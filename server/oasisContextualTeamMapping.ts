@@ -1,12 +1,12 @@
 /**
- * OASIS Contextual Team Mapping (v1.0)
- * Applies team-level context tags (OASIS) to player evaluation logic
+ * TRACKSTAR Contextual Team Mapping (v1.0)
+ * Applies team-level context tags (TRACKSTAR) to player evaluation logic
  * for WR, RB, TE, and QB based on offensive scheme and tempo.
  * 
- * Note: This is a temporary framework pending final OASIS schema from @EaglesXsandOs
+ * Note: This is a temporary framework pending final TRACKSTAR schema from @EaglesXsandOs
  */
 
-export interface OASISTeamContext {
+export interface TRACKSTARTeamContext {
   oasisTags: string[];
   offensiveScheme?: string;
   tempo?: 'High' | 'Medium' | 'Low';
@@ -25,7 +25,7 @@ export interface PlayerWithTeamContext {
   rushingScoreWeight?: number;
 }
 
-export interface OASISContextualResult {
+export interface TRACKSTARContextualResult {
   playerId: string;
   playerName: string;
   position: string;
@@ -41,17 +41,17 @@ export interface OASISContextualResult {
   timestamp: Date;
 }
 
-export class OASISContextualTeamMappingService {
+export class TRACKSTARContextualTeamMappingService {
   private readonly version = "1.0";
-  private readonly name = "OASIS Contextual Team Mapping";
+  private readonly name = "TRACKSTAR Contextual Team Mapping";
 
   /**
-   * Apply OASIS team context to player evaluation
+   * Apply TRACKSTAR team context to player evaluation
    */
   applyTeamContext(
     player: PlayerWithTeamContext,
-    teamContext: OASISTeamContext
-  ): OASISContextualResult {
+    teamContext: TRACKSTARTeamContext
+  ): TRACKSTARContextualResult {
     const logs: string[] = [];
     const appliedTags: string[] = [];
     const contextAdjustments = {
@@ -68,7 +68,7 @@ export class OASISContextualTeamMappingService {
     }
 
     const tags = Array.isArray(teamContext.oasisTags) ? teamContext.oasisTags : [];
-    logs.push(`Evaluating ${player.playerName} (${player.position}) with ${tags.length} OASIS tags`);
+    logs.push(`Evaluating ${player.playerName} (${player.position}) with ${tags.length} TRACKSTAR tags`);
 
     // WR Context Logic
     if (player.position === "WR" && tags.includes("High Tempo Pass Offense")) {
@@ -100,9 +100,9 @@ export class OASISContextualTeamMappingService {
 
     // Log if no adjustments applied
     if (appliedTags.length === 0) {
-      logs.push("No OASIS context adjustments applied");
+      logs.push("No TRACKSTAR context adjustments applied");
     } else {
-      logs.push(`Applied ${appliedTags.length} OASIS context adjustments`);
+      logs.push(`Applied ${appliedTags.length} TRACKSTAR context adjustments`);
     }
 
     return this.createResult(player, contextAdjustments, appliedTags, logs);
@@ -116,7 +116,7 @@ export class OASISContextualTeamMappingService {
     contextAdjustments: any,
     appliedTags: string[],
     logs: string[]
-  ): OASISContextualResult {
+  ): TRACKSTARContextualResult {
     return {
       playerId: player?.playerId || 'unknown',
       playerName: player?.playerName || 'Unknown Player',
@@ -136,7 +136,7 @@ export class OASISContextualTeamMappingService {
     return {
       name: this.name,
       version: this.version,
-      description: "Applies team-level context tags (OASIS) to player evaluation logic for WR, RB, TE, and QB based on offensive scheme and tempo.",
+      description: "Applies team-level context tags (TRACKSTAR) to player evaluation logic for WR, RB, TE, and QB based on offensive scheme and tempo.",
       triggerScope: ["dynastyValuation", "playerProfile", "teamContext"],
       inputValidation: {
         requiredFields: ["player.team", "player.position"],
@@ -148,14 +148,14 @@ export class OASISContextualTeamMappingService {
         TE: "Condensed Red Zone Usage → +1 TD ceiling",
         QB: "Designed QB Run Concepts → +0.1 rushing score weight"
       },
-      note: "Temporary framework pending final OASIS schema from @EaglesXsandOs"
+      note: "Temporary framework pending final TRACKSTAR schema from @EaglesXsandOs"
     };
   }
 
   /**
    * Test with example inputs
    */
-  runTestCases(): OASISContextualResult[] {
+  runTestCases(): TRACKSTARContextualResult[] {
     const testCases = [
       // WR Test Case
       {
@@ -238,9 +238,9 @@ export class OASISContextualTeamMappingService {
       conflicts: [],
       rollbackCapable: true,
       upgradeReady: true,
-      note: "Designed for clean replacement when final OASIS schema arrives"
+      note: "Designed for clean replacement when final TRACKSTAR schema arrives"
     };
   }
 }
 
-export const oasisContextualTeamMappingService = new OASISContextualTeamMappingService();
+export const oasisContextualTeamMappingService = new TRACKSTARContextualTeamMappingService();

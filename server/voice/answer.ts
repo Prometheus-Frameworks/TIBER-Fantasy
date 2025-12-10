@@ -1,5 +1,5 @@
 /**
- * Tiber Answer System - Real OTC Power Integration + Memory-Enhanced Intelligence
+ * Tiber Answer System - Real TIBER Power Integration + Memory-Enhanced Intelligence
  * Main answer router using live database queries and learned insights
  */
 

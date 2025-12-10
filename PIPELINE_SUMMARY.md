@@ -1,4 +1,4 @@
-# OTC Redraft 2025 MVP Data Pipeline
+# TIBER Redraft 2025 MVP Data Pipeline
 
 ## Overview
 Complete data collection and processing pipeline for fantasy football analytics, built with Python and NFL data sources.

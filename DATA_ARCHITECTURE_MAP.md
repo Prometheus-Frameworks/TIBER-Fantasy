@@ -619,7 +619,7 @@
 
 #### Team Context
 - **`client/src/pages/team-context.tsx`**
-- **`client/src/pages/OASISTeamContext.tsx`**
+- **`client/src/pages/TRACKSTARTeamContext.tsx`**
 - **`client/src/pages/QBEnvironmentContext.tsx`**
   - Calls: Team context endpoints
   - Displays: Offensive/defensive context, QB environment

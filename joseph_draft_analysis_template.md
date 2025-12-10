@@ -2,7 +2,7 @@
 **Date**: August 14, 2025
 **Team**: H4MMER
 **Format**: PPR
-**Platform**: OTC Analysis Complete
+**Platform**: TIBER Analysis Complete
 
 ## Pre-Draft Strategy (Documented)
 - Turn strategy: Two first-round caliber players

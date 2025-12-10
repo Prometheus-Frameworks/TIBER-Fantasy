@@ -1,4 +1,4 @@
-Alright, Boss Man J — here’s a dead-simple drop-in TypeScript scorer that takes a Sleeper-style game log row and spits out a 1–99 OVR (plus the sub-scores). No Fusion/Compass/OASIS. Just the log.
+Alright, Boss Man J — here’s a dead-simple drop-in TypeScript scorer that takes a Sleeper-style game log row and spits out a 1–99 OVR (plus the sub-scores). No Fusion/Compass/TRACKSTAR. Just the log.
 
 Paste this anywhere in your shared utils and call it from the card renderer.
 

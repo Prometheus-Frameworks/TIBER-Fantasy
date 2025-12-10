@@ -221,7 +221,7 @@ export function securityHeaders() {
     
     // Hide server information
     res.removeHeader('X-Powered-By');
-    res.setHeader('Server', 'OTC-API');
+    res.setHeader('Server', 'TIBER-API');
     
     // Add Content Security Policy for API responses
     res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none';");

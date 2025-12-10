@@ -51,7 +51,7 @@ export class SleeperSyncService {
       const response = await axios.get('https://api.sleeper.app/v1/players/nfl', {
         timeout: 30000, // 30 second timeout
         headers: {
-          'User-Agent': 'OTC-Fantasy-Football-Platform/1.0',
+          'User-Agent': 'TIBER-Fantasy-Football-Platform/1.0',
           'Accept': 'application/json'
         }
       });

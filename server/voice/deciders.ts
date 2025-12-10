@@ -1,5 +1,5 @@
 /**
- * Tiber Decision Logic - Real OTC Power Algorithm
+ * Tiber Decision Logic - Real TIBER Power Algorithm
  * Sophisticated decision-making using Power + RAG + market data
  */
 

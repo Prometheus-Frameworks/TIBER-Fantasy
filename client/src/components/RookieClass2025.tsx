@@ -189,7 +189,7 @@ export default function RookieClass2025({ season, week, limit = 8 }: RookieClass
             Showing top {Math.min(limit, rookies.length)} performers • {season} Season Week {week}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Data from OTC Weekly Pipeline
+            Data from TIBER Weekly Pipeline
           </p>
         </div>
       </CardContent>

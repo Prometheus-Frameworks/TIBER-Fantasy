@@ -1,7 +1,7 @@
 // src/data/providers/oasis.ts
-// Pull team/position matchup from your OASIS service
+// Pull team/position matchup from your TRACKSTAR service
 //
-// TODO: Replace OASIS with internal FORGE SoS module
+// TODO: Replace TRACKSTAR with internal FORGE SoS module
 // See: docs/oasis_audit.md for migration plan
 // Target: Rename to forge.ts and use /api/forge/matchup endpoint
 
@@ -19,7 +19,7 @@ export async function fetchOasisMatchup(team: NFLTeam, position: string): Promis
   if (cached) return cached;
 
   try {
-    // Use existing OASIS integration
+    // Use existing TRACKSTAR integration
     const response = await fetch(`http://localhost:5000/api/oasis/matchup?team=${team}&position=${position}`);
     
     if (!response.ok) {

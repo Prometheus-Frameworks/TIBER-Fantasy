@@ -36,7 +36,7 @@ All notable changes to Prometheus will be documented in this file.
 ---
 
 ## [v0.8] - 2025-07-07  
-### OASIS System
+### TRACKSTAR System
 - ✅ Contextual data system introduced
 - ⚠️ Only partially implemented on QB modules
 - ⚠️ WR/TE support still pending

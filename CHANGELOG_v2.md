@@ -1,4 +1,4 @@
-# OTC v2 Production Release Changelog
+# TIBER v2 Production Release Changelog
 
 ## 🚀 DeepSeek v2 - Full Season Implementation
 

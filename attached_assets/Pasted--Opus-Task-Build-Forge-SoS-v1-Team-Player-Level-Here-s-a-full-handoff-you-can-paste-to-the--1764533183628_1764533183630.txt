@@ -8,7 +8,7 @@ Implement Forge Strength of Schedule v1 (Team + Player) using internal env/match
 Goal
 Create a first-version Strength of Schedule (SoS) engine that:
 
-Uses only internal FORGE data (no OASIS, no external APIs).
+Uses only internal FORGE data (no TRACKSTAR, no external APIs).
 
 Works per team + position (QB/RB/WR/TE).
 
@@ -274,6 +274,6 @@ If this feels too big for this task, leave it as a TODO in replit.md.
 
 Don’t modify envScore or matchupScore math.
 
-Don’t touch OASIS files beyond what Phase 1 already removed.
+Don’t touch TRACKSTAR files beyond what Phase 1 already removed.
 
 Don’t wire this into rankings or Tiber voice yet – this is just the core SoS engine and APIs.

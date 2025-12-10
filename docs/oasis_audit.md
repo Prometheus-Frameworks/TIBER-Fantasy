@@ -1,19 +1,19 @@
-# OASIS Audit & Deprecation Plan
+# TRACKSTAR Audit & Deprecation Plan
 
 **Date:** November 30, 2025  
 **Status:** AUDIT COMPLETE  
-**Purpose:** Map all OASIS references and plan migration to internal FORGE SoS/Context module
+**Purpose:** Map all TRACKSTAR references and plan migration to internal FORGE SoS/Context module
 
 ---
 
 ## Executive Summary
 
-OASIS (Offensive Architecture Scoring & Insight System) was originally conceived as an external API integration for team offensive environment data. The codebase now contains a mix of:
+TRACKSTAR (Offensive Architecture Scoring & Insight System) was originally conceived as an external API integration for team offensive environment data. The codebase now contains a mix of:
 - **LEGACY_UNUSED**: Dead code, placeholders, and unused integrations
 - **INTEGRATION_STUB**: Wired up but using baseline/fallback data (no real external API)
 - **ACTIVE_DEPENDENCY**: Actually used in ranking pipelines via internal services
 
-**Key Finding:** No external OASIS API is being called. All OASIS endpoints serve internally-generated baseline data. This makes migration to FORGE SoS/Context straightforward.
+**Key Finding:** No external TRACKSTAR API is being called. All TRACKSTAR endpoints serve internally-generated baseline data. This makes migration to FORGE SoS/Context straightforward.
 
 ---
 
@@ -35,11 +35,11 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 |------|-------------|-------|
 | `public/oasis.html` | Static HTML placeholder page | No references, unused |
 | `server/oasisRServerClient.ts` | R server integration for nflfastR | Never called, spawns R processes that don't exist |
-| `otc-power/src/data/sources/oasis.ts` | OTC Power module OASIS fetcher | Uses fetch to non-existent `/api/oasis/` endpoints internally |
-| `otc-power/src/data/loaders.ts` | References OASIS loader | Part of OTC Power (unused module) |
-| `otc-power/src/data/unifiedLoader.ts` | OASIS unified loader | Part of OTC Power (unused module) |
-| `otc-power/src/data/featureRegistry.ts` | OASIS feature registry entry | Part of OTC Power (unused module) |
-| `config/ovr.v1.json` | OVR config mentions OASIS | Comment only, safe to clean |
+| `otc-power/src/data/sources/oasis.ts` | TIBER Power module TRACKSTAR fetcher | Uses fetch to non-existent `/api/oasis/` endpoints internally |
+| `otc-power/src/data/loaders.ts` | References TRACKSTAR loader | Part of TIBER Power (unused module) |
+| `otc-power/src/data/unifiedLoader.ts` | TRACKSTAR unified loader | Part of TIBER Power (unused module) |
+| `otc-power/src/data/featureRegistry.ts` | TRACKSTAR feature registry entry | Part of TIBER Power (unused module) |
+| `config/ovr.v1.json` | OVR config mentions TRACKSTAR | Comment only, safe to clean |
 | `AUDIT.md`, `CHANGELOG.md`, `ENDPOINT_STATUS_REPORT.md` | Documentation references | Update to reflect FORGE replacement |
 
 ### INTEGRATION_STUB (Convert to FORGE naming)
@@ -50,21 +50,21 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 | `server/services/oasisEnvironmentService.ts` | Team environment service | STUB: Calls internal `/api/oasis/environment` which returns baseline |
 | `server/oasisContextualTeamMapping.ts` | Team context mapping for player evaluation | STUB: Framework only, uses placeholder tags |
 | `src/data/providers/oasis.ts` | Matchup data provider | STUB: Falls back to neutral values on error |
-| `src/data/normalizers/matchup.ts` | Matchup normalizer with OASIS fields | STUB: Uses `oasisMatchupScore` field name |
+| `src/data/normalizers/matchup.ts` | Matchup normalizer with TRACKSTAR fields | STUB: Uses `oasisMatchupScore` field name |
 | `src/data/interfaces.ts` | `OasisMatchup` interface | STUB: Type definition only |
 | `client/src/lib/apiClient.ts` | `oasisTeams()`, `oasisTeam()` methods | STUB: Client-side API helpers |
 | `client/src/config/nav.ts` | Navigation entry for `/oasis` | STUB: Links to non-existent page |
 | `client/src/components/HealthWidget.tsx` | Health check includes `oasis` | STUB: Part of health response |
-| `client/src/components/ForgeTransparencyPanel.tsx` | Mentions "OASIS team environment" | STUB: UI text description |
-| `server/analyticsInventory.ts` | Source type includes 'OASIS-API' | STUB: Enum value |
-| `shared/startSit.ts` | OASIS type references | STUB: Type definitions |
+| `client/src/components/ForgeTransparencyPanel.tsx` | Mentions "TRACKSTAR team environment" | STUB: UI text description |
+| `server/analyticsInventory.ts` | Source type includes 'TRACKSTAR-API' | STUB: Enum value |
+| `shared/startSit.ts` | TRACKSTAR type references | STUB: Type definitions |
 
 ### ACTIVE_DEPENDENCY (Migrate to FORGE)
 
 | File | Description | Current Usage | Migration Path |
 |------|-------------|---------------|----------------|
 | `server/services/playerCompassService.ts` | Player Compass calculations | Uses `oasisEnvironmentService.getTeamEnvironment()` for EAST scores | Replace with `forgeEnvironmentService` |
-| `server/modules/sos/oasisSosService.ts` | SOS projections using OASIS | Uses `oasisEnvironmentService` for defensive projections | Replace with FORGE SoS module |
+| `server/modules/sos/oasisSosService.ts` | SOS projections using TRACKSTAR | Uses `oasisEnvironmentService` for defensive projections | Replace with FORGE SoS module |
 | `server/modules/forge/context/contextFetcher.ts` | FORGE context fetching | Imports `OasisEnvironmentService` for team env | Replace with internal FORGE env |
 | `server/modules/startSit/dataAssembler.ts` | Start/Sit data assembly | Uses `oasisMatchupScore` field | Rename to `forgeMatchupScore` |
 | `server/modules/startSit/startSitAgent.ts` | Start/Sit AI agent | References `oasisScore`, `oasisMatchupScore` | Rename fields |
@@ -74,11 +74,11 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 
 ## External API Status
 
-**CRITICAL FINDING:** No external OASIS API is being called anywhere in the codebase.
+**CRITICAL FINDING:** No external TRACKSTAR API is being called anywhere in the codebase.
 
 - `/api/oasis/environment` endpoint in `server/routes.ts` calls `fetchTeamEnvIndex()` from `otc-power/src/data/sources/oasis.ts`
 - That function returns hardcoded `getBaselineEnvironmentScores()` when fetch fails (which it always does since there's no external server)
-- Result: All OASIS data is internally-generated baseline values
+- Result: All TRACKSTAR data is internally-generated baseline values
 
 ---
 
@@ -89,13 +89,13 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 **Files Deleted:**
 - `public/oasis.html` - Static HTML placeholder
 - `server/oasisRServerClient.ts` - Dead R server integration
-- `otc-power/` - Entire unused OTC Power module (including `src/data/sources/oasis.ts`)
+- `otc-power/` - Entire unused TIBER Power module (including `src/data/sources/oasis.ts`)
 
 **Routes Updated:**
 - `server/routes.ts` - Removed dead imports, inlined baseline data for `/api/oasis/*` endpoints
 - `/api/power/fpg/*` routes now return 410 deprecation notices
 
-**No Breaking Changes:** All OASIS endpoints still work using inline baseline data.
+**No Breaking Changes:** All TRACKSTAR endpoints still work using inline baseline data.
 
 ### Phase 2: Rename INTEGRATION_STUB → FORGE
 
@@ -119,7 +119,7 @@ OASIS (Offensive Architecture Scoring & Insight System) was originally conceived
 
 ---
 
-## Interface Requirements (What OASIS Provided)
+## Interface Requirements (What TRACKSTAR Provided)
 
 For complete migration, FORGE SoS/Context module must provide:
 
@@ -155,7 +155,7 @@ interface ForgeMatchup {
 After audit, add these TODO comments to key files:
 
 ```typescript
-// TODO: Replace OASIS with internal FORGE SoS module
+// TODO: Replace TRACKSTAR with internal FORGE SoS module
 // See: docs/oasis_audit.md for migration plan
 ```
 
@@ -169,7 +169,7 @@ Files requiring TODO:
 
 ## Conclusion
 
-OASIS is effectively a placeholder/stub system that:
+TRACKSTAR is effectively a placeholder/stub system that:
 1. Was designed for external API integration that never materialized
 2. Falls back to internally-generated baseline data
 3. Can be fully replaced by existing FORGE env/matchup infrastructure
@@ -183,4 +183,4 @@ The migration is low-risk because:
 - Phase 1 (Delete): Immediate
 - Phase 2 (Rename): 1-2 days
 - Phase 3 (Migrate): 3-5 days
-- Retire OASIS naming: Complete within 1 week
+- Retire TRACKSTAR naming: Complete within 1 week

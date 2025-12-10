@@ -256,7 +256,7 @@ export class API {
     return this.get<RowsEnvelope<DynastyRow>>(`/api/dynasty/value?${q.toString()}`);
   }
 
-  // ---------- OASIS ----------
+  // ---------- TRACKSTAR ----------
   oasisTeams(season = 2025) {
     return this.get<RowsEnvelope<OasisTeamRow>>(`/api/oasis/teams?season=${season}`);
   }

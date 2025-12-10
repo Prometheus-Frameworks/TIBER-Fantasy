@@ -22,7 +22,7 @@ export interface SleeperUsage {
 
 export interface OasisMatchup {
   defRankVsPos?: number;     // 1..32 (1 hardest)
-  oasisMatchupScore?: number; // 0..100 (your R/OASIS output)
+  oasisMatchupScore?: number; // 0..100 (your R/TRACKSTAR output)
   olHealthIndex?: number;    // 0..100
 }
 

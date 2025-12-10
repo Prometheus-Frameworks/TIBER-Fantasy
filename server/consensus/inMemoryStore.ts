@@ -1,4 +1,4 @@
-// Temporary in-memory store for OTC Consensus Command Router v1 demo
+// Temporary in-memory store for TIBER Consensus Command Router v1 demo
 // This provides immediate functionality while database schema is being finalized
 
 interface InMemoryConsensusRank {

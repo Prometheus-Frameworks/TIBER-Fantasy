@@ -156,7 +156,7 @@ export class RankingsFusionService {
   }
   
   /**
-   * Calculate East quadrant (Environment/Scheme) with OASIS integration
+   * Calculate East quadrant (Environment/Scheme) with TRACKSTAR integration
    */
   private async calculateEastQuadrant(
     player: FusionPlayer,
@@ -164,10 +164,10 @@ export class RankingsFusionService {
   ): Promise<number> {
     const weights = config.quadrants.east;
     
-    // Get OASIS team environment data
+    // Get TRACKSTAR team environment data
     const teamEnv = player.team ? await oasisEnvironmentService.getTeamEnvironment(player.team) : null;
     
-    // Blend OASIS with existing metrics (60% OASIS, 40% existing if both present)
+    // Blend TRACKSTAR with existing metrics (60% TRACKSTAR, 40% existing if both present)
     const blendedProe = this.blendMetrics(
       teamEnv ? this.scaleToHundred(teamEnv.proe_pct) : NaN,
       player.team_proe,
@@ -186,7 +186,7 @@ export class RankingsFusionService {
       teamEnv
     );
     
-    // Add scoring environment from OASIS
+    // Add scoring environment from TRACKSTAR
     const scoringEnv = teamEnv ? this.scaleToHundred(teamEnv.scoring_environment_pct) : 50;
     
     const comp =
@@ -200,7 +200,7 @@ export class RankingsFusionService {
   }
   
   /**
-   * Blend OASIS and existing metrics with staleness adjustments
+   * Blend TRACKSTAR and existing metrics with staleness adjustments
    */
   private blendMetrics(oasisValue: number, existingValue: number, teamEnv: any): number {
     const hasOasis = Number.isFinite(oasisValue);
@@ -215,12 +215,12 @@ export class RankingsFusionService {
       (Date.now() - new Date(teamEnv.lastUpdated).getTime() > 24 * 60 * 60 * 1000);
     
     if (isStale) {
-      // Shrink OASIS toward league mean (50) by 20%
+      // Shrink TRACKSTAR toward league mean (50) by 20%
       const shrunkOasis = oasisValue + (50 - oasisValue) * 0.2;
       return 0.6 * shrunkOasis + 0.4 * existingValue;
     }
     
-    // Fresh data: 60% OASIS, 40% existing
+    // Fresh data: 60% TRACKSTAR, 40% existing
     return 0.6 * oasisValue + 0.4 * existingValue;
   }
   
@@ -399,7 +399,7 @@ export class RankingsFusionService {
   }
 
   /**
-   * Enhanced scoreWRBatch with proven elite priors and guardrails (with OASIS integration)
+   * Enhanced scoreWRBatch with proven elite priors and guardrails (with TRACKSTAR integration)
    */
   async scoreWRBatch(
     players: FusionPlayer[],
@@ -421,7 +421,7 @@ export class RankingsFusionService {
       
       let score = this.fuseScore(quadrants, mode);
       
-      // Apply OASIS environment score adjustment after fusion
+      // Apply TRACKSTAR environment score adjustment after fusion
       score = await this.applyEnvironmentAdjustment(score, player, mode);
       
       // Apply proven elite floor
@@ -464,7 +464,7 @@ export class RankingsFusionService {
   }
   
   /**
-   * Apply OASIS environment score adjustment after fusion
+   * Apply TRACKSTAR environment score adjustment after fusion
    */
   private async applyEnvironmentAdjustment(score: number, player: FusionPlayer, mode: Mode): Promise<number> {
     if (!player.team) return score;

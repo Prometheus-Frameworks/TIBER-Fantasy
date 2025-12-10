@@ -1,7 +1,7 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard. Its purpose is to provide real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics, empowering users with superior decision-making tools without paywalls. Future ambitions include a "Player Compass" for dynamic player evaluation, an "OTC Consensus" for community-driven rankings, and advanced AI insights via the TIBER Brain OS.
+Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard. Its purpose is to provide real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics, empowering users with superior decision-making tools without paywalls. Future ambitions include a "Player Compass" for dynamic player evaluation, an "TIBER Consensus" for community-driven rankings, and advanced AI insights via the TIBER Brain OS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -33,7 +33,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Universal Current Week System**: `/api/system/current-week` endpoint for real-time NFL week detection, used by frontend components.
 
 **Technical Implementations & Feature Specifications:**
-- **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "OTC Consensus" rankings, and Madden-style OVR.
+- **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "TIBER Consensus" rankings, and Madden-style OVR.
 - **AI & Analytics**: "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI, Tiber Memory (FANTASY vs GENERAL pools), and Tiber Voice (Insight/Analyst modes with 5-tier Truth Hierarchy).
 - **FORGE (Football-Oriented Recursive Grading Engine)**: Core player evaluation system providing unified Alpha scores (0-100) for skill positions. Full FORGE acronym implementation:
     - **F (Football Lens)**: `forgeFootballLens.ts` - Detects football-sense issues (TD spikes, volume/efficiency mismatches, pillar polarization). Applies bounded pillar adjustments when warranted. Returns issues with severity levels (info/warn/block).

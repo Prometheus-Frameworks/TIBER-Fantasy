@@ -510,7 +510,7 @@ if (playerData.targetCompetition === 'High') risks.push('High target competition
 
 ### **Integration Points**
 - **Prometheus Compatibility**: Leverages existing scoring when available
-- **Team Context**: OASIS R server integration ready
+- **Team Context**: TRACKSTAR R server integration ready
 - **Draft Capital**: Historical draft position weighting
 - **Injury Data**: MySportsFeeds integration for risk assessment
 - **ADP Integration**: Sleeper API for market efficiency calculations

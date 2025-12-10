@@ -96,7 +96,7 @@ import {
 import { 
   getConsensusWhy, rebuildConsensusEndpoint 
 } from './adaptiveConsensus';
-import { OTC_SIGNATURE } from '../shared/otcSignature';
+import { TIBER_SIGNATURE } from '../shared/tiberSignature';
 import fs from 'fs';
 import path from 'path';
 import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
@@ -159,12 +159,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve docs folder for static markdown files
   app.use('/docs', express.static('docs'));
   
-  // OTC Signature Protocol - Signal endpoint
+  // TIBER Signature Protocol - Signal endpoint
   app.get('/api/signal', (req: Request, res: Response) => {
     const base = { 
       status: "aligned", 
-      key: OTC_SIGNATURE.key, 
-      motto: OTC_SIGNATURE.motto 
+      key: TIBER_SIGNATURE.key, 
+      motto: TIBER_SIGNATURE.motto 
     };
 
     // Reveal credits only if Founder Mode header or query is present
@@ -568,7 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== OTC FINAL RANKINGS ENDPOINT =====
+  // ===== TIBER FINAL RANKINGS ENDPOINT =====
   // Simple test endpoint to verify routing works
   app.get('/api/test-simple', (req: Request, res: Response) => {
     console.log('🔥 [TEST] Simple test endpoint called');
@@ -656,15 +656,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // OTC Final Rankings - Authoritative endpoint combining consensus + OTC adjustments
+  // TIBER Final Rankings - Authoritative endpoint combining consensus + TIBER adjustments
   app.get('/api/rankings/otc-final', async (req: Request, res: Response) => {
     try {
-      console.log(`📊 [OTC Final Rankings] Endpoint called with query:`, req.query);
+      console.log(`📊 [TIBER Final Rankings] Endpoint called with query:`, req.query);
       
       const position = req.query.pos as string;
       const positions: ("QB" | "RB" | "WR" | "TE")[] = position ? [position as "QB" | "RB" | "WR" | "TE"] : ["QB", "RB", "WR", "TE"];
       
-      console.log(`📊 [OTC Final Rankings] Generating authoritative rankings for positions: ${positions.join(', ')}`);
+      console.log(`📊 [TIBER Final Rankings] Generating authoritative rankings for positions: ${positions.join(', ')}`);
 
       // For now, provide a simplified fallback with sample data while consensus is not working
       const samplePlayers = [
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? samplePlayers.filter(p => p.pos === position)
         : samplePlayers;
 
-      console.log(`✅ [OTC Final Rankings] Generated ${filteredPlayers.length} final rankings (sample data)`);
+      console.log(`✅ [TIBER Final Rankings] Generated ${filteredPlayers.length} final rankings (sample data)`);
 
       res.json({
         success: true,
@@ -694,15 +694,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generated_at: new Date().toISOString(),
           total_players: filteredPlayers.length,
           positions: Array.from(new Set(filteredPlayers.map(p => p.pos))),
-          source: "OTC_AUTHORITATIVE_SAMPLE"
+          source: "TIBER_AUTHORITATIVE_SAMPLE"
         }
       });
 
     } catch (error) {
-      console.error('❌ [OTC Final Rankings] Error generating final rankings:', error);
+      console.error('❌ [TIBER Final Rankings] Error generating final rankings:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to generate OTC final rankings',
+        error: 'Failed to generate TIBER final rankings',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -772,7 +772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: '[DEPRECATION_COMPLETE]',
       message: 'SportsDataIO Depth Chart API has been deprecated',
       deprecated: true,
-      instruction: 'Use Sleeper API or OASIS API for data sources'
+      instruction: 'Use Sleeper API or TRACKSTAR API for data sources'
     });
   });
 
@@ -784,7 +784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       status: '[DEPRECATION_COMPLETE]',
       message: 'MainPlayerSystem.json generation has been deprecated',
       deprecated: true,
-      instruction: 'Use Sleeper API or OASIS API for data sources'
+      instruction: 'Use Sleeper API or TRACKSTAR API for data sources'
     });
   });
 
@@ -2020,7 +2020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         count: compassResults.length,
         data: compassResults,
         metadata: {
-          engine: 'Player Compass - OTC In-House Ratings',
+          engine: 'Player Compass - TIBER In-House Ratings',
           format_description: format === 'dynasty' 
             ? 'Long-term value with age curve and talent evaluation'
             : 'Current season production focus with immediate opportunity',
@@ -2296,8 +2296,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const debugCalculation = await import('./routes/debug-calculation');
   app.use('/api/debug', debugCalculation.default);
   
-  // OTC Consensus routes
-  // OTC Consensus Command Router v1 - dedicated update endpoint
+  // TIBER Consensus routes
+  // TIBER Consensus Command Router v1 - dedicated update endpoint
   app.post('/api/consensus/update', async (req, res) => {
     try {
       const { updateConsensusRank } = await import('./consensus/commandRouter');
@@ -2329,16 +2329,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🌱 Processing consensus command: "${commandText}"`);
       
-      // Use OTC Consensus Command Router v1
+      // Use TIBER Consensus Command Router v1
       const { parseConsensusCommand, updateConsensusRank } = await import('./consensus/commandRouter');
       const payload = parseConsensusCommand(commandText);
       
       if (!payload) {
         return res.status(400).json({
           success: false,
-          message: "❌ Error: Invalid command format. Use: OTC consensus <Redraft|Dynasty> <POSITION><RANK> : <PLAYER NAME>",
+          message: "❌ Error: Invalid command format. Use: TIBER consensus <Redraft|Dynasty> <POSITION><RANK> : <PLAYER NAME>",
           errorType: "INVALID_FORMAT",
-          example: "OTC consensus Redraft RB1 : Jahmyr Gibbs"
+          example: "TIBER consensus Redraft RB1 : Jahmyr Gibbs"
         });
       }
       
@@ -2374,7 +2374,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   
-  // OTC Consensus Engine v1.1 API Routes
+  // TIBER Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);
   app.patch('/api/profile/:username', updateProfile);
   app.post('/api/fire', giveFire);
@@ -3071,9 +3071,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Ratings router mounted at /api/ratings above
 
-  // OASIS Routes - Baseline data (Phase 1 cleanup: removed dead R server/otc-power imports)
+  // TRACKSTAR Routes - Baseline data (Phase 1 cleanup: removed dead R server/otc-power imports)
   const oasisCache = new Map();
-  const OASIS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+  const TRACKSTAR_TTL_MS = 5 * 60 * 1000; // 5 minutes
   
   // Baseline environment scores
   const BASELINE_ENV_SCORES: Record<string, number> = {
@@ -3096,14 +3096,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'CAR': 59.5, 'NYG': 59.2
   };
 
-  // OASIS Environment/Team data endpoint
+  // TRACKSTAR Environment/Team data endpoint
   app.get('/api/oasis/environment', async (req, res) => {
     const { season = 2025, week = 2 } = req.query;
     const cacheKey = `environment_${season}_${week}`;
     const now = Date.now();
     const hit = oasisCache.get(cacheKey);
     
-    if (hit && (now - hit.ts) < OASIS_TTL_MS) {
+    if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
@@ -3122,18 +3122,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const result = { teams };
     oasisCache.set(cacheKey, { ts: now, data: result });
     
-    console.log(`✅ [OASIS] Served environment data for ${teams.length} teams (Season ${season}, Week ${week}) - Using baseline`);
+    console.log(`✅ [TRACKSTAR] Served environment data for ${teams.length} teams (Season ${season}, Week ${week}) - Using baseline`);
     return res.json(result);
   });
 
-  // OASIS Pace data endpoint
+  // TRACKSTAR Pace data endpoint
   app.get('/api/oasis/pace', async (req, res) => {
     const { season = 2025, week = 2 } = req.query;
     const cacheKey = `pace_${season}_${week}`;
     const now = Date.now();
     const hit = oasisCache.get(cacheKey);
     
-    if (hit && (now - hit.ts) < OASIS_TTL_MS) {
+    if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
@@ -3144,23 +3144,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }));
 
     oasisCache.set(cacheKey, { ts: now, data: result });
-    console.log(`✅ [OASIS] Served pace data for ${result.length} teams`);
+    console.log(`✅ [TRACKSTAR] Served pace data for ${result.length} teams`);
     return res.json(result);
   });
 
-  // OASIS Teams endpoint (main endpoint)
+  // TRACKSTAR Teams endpoint (main endpoint)
   app.get('/api/oasis/teams', async (req, res) => {
     const { season = 2025 } = req.query;
     const cacheKey = `teams_${season}`;
     const now = Date.now();
     const hit = oasisCache.get(cacheKey);
     
-    if (hit && (now - hit.ts) < OASIS_TTL_MS) {
+    if (hit && (now - hit.ts) < TRACKSTAR_TTL_MS) {
       return res.json(hit.data);
     }
 
     try {
-      // Generate OASIS-style team data using your existing data sources
+      // Generate TRACKSTAR-style team data using your existing data sources
       const teams = [
         'BUF', 'KC', 'SF', 'MIA', 'DAL', 'BAL', 'PHI', 'DET', 'CIN', 'LAC',
         'MIN', 'HOU', 'TB', 'ATL', 'LAR', 'GB', 'SEA', 'IND', 'JAX', 'NO',
@@ -3188,31 +3188,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       oasisCache.set(cacheKey, { ts: now, data: teamData });
       
-      console.log(`✅ [OASIS] Served team data for ${teamData.length} teams (Season ${season}) - Using integrated data sources`);
+      console.log(`✅ [TRACKSTAR] Served team data for ${teamData.length} teams (Season ${season}) - Using integrated data sources`);
       return res.json(teamData);
       
     } catch (error) {
-      console.error('❌ [OASIS] Teams data error:', error);
+      console.error('❌ [TRACKSTAR] Teams data error:', error);
       return res.status(500).json({
-        error: "OASIS teams data unavailable", 
+        error: "TRACKSTAR teams data unavailable", 
         detail: String(error)
       });
     }
   });
 
-  // Fallback for any other OASIS endpoints
+  // Fallback for any other TRACKSTAR endpoints
   app.get('/api/oasis/*', async (req, res) => {
     const pathParam = req.params && typeof req.params === 'object' ? (req.params as any)['0'] || '' : '';
     
     return res.status(404).json({
-      error: "OASIS endpoint not found",
+      error: "TRACKSTAR endpoint not found",
       available_endpoints: ["/environment", "/pace", "/teams"],
       requested: pathParam,
-      message: "Local R server OASIS system active"
+      message: "Local R server TRACKSTAR system active"
     });
   });
 
-  // OASIS endpoint discovery
+  // TRACKSTAR endpoint discovery
   app.get("/api/oasis/_index", (_req, res) => {
     res.json({ 
       endpoints: [
@@ -3224,7 +3224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // OASIS debug endpoint - tests all available endpoints
+  // TRACKSTAR debug endpoint - tests all available endpoints
   app.get("/api/oasis/_debug", async (req, res) => {
     const list = ["/teams", "/metrics/offense", "/targets/distribution"];
     const out: Record<string, any> = {};
@@ -3470,7 +3470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // 🏆 OTC Consensus Service - Community rankings
+  // 🏆 TIBER Consensus Service - Community rankings
   app.get('/api/consensus/players', async (req: Request, res: Response) => {
     try {
       const { otcConsensusPlayerService } = await import("./services/otcConsensusPlayerService");
@@ -3486,9 +3486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await otcConsensusPlayerService.getPlayers(filters);
       res.json(result);
     } catch (error) {
-      console.error('❌ OTC Consensus API Error:', error);
+      console.error('❌ TIBER Consensus API Error:', error);
       res.status(500).json({
-        error: 'Failed to fetch OTC Consensus data',
+        error: 'Failed to fetch TIBER Consensus data',
         message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
@@ -4086,7 +4086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ===== OTC CONSENSUS RANKINGS API =====
+  // ===== TIBER CONSENSUS RANKINGS API =====
   // Community Rankings (separate from Player Compass in-house ratings)
   
   app.get('/api/consensus/:format', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
@@ -4096,7 +4096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const position = req.query.position as string;
       const limit = parseInt(req.query.limit as string) || 100;
       
-      console.log(`📊 OTC Consensus: ${format.toUpperCase()} rankings requested`);
+      console.log(`📊 TIBER Consensus: ${format.toUpperCase()} rankings requested`);
       
       if (!['dynasty', 'redraft'].includes(format)) {
         return res.status(400).json({ error: 'Invalid format. Use dynasty or redraft' });
@@ -4112,7 +4112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: rankings.slice(0, limit),
         metadata: {
           ...metadata,
-          system: 'OTC Consensus - Community Rankings',
+          system: 'TIBER Consensus - Community Rankings',
           format_description: format === 'dynasty' 
             ? 'Community consensus on long-term dynasty value and outlook'
             : 'Community consensus on current season fantasy production',
@@ -4121,8 +4121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
     } catch (error) {
-      console.error(`❌ OTC Consensus ${req.params.format} error:`, error);
-      res.status(500).json({ error: 'Failed to fetch OTC Consensus rankings' });
+      console.error(`❌ TIBER Consensus ${req.params.format} error:`, error);
+      res.status(500).json({ error: 'Failed to fetch TIBER Consensus rankings' });
     }
   });
   
@@ -4352,7 +4352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, return structured empty state
       res.json({
         date: new Date().toISOString().split('T')[0],
-        source: "OTC Intelligence System",
+        source: "TIBER Intelligence System",
         intel_type: "training_camp_updates",
         entries: [],
         summary: {

@@ -137,13 +137,13 @@ export function runTests(): void {
   console.log('\n🧪 Testing Projections Ingestion System...\n');
   
   try {
-    console.log('Testing OASIS JSON:');
+    console.log('Testing TRACKSTAR JSON:');
     console.log(ingestOasis(testData.oasisJSON));
     
     console.log('\nTesting FantasyPros CSV:');
     console.log(ingestFantasyPros(testData.fantasyProsCSV));
     
-    console.log('\nTesting OASIS CSV:');
+    console.log('\nTesting TRACKSTAR CSV:');
     console.log(ingestOasis(testData.oasisCSV));
     
     console.log('\nTesting FantasyPros JSON:');

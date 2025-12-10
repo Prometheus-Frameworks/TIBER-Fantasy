@@ -1,10 +1,10 @@
 # Sleeper API Integration Guide
-**Complete Implementation Package for On The Clock (OTC) Fantasy Football Platform**
+**Complete Implementation Package for On The Clock (TIBER) Fantasy Football Platform**
 
 ---
 
 ## Overview
-This guide provides complete instructions for integrating live Sleeper API data into fantasy football applications, specifically tested and proven on the OTC platform. The integration replaces static CSV data with real-time NFL player information from Sleeper's comprehensive database (3,755+ players).
+This guide provides complete instructions for integrating live Sleeper API data into fantasy football applications, specifically tested and proven on the TIBER platform. The integration replaces static CSV data with real-time NFL player information from Sleeper's comprehensive database (3,755+ players).
 
 ## 📋 Quick Reference
 - **Data Source**: Sleeper API (`https://api.sleeper.app/v1/players/nfl`)
@@ -400,7 +400,7 @@ const cache = new LRUCache({ max: 10, ttl: 10 * 60 * 1000 }); // 10 minutes
 - **Rate Limits**: No documented limits, use reasonable caching
 - **Data Updates**: Updated regularly during NFL seasons
 
-### OTC Platform Integration
+### TIBER Platform Integration
 - **Compass System**: 4-directional scoring (North/East/South/West)
 - **Player Pool**: Unified player data across all systems
 - **Caching Strategy**: LRU with configurable TTL
@@ -409,6 +409,6 @@ const cache = new LRUCache({ max: 10, ttl: 10 * 60 * 1000 }); // 10 minutes
 ---
 
 **Package Created**: August 18, 2025  
-**Tested On**: On The Clock (OTC) Fantasy Football Platform  
+**Tested On**: On The Clock (TIBER) Fantasy Football Platform  
 **Status**: Production Ready ✅  
 **Integration Time**: ~2-4 hours for experienced developers

@@ -62,7 +62,7 @@ export class FantasyProsProvider implements Provider {
         u.searchParams.set("pos", opts.pos);
       }
       const res = await fetch(u.toString(), { 
-        headers: { "User-Agent": "OTC-Consensus/1.0" },
+        headers: { "User-Agent": "TIBER-Consensus/1.0" },
         timeout: 5000 
       });
       if (!res.ok) {
@@ -96,7 +96,7 @@ export class SleeperAdpProvider implements Provider {
     try {
       const url = `https://api.sleeper.app/v1/adp/nfl/ppr?season=${this.season}&type=${this.type}`;
       const res = await fetch(url, { 
-        headers: { "User-Agent": "OTC-Consensus/1.0" },
+        headers: { "User-Agent": "TIBER-Consensus/1.0" },
         timeout: 5000
       });
       if (!res.ok) {

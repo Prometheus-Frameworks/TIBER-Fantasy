@@ -1,4 +1,4 @@
-# OTC Platform - Quick API Reference for Agents
+# TIBER Platform - Quick API Reference for Agents
 
 ## 🔧 Core System Endpoints
 
@@ -44,7 +44,7 @@ GET /api/ratings                  # Base player ratings
     &pos=WR                       # Position filter
     &limit=200                    # Result limit
 
-GET /api/consensus                # OTC Consensus rankings
+GET /api/consensus                # TIBER Consensus rankings
 GET /api/consensus/splits         # Dynasty vs Redraft comparison
 ```
 
@@ -161,7 +161,7 @@ curl "http://localhost:5000/api/consensus"
 
 ## 📱 Frontend Routes
 - `/` - Landing/Home page
-- `/rankings` - OTC Consensus hub
+- `/rankings` - TIBER Consensus hub
 - `/redraft` - Season HQ (7-tab interface)
 - `/hot-list` - Live Hot List interface
 - `/competence` - AI assistant

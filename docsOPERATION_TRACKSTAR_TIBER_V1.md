@@ -1,4 +1,4 @@
-# OPERATION HARDENING – TIBER v1
+# OPERATION TRACKSTAR – TIBER v1
 
 This file is the source of truth for structural cleanup and stabilization tasks for TIBER-Fantasy.
 
@@ -16,7 +16,7 @@ For each task below:
 3. Run the relevant tests (e.g. `npm test`, `npm run test:forge`, or whatever is configured).
 4. Open a pull request targeting `main` with a clear title:
 
-   - `[Codex] Operation Hardening – Task X: <short description>`
+   - `[Codex] Operation TRACKSTAR – Task X: <short description>`
 
 5. Do **not** change business logic unless the task explicitly asks for it.  
    If a behavior change is unavoidable, call it out clearly in the PR description.

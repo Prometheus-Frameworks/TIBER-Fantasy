@@ -92,7 +92,7 @@ export function createEcrLoaderRouter(): Router {
     if (!url || !pos) return res.status(400).json({ error: "url and pos required" });
     try {
       console.log(`📊 [ECR Loader] Fetching ${pos} data from URL: ${url}`);
-      const resp = await fetch(url, { headers: { "User-Agent": "OTC-ECR-Fetcher/1.0" } });
+      const resp = await fetch(url, { headers: { "User-Agent": "TIBER-ECR-Fetcher/1.0" } });
       if (!resp.ok) return res.status(400).json({ error: `fetch failed: ${resp.status}` });
       const text = await resp.text();
       const rows = parseFantasyProsCsv(text, !!week, pos);

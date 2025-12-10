@@ -85,7 +85,7 @@ function calculateEastScore(player: TEPlayerData): number {
     games_played
   } = player;
 
-  // Team offensive context (simplified - could integrate OASIS data later)
+  // Team offensive context (simplified - could integrate TRACKSTAR data later)
   const teamOffenseMultiplier = getTeamOffenseMultiplier(team);
   
   // Role definition - receiving vs blocking
@@ -255,7 +255,7 @@ export function calculateTECompass(player: TEPlayerData): TECompass {
 
 /**
  * Team offensive context multipliers (simplified)
- * Future: Integrate with OASIS R server data
+ * Future: Integrate with TRACKSTAR R server data
  */
 function getTeamOffenseMultiplier(team: string): number {
   const highVolumeOffenses = ['KC', 'BUF', 'MIA', 'SF', 'DAL', 'DET'];

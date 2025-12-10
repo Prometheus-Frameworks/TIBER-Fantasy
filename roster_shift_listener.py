@@ -328,7 +328,7 @@ class RosterShiftListener:
             # Dynasty Tier Recalibrator
             self._trigger_dynasty_recalculation(change)
             
-            # OASIS Context System
+            # TRACKSTAR Context System
             self._trigger_oasis_update(change)
             
             # Player Usage Forecaster
@@ -343,9 +343,9 @@ class RosterShiftListener:
         # Integration point for dynasty tier updates
     
     def _trigger_oasis_update(self, change: Dict[str, Any]):
-        """Trigger OASIS context system update"""
-        print(f"   → OASIS Context System: Updating {change['team']} environment")
-        # Integration point for OASIS updates
+        """Trigger TRACKSTAR context system update"""
+        print(f"   → TRACKSTAR Context System: Updating {change['team']} environment")
+        # Integration point for TRACKSTAR updates
     
     def _trigger_usage_forecast_update(self, change: Dict[str, Any]):
         """Trigger player usage forecast update"""

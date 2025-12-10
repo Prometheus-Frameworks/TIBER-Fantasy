@@ -173,8 +173,8 @@ export class SeasonService {
    */
   private detectFromEnv(): SeasonSnapshot {
     const currentYear = new Date().getFullYear();
-    const season = Number(process.env.OTC_SEASON) || currentYear;
-    const week = Number(process.env.OTC_WEEK) || this.estimateCurrentWeek();
+    const season = Number(process.env.TIBER_SEASON) || currentYear;
+    const week = Number(process.env.TIBER_WEEK) || this.estimateCurrentWeek();
     
     return {
       season,

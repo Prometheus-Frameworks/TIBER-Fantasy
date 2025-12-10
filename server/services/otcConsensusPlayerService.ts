@@ -1,5 +1,5 @@
-// OTC Consensus Player service - community rankings
-export interface OTCConsensusPlayer {
+// TIBER Consensus Player service - community rankings
+export interface TIBERConsensusPlayer {
   id: string;
   name: string;
   team: string;
@@ -18,8 +18,8 @@ export interface PlayerFilters {
   pageSize?: number;
 }
 
-// Sample OTC Consensus data - replace with real community voting implementation
-const SAMPLE_CONSENSUS_PLAYERS: OTCConsensusPlayer[] = [
+// Sample TIBER Consensus data - replace with real community voting implementation
+const SAMPLE_CONSENSUS_PLAYERS: TIBERConsensusPlayer[] = [
   { id: "ja-marr-chase", name: "Ja'Marr Chase", team: "CIN", pos: "WR", consensusRank: 2, tier: "Tier 1", votingStrength: 95, communityConfidence: 92 },
   { id: "ceedee-lamb", name: "CeeDee Lamb", team: "DAL", pos: "WR", consensusRank: 1, tier: "Tier 1", votingStrength: 97, communityConfidence: 94 },
   { id: "justin-jefferson", name: "Justin Jefferson", team: "MIN", pos: "WR", consensusRank: 3, tier: "Tier 1", votingStrength: 93, communityConfidence: 89 },
@@ -45,9 +45,9 @@ const SAMPLE_CONSENSUS_PLAYERS: OTCConsensusPlayer[] = [
   { id: "kyle-pitts", name: "Kyle Pitts", team: "ATL", pos: "TE", consensusRank: 5, tier: "Tier 3", votingStrength: 77, communityConfidence: 74 }
 ];
 
-export class OTCConsensusPlayerService {
+export class TIBERConsensusPlayerService {
   async getPlayers(filters: PlayerFilters = {}) {
-    console.log(`🏆 OTC Consensus API: pos=${filters.pos || "ALL"} team=${filters.team || "ALL"} search="${filters.search || ""}" page=${filters.page || 1}`);
+    console.log(`🏆 TIBER Consensus API: pos=${filters.pos || "ALL"} team=${filters.team || "ALL"} search="${filters.search || ""}" page=${filters.page || 1}`);
     
     let filteredPlayers = [...SAMPLE_CONSENSUS_PLAYERS];
 
@@ -100,4 +100,4 @@ export class OTCConsensusPlayerService {
   }
 }
 
-export const otcConsensusPlayerService = new OTCConsensusPlayerService();
+export const otcConsensusPlayerService = new TIBERConsensusPlayerService();

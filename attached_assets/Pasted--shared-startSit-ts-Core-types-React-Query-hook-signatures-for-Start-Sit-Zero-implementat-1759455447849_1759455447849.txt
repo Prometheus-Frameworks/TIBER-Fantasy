@@ -56,7 +56,7 @@ export interface StartSitFactorBreakdown {
 
 /** Player profile used by Start/Sit engine + UI */
 export interface StartSitPlayerProfile {
-  playerId: string;            // slug/id used across OTC
+  playerId: string;            // slug/id used across TIBER
   name: string;
   position: Position;
   team: string;

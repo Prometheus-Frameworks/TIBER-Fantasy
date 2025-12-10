@@ -21,9 +21,9 @@ _Please include a line in your commit message:_
 **Credit:**  
 - Who: Architect J  
 - Role: Architect  
-- What: OTC Signature Protocol implementation  
+- What: TIBER Signature Protocol implementation  
 
-Commit message: `Credit: Architect J | Architect | OTC Signature Protocol implementation`
+Commit message: `Credit: Architect J | Architect | TIBER Signature Protocol implementation`
 
 ### Bug Fix
 - [x] Fix

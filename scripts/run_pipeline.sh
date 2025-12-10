@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "🚀 Starting OTC Redraft 2025 MVP Pipeline..."
+echo "🚀 Starting TIBER Redraft 2025 MVP Pipeline..."
 echo "================================================"
 
 echo "Step 1: Collecting weekly core stats..."

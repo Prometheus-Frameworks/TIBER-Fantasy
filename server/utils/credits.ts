@@ -48,7 +48,7 @@ export function initCredits() {
     // Create file if it doesn't exist
     if (!fs.existsSync(FILE)) {
       const initial = {
-        "project": "OTC",
+        "project": "TIBER",
         "motto": "Serve Not Take", 
         "entries": []
       };

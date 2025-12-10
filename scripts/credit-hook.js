@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OTC Credit Hook - Lightweight CI script
+ * TIBER Credit Hook - Lightweight CI script
  * Parses commit trailers and appends to credits ledger on merge
  * 
  * Usage: node scripts/credit-hook.js [commit-sha]
@@ -49,7 +49,7 @@ function addCreditsToLedger(credits) {
     // Ensure credits file exists
     if (!fs.existsSync(CREDITS_FILE)) {
       const initialLedger = {
-        project: "OTC",
+        project: "TIBER",
         motto: "Serve Not Take",
         entries: []
       };

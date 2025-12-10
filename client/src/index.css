@@ -11,7 +11,7 @@
   display: none;
 }
 
-/* Clean OTC Theme */
+/* Clean TIBER Theme */
 :root {
   --ink: #0F1220;
   --body: #2B2F45;
@@ -47,7 +47,7 @@ a:hover {
   box-shadow: 0 12px 24px rgba(15,18,32,0.08);
 }
 
-/* OTC Consensus Engine - Fire Badge Styles */
+/* TIBER Consensus Engine - Fire Badge Styles */
 .username-hot {
   position: relative;
   text-shadow: 0 0 8px rgba(255, 111, 0, 0.6);

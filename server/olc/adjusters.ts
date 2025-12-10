@@ -6,7 +6,7 @@ export interface PositionAdjusters {
   qb_env: number;        // ±4% base, ±6% cap
   rb_runways: number;    // ±8% cap
   wrte_timing: number;   // ±4% cap
-  oasis_team_mult: number; // OASIS team offense multiplier 0.90-1.10
+  oasis_team_mult: number; // TRACKSTAR team offense multiplier 0.90-1.10
 }
 
 export interface AdjusterInputs {
@@ -127,14 +127,14 @@ export class OlcAdjusterCalculator {
   }
 
   /**
-   * Calculate OASIS team offense multiplier for ROS projections
+   * Calculate TRACKSTAR team offense multiplier for ROS projections
    * Formula: clamp(0.95 + 0.10*(scoring_env_pct−50)/50 + 0.05*(pace_pct−50)/50 + 0.05*(rz_eff_pct−50)/50, 0.90, 1.10)
    */
   private async calculateOasisTeamMultiplier(teamId: string): Promise<number> {
     try {
       const teamEnv = await oasisEnvironmentService.getTeamEnvironment(teamId);
       if (!teamEnv) {
-        console.debug(`[OLC] No OASIS data for team ${teamId}, using default multiplier 1.0`);
+        console.debug(`[OLC] No TRACKSTAR data for team ${teamId}, using default multiplier 1.0`);
         return 1.0; // Default multiplier
       }
 
@@ -149,7 +149,7 @@ export class OlcAdjusterCalculator {
       // Clamp between 0.90 and 1.10
       const clampedMult = Math.max(0.90, Math.min(1.10, teamOffMult));
 
-      console.debug(`[OLC] OASIS team multiplier for ${teamId}:`, {
+      console.debug(`[OLC] TRACKSTAR team multiplier for ${teamId}:`, {
         scoring_env_pct: teamEnv.scoring_environment_pct,
         pace_pct: teamEnv.pace_pct,
         red_zone_pct: teamEnv.red_zone_efficiency_pct,
@@ -159,12 +159,12 @@ export class OlcAdjusterCalculator {
 
       return clampedMult;
     } catch (error) {
-      console.error(`[OLC] Error calculating OASIS multiplier for ${teamId}:`, error);
+      console.error(`[OLC] Error calculating TRACKSTAR multiplier for ${teamId}:`, error);
       return 1.0; // Fallback to default
     }
   }
 
-  // Apply adjusters to a baseline value (includes OASIS team multiplier)
+  // Apply adjusters to a baseline value (includes TRACKSTAR team multiplier)
   applyAdjustersWithOasis(
     baseline: number,
     adjusters: PositionAdjusters,
@@ -185,11 +185,11 @@ export class OlcAdjusterCalculator {
         break;
     }
 
-    // Apply position adjuster first, then OASIS team multiplier
+    // Apply position adjuster first, then TRACKSTAR team multiplier
     const positionAdjustedValue = baseline * (1 + positionAdjuster);
     const finalValue = positionAdjustedValue * adjusters.oasis_team_mult;
     
-    console.debug('[OLC] Adjuster with OASIS applied', { 
+    console.debug('[OLC] Adjuster with TRACKSTAR applied', { 
       position, 
       baseline, 
       position_adjuster: positionAdjuster * 100,
@@ -242,7 +242,7 @@ export class OlcAdjusterCalculator {
       qb_env: `QB Environment: ${formatPercent(adjusters.qb_env)} (pass protection quality)`,
       rb_runways: `RB Runways: ${formatPercent(adjusters.rb_runways)} (run blocking effectiveness)`,
       wrte_timing: `WR/TE Timing: ${formatPercent(adjusters.wrte_timing)} (route timing/protection)`,
-      oasis_team_mult: `OASIS Team Multiplier: ${formatMultiplier(adjusters.oasis_team_mult)} (team offensive environment)`,
+      oasis_team_mult: `TRACKSTAR Team Multiplier: ${formatMultiplier(adjusters.oasis_team_mult)} (team offensive environment)`,
     };
   }
 }

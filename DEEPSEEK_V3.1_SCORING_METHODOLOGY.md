@@ -186,7 +186,7 @@ deepseekV3.1Service.ts
 ### Ready for Live Season
 - Weekly xFP coefficient updates
 - Real-time injury status integration  
-- Advanced context scoring (OASIS integration)
+- Advanced context scoring (TRACKSTAR integration)
 - Machine learning coefficient optimization
 - Expanded fallback data sources
 

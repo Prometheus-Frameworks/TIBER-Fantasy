@@ -1,5 +1,5 @@
 /**
- * Data Adapter - Real OTC Power Database Integration
+ * Data Adapter - Real TIBER Power Database Integration
  * Fetches live player data from Power Rankings & RAG scoring system
  */
 

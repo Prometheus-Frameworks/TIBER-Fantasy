@@ -1,4 +1,4 @@
-// OTC Consensus Service - Community Rankings (separate from Player Compass)
+// TIBER Consensus Service - Community Rankings (separate from Player Compass)
 // This handles the community-driven rankings, not Tiber's in-house ratings
 
 export interface ConsensusRanking {
@@ -21,7 +21,7 @@ export interface ConsensusMetadata {
   format: 'dynasty' | 'redraft';
 }
 
-export class OTCConsensusService {
+export class TIBERConsensusService {
   
   // Get community consensus rankings by format
   async getConsensusRankings(format: 'dynasty' | 'redraft', position?: string): Promise<{
@@ -29,7 +29,7 @@ export class OTCConsensusService {
     metadata: ConsensusMetadata;
   }> {
     
-    console.log(`📊 OTC Consensus: Fetching ${format} rankings${position ? ` for ${position}` : ''}`);
+    console.log(`📊 TIBER Consensus: Fetching ${format} rankings${position ? ` for ${position}` : ''}`);
     
     // Sample consensus data (replace with real community data)
     const sampleRankings = this.getSampleConsensusData(format, position);
@@ -71,7 +71,7 @@ export class OTCConsensusService {
     newConsensusRank: number;
   }> {
     
-    console.log(`🗳️ OTC Consensus: Vote submitted for ${playerId} - Rank ${rank} (${format})`);
+    console.log(`🗳️ TIBER Consensus: Vote submitted for ${playerId} - Rank ${rank} (${format})`);
     
     // Simulate vote processing
     return {
@@ -130,4 +130,4 @@ export class OTCConsensusService {
   }
 }
 
-export const otcConsensusService = new OTCConsensusService();
+export const otcConsensusService = new TIBERConsensusService();

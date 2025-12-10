@@ -1,4 +1,4 @@
-Alright, Boss Man J — RUNNING. Here’s a PR-ready patch pack you can drop straight into OTC. It’s opinionated, safe, and won’t baby the UI. It prevents crashes, normalizes data, and stubs missing endpoints so the pages render even with half-baked feeds.
+Alright, Boss Man J — RUNNING. Here’s a PR-ready patch pack you can drop straight into TIBER. It’s opinionated, safe, and won’t baby the UI. It prevents crashes, normalizes data, and stubs missing endpoints so the pages render even with half-baked feeds.
 
 I’m assuming your structure is:
 

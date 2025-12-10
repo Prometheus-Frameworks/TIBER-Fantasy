@@ -8,7 +8,7 @@ import { eq, and, desc } from 'drizzle-orm';
  * Implements the proposed attribute sheet system:
  * - Sleeper API: Base stats, injury status, fantasy points
  * - nflfastR: Advanced metrics (EPA, air yards, YAC, sacks)
- * - OASIS: Environment data (opponent, defense rank, pace, implied totals)
+ * - TRACKSTAR: Environment data (opponent, defense rank, pace, implied totals)
  * 
  * Data flows: Bronze (raw) → Silver (normalized) → Gold (scored attributes)
  */
@@ -307,7 +307,7 @@ export class AttributesService {
     await this.collectSleeperData(attributes, season, week);
 
     // TODO: Step 2 - Collect nflfastR data (EPA, air yards, YAC, sacks taken) 
-    // TODO: Step 3 - Collect OASIS data (opponent team, defensive rank, pace, implied totals)
+    // TODO: Step 3 - Collect TRACKSTAR data (opponent team, defensive rank, pace, implied totals)
     
     // Upsert the attributes
     try {

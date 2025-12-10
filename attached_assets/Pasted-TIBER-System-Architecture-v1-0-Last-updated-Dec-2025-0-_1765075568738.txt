@@ -443,7 +443,7 @@ Powered by FORGE outputs + Tiber Tiers + scenario tagging
 
 Lives in TIBER domain, uses FORGE as backend brain
 
-OTC Consensus / Community Layer:
+TIBER Consensus / Community Layer:
 
 Aggregate community rankings → compare vs FORGE/TIBER
 

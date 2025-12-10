@@ -142,7 +142,7 @@ export default function RookieSpotlight({ team = "", week = 1, limit = 5 }: Rook
         )}
 
         <div className="mt-4 pt-3 border-t text-xs text-muted-foreground text-center">
-          Data from OTC 2024 Weekly Pipeline • Week {week}
+          Data from TIBER 2024 Weekly Pipeline • Week {week}
         </div>
       </CardContent>
     </Card>

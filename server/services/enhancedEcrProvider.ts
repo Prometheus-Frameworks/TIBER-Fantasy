@@ -105,7 +105,7 @@ export class FantasyProsCsvProvider {
       } else if (remoteUrl) {
         console.log(`📊 [ECR Provider] Local CSV not found, fetching remote: ${remoteUrl}`);
         const res = await fetch(remoteUrl, {
-          headers: { "User-Agent": "OTC-ECR-Provider/1.0" }
+          headers: { "User-Agent": "TIBER-ECR-Provider/1.0" }
         });
         if (!res.ok) throw new Error(`Failed to fetch remote ECR CSV: ${res.status}`);
         csv = await res.text();
@@ -138,7 +138,7 @@ export class FantasyProsCsvProvider {
       } else if (remoteUrl) {
         console.log(`📊 [ECR Provider] Local ROS CSV not found, fetching remote: ${remoteUrl}`);
         const res = await fetch(remoteUrl, {
-          headers: { "User-Agent": "OTC-ECR-Provider/1.0" }
+          headers: { "User-Agent": "TIBER-ECR-Provider/1.0" }
         });
         if (!res.ok) throw new Error(`Failed to fetch ROS ECR CSV: ${res.status}`);
         csv = await res.text();
@@ -171,7 +171,7 @@ export class FantasyProsCsvProvider {
       } else if (remoteUrl) {
         console.log(`📊 [ECR Provider] Local dynasty CSV not found, fetching remote: ${remoteUrl}`);
         const res = await fetch(remoteUrl, {
-          headers: { "User-Agent": "OTC-ECR-Provider/1.0" }
+          headers: { "User-Agent": "TIBER-ECR-Provider/1.0" }
         });
         if (!res.ok) throw new Error(`Failed to fetch dynasty ECR CSV: ${res.status}`);
         csv = await res.text();
@@ -259,7 +259,7 @@ export class SleeperMarketProvider {
     try {
       console.log(`📈 [Market Provider] Fetching Sleeper ADP data (${format})`);
       const res = await fetch(`https://api.sleeper.app/v1/adp/nfl/ppr?season=2025&type=${format}`, {
-        headers: { "User-Agent": "OTC-Market-Provider/1.0" }
+        headers: { "User-Agent": "TIBER-Market-Provider/1.0" }
       });
       
       if (!res.ok) {
