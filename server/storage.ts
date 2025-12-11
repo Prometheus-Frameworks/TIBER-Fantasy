@@ -212,15 +212,27 @@ export interface IStorage {
   createPlaybookEntry(entry: {
     userId: string;
     leagueId?: string | null;
+    teamId?: string | null;
+    scoringFormat?: string | null;
+    week?: number | null;
+    season?: number | null;
     entryType: string;
     title: string;
     content: string;
     playerIds?: string[];
     metadata?: any;
+    outcome?: string | null;
+    regretScore?: number | null;
+    resolvedAt?: string | null;
   }): Promise<any>;
   getPlaybookEntries(userId: string, filters?: {
     leagueId?: string;
+    teamId?: string;
+    week?: number;
+    season?: number;
     entryType?: string;
+    outcome?: string;
+    pendingOnly?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<any[]>;
@@ -229,6 +241,14 @@ export interface IStorage {
     content: string;
     playerIds: string[];
     metadata: any;
+    leagueId: string | null;
+    teamId: string | null;
+    scoringFormat: string | null;
+    week: number | null;
+    season: number | null;
+    outcome: string | null;
+    regretScore: number | null;
+    resolvedAt: string | null;
   }>): Promise<void>;
   deletePlaybookEntry(id: number): Promise<void>;
 }
@@ -2489,36 +2509,83 @@ export class DatabaseStorage implements IStorage {
   async createPlaybookEntry(entry: {
     userId: string;
     leagueId?: string | null;
+    teamId?: string | null;
+    scoringFormat?: string | null;
+    week?: number | null;
+    season?: number | null;
     entryType: string;
     title: string;
     content: string;
     playerIds?: string[];
     metadata?: any;
+    outcome?: string | null;
+    regretScore?: number | null;
+    resolvedAt?: string | null;
+    forgeBefore?: number | null;
+    forgeAfter?: number | null;
+    tierBefore?: string | null;
+    tierAfter?: string | null;
   }): Promise<any> {
-    const playerIdsArray = entry.playerIds && entry.playerIds.length > 0 
-      ? `{${entry.playerIds.join(',')}}` 
+    const playerIdsArray = entry.playerIds && entry.playerIds.length > 0
+      ? `{${entry.playerIds.join(',')}}`
       : null;
     const metadataJson = entry.metadata ? JSON.stringify(entry.metadata) : null;
-    
+
     const result = await db.execute(sql`
-      INSERT INTO playbook_entries (user_id, league_id, entry_type, title, content, player_ids, metadata)
-      VALUES (
-        ${entry.userId}, 
-        ${entry.leagueId ?? null}, 
-        ${entry.entryType}::playbook_entry_type, 
-        ${entry.title}, 
-        ${entry.content}, 
-        ${playerIdsArray}::text[], 
-        ${metadataJson}::jsonb
-      )
+      INSERT INTO playbook_entries (
+        user_id,
+        league_id,
+        team_id,
+        scoring_format,
+        week,
+        season,
+      entry_type,
+      title,
+      content,
+      player_ids,
+      metadata,
+      outcome,
+      regret_score,
+      resolved_at,
+      forge_before,
+      forge_after,
+      tier_before,
+      tier_after
+    )
+    VALUES (
+      ${entry.userId},
+      ${entry.leagueId ?? null},
+      ${entry.teamId ?? null},
+        ${entry.scoringFormat ?? null},
+        ${entry.week ?? null},
+        ${entry.season ?? null},
+      ${entry.entryType}::playbook_entry_type,
+      ${entry.title},
+      ${entry.content},
+      ${playerIdsArray}::text[],
+      ${metadataJson}::jsonb,
+      ${entry.outcome ?? 'pending'},
+      ${entry.regretScore ?? null},
+      ${entry.resolvedAt ?? null},
+      ${entry.forgeBefore ?? null},
+      ${entry.forgeAfter ?? null},
+      ${entry.tierBefore ?? null},
+      ${entry.tierAfter ?? null}
+    )
       RETURNING *
     `);
     return result.rows[0];
   }
-  
+
   async getPlaybookEntries(userId: string, filters?: {
     leagueId?: string;
+    teamId?: string;
+    week?: number;
+    season?: number;
     entryType?: string;
+    outcome?: string;
+    regretScore?: number;
+    pendingOnly?: boolean;
     limit?: number;
     offset?: number;
   }): Promise<any[]> {
@@ -2533,14 +2600,174 @@ export class DatabaseStorage implements IStorage {
     if (filters?.leagueId) {
       query = sql`${query} AND league_id = ${filters.leagueId}`;
     }
+    if (filters?.teamId) {
+      query = sql`${query} AND team_id = ${filters.teamId}`;
+    }
+    if (filters?.week !== undefined) {
+      query = sql`${query} AND week = ${filters.week}`;
+    }
+    if (filters?.season !== undefined) {
+      query = sql`${query} AND season = ${filters.season}`;
+    }
     if (filters?.entryType) {
       query = sql`${query} AND entry_type = ${filters.entryType}::playbook_entry_type`;
     }
-    
+    if (filters?.outcome) {
+      query = sql`${query} AND outcome = ${filters.outcome}`;
+    }
+    if (filters?.regretScore !== undefined) {
+      query = sql`${query} AND regret_score = ${filters.regretScore}`;
+    }
+    if (filters?.pendingOnly) {
+      query = sql`${query} AND (outcome IS NULL OR outcome = 'pending')`;
+    }
+
     query = sql`${query} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`;
     
     const result = await db.execute(query);
     return result.rows as any[];
+  }
+
+  async getPlaybookRegretSummary(
+    userId: string,
+    filters?: {
+      leagueId?: string;
+      teamId?: string;
+      season?: number;
+    }
+  ): Promise<{ byType: any[]; byWeek: any[] }> {
+    let baseWhere = sql`WHERE user_id = ${userId}`;
+
+    if (filters?.leagueId) {
+      baseWhere = sql`${baseWhere} AND league_id = ${filters.leagueId}`;
+    }
+    if (filters?.teamId) {
+      baseWhere = sql`${baseWhere} AND team_id = ${filters.teamId}`;
+    }
+    if (filters?.season !== undefined) {
+      baseWhere = sql`${baseWhere} AND season = ${filters.season}`;
+    }
+
+    const regretFilter = sql`${baseWhere} AND outcome IS NOT NULL AND regret_score IS NOT NULL`;
+
+    const byTypeQuery = sql`
+      SELECT
+        entry_type,
+        COUNT(*)::int AS decisions_count,
+        AVG(regret_score)::float AS avg_regret,
+        SUM(CASE WHEN regret_score >= 4 THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS high_regret_rate,
+        SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS win_rate,
+        SUM(CASE WHEN outcome = 'loss' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0) AS loss_rate
+      FROM playbook_entries
+      ${regretFilter}
+      GROUP BY entry_type
+      ORDER BY entry_type;
+    `;
+
+    const byWeekQuery = sql`
+      SELECT
+        season,
+        week,
+        COUNT(*)::int AS decisions_count,
+        AVG(regret_score)::float AS avg_regret
+      FROM playbook_entries
+      ${sql`${regretFilter} AND season IS NOT NULL AND week IS NOT NULL`}
+      GROUP BY season, week
+      ORDER BY season, week;
+    `;
+
+    const [byTypeResult, byWeekResult] = await Promise.all([
+      db.execute(byTypeQuery),
+      db.execute(byWeekQuery)
+    ]);
+
+    return {
+      byType: byTypeResult.rows,
+      byWeek: byWeekResult.rows
+    };
+  }
+
+  async getPlaybookPatternInsights(
+    userId: string,
+    filters?: {
+      leagueId?: string;
+      teamId?: string;
+      season?: number;
+    }
+  ): Promise<{
+    insights: {
+      id: string;
+      severity: 'low' | 'medium' | 'high';
+      label: string;
+      description: string;
+      entry_types?: string[];
+      season?: number | null;
+      weeks?: number[] | null;
+    }[];
+  }> {
+    const summary = await this.getPlaybookRegretSummary(userId, filters);
+
+    const insights: {
+      id: string;
+      severity: 'low' | 'medium' | 'high';
+      label: string;
+      description: string;
+      entry_types?: string[];
+      season?: number | null;
+      weeks?: number[] | null;
+    }[] = [];
+
+    // High regret per entry type
+    summary.byType.forEach((row: any) => {
+      if (row.avg_regret !== null && row.high_regret_rate !== null && row.avg_regret >= 3.5 && row.high_regret_rate >= 0.5) {
+        insights.push({
+          id: `high_regret_${row.entry_type}`,
+          severity: 'high',
+          label: `High regret in ${row.entry_type}`,
+          description: `Average regret ${Number(row.avg_regret).toFixed(2)} with ${Math.round(row.high_regret_rate * 100)}% high-regret outcomes.`,
+          entry_types: [row.entry_type]
+        });
+      }
+    });
+
+    // Strength: entry type meaningfully lower regret than others
+    const typesWithRegret = summary.byType
+      .filter((row: any) => row.avg_regret !== null)
+      .sort((a: any, b: any) => a.avg_regret - b.avg_regret);
+
+    if (typesWithRegret.length >= 2) {
+      const best = typesWithRegret[0];
+      const second = typesWithRegret[1];
+      if (best.avg_regret + 1 <= second.avg_regret) {
+        insights.push({
+          id: `strength_${best.entry_type}`,
+          severity: best.avg_regret <= 2 ? 'low' : 'medium',
+          label: `Strength in ${best.entry_type}`,
+          description: `Regret is trending lower here (${Number(best.avg_regret).toFixed(2)} vs ${Number(second.avg_regret).toFixed(2)} next-best).`,
+          entry_types: [best.entry_type]
+        });
+      }
+    }
+
+    // Regret spikes by week
+    const weeksWithRegret = summary.byWeek.filter((row: any) => row.avg_regret !== null);
+    if (weeksWithRegret.length > 0) {
+      const overallAvg = weeksWithRegret.reduce((sum: number, row: any) => sum + Number(row.avg_regret), 0) / weeksWithRegret.length;
+      weeksWithRegret.forEach((row: any) => {
+        if (row.avg_regret >= overallAvg + 1) {
+          insights.push({
+            id: `regret_spike_${row.season ?? 'unknown'}_${row.week ?? 'unknown'}`,
+            severity: 'medium',
+            label: `Regret spike: Season ${row.season ?? 'N/A'} Week ${row.week ?? 'N/A'}`,
+            description: `Avg regret ${Number(row.avg_regret).toFixed(2)} vs baseline ${overallAvg.toFixed(2)} in surrounding weeks.`,
+            season: row.season ?? null,
+            weeks: row.week ? [row.week] : null,
+          });
+        }
+      });
+    }
+
+    return { insights };
   }
   
   async updatePlaybookEntry(id: number, updates: Partial<{
@@ -2548,10 +2775,22 @@ export class DatabaseStorage implements IStorage {
     content: string;
     playerIds: string[];
     metadata: any;
+    leagueId: string | null;
+    teamId: string | null;
+    scoringFormat: string | null;
+    week: number | null;
+    season: number | null;
+    outcome: string | null;
+    regretScore: number | null;
+    resolvedAt: string | null;
+    forgeBefore: number | null;
+    forgeAfter: number | null;
+    tierBefore: string | null;
+    tierAfter: string | null;
   }>): Promise<void> {
     const setClauses: string[] = [];
     const values: any[] = [];
-    
+
     if (updates.title !== undefined) {
       setClauses.push('title = $' + (values.length + 1));
       values.push(updates.title);
@@ -2568,11 +2807,80 @@ export class DatabaseStorage implements IStorage {
       setClauses.push('metadata = $' + (values.length + 1) + '::jsonb');
       values.push(JSON.stringify(updates.metadata));
     }
+    if (updates.leagueId !== undefined) {
+      setClauses.push('league_id = $' + (values.length + 1));
+      values.push(updates.leagueId);
+    }
+    if (updates.teamId !== undefined) {
+      setClauses.push('team_id = $' + (values.length + 1));
+      values.push(updates.teamId);
+    }
+    if (updates.scoringFormat !== undefined) {
+      setClauses.push('scoring_format = $' + (values.length + 1));
+      values.push(updates.scoringFormat);
+    }
+    if (updates.week !== undefined) {
+      setClauses.push('week = $' + (values.length + 1));
+      values.push(updates.week);
+    }
+    if (updates.season !== undefined) {
+      setClauses.push('season = $' + (values.length + 1));
+      values.push(updates.season);
+    }
+    if (updates.outcome !== undefined) {
+      setClauses.push('outcome = $' + (values.length + 1));
+      values.push(updates.outcome);
+    }
+    if (updates.regretScore !== undefined) {
+      setClauses.push('regret_score = $' + (values.length + 1));
+      values.push(updates.regretScore);
+    }
+    if (updates.resolvedAt !== undefined) {
+      setClauses.push('resolved_at = $' + (values.length + 1));
+      values.push(updates.resolvedAt);
+    }
+    if (updates.forgeBefore !== undefined) {
+      setClauses.push('forge_before = $' + (values.length + 1));
+      values.push(updates.forgeBefore);
+    }
+    if (updates.forgeAfter !== undefined) {
+      setClauses.push('forge_after = $' + (values.length + 1));
+      values.push(updates.forgeAfter);
+    }
+    if (updates.tierBefore !== undefined) {
+      setClauses.push('tier_before = $' + (values.length + 1));
+      values.push(updates.tierBefore);
+    }
+    if (updates.tierAfter !== undefined) {
+      setClauses.push('tier_after = $' + (values.length + 1));
+      values.push(updates.tierAfter);
+    }
     
     setClauses.push('updated_at = NOW()');
     values.push(id);
-    
+
     await db.execute(sql.raw(`UPDATE playbook_entries SET ${setClauses.join(', ')} WHERE id = $${values.length}`, values));
+  }
+
+  async resolvePlaybookEntry(id: number, data: {
+    outcome: string;
+    regretScore?: number | null;
+    forgeBefore?: number | null;
+    forgeAfter?: number | null;
+    tierBefore?: string | null;
+    tierAfter?: string | null;
+    metadata?: any;
+  }): Promise<void> {
+    await this.updatePlaybookEntry(id, {
+      outcome: data.outcome,
+      regretScore: data.regretScore ?? null,
+      resolvedAt: new Date().toISOString(),
+      forgeBefore: data.forgeBefore ?? null,
+      forgeAfter: data.forgeAfter ?? null,
+      tierBefore: data.tierBefore ?? null,
+      tierAfter: data.tierAfter ?? null,
+      metadata: data.metadata ?? undefined,
+    });
   }
   
   async deletePlaybookEntry(id: number): Promise<void> {

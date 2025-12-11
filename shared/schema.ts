@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint, primaryKey, vector } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, timestamp, varchar, jsonb, unique, pgEnum, uniqueIndex, index, smallint, primaryKey, vector, numeric } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -4111,18 +4111,28 @@ export const playbookEntries = pgTable("playbook_entries", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
   leagueId: varchar("league_id").references(() => leagues.id, { onDelete: 'set null' }),
+  teamId: text("team_id"),
+  scoringFormat: text("scoring_format"),
+  week: integer("week"),
+  season: integer("season"),
   entryType: playbookEntryTypeEnum("entry_type").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   playerIds: text("player_ids").array(),
   metadata: jsonb("metadata").$type<{
-    week?: number;
-    season?: number;
     forgeAlpha?: Record<string, number>;
     tier?: Record<string, string>;
     linkedFeature?: string;
     tags?: string[];
+    summary?: string;
   }>(),
+  outcome: text("outcome"),
+  regretScore: integer("regret_score"),
+  resolvedAt: timestamp("resolved_at"),
+  forgeBefore: numeric("forge_before"),
+  forgeAfter: numeric("forge_after"),
+  tierBefore: text("tier_before"),
+  tierAfter: text("tier_after"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({

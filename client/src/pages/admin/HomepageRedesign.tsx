@@ -676,7 +676,13 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
           
           {/* Playbook Tab */}
           {activeFeature === 'playbook' && (
-            <PlaybookTab />
+            <PlaybookTab
+              leagueId="demo-league-001"
+              teamId="demo-team-01"
+              week={1}
+              season={2025}
+              scoringFormat="ppr"
+            />
           )}
           
           {/* Dashboard Content - only show when dashboard is active */}
