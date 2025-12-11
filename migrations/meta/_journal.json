@@ -29,6 +29,20 @@
       "when": 1758563274886,
       "tag": "0003_sturdy_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765458355141,
+      "tag": "0004_command_hub_war_room",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765470000000,
+      "tag": "0005_playbook_outcome_workflow",
+      "breakpoints": true
     }
   ]
 }

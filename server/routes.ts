@@ -8692,19 +8692,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ========================================
   // PLAYBOOK API - Decision Journal
   // ========================================
-  
+
+  app.get('/api/playbook/analytics/regret-summary', async (req, res) => {
+    try {
+      const userId = (req.query.user_id as string) || 'default_user';
+      const leagueId = req.query.league_id as string | undefined;
+      const teamId = req.query.team_id as string | undefined;
+      const parsedSeason = req.query.season ? parseInt(req.query.season as string, 10) : undefined;
+      const season = Number.isNaN(parsedSeason as number) ? undefined : parsedSeason;
+
+      const summary = await storage.getPlaybookRegretSummary(userId, { leagueId, teamId, season });
+
+      res.json({ success: true, ...summary });
+    } catch (error) {
+      console.error('❌ [Playbook Analytics] Failed to get regret summary:', error);
+      res.status(500).json({ success: false, error: (error as Error).message || 'Unknown error' });
+    }
+  });
+
+  app.get('/api/playbook/analytics/patterns', async (req, res) => {
+    try {
+      const userId = (req.query.user_id as string) || 'default_user';
+      const leagueId = req.query.league_id as string | undefined;
+      const teamId = req.query.team_id as string | undefined;
+      const parsedSeason = req.query.season ? parseInt(req.query.season as string, 10) : undefined;
+      const season = Number.isNaN(parsedSeason as number) ? undefined : parsedSeason;
+
+      const patterns = await storage.getPlaybookPatternInsights(userId, { leagueId, teamId, season });
+
+      res.json({ success: true, ...patterns });
+    } catch (error) {
+      console.error('❌ [Playbook Analytics] Failed to get pattern insights:', error);
+      res.status(500).json({ success: false, error: (error as Error).message || 'Unknown error' });
+    }
+  });
+
   // GET /api/playbook - Get user's playbook entries
   app.get('/api/playbook', async (req, res) => {
     try {
       const userId = req.query.user_id as string || 'default_user';
       const leagueId = req.query.league_id as string | undefined;
+      const teamId = req.query.team_id as string | undefined;
       const entryType = req.query.entry_type as string | undefined;
+      const parsedWeek = req.query.week ? parseInt(req.query.week as string, 10) : undefined;
+      const parsedSeason = req.query.season ? parseInt(req.query.season as string, 10) : undefined;
+      const week = Number.isNaN(parsedWeek as number) ? undefined : parsedWeek;
+      const season = Number.isNaN(parsedSeason as number) ? undefined : parsedSeason;
+      const outcome = req.query.outcome as string | undefined;
+      const parsedRegret = req.query.regret_score ? parseInt(req.query.regret_score as string, 10) : undefined;
+      const regretScore = Number.isNaN(parsedRegret as number) ? undefined : parsedRegret;
+      const pendingOnly = req.query.pending_only === 'true';
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
-      
+
       const entries = await storage.getPlaybookEntries(userId, {
         leagueId,
+        teamId,
+        week,
+        season,
         entryType,
+        outcome,
+        regretScore,
+        pendingOnly,
         limit,
         offset
       });
@@ -8726,8 +8775,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/playbook - Create a new playbook entry
   app.post('/api/playbook', async (req, res) => {
     try {
-      const { user_id, league_id, entry_type, title, content, player_ids, metadata } = req.body;
-      
+      const { user_id, league_id, team_id, scoring_format, week, season, entry_type, title, content, player_ids, metadata, outcome, regret_score, resolved_at, forge_before, forge_after, tier_before, tier_after } = req.body;
+
       if (!entry_type || !title || !content) {
         return res.status(400).json({
           success: false,
@@ -8738,11 +8787,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const entry = await storage.createPlaybookEntry({
         userId: user_id || 'default_user',
         leagueId: league_id || null,
+        teamId: team_id || null,
+        scoringFormat: scoring_format || null,
+        week: week ?? null,
+        season: season ?? null,
         entryType: entry_type,
         title,
         content,
         playerIds: player_ids || [],
-        metadata: metadata || {}
+        metadata: metadata || {},
+        outcome: outcome ?? null,
+        regretScore: regret_score ?? null,
+        resolvedAt: resolved_at ?? null,
+        forgeBefore: forge_before ?? null,
+        forgeAfter: forge_after ?? null,
+        tierBefore: tier_before ?? null,
+        tierAfter: tier_after ?? null
       });
       
       console.log(`✅ [Playbook] Created entry: ${title} (type: ${entry_type})`);
@@ -8764,13 +8824,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/playbook/:id', async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { title, content, player_ids, metadata } = req.body;
-      
+      const { title, content, player_ids, metadata, league_id, team_id, scoring_format, week, season, outcome, regret_score, resolved_at, forge_before, forge_after, tier_before, tier_after } = req.body;
+
       await storage.updatePlaybookEntry(id, {
         title,
         content,
         playerIds: player_ids,
-        metadata
+        metadata,
+        leagueId: league_id,
+        teamId: team_id,
+        scoringFormat: scoring_format,
+        week,
+        season,
+        outcome,
+        regretScore: regret_score,
+        resolvedAt: resolved_at,
+        forgeBefore: forge_before,
+        forgeAfter: forge_after,
+        tierBefore: tier_before,
+        tierAfter: tier_after
       });
       
       res.json({
