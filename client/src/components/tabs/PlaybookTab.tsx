@@ -908,7 +908,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                 {msg.role === 'assistant' && (
                   <div className="mt-1 ml-2">
                     <Button
-                      size="xs"
+                      size="sm"
                       variant="outline"
                       className="text-amber-300 border-amber-500/50 hover:bg-amber-500/10"
                       onClick={() => handleSaveChatEntry(msg)}
