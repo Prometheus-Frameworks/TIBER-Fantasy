@@ -19,16 +19,38 @@ type Feature = {
   href?: string;
 };
 
-interface League {
+interface LeagueTeam {
   id: string;
-  userId: string;
-  leagueName: string;
+  league_id: string;
+  external_user_id: string | null;
+  external_roster_id: string | null;
+  display_name: string;
+  is_commissioner: boolean | null;
+  avatar: string | null;
+}
+
+interface SyncedLeague {
+  id: string;
+  user_id: string;
+  league_name: string;
   platform: string | null;
-  leagueIdExternal: string | null;
-  settings: {
-    scoring?: string;
-    teams?: number;
-  };
+  league_id_external: string | null;
+  season: number | null;
+  scoring_format: string | null;
+  settings: Record<string, any>;
+  teams?: LeagueTeam[];
+}
+
+interface LeagueContextResponse {
+  success: boolean;
+  preference: {
+    user_id: string;
+    active_league_id: string | null;
+    active_team_id: string | null;
+    updated_at: string;
+  } | null;
+  activeLeague: SyncedLeague | null;
+  activeTeam: LeagueTeam | null;
 }
 
 interface ChatMessage {
@@ -88,6 +110,9 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   const [, navigate] = useLocation();
   const [activeFeature, setActiveFeature] = useState('dashboard');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [contextInitialized, setContextInitialized] = useState(false);
+  const preferenceSignatureRef = useRef<string | null>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatMode, setChatMode] = useState<'insight' | 'analyst'>('insight');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -114,16 +139,92 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     { id: 'playbook', label: 'Playbook', icon: BookOpen },
   ];
 
-  // Fetch real leagues
-  const { data: leaguesData } = useQuery({
-    queryKey: ['/api/leagues'],
+  // Fetch synced leagues
+  const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
+    queryKey: ['/api/league-sync/leagues'],
     queryFn: async () => {
-      const response = await fetch('/api/leagues?user_id=default_user');
+      const response = await fetch('/api/league-sync/leagues?user_id=default_user');
       return response.json();
     },
   });
 
-  const leagues: League[] = leaguesData?.leagues || [];
+  const { data: leagueContextData, refetch: refetchLeagueContext } = useQuery<LeagueContextResponse>({
+    queryKey: ['/api/league-context'],
+    queryFn: async () => {
+      const response = await fetch('/api/league-context?user_id=default_user');
+      return response.json();
+    },
+  });
+
+  const leagues: SyncedLeague[] = leaguesData?.leagues || [];
+
+  useEffect(() => {
+    if (!leagueContextData) return;
+
+    const contextLeagueId = leagueContextData.activeLeague?.id ?? null;
+    const contextTeamId = leagueContextData.activeTeam?.id ?? null;
+    const signature = `${contextLeagueId ?? ''}:${contextTeamId ?? ''}`;
+
+    const preferenceChanged = preferenceSignatureRef.current !== signature;
+
+    if (!contextInitialized || preferenceChanged) {
+      setSelectedLeagueId(contextLeagueId);
+      setSelectedTeamId(contextTeamId);
+      preferenceSignatureRef.current = signature;
+      setContextInitialized(true);
+    }
+  }, [leagueContextData, contextInitialized]);
+
+  const activeLeague = leagueContextData?.activeLeague || null;
+  const activeTeam = leagueContextData?.activeTeam || null;
+
+  const leagueFromList = selectedLeagueId
+    ? leagues.find((league) => league.id === selectedLeagueId) || null
+    : null;
+
+  const canUseActiveAsTeamSource =
+    activeLeague?.id && activeLeague.id === selectedLeagueId && (activeLeague.teams?.length ?? 0) > 0;
+
+  const selectedLeague =
+    (leagueFromList?.teams?.length ?? 0) > 0
+      ? leagueFromList
+      : (canUseActiveAsTeamSource ? activeLeague : leagueFromList || activeLeague);
+
+  const availableTeams = selectedLeague?.teams || [];
+
+  const teamsReady =
+    (leagueFromList?.teams?.length ?? 0) > 0 ||
+    (activeLeague?.id === selectedLeagueId && (activeLeague.teams?.length ?? 0) > 0);
+
+  const selectedTeamIsValid =
+    !!selectedTeamId && availableTeams.some((t) => t.id === selectedTeamId);
+
+  const canSaveContext =
+    !!selectedLeagueId && teamsReady && selectedTeamIsValid;
+
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    if (!teamsReady) return;
+    const stillValid = availableTeams.some(t => t.id === selectedTeamId);
+    if (!stillValid) setSelectedTeamId(null);
+  }, [selectedTeamId, teamsReady, availableTeams]);
+
+  const selectedTeam = selectedTeamId
+    ? availableTeams.find((team) => team.id === selectedTeamId) || activeTeam
+    : activeTeam;
+
+  const saveLeagueContext = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/league-context', {
+        user_id: 'default_user',
+        league_id: selectedLeagueId,
+        team_id: selectedTeamId,
+      });
+    },
+    onSuccess: () => {
+      refetchLeagueContext();
+    }
+  });
 
   // Fetch FORGE batch scores for movers widget
   const { data: forgeData, isLoading: forgeLoading } = useQuery({
@@ -248,17 +349,21 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
   // Auto-select first league when leagues load and none is selected, then show contextual welcome
   useEffect(() => {
+    // If league-context has already initialized, or backend has an active league, do NOT auto-pick.
+    if (contextInitialized) return;
+    if (leagueContextData?.activeLeague?.id) return;
+
     if (leagues.length > 0 && messages.length === 0) {
       const savedLeagueId = localStorage.getItem('tiber_chat_league');
-      const leagueToUse = savedLeagueId && leagues.find(l => l.id === savedLeagueId) 
-        ? savedLeagueId 
+      const leagueToUse = savedLeagueId && leagues.find(l => l.id === savedLeagueId)
+        ? savedLeagueId
         : leagues[0].id;
-      
+
       setSelectedLeagueId(leagueToUse);
       localStorage.setItem('tiber_chat_league', leagueToUse);
-      
+
       const league = leagues.find(l => l.id === leagueToUse);
-      showWelcomeMessage(league?.leagueName);
+      showWelcomeMessage(league?.league_name);
     } else if (leagues.length === 0 && messages.length === 0) {
       // No leagues yet, show generic welcome after a brief delay
       const timer = setTimeout(() => {
@@ -268,7 +373,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [leagues, messages.length]);
+  }, [leagues, messages.length, contextInitialized, leagueContextData?.activeLeague?.id]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -388,15 +493,16 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     localStorage.removeItem('tiber_chat_session');
     localStorage.removeItem('tiber_chat_messages');
     setSessionId(null);
-    const leagueName = selectedLeagueId 
-      ? leagues.find(l => l.id === selectedLeagueId)?.leagueName 
-      : undefined;
+    const leagueName = selectedLeagueId
+      ? leagues.find(l => l.id === selectedLeagueId)?.league_name
+      : leagueContextData?.activeLeague?.league_name;
     showWelcomeMessage(leagueName);
   };
 
   const handleLeagueChange = (leagueId: string) => {
     const normalizedId = leagueId || null;
     setSelectedLeagueId(normalizedId);
+    setSelectedTeamId(null);
     if (normalizedId) {
       localStorage.setItem('tiber_chat_league', normalizedId);
     } else {
@@ -406,7 +512,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     localStorage.removeItem('tiber_chat_messages');
     setSessionId(null);
     const league = normalizedId ? leagues.find(l => l.id === normalizedId) : undefined;
-    showWelcomeMessage(league?.leagueName);
+    showWelcomeMessage(league?.league_name);
   };
 
   const handleFeatureClick = (feature: Feature) => {
@@ -553,18 +659,18 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         {/* League Selector - Real Data */}
         <div className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 bg-purple-500/10 rounded-lg border border-purple-500/20 cursor-pointer max-w-[140px] md:max-w-none">
           <span className="text-[10px] md:text-xs text-zinc-400 hidden sm:inline">Active:</span>
-          <select 
+          <select
             value={selectedLeagueId || ''}
             onChange={(e) => handleLeagueChange(e.target.value)}
             className="bg-transparent border-none text-zinc-200 text-xs md:text-sm font-semibold cursor-pointer outline-none truncate max-w-[100px] md:max-w-none"
             data-testid="select-league"
           >
             {leagues.length === 0 && (
-              <option value="" className="bg-[#1a1a24]">Loading...</option>
+              <option value="" className="bg-[#1a1a24]">Sync a league</option>
             )}
             {leagues.map(league => (
               <option key={league.id} value={league.id} className="bg-[#1a1a24]">
-                {league.leagueName} ({league.settings.teams || 12}T)
+                {league.league_name} {league.season ? `(${league.season})` : ''} {league.scoring_format ? `• ${league.scoring_format}` : ''}
               </option>
             ))}
           </select>
@@ -673,15 +779,83 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         
         {/* LEFT: Dashboard / Feature Content */}
         <div className="p-3 md:p-6 overflow-y-auto flex flex-col gap-4 md:gap-5 flex-1">
-          
+
+          {/* League Context Selector */}
+          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">League Context</p>
+                <p className="text-sm text-zinc-300 mt-1">Select your Sleeper league and team to drive Playbook context.</p>
+              </div>
+              <div className="text-right text-xs text-zinc-400">
+                <p className="font-semibold text-zinc-200">Active League</p>
+                <p>{activeLeague?.league_name ?? 'None selected'}</p>
+                <p className="mt-1">Team: {activeTeam?.display_name ?? 'None selected'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="space-y-2">
+                <label className="text-xs text-zinc-400">Select League</label>
+                <select
+                  value={selectedLeagueId ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value || null;
+                    setSelectedLeagueId(value);
+                    setSelectedTeamId(null);
+                  }}
+                  className="w-full bg-[#0f1016] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none"
+                  disabled={leaguesLoading}
+                >
+                  <option value="">{leaguesLoading ? 'Loading leagues...' : 'Choose a league'}</option>
+                  {leagues.map((league) => (
+                    <option key={league.id} value={league.id}>
+                      {league.league_name} • {league.season ?? 'Season N/A'} ({league.platform || 'sleeper'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs text-zinc-400">Select Team</label>
+                <select
+                  value={selectedTeamId ?? ''}
+                  onChange={(e) => setSelectedTeamId(e.target.value || null)}
+                  className="w-full bg-[#0f1016] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none"
+                  disabled={!selectedLeagueId || availableTeams.length === 0}
+                >
+                  <option value="">{availableTeams.length === 0 ? 'Sync a league to load teams' : 'Choose a team'}</option>
+                  {availableTeams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.display_name}
+                    </option>
+                  ))}
+                </select>
+                {!selectedLeagueId && (
+                  <p className="text-[11px] text-zinc-500">Sync a Sleeper league to load teams.</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end">
+                <Button
+                  onClick={() => saveLeagueContext.mutate()}
+                  disabled={!canSaveContext || saveLeagueContext.isPending}
+                  className="w-full md:w-auto"
+                >
+                  {saveLeagueContext.isPending ? 'Saving...' : 'Save as Active'}
+                </Button>
+              </div>
+            </div>
+          </section>
+
           {/* Playbook Tab */}
           {activeFeature === 'playbook' && (
             <PlaybookTab
-              leagueId="demo-league-001"
-              teamId="demo-team-01"
-              week={1}
-              season={2025}
-              scoringFormat="ppr"
+              leagueId={activeLeague?.id ?? null}
+              teamId={activeTeam?.id ?? null}
+              week={null}
+              season={activeLeague?.season ?? null}
+              scoringFormat={activeLeague?.scoring_format ?? null}
             />
           )}
           
@@ -969,11 +1143,11 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
               <div>
                 <div className="text-xs md:text-sm font-semibold text-zinc-200">TIBER Chat</div>
                 <div className="text-[10px] md:text-[11px] text-zinc-500">
-                  {selectedLeague ? selectedLeague.leagueName : 'Your Assistant GM'}
+                  {selectedLeague?.league_name || activeLeague?.league_name || 'Your Assistant GM'}
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleNewChat}
               className="px-2 md:px-3 py-1 md:py-1.5 rounded-md border border-purple-500/30 bg-transparent text-purple-500 text-[10px] md:text-xs cursor-pointer flex items-center gap-1 md:gap-1.5 hover:bg-purple-500/10"
               data-testid="button-new-chat"

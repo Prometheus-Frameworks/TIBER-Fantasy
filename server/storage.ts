@@ -22,19 +22,25 @@ import {
   qbRoleBank,
   qbEpaReference,
   qbContextMetrics,
-  type Team, 
-  type Player, 
-  type TeamPlayer, 
-  type PositionAnalysis, 
+  leagues,
+  leagueTeams,
+  userLeaguePreferences,
+  type Team,
+  type Player,
+  type TeamPlayer,
+  type PositionAnalysis,
   type WeeklyPerformance,
   type MatchupAnalysis,
   type LineupOptimization,
   type TradeAnalysis,
   type WaiverRecommendations,
   type InjuryTracker,
-  type InsertTeam, 
-  type InsertPlayer, 
-  type InsertTeamPlayer, 
+  type League,
+  type LeagueTeam,
+  type UserLeaguePreference,
+  type InsertTeam,
+  type InsertPlayer,
+  type InsertTeamPlayer,
   type InsertPositionAnalysis, 
   type InsertWeeklyPerformance,
   type InsertMatchupAnalysis,
@@ -251,6 +257,31 @@ export interface IStorage {
     resolvedAt: string | null;
   }>): Promise<void>;
   deletePlaybookEntry(id: number): Promise<void>;
+
+  // League + context operations
+  upsertLeagueWithTeams(input: {
+    userId: string;
+    leagueName: string;
+    platform: string;
+    externalLeagueId: string;
+    season?: number | null;
+    scoringFormat?: string | null;
+    settings?: Record<string, any>;
+    teams: Array<{
+      externalUserId?: string | null;
+      externalRosterId?: string | null;
+      displayName: string;
+      isCommissioner?: boolean;
+      avatar?: string | null;
+    }>;
+  }): Promise<{ league: League; teams: LeagueTeam[] }>;
+  getLeaguesWithTeams(userId: string): Promise<Array<League & { teams: LeagueTeam[] }>>;
+  getUserLeagueContext(userId: string): Promise<{
+    preference: UserLeaguePreference | null;
+    activeLeague: (League & { teams?: LeagueTeam[] }) | null;
+    activeTeam: LeagueTeam | null;
+  }>;
+  setUserLeagueContext(data: { userId: string; leagueId: string; teamId: string }): Promise<UserLeaguePreference>;
 }
 
 export class MemStorage implements IStorage {
@@ -2882,7 +2913,108 @@ export class DatabaseStorage implements IStorage {
       metadata: data.metadata ?? undefined,
     });
   }
-  
+
+  async upsertLeagueWithTeams(input: {
+    userId: string;
+    leagueName: string;
+    platform: string;
+    externalLeagueId: string;
+    season?: number | null;
+    scoringFormat?: string | null;
+    settings?: Record<string, any>;
+    teams: Array<{
+      externalUserId?: string | null;
+      externalRosterId?: string | null;
+      displayName: string;
+      isCommissioner?: boolean;
+      avatar?: string | null;
+    }>;
+  }): Promise<{ league: League; teams: LeagueTeam[] }> {
+    const existing = await db.execute(sql`SELECT * FROM leagues WHERE user_id = ${input.userId} AND platform = ${input.platform} AND league_id_external = ${input.externalLeagueId} LIMIT 1`);
+
+    const settingsJson = input.settings ? JSON.stringify(input.settings) : JSON.stringify({});
+    let league: League;
+
+    if (existing.rows.length > 0) {
+      const [updated] = (await db.execute(sql`UPDATE leagues SET league_name = ${input.leagueName}, platform = ${input.platform}, league_id_external = ${input.externalLeagueId}, season = ${input.season ?? null}, scoring_format = ${input.scoringFormat ?? null}, settings = ${settingsJson}::jsonb, updated_at = NOW() WHERE id = ${existing.rows[0].id} RETURNING *`)).rows as League[];
+      league = updated;
+    } else {
+      const [inserted] = (await db.execute(sql`INSERT INTO leagues (user_id, league_name, platform, league_id_external, season, scoring_format, settings) VALUES (${input.userId}, ${input.leagueName}, ${input.platform}, ${input.externalLeagueId}, ${input.season ?? null}, ${input.scoringFormat ?? null}, ${settingsJson}::jsonb) RETURNING *`)).rows as League[];
+      league = inserted;
+    }
+
+    const teams: LeagueTeam[] = [];
+
+    for (const team of input.teams) {
+      const [upserted] = (await db.execute(sql`INSERT INTO league_teams (league_id, external_user_id, external_roster_id, display_name, is_commissioner, avatar) VALUES (${league.id}, ${team.externalUserId ?? null}, ${team.externalRosterId ?? null}, ${team.displayName}, ${team.isCommissioner ?? false}, ${team.avatar ?? null}) ON CONFLICT (league_id, external_roster_id) DO UPDATE SET display_name = EXCLUDED.display_name, external_user_id = EXCLUDED.external_user_id, is_commissioner = COALESCE(EXCLUDED.is_commissioner, league_teams.is_commissioner), avatar = COALESCE(EXCLUDED.avatar, league_teams.avatar), updated_at = NOW() RETURNING *`)).rows as LeagueTeam[];
+      teams.push(upserted);
+    }
+
+    return { league, teams };
+  }
+
+  async getLeaguesWithTeams(userId: string): Promise<Array<League & { teams: LeagueTeam[] }>> {
+    const leagueRows = (await db.execute(sql`SELECT * FROM leagues WHERE user_id = ${userId}`)).rows as League[];
+
+    if (leagueRows.length === 0) return [];
+
+    const leagueIds = leagueRows.map((l) => l.id);
+    const teamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ANY(${leagueIds})`)).rows as LeagueTeam[];
+    const teamsByLeague = teamsResult.reduce<Record<string, LeagueTeam[]>>((acc, team) => {
+      if (!acc[team.leagueId]) acc[team.leagueId] = [];
+      acc[team.leagueId].push(team);
+      return acc;
+    }, {} as Record<string, LeagueTeam[]>);
+
+    return leagueRows.map((league) => ({
+      ...league,
+      teams: teamsByLeague[league.id] ?? [],
+    }));
+  }
+
+  async getUserLeagueContext(userId: string): Promise<{
+    preference: UserLeaguePreference | null;
+    activeLeague: (League & { teams?: LeagueTeam[] }) | null;
+    activeTeam: LeagueTeam | null;
+  }> {
+    const preferenceResult = await db.execute(sql`SELECT * FROM user_league_preferences WHERE user_id = ${userId} LIMIT 1`);
+    const preference = (preferenceResult.rows[0] as UserLeaguePreference) || null;
+
+    if (!preference?.activeLeagueId) {
+      return { preference, activeLeague: null, activeTeam: null };
+    }
+
+    const [league] = (await db.execute(sql`SELECT * FROM leagues WHERE id = ${preference.activeLeagueId} LIMIT 1`)).rows as League[];
+    if (!league) {
+      return { preference, activeLeague: null, activeTeam: null };
+    }
+
+    const leagueTeamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ${league.id}`)).rows as LeagueTeam[];
+    const activeTeam = leagueTeamsResult.find((team) => team.id === preference.activeTeamId) ?? null;
+
+    return {
+      preference,
+      activeLeague: { ...league, teams: leagueTeamsResult },
+      activeTeam,
+    };
+  }
+
+  async setUserLeagueContext(data: { userId: string; leagueId: string; teamId: string }): Promise<UserLeaguePreference> {
+    const [league] = (await db.execute(sql`SELECT id FROM leagues WHERE id = ${data.leagueId} AND user_id = ${data.userId}`)).rows as League[];
+    if (!league) {
+      throw new Error('League not found for user');
+    }
+
+    const [team] = (await db.execute(sql`SELECT * FROM league_teams WHERE id = ${data.teamId} LIMIT 1`)).rows as LeagueTeam[];
+    if (!team || team.leagueId !== data.leagueId) {
+      throw new Error('Team not found for league');
+    }
+
+    const [preference] = (await db.execute(sql`INSERT INTO user_league_preferences (user_id, active_league_id, active_team_id) VALUES (${data.userId}, ${data.leagueId}, ${data.teamId}) ON CONFLICT (user_id) DO UPDATE SET active_league_id = EXCLUDED.active_league_id, active_team_id = EXCLUDED.active_team_id, updated_at = NOW() RETURNING *`)).rows as UserLeaguePreference[];
+
+    return preference;
+  }
+
   async deletePlaybookEntry(id: number): Promise<void> {
     await db.execute(sql`DELETE FROM playbook_entries WHERE id = ${id}`);
   }

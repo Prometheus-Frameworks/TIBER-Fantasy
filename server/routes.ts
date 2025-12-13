@@ -26,6 +26,7 @@ import { registerWeeklyProjectionsCheckRoutes } from './api/check-weekly-project
 import { registerRealDataValidationRoutes } from './api/test-real-data-validation';
 import { registerTest2024ProjectionsRoutes } from './api/test-2024-projections';
 import { testNFLStatsDirect } from './api/test-nfl-stats-direct';
+import { sleeperClient, deriveSleeperScoringFormat } from './integrations/sleeperClient';
 // REMOVED: grokProjectionsService (DEAD_ORPHAN)
 import { cleanVorpRankings } from './clean-vorp-endpoint';
 import { getSleeperProjections } from './services/sleeperProjectionsService';
@@ -108,6 +109,7 @@ import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import teamReportsRoutes from './routes/teamReportsRoutes';
+import { leagueSyncRouter } from './routes/leagueSyncRoutes';
 import weekSummaryRouter from './routes/debug/week-summary';
 import { registerForgeRoutes } from './modules/forge';
 import adminForgeRouter from './routes/adminForge';
@@ -188,6 +190,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       pid: process.pid
     });
   });
+
+  // League sync + context API
+  app.use(leagueSyncRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS
@@ -8434,10 +8439,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-  // ========================================
-  // LEAGUE MANAGEMENT ROUTES
-  // ========================================
 
   // GET /api/leagues - List all leagues for a user
   app.get('/api/leagues', async (req, res) => {
