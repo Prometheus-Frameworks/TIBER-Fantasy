@@ -4034,8 +4034,10 @@ export const leagues = pgTable("leagues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: text("user_id").notNull(), // Will integrate auth later
   leagueName: text("league_name").notNull(),
-  platform: text("platform"), // 'sleeper', 'espn', 'yahoo', 'manual'
+  platform: text("platform").default("sleeper"), // 'sleeper', 'espn', 'yahoo', 'manual'
   leagueIdExternal: text("league_id_external"), // For API sync
+  season: integer("season"),
+  scoringFormat: text("scoring_format"),
   settings: jsonb("settings").notNull().$type<{
     scoring?: string; // 'ppr', 'half-ppr', 'standard'
     teams?: number;
@@ -4048,6 +4050,28 @@ export const leagues = pgTable("leagues", {
   userIdIdx: index("leagues_user_id_idx").on(table.userId),
   platformIdx: index("leagues_platform_idx").on(table.platform),
 }));
+
+export const leagueTeams = pgTable("league_teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: varchar("league_id").notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  externalUserId: text("external_user_id"),
+  externalRosterId: text("external_roster_id"),
+  displayName: text("display_name").notNull(),
+  isCommissioner: boolean("is_commissioner").default(false),
+  avatar: text("avatar"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  leagueRosterIdx: uniqueIndex("league_teams_league_roster_idx").on(table.leagueId, table.externalRosterId),
+  leagueUserIdx: uniqueIndex("league_teams_league_user_idx").on(table.leagueId, table.externalUserId),
+}));
+
+export const userLeaguePreferences = pgTable("user_league_preferences", {
+  userId: text("user_id").primaryKey(),
+  activeLeagueId: varchar("active_league_id").references(() => leagues.id, { onDelete: 'set null' }),
+  activeTeamId: varchar("active_team_id").references(() => leagueTeams.id, { onDelete: 'set null' }),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 
 // League context table - Vector-searchable league-specific information
 export const leagueContext = pgTable("league_context", {
@@ -4160,6 +4184,8 @@ export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ i
 // League System Types
 export type League = typeof leagues.$inferSelect;
 export type InsertLeague = z.infer<typeof insertLeagueSchema>;
+export type LeagueTeam = typeof leagueTeams.$inferSelect;
+export type UserLeaguePreference = typeof userLeaguePreferences.$inferSelect;
 export type LeagueContext = typeof leagueContext.$inferSelect;
 export type InsertLeagueContext = z.infer<typeof insertLeagueContextSchema>;
 
