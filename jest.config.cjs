@@ -4,7 +4,7 @@ module.exports = {
     '^@shared/(.*)$': '<rootDir>/shared/$1',
   },
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
   injectGlobals: true,

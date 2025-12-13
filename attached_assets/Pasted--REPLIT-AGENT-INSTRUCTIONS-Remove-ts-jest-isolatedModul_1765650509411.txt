@@ -1,0 +1,95 @@
+✅ REPLIT AGENT INSTRUCTIONS — Remove ts-jest isolatedModules Deprecation Warning
+
+Goal: Stop this warning:
+
+The "ts-jest" config option "isolatedModules" is deprecated…
+
+1) Find the real source (ignore node_modules)
+
+Run this from repo root:
+
+grep -R "isolatedModules" -n . --exclude-dir=node_modules --exclude-dir=.git
+grep -R "globals" -n . --exclude-dir=node_modules --exclude-dir=.git
+grep -R "ts-jest" -n . --exclude-dir=node_modules --exclude-dir=.git
+
+
+Expected: there should be no globals.ts-jest.isolatedModules anywhere.
+If it exists (often in package.json or a second jest config), delete it.
+
+2) Check for multiple Jest configs (common cause)
+
+List any configs that could be getting picked up:
+
+ls -la | egrep "jest\.config|jest\.config\.|package\.json|ts-jest|jest\."
+
+
+Also check package.json for an embedded Jest block:
+
+cat package.json | sed -n '1,200p' | grep -n "\"jest\""
+
+
+If package.json has "jest": { ... }, open the whole block and ensure no globals.ts-jest.isolatedModules is set.
+
+3) Hard reset Jest cache (most common fix)
+
+Do a cache clear:
+
+NODE_OPTIONS=--experimental-vm-modules npx jest --clearCache --config ./jest.config.cjs
+
+
+Then rerun:
+
+NODE_OPTIONS=--experimental-vm-modules npx jest --config ./jest.config.cjs --runInBand server/routes/__tests__/leagueSyncRoutes.test.ts
+
+4) If the warning persists, modernize ts-jest config (best practice)
+
+Update jest.config.cjs to explicitly point ts-jest at your tsconfig (so it doesn’t try legacy defaults):
+
+module.exports = {
+  testEnvironment: 'node',
+  moduleNameMapper: {
+    '^@shared/(.*)$': '<rootDir>/shared/$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],
+  },
+  testMatch: ['**/__tests__/**/*.test.ts'],
+  injectGlobals: true,
+};
+
+
+Then re-run tests.
+
+5) If STILL persisting, print Jest’s active config and locate the injection
+
+Run:
+
+NODE_OPTIONS=--experimental-vm-modules npx jest --showConfig --config ./jest.config.cjs > /tmp/jest_showconfig.json
+grep -n "isolatedModules\|ts-jest\|globals" /tmp/jest_showconfig.json | head -n 200
+
+
+If isolatedModules appears in showConfig anywhere, the agent must identify which file is providing it and remove it.
+
+6) Optional: Silence it if it’s coming from ts-jest itself (last resort)
+
+If no repo config is injecting it and this is purely ts-jest logging noise, add diagnostics ignore codes (only if we confirm it’s not configured anywhere):
+
+transform: {
+  '^.+\\.tsx?$': ['ts-jest', {
+    tsconfig: '<rootDir>/tsconfig.json',
+    diagnostics: { warnOnly: true }
+  }],
+},
+
+
+(Not my favorite, but it shuts up non-critical chatter.)
+
+✅ Deliverable
+
+When finished, agent should provide:
+
+The grep outputs (excluding node_modules) proving no extra configs exist
+
+Updated config diff (if they changed jest.config.cjs)
+
+Test run output showing warning gone (or explanation of where it’s coming from)
