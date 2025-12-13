@@ -22,4 +22,4 @@ yarn-error.log*
 # Phase 1 cleanup directories
 .trash/
 .ops/
-archive/
+archive/.replit
