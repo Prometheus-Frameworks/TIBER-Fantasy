@@ -4,12 +4,7 @@ module.exports = {
     '^@shared/(.*)$': '<rootDir>/shared/$1',
   },
   transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        isolatedModules: true,
-      },
-    ],
+    '^.+\\.tsx?$': 'ts-jest',
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
   injectGlobals: true,
