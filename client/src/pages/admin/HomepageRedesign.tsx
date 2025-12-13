@@ -619,8 +619,6 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     }
   };
 
-  const selectedLeague = leagues.find(l => l.id === selectedLeagueId);
-
   return (
     <div className="min-h-screen flex flex-col font-sans text-zinc-200" style={{ 
       background: 'linear-gradient(135deg, #0a0a0f 0%, #0d0d14 50%, #0f0a14 100%)'
