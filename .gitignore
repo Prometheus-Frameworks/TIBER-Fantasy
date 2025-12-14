@@ -24,3 +24,6 @@ yarn-error.log*
 .ops/
 archive/.replit
 replit_move-*.txt
+
+# local DB backups
+backup_*.sql
