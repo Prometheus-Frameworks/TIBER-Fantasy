@@ -10,7 +10,7 @@ import { apiRequest } from '@/lib/queryClient';
 interface SyncLeagueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSynced?: (newLeagueId: string) => void;
+  onSynced?: (newLeagueId: string, leagueName?: string) => void;
 }
 
 export function SyncLeagueModal({ open, onOpenChange, onSynced }: SyncLeagueModalProps) {
@@ -19,17 +19,17 @@ export function SyncLeagueModal({ open, onOpenChange, onSynced }: SyncLeagueModa
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/league-sync/sync', {
+      const response = await apiRequest('POST', '/api/league-sync/sleeper', {
         user_id: 'default_user',
-        league_id_external: leagueIdExternal.trim(),
-        season: season,
+        sleeper_league_id: leagueIdExternal.trim(),
       });
       return response.json();
     },
     onSuccess: (data) => {
       const newLeagueId = data?.league?.id || data?.leagueId || leagueIdExternal.trim();
+      const leagueName = data?.league?.league_name || data?.league?.leagueName;
       if (onSynced) {
-        onSynced(newLeagueId);
+        onSynced(newLeagueId, leagueName);
       }
       setLeagueIdExternal('');
       onOpenChange(false);

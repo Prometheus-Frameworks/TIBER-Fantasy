@@ -3044,7 +3044,8 @@ export class DatabaseStorage implements IStorage {
     if (leagueRows.length === 0) return [];
 
     const leagueIds = leagueRows.map((l) => l.id);
-    const teamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ANY(${leagueIds})`)).rows as LeagueTeam[];
+    const leagueIdsArray = `{${leagueIds.map(id => `"${id}"`).join(',')}}`;
+    const teamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ANY(${leagueIdsArray}::varchar[])`)).rows as LeagueTeam[];
     const teamsByLeague = teamsResult.reduce<Record<string, LeagueTeam[]>>((acc, team) => {
       if (!acc[team.leagueId]) acc[team.leagueId] = [];
       acc[team.leagueId].push(team);
