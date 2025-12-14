@@ -11,6 +11,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import EnhancedPlayerCard from '@/components/EnhancedPlayerCard';
 import PlaybookTab from '@/components/tabs/PlaybookTab';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 type Feature = {
   id: string;
@@ -39,6 +40,8 @@ interface SyncedLeague {
   scoring_format: string | null;
   settings: Record<string, any>;
   teams?: LeagueTeam[];
+  suggestedTeamId?: string | null;
+  suggested_team_id?: string | null;
 }
 
 interface LeagueContextResponse {
@@ -51,6 +54,31 @@ interface LeagueContextResponse {
   } | null;
   activeLeague: SyncedLeague | null;
   activeTeam: LeagueTeam | null;
+  suggestedTeamId?: string | null;
+  suggested_team_id?: string | null;
+}
+
+interface LeagueDashboardPlayerRow {
+  canonicalId: string;
+  name: string;
+  pos: string;
+  alpha: number;
+  usedAsStarter: boolean;
+}
+
+interface LeagueDashboardTeamRow {
+  team_id: string;
+  display_name: string;
+  totals: { QB: number; RB: number; WR: number; TE: number };
+  overall_total: number;
+  starters_used: Array<{ canonicalId: string; name: string; pos: string; alpha: number }>;
+  roster: LeagueDashboardPlayerRow[];
+}
+
+interface LeagueDashboardResponse {
+  success: boolean;
+  meta: { league_id: string; week: number | null; season: number | null; computed_at: string; cached: boolean };
+  teams: LeagueDashboardTeamRow[];
 }
 
 interface ChatMessage {
@@ -111,6 +139,9 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   const [activeFeature, setActiveFeature] = useState('dashboard');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedOverviewTeamId, setSelectedOverviewTeamId] = useState<string | null>(null);
+  const [sleeperHandle, setSleeperHandle] = useState('');
+  const [syncLeagueIdInput, setSyncLeagueIdInput] = useState('');
   const [contextInitialized, setContextInitialized] = useState(false);
   const preferenceSignatureRef = useRef<string | null>(null);
   const [chatMessage, setChatMessage] = useState('');
@@ -140,10 +171,18 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   ];
 
   // Fetch synced leagues
-  const { data: leaguesData, isLoading: leaguesLoading } = useQuery({
+  const { data: leaguesData, isLoading: leaguesLoading, refetch: refetchLeagues } = useQuery({
     queryKey: ['/api/league-sync/leagues'],
     queryFn: async () => {
       const response = await fetch('/api/league-sync/leagues?user_id=default_user');
+      return response.json();
+    },
+  });
+
+  const { data: integrationData, refetch: refetchIntegration } = useQuery({
+    queryKey: ['/api/user-integrations/sleeper'],
+    queryFn: async () => {
+      const response = await fetch('/api/user-integrations/sleeper?user_id=default_user');
       return response.json();
     },
   });
@@ -163,13 +202,14 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
     const contextLeagueId = leagueContextData.activeLeague?.id ?? null;
     const contextTeamId = leagueContextData.activeTeam?.id ?? null;
+    const suggestionFromContext = leagueContextData.suggestedTeamId ?? leagueContextData.suggested_team_id ?? null;
     const signature = `${contextLeagueId ?? ''}:${contextTeamId ?? ''}`;
 
     const preferenceChanged = preferenceSignatureRef.current !== signature;
 
     if (!contextInitialized || preferenceChanged) {
       setSelectedLeagueId(contextLeagueId);
-      setSelectedTeamId(contextTeamId);
+      setSelectedTeamId(contextTeamId ?? suggestionFromContext ?? null);
       preferenceSignatureRef.current = signature;
       setContextInitialized(true);
     }
@@ -192,6 +232,10 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
   const availableTeams = selectedLeague?.teams || [];
 
+  const suggestedTeamForSelection =
+    (selectedLeague?.suggestedTeamId ?? selectedLeague?.suggested_team_id ?? null) ||
+    (leagueContextData?.suggestedTeamId ?? leagueContextData?.suggested_team_id ?? null);
+
   const teamsReady =
     (leagueFromList?.teams?.length ?? 0) > 0 ||
     (activeLeague?.id === selectedLeagueId && (activeLeague.teams?.length ?? 0) > 0);
@@ -200,7 +244,15 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     !!selectedTeamId && availableTeams.some((t) => t.id === selectedTeamId);
 
   const canSaveContext =
-    !!selectedLeagueId && teamsReady && selectedTeamIsValid;
+    !!selectedLeagueId && teamsReady && (selectedTeamIsValid || (!!suggestedTeamForSelection && availableTeams.some((t) => t.id === suggestedTeamForSelection)));
+
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+    if (selectedTeamId) return;
+    const league = leagues.find((l) => l.id === selectedLeagueId);
+    const suggestion = league?.suggestedTeamId ?? league?.suggested_team_id ?? null;
+    if (suggestion) setSelectedTeamId(suggestion);
+  }, [selectedLeagueId, selectedTeamId, leagues]);
 
   useEffect(() => {
     if (!selectedTeamId) return;
@@ -208,6 +260,18 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     const stillValid = availableTeams.some(t => t.id === selectedTeamId);
     if (!stillValid) setSelectedTeamId(null);
   }, [selectedTeamId, teamsReady, availableTeams]);
+
+  useEffect(() => {
+    if (!leagueDashboard?.teams?.length) return;
+    const preferredTeam = activeTeam?.id ?? selectedTeamId ?? leagueDashboard.teams[0]?.team_id ?? null;
+    setSelectedOverviewTeamId((prev) => prev ?? preferredTeam);
+  }, [leagueDashboard, activeTeam?.id, selectedTeamId]);
+
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    const exists = leagueOverviewTeams.some((team) => team.team_id === selectedTeamId);
+    if (exists) setSelectedOverviewTeamId(selectedTeamId);
+  }, [selectedTeamId, leagueOverviewTeams]);
 
   const selectedTeam = selectedTeamId
     ? availableTeams.find((team) => team.id === selectedTeamId) || activeTeam
@@ -218,12 +282,42 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
       return apiRequest('POST', '/api/league-context', {
         user_id: 'default_user',
         league_id: selectedLeagueId,
-        team_id: selectedTeamId,
+        team_id: selectedTeamId ?? suggestedTeamForSelection,
       });
     },
     onSuccess: () => {
       refetchLeagueContext();
     }
+  });
+
+  const linkSleeperProfile = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/user-integrations/sleeper', {
+        user_id: 'default_user',
+        usernameOrUserId: sleeperHandle,
+      });
+    },
+    onSuccess: () => {
+      refetchIntegration();
+    },
+  });
+
+  const syncLeague = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/league-sync/sync', {
+        user_id: 'default_user',
+        league_id_external: syncLeagueIdInput,
+      });
+    },
+    onSuccess: (data) => {
+      refetchLeagues();
+      refetchLeagueContext();
+      if (data?.league?.id) {
+        setSelectedLeagueId(data.league.id);
+        const suggested = data?.activeTeam?.id || data?.suggestedTeamId || data?.suggested_team_id;
+        if (suggested) setSelectedTeamId(suggested);
+      }
+    },
   });
 
   // Fetch FORGE batch scores for movers widget
@@ -247,6 +341,32 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   });
 
   const opportunityShifts = opportunityData?.shifts || [];
+
+  const activeLeagueIdForDashboard = activeLeague?.id ?? null;
+  const { data: leagueDashboard, isLoading: dashboardLoading } = useQuery<LeagueDashboardResponse | null>({
+    queryKey: ['/api/league-dashboard', activeLeagueIdForDashboard],
+    enabled: Boolean(activeLeagueIdForDashboard),
+    queryFn: async () => {
+      if (!activeLeagueIdForDashboard) return null;
+      const response = await fetch(`/api/league-dashboard?user_id=default_user&league_id=${activeLeagueIdForDashboard}`);
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const leagueOverviewTeams = leagueDashboard?.teams || [];
+  const selectedOverviewTeam = selectedOverviewTeamId
+    ? leagueOverviewTeams.find((team) => team.team_id === selectedOverviewTeamId) || leagueOverviewTeams[0]
+    : leagueOverviewTeams[0];
+  const chartData = leagueOverviewTeams.map((team) => ({
+    teamId: team.team_id,
+    name: team.display_name,
+    QB: team.totals.QB,
+    RB: team.totals.RB,
+    WR: team.totals.WR,
+    TE: team.totals.TE,
+    overall: team.overall_total,
+  }));
 
   // Fetch Sleeper trending players
   const { data: trendingData } = useQuery({
@@ -802,7 +922,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                     setSelectedLeagueId(value);
                     setSelectedTeamId(null);
                   }}
-                  className="w-full bg-[#0f1016] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none"
+                  className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                   disabled={leaguesLoading}
                 >
                   <option value="">{leaguesLoading ? 'Loading leagues...' : 'Choose a league'}</option>
@@ -819,15 +939,18 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                 <select
                   value={selectedTeamId ?? ''}
                   onChange={(e) => setSelectedTeamId(e.target.value || null)}
-                  className="w-full bg-[#0f1016] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none"
+                  className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
                   disabled={!selectedLeagueId || availableTeams.length === 0}
                 >
                   <option value="">{availableTeams.length === 0 ? 'Sync a league to load teams' : 'Choose a team'}</option>
-                  {availableTeams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.display_name}
-                    </option>
-                  ))}
+                  {availableTeams.map((team) => {
+                    const label = team.display_name ?? (team as any).displayName ?? 'Team';
+                    return (
+                      <option key={team.id} value={team.id}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
                 {!selectedLeagueId && (
                   <p className="text-[11px] text-zinc-500">Sync a Sleeper league to load teams.</p>
@@ -844,17 +967,143 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
                 </Button>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-zinc-400">Sleeper Username (for auto-detect team)</label>
+                  <span className="text-[11px] text-zinc-500">
+                    {integrationData?.profile ? `Linked: ${integrationData.profile.username ?? integrationData.profile.external_user_id}` : 'Not linked'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={sleeperHandle}
+                    onChange={(e) => setSleeperHandle(e.target.value)}
+                    placeholder="Your Sleeper username"
+                    className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                  />
+                  <Button
+                    onClick={() => linkSleeperProfile.mutate()}
+                    disabled={!sleeperHandle || linkSleeperProfile.isPending}
+                  >
+                    {linkSleeperProfile.isPending ? 'Linking...' : 'Link'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-zinc-400">Sleeper League ID</label>
+                  <span className="text-[11px] text-zinc-500">Sync and auto-select teams</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={syncLeagueIdInput}
+                    onChange={(e) => setSyncLeagueIdInput(e.target.value)}
+                    placeholder="Paste league ID"
+                    className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                  />
+                  <Button
+                    onClick={() => syncLeague.mutate()}
+                    disabled={!syncLeagueIdInput || syncLeague.isPending}
+                    variant="secondary"
+                  >
+                    {syncLeague.isPending ? 'Syncing...' : 'Sync'}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </section>
 
           {/* Playbook Tab */}
           {activeFeature === 'playbook' && (
-            <PlaybookTab
-              leagueId={activeLeague?.id ?? null}
-              teamId={activeTeam?.id ?? null}
-              week={null}
-              season={activeLeague?.season ?? null}
-              scoringFormat={activeLeague?.scoring_format ?? null}
-            />
+            <div className="space-y-4">
+              {activeLeague && (
+                <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">League Overview</p>
+                      <p className="text-sm text-zinc-300">Stacked starters by position with bench weight</p>
+                    </div>
+                    <div className="text-xs text-zinc-500">
+                      {leagueDashboard?.meta?.computed_at && (
+                        <span>
+                          Updated {new Date(leagueDashboard.meta.computed_at).toLocaleTimeString()} {leagueDashboard.meta.cached ? '(cached)' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {dashboardLoading ? (
+                    <div className="flex items-center justify-center py-10 text-zinc-400">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Loading league dashboard...
+                    </div>
+                  ) : chartData.length === 0 ? (
+                    <div className="py-8 text-center text-zinc-500">Sync a league to view overview</div>
+                  ) : (
+                    <>
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer>
+                          <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                            <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={{ stroke: '#1f2937' }} />
+                            <YAxis hide />
+                            <Tooltip
+                              cursor={{ fill: 'rgba(124,58,237,0.08)' }}
+                              contentStyle={{ backgroundColor: '#0b0c14', border: '1px solid rgba(168,85,247,0.2)' }}
+                              formatter={(value, name) => [Number(value as number).toFixed(1), name]}
+                            />
+                            <Bar dataKey="QB" stackId="totals" fill="#a855f7" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                            <Bar dataKey="RB" stackId="totals" fill="#22c55e" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                            <Bar dataKey="WR" stackId="totals" fill="#38bdf8" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                            <Bar dataKey="TE" stackId="totals" fill="#f97316" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {selectedOverviewTeam && (
+                        <div className="mt-2 border border-purple-500/10 rounded-lg overflow-hidden">
+                          <div className="flex items-center justify-between px-3 py-2 bg-white/[0.03] border-b border-purple-500/10">
+                            <div className="text-sm text-zinc-200 font-semibold">{selectedOverviewTeam.display_name}</div>
+                            <div className="text-sm text-zinc-400">Overall {selectedOverviewTeam.overall_total.toFixed(1)}</div>
+                          </div>
+                          <div className="grid grid-cols-4 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-500 bg-white/[0.01]">
+                            <span>Player</span>
+                            <span>Pos</span>
+                            <span className="text-right">Alpha</span>
+                            <span className="text-right">Role</span>
+                          </div>
+                          <div>
+                            {[...(selectedOverviewTeam.roster || [])]
+                              .sort((a, b) => (b.alpha ?? 0) - (a.alpha ?? 0))
+                              .map((player) => (
+                                <div
+                                  key={player.canonicalId}
+                                  className={`grid grid-cols-4 px-3 py-2 text-sm ${player.usedAsStarter ? 'bg-purple-500/10' : 'bg-transparent'} border-t border-purple-500/5`}
+                                >
+                                  <span className="text-zinc-100 truncate">{player.name}</span>
+                                  <span className="text-zinc-300">{player.pos}</span>
+                                  <span className="text-right text-zinc-100">{player.alpha?.toFixed(1) ?? '0.0'}</span>
+                                  <span className="text-right text-zinc-400">{player.usedAsStarter ? 'Starter' : 'Bench'}</span>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </section>
+              )}
+
+              <PlaybookTab
+                leagueId={activeLeague?.id ?? null}
+                teamId={activeTeam?.id ?? null}
+                week={null}
+                season={activeLeague?.season ?? null}
+                scoringFormat={activeLeague?.scoring_format ?? null}
+              />
+            </div>
           )}
           
           {/* Dashboard Content - only show when dashboard is active */}

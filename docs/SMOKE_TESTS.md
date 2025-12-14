@@ -13,6 +13,10 @@ Use this lightweight checklist to verify Sleeper league sync, active league cont
 - [ ] League Context panel lists synced leagues and teams; changing the league updates the team dropdown without needing a refresh.
 - [ ] Saving a new active league/team triggers a refreshed context and updates the Playbook pills (league, team, season, scoring).
 - [ ] Creating a Playbook entry from this page includes `league_id`, `team_id`, `season`, and `scoring_format` tied to the active selection.
+- [ ] Linking a Sleeper username shows `Linked: <username>` and subsequent league selections auto-suggest the matching team.
+- [ ] Pasting a Sleeper League ID into "Sync" creates the league, refreshes the dropdowns, and pre-selects the detected team when possible.
+- [ ] League Overview stacked bar chart renders with QB/RB/WR/TE colors and shows totals per team.
+- [ ] Clicking a bar updates the roster drilldown table and highlights starters.
 
 ## Error handling
 - [ ] Missing `sleeper_league_id` on the sync POST returns HTTP 400 with a clear message.

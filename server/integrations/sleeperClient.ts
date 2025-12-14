@@ -7,6 +7,7 @@ export interface SleeperLeague {
   scoring_settings?: Record<string, any>;
   total_rosters?: number;
   status?: string;
+  roster_positions?: string[];
 }
 
 export interface SleeperUser {
@@ -17,12 +18,15 @@ export interface SleeperUser {
   metadata?: Record<string, any>;
   is_bot?: boolean;
   team_name?: string;
+  username?: string;
 }
 
 export interface SleeperRoster {
   roster_id: number;
   owner_id: string;
   co_owners?: string[] | null;
+  players?: string[];
+  starters?: string[] | null;
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -37,6 +41,10 @@ async function fetchJson<T>(path: string): Promise<T> {
 export const sleeperClient = {
   async getLeague(leagueId: string): Promise<SleeperLeague> {
     return fetchJson<SleeperLeague>(`/league/${leagueId}`);
+  },
+
+  async getUser(userIdOrUsername: string): Promise<SleeperUser> {
+    return fetchJson<SleeperUser>(`/user/${userIdOrUsername}`);
   },
 
   async getLeagueUsers(leagueId: string): Promise<SleeperUser[]> {

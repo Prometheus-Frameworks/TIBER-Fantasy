@@ -110,6 +110,8 @@ import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import teamReportsRoutes from './routes/teamReportsRoutes';
 import { leagueSyncRouter } from './routes/leagueSyncRoutes';
+import { userIntegrationRouter } from './routes/userIntegrationRoutes';
+import { leagueDashboardRouter } from './routes/leagueDashboardRoutes';
 import weekSummaryRouter from './routes/debug/week-summary';
 import { registerForgeRoutes } from './modules/forge';
 import adminForgeRouter from './routes/adminForge';
@@ -193,6 +195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // League sync + context API
   app.use(leagueSyncRouter);
+  app.use(userIntegrationRouter);
+  app.use(leagueDashboardRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS

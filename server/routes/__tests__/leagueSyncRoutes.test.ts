@@ -13,6 +13,8 @@ const mockStorage = {
   getLeaguesWithTeams: jest.fn(),
   getUserLeagueContext: jest.fn(),
   setUserLeagueContext: jest.fn(),
+  getUserPlatformProfile: jest.fn(),
+  getLeagueWithTeams: jest.fn(),
 };
 
 const mockSleeperClient = {
@@ -54,6 +56,9 @@ async function call(app: express.Express, method: string, path: string, body?: a
 describe("league sync routes", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    mockStorage.getUserPlatformProfile.mockResolvedValue({ externalUserId: 'u1', platform: 'sleeper' });
+    mockStorage.getLeagueWithTeams.mockResolvedValue(null);
 
     mockSleeperClient.getLeague.mockResolvedValue({
       league_id: "123",
@@ -113,7 +118,7 @@ describe("league sync routes", () => {
 
   it("syncs a Sleeper league and returns normalized teams", async () => {
     const app = buildApp();
-    const res = await call(app, 'POST', "/api/league-sync/sleeper", { sleeper_league_id: "123" });
+    const res = await call(app, 'POST', "/api/league-sync/sync", { league_id_external: "123" });
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);

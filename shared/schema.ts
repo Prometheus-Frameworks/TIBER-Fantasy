@@ -4073,6 +4073,18 @@ export const userLeaguePreferences = pgTable("user_league_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const userPlatformProfiles = pgTable("user_platform_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  platform: text("platform").notNull().default('sleeper'),
+  externalUserId: text("external_user_id").notNull(),
+  username: text("username"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userPlatformIdx: uniqueIndex("user_platform_profiles_user_platform_idx").on(table.userId, table.platform),
+}));
+
 // League context table - Vector-searchable league-specific information
 export const leagueContext = pgTable("league_context", {
   id: serial("id").primaryKey(),
@@ -4176,6 +4188,17 @@ export type InsertPlaybookEntry = z.infer<typeof insertPlaybookEntrySchema>;
 export const insertLeagueSchema = createInsertSchema(leagues).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertLeagueContextSchema = createInsertSchema(leagueContext).omit({ id: true, createdAt: true });
 
+export const leagueDashboardSnapshots = pgTable("league_dashboard_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: text("league_id").notNull(),
+  week: integer("week"),
+  season: integer("season"),
+  payload: jsonb("payload").notNull(),
+  computedAt: timestamp("computed_at").defaultNow(),
+}, (table) => ({
+  leagueSnapshotIdx: uniqueIndex("league_dashboard_snapshots_key").on(table.leagueId, table.week, table.season),
+}));
+
 // RAG System Insert Schemas
 export const insertChunkSchema = createInsertSchema(chunks).omit({ id: true, createdAt: true });
 export const insertChatSessionSchema = createInsertSchema(chatSessions).omit({ id: true, createdAt: true, updatedAt: true });
@@ -4186,8 +4209,10 @@ export type League = typeof leagues.$inferSelect;
 export type InsertLeague = z.infer<typeof insertLeagueSchema>;
 export type LeagueTeam = typeof leagueTeams.$inferSelect;
 export type UserLeaguePreference = typeof userLeaguePreferences.$inferSelect;
+export type UserPlatformProfile = typeof userPlatformProfiles.$inferSelect;
 export type LeagueContext = typeof leagueContext.$inferSelect;
 export type InsertLeagueContext = z.infer<typeof insertLeagueContextSchema>;
+export type LeagueDashboardSnapshot = typeof leagueDashboardSnapshots.$inferSelect;
 
 // RAG System Types
 export type Chunk = typeof chunks.$inferSelect;

@@ -43,6 +43,13 @@
       "when": 1765470000000,
       "tag": "0005_playbook_outcome_workflow",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765477200000,
+      "tag": "0007_playbook_league_overview",
+      "breakpoints": true
     }
   ]
 }
