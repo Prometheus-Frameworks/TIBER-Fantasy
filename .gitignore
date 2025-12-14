@@ -27,3 +27,12 @@ replit_move-*.txt
 
 # local DB backups
 backup_*.sql
+
+backup_*.sql
+*.dump
+*.dump
+*.sqlite
+*.sqlite3
+
+*.swp
+*.swo
