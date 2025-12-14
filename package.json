@@ -11,7 +11,9 @@
     "typecheck": "tsc -p .",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test:forge": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/recursiveAlphaEngine.test.ts"
+    "test:forge": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/recursiveAlphaEngine.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
