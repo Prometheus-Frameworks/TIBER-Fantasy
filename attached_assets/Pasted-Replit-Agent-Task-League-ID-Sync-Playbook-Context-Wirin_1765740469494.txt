@@ -1,0 +1,151 @@
+Replit Agent Task — League ID Sync (Playbook Context Wiring)
+Objective
+
+Make the Playbook “League Context” section interactive using a simple Sleeper League ID sync flow.
+
+Deliverables
+
+A Sync League modal (league ID input)
+
+Wire UI → POST /api/league-sync/sync
+
+Refresh leagues list + teams + context after sync
+
+Make league/team dropdowns fully usable
+
+Fix low-contrast text in dropdowns/inputs/buttons
+
+Step 1 — Create modal component
+
+Create: client/src/components/SyncLeagueModal.tsx
+
+Props:
+
+open: boolean
+
+onOpenChange(open: boolean): void
+
+onSynced?(newLeagueId: string): void
+
+UI:
+
+Title: “Sync a Sleeper league”
+
+Input: Sleeper League ID (required)
+
+Optional: Season (default 2025) (can be hidden behind “Advanced” if you want)
+
+Buttons: Cancel / Sync
+
+Behavior:
+
+Disable Sync button until leagueIdExternal is non-empty.
+
+On click Sync:
+
+call:
+
+await apiRequest('POST', '/api/league-sync/sync', {
+  user_id: 'default_user',
+  league_id_external: leagueIdExternal.trim(),
+  season: seasonNumber,
+});
+
+
+On success:
+
+call onSynced(newLeagueId) if server returns it (if not, just refetch list)
+
+close modal
+
+Step 2 — Wire modal into HomepageRedesign.tsx
+
+File: client/src/pages/admin/HomepageRedesign.tsx
+
+Add state:
+
+const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+
+Add to header league selector:
+
+If leagues.length === 0, show a button “Sync a league” that opens modal.
+
+If leagues exist, keep the select.
+
+Add to League Context card:
+
+If leagues.length === 0, show a prominent “Sync a league” CTA button.
+
+Also show helper text: “Paste your Sleeper League ID to import teams.”
+
+On modal success:
+
+queryClient.invalidateQueries(['/api/league-sync/leagues'])
+
+await refetch league list (or rely on react-query)
+
+setSelectedLeagueId to the newly synced league (match by league_id_external if needed)
+
+setSelectedTeamId(null)
+
+refetchLeagueContext()
+
+Step 3 — Ensure league/team dropdowns work
+
+When selectedLeagueId changes: always setSelectedTeamId(null)
+
+Team dropdown should populate from selectedLeague.teams
+
+Save button should only enable if:
+
+selectedLeagueId exists
+
+teams are loaded for that league
+
+selectedTeamId is one of those teams
+(you already have most of this logic; just make sure teams actually appear after sync)
+
+Step 4 — Fix contrast/readability
+
+Targets:
+
+League dropdown
+
+Team dropdown
+
+Placeholder options
+
+Disabled controls
+
+Save button in disabled state
+
+Rules:
+
+Keep text-zinc-200 even when disabled; rely on opacity-60 not text-zinc-700.
+
+Placeholder option should be text-zinc-400 with bg-[#0f1016].
+
+Ensure select background is consistently bg-[#0f1016] (not transparent).
+
+Step 5 — Verify
+
+Manual:
+
+Open Playbook page
+
+Click “Sync a league”
+
+Paste league ID → Sync
+
+League appears in selector
+
+Team list loads
+
+Select team → Save as Active enables → save works
+
+Playbook pills stop showing N/A and show league/team
+
+Tests:
+
+Don’t change existing jest tests; run:
+NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/routes/__tests__/leagueSyncRoutes.test.ts
