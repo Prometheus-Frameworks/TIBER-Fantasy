@@ -17,26 +17,55 @@ const defaultDeps: LeagueSyncDeps = {
 export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
   const router = express.Router();
 
-  router.post('/api/league-sync/sleeper', async (req, res) => {
-    try {
-      const { user_id = 'default_user', sleeper_league_id } = req.body;
+  function normalizeExternalId(value?: string | null) {
+    if (!value) return null;
+    return String(value);
+  }
 
-      if (!sleeper_league_id) {
-        return res.status(400).json({ success: false, error: 'sleeper_league_id is required' });
+  function findSuggestedTeam(teams: any[], externalUserId?: string | null) {
+    if (!externalUserId) return null;
+    return teams.find((team) => normalizeExternalId(team.externalUserId ?? team.external_user_id) === externalUserId) || null;
+  }
+
+  async function maybeAutoSetContext(options: {
+    userId: string;
+    leagueId: string;
+    teams: any[];
+  }) {
+    const profile = await deps.storage.getUserPlatformProfile(options.userId, 'sleeper');
+    if (!profile) return { suggestedTeamId: null, activeTeam: null };
+
+    const externalUserId = (profile as any).externalUserId ?? (profile as any).external_user_id;
+    const match = findSuggestedTeam(options.teams, externalUserId);
+    if (match) {
+      await deps.storage.setUserLeagueContext({ userId: options.userId, leagueId: options.leagueId, teamId: match.id });
+      return { suggestedTeamId: match.id, activeTeam: match };
+    }
+
+    return { suggestedTeamId: null, activeTeam: null };
+  }
+
+  async function syncSleeperLeague(req: any, res: any) {
+    try {
+      const { user_id = 'default_user', league_id_external, sleeper_league_id } = req.body;
+      const externalLeagueId = league_id_external || sleeper_league_id;
+
+      if (!externalLeagueId) {
+        return res.status(400).json({ success: false, error: 'league_id_external is required' });
       }
 
       const [league, users, rosters] = await Promise.all([
-        deps.sleeperClient.getLeague(sleeper_league_id),
-        deps.sleeperClient.getLeagueUsers(sleeper_league_id),
-        deps.sleeperClient.getLeagueRosters(sleeper_league_id),
+        deps.sleeperClient.getLeague(externalLeagueId),
+        deps.sleeperClient.getLeagueUsers(externalLeagueId),
+        deps.sleeperClient.getLeagueRosters(externalLeagueId),
       ]);
 
       const scoringFormat = deps.deriveSleeperScoringFormat(league.scoring_settings);
       const season = Number(league.season) || null;
-      const rosterByOwner = new Map(rosters.map((roster) => [roster.owner_id, roster]));
+      const rosterByOwner = new Map(rosters.map((roster) => [String(roster.owner_id), roster]));
 
       const teams = users.map((user) => {
-        const roster = rosterByOwner.get(user.user_id);
+        const roster = rosterByOwner.get(String(user.user_id));
         const displayName = user.metadata?.team_name || user.team_name || user.display_name || 'Team';
 
         return {
@@ -52,21 +81,26 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         userId: user_id as string,
         leagueName: league.name || `Sleeper League ${league.league_id}`,
         platform: 'sleeper',
-        externalLeagueId: sleeper_league_id as string,
+        externalLeagueId: String(externalLeagueId),
         season,
         scoringFormat,
         settings: {
           scoring_settings: league.scoring_settings ?? {},
           status: league.status,
           total_rosters: league.total_rosters,
+          roster_positions: (league as any).roster_positions ?? [],
         },
         teams,
       });
+
+      const auto = await maybeAutoSetContext({ userId: user_id, leagueId: result.league.id, teams: result.teams });
 
       res.json({
         success: true,
         league: result.league,
         teams: result.teams,
+        activeTeam: auto.activeTeam,
+        suggestedTeamId: auto.suggestedTeamId,
       });
     } catch (error) {
       console.error('❌ [Sleeper League Sync] Failed:', error);
@@ -75,13 +109,27 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         error: (error as Error).message || 'Failed to sync Sleeper league',
       });
     }
-  });
+  }
+
+  router.post('/api/league-sync/sleeper', syncSleeperLeague);
+  router.post('/api/league-sync/sync', syncSleeperLeague);
 
   router.get('/api/league-sync/leagues', async (req, res) => {
     try {
       const { user_id = 'default_user' } = req.query;
       const leagues = await deps.storage.getLeaguesWithTeams(user_id as string);
-      const normalizedLeagues = leagues.map((league) => ({ ...league, teams: league.teams ?? [] }));
+      const profile = await deps.storage.getUserPlatformProfile(user_id as string, 'sleeper');
+      const externalUserId = profile ? (profile as any).externalUserId ?? (profile as any).external_user_id : null;
+      const normalizedLeagues = leagues.map((league) => {
+        const teams = league.teams ?? [];
+        const match = externalUserId ? findSuggestedTeam(teams, externalUserId) : null;
+        return {
+          ...league,
+          teams,
+          suggestedTeamId: match?.id ?? null,
+          suggested_team_id: match?.id ?? null,
+        };
+      });
 
       res.json({ success: true, leagues: normalizedLeagues });
     } catch (error) {
@@ -94,8 +142,22 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
     try {
       const { user_id = 'default_user' } = req.query;
       const context = await deps.storage.getUserLeagueContext(user_id as string);
+      const profile = await deps.storage.getUserPlatformProfile(user_id as string, 'sleeper');
+      const externalUserId = profile ? (profile as any).externalUserId ?? (profile as any).external_user_id : null;
 
-      res.json({ success: true, ...context });
+      let suggestedTeamId: string | null = null;
+      let activeTeam = context.activeTeam;
+
+      if (externalUserId && context.activeLeague?.teams?.length) {
+        const match = findSuggestedTeam(context.activeLeague.teams, externalUserId);
+        suggestedTeamId = match?.id ?? null;
+        if (match && !activeTeam) {
+          await deps.storage.setUserLeagueContext({ userId: user_id as string, leagueId: context.activeLeague.id, teamId: match.id });
+          activeTeam = match;
+        }
+      }
+
+      res.json({ success: true, ...context, activeTeam, suggestedTeamId, suggested_team_id: suggestedTeamId });
     } catch (error) {
       console.error('❌ [League Context] Failed to fetch context:', error);
       res.status(500).json({ success: false, error: (error as Error).message || 'Failed to fetch league context' });
@@ -106,14 +168,32 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
     try {
       const { user_id = 'default_user', league_id, team_id } = req.body;
 
-      if (!league_id || !team_id) {
-        return res.status(400).json({ success: false, error: 'league_id and team_id are required' });
+      if (!league_id) {
+        return res.status(400).json({ success: false, error: 'league_id is required' });
+      }
+
+      let targetTeamId = team_id as string | undefined;
+
+      if (!targetTeamId) {
+        const league = await deps.storage.getLeagueWithTeams(league_id);
+        if (league) {
+          const profile = await deps.storage.getUserPlatformProfile(user_id as string, 'sleeper');
+          const externalUserId = profile ? (profile as any).externalUserId ?? (profile as any).external_user_id : null;
+          if (externalUserId) {
+            const match = findSuggestedTeam(league.teams ?? [], externalUserId);
+            if (match) targetTeamId = match.id;
+          }
+        }
+      }
+
+      if (!targetTeamId) {
+        return res.status(400).json({ success: false, error: 'team_id is required for this league' });
       }
 
       const preference = await deps.storage.setUserLeagueContext({
         userId: user_id,
         leagueId: league_id,
-        teamId: team_id,
+        teamId: targetTeamId,
       });
 
       const context = await deps.storage.getUserLeagueContext(user_id);

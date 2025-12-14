@@ -25,6 +25,8 @@ import {
   leagues,
   leagueTeams,
   userLeaguePreferences,
+  userPlatformProfiles,
+  leagueDashboardSnapshots,
   type Team,
   type Player,
   type TeamPlayer,
@@ -38,6 +40,8 @@ import {
   type League,
   type LeagueTeam,
   type UserLeaguePreference,
+  type UserPlatformProfile,
+  type LeagueDashboardSnapshot,
   type InsertTeam,
   type InsertPlayer,
   type InsertTeamPlayer,
@@ -275,6 +279,7 @@ export interface IStorage {
       avatar?: string | null;
     }>;
   }): Promise<{ league: League; teams: LeagueTeam[] }>;
+  getLeagueWithTeams(leagueId: string): Promise<(League & { teams: LeagueTeam[] }) | null>;
   getLeaguesWithTeams(userId: string): Promise<Array<League & { teams: LeagueTeam[] }>>;
   getUserLeagueContext(userId: string): Promise<{
     preference: UserLeaguePreference | null;
@@ -282,6 +287,12 @@ export interface IStorage {
     activeTeam: LeagueTeam | null;
   }>;
   setUserLeagueContext(data: { userId: string; leagueId: string; teamId: string }): Promise<UserLeaguePreference>;
+
+  upsertUserPlatformProfile(data: { userId: string; platform: string; externalUserId: string; username?: string | null }): Promise<UserPlatformProfile>;
+  getUserPlatformProfile(userId: string, platform?: string): Promise<UserPlatformProfile | null>;
+
+  getLeagueDashboardSnapshot(leagueId: string, season?: number | null, week?: number | null): Promise<LeagueDashboardSnapshot | null>;
+  saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot>;
 }
 
 export class MemStorage implements IStorage {
@@ -966,7 +977,7 @@ export class MemStorage implements IStorage {
   async getWeeklyUsageForQBRoleBank(playerId: string, season: number): Promise<any[]> {
     return [];
   }
-  
+
   // Playbook operations (stubs - not implemented in MemStorage)
   async createPlaybookEntry(entry: any): Promise<any> {
     return { id: 1, ...entry, createdAt: new Date() };
@@ -979,9 +990,75 @@ export class MemStorage implements IStorage {
   async updatePlaybookEntry(id: number, updates: any): Promise<void> {
     return;
   }
-  
+
   async deletePlaybookEntry(id: number): Promise<void> {
     return;
+  }
+
+  async upsertLeagueWithTeams(input: any): Promise<{ league: League; teams: LeagueTeam[] }> {
+    const league: any = {
+      id: 'mem-league',
+      userId: input.userId,
+      league_name: input.leagueName,
+      leagueIdExternal: input.externalLeagueId,
+      platform: input.platform,
+      season: input.season ?? null,
+      scoring_format: input.scoringFormat ?? null,
+      settings: input.settings ?? {},
+    };
+    const teams: any[] = input.teams?.map((team: any, idx: number) => ({
+      id: `mem-team-${idx}`,
+      leagueId: league.id,
+      ...team,
+    })) ?? [];
+    return { league, teams } as any;
+  }
+
+  async getLeagueWithTeams(_leagueId: string): Promise<(League & { teams: LeagueTeam[] }) | null> {
+    return null;
+  }
+
+  async getLeaguesWithTeams(_userId: string): Promise<Array<League & { teams: LeagueTeam[] }>> {
+    return [];
+  }
+
+  async getUserLeagueContext(_userId: string): Promise<{ preference: UserLeaguePreference | null; activeLeague: (League & { teams?: LeagueTeam[]; }) | null; activeTeam: LeagueTeam | null; }> {
+    return { preference: null, activeLeague: null, activeTeam: null };
+  }
+
+  async setUserLeagueContext(data: { userId: string; leagueId: string; teamId: string }): Promise<UserLeaguePreference> {
+    return { userId: data.userId, activeLeagueId: data.leagueId, activeTeamId: data.teamId, updatedAt: new Date() } as any;
+  }
+
+  async upsertUserPlatformProfile(data: { userId: string; platform: string; externalUserId: string; username?: string | null }): Promise<UserPlatformProfile> {
+    return {
+      id: 'mem-profile',
+      userId: data.userId,
+      platform: data.platform,
+      externalUserId: data.externalUserId,
+      username: data.username ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any;
+  }
+
+  async getUserPlatformProfile(_userId: string, _platform: string = 'sleeper'): Promise<UserPlatformProfile | null> {
+    return null;
+  }
+
+  async getLeagueDashboardSnapshot(_leagueId: string, _season?: number | null, _week?: number | null): Promise<LeagueDashboardSnapshot | null> {
+    return null;
+  }
+
+  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot> {
+    return {
+      id: 'mem-snapshot',
+      leagueId: data.leagueId,
+      season: data.season ?? null,
+      week: data.week ?? null,
+      payload: data.payload,
+      computedAt: new Date(),
+    } as any;
   }
 }
 
@@ -2953,6 +3030,14 @@ export class DatabaseStorage implements IStorage {
     return { league, teams };
   }
 
+  async getLeagueWithTeams(leagueId: string): Promise<(League & { teams: LeagueTeam[] }) | null> {
+    const [league] = (await db.execute(sql`SELECT * FROM leagues WHERE id = ${leagueId} LIMIT 1`)).rows as League[];
+    if (!league) return null;
+
+    const teamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ${leagueId}`)).rows as LeagueTeam[];
+    return { ...league, teams: teamsResult };
+  }
+
   async getLeaguesWithTeams(userId: string): Promise<Array<League & { teams: LeagueTeam[] }>> {
     const leagueRows = (await db.execute(sql`SELECT * FROM leagues WHERE user_id = ${userId}`)).rows as League[];
 
@@ -3013,6 +3098,30 @@ export class DatabaseStorage implements IStorage {
     const [preference] = (await db.execute(sql`INSERT INTO user_league_preferences (user_id, active_league_id, active_team_id) VALUES (${data.userId}, ${data.leagueId}, ${data.teamId}) ON CONFLICT (user_id) DO UPDATE SET active_league_id = EXCLUDED.active_league_id, active_team_id = EXCLUDED.active_team_id, updated_at = NOW() RETURNING *`)).rows as UserLeaguePreference[];
 
     return preference;
+  }
+
+  async upsertUserPlatformProfile(data: { userId: string; platform: string; externalUserId: string; username?: string | null }): Promise<UserPlatformProfile> {
+    const [profile] = (await db.execute(sql`INSERT INTO user_platform_profiles (user_id, platform, external_user_id, username) VALUES (${data.userId}, ${data.platform}, ${data.externalUserId}, ${data.username ?? null}) ON CONFLICT (user_id, platform) DO UPDATE SET external_user_id = EXCLUDED.external_user_id, username = COALESCE(EXCLUDED.username, user_platform_profiles.username), updated_at = NOW() RETURNING *`)).rows as UserPlatformProfile[];
+
+    return profile;
+  }
+
+  async getUserPlatformProfile(userId: string, platform: string = 'sleeper'): Promise<UserPlatformProfile | null> {
+    const [profile] = (await db.execute(sql`SELECT * FROM user_platform_profiles WHERE user_id = ${userId} AND platform = ${platform} LIMIT 1`)).rows as UserPlatformProfile[];
+    return profile || null;
+  }
+
+  async getLeagueDashboardSnapshot(leagueId: string, season?: number | null, week?: number | null): Promise<LeagueDashboardSnapshot | null> {
+    const normalizedSeason = season ?? null;
+    const normalizedWeek = week ?? null;
+    const [snapshot] = (await db.execute(sql`SELECT * FROM league_dashboard_snapshots WHERE league_id = ${leagueId} AND coalesce(season, -1) = coalesce(${normalizedSeason}, -1) AND coalesce(week, -1) = coalesce(${normalizedWeek}, -1) LIMIT 1`)).rows as LeagueDashboardSnapshot[];
+    return snapshot || null;
+  }
+
+  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot> {
+    const [snapshot] = (await db.execute(sql`INSERT INTO league_dashboard_snapshots (league_id, season, week, payload) VALUES (${data.leagueId}, ${data.season ?? null}, ${data.week ?? null}, ${JSON.stringify(data.payload)}::jsonb) ON CONFLICT (league_id, week, season) DO UPDATE SET payload = EXCLUDED.payload, computed_at = NOW() RETURNING *`)).rows as LeagueDashboardSnapshot[];
+
+    return snapshot;
   }
 
   async deletePlaybookEntry(id: number): Promise<void> {
