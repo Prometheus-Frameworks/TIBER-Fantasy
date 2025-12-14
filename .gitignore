@@ -23,3 +23,4 @@ yarn-error.log*
 .trash/
 .ops/
 archive/.replit
+replit_move-*.txt
