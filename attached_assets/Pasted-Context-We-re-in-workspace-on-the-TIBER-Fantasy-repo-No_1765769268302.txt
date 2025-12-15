@@ -1,0 +1,109 @@
+Context
+We’re in ~/workspace on the TIBER-Fantasy repo (Node/TS/Express/Postgres). We added Sleeper sync + league dashboard routes and manually created DB tables:
+
+user_platform_profiles
+
+league_dashboard_snapshots
+
+brand_signals (hotfix SQL)
+Drizzle migrations are not being applied cleanly (drizzle.__drizzle_migrations exists but has 0 rows; drizzle-kit migrate errored on enum consensus_format already exists). We aborted db:push due to huge “data-loss statements”, but the new tables exist now.
+
+Problem
+User can’t hit API routes locally:
+curl http://localhost:3000/... fails (server not running or wrong port). The UI is currently non-interactive / feels “loading”.
+
+Goal
+Get the dev server running reliably and confirm the API works end-to-end for:
+
+GET /api/league-sync/leagues?user_id=default_user
+
+POST /api/league-sync/sleeper (or /api/league-sync/sync)
+
+GET /api/league-context?user_id=default_user
+
+GET /api/league-dashboard?user_id=default_user&league_id=...
+
+Then wire the UI so “League ID” input triggers the sync call and populates league list + overview chart.
+
+Tasks (do in this order)
+
+Determine the actual server port
+
+Inspect how the server binds (check server/index.ts and any usage of process.env.PORT).
+
+Start the server (npm run dev) and capture the “listening on …” output.
+
+Confirm the listening port with one of:
+
+ss -ltnp | head -n 50
+
+or netstat -ltnp | head -n 50
+
+If the app is using Vite/proxy, document how API calls should be made (direct server port vs front-end dev proxy).
+
+Add a dead-simple health endpoint
+
+Add GET /api/health returning { ok: true } so we can test connectivity quickly.
+
+Confirm curl http://localhost:<PORT>/api/health returns OK.
+
+Smoke test the Sleeper routes
+Using the correct port:
+
+curl -sS "http://localhost:<PORT>/api/league-sync/leagues?user_id=default_user"
+
+If empty leagues, test syncing with a known Sleeper league ID:
+
+curl -sS -X POST "http://localhost:<PORT>/api/league-sync/sleeper" -H "Content-Type: application/json" -d '{"user_id":"default_user","league_id_external":"<LEAGUE_ID>"}' | jq
+
+Verify it inserts into leagues, league_teams, and updates/reads league_context.
+
+Fix the UI wiring
+In client/src/pages/admin/HomepageRedesign.tsx:
+
+Identify the “League ID” input and button(s).
+
+On submit/click, call POST /api/league-sync/sleeper with body { user_id: 'default_user', league_id_external: <input> }
+
+After success, refresh:
+
+GET /api/league-sync/leagues?user_id=default_user
+
+GET /api/league-context?user_id=default_user
+
+then GET /api/league-dashboard?user_id=default_user&league_id=<internal_league_id>
+
+Ensure the chart uses the dashboard payload and that selecting a team shows roster drilldown.
+
+Also fix unreadable textbox colors (dark theme) so text is legible.
+
+Write exact “how to run + how to test” steps
+Update docs/SMOKE_TESTS.md with:
+
+command to start server
+
+how to find port
+
+4 curl commands that must succeed
+
+expected JSON keys returned
+
+Constraints
+
+Do NOT run db:push if it includes destructive drops/truncation.
+
+We already have the required new tables created; only focus on server + API + UI wiring.
+
+Keep changes minimal and type-safe. Add tests only if needed.
+
+Deliverables
+
+A short summary of findings (what port, why 3000 failed)
+
+A PR/commit with:
+
+/api/health
+
+UI wiring for league sync + dashboard fetch
+
+smoke test doc updates
