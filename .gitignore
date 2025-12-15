@@ -36,3 +36,7 @@ backup_*.sql
 
 *.swp
 *.swo
+
+# local backups
+backup_*.sql
+*.swp
