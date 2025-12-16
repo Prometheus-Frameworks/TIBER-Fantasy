@@ -11,7 +11,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import EnhancedPlayerCard from '@/components/EnhancedPlayerCard';
 import PlaybookTab from '@/components/tabs/PlaybookTab';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 type Feature = {
   id: string;
@@ -62,16 +62,17 @@ interface LeagueDashboardPlayerRow {
   canonicalId: string;
   name: string;
   pos: string;
-  alpha: number;
-  usedAsStarter: boolean;
+  alpha: number | null;
+  usedAsStarter: boolean | null;
 }
 
 interface LeagueDashboardTeamRow {
   team_id: string;
   display_name: string;
   totals: { QB: number; RB: number; WR: number; TE: number };
+  bench_contribution?: number;
   overall_total: number;
-  starters_used: Array<{ canonicalId: string; name: string; pos: string; alpha: number }>;
+  starters_used: Array<{ canonicalId: string; name: string; pos: string; alpha: number | null }>;
   roster: LeagueDashboardPlayerRow[];
 }
 
@@ -159,6 +160,7 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   // Mobile state
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [isNavExpanded, setIsNavExpanded] = useState(false);
+  const [showContextManager, setShowContextManager] = useState(false);
 
   const features: Feature[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -365,8 +367,10 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     RB: team.totals.RB,
     WR: team.totals.WR,
     TE: team.totals.TE,
+    bench: team.bench_contribution ?? 0,
     overall: team.overall_total,
   }));
+  const chartMinWidth = Math.max(chartData.length * 90, 360);
 
   // Fetch Sleeper trending players
   const { data: trendingData } = useQuery({
@@ -898,213 +902,273 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
         {/* LEFT: Dashboard / Feature Content */}
         <div className="p-3 md:p-6 overflow-y-auto flex flex-col gap-4 md:gap-5 flex-1">
 
-          {/* League Context Selector */}
-          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">League Context</p>
-                <p className="text-sm text-zinc-300 mt-1">Select your Sleeper league and team to drive Playbook context.</p>
-              </div>
-              <div className="text-right text-xs text-zinc-400">
-                <p className="font-semibold text-zinc-200">Active League</p>
-                <p>{activeLeague?.league_name ?? 'None selected'}</p>
-                <p className="mt-1">Team: {activeTeam?.display_name ?? 'None selected'}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-              <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Select League</label>
-                <select
-                  value={selectedLeagueId ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value || null;
-                    setSelectedLeagueId(value);
-                    setSelectedTeamId(null);
-                  }}
-                  className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-                  disabled={leaguesLoading}
-                >
-                  <option value="">{leaguesLoading ? 'Loading leagues...' : 'Choose a league'}</option>
-                  {leagues.map((league) => (
-                    <option key={league.id} value={league.id}>
-                      {league.league_name} • {league.season ?? 'Season N/A'} ({league.platform || 'sleeper'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs text-zinc-400">Select Team</label>
-                <select
-                  value={selectedTeamId ?? ''}
-                  onChange={(e) => setSelectedTeamId(e.target.value || null)}
-                  className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-                  disabled={!selectedLeagueId || availableTeams.length === 0}
-                >
-                  <option value="">{availableTeams.length === 0 ? 'Sync a league to load teams' : 'Choose a team'}</option>
-                  {availableTeams.map((team) => {
-                    const label = team.display_name ?? (team as any).displayName ?? 'Team';
-                    return (
-                      <option key={team.id} value={team.id}>
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-                {!selectedLeagueId && (
-                  <p className="text-[11px] text-zinc-500">Sync a Sleeper league to load teams.</p>
+          {/* Active context summary */}
+          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-3 md:p-4 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Active Context</p>
+                <div className="text-sm text-zinc-200 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="font-semibold">{activeLeague?.league_name ?? 'No active league selected'}</span>
+                  <span className="text-xs text-zinc-500">Team: {activeTeam?.display_name ?? 'None selected'}</span>
+                </div>
+                {leagueDashboard?.meta?.computed_at && (
+                  <p className="text-[11px] text-zinc-500">
+                    Dashboard updated {new Date(leagueDashboard.meta.computed_at).toLocaleTimeString()} {leagueDashboard.meta.cached ? '(cached)' : ''}
+                  </p>
                 )}
               </div>
-
-              <div className="flex items-center justify-end">
+              <div className="flex items-start gap-2">
+                <span className="text-[11px] text-zinc-500 mt-0.5">Teams: {chartData.length || '—'}</span>
                 <Button
-                  onClick={() => saveLeagueContext.mutate()}
-                  disabled={!canSaveContext || saveLeagueContext.isPending}
-                  className="w-full md:w-auto"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setShowContextManager((prev) => !prev)}
+                  className="shrink-0"
                 >
-                  {saveLeagueContext.isPending ? 'Saving...' : 'Save as Active'}
+                  {showContextManager ? 'Hide' : 'Manage League'}
                 </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs text-zinc-400">Sleeper Username (for auto-detect team)</label>
-                  <span className="text-[11px] text-zinc-500">
-                    {integrationData?.profile ? `Linked: ${integrationData.profile.username ?? integrationData.profile.external_user_id}` : 'Not linked'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={sleeperHandle}
-                    onChange={(e) => setSleeperHandle(e.target.value)}
-                    placeholder="Your Sleeper username"
-                    className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-                  />
-                  <Button
-                    onClick={() => linkSleeperProfile.mutate()}
-                    disabled={!sleeperHandle || linkSleeperProfile.isPending}
-                  >
-                    {linkSleeperProfile.isPending ? 'Linking...' : 'Link'}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs text-zinc-400">Sleeper League ID</label>
-                  <span className="text-[11px] text-zinc-500">Sync and auto-select teams</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={syncLeagueIdInput}
-                    onChange={(e) => setSyncLeagueIdInput(e.target.value)}
-                    placeholder="Paste league ID"
-                    className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
-                  />
-                  <Button
-                    onClick={() => syncLeague.mutate()}
-                    disabled={!syncLeagueIdInput || syncLeague.isPending}
-                    variant="secondary"
-                  >
-                    {syncLeague.isPending ? 'Syncing...' : 'Sync'}
-                  </Button>
-                </div>
               </div>
             </div>
           </section>
 
-          {/* Playbook Tab */}
-          {activeFeature === 'playbook' && (
-            <div className="space-y-4">
-              {activeLeague && (
-                <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">League Overview</p>
-                      <p className="text-sm text-zinc-300">Stacked starters by position with bench weight</p>
-                    </div>
-                    <div className="text-xs text-zinc-500">
-                      {leagueDashboard?.meta?.computed_at && (
-                        <span>
-                          Updated {new Date(leagueDashboard.meta.computed_at).toLocaleTimeString()} {leagueDashboard.meta.cached ? '(cached)' : ''}
-                        </span>
-                      )}
+          {/* League Overview */}
+          {activeLeague && (
+            <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-3 md:p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">League Overview</p>
+                  <p className="text-sm text-zinc-300">Stacked starters by position with bench weight</p>
+                </div>
+                <div className="text-right text-[11px] text-zinc-500 space-y-1">
+                  <p>Teams loaded: {chartData.length}</p>
+                  {leagueDashboard?.meta?.computed_at && (
+                    <p>
+                      Updated {new Date(leagueDashboard.meta.computed_at).toLocaleTimeString()} {leagueDashboard.meta.cached ? '(cached)' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {dashboardLoading ? (
+                <div className="flex items-center justify-center py-10 text-zinc-400">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  Loading league dashboard...
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className="py-8 text-center text-zinc-500">Sync a league to view overview</div>
+              ) : (
+                <>
+                  <div className="w-full overflow-x-auto pb-1">
+                    <div className="h-64" style={{ minWidth: `${chartMinWidth}px` }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                          <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={{ stroke: '#1f2937' }} interval={0} />
+                          <YAxis hide />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(124,58,237,0.08)' }}
+                            contentStyle={{ backgroundColor: '#0b0c14', border: '1px solid rgba(168,85,247,0.2)' }}
+                            formatter={(value, name) => {
+                              const label = name === 'bench' ? 'Bench (weighted)' : name;
+                              return [Number(value as number).toFixed(1), label];
+                            }}
+                          />
+                          <Legend wrapperStyle={{ color: '#e5e7eb' }} />
+                          <Bar dataKey="QB" name="QB" stackId="totals" fill="#a855f7" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                          <Bar dataKey="RB" name="RB" stackId="totals" fill="#22c55e" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                          <Bar dataKey="WR" name="WR" stackId="totals" fill="#38bdf8" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                          <Bar dataKey="TE" name="TE" stackId="totals" fill="#f97316" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                          <Bar dataKey="bench" name="Bench" stackId="totals" fill="#9ca3af" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </div>
 
-                  {dashboardLoading ? (
-                    <div className="flex items-center justify-center py-10 text-zinc-400">
-                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                      Loading league dashboard...
-                    </div>
-                  ) : chartData.length === 0 ? (
-                    <div className="py-8 text-center text-zinc-500">Sync a league to view overview</div>
-                  ) : (
-                    <>
-                      <div className="h-64 w-full">
-                        <ResponsiveContainer>
-                          <BarChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                            <XAxis dataKey="name" stroke="#9ca3af" tickLine={false} axisLine={{ stroke: '#1f2937' }} />
-                            <YAxis hide />
-                            <Tooltip
-                              cursor={{ fill: 'rgba(124,58,237,0.08)' }}
-                              contentStyle={{ backgroundColor: '#0b0c14', border: '1px solid rgba(168,85,247,0.2)' }}
-                              formatter={(value, name) => [Number(value as number).toFixed(1), name]}
-                            />
-                            <Bar dataKey="QB" stackId="totals" fill="#a855f7" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
-                            <Bar dataKey="RB" stackId="totals" fill="#22c55e" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
-                            <Bar dataKey="WR" stackId="totals" fill="#38bdf8" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
-                            <Bar dataKey="TE" stackId="totals" fill="#f97316" onClick={(data) => setSelectedOverviewTeamId(data.payload.teamId)} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                  {selectedOverviewTeam && (
+                    <div className="mt-2 border border-purple-500/10 rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-white/[0.03] border-b border-purple-500/10">
+                        <div className="text-sm text-zinc-200 font-semibold">{selectedOverviewTeam.display_name}</div>
+                        <div className="text-sm text-zinc-400">Overall {selectedOverviewTeam.overall_total.toFixed(1)}</div>
                       </div>
-
-                      {selectedOverviewTeam && (
-                        <div className="mt-2 border border-purple-500/10 rounded-lg overflow-hidden">
-                          <div className="flex items-center justify-between px-3 py-2 bg-white/[0.03] border-b border-purple-500/10">
-                            <div className="text-sm text-zinc-200 font-semibold">{selectedOverviewTeam.display_name}</div>
-                            <div className="text-sm text-zinc-400">Overall {selectedOverviewTeam.overall_total.toFixed(1)}</div>
-                          </div>
-                          <div className="grid grid-cols-4 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-500 bg-white/[0.01]">
-                            <span>Player</span>
-                            <span>Pos</span>
-                            <span className="text-right">Alpha</span>
-                            <span className="text-right">Role</span>
-                          </div>
-                          <div>
-                            {[...(selectedOverviewTeam.roster || [])]
-                              .sort((a, b) => (b.alpha ?? 0) - (a.alpha ?? 0))
-                              .map((player) => (
-                                <div
-                                  key={player.canonicalId}
-                                  className={`grid grid-cols-4 px-3 py-2 text-sm ${player.usedAsStarter ? 'bg-purple-500/10' : 'bg-transparent'} border-t border-purple-500/5`}
-                                >
-                                  <span className="text-zinc-100 truncate">{player.name}</span>
-                                  <span className="text-zinc-300">{player.pos}</span>
-                                  <span className="text-right text-zinc-100">{player.alpha?.toFixed(1) ?? '0.0'}</span>
-                                  <span className="text-right text-zinc-400">{player.usedAsStarter ? 'Starter' : 'Bench'}</span>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
+                      <div className="grid grid-cols-4 px-3 py-2 text-[11px] uppercase tracking-wide text-zinc-500 bg-white/[0.01]">
+                        <span>Player</span>
+                        <span>Pos</span>
+                        <span className="text-right">Alpha</span>
+                        <span className="text-right">Role</span>
+                      </div>
+                      <div>
+                        {[...(selectedOverviewTeam.roster || [])]
+                          .sort((a, b) => (b.alpha ?? 0) - (a.alpha ?? 0))
+                          .map((player) => {
+                            const alphaValue = player.alpha;
+                            const alphaDisplay = alphaValue === null || alphaValue === undefined ? '—' : Number(alphaValue).toFixed(1);
+                            const roleLabel = player.usedAsStarter === true ? 'Starter' : player.usedAsStarter === false ? 'Bench' : 'Unknown';
+                            return (
+                              <div
+                                key={player.canonicalId}
+                                className={`grid grid-cols-4 px-3 py-2 text-sm ${player.usedAsStarter ? 'bg-purple-500/10' : 'bg-transparent'} border-t border-purple-500/5`}
+                              >
+                                <span className="text-zinc-100 truncate">{player.name}</span>
+                                <span className="text-zinc-300">{player.pos}</span>
+                                <span className="text-right text-zinc-100 flex items-center justify-end gap-2">
+                                  {alphaDisplay}
+                                  {alphaValue === null && (
+                                    <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-400/10 text-amber-300 border border-amber-400/40">
+                                      No alpha
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-right text-zinc-400">{roleLabel}</span>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
                   )}
-                </section>
+                </>
               )}
-
-              <PlaybookTab
-                leagueId={activeLeague?.id ?? null}
-                teamId={activeTeam?.id ?? null}
-                week={null}
-                season={activeLeague?.season ?? null}
-                scoringFormat={activeLeague?.scoring_format ?? null}
-              />
-            </div>
+            </section>
           )}
+
+          {/* Playbook Tab - pulled up in layout */}
+          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-3 md:p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Playbook</p>
+                <p className="text-sm text-zinc-300">New entries and Ask Tiber stay near the top</p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => setActiveFeature('playbook')}>
+                Jump to Playbook
+              </Button>
+            </div>
+            <PlaybookTab
+              leagueId={activeLeague?.id ?? null}
+              teamId={activeTeam?.id ?? null}
+              week={null}
+              season={activeLeague?.season ?? null}
+              scoringFormat={activeLeague?.scoring_format ?? null}
+            />
+          </section>
+
+          {/* Management accordion */}
+          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setShowContextManager((prev) => !prev)}
+              className="w-full flex items-center justify-between px-3 md:px-4 py-3 md:py-4 text-left"
+            >
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Manage League</p>
+                <p className="text-sm text-zinc-300">Link Sleeper, sync your league, and set the active context.</p>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${showContextManager ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showContextManager && (
+              <div className="border-t border-purple-500/10 p-3 md:p-4 space-y-3 md:space-y-4 bg-[#0b0c14]">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400">Select League</label>
+                    <select
+                      value={selectedLeagueId ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value || null;
+                        setSelectedLeagueId(value);
+                        setSelectedTeamId(null);
+                      }}
+                      className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      disabled={leaguesLoading}
+                    >
+                      <option value="">{leaguesLoading ? 'Loading leagues...' : 'Choose a league'}</option>
+                      {leagues.map((league) => (
+                        <option key={league.id} value={league.id}>
+                          {league.league_name} • {league.season ?? 'Season N/A'} ({league.platform || 'sleeper'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs text-zinc-400">Select Team</label>
+                    <select
+                      value={selectedTeamId ?? ''}
+                      onChange={(e) => setSelectedTeamId(e.target.value || null)}
+                      className="w-full bg-[#0b0c14] border border-purple-500/40 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      disabled={!selectedLeagueId || availableTeams.length === 0}
+                    >
+                      <option value="">{availableTeams.length === 0 ? 'Sync a league to load teams' : 'Choose a team'}</option>
+                      {availableTeams.map((team) => {
+                        const label = team.display_name ?? (team as any).displayName ?? 'Team';
+                        return (
+                          <option key={team.id} value={team.id}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {!selectedLeagueId && (
+                      <p className="text-[11px] text-zinc-500">Sync a Sleeper league to load teams.</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end">
+                    <Button
+                      onClick={() => saveLeagueContext.mutate()}
+                      disabled={!canSaveContext || saveLeagueContext.isPending}
+                      className="w-full md:w-auto"
+                    >
+                      {saveLeagueContext.isPending ? 'Saving...' : 'Save as Active'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-zinc-400">Sleeper Username (for auto-detect team)</label>
+                      <span className="text-[11px] text-zinc-500">
+                        {integrationData?.profile ? `Linked: ${integrationData.profile.username ?? integrationData.profile.external_user_id}` : 'Not linked'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={sleeperHandle}
+                        onChange={(e) => setSleeperHandle(e.target.value)}
+                        placeholder="Your Sleeper username"
+                        className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      />
+                      <Button
+                        onClick={() => linkSleeperProfile.mutate()}
+                        disabled={!sleeperHandle || linkSleeperProfile.isPending}
+                      >
+                        {linkSleeperProfile.isPending ? 'Linking...' : 'Link'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg border border-purple-500/20 bg-[#0b0c14]">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-zinc-400">Sleeper League ID</label>
+                      <span className="text-[11px] text-zinc-500">Sync and auto-select teams</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={syncLeagueIdInput}
+                        onChange={(e) => setSyncLeagueIdInput(e.target.value)}
+                        placeholder="Paste league ID"
+                        className="flex-1 bg-[#0f111a] border border-purple-500/30 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+                      />
+                      <Button
+                        onClick={() => syncLeague.mutate()}
+                        disabled={!syncLeagueIdInput || syncLeague.isPending}
+                        variant="secondary"
+                      >
+                        {syncLeague.isPending ? 'Syncing...' : 'Sync'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
           
           {/* Dashboard Content - only show when dashboard is active */}
           {activeFeature === 'dashboard' && (

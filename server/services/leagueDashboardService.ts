@@ -11,9 +11,10 @@ export type LeagueDashboardTeam = {
   team_id: string;
   display_name: string;
   totals: { QB: number; RB: number; WR: number; TE: number };
+  bench_contribution: number;
   overall_total: number;
-  starters_used: Array<{ canonicalId: string; name: string; pos: string; alpha: number }>;
-  roster: Array<{ canonicalId: string; name: string; pos: string; alpha: number; usedAsStarter: boolean }>;
+  starters_used: Array<{ canonicalId: string; name: string; pos: string; alpha: number | null }>;
+  roster: Array<{ canonicalId: string; name: string; pos: string; alpha: number | null; usedAsStarter: boolean }>;
 };
 
 export type LeagueDashboardPayload = {
@@ -68,10 +69,13 @@ function countPositions(rosterPositions: string[]) {
   return counts;
 }
 
-function buildLineup(players: Array<{ canonicalId: string; name: string; pos: string; alpha: number }>, rosterPositions: string[]) {
+function buildLineup(
+  players: Array<{ canonicalId: string; name: string; pos: string; alpha: number | null }>,
+  rosterPositions: string[]
+) {
   const counts = countPositions(rosterPositions);
   const totals = { QB: 0, RB: 0, WR: 0, TE: 0 };
-  const startersUsed: Array<{ canonicalId: string; name: string; pos: string; alpha: number }> = [];
+  const startersUsed: Array<{ canonicalId: string; name: string; pos: string; alpha: number | null }> = [];
   const used = new Set<string>();
 
   const sorted = [...players].sort((a, b) => (b.alpha ?? 0) - (a.alpha ?? 0));
@@ -125,9 +129,10 @@ function buildLineup(players: Array<{ canonicalId: string; name: string; pos: st
     .filter((p) => !p.usedAsStarter)
     .reduce((sum, p) => sum + (p.alpha ?? 0), 0);
 
-  const overall = Object.values(totals).reduce((sum, val) => sum + val, 0) + BENCH_WEIGHT * benchSum;
+  const benchContribution = BENCH_WEIGHT * benchSum;
+  const overall = Object.values(totals).reduce((sum, val) => sum + val, 0) + benchContribution;
 
-  return { totals, startersUsed, roster, overallTotal: overall };
+  return { totals, startersUsed, roster, overallTotal: overall, benchContribution };
 }
 
 export async function computeLeagueDashboard(
@@ -218,10 +223,11 @@ export async function computeLeagueDashboard(
         .orderBy(desc(forgePlayerState.season), desc(forgePlayerState.week), desc(forgePlayerState.computedAt))
     : [];
 
-  const alphaByPlayer = new Map<string, { alpha: number }>();
+  const alphaByPlayer = new Map<string, { alpha: number | null }>();
   for (const row of alphaRows) {
     if (alphaByPlayer.has(row.playerId)) continue;
-    alphaByPlayer.set(row.playerId, { alpha: Number(row.alphaFinal ?? row.alphaRaw ?? 0) });
+    const alphaValue = row.alphaFinal ?? row.alphaRaw;
+    alphaByPlayer.set(row.playerId, { alpha: alphaValue === null || alphaValue === undefined ? null : Number(alphaValue) });
   }
 
   const teams: LeagueDashboardTeam[] = [];
@@ -235,7 +241,8 @@ export async function computeLeagueDashboard(
       const identity = identityBySleeperId.get(String(pid));
       const canonicalId = identity?.canonicalId ?? `sleeper:${pid}`;
       const pos = identity?.position ?? 'FLEX';
-      const alpha = alphaByPlayer.get(canonicalId)?.alpha ?? 0;
+      const alphaEntry = alphaByPlayer.get(canonicalId);
+      const alpha = alphaEntry ? alphaEntry.alpha : null;
       return {
         canonicalId,
         name: identity?.fullName ?? String(pid),
@@ -244,12 +251,13 @@ export async function computeLeagueDashboard(
       };
     });
 
-    const { totals, startersUsed, roster: rosterRows, overallTotal } = buildLineup(players, positions);
+    const { totals, startersUsed, roster: rosterRows, overallTotal, benchContribution } = buildLineup(players, positions);
 
     teams.push({
       team_id: team.id,
       display_name: (team as any).displayName ?? (team as any).display_name ?? 'Team',
       totals,
+      bench_contribution: benchContribution,
       overall_total: overallTotal,
       starters_used: startersUsed,
       roster: rosterRows,
