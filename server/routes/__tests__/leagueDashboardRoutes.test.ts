@@ -1,3 +1,14 @@
+jest.mock('../../infra/db', () => ({ db: {} }));
+jest.mock('../../storage', () => ({
+  storage: {
+    getLeagueWithTeams: jest.fn(),
+    getLeaguesWithTeams: jest.fn(),
+    getUserPlatformProfile: jest.fn(),
+    setUserLeagueContext: jest.fn(),
+    getUserLeagueContext: jest.fn(),
+  },
+}));
+
 import express from 'express';
 import { AddressInfo } from 'net';
 import { createLeagueDashboardRouter } from '../leagueDashboardRoutes';
@@ -20,7 +31,7 @@ describe('league dashboard routes', () => {
 
     const response = await fetch(`http://127.0.0.1:${port}${path}`);
     const json = await response.json();
-    server.close();
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
     return { status: response.status, body: json };
   }
 
@@ -29,6 +40,7 @@ describe('league dashboard routes', () => {
     (computeLeagueDashboard as jest.Mock).mockResolvedValue({
       success: true,
       meta: { league_id: 'l1', week: null, season: 2024, computed_at: new Date().toISOString(), cached: false },
+      unresolvedPlayers: [],
       teams: [
         {
           team_id: 't1',
@@ -49,6 +61,7 @@ describe('league dashboard routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.teams[0].overall_total).toBe(65);
+    expect(res.body.requestId).toBeDefined();
   });
 
   it('forces refresh when query flag passed', async () => {
@@ -56,7 +69,9 @@ describe('league dashboard routes', () => {
     await call(app, '/api/league-dashboard?user_id=default_user&league_id=l1&refresh=1');
 
     expect(computeLeagueDashboard).toHaveBeenCalledWith(
-      expect.objectContaining({ refresh: true, leagueId: 'l1', userId: 'default_user' })
+      expect.objectContaining({ refresh: true, leagueId: 'l1', userId: 'default_user', week: null, season: null }),
+      undefined,
+      expect.anything()
     );
   });
 });
