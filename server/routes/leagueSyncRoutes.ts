@@ -1,6 +1,7 @@
 import express from "express";
 import { deriveSleeperScoringFormat, sleeperClient } from "../integrations/sleeperClient";
 import { storage } from "../storage";
+import { createPlaybookForgeLogger } from "../utils/playbookForgeLogger";
 
 type LeagueSyncDeps = {
   storage: typeof storage;
@@ -47,6 +48,11 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
 
   async function syncSleeperLeague(req: any, res: any) {
     try {
+      const logger = createPlaybookForgeLogger({
+        requestId: (req.headers['x-request-id'] as string) || undefined,
+        enabled: process.env.DEBUG_PLAYBOOK_FORGE === '1',
+        scope: 'LeagueSync',
+      });
       const { user_id = 'default_user', league_id_external, sleeper_league_id } = req.body;
       const externalLeagueId = league_id_external || sleeper_league_id;
 
@@ -63,6 +69,17 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
       const scoringFormat = deps.deriveSleeperScoringFormat(league.scoring_settings);
       const season = Number(league.season) || null;
       const rosterByOwner = new Map(rosters.map((roster) => [String(roster.owner_id), roster]));
+
+      const rosterPlayerIds = Array.from(new Set(rosters.flatMap((r) => (r.players ?? []).map((pid) => String(pid)))));
+
+      logger.log('league-sync-fetched', {
+        requestId: logger.requestId,
+        external_league_id: String(externalLeagueId),
+        user_count: users.length,
+        roster_count: rosters.length,
+        unique_player_ids: rosterPlayerIds.length,
+        sample_player_ids: rosterPlayerIds.slice(0, 10),
+      });
 
       const teams = users.map((user) => {
         const roster = rosterByOwner.get(String(user.user_id));
@@ -95,12 +112,22 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
 
       const auto = await maybeAutoSetContext({ userId: user_id, leagueId: result.league.id, teams: result.teams });
 
+      logger.log('league-sync-upserted', {
+        requestId: logger.requestId,
+        league_id: result.league.id,
+        platform: 'sleeper',
+        teams: result.teams.length,
+        season,
+      });
+
+      res.setHeader('x-playbook-request-id', logger.requestId);
       res.json({
         success: true,
         league: result.league,
         teams: result.teams,
         activeTeam: auto.activeTeam,
         suggestedTeamId: auto.suggestedTeamId,
+        requestId: logger.requestId,
       });
     } catch (error) {
       console.error('❌ [Sleeper League Sync] Failed:', error);
