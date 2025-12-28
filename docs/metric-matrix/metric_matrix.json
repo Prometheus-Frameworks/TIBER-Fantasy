@@ -1,0 +1,394 @@
+{
+  "$schema": "./metric_matrix.schema.json",
+  "sources": [
+    {
+      "name": "bronze_nflfastr_plays",
+      "kind": "table",
+      "layer": "bronze",
+      "status": "active",
+      "description": "Raw NFLfastR play-by-play ingest (bronze layer)",
+      "fields": [
+        "air_yards",
+        "complete_pass",
+        "created_at",
+        "defteam",
+        "epa",
+        "first_down",
+        "first_down_pass",
+        "first_down_rush",
+        "game_id",
+        "id",
+        "imported_at",
+        "incomplete_pass",
+        "interception",
+        "passer_player_id",
+        "passer_player_name",
+        "play_id",
+        "play_type",
+        "posteam",
+        "raw_data",
+        "receiver_player_id",
+        "receiver_player_name",
+        "rusher_player_id",
+        "rusher_player_name",
+        "season",
+        "touchdown",
+        "week",
+        "wpa",
+        "yards_after_catch",
+        "yards_gained"
+      ]
+    },
+    {
+      "name": "bronze_nflfastr_snap_counts",
+      "kind": "table",
+      "layer": "bronze",
+      "status": "active",
+      "description": "Snap count ingest from nfl_data_py (bronze layer)",
+      "fields": [
+        "defense_pct",
+        "defense_snaps",
+        "game_id",
+        "game_type",
+        "id",
+        "imported_at",
+        "offense_pct",
+        "offense_snaps",
+        "opponent",
+        "pfr_game_id",
+        "pfr_player_id",
+        "player",
+        "position",
+        "season",
+        "st_pct",
+        "st_snaps",
+        "team",
+        "week"
+      ]
+    },
+    {
+      "name": "datadive_nflfastr_metrics",
+      "kind": "table",
+      "layer": "gold",
+      "status": "active",
+      "description": "Per-player per-week context metrics used by xFPTS v2",
+      "fields": [
+        "air_yards",
+        "created_at",
+        "player_id",
+        "position",
+        "rush_epa",
+        "rush_success",
+        "rz_carries",
+        "rz_targets",
+        "season",
+        "targets",
+        "updated_at",
+        "week",
+        "yac_per_rec"
+      ]
+    },
+    {
+      "name": "defense_vs_position_stats",
+      "kind": "table",
+      "layer": "gold",
+      "status": "active",
+      "description": "Fantasy/EPA allowed by defense and position derived from bronze_nflfastr_plays",
+      "fields": [
+        "avg_epa_allowed",
+        "avg_pts_per_game_ppr",
+        "avg_pts_per_game_standard",
+        "created_at",
+        "defense_team",
+        "dvp_rating",
+        "fantasy_pts_half_ppr",
+        "fantasy_pts_ppr",
+        "fantasy_pts_standard",
+        "id",
+        "plays_against",
+        "position",
+        "rank_vs_position",
+        "receptions_allowed",
+        "season",
+        "success_rate_allowed",
+        "targets_allowed",
+        "total_yards_allowed",
+        "touchdowns_allowed",
+        "unique_players",
+        "updated_at",
+        "week"
+      ]
+    },
+    {
+      "name": "forge_player_advanced_qb",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "PlayerAdvanced QB view blending efficiency and volume splits.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "forge_player_advanced_te",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "PlayerAdvanced TE view with route and efficiency enrichments.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "forge_team_environment",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Team environment aggregates for pace and pass rate over expected.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "forge_team_matchup_context",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Matchup context view aligning opponent strength metrics.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "nfl_data_py.import_snap_counts",
+      "kind": "external",
+      "layer": "bronze",
+      "status": "unknown",
+      "description": "External import hook used for snap count ingestion.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "player_identity_map",
+      "kind": "view",
+      "layer": "silver",
+      "status": "unknown",
+      "description": "Identity resolution table joining provider player IDs.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "player_usage",
+      "kind": "table",
+      "layer": "silver",
+      "status": "active",
+      "description": "Weekly alignment and usage splits derived from play-by-play",
+      "fields": [
+        "alignment_outside_pct",
+        "alignment_slot_pct",
+        "carries_gap",
+        "carries_total",
+        "carries_zone",
+        "created_at",
+        "id",
+        "player_id",
+        "routes_inline",
+        "routes_outside",
+        "routes_slot",
+        "routes_total",
+        "season",
+        "sleeper_id",
+        "snap_share_pct",
+        "snaps",
+        "target_share_pct",
+        "targets",
+        "updated_at",
+        "week"
+      ]
+    },
+    {
+      "name": "qb_context_metrics",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Computed QB context metrics including CPOE and pressure signals.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "qb_epa_reference",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "EPA reference leaderboard for QB ranking blends.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "rb_advanced_stats_2025",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Season-level RB advanced metric aggregates for 2025.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "rb_advanced_weekly_2025",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Weekly RB advanced metric view for 2025.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "silver_player_weekly_stats",
+      "kind": "table",
+      "layer": "silver",
+      "status": "active",
+      "description": "Aggregated weekly player stats (silver layer)",
+      "fields": [
+        "air_yards",
+        "completions",
+        "created_at",
+        "id",
+        "interceptions",
+        "pass_attempts",
+        "passing_epa",
+        "passing_tds",
+        "passing_yards",
+        "player_id",
+        "player_name",
+        "position",
+        "receiving_epa",
+        "receiving_tds",
+        "receiving_yards",
+        "receptions",
+        "rush_attempts",
+        "rushing_epa",
+        "rushing_tds",
+        "rushing_yards",
+        "season",
+        "targets",
+        "team",
+        "updated_at",
+        "week",
+        "yac"
+      ]
+    },
+    {
+      "name": "tiber_scores",
+      "kind": "table",
+      "layer": "gold",
+      "status": "active",
+      "description": "Per-player, per-week TIBER scores computed from NFLfastR stats",
+      "fields": [
+        "calculated_at",
+        "epa_per_play",
+        "epa_score",
+        "first_down_rate",
+        "first_down_score",
+        "id",
+        "nflfastr_id",
+        "player_id",
+        "season",
+        "snap_percent_avg",
+        "snap_percent_trend",
+        "td_rate",
+        "td_score",
+        "team_offense_rank",
+        "team_score",
+        "tiber_score",
+        "tier",
+        "total_first_downs",
+        "usage_score",
+        "week"
+      ]
+    },
+    {
+      "name": "tiber_season_ratings",
+      "kind": "table",
+      "layer": "gold",
+      "status": "active",
+      "description": "Season-level TIBER aggregates",
+      "fields": [
+        "calculated_at",
+        "highest_week_score",
+        "id",
+        "last_week",
+        "last_week_score",
+        "lowest_week_score",
+        "nflfastr_id",
+        "score_std_dev",
+        "season",
+        "season_average",
+        "season_tier",
+        "trend",
+        "updated_at",
+        "weeks_included"
+      ]
+    },
+    {
+      "name": "weekly_stats",
+      "kind": "table",
+      "layer": "silver",
+      "status": "active",
+      "description": "Per-player weekly stats with fantasy scoring from NFLfastR pulls",
+      "fields": [
+        "created_at",
+        "fantasy_points_half",
+        "fantasy_points_ppr",
+        "fantasy_points_std",
+        "fumbles",
+        "gsis_id",
+        "int",
+        "pass_td",
+        "pass_yd",
+        "player_id",
+        "player_name",
+        "position",
+        "rec",
+        "rec_td",
+        "rec_yd",
+        "routes",
+        "rush_att",
+        "rush_td",
+        "rush_yd",
+        "season",
+        "snaps",
+        "targets",
+        "team",
+        "two_pt",
+        "updated_at",
+        "week"
+      ]
+    },
+    {
+      "name": "wr_advanced_stats_2025",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Season-level WR advanced metric aggregates for 2025.",
+      "tags": [
+        "needs_field_list"
+      ]
+    },
+    {
+      "name": "wr_advanced_weekly_2025",
+      "kind": "view",
+      "layer": "gold",
+      "status": "unknown",
+      "description": "Weekly WR advanced metric view for 2025.",
+      "tags": [
+        "needs_field_list"
+      ]
+    }
+  ]
+}
