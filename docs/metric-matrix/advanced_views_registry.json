@@ -1,0 +1,76 @@
+{
+  "assets": [
+    {
+      "name": "forge_player_advanced_qb",
+      "kind": "view",
+      "layer": "gold",
+      "description": "PlayerAdvanced QB view blending efficiency and volume splits."
+    },
+    {
+      "name": "forge_player_advanced_te",
+      "kind": "view",
+      "layer": "gold",
+      "description": "PlayerAdvanced TE view with route and efficiency enrichments."
+    },
+    {
+      "name": "forge_team_environment",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Team environment aggregates for pace and pass rate over expected."
+    },
+    {
+      "name": "forge_team_matchup_context",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Matchup context view aligning opponent strength metrics."
+    },
+    {
+      "name": "nfl_data_py.import_snap_counts",
+      "kind": "external",
+      "layer": "bronze",
+      "description": "External import hook used for snap count ingestion."
+    },
+    {
+      "name": "player_identity_map",
+      "kind": "view",
+      "layer": "silver",
+      "description": "Identity resolution table joining provider player IDs."
+    },
+    {
+      "name": "qb_context_metrics",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Computed QB context metrics including CPOE and pressure signals."
+    },
+    {
+      "name": "qb_epa_reference",
+      "kind": "view",
+      "layer": "gold",
+      "description": "EPA reference leaderboard for QB ranking blends."
+    },
+    {
+      "name": "rb_advanced_stats_2025",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Season-level RB advanced metric aggregates for 2025."
+    },
+    {
+      "name": "rb_advanced_weekly_2025",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Weekly RB advanced metric view for 2025."
+    },
+    {
+      "name": "wr_advanced_stats_2025",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Season-level WR advanced metric aggregates for 2025."
+    },
+    {
+      "name": "wr_advanced_weekly_2025",
+      "kind": "view",
+      "layer": "gold",
+      "description": "Weekly WR advanced metric view for 2025."
+    }
+  ]
+}
