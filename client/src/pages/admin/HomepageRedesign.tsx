@@ -263,18 +263,6 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     if (!stillValid) setSelectedTeamId(null);
   }, [selectedTeamId, teamsReady, availableTeams]);
 
-  useEffect(() => {
-    if (!leagueDashboard?.teams?.length) return;
-    const preferredTeam = activeTeam?.id ?? selectedTeamId ?? leagueDashboard.teams[0]?.team_id ?? null;
-    setSelectedOverviewTeamId((prev) => prev ?? preferredTeam);
-  }, [leagueDashboard, activeTeam?.id, selectedTeamId]);
-
-  useEffect(() => {
-    if (!selectedTeamId) return;
-    const exists = leagueOverviewTeams.some((team) => team.team_id === selectedTeamId);
-    if (exists) setSelectedOverviewTeamId(selectedTeamId);
-  }, [selectedTeamId, leagueOverviewTeams]);
-
   const selectedTeam = selectedTeamId
     ? availableTeams.find((team) => team.id === selectedTeamId) || activeTeam
     : activeTeam;
@@ -304,14 +292,22 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     },
   });
 
+  interface SyncLeagueResponse {
+    league?: { id: string };
+    activeTeam?: { id: string };
+    suggestedTeamId?: string;
+    suggested_team_id?: string;
+  }
+
   const syncLeague = useMutation({
-    mutationFn: async () => {
-      return apiRequest('POST', '/api/league-sync/sync', {
+    mutationFn: async (): Promise<SyncLeagueResponse> => {
+      const res = await apiRequest('POST', '/api/league-sync/sync', {
         user_id: 'default_user',
         league_id_external: syncLeagueIdInput,
       });
+      return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: SyncLeagueResponse) => {
       refetchLeagues();
       refetchLeagueContext();
       if (data?.league?.id) {
@@ -371,6 +367,20 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
     overall: team.overall_total,
   }));
   const chartMinWidth = Math.max(chartData.length * 90, 360);
+
+  // Sync selectedOverviewTeamId when leagueDashboard loads
+  useEffect(() => {
+    if (!leagueDashboard?.teams?.length) return;
+    const preferredTeam = activeTeam?.id ?? selectedTeamId ?? leagueDashboard.teams[0]?.team_id ?? null;
+    setSelectedOverviewTeamId((prev) => prev ?? preferredTeam);
+  }, [leagueDashboard, activeTeam?.id, selectedTeamId]);
+
+  // Sync selectedOverviewTeamId when selectedTeamId changes
+  useEffect(() => {
+    if (!selectedTeamId) return;
+    const exists = leagueOverviewTeams.some((team) => team.team_id === selectedTeamId);
+    if (exists) setSelectedOverviewTeamId(selectedTeamId);
+  }, [selectedTeamId, leagueOverviewTeams]);
 
   // Fetch Sleeper trending players
   const { data: trendingData } = useQuery({
