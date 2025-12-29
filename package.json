@@ -14,7 +14,10 @@
     "db:studio": "drizzle-kit studio",
     "test:forge": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/recursiveAlphaEngine.test.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "seed:metric-matrix": "tsx server/scripts/seedMetricMatrix.ts",
+    "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts",
+    "sync:metric-matrix-registry": "tsx server/scripts/syncAdvancedRegistryFields.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

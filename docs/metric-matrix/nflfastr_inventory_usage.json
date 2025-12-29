@@ -1,0 +1,113 @@
+{
+  "routes": [
+    {
+      "name": "/api/game-logs/:playerId/latest",
+      "sources": ["bronze_nflfastr_plays"],
+      "fields_returned": [
+        "passing.attempts", "passing.completions", "passing.yards", "passing.touchdowns", "passing.interceptions",
+        "rushing.attempts", "rushing.yards", "rushing.touchdowns",
+        "receiving.targets", "receiving.receptions", "receiving.yards", "receiving.touchdowns",
+        "fantasyPoints.standard", "fantasyPoints.halfPPR", "fantasyPoints.ppr"
+      ]
+    },
+    {
+      "name": "/api/admin/te-rankings-sandbox",
+      "sources": ["weekly_stats", "player_usage", "bronze_nflfastr_plays", "forge_team_environment", "forge_team_matchup_context"],
+      "fields_returned": [
+        "targets", "receptions", "rec_yards", "rec_tds", "fantasy_points_ppr", "snaps", "routes",
+        "alignment.slot_pct", "alignment.inline_pct", "alignment.outside_pct",
+        "red_zone.rz_targets", "red_zone.10_zone_targets", "red_zone.goal_line_targets", "red_zone.rz_tds",
+        "volatility.weekly_ppr_series", "env_score", "matchup_score"
+      ]
+    },
+    {
+      "name": "/api/admin/qb-rankings-sandbox",
+      "sources": ["bronze_nflfastr_plays", "qb_context_metrics", "qb_epa_reference"],
+      "fields_returned": [
+        "attempts", "completions", "passing_yards", "passing_tds", "interceptions", "air_yards", "epa_avg",
+        "deep/short/intermediate attempts+completions", "red_zone.attempts/tds/ints", "end_zone_attempts",
+        "rushing.carries", "rushing.yards", "rushing.tds", "scrambles", "designed_runs", "rz_rushes/rz_rush_tds",
+        "context.cpoe", "context.pressure_rate", "context.drop_rate", "epa_reference"
+      ]
+    }
+  ],
+  "services": [
+    {
+      "name": "DefenseVsPositionService.calculateDefenseVsPosition",
+      "sources": ["bronze_nflfastr_plays", "player_identity_map"],
+      "fields_generated": [
+        "plays_against", "unique_players", "fantasy_pts_ppr", "fantasy_pts_half_ppr", "fantasy_pts_standard",
+        "avg_epa_allowed", "success_rate_allowed", "touchdowns_allowed", "total_yards_allowed",
+        "receptions_allowed", "targets_allowed", "rank_vs_position", "dvp_rating"
+      ]
+    },
+    {
+      "name": "SnapCountService.fetchSnapCounts/importSnapCounts",
+      "sources": ["nfl_data_py.import_snap_counts", "bronze_nflfastr_snap_counts"],
+      "fields_generated": [
+        "game_id", "pfr_game_id", "season", "week", "player", "pfr_player_id", "position", "team", "opponent",
+        "offense_snaps", "offense_pct", "defense_snaps", "defense_pct", "st_snaps", "st_pct"
+      ]
+    },
+    {
+      "name": "PlayerAdvancedService (WR/RB/TE/QB getters)",
+      "sources": ["wr_advanced_stats_2025", "wr_advanced_weekly_2025", "rb_advanced_stats_2025", "rb_advanced_weekly_2025", "forge_player_advanced_qb", "forge_player_advanced_te"],
+      "fields_returned": [
+        "usage.targets/receptions/carries", "shares.target_share/carry_share/air_yards_share", "air_yards", "yac", "yprr_est",
+        "epa_per_target", "success_rate", "yards_per_target/carry", "fd_per_target", "goal_line_carries", "redzone_targets/carries",
+        "rush_epa_per_att", "catch_rate", "yac_per_rec", "games_played"
+      ]
+    },
+    {
+      "name": "TiberService.calculateTiberScore",
+      "sources": ["bronze_nflfastr_plays", "bronze_nflfastr_snap_counts", "player_identity_map", "tiber_scores", "tiber_season_ratings"],
+      "fields_generated": [
+        "targets", "receptions", "receiving_epa", "receiving_tds", "receiving_first_downs",
+        "rushes", "rushing_epa", "rushing_tds", "rushing_first_downs", "team_abbr",
+        "snap_percentage_avg/trend", "tiber_score", "tier", "season_average"
+      ]
+    }
+  ],
+  "features": {
+    "WR": {
+      "inputs": [
+        "seasonStats.targets", "seasonStats.targetShare (est. if missing)", "seasonStats.airYardsShare (computed)", "seasonStats.redZoneTargets",
+        "advancedMetrics.yprr", "advancedMetrics.epaPerTarget", "seasonStats.receivingYards", "seasonStats.receptions",
+        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.proePct/pacePct", "dvpData.rank"
+      ],
+      "source_tables": ["weekly_stats", "player_usage", "wr_advanced_stats_2025", "wr_advanced_weekly_2025"],
+      "nflfastr_derived": true,
+      "notes": "targetShare/airYardsShare/rzTargets are estimated when null; efficiency capped without advanced stats"
+    },
+    "RB": {
+      "inputs": [
+        "seasonStats.rushAttempts", "seasonStats.targets", "seasonStats.snapShare as opportunityShare", "seasonStats.redZoneCarries", "seasonStats.redZoneTargets",
+        "advancedMetrics.yardsPerCarry", "advancedMetrics.yardsAfterContact", "advancedMetrics.missedTacklesForced", "advancedMetrics.epaPerRush", "advancedMetrics.successRate",
+        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.proePct (converted to rush volume)", "teamEnvironment.olGradePct", "dvpData.rank"
+      ],
+      "source_tables": ["weekly_stats", "player_usage", "rb_advanced_stats_2025", "rb_advanced_weekly_2025"],
+      "nflfastr_derived": true,
+      "notes": "Goal-line/RZ touches estimated when missing; caps applied when advanced metrics absent"
+    },
+    "TE": {
+      "inputs": [
+        "seasonStats.targets/receptions/recYards/recTds", "seasonStats.targetShare", "seasonStats.airYardsShare", "seasonStats.redZoneTargets", "snaps/routes",
+        "advancedMetrics.yprr", "advancedMetrics.epaPerTarget", "advancedMetrics.successRate", "advancedMetrics.catchRateOverExpected", "advancedMetrics.yardsAfterContact",
+        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.passAttemptsPerGame/pace", "dvpData.rank"
+      ],
+      "source_tables": ["weekly_stats", "player_usage", "forge_player_advanced_te"],
+      "nflfastr_derived": true,
+      "notes": "Defaults to neutral contextFit when matchup/environment missing"
+    },
+    "QB": {
+      "inputs": [
+        "seasonStats.passingAttempts (est. from passingYards if missing)", "seasonStats.rushAttempts", "seasonStats.redZoneTargets as rzPass proxy",
+        "seasonStats.passingYards/passingTds/interceptions", "advancedMetrics.epaPerPlay", "advancedMetrics.cpoe", "advancedMetrics.aypa",
+        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.passAttemptsPerGame/pace/proe", "dvpData.rank"
+      ],
+      "source_tables": ["forge_player_advanced_qb", "weekly_stats"],
+      "nflfastr_derived": true,
+      "notes": "Caps efficiency when advanced stats unavailable; sack rate currently placeholder"
+    }
+  }
+}

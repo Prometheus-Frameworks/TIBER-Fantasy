@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Metric Matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sources"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "kind", "layer", "status"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["table", "view", "external", "unknown"]
+          },
+          "layer": {
+            "type": "string",
+            "enum": ["bronze", "silver", "gold", "application", "unknown"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "deprecated", "missing", "unknown"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "upstream": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "provides_metrics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consumed_by": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "refresh": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "cadence": { "type": "string" },
+              "sla_hours": { "type": "number" },
+              "last_updated_field": { "type": "string" }
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
