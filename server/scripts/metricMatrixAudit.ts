@@ -109,7 +109,7 @@ function collectUsageSources(usage: UsageInventory): string[] {
     (feature.source_tables ?? []).forEach((source) => discovered.add(source));
   });
 
-  return [...discovered].sort();
+  return Array.from(discovered).sort();
 }
 
 function collectMatrixCoverage(matrix: MetricMatrix): Set<string> {
@@ -124,7 +124,7 @@ function collectMatrixCoverage(matrix: MetricMatrix): Set<string> {
 }
 
 function detectDuplicateScriptKeys(packageJsonRaw: string): string[] {
-  const scriptsMatch = packageJsonRaw.match(/"scripts"\s*:\s*{([^}]*)}/s);
+  const scriptsMatch = packageJsonRaw.match(/"scripts"\s*:\s*\{([\s\S]*?)\}/);
   if (!scriptsMatch) return [];
 
   const scriptsBlock = scriptsMatch[1];
@@ -142,7 +142,7 @@ function detectDuplicateScriptKeys(packageJsonRaw: string): string[] {
     }
   }
 
-  return [...duplicates].sort();
+  return Array.from(duplicates).sort();
 }
 
 function detectDuplicateSources(matrix: MetricMatrix): string[] {
@@ -157,7 +157,7 @@ function detectDuplicateSources(matrix: MetricMatrix): string[] {
     }
   });
 
-  return [...duplicates].sort();
+  return Array.from(duplicates).sort();
 }
 
 function findDuplicates(values: string[]): string[] {
@@ -172,7 +172,7 @@ function findDuplicates(values: string[]): string[] {
     }
   });
 
-  return [...duplicates].sort();
+  return Array.from(duplicates).sort();
 }
 
 function validateTableCoverage(
@@ -209,8 +209,8 @@ function validateTableCoverage(
     const inventoryFields = new Set((definition.columns ?? []).map((column) => column.name));
     const matrixFields = new Set(entry.fields ?? []);
 
-    const missingInMatrix = [...inventoryFields].filter((field) => !matrixFields.has(field)).sort();
-    const extraInMatrix = [...matrixFields].filter((field) => !inventoryFields.has(field)).sort();
+    const missingInMatrix = Array.from(inventoryFields).filter((field) => !matrixFields.has(field)).sort();
+    const extraInMatrix = Array.from(matrixFields).filter((field) => !inventoryFields.has(field)).sort();
 
     if (missingInMatrix.length > 0 || extraInMatrix.length > 0 || entry.fields === undefined) {
       fieldMismatches.push({ source: name, missingInMatrix, extraInMatrix });
@@ -239,7 +239,7 @@ function validateRegistry(advanced: AdvancedRegistry): { invalidKinds: string[];
     }
   });
 
-  return { invalidKinds: [...invalidKinds].sort(), invalidLayers: [...invalidLayers].sort() };
+  return { invalidKinds: Array.from(invalidKinds).sort(), invalidLayers: Array.from(invalidLayers).sort() };
 }
 
 function partitionTableInventory(
@@ -314,7 +314,7 @@ function main(): void {
   const duplicateSources = detectDuplicateSources(metricMatrix);
   const registryValidation = validateRegistry(advancedViews);
   const registryDuplicates = findDuplicates(registryNames);
-  const registryTableCollisions = [...new Set(registryNames.filter((name) => Object.prototype.hasOwnProperty.call(tables, name)))].sort();
+  const registryTableCollisions = Array.from(new Set(registryNames.filter((name) => Object.prototype.hasOwnProperty.call(tables, name)))).sort();
   const nonTableFields = validateNonTableFields(metricMatrix);
 
   const hasFailures =

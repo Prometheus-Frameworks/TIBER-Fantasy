@@ -1,0 +1,48 @@
+You are working in repo TIBER-Fantasy on Replit.
+
+Goal: Fix the TypeScript/LSP errors in server/scripts/metricMatrixAudit.ts (Set iteration / ES target issue) WITHOUT changing behavior, and ensure the metric-matrix registry sync script is correctly implemented + wired.
+
+Constraints:
+- Do NOT change tsconfig target or compiler flags unless absolutely necessary.
+- Prefer code-level fixes: replace Set iteration/spread patterns with Array.from(...) so typecheck passes under current TS target.
+- Keep existing runtime behavior identical.
+
+Tasks:
+
+1) Fix ES2015 Set iteration errors in:
+   server/scripts/metricMatrixAudit.ts
+   Specifically replace patterns like:
+     - return [...someSet].sort()
+     - const arr = [...new Set(...)]
+     - for (const x of someSet) { ... }  (if present)
+   With safe equivalents like:
+     - Array.from(someSet).sort()
+     - Array.from(new Set(...)).sort()
+     - for (const x of Array.from(someSet)) { ... }
+   Ensure no lint/type errors remain.
+
+2) Verify package.json scripts:
+   - seed:metric-matrix -> tsx server/scripts/seedMetricMatrix.ts
+   - audit:metric-matrix -> tsx server/scripts/metricMatrixAudit.ts
+   - sync:metric-matrix-registry -> tsx server/scripts/syncAdvancedRegistryFields.ts
+
+3) If server/scripts/syncAdvancedRegistryFields.ts does not exist, create it.
+   Required behavior:
+   - If DATABASE_URL is missing: print a friendly message and exit 0 (no failure).
+   - If DATABASE_URL exists: connect via pg Pool, discover view columns from information_schema, and backfill field lists into docs/metric-matrix/advanced_views_registry.json for assets with kind="view".
+   - Preserve existing registry metadata (description, tags, status, etc.) and only add/update "fields" arrays.
+   - Sort fields alphabetically, and keep JSON output deterministic.
+
+4) Update metricMatrixAudit.ts to optionally validate view fields from DB:
+   - If DATABASE_URL missing or DB errors: WARN and continue, do not fail audit.
+   - If DB is reachable: for registry view assets that exist in DB and have columns, ensure metric_matrix.json has fields populated OR warn (do not hard fail unless you think it's genuinely critical).
+
+5) Verification steps you must run and report outputs for:
+   - npm run seed:metric-matrix
+   - npm run audit:metric-matrix
+   - npm run typecheck  (this is the important one)
+
+Deliverables:
+- Tell me exactly what files you changed
+- Paste the final console output for the 3 npm commands
+- Confirm audit still passes when DATABASE_URL is missing
