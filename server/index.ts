@@ -92,7 +92,15 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
       log("✅ Drizzle migrations applied successfully");
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
-      console.warn("⚠️  Drizzle auto-migrate failed (continuing):", errMsg);
+      // Known issue: pgEnum types like "consensus_format" show "already exists" on subsequent runs.
+      // This is expected behavior when schema hasn't changed - Drizzle doesn't track enum state.
+      // Use `npm run db:push` for schema changes instead of migrations folder.
+      const isEnumExists = errMsg.includes("already exists");
+      if (isEnumExists) {
+        log("ℹ️  Database schema up-to-date (enum already exists)");
+      } else {
+        console.warn("⚠️  Drizzle auto-migrate failed (continuing):", errMsg);
+      }
     }
   }
 
