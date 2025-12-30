@@ -283,19 +283,25 @@ export default function PlayerDetailDrawer({
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                       Metric Matrix
                     </h3>
-                    <p className="text-xs text-gray-500">Player Vector (Usage, Efficiency, TD Role, Stability, Context)</p>
+                    <p className="text-xs text-gray-500">0–30 low · 30–50 moderate · 50–70 strong · 70+ elite</p>
                   </div>
                   <Badge variant="outline" className="text-xs bg-gray-900 border-gray-700 text-gray-200">
                     {metricMatrix?.data?.confidence != null
-                      ? `Confidence ${(metricMatrix.data.confidence * 100).toFixed(0)}%`
-                      : 'Loading'}
+                      ? `${(metricMatrix.data.confidence * 100).toFixed(0)}%`
+                      : '...'}
                   </Badge>
                 </div>
 
                 {metricLoading && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {[...Array(5)].map((_, idx) => (
-                      <div key={idx} className="h-4 bg-gray-800 rounded animate-pulse" />
+                      <div key={idx} className="space-y-1" data-testid={`metric-skeleton-${idx}`}>
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-4 w-20 bg-gray-800" />
+                          <Skeleton className="h-4 w-12 bg-gray-800" />
+                        </div>
+                        <Skeleton className="h-2 w-full bg-gray-800" />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -309,10 +315,16 @@ export default function PlayerDetailDrawer({
                 {!metricLoading && !metricError && metricMatrix?.data?.axes && (
                   <div className="space-y-3">
                     {metricMatrix.data.axes.map((axis) => (
-                      <div key={axis.key}>
+                      <div key={axis.key} data-testid={`metric-axis-${axis.key}`}>
                         {renderAxisBar(axis.label, axis.value)}
                       </div>
                     ))}
+                    {metricMatrix.data.missingInputs && metricMatrix.data.missingInputs.length > 0 && (
+                      <p className="text-xs text-gray-600 pt-1" data-testid="metric-missing-inputs">
+                        Missing: {metricMatrix.data.missingInputs.slice(0, 4).join(', ')}
+                        {metricMatrix.data.missingInputs.length > 4 && ` +${metricMatrix.data.missingInputs.length - 4} more`}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
