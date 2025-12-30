@@ -1,0 +1,71 @@
+TIBER.AI — NEXT STEP (Metric Matrix v1.1 Refinement)
+
+Goal:
+The Metric Matrix Player Vector works end-to-end. Now fix the scoring so early-season outputs are not misleading and normalization is position-aware (WR/TE/QB/RB). Keep everything deterministic and backwards compatible.
+
+Context:
+We currently compute axes in:
+server/modules/metricMatrix/playerVectorService.ts
+and render them in:
+client/src/components/PlayerDetailDrawer.tsx
+
+Problem 1 — Stability/Availability is broken early season:
+Current logic uses:
+availability = games / Math.max(games, 18)
+This guarantees low values early season and tanks “Stability” unfairly.
+Fix it so Stability reflects “reliability so far” and doesn’t assume 18-game completion.
+
+Problem 2 — Normalization caps are not position-aware:
+We use fixed caps like routes/45, touches/30, etc. That can undervalue WR usage and mis-scale positions.
+We need position-aware ceilings for at least: WR, RB, TE, QB (QB can be neutral/skip for now if not supported).
+
+Deliverables (do all):
+1) Update playerVectorService.ts
+   - Introduce a PositionCaps map:
+     WR: { routesPerGameCap, touchesPerGameCap, yardsPerTouchCap, fpPerTouchCap, etc }
+     RB: { touchesPerGameCap higher, routes lower, etc }
+     TE: { routesPerGameCap lower than WR, touches lower, etc }
+   - Use detected position (from weeklyRows) to select caps for normalization.
+   - Keep behavior stable if position is missing (default to WR-ish or generic safe defaults).
+
+2) Fix Stability axis inputs:
+   - Replace availability formula with something sane.
+   - Proposed:
+     availability = clamp(games / clamp(resolvedWeek ?? games, 1, 18), 0, 1)
+     (so by week 3, if played 3 games, availability = 1.0)
+   - Also fix sample_size scaling:
+     sample_size = clamp(games / 6, 0, 1) is OK, but ensure it is treated as a 0–1 value and normalized appropriately.
+
+3) Review fp_consistency normalization:
+   - It’s currently: 100 - value * 10
+   - Ensure this won’t instantly crater for normal std dev ranges.
+   - Add clamps and adjust multiplier if necessary (document your choice).
+
+4) Update docs:
+   - Add docs/metric-matrix/axis_map.md (or update README) describing:
+     - early-season handling philosophy
+     - position-aware caps
+     - what each axis is intended to represent
+
+5) Tests:
+   - Add a small unit test file:
+     server/modules/metricMatrix/__tests__/playerVectorService.test.ts
+   - Test cases:
+     A) Week 3 player with games=3 => availability should be 1.0 (or near)
+     B) Missing position falls back without throwing
+     C) Normalization output stays within 0..100 for all axes
+
+Constraints:
+- Do NOT change the API response shape.
+- Do NOT remove caching behavior.
+- Make it deterministic: same inputs -> same outputs.
+- Keep code clean and type-safe (TypeScript).
+- Run:
+  npm run test:forge
+  npm run audit:metric-matrix
+  npm test (or whatever test command you add) and report results.
+
+Acceptance:
+- Ja’Marr Chase early-season “Stability” should not be artificially crushed solely because it’s Week 3.
+- Axes should look plausible for WR vs RB (WR should not be capped like a RB on touches; routes scaling should make sense).
+- All tests pass and endpoint still responds.
