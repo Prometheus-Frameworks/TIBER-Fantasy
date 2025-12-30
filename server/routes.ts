@@ -77,6 +77,7 @@ import tiberRouter from './routes/tiberRoutes';
 import { API_REGISTRY, getEndpointByKey, getAllTags } from './infra/apiRegistry';
 import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
+import metricMatrixRoutes from './routes/metricMatrixRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import consensusRoutes from './consensus';
@@ -723,6 +724,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== PLAYER ATTRIBUTES SYSTEM =====
   // Mount the player attributes router
   app.use('/api/attributes', attributesRoutes);
+  
+  // ===== METRIC MATRIX SYSTEM =====
+  app.use('/api/metric-matrix', metricMatrixRoutes);
   
   // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
   // Legacy ratings endpoint - disabled (using ratingsRouter above)

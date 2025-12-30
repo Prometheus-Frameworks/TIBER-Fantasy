@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Activity, Target, Zap, Users, Trophy } from 'lucide-react';
 
 interface PlayerDetailDrawerProps {
@@ -70,6 +72,27 @@ interface TiberScoreData {
   };
 }
 
+interface MetricMatrixResponse {
+  success: boolean;
+  data: {
+    playerId: string;
+    playerName: string | null;
+    position: string | null;
+    team: string | null;
+    season: number | null;
+    week: number | null;
+    mode: string;
+    axes: Array<{
+      key: string;
+      label: string;
+      value: number;
+      components: Array<{ key: string; value: number | null }>;
+    }>;
+    confidence: number;
+    missingInputs: string[];
+  };
+}
+
 export default function PlayerDetailDrawer({
   isOpen,
   onClose,
@@ -92,6 +115,17 @@ export default function PlayerDetailDrawer({
     enabled: isOpen && !!nflfastrId,
   });
 
+  const { data: metricMatrix, isLoading: metricLoading, isError: metricError } = useQuery<MetricMatrixResponse>({
+    queryKey: ['/api/metric-matrix/player-vector', nflfastrId, season, week],
+    queryFn: async () => {
+      const params = new URLSearchParams({ playerId: nflfastrId, season: String(season), week: String(week) });
+      const res = await fetch(`/api/metric-matrix/player-vector?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch metric matrix');
+      return res.json();
+    },
+    enabled: isOpen && !!nflfastrId,
+  });
+
   const getTierColor = (tier: string) => {
     if (tier === 'breakout') return 'text-green-400 bg-green-500/20 border-green-500/30';
     if (tier === 'regression') return 'text-red-400 bg-red-500/20 border-red-500/30';
@@ -103,6 +137,21 @@ export default function PlayerDetailDrawer({
     if (score >= 60) return 'text-blue-400';
     return 'text-red-400';
   };
+
+  const renderAxisBar = (label: string, value: number) => (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-sm text-gray-300">
+        <span>{label}</span>
+        <span className="font-semibold">{value.toFixed(0)} / 100</span>
+      </div>
+      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-red-500/60 to-purple-500/80"
+          style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+        />
+      </div>
+    </div>
+  );
 
   const renderBreakdownItem = (label: string, score: number, icon: React.ReactNode, maxScore: number = 20) => {
     const percentage = (score / maxScore) * 100;
@@ -225,6 +274,49 @@ export default function PlayerDetailDrawer({
               </div>
             </div>
             )}
+
+            {/* Metric Matrix Bars */}
+            <Card className="bg-[#111217] border border-gray-800/50">
+              <div className="p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                      Metric Matrix
+                    </h3>
+                    <p className="text-xs text-gray-500">Player Vector (Usage, Efficiency, TD Role, Stability, Context)</p>
+                  </div>
+                  <Badge variant="outline" className="text-xs bg-gray-900 border-gray-700 text-gray-200">
+                    {metricMatrix?.data?.confidence != null
+                      ? `Confidence ${(metricMatrix.data.confidence * 100).toFixed(0)}%`
+                      : 'Loading'}
+                  </Badge>
+                </div>
+
+                {metricLoading && (
+                  <div className="space-y-2">
+                    {[...Array(5)].map((_, idx) => (
+                      <div key={idx} className="h-4 bg-gray-800 rounded animate-pulse" />
+                    ))}
+                  </div>
+                )}
+
+                {metricError && (
+                  <p className="text-xs text-gray-500">
+                    Metric Matrix unavailable right now. Check back later.
+                  </p>
+                )}
+
+                {!metricLoading && !metricError && metricMatrix?.data?.axes && (
+                  <div className="space-y-3">
+                    {metricMatrix.data.axes.map((axis) => (
+                      <div key={axis.key}>
+                        {renderAxisBar(axis.label, axis.value)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
 
             {/* Key Metrics */}
             {tiberData.data.metrics && (

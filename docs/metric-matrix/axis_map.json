@@ -1,0 +1,85 @@
+{
+  "version": "v1",
+  "axes": [
+    {
+      "key": "usage",
+      "label": "Usage",
+      "description": "How consistently the player is deployed in snaps, routes, and touches.",
+      "inputs": ["snap_share_pct", "routes_per_game", "touches_per_game"],
+      "normalization": "minmax",
+      "weights": {
+        "snap_share_pct": 0.45,
+        "routes_per_game": 0.25,
+        "touches_per_game": 0.3
+      },
+      "defaults": {
+        "value": 45,
+        "reason": "Bench baseline when no usage data is present"
+      }
+    },
+    {
+      "key": "efficiency",
+      "label": "Efficiency",
+      "description": "Production quality per touch, mixing yards, fantasy points, and catch rate.",
+      "inputs": ["fantasy_points_per_touch", "yards_per_touch", "catch_rate"],
+      "normalization": "minmax",
+      "weights": {
+        "fantasy_points_per_touch": 0.45,
+        "yards_per_touch": 0.35,
+        "catch_rate": 0.2
+      },
+      "defaults": {
+        "value": 50,
+        "reason": "Average efficiency placeholder when sample size is missing"
+      }
+    },
+    {
+      "key": "td_role",
+      "label": "TD Role",
+      "description": "Touchdown involvement and scoring share relative to opportunity.",
+      "inputs": ["td_rate", "tds_per_game", "high_leverage_usage"],
+      "normalization": "percentile",
+      "weights": {
+        "td_rate": 0.5,
+        "tds_per_game": 0.35,
+        "high_leverage_usage": 0.15
+      },
+      "defaults": {
+        "value": 40,
+        "reason": "Low leverage baseline without scoring data"
+      }
+    },
+    {
+      "key": "stability",
+      "label": "Stability",
+      "description": "Week-over-week consistency and availability of the player.",
+      "inputs": ["availability", "fp_consistency", "sample_size"],
+      "normalization": "minmax",
+      "weights": {
+        "availability": 0.4,
+        "fp_consistency": 0.4,
+        "sample_size": 0.2
+      },
+      "defaults": {
+        "value": 55,
+        "reason": "Neutral stability when volatility cannot be measured"
+      }
+    },
+    {
+      "key": "context",
+      "label": "Context",
+      "description": "Role security and surrounding environment signals (target share, trend, workload).",
+      "inputs": ["target_share_pct", "recent_usage_trend", "role_security"],
+      "normalization": "minmax",
+      "weights": {
+        "target_share_pct": 0.4,
+        "recent_usage_trend": 0.35,
+        "role_security": 0.25
+      },
+      "defaults": {
+        "value": 50,
+        "reason": "Team context unknown; assume neutral"
+      }
+    }
+  ]
+}

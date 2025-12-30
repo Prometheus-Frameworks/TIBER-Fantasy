@@ -3334,6 +3334,21 @@ export const playerUsageRelations = relations(playerUsage, ({ one }) => ({
   }),
 }));
 
+// Metric Matrix cache: player vector axes for Metric Matrix UI
+export const metricMatrixPlayerVectors = pgTable("metric_matrix_player_vectors", {
+  playerId: text("player_id").notNull(),
+  season: integer("season").notNull().default(0),
+  week: integer("week").notNull().default(0),
+  mode: text("mode").notNull(),
+  axesJson: jsonb("axes_json").notNull(),
+  confidence: real("confidence"),
+  missingInputs: text("missing_inputs").array().default([]),
+  computedAt: timestamp("computed_at").defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.playerId, table.season, table.week, table.mode] }),
+  modeIdx: index("metric_matrix_player_vectors_mode_idx").on(table.mode),
+}));
+
 // Player Usage Types and Insert Schemas
 export type PlayerUsage = typeof playerUsage.$inferSelect;
 export type InsertPlayerUsage = z.infer<typeof insertPlayerUsageSchema>;
