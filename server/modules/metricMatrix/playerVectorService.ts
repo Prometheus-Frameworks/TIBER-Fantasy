@@ -203,19 +203,22 @@ function deriveRawMetrics(
   const totalFp = weeklyRows.reduce((sum, w) => sum + (w.fantasyPointsPpr ?? 0), 0);
   const fpPerWeek = weeklyRows.map((w) => w.fantasyPointsPpr ?? 0);
 
-  const avgSnapShare = usageRows.length
-    ? usageRows.reduce((sum, u) => sum + (u.snapSharePct ?? 0), 0) / usageRows.length / 100
+  const nonNullSnapRows = usageRows.filter((u) => u.snapSharePct != null);
+  const avgSnapShare = nonNullSnapRows.length > 0
+    ? nonNullSnapRows.reduce((sum, u) => sum + (u.snapSharePct as number), 0) / nonNullSnapRows.length / 100
     : null;
-  const avgTargetShare = usageRows.length
-    ? usageRows.reduce((sum, u) => sum + (u.targetSharePct ?? 0), 0) / usageRows.length / 100
+
+  const nonNullTargetRows = usageRows.filter((u) => u.targetSharePct != null);
+  const avgTargetShare = nonNullTargetRows.length > 0
+    ? nonNullTargetRows.reduce((sum, u) => sum + (u.targetSharePct as number), 0) / nonNullTargetRows.length / 100
     : null;
 
   const recentTrend = (() => {
-    if (usageRows.length < 2) return null;
-    const last3 = usageRows.slice(-3);
-    const first3 = usageRows.slice(0, 3);
-    const lastAvg = last3.reduce((s, u) => s + (u.snapSharePct ?? 0), 0) / Math.max(last3.length, 1) / 100;
-    const firstAvg = first3.reduce((s, u) => s + (u.snapSharePct ?? 0), 0) / Math.max(first3.length, 1) / 100;
+    if (nonNullSnapRows.length < 2) return null;
+    const last3 = nonNullSnapRows.slice(-3);
+    const first3 = nonNullSnapRows.slice(0, 3);
+    const lastAvg = last3.reduce((s, u) => s + (u.snapSharePct as number), 0) / last3.length / 100;
+    const firstAvg = first3.reduce((s, u) => s + (u.snapSharePct as number), 0) / first3.length / 100;
     return lastAvg - firstAvg;
   })();
 

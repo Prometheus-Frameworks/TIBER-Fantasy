@@ -172,4 +172,21 @@ describe("playerVectorService", () => {
       expect(computeStdDev([0, 10])).toBe(5);
     });
   });
+
+  describe("normalizeMetric - target_share handling", () => {
+    it("target_share_pct 21.74 normalizes to ~21.74 (not 100)", () => {
+      const normalized = normalizeMetric("target_share_pct", 0.2174);
+      expect(normalized).toBeCloseTo(21.74, 1);
+    });
+
+    it("snap_share_pct null returns null (not 0)", () => {
+      const normalized = normalizeMetric("snap_share_pct", null);
+      expect(normalized).toBeNull();
+    });
+
+    it("role_security null returns null (derived from snap share)", () => {
+      const normalized = normalizeMetric("role_security", null);
+      expect(normalized).toBeNull();
+    });
+  });
 });
