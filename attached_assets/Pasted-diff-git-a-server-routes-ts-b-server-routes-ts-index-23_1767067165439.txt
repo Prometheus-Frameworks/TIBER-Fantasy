@@ -1,0 +1,108 @@
+diff --git a/server/routes.ts b/server/routes.ts
+index 2339fd16b7f4e4859ca70c191260dc9a25a11a64..961d547c4dd367f700a7a005f29f1a61d12b4ca3 100644
+--- a/server/routes.ts
++++ b/server/routes.ts
+@@ -55,50 +55,51 @@ import { expandPlayerAliases } from './services/playerAliases';
+ // Live compass routes imported in registerRoutes function
+ import rbCompassRoutes from './routes/rbCompassRoutes';
+ import publicRoutes from './routes/public';
+ import teCompassRoutes from './routes/teCompassRoutes';
+ import tiberDataRoutes from './routes/tiberDataRoutes';
+ import populationStatsRoutes from './routes/populationStatsRoutes';
+ import tradeAnalyzerRoutes from './routes/tradeAnalyzerRoutes';
+ import compassCompareRoutes from './routes/compassCompareRoutes';
+ import { nightlyProcessingRoutes } from './routes/nightlyProcessingRoutes';
+ import etlRoutes from './routes/etlRoutes';
+ import matchupRoutes from './routes/matchupRoutes';
+ import strategyRoutes from './routes/strategyRoutes';
+ import playerComparisonRoutes from './routes/playerComparisonRoutes';
+ import rookieRoutes from './routes/rookieRoutes';
+ import playerIdentityRoutes from './routes/playerIdentityRoutes';
+ import uphAdminRoutes from './routes/uphAdminRoutes';
+ import gameLogRoutes from './routes/gameLogRoutes';
+ import { registerRoleBankRoutes } from './routes/roleBankRoutes';
+ import sosRouter from './modules/sos/sos.router';
+ import { ratingsRouter } from './src/modules/ratings';
+ import ovrRouter from './routes/ovrRoutes';
+ import tiberRouter from './routes/tiberRoutes';
+ import { API_REGISTRY, getEndpointByKey, getAllTags } from './infra/apiRegistry';
+ import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
+ import attributesRoutes from './routes/attributesRoutes';
++import metricMatrixRoutes from './routes/metricMatrixRoutes';
+ import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
+ import buysSellsRoutes from './routes/buysSellsRoutes';
+ import consensusRoutes from './consensus';
+ import consensusSeedingRoutes from './consensusSeeding';
+ import articleRoutes from './routes/articleRoutes';
+ import { createEcrLoaderRouter } from './services/ecrLoader';
+ import { enhancedEcrService } from './services/enhancedEcrProvider';
+ import { createConsensusRouter, pickConsensus, FantasyProsProvider, SleeperAdpProvider, EnhancedEcrProvider } from './services/consensusBenchmark';
+ import { 
+   getProfile, 
+   updateProfile, 
+   giveFire, 
+   getFireLeaderboard,
+   rebuildConsensus,
+   getConsensusMetadata,
+   compareRankings
+ } from './consensusEngine';
+ import { 
+   getConsensusWhy, rebuildConsensusEndpoint 
+ } from './adaptiveConsensus';
+ import { TIBER_SIGNATURE } from '../shared/tiberSignature';
+ import fs from 'fs';
+ import path from 'path';
+ import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
+ import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
+@@ -701,50 +702,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
+         data: filteredPlayers,
+         metadata: {
+           generated_at: new Date().toISOString(),
+           total_players: filteredPlayers.length,
+           positions: Array.from(new Set(filteredPlayers.map(p => p.pos))),
+           source: "TIBER_AUTHORITATIVE_SAMPLE"
+         }
+       });
+ 
+     } catch (error) {
+       console.error('❌ [TIBER Final Rankings] Error generating final rankings:', error);
+       res.status(500).json({
+         success: false,
+         error: 'Failed to generate TIBER final rankings',
+         message: error instanceof Error ? error.message : 'Unknown error'
+       });
+     }
+   });
+ 
+   // ===== RATINGS SYSTEM =====
+   app.use('/api/ratings', ratingsRouter);
+   
+   // ===== PLAYER ATTRIBUTES SYSTEM =====
+   // Mount the player attributes router
+   app.use('/api/attributes', attributesRoutes);
++  app.use('/api/metric-matrix', metricMatrixRoutes);
+   
+   // ===== LEGACY RATINGS ENGINE (DEPRECATED) =====
+   // Legacy ratings endpoint - disabled (using ratingsRouter above)
+   /*
+   app.get('/api/ratings', async (req: Request, res: Response) => {
+     try {
+       const { ratingsEngineService } = await import('./services/ratingsEngineService');
+       const { position, format, limit } = req.query;
+       
+       if (position) {
+         const rankings = await ratingsEngineService.getPositionRankings(
+           position as string,
+           format as string || 'dynasty'
+         );
+         res.json({
+           ok: true,
+           data: rankings
+         });
+       } else {
+         const topPlayers = await ratingsEngineService.getTopPlayers(
+           limit ? parseInt(limit as string) : 100,
+           format as string || 'dynasty'
+         );
+         res.json({
+           ok: true,

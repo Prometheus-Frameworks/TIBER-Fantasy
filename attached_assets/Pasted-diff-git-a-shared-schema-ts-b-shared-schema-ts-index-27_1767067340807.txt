@@ -1,0 +1,140 @@
+diff --git a/shared/schema.ts b/shared/schema.ts
+index 278df101242d31f7d5007b552026b8d8a37dd866..ddd8e4b3e05a9a25fb658ef507506d226ee8cb64 100644
+--- a/shared/schema.ts
++++ b/shared/schema.ts
+@@ -3312,50 +3312,65 @@ export const playerUsage = pgTable("player_usage", {
+   
+   // RB Specific - Rushing concept splits
+   carriesGap: integer("carries_gap"),
+   carriesZone: integer("carries_zone"),
+   carriesTotal: integer("carries_total"),
+   
+   // Metadata
+   createdAt: timestamp("created_at").defaultNow(),
+   updatedAt: timestamp("updated_at").defaultNow(),
+ }, (table) => ({
+   // Unique constraint on player/week/season
+   uniquePlayerWeek: uniqueIndex("player_usage_unique").on(table.playerId, table.week, table.season),
+   // Performance indexes
+   playerSeasonIdx: index("player_usage_player_season_idx").on(table.playerId, table.season),
+   seasonWeekIdx: index("player_usage_season_week_idx").on(table.season, table.week),
+ }));
+ 
+ // Player Usage Relations
+ export const playerUsageRelations = relations(playerUsage, ({ one }) => ({
+   player: one(playerIdentityMap, {
+     fields: [playerUsage.playerId],
+     references: [playerIdentityMap.canonicalId],
+   }),
+ }));
+ 
++// Metric Matrix cache: player vector axes for Metric Matrix UI
++export const metricMatrixPlayerVectors = pgTable("metric_matrix_player_vectors", {
++  playerId: text("player_id").notNull(),
++  season: integer("season"),
++  week: integer("week"),
++  mode: text("mode").notNull(),
++  axesJson: jsonb("axes_json").notNull(),
++  confidence: real("confidence"),
++  missingInputs: text("missing_inputs").array().default([]),
++  computedAt: timestamp("computed_at").defaultNow(),
++}, (table) => ({
++  pk: primaryKey({ columns: [table.playerId, table.season, table.week, table.mode] }),
++  modeIdx: index("metric_matrix_player_vectors_mode_idx").on(table.mode),
++}));
++
+ // Player Usage Types and Insert Schemas
+ export type PlayerUsage = typeof playerUsage.$inferSelect;
+ export type InsertPlayerUsage = z.infer<typeof insertPlayerUsageSchema>;
+ export const insertPlayerUsageSchema = createInsertSchema(playerUsage).omit({
+   id: true,
+   createdAt: true,
+   updatedAt: true
+ });
+ 
+ // ========================================
+ // WR ROLE BANK - ANALYTICAL LAYER
+ // ========================================
+ 
+ // WR Role Bank - Season-level analytics computed from weekly_stats + player_usage
+ export const wrRoleBank = pgTable("wr_role_bank", {
+   id: serial("id").primaryKey(),
+   playerId: text("player_id").notNull(),
+   sleeperId: text("sleeper_id"),
+   season: integer("season").notNull(),
+   
+   // Volume Metrics
+   gamesPlayed: integer("games_played").notNull(),
+   targetsPerGame: real("targets_per_game").notNull(),
+   targetShareAvg: real("target_share_avg"),
+   routesPerGame: real("routes_per_game"),
+
+diff --git a/server/routes/metricMatrixRoutes.ts b/server/routes/metricMatrixRoutes.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbbcee6ed5f43f733659b1d43113ec812dbd5fad
+--- /dev/null
++++ b/server/routes/metricMatrixRoutes.ts
+@@ -0,0 +1,33 @@
++import { Router } from "express";
++import { z } from "zod";
++import { getPlayerVector } from "../modules/metricMatrix/playerVectorService";
++
++const router = Router();
++
++const QuerySchema = z.object({
++  playerId: z.string().min(1, "playerId is required"),
++  season: z.coerce.number().min(2000).max(2100).optional(),
++  week: z.coerce.number().min(1).max(18).optional(),
++  mode: z.enum(["forge"]).optional().default("forge"),
++});
++
++router.get("/player-vector", async (req, res) => {
++  try {
++    const parsed = QuerySchema.safeParse(req.query);
++    if (!parsed.success) {
++      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
++    }
++
++    const payload = await getPlayerVector(parsed.data);
++    res.json({ success: true, data: payload });
++  } catch (error) {
++    console.error("[MetricMatrix] player-vector error:", error);
++    res.status(500).json({
++      success: false,
++      error: "Failed to compute player vector",
++      details: error instanceof Error ? error.message : "Unknown error",
++    });
++  }
++});
++
++export default router;
+
+
+diff --git a/migrations/0010_metric_matrix_player_vectors.sql b/migrations/0010_metric_matrix_player_vectors.sql
+new file mode 100644
+index 0000000000000000000000000000000000000000..bcb78abba08b639e45092fa629fd7b28dd743d12
+--- /dev/null
++++ b/migrations/0010_metric_matrix_player_vectors.sql
+@@ -0,0 +1,15 @@
++-- Metric Matrix Player Vectors cache table
++CREATE TABLE IF NOT EXISTS metric_matrix_player_vectors (
++  player_id text NOT NULL,
++  season integer,
++  week integer,
++  mode text NOT NULL,
++  axes_json jsonb NOT NULL,
++  confidence real,
++  missing_inputs text[] DEFAULT '{}',
++  computed_at timestamptz DEFAULT now(),
++  PRIMARY KEY (player_id, season, week, mode)
++);
++
++CREATE INDEX IF NOT EXISTS metric_matrix_player_vectors_mode_idx
++  ON metric_matrix_player_vectors (mode);
+
+diff --git a/server/routes/metricMatrixRoutes.ts b/server/routes/metricMatrixRoutes.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..fbbcee6ed5f43f733659b1d43113ec812dbd5fad
+--- /dev/null
++++ b/server/routes/metricMatrixRoutes.ts
+@@ -0,0 +1,33 @@

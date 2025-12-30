@@ -1,0 +1,270 @@
+diff --git a/client/src/components/PlayerDetailDrawer.tsx b/client/src/components/PlayerDetailDrawer.tsx
+index 17be871d982c18b2c717942b0fdd903d349d7e6a..5e8cc101840a3bf6ab71e3d445d9935b69e8d0f8 100644
+--- a/client/src/components/PlayerDetailDrawer.tsx
++++ b/client/src/components/PlayerDetailDrawer.tsx
+@@ -1,37 +1,39 @@
+ import { useState } from 'react';
+ import { useQuery } from '@tanstack/react-query';
+ import {
+   Sheet,
+   SheetContent,
+   SheetDescription,
+   SheetHeader,
+   SheetTitle,
+ } from '@/components/ui/sheet';
+ import { Skeleton } from '@/components/ui/skeleton';
+ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+ import { TrendingUp, TrendingDown, Activity, Target, Zap, Users, Trophy } from 'lucide-react';
++import { Card } from '@/components/ui/card';
++import { Badge } from '@/components/ui/badge';
+ 
+ interface PlayerDetailDrawerProps {
+   isOpen: boolean;
+   onClose: () => void;
+   nflfastrId: string;
+   playerName: string;
+   team: string;
+   position: string;
+   week: number;
+   season: number;
+ }
+ 
+ interface TiberScoreData {
+   success: boolean;
+   data: {
+     tiberScore: number;
+     tier: string;
+     breakdown: {
+       firstDownScore: number;
+       epaScore: number;
+       usageScore: number;
+       tdScore: number;
+       teamScore: number;
+     };
+     metrics: {
+@@ -48,84 +50,131 @@ interface TiberScoreData {
+       gameDate: Date | null;
+       gamesPlayed?: number;
+       fantasyPoints: number;
+       passing: {
+         attempts: number;
+         completions: number;
+         yards: number;
+         touchdowns: number;
+         interceptions: number;
+       };
+       rushing: {
+         attempts: number;
+         yards: number;
+         touchdowns: number;
+       };
+       receiving: {
+         receptions: number;
+         targets: number;
+         yards: number;
+         touchdowns: number;
+       };
+     } | null;
+   };
+ }
+ 
++interface MetricMatrixResponse {
++  success: boolean;
++  data: {
++    playerId: string;
++    playerName: string | null;
++    position: string | null;
++    team: string | null;
++    season: number | null;
++    week: number | null;
++    mode: string;
++    axes: Array<{
++      key: string;
++      label: string;
++      value: number;
++      components: Array<{ key: string; value: number | null }>;
++    }>;
++    confidence: number;
++    missingInputs: string[];
++  };
++}
++
+ export default function PlayerDetailDrawer({
+   isOpen,
+   onClose,
+   nflfastrId,
+   playerName,
+   team,
+   position,
+   week,
+   season,
+ }: PlayerDetailDrawerProps) {
+   const [mode, setMode] = useState<'weekly' | 'season'>('weekly');
+   
+   const { data: tiberData, isLoading } = useQuery<TiberScoreData>({
+     queryKey: ['/api/tiber/score', nflfastrId, week, season, mode],
+     queryFn: async () => {
+       const res = await fetch(`/api/tiber/score/${nflfastrId}?week=${week}&season=${season}&mode=${mode}`);
+       if (!res.ok) throw new Error('Failed to fetch TIBER score');
+       return res.json();
+     },
+     enabled: isOpen && !!nflfastrId,
+   });
+ 
++  const { data: metricMatrix, isLoading: metricLoading, isError: metricError } = useQuery<MetricMatrixResponse>({
++    queryKey: ['/api/metric-matrix/player-vector', nflfastrId, season, week],
++    queryFn: async () => {
++      const params = new URLSearchParams({ playerId: nflfastrId, season: String(season), week: String(week) });
++      const res = await fetch(`/api/metric-matrix/player-vector?${params.toString()}`);
++      if (!res.ok) throw new Error('Failed to fetch metric matrix');
++      return res.json();
++    },
++    enabled: isOpen && !!nflfastrId,
++  });
++
+   const getTierColor = (tier: string) => {
+     if (tier === 'breakout') return 'text-green-400 bg-green-500/20 border-green-500/30';
+     if (tier === 'regression') return 'text-red-400 bg-red-500/20 border-red-500/30';
+     return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
+   };
+ 
+   const getScoreColor = (score: number) => {
+     if (score >= 80) return 'text-green-400';
+     if (score >= 60) return 'text-blue-400';
+     return 'text-red-400';
+   };
+ 
++  const renderAxisBar = (label: string, value: number) => (
++    <div className="space-y-1">
++      <div className="flex items-center justify-between text-sm text-gray-300">
++        <span>{label}</span>
++        <span className="font-semibold">{value.toFixed(0)} / 100</span>
++      </div>
++      <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
++        <div
++          className="h-full bg-gradient-to-r from-red-500/60 to-purple-500/80"
++          style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
++        />
++      </div>
++    </div>
++  );
++
+   const renderBreakdownItem = (label: string, score: number, icon: React.ReactNode, maxScore: number = 20) => {
+     const percentage = (score / maxScore) * 100;
+     return (
+       <div className="space-y-2">
+         <div className="flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <div className="text-gray-400">{icon}</div>
+             <span className="text-sm text-gray-300">{label}</span>
+           </div>
+           <span className={`font-bold text-sm ${getScoreColor(score * 5)}`}>
+             {score.toFixed(1)}/{maxScore}
+           </span>
+         </div>
+         <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+           <div 
+             className={`h-full rounded-full transition-all ${
+               score >= maxScore * 0.8 ? 'bg-green-500' :
+               score >= maxScore * 0.6 ? 'bg-blue-500' : 'bg-red-500'
+             }`}
+             style={{ width: `${Math.min(percentage, 100)}%` }}
+           />
+         </div>
+       </div>
+     );
+   };
+@@ -204,50 +253,93 @@ export default function PlayerDetailDrawer({
+                   <TrendingUp size={16} />,
+                   20
+                 )}
+                 {renderBreakdownItem(
+                   'Usage/Opportunity', 
+                   tiberData.data.breakdown.usageScore,
+                   <Zap size={16} />,
+                   20
+                 )}
+                 {renderBreakdownItem(
+                   'Touchdown Upside', 
+                   tiberData.data.breakdown.tdScore,
+                   <TrendingUp size={16} />,
+                   20
+                 )}
+                 {renderBreakdownItem(
+                   'Team Offense Context', 
+                   tiberData.data.breakdown.teamScore,
+                   <Users size={16} />,
+                   20
+                 )}
+               </div>
+             </div>
+             )}
+ 
++            {/* Metric Matrix Bars */}
++            <Card className="bg-[#111217] border border-gray-800/50">
++              <div className="p-5 space-y-3">
++                <div className="flex items-center justify-between">
++                  <div>
++                    <h3 className="text-sm font-bold text-white uppercase tracking-wider">
++                      Metric Matrix
++                    </h3>
++                    <p className="text-xs text-gray-500">Player Vector (Usage, Efficiency, TD Role, Stability, Context)</p>
++                  </div>
++                  <Badge variant="outline" className="text-xs bg-gray-900 border-gray-700 text-gray-200">
++                    {metricMatrix?.data?.confidence != null
++                      ? `Confidence ${(metricMatrix.data.confidence * 100).toFixed(0)}%`
++                      : 'Loading'}
++                  </Badge>
++                </div>
++
++                {metricLoading && (
++                  <div className="space-y-2">
++                    {[...Array(5)].map((_, idx) => (
++                      <div key={idx} className="h-4 bg-gray-800 rounded animate-pulse" />
++                    ))}
++                  </div>
++                )}
++
++                {metricError && (
++                  <p className="text-xs text-gray-500">
++                    Metric Matrix unavailable right now. Check back later.
++                  </p>
++                )}
++
++                {!metricLoading && !metricError && metricMatrix?.data?.axes && (
++                  <div className="space-y-3">
++                    {metricMatrix.data.axes.map((axis) => (
++                      <div key={axis.key}>
++                        {renderAxisBar(axis.label, axis.value)}
++                      </div>
++                    ))}
++                  </div>
++                )}
++              </div>
++            </Card>
++
+             {/* Key Metrics */}
+             {tiberData.data.metrics && (
+             <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
+               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center justify-between">
+                 <span>Key Metrics ({mode === 'weekly' ? `Week ${week}` : 'Season Total'})</span>
+                 <span className={`text-xs px-2 py-1 rounded ${mode === 'weekly' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                   {mode === 'weekly' ? 'Single Week' : 'Cumulative'}
+                 </span>
+               </h3>
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-1">
+                   <p className="text-xs text-gray-500">First Down Rate</p>
+                   <p className="text-lg font-bold text-white">
+                     {(tiberData.data.metrics.firstDownRate * 100).toFixed(1)}%
+                   </p>
+                 </div>
+                 <div className="space-y-1">
+                   <p className="text-xs text-gray-500">First Downs</p>
+                   <p className="text-lg font-bold text-white">
+                     {tiberData.data.metrics.totalFirstDowns}
+                   </p>
+                 </div>
+                 <div className="space-y-1">
+                   <p className="text-xs text-gray-500">EPA per Play</p>
+                   <p className="text-lg font-bold text-white">

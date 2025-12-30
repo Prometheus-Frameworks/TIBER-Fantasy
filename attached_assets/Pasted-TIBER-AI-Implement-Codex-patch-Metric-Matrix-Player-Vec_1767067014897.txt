@@ -1,0 +1,63 @@
+TIBER.AI — Implement Codex patch: Metric Matrix Player Vector + UI card
+
+GOAL
+Add a Metric Matrix “player vector” service (deterministic axes JSON) with caching table, route, and a PlayerDetailDrawer UI card rendering horizontal axis bars w/ confidence.
+
+RULES
+- Do NOT overwrite existing logic. Only add or minimally modify touched files.
+- Keep type safety. Ensure builds pass.
+- If any naming differs in existing codebase, adapt imports/paths accordingly.
+
+TASKS
+1) Add new doc file:
+- docs/metric-matrix/axis_map.json (as provided)
+
+2) Add migration:
+- migrations/0010_metric_matrix_player_vectors.sql
+IMPORTANT: Make season and week NOT NULL to match the PRIMARY KEY.
+Example:
+  season integer NOT NULL,
+  week integer NOT NULL
+If you must support defaults, use DEFAULT 0.
+
+3) Update Drizzle schema:
+- shared/schema.ts
+Add metricMatrixPlayerVectors table definition.
+IMPORTANT: season/week should be .notNull() if they’re in the PK.
+
+4) Add service module:
+- server/modules/metricMatrix/playerVectorService.ts
+Ensure imports match project structure:
+- db from server/infra/db
+- weeklyStats/playerUsage/metricMatrixPlayerVectors from shared/schema
+
+5) Add routes:
+- server/routes/metricMatrixRoutes.ts with GET /player-vector
+Validate query with zod (playerId required; season/week optional; mode default "forge")
+Return JSON { success: true, data }
+
+6) Mount router:
+- server/routes.ts
+app.use('/api/metric-matrix', metricMatrixRoutes);
+
+7) Frontend UI:
+- client/src/components/PlayerDetailDrawer.tsx
+Add a “Metric Matrix” card that fetches:
+  /api/metric-matrix/player-vector?playerId=<id>&season=<season>&week=<week>
+Render 5 axis bars + confidence badge.
+IMPORTANT: Fix TS typing by importing ReactNode:
+  import { useState, type ReactNode } from 'react';
+and replace React.ReactNode with ReactNode.
+
+TEST
+- Run migration / restart server
+- curl:
+  curl "http://localhost:5000/api/metric-matrix/player-vector?playerId=<PLAYER_ID>&season=2025&week=3"
+- Open Player Detail Drawer and confirm:
+  - Card renders bars
+  - Confidence shows a %
+  - Graceful fallback on error
+
+DELIVERABLE
+Commit the changes with message:
+"Metric Matrix player vector endpoint + UI card"
