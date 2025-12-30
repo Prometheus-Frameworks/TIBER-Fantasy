@@ -1,0 +1,61 @@
+TIBER.AI — Metric Matrix v1.2: Fix snap_share_pct population + backfill (source-of-truth repair)
+
+GOAL
+snap_share_pct is NULL in player_usage for all weeks for some players (ex: 00-0036900). This breaks Metric Matrix axes (usage/context) and forces defaults. We already fixed NULL handling; now we need to populate snap_share_pct correctly from available data sources and backfill.
+
+CONSTRAINTS
+- Do NOT change metric matrix axis_map semantics other than what’s needed to support correct snap_share_pct.
+- Prefer deterministic, explainable calculations.
+- No “fake data”: if we truly cannot compute snap share, leave NULL (the UI will show missingInputs).
+- Keep everything TypeScript-safe and consistent with existing ETL patterns.
+- Add tests.
+
+DELIVERABLES
+1) Identify where player_usage is populated (ETL job / script / nightly processing / seed path).
+2) Implement snap_share_pct population:
+   - If upstream already provides snap share, map it into player_usage.snap_share_pct.
+   - If not provided, compute it from existing tables:
+     Preferred: player snaps / team offensive snaps for that week (if team snaps exist).
+     Acceptable fallback: compute from weekly_stats if we have a team snaps field/table; otherwise skip and keep NULL.
+   - Ensure stored value format matches current DB convention:
+     target_share_pct currently appears stored as 0–100 (e.g., 21.74). Determine what snap_share_pct should be (0–100 preferred for consistency). Update normalization code only if necessary, but do NOT introduce double-scaling. If you change stored format, document it and migrate/backfill consistently.
+
+3) Backfill:
+   - Create an admin/script endpoint OR a server script:
+     - Example: POST /api/admin/player-usage/backfill-snap-share?season=2025&weekMax=18
+     - Or: server/scripts/backfillSnapSharePct.ts runnable via npm script.
+   - Backfill only where snap_share_pct IS NULL.
+   - Use idempotent logic.
+
+4) Verification:
+   - Add unit tests:
+     - If snap share computed, it must be within 0–100 (or 0–1 if that’s the chosen convention, but be consistent).
+     - Null-safe: if cannot compute, remains NULL and shows as missingInputs.
+   - Run:
+     - npm run test:forge
+     - npm run audit:metric-matrix
+     - metric matrix unit tests
+   - Provide an eyeball check using:
+     curl "http://localhost:5000/api/metric-matrix/player-vector?playerId=00-0036900&season=2025&week=3" | jq
+     Confirm snap_share_pct is no longer missing (if computable), confidence increases, and usage/context stabilize.
+
+IMPLEMENTATION NOTES
+- Search repo for: "player_usage" inserts/upserts, ETL routes, nightly processors, or seed scripts.
+- Find existing sources for snaps:
+  - weeklyStats.snaps (player snaps) exists.
+  - Look for a team snaps table or team weekly stats table. If none exists, check if weeklyStats includes team total snaps or if an advanced view already has it.
+- If you need a new derived table for team offensive snaps by week:
+  - Create minimal migration + schema + ETL derivation.
+  - Compute team offensive snaps as sum of offensive player snaps for that team-week OR from play-by-play aggregation if already available.
+  - Keep it efficient (index on season/week/team).
+
+OUTPUT
+Return:
+- List of files changed/added
+- The computation rule used for snap_share_pct
+- Backfill command/endpoint usage
+- Test results
+- Before/after sample for Ja’Marr Chase week 3
+
+DO NOT STOP EARLY
+If team snap totals don’t exist, implement the smallest viable deterministic method. If absolutely impossible with current data, clearly state what’s missing and leave snap_share_pct NULL with tests proving correct behavior.
