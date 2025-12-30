@@ -62,24 +62,80 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function normalizeMetric(metric: string, value: number | null | undefined): number | null {
+type PositionCaps = {
+  routesPerGameCap: number;
+  touchesPerGameCap: number;
+  yardsPerTouchCap: number;
+  fpPerTouchCap: number;
+  tdsPerGameCap: number;
+  tdRateCap: number;
+};
+
+const POSITION_CAPS: Record<string, PositionCaps> = {
+  WR: {
+    routesPerGameCap: 45,
+    touchesPerGameCap: 12,
+    yardsPerTouchCap: 12,
+    fpPerTouchCap: 1.8,
+    tdsPerGameCap: 1.5,
+    tdRateCap: 0.15,
+  },
+  RB: {
+    routesPerGameCap: 30,
+    touchesPerGameCap: 25,
+    yardsPerTouchCap: 6,
+    fpPerTouchCap: 1.0,
+    tdsPerGameCap: 1.5,
+    tdRateCap: 0.08,
+  },
+  TE: {
+    routesPerGameCap: 35,
+    touchesPerGameCap: 10,
+    yardsPerTouchCap: 10,
+    fpPerTouchCap: 1.5,
+    tdsPerGameCap: 1.0,
+    tdRateCap: 0.12,
+  },
+  QB: {
+    routesPerGameCap: 1,
+    touchesPerGameCap: 35,
+    yardsPerTouchCap: 8,
+    fpPerTouchCap: 0.8,
+    tdsPerGameCap: 2.5,
+    tdRateCap: 0.10,
+  },
+};
+
+const DEFAULT_CAPS: PositionCaps = POSITION_CAPS.WR;
+
+function getCapsForPosition(position: string | null): PositionCaps {
+  if (!position) return DEFAULT_CAPS;
+  const upper = position.toUpperCase();
+  return POSITION_CAPS[upper] ?? DEFAULT_CAPS;
+}
+
+function normalizeMetric(
+  metric: string,
+  value: number | null | undefined,
+  caps: PositionCaps = DEFAULT_CAPS
+): number | null {
   if (value == null || Number.isNaN(value)) return null;
 
   const normalizedByName: Record<string, () => number> = {
     snap_share_pct: () => clamp(value * 100, 0, 100),
     target_share_pct: () => clamp(value * 100, 0, 100),
-    routes_per_game: () => clamp((value / 45) * 100, 0, 100),
-    touches_per_game: () => clamp((value / 30) * 100, 0, 100),
-    fantasy_points_per_touch: () => clamp((value / 1.2) * 100, 0, 100),
-    yards_per_touch: () => clamp((value / 8) * 100, 0, 100),
+    routes_per_game: () => clamp((value / caps.routesPerGameCap) * 100, 0, 100),
+    touches_per_game: () => clamp((value / caps.touchesPerGameCap) * 100, 0, 100),
+    fantasy_points_per_touch: () => clamp((value / caps.fpPerTouchCap) * 100, 0, 100),
+    yards_per_touch: () => clamp((value / caps.yardsPerTouchCap) * 100, 0, 100),
     catch_rate: () => clamp(value * 100, 0, 100),
-    td_rate: () => clamp((value / 0.2) * 100, 0, 100),
-    tds_per_game: () => clamp((value / 2) * 100, 0, 100),
-    high_leverage_usage: () => clamp((value / 0.2) * 100, 0, 100),
+    td_rate: () => clamp((value / caps.tdRateCap) * 100, 0, 100),
+    tds_per_game: () => clamp((value / caps.tdsPerGameCap) * 100, 0, 100),
+    high_leverage_usage: () => clamp((value / caps.tdRateCap) * 100, 0, 100),
     availability: () => clamp(value * 100, 0, 100),
-    fp_consistency: () => clamp(100 - value * 10, 0, 100), // higher std dev => lower stability
+    fp_consistency: () => clamp(100 - clamp(value, 0, 8) * 10, 20, 100),
     sample_size: () => clamp(value * 100, 0, 100),
-    recent_usage_trend: () => clamp(50 + value * 200, 0, 100), // centered at 50, delta scaled
+    recent_usage_trend: () => clamp(50 + value * 200, 0, 100),
     role_security: () => clamp(value * 100, 0, 100),
   };
 
@@ -119,7 +175,16 @@ async function fetchPlayerStats(playerId: string, season: number, week?: number)
 type WeeklyRow = typeof weeklyStats.$inferSelect;
 type UsageRow = typeof playerUsage.$inferSelect;
 
-function deriveRawMetrics(weeklyRows: WeeklyRow[], usageRows: UsageRow[]) {
+export type DeriveMetricsContext = {
+  resolvedWeek: number | null;
+  position: string | null;
+};
+
+function deriveRawMetrics(
+  weeklyRows: WeeklyRow[],
+  usageRows: UsageRow[],
+  ctx: DeriveMetricsContext = { resolvedWeek: null, position: null }
+) {
   const games = weeklyRows.length;
   const totalSnaps = weeklyRows.reduce((sum, w) => sum + (w.snaps ?? 0), 0);
   const totalRoutes = weeklyRows.reduce((sum, w) => sum + (w.routes ?? 0), 0);
@@ -161,9 +226,11 @@ function deriveRawMetrics(weeklyRows: WeeklyRow[], usageRows: UsageRow[]) {
     td_rate: totalTouches > 0 ? totalTd / totalTouches : null,
     tds_per_game: games ? totalTd / games : null,
     high_leverage_usage: totalTouches > 0 ? totalTd / totalTouches : null,
-    availability: games ? games / Math.max(games, 18) : null,
+    availability: games
+      ? games / clamp(ctx.resolvedWeek ?? games, 1, 18)
+      : null,
     fp_consistency: fpPerWeek.length ? computeStdDev(fpPerWeek) : null,
-    sample_size: clamp(games / 6, 0, 1),
+    sample_size: games ? clamp(games / 6, 0, 1) : null,
     target_share_pct: avgTargetShare,
     recent_usage_trend: recentTrend,
     role_security: avgSnapShare,
@@ -172,12 +239,16 @@ function deriveRawMetrics(weeklyRows: WeeklyRow[], usageRows: UsageRow[]) {
   return rawMetrics;
 }
 
-function buildAxes(rawMetrics: Record<string, number | null>, axisMap: AxisMap) {
+function buildAxes(
+  rawMetrics: Record<string, number | null>,
+  axisMap: AxisMap,
+  caps: PositionCaps = DEFAULT_CAPS
+) {
   const missingInputs: string[] = [];
 
   const axes = axisMap.axes.map((axis) => {
     const components = axis.inputs.map((inputKey) => {
-      const normalized = normalizeMetric(inputKey, rawMetrics[inputKey]);
+      const normalized = normalizeMetric(inputKey, rawMetrics[inputKey], caps);
       if (normalized == null) missingInputs.push(inputKey);
       return { key: inputKey, value: normalized };
     });
@@ -318,12 +389,13 @@ export async function getPlayerVector(
   }
 
   const { weeklyRows, usageRows } = await fetchPlayerStats(params.playerId, resolvedSeason, resolvedWeek ?? undefined);
-  const rawMetrics = deriveRawMetrics(weeklyRows, usageRows);
-  const { axes, missingInputs, confidence } = buildAxes(rawMetrics, axisMap);
+  const position = weeklyRows[0]?.position ?? null;
+  const caps = getCapsForPosition(position);
+  const rawMetrics = deriveRawMetrics(weeklyRows, usageRows, { resolvedWeek, position });
+  const { axes, missingInputs, confidence } = buildAxes(rawMetrics, axisMap, caps);
 
   const playerName = weeklyRows[0]?.playerName ?? null;
   const team = weeklyRows[0]?.team ?? null;
-  const position = weeklyRows[0]?.position ?? null;
 
   const response: PlayerVectorResponse = {
     playerId: params.playerId,
