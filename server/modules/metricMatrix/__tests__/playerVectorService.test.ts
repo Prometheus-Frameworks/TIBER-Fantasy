@@ -3,6 +3,7 @@ import {
   normalizeMetric,
   computeStdDev,
   getCapsForPosition,
+  ensurePercentScale,
   POSITION_CAPS,
   DEFAULT_CAPS,
 } from "../playerVectorService";
@@ -187,6 +188,36 @@ describe("playerVectorService", () => {
     it("role_security null returns null (derived from snap share)", () => {
       const normalized = normalizeMetric("role_security", null);
       expect(normalized).toBeNull();
+    });
+  });
+
+  describe("ensurePercentScale - auto-detect fraction vs percent", () => {
+    it("converts fraction (0-1) to percent by multiplying by 100", () => {
+      expect(ensurePercentScale(0.87)).toBe(87);
+      expect(ensurePercentScale(0.5)).toBe(50);
+      expect(ensurePercentScale(0.0)).toBe(0);
+      expect(ensurePercentScale(1.0)).toBe(100);
+    });
+
+    it("leaves already-percent values (>1) unchanged", () => {
+      expect(ensurePercentScale(87)).toBe(87);
+      expect(ensurePercentScale(50.5)).toBe(50.5);
+      expect(ensurePercentScale(100)).toBe(100);
+      expect(ensurePercentScale(1.5)).toBe(1.5);
+    });
+
+    it("returns null for null/undefined/NaN", () => {
+      expect(ensurePercentScale(null)).toBeNull();
+      expect(ensurePercentScale(undefined)).toBeNull();
+      expect(ensurePercentScale(NaN)).toBeNull();
+    });
+
+    it("handles edge case of exactly 1.0 as fraction (100%)", () => {
+      expect(ensurePercentScale(1.0)).toBe(100);
+    });
+
+    it("handles edge case of 1.01 as already percent", () => {
+      expect(ensurePercentScale(1.01)).toBe(1.01);
     });
   });
 });

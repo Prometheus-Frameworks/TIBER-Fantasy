@@ -117,6 +117,26 @@ export function getCapsForPosition(position: string | null): PositionCaps {
   return POSITION_CAPS[upper] ?? DEFAULT_CAPS;
 }
 
+/**
+ * Ensures a percentage value is on 0-100 scale.
+ * Auto-detects if value is fraction (0-1) or already percent (0-100).
+ * 
+ * Rule:
+ * - If value <= 1.0, treat as fraction and multiply by 100
+ * - If value > 1.0, treat as already percent (0-100)
+ * 
+ * This guardrail prevents double-scaling issues when data sources
+ * may provide percentages in different formats.
+ */
+export function ensurePercentScale(value: number | null | undefined): number | null {
+  if (value == null || Number.isNaN(value)) return null;
+  
+  if (value <= 1.0) {
+    return value * 100;
+  }
+  return value;
+}
+
 export function normalizeMetric(
   metric: string,
   value: number | null | undefined,

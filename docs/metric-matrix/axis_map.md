@@ -130,7 +130,67 @@ The endpoint returns:
 }
 ```
 
+## Data Sources & Scaling
+
+### snap_share_pct
+
+**Source:** `nfl_data_py.import_snap_counts()` → `offense_pct` field
+
+**Transformation:**
+- Raw `offense_pct` is a decimal (0-1 scale, e.g., 0.87 = 87%)
+- Stored in `player_usage.snap_share_pct` as 0-100 scale (e.g., 87.0)
+- Backfill script: `server/scripts/backfillSnapSharePct.py`
+
+**ID Mapping:**
+- Snap counts use PFR player IDs (e.g., `ChasJa00`)
+- Mapped to GSIS IDs (e.g., `00-0036900`) via `nfl_data_py.import_ids()`
+
+### target_share_pct
+
+**Source:** Calculated during weekly usage backfill from play-by-play data
+
+**Transformation:**
+- Stored as 0-100 scale (e.g., 21.74 = 21.74% target share)
+
+### Missing Data & Bye Weeks
+
+Players may have missing `snap_share_pct` for several reasons:
+
+1. **Bye weeks** - No games played that week, so no snap data exists
+2. **PFR ID mapping gaps** - Some players lack PFR→GSIS mappings
+3. **Preseason/injured** - Player didn't appear in snap count reports
+
+When `snap_share_pct` is NULL:
+- The Metric Matrix shows it in `missingInputs`
+- Confidence score is reduced proportionally
+- The `role_security` metric (derived from snap share) also becomes NULL
+
+### Guardrail: ensurePercentScale()
+
+To prevent double-scaling issues when data arrives in different formats, use:
+
+```typescript
+ensurePercentScale(value)
+// If value <= 1.0, treat as fraction → multiply by 100
+// If value > 1.0, treat as already percent → return as-is
+```
+
+### Coverage Monitoring
+
+Check data quality with:
+```
+GET /api/metric-matrix/coverage?season=2025&week=3
+```
+
+Returns % of rows with non-null snap_share_pct/target_share_pct.
+
 ## Changelog
+
+### v1.2 (2025-12-30)
+- Added snap_share_pct backfill from nfl_data_py snap counts
+- Added coverage endpoint for data quality monitoring
+- Added ensurePercentScale() guardrail for percent normalization
+- Documented data sources, scaling, and bye week behavior
 
 ### v1.1 (2025-12-30)
 - Added position-aware normalization caps (WR/RB/TE/QB)
