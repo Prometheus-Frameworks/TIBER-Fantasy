@@ -58,7 +58,7 @@ function loadAxisMap(): AxisMap {
   return cachedAxisMap;
 }
 
-function clamp(value: number, min: number, max: number): number {
+export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
@@ -108,13 +108,16 @@ const POSITION_CAPS: Record<string, PositionCaps> = {
 
 const DEFAULT_CAPS: PositionCaps = POSITION_CAPS.WR;
 
-function getCapsForPosition(position: string | null): PositionCaps {
+export { POSITION_CAPS, DEFAULT_CAPS };
+export type { PositionCaps };
+
+export function getCapsForPosition(position: string | null): PositionCaps {
   if (!position) return DEFAULT_CAPS;
   const upper = position.toUpperCase();
   return POSITION_CAPS[upper] ?? DEFAULT_CAPS;
 }
 
-function normalizeMetric(
+export function normalizeMetric(
   metric: string,
   value: number | null | undefined,
   caps: PositionCaps = DEFAULT_CAPS
@@ -142,7 +145,7 @@ function normalizeMetric(
   return normalizedByName[metric]?.() ?? clamp(value, 0, 100);
 }
 
-function computeStdDev(values: number[]): number {
+export function computeStdDev(values: number[]): number {
   if (!values.length) return 0;
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
   const variance = values.reduce((sum, val) => sum + (val - mean) ** 2, 0) / values.length;
