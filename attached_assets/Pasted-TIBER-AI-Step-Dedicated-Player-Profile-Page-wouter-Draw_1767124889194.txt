@@ -1,0 +1,77 @@
+TIBER.AI — Step: Dedicated Player Profile Page (wouter) + Drawer Deep Link
+
+Goal
+Create a dedicated player profile page route: /player/:playerId using wouter, reusing existing PlayerDetailDrawer logic/data. Keep the drawer workflow intact, but add deep-link support so the drawer can open to /player/:playerId (optional but preferred).
+
+Constraints
+- App uses wouter (NOT react-router).
+- Do NOT break existing drawer/search behavior.
+- Reuse existing endpoints:
+  - GET /api/tiber/score/:nflfastrId?week=&season=&mode=
+  - GET /api/metric-matrix/player-vector?playerId=&season=&week=
+  - GET /api/player-identity/search
+- Keep styling consistent with current dark UI.
+- Avoid layout jank.
+
+Implementation Plan
+
+1) Create new page component:
+   File: client/src/pages/PlayerPage.tsx
+   - Reads :playerId from wouter params (useRoute or Route component pattern).
+   - Fetch minimal player identity info so we can render a header:
+     Preferred: add a small API endpoint (see step 4) to fetch identity by canonicalId.
+     If you want to avoid backend changes: render page title as playerId initially, but backend endpoint is strongly preferred.
+   - Render a “Player Profile” page layout:
+     - Header: Player name, team, position
+     - Two cards:
+       A) TIBER / FORGE Score card (reuse same breakdown UI patterns from PlayerDetailDrawer)
+       B) Metric Matrix card (reuse the existing Metric Matrix card rendering from PlayerDetailDrawer)
+     - Optional: include a “Back” link (wouter Link) to /tiers or previous page.
+   - Add a small “Open Drawer View” button that opens the existing PlayerDetailDrawer (optional).
+   - Make week/season controls simple:
+     - Default season=2025, week=current detected week if there’s already a helper; otherwise week=3 default.
+     - Provide a small toggle for mode weekly/season if you can reuse existing state.
+
+2) Refactor PlayerDetailDrawer for reuse (no behavior change)
+   - Extract the Metric Matrix card UI into a small component:
+     client/src/components/metricMatrix/MetricMatrixCard.tsx
+     Props: { playerId, season, week }
+   - Extract the TIBER score section into:
+     client/src/components/tiber/TiberScoreCard.tsx
+     Props: { nflfastrId, week, season, mode }
+   - PlayerDetailDrawer keeps its layout, but now uses these components.
+
+3) Add route to App.tsx (wouter)
+   - In client/src/App.tsx add:
+     <Route path="/player/:playerId" component={PlayerPage} />
+   - Ensure this route doesn’t conflict with existing ones.
+
+4) Backend support (recommended, small + safe)
+   Add a simple identity endpoint so PlayerPage can show proper name/team/pos without relying on weekly_stats:
+   - New route: GET /api/player-identity/:id
+   - It should return canonicalId, playerName, position, team, plus nflfastrId/sleeperId if available.
+   - Use existing playerIdentityMap table if present (it exists in schema).
+   - If playerIdentityMap doesn’t have team, fall back to latest weeklyStats row for that playerId (desc season/week).
+   - Return { success: true, data: {...} }.
+
+5) Deep-link support (optional but valuable)
+   - When a user opens the drawer from search, also push the URL to /player/:id (without full page nav if possible), OR
+   - Add a “View Full Profile” link inside the drawer that navigates to /player/:id using wouter <Link>.
+
+6) Testing / Verification
+   - Navigate to /player/00-0036900 (Chase example) and confirm:
+     - Page loads without console errors
+     - TIBER score loads
+     - Metric Matrix loads (with missing inputs line when applicable)
+     - No layout jank (skeleton matches final height)
+   - Confirm existing search + drawer still works.
+   - Confirm /api/player-identity/:id returns expected data.
+
+Deliverables
+- New PlayerPage route and page component
+- Extracted reusable card components (MetricMatrixCard, TiberScoreCard)
+- Optional backend identity endpoint
+- “View Full Profile” link in drawer
+- Quick sanity check screenshots or notes in summary
+
+Do the smallest safe implementation first (route + page + identity endpoint), then refactor components second if needed for cleanliness.
