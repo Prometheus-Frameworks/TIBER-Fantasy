@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import {
   Sheet,
   SheetContent,
@@ -11,7 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Activity, Target, Zap, Users, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Activity, Target, Zap, Users, Trophy, ExternalLink } from 'lucide-react';
 
 interface PlayerDetailDrawerProps {
   isOpen: boolean;
@@ -553,8 +555,18 @@ export default function PlayerDetailDrawer({
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-t border-gray-800/50 text-center">
-          <p className="text-xs text-gray-600 tracking-wide">
+        <div className="mt-8 pt-4 border-t border-gray-800/50 space-y-4">
+          <Link href={`/player/${nflfastrId}`} onClick={onClose}>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 border-gray-700 hover:bg-gray-800 hover:border-gray-600"
+              data-testid="button-view-full-profile"
+            >
+              <ExternalLink size={16} />
+              View Full Profile
+            </Button>
+          </Link>
+          <p className="text-xs text-gray-600 tracking-wide text-center">
             TIBER v1.0 — Tactical Index for Breakout Efficiency & Regression
           </p>
         </div>

@@ -20,6 +20,7 @@ import ForgeLab from "@/pages/ForgeLab";
 import TiberDataLab from "@/pages/TiberDataLab";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
+import PlayerPage from "@/pages/PlayerPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,6 +36,9 @@ function Router() {
       
       {/* Tiber Tiers - FORGE-powered fantasy rankings */}
       <Route path="/tiers" component={TiberTiers} />
+      
+      {/* Player Profile - Dedicated player page */}
+      <Route path="/player/:playerId" component={PlayerPage} />
       
       {/* Rankings - Redirect to Tiber Tiers */}
       <Route path="/rankings">
