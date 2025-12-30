@@ -1,0 +1,2033 @@
+From 93aec778c84665f5d5327fcbf7ed7fa554e05df9 Mon Sep 17 00:00:00 2001
+From: Architect J <josephmasciale11@gmail.com>
+Date: Sun, 28 Dec 2025 19:42:56 -0500
+Subject: [PATCH] Sync advanced view fields and extend audit
+
+---
+ docs/metric-matrix/NFLFASTR_INVENTORY_RAW.md  |  44 ++
+ docs/metric-matrix/README.md                  |   3 +
+ .../advanced_views_registry.json              |  76 +++
+ docs/metric-matrix/metric_matrix.json         | 394 +++++++++++++
+ docs/metric-matrix/metric_matrix.schema.json  |  79 +++
+ .../nflfastr_inventory_tables.json            | 274 +++++++++
+ .../nflfastr_inventory_usage.json             | 113 ++++
+ package.json                                  |   5 +-
+ server/scripts/metricMatrixAudit.ts           | 522 ++++++++++++++++++
+ server/scripts/seedMetricMatrix.ts            | 270 +++++++++
+ server/scripts/syncAdvancedRegistryFields.ts  | 153 +++++
+ 11 files changed, 1932 insertions(+), 1 deletion(-)
+ create mode 100644 docs/metric-matrix/NFLFASTR_INVENTORY_RAW.md
+ create mode 100644 docs/metric-matrix/README.md
+ create mode 100644 docs/metric-matrix/advanced_views_registry.json
+ create mode 100644 docs/metric-matrix/metric_matrix.json
+ create mode 100644 docs/metric-matrix/metric_matrix.schema.json
+ create mode 100644 docs/metric-matrix/nflfastr_inventory_tables.json
+ create mode 100644 docs/metric-matrix/nflfastr_inventory_usage.json
+ create mode 100644 server/scripts/metricMatrixAudit.ts
+ create mode 100644 server/scripts/seedMetricMatrix.ts
+ create mode 100644 server/scripts/syncAdvancedRegistryFields.ts
+
+diff --git a/docs/metric-matrix/NFLFASTR_INVENTORY_RAW.md b/docs/metric-matrix/NFLFASTR_INVENTORY_RAW.md
+new file mode 100644
+index 00000000..07be745a
+--- /dev/null
++++ b/docs/metric-matrix/NFLFASTR_INVENTORY_RAW.md
+@@ -0,0 +1,44 @@
++Pipelines found
++- server/ingest/nflfastr.ts: TypeScript entrypoint exposing fetchWeeklyFromNflfastR(season, week) and fetchSeasonToDate(), shells out to server/ingest/fetch-weekly.py for per-week nflreadpy pulls and hydrates fantasy points.
++- server/ingest/fetch-weekly.py: Python helper using nflreadpy.load_player_stats + load_snap_counts to emit per-week player stat rows (snaps/routes estimated by position) with fumbles and two_pt stitched in.
++- server/scripts/import_nflfastr_2025_bulk.py: Bulk parquet downloader/loader for 2025 play_by_play parquet into bronze_nflfastr_plays (delete-then-insert of full season, preserves raw_data JSON).
++- server/scripts/backfillWeeklyUsage.py: Downloads nflverse parquet play-by-play plus nfl_data_py weekly aggregates, builds weekly_stats + player_usage rows (routes/alignments, target share, carries gap/zone) with UPSERT semantics; supports season or single-week runs.
++- server/scripts/calculateWeek5Usage.py: Single-week pbp downloader from nflverse (parquet) to compute usage metrics; limited scope helper.
++- server/services/snapCountService.ts: Python inline script calling nfl_data_py.import_snap_counts for specified seasons, then imports into bronze_nflfastr_snap_counts with conflict handling.
++- server/scripts/populatePlayerIdentityFromUsage.py: Pulls nfl_data_py roster (printouts labeled “Downloading roster data from nflfastR”), maps GSIS IDs into player_identity_map.
++- server/scripts/populate2025Schedule.py: Uses nfl_data_py.import_schedules to load 2025 schedule; partnered with server/cron/scheduleSync.ts cron (Tuesdays 1 AM ET) invoking scripts/sync_schedule.py.
++- server/python/query_nflfastr.py: Ad hoc nfl_data_py importer for pbp-based metric lookups (receiving, rushing, success) for a player/team.
++
++Tables found (with columns)
++- weekly_stats: season, week, player_id, player_name, team, position, snaps, routes, targets, rush_att, rec, rec_yd, rec_td, rush_yd, rush_td, pass_yd, pass_td, int, fumbles, two_pt, fantasy_points_std/half/ppr, gsis_id, created_at, updated_at. PK (season, week, player_id); indexes on player_id, season+player_id, season+week, season+position.
++- player_usage: id, player_id, sleeper_id, week, season, routes_total/outside/slot/inline, alignment_outside_pct, alignment_slot_pct, snaps, snap_share_pct, target_share_pct, targets, carries_gap/zone/total. Unique (player_id, week, season) plus player/season and season/week indexes.
++- bronze_nflfastr_plays: id, play_id, game_id, season, week, posteam, defteam, play_type, passer_player_id/name, receiver_player_id/name, rusher_player_id/name, epa, wpa, air_yards, yards_after_catch, yards_gained, complete_pass, incomplete_pass, interception, touchdown, first_down, first_down_rush, first_down_pass, raw_data, imported_at, created_at. Unique (game_id, play_id); indexes on season+week, passer_player_id, receiver_player_id, rusher_player_id, play_type.
++- bronze_nflfastr_snap_counts: id, game_id, pfr_game_id, season, game_type, week, player, pfr_player_id, position, team, opponent, offense_snaps/pct, defense_snaps/pct, st_snaps/pct, imported_at. Unique (game_id, player); indexes on season+week, player, position, pfr_player_id.
++- silver_player_weekly_stats: id, player_id, player_name, position, team, season, week, pass_attempts, completions, passing_yards/tds/epa, interceptions, targets, receptions, receiving_yards/tds/epa, air_yards, yac, rush_attempts, rushing_yards/tds/epa, updated_at, created_at. Unique (player_id, season, week); indexes on player_id and season+week.
++- defense_vs_position_stats: id, defense_team, position, season, week, plays_against, unique_players, fantasy_pts_ppr/half_ppr/standard, avg_pts_per_game_ppr/standard, avg_epa_allowed, success_rate_allowed, touchdowns_allowed, total_yards_allowed, receptions_allowed, targets_allowed, rank_vs_position, dvp_rating, updated_at, created_at. Unique (defense_team, position, season, week) plus indexes on defense, position, season+week, rank, rating.
++- tiber_scores: id, player_id (FK players.id), nflfastr_id, week, season, tiber_score, tier, first_down_score, epa_score, usage_score, td_score, team_score, first_down_rate, total_first_downs, epa_per_play, snap_percent_avg/trend, td_rate, team_offense_rank, calculated_at. Unique (nflfastr_id, week, season) plus indexes on nflfastr_id, week+season, tier, score.
++- tiber_season_ratings: id, nflfastr_id, season, season_average, weeks_included, season_tier, trend, last_week_score, last_week, score_std_dev, highest_week_score, lowest_week_score, calculated_at, updated_at. Unique (nflfastr_id, season) plus indexes on nflfastr_id, season, season_average.
++- datadive_nflfastr_metrics: season, week, player_id, position, targets, air_yards, yac_per_rec, rz_targets, rz_carries, rush_epa, rush_success, created_at, updated_at. PK (season, week, player_id); index on season+week.
++- bronze_nflfastr_snap_counts consumers: snapCountService.ts expects offense_snaps/pct, defense_snaps/pct, st_snaps/pct and inserts via drizzle with conflict on game_id+player.
++- Advanced stats materialized views referenced (not defined in schema file but queried):
++  - wr_advanced_stats_2025: canonical_id/player_name/team, games_played, targets, receptions, rec_yards, first_downs, tds, air_yards, yac, target_share, air_yards_share, yards_per_target, fd_per_target, catch_rate, yac_per_rec, epa_per_target, success_rate, yprr_est, fd_rr_est, sleeper_id, nfl_id.
++  - wr_advanced_weekly_2025: week-level fields mirroring above (week, team, targets, receptions, rec_yards, first_downs, tds, air_yards, yac, target_share, air_yards_share, yards_per_target, fd_per_target, catch_rate, yac_per_rec, epa_per_target, success_rate).
++  - rb_advanced_stats_2025: canonical_id/full_name/team, games_played, carries, targets, receptions, carry_share, target_share, carries_per_game, targets_per_game, rush_yards, yards_per_carry, explosive_rush_rate, rush_success_rate, rush_epa_per_att, rush_fd_rate, rec_yards, yards_per_target, catch_rate, yac_per_rec, rec_epa_per_target, rec_success_rate, total_tds, rush_tds, rec_tds, goal_line_carries, redzone_carries/targets, total_yards, total_opportunities, yards_per_game, sleeper_id.
++  - rb_advanced_weekly_2025: week, team, carries, rush_yards, yards_per_carry, explosive_rush_rate, rush_success_rate, rush_epa_per_att, rush_tds, goal_line_carries, redzone_carries, targets, receptions, rec_yards, yards_per_target, catch_rate, yac_per_rec, rec_epa_per_target, rec_success_rate, rec_tds, total_tds, total_yards, opportunities.
++  - forge_player_advanced_qb: season-filtered QB rows with games_played, attempts, completions, completion_pct, pass_yards/tds, ints, yards_per_attempt, air_yards, air_yards_per_attempt, epa_per_attempt, success_rate, rush_attempts, rush_yards, rush_tds, yards_per_carry, rush_epa_per_att.
++  - forge_player_advanced_te: player_id/season with games_played, targets, receptions, rec_yards, first_downs, tds, air_yards, yac, target_share, air_yards_share, yards_per_target/reception, fd_per_target, catch_rate, yac_per_rec, epa_per_target, success_rate.
++
++Routes/services found
++- GET /api/game-logs/:playerId/latest (server/routes/gameLogRoutes.ts): aggregates latest game from bronze_nflfastr_plays into passing (attempts, completions, yards, TDs, INTs), rushing (attempts, yards, TDs), receiving (targets, receptions, yards, TDs) plus standard/half/PPR fantasy totals.
++- GET /api/admin/te-rankings-sandbox (server/routes.ts): pulls 2025 TE rows from weekly_stats (targets, receptions, fantasy points, snaps/routes) joined to player_identity_map; merges alignment splits from player_usage and red-zone counts from bronze_nflfastr_plays (yardline_100 filtering) then applies environment/matchup modifiers.
++- GET /api/admin/qb-rankings-sandbox (server/routes.ts): aggregates passer/rusher splits from bronze_nflfastr_plays (attempts, completions, yards, TDs, INTs, air yards, EPA, depth splits, red-zone attempts/TDs/INTs, scrambles) and blends qb_context_metrics + qb_epa_reference for ranking output.
++- DefenseVsPositionService.calculateDefenseVsPosition (server/services/defenseVsPositionService.ts): iterates bronze_nflfastr_plays joined to player_identity_map by position to compute fantasy points allowed, yards, receptions/targets, EPA, success_rate per defense_team/position into defense_vs_position_stats.
++- SnapCountService (server/services/snapCountService.ts): fetchSnapCounts() + importSnapCounts() read/write bronze_nflfastr_snap_counts; also exposes query helpers for player/season/week filters.
++- PlayerAdvancedService (server/services/playerAdvancedService.ts): getWRSeasonStats/getWRWeeklyStats, getRBSeasonStats/getRBWeeklyStats, getTE season/weekly, getQB season stats all source from the advanced materialized views built from nflfastR data.
++- TiberService (server/services/tiberService.ts): getPlayerStats/calculateTiberScore/calculateSeasonRating read bronze_nflfastr_plays for usage+EPA + bronze_nflfastr_snap_counts for snap percentages; persists into tiber_scores and tiber_season_ratings.
++
++Feature inputs referenced
++- wrFeatures (server/modules/forge/features/wrFeatures.ts): uses seasonStats targets, targetShare (or estimated from TEAM_TARGETS_PER_GAME), airYardsShare (from seasonStats.airYards/recYards), redZoneTargets, snaps/routes; advancedMetrics yprr, epaPerTarget; derived yardsPerTarget, catchRate/CatchRateOE; weeklyStats.fantasyPointsPpr for volatility; contextFit uses teamEnvironment.proePct/pacePct and dvpData.rank. Inputs sourced from weekly_stats/player_usage/advanced WR views; estimates applied when targetShare/airYardsShare/rzTargets missing.
++- rbFeatures (server/modules/forge/features/rbFeatures.ts): seasonStats rushAttempts, targets, snapShare (used as opportunityShare), redZoneCarries/Targets with estimated goal-line share; advancedMetrics yardsPerCarry, yardsAfterContact, missedTacklesForced, epaPerRush, successRate; weeklyStats.fantasyPointsPpr for volatility; contextFit uses teamEnvironment.proePct (converted to rush volume), olGradePct, dvpData.rank. Sources: weekly_stats/player_usage, RB advanced view; caps applied when advanced stats absent.
++- teFeatures (server/modules/forge/features/teFeatures.ts): seasonStats targets/receptions/recYards/recTds, redZoneTargets, targetShare/airYardsShare, snaps/routes; advancedMetrics yprr, epaPerTarget, successRate, catchRateOverExpected, yardsAfterContact; weeklyStats.fantasyPointsPpr for stability; contextFit uses teamEnvironment.passAttemptsPerGame/pace and dvpData.rank. Source tables: weekly_stats + TE advanced view; neutral defaults when matchup/env missing.
++- qbFeatures (server/modules/forge/features/qbFeatures.ts): seasonStats passingAttempts (estimated from passingYards if missing), rushAttempts, redZoneTargets (used as rzPass proxy), passingYards/TDs/INTs; advancedMetrics epaPerPlay, cpoe, aypa; weeklyStats.fantasyPointsPpr volatility; contextFit uses teamEnvironment.passAttemptsPerGame/pace/proe plus dvpData.rank. Source tables: forge_player_advanced_qb + weekly/snap usage; caps when advanced stats unavailable.
+diff --git a/docs/metric-matrix/README.md b/docs/metric-matrix/README.md
+new file mode 100644
+index 00000000..6637e3a4
+--- /dev/null
++++ b/docs/metric-matrix/README.md
+@@ -0,0 +1,3 @@
++# Operation Metric Matrix
++
++This folder holds the raw discovery notes for Operation Metric Matrix. Step 1 is a simple inventory of NFLfastR-derived data and usage across the codebase; the lists are intentionally unorganized for now and will be refined in later phases.
+diff --git a/docs/metric-matrix/advanced_views_registry.json b/docs/metric-matrix/advanced_views_registry.json
+new file mode 100644
+index 00000000..87eaed30
+--- /dev/null
++++ b/docs/metric-matrix/advanced_views_registry.json
+@@ -0,0 +1,76 @@
++{
++  "assets": [
++    {
++      "name": "forge_player_advanced_qb",
++      "kind": "view",
++      "layer": "gold",
++      "description": "PlayerAdvanced QB view blending efficiency and volume splits."
++    },
++    {
++      "name": "forge_player_advanced_te",
++      "kind": "view",
++      "layer": "gold",
++      "description": "PlayerAdvanced TE view with route and efficiency enrichments."
++    },
++    {
++      "name": "forge_team_environment",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Team environment aggregates for pace and pass rate over expected."
++    },
++    {
++      "name": "forge_team_matchup_context",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Matchup context view aligning opponent strength metrics."
++    },
++    {
++      "name": "nfl_data_py.import_snap_counts",
++      "kind": "external",
++      "layer": "bronze",
++      "description": "External import hook used for snap count ingestion."
++    },
++    {
++      "name": "player_identity_map",
++      "kind": "view",
++      "layer": "silver",
++      "description": "Identity resolution table joining provider player IDs."
++    },
++    {
++      "name": "qb_context_metrics",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Computed QB context metrics including CPOE and pressure signals."
++    },
++    {
++      "name": "qb_epa_reference",
++      "kind": "view",
++      "layer": "gold",
++      "description": "EPA reference leaderboard for QB ranking blends."
++    },
++    {
++      "name": "rb_advanced_stats_2025",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Season-level RB advanced metric aggregates for 2025."
++    },
++    {
++      "name": "rb_advanced_weekly_2025",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Weekly RB advanced metric view for 2025."
++    },
++    {
++      "name": "wr_advanced_stats_2025",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Season-level WR advanced metric aggregates for 2025."
++    },
++    {
++      "name": "wr_advanced_weekly_2025",
++      "kind": "view",
++      "layer": "gold",
++      "description": "Weekly WR advanced metric view for 2025."
++    }
++  ]
++}
+diff --git a/docs/metric-matrix/metric_matrix.json b/docs/metric-matrix/metric_matrix.json
+new file mode 100644
+index 00000000..49acb0ca
+--- /dev/null
++++ b/docs/metric-matrix/metric_matrix.json
+@@ -0,0 +1,394 @@
++{
++  "$schema": "./metric_matrix.schema.json",
++  "sources": [
++    {
++      "name": "bronze_nflfastr_plays",
++      "kind": "table",
++      "layer": "bronze",
++      "status": "active",
++      "description": "Raw NFLfastR play-by-play ingest (bronze layer)",
++      "fields": [
++        "air_yards",
++        "complete_pass",
++        "created_at",
++        "defteam",
++        "epa",
++        "first_down",
++        "first_down_pass",
++        "first_down_rush",
++        "game_id",
++        "id",
++        "imported_at",
++        "incomplete_pass",
++        "interception",
++        "passer_player_id",
++        "passer_player_name",
++        "play_id",
++        "play_type",
++        "posteam",
++        "raw_data",
++        "receiver_player_id",
++        "receiver_player_name",
++        "rusher_player_id",
++        "rusher_player_name",
++        "season",
++        "touchdown",
++        "week",
++        "wpa",
++        "yards_after_catch",
++        "yards_gained"
++      ]
++    },
++    {
++      "name": "bronze_nflfastr_snap_counts",
++      "kind": "table",
++      "layer": "bronze",
++      "status": "active",
++      "description": "Snap count ingest from nfl_data_py (bronze layer)",
++      "fields": [
++        "defense_pct",
++        "defense_snaps",
++        "game_id",
++        "game_type",
++        "id",
++        "imported_at",
++        "offense_pct",
++        "offense_snaps",
++        "opponent",
++        "pfr_game_id",
++        "pfr_player_id",
++        "player",
++        "position",
++        "season",
++        "st_pct",
++        "st_snaps",
++        "team",
++        "week"
++      ]
++    },
++    {
++      "name": "datadive_nflfastr_metrics",
++      "kind": "table",
++      "layer": "gold",
++      "status": "active",
++      "description": "Per-player per-week context metrics used by xFPTS v2",
++      "fields": [
++        "air_yards",
++        "created_at",
++        "player_id",
++        "position",
++        "rush_epa",
++        "rush_success",
++        "rz_carries",
++        "rz_targets",
++        "season",
++        "targets",
++        "updated_at",
++        "week",
++        "yac_per_rec"
++      ]
++    },
++    {
++      "name": "defense_vs_position_stats",
++      "kind": "table",
++      "layer": "gold",
++      "status": "active",
++      "description": "Fantasy/EPA allowed by defense and position derived from bronze_nflfastr_plays",
++      "fields": [
++        "avg_epa_allowed",
++        "avg_pts_per_game_ppr",
++        "avg_pts_per_game_standard",
++        "created_at",
++        "defense_team",
++        "dvp_rating",
++        "fantasy_pts_half_ppr",
++        "fantasy_pts_ppr",
++        "fantasy_pts_standard",
++        "id",
++        "plays_against",
++        "position",
++        "rank_vs_position",
++        "receptions_allowed",
++        "season",
++        "success_rate_allowed",
++        "targets_allowed",
++        "total_yards_allowed",
++        "touchdowns_allowed",
++        "unique_players",
++        "updated_at",
++        "week"
++      ]
++    },
++    {
++      "name": "forge_player_advanced_qb",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "PlayerAdvanced QB view blending efficiency and volume splits.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "forge_player_advanced_te",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "PlayerAdvanced TE view with route and efficiency enrichments.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "forge_team_environment",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Team environment aggregates for pace and pass rate over expected.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "forge_team_matchup_context",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Matchup context view aligning opponent strength metrics.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "nfl_data_py.import_snap_counts",
++      "kind": "external",
++      "layer": "bronze",
++      "status": "unknown",
++      "description": "External import hook used for snap count ingestion.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "player_identity_map",
++      "kind": "view",
++      "layer": "silver",
++      "status": "unknown",
++      "description": "Identity resolution table joining provider player IDs.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "player_usage",
++      "kind": "table",
++      "layer": "silver",
++      "status": "active",
++      "description": "Weekly alignment and usage splits derived from play-by-play",
++      "fields": [
++        "alignment_outside_pct",
++        "alignment_slot_pct",
++        "carries_gap",
++        "carries_total",
++        "carries_zone",
++        "created_at",
++        "id",
++        "player_id",
++        "routes_inline",
++        "routes_outside",
++        "routes_slot",
++        "routes_total",
++        "season",
++        "sleeper_id",
++        "snap_share_pct",
++        "snaps",
++        "target_share_pct",
++        "targets",
++        "updated_at",
++        "week"
++      ]
++    },
++    {
++      "name": "qb_context_metrics",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Computed QB context metrics including CPOE and pressure signals.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "qb_epa_reference",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "EPA reference leaderboard for QB ranking blends.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "rb_advanced_stats_2025",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Season-level RB advanced metric aggregates for 2025.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "rb_advanced_weekly_2025",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Weekly RB advanced metric view for 2025.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "silver_player_weekly_stats",
++      "kind": "table",
++      "layer": "silver",
++      "status": "active",
++      "description": "Aggregated weekly player stats (silver layer)",
++      "fields": [
++        "air_yards",
++        "completions",
++        "created_at",
++        "id",
++        "interceptions",
++        "pass_attempts",
++        "passing_epa",
++        "passing_tds",
++        "passing_yards",
++        "player_id",
++        "player_name",
++        "position",
++        "receiving_epa",
++        "receiving_tds",
++        "receiving_yards",
++        "receptions",
++        "rush_attempts",
++        "rushing_epa",
++        "rushing_tds",
++        "rushing_yards",
++        "season",
++        "targets",
++        "team",
++        "updated_at",
++        "week",
++        "yac"
++      ]
++    },
++    {
++      "name": "tiber_scores",
++      "kind": "table",
++      "layer": "gold",
++      "status": "active",
++      "description": "Per-player, per-week TIBER scores computed from NFLfastR stats",
++      "fields": [
++        "calculated_at",
++        "epa_per_play",
++        "epa_score",
++        "first_down_rate",
++        "first_down_score",
++        "id",
++        "nflfastr_id",
++        "player_id",
++        "season",
++        "snap_percent_avg",
++        "snap_percent_trend",
++        "td_rate",
++        "td_score",
++        "team_offense_rank",
++        "team_score",
++        "tiber_score",
++        "tier",
++        "total_first_downs",
++        "usage_score",
++        "week"
++      ]
++    },
++    {
++      "name": "tiber_season_ratings",
++      "kind": "table",
++      "layer": "gold",
++      "status": "active",
++      "description": "Season-level TIBER aggregates",
++      "fields": [
++        "calculated_at",
++        "highest_week_score",
++        "id",
++        "last_week",
++        "last_week_score",
++        "lowest_week_score",
++        "nflfastr_id",
++        "score_std_dev",
++        "season",
++        "season_average",
++        "season_tier",
++        "trend",
++        "updated_at",
++        "weeks_included"
++      ]
++    },
++    {
++      "name": "weekly_stats",
++      "kind": "table",
++      "layer": "silver",
++      "status": "active",
++      "description": "Per-player weekly stats with fantasy scoring from NFLfastR pulls",
++      "fields": [
++        "created_at",
++        "fantasy_points_half",
++        "fantasy_points_ppr",
++        "fantasy_points_std",
++        "fumbles",
++        "gsis_id",
++        "int",
++        "pass_td",
++        "pass_yd",
++        "player_id",
++        "player_name",
++        "position",
++        "rec",
++        "rec_td",
++        "rec_yd",
++        "routes",
++        "rush_att",
++        "rush_td",
++        "rush_yd",
++        "season",
++        "snaps",
++        "targets",
++        "team",
++        "two_pt",
++        "updated_at",
++        "week"
++      ]
++    },
++    {
++      "name": "wr_advanced_stats_2025",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Season-level WR advanced metric aggregates for 2025.",
++      "tags": [
++        "needs_field_list"
++      ]
++    },
++    {
++      "name": "wr_advanced_weekly_2025",
++      "kind": "view",
++      "layer": "gold",
++      "status": "unknown",
++      "description": "Weekly WR advanced metric view for 2025.",
++      "tags": [
++        "needs_field_list"
++      ]
++    }
++  ]
++}
+diff --git a/docs/metric-matrix/metric_matrix.schema.json b/docs/metric-matrix/metric_matrix.schema.json
+new file mode 100644
+index 00000000..649b2c1f
+--- /dev/null
++++ b/docs/metric-matrix/metric_matrix.schema.json
+@@ -0,0 +1,79 @@
++{
++  "$schema": "http://json-schema.org/draft-07/schema#",
++  "title": "Metric Matrix",
++  "type": "object",
++  "additionalProperties": false,
++  "required": ["sources"],
++  "properties": {
++    "$schema": {
++      "type": "string"
++    },
++    "sources": {
++      "type": "array",
++      "items": {
++        "type": "object",
++        "additionalProperties": false,
++        "required": ["name", "kind", "layer", "status"],
++        "properties": {
++          "name": {
++            "type": "string"
++          },
++          "kind": {
++            "type": "string",
++            "enum": ["table", "view", "external", "unknown"]
++          },
++          "layer": {
++            "type": "string",
++            "enum": ["bronze", "silver", "gold", "application", "unknown"]
++          },
++          "status": {
++            "type": "string",
++            "enum": ["active", "deprecated", "missing", "unknown"]
++          },
++          "description": {
++            "type": "string"
++          },
++          "upstream": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            }
++          },
++          "fields": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            }
++          },
++          "provides_metrics": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            }
++          },
++          "consumed_by": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            }
++          },
++          "refresh": {
++            "type": "object",
++            "additionalProperties": false,
++            "properties": {
++              "cadence": { "type": "string" },
++              "sla_hours": { "type": "number" },
++              "last_updated_field": { "type": "string" }
++            }
++          },
++          "tags": {
++            "type": "array",
++            "items": {
++              "type": "string"
++            }
++          }
++        }
++      }
++    }
++  }
++}
+diff --git a/docs/metric-matrix/nflfastr_inventory_tables.json b/docs/metric-matrix/nflfastr_inventory_tables.json
+new file mode 100644
+index 00000000..80e516ab
+--- /dev/null
++++ b/docs/metric-matrix/nflfastr_inventory_tables.json
+@@ -0,0 +1,274 @@
++{
++  "weekly_stats": {
++    "description": "Per-player weekly stats with fantasy scoring from NFLfastR pulls",
++    "layer": "silver",
++    "columns": [
++      {"name": "season", "type": "integer"},
++      {"name": "week", "type": "integer"},
++      {"name": "player_id", "type": "text"},
++      {"name": "player_name", "type": "text"},
++      {"name": "team", "type": "text"},
++      {"name": "position", "type": "text"},
++      {"name": "snaps", "type": "integer"},
++      {"name": "routes", "type": "integer"},
++      {"name": "targets", "type": "integer"},
++      {"name": "rush_att", "type": "integer"},
++      {"name": "rec", "type": "integer"},
++      {"name": "rec_yd", "type": "integer"},
++      {"name": "rec_td", "type": "integer"},
++      {"name": "rush_yd", "type": "integer"},
++      {"name": "rush_td", "type": "integer"},
++      {"name": "pass_yd", "type": "integer"},
++      {"name": "pass_td", "type": "integer"},
++      {"name": "int", "type": "integer"},
++      {"name": "fumbles", "type": "integer"},
++      {"name": "two_pt", "type": "integer"},
++      {"name": "fantasy_points_std", "type": "real"},
++      {"name": "fantasy_points_half", "type": "real"},
++      {"name": "fantasy_points_ppr", "type": "real"},
++      {"name": "gsis_id", "type": "text"},
++      {"name": "created_at", "type": "timestamp"},
++      {"name": "updated_at", "type": "timestamp"}
++    ],
++    "primary_key": ["season", "week", "player_id"],
++    "indexes": ["player_id", "season+player_id", "season+week", "season+position"]
++  },
++  "player_usage": {
++    "description": "Weekly alignment and usage splits derived from play-by-play",
++    "layer": "silver",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "player_id", "type": "text"},
++      {"name": "sleeper_id", "type": "text"},
++      {"name": "week", "type": "integer"},
++      {"name": "season", "type": "integer"},
++      {"name": "routes_total", "type": "integer"},
++      {"name": "routes_outside", "type": "integer"},
++      {"name": "routes_slot", "type": "integer"},
++      {"name": "routes_inline", "type": "integer"},
++      {"name": "alignment_outside_pct", "type": "real"},
++      {"name": "alignment_slot_pct", "type": "real"},
++      {"name": "snaps", "type": "integer"},
++      {"name": "snap_share_pct", "type": "real"},
++      {"name": "target_share_pct", "type": "real"},
++      {"name": "targets", "type": "integer"},
++      {"name": "carries_gap", "type": "integer"},
++      {"name": "carries_zone", "type": "integer"},
++      {"name": "carries_total", "type": "integer"},
++      {"name": "created_at", "type": "timestamp"},
++      {"name": "updated_at", "type": "timestamp"}
++    ],
++    "primary_key": ["player_id", "week", "season"],
++    "indexes": ["player_id+season", "season+week"]
++  },
++  "bronze_nflfastr_plays": {
++    "description": "Raw NFLfastR play-by-play ingest (bronze layer)",
++    "layer": "bronze",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "play_id", "type": "varchar"},
++      {"name": "game_id", "type": "varchar"},
++      {"name": "season", "type": "integer"},
++      {"name": "week", "type": "integer"},
++      {"name": "posteam", "type": "varchar"},
++      {"name": "defteam", "type": "varchar"},
++      {"name": "play_type", "type": "varchar"},
++      {"name": "passer_player_id", "type": "varchar"},
++      {"name": "passer_player_name", "type": "varchar"},
++      {"name": "receiver_player_id", "type": "varchar"},
++      {"name": "receiver_player_name", "type": "varchar"},
++      {"name": "rusher_player_id", "type": "varchar"},
++      {"name": "rusher_player_name", "type": "varchar"},
++      {"name": "epa", "type": "real"},
++      {"name": "wpa", "type": "real"},
++      {"name": "air_yards", "type": "integer"},
++      {"name": "yards_after_catch", "type": "integer"},
++      {"name": "yards_gained", "type": "integer"},
++      {"name": "complete_pass", "type": "boolean"},
++      {"name": "incomplete_pass", "type": "boolean"},
++      {"name": "interception", "type": "boolean"},
++      {"name": "touchdown", "type": "boolean"},
++      {"name": "first_down", "type": "boolean"},
++      {"name": "first_down_rush", "type": "boolean"},
++      {"name": "first_down_pass", "type": "boolean"},
++      {"name": "raw_data", "type": "jsonb"},
++      {"name": "imported_at", "type": "timestamp"},
++      {"name": "created_at", "type": "timestamp"}
++    ],
++    "primary_key": ["game_id", "play_id"],
++    "indexes": ["season+week", "passer_player_id", "receiver_player_id", "rusher_player_id", "play_type"]
++  },
++  "bronze_nflfastr_snap_counts": {
++    "description": "Snap count ingest from nfl_data_py (bronze layer)",
++    "layer": "bronze",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "game_id", "type": "varchar"},
++      {"name": "pfr_game_id", "type": "varchar"},
++      {"name": "season", "type": "integer"},
++      {"name": "game_type", "type": "varchar"},
++      {"name": "week", "type": "integer"},
++      {"name": "player", "type": "varchar"},
++      {"name": "pfr_player_id", "type": "varchar"},
++      {"name": "position", "type": "varchar"},
++      {"name": "team", "type": "varchar"},
++      {"name": "opponent", "type": "varchar"},
++      {"name": "offense_snaps", "type": "integer"},
++      {"name": "offense_pct", "type": "real"},
++      {"name": "defense_snaps", "type": "integer"},
++      {"name": "defense_pct", "type": "real"},
++      {"name": "st_snaps", "type": "integer"},
++      {"name": "st_pct", "type": "real"},
++      {"name": "imported_at", "type": "timestamp"}
++    ],
++    "primary_key": ["game_id", "player"],
++    "indexes": ["season+week", "player", "position", "pfr_player_id"]
++  },
++  "silver_player_weekly_stats": {
++    "description": "Aggregated weekly player stats (silver layer)",
++    "layer": "silver",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "player_id", "type": "varchar"},
++      {"name": "player_name", "type": "varchar"},
++      {"name": "position", "type": "varchar"},
++      {"name": "team", "type": "varchar"},
++      {"name": "season", "type": "integer"},
++      {"name": "week", "type": "integer"},
++      {"name": "pass_attempts", "type": "integer"},
++      {"name": "completions", "type": "integer"},
++      {"name": "passing_yards", "type": "integer"},
++      {"name": "passing_tds", "type": "integer"},
++      {"name": "interceptions", "type": "integer"},
++      {"name": "passing_epa", "type": "real"},
++      {"name": "targets", "type": "integer"},
++      {"name": "receptions", "type": "integer"},
++      {"name": "receiving_yards", "type": "integer"},
++      {"name": "receiving_tds", "type": "integer"},
++      {"name": "receiving_epa", "type": "real"},
++      {"name": "air_yards", "type": "integer"},
++      {"name": "yac", "type": "integer"},
++      {"name": "rush_attempts", "type": "integer"},
++      {"name": "rushing_yards", "type": "integer"},
++      {"name": "rushing_tds", "type": "integer"},
++      {"name": "rushing_epa", "type": "real"},
++      {"name": "updated_at", "type": "timestamp"},
++      {"name": "created_at", "type": "timestamp"}
++    ],
++    "primary_key": ["player_id", "season", "week"],
++    "indexes": ["player_id", "season+week"]
++  },
++  "defense_vs_position_stats": {
++    "description": "Fantasy/EPA allowed by defense and position derived from bronze_nflfastr_plays",
++    "layer": "gold",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "defense_team", "type": "varchar"},
++      {"name": "position", "type": "varchar"},
++      {"name": "season", "type": "integer"},
++      {"name": "week", "type": "integer"},
++      {"name": "plays_against", "type": "integer"},
++      {"name": "unique_players", "type": "integer"},
++      {"name": "fantasy_pts_ppr", "type": "real"},
++      {"name": "fantasy_pts_half_ppr", "type": "real"},
++      {"name": "fantasy_pts_standard", "type": "real"},
++      {"name": "avg_pts_per_game_ppr", "type": "real"},
++      {"name": "avg_pts_per_game_standard", "type": "real"},
++      {"name": "avg_epa_allowed", "type": "real"},
++      {"name": "success_rate_allowed", "type": "real"},
++      {"name": "touchdowns_allowed", "type": "integer"},
++      {"name": "total_yards_allowed", "type": "integer"},
++      {"name": "receptions_allowed", "type": "integer"},
++      {"name": "targets_allowed", "type": "integer"},
++      {"name": "rank_vs_position", "type": "integer"},
++      {"name": "dvp_rating", "type": "varchar"},
++      {"name": "updated_at", "type": "timestamp"},
++      {"name": "created_at", "type": "timestamp"}
++    ],
++    "primary_key": ["defense_team", "position", "season", "week"],
++    "indexes": ["defense_team", "position", "season+week", "rank_vs_position", "dvp_rating"]
++  },
++  "tiber_scores": {
++    "description": "Per-player, per-week TIBER scores computed from NFLfastR stats",
++    "layer": "gold",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "player_id", "type": "integer"},
++      {"name": "nflfastr_id", "type": "text"},
++      {"name": "week", "type": "integer"},
++      {"name": "season", "type": "integer"},
++      {"name": "tiber_score", "type": "integer"},
++      {"name": "tier", "type": "enum"},
++      {"name": "first_down_score", "type": "integer"},
++      {"name": "epa_score", "type": "integer"},
++      {"name": "usage_score", "type": "integer"},
++      {"name": "td_score", "type": "integer"},
++      {"name": "team_score", "type": "integer"},
++      {"name": "first_down_rate", "type": "real"},
++      {"name": "total_first_downs", "type": "integer"},
++      {"name": "epa_per_play", "type": "real"},
++      {"name": "snap_percent_avg", "type": "real"},
++      {"name": "snap_percent_trend", "type": "enum"},
++      {"name": "td_rate", "type": "real"},
++      {"name": "team_offense_rank", "type": "integer"},
++      {"name": "calculated_at", "type": "timestamp"}
++    ],
++    "primary_key": ["nflfastr_id", "week", "season"],
++    "indexes": ["nflfastr_id", "week+season", "tier", "tiber_score"]
++  },
++  "tiber_season_ratings": {
++    "description": "Season-level TIBER aggregates",
++    "layer": "gold",
++    "columns": [
++      {"name": "id", "type": "serial"},
++      {"name": "nflfastr_id", "type": "text"},
++      {"name": "season", "type": "integer"},
++      {"name": "season_average", "type": "real"},
++      {"name": "weeks_included", "type": "integer"},
++      {"name": "season_tier", "type": "enum"},
++      {"name": "trend", "type": "enum"},
++      {"name": "last_week_score", "type": "integer"},
++      {"name": "last_week", "type": "integer"},
++      {"name": "score_std_dev", "type": "real"},
++      {"name": "highest_week_score", "type": "integer"},
++      {"name": "lowest_week_score", "type": "integer"},
++      {"name": "calculated_at", "type": "timestamp"},
++      {"name": "updated_at", "type": "timestamp"}
++    ],
++    "primary_key": ["nflfastr_id", "season"],
++    "indexes": ["nflfastr_id", "season", "season_average"]
++  },
++  "datadive_nflfastr_metrics": {
++    "description": "Per-player per-week context metrics used by xFPTS v2",
++    "layer": "gold",
++    "columns": [
++      {"name": "season", "type": "integer"},
++      {"name": "week", "type": "integer"},
++      {"name": "player_id", "type": "text"},
++      {"name": "position", "type": "text"},
++      {"name": "targets", "type": "integer"},
++      {"name": "air_yards", "type": "real"},
++      {"name": "yac_per_rec", "type": "real"},
++      {"name": "rz_targets", "type": "integer"},
++      {"name": "rz_carries", "type": "integer"},
++      {"name": "rush_epa", "type": "real"},
++      {"name": "rush_success", "type": "real"},
++      {"name": "created_at", "type": "timestamp"},
++      {"name": "updated_at", "type": "timestamp"}
++    ],
++    "primary_key": ["season", "week", "player_id"],
++    "indexes": ["season+week"]
++  },
++  "advanced_views": {
++    "description": "Materialized views queried for FORGE advanced stats (sourced from NFLfastR)",
++    "layer": "application",
++    "entries": [
++      "wr_advanced_stats_2025",
++      "wr_advanced_weekly_2025",
++      "rb_advanced_stats_2025",
++      "rb_advanced_weekly_2025",
++      "forge_player_advanced_qb",
++      "forge_player_advanced_te"
++    ]
++  }
++}
+diff --git a/docs/metric-matrix/nflfastr_inventory_usage.json b/docs/metric-matrix/nflfastr_inventory_usage.json
+new file mode 100644
+index 00000000..0183a4bd
+--- /dev/null
++++ b/docs/metric-matrix/nflfastr_inventory_usage.json
+@@ -0,0 +1,113 @@
++{
++  "routes": [
++    {
++      "name": "/api/game-logs/:playerId/latest",
++      "sources": ["bronze_nflfastr_plays"],
++      "fields_returned": [
++        "passing.attempts", "passing.completions", "passing.yards", "passing.touchdowns", "passing.interceptions",
++        "rushing.attempts", "rushing.yards", "rushing.touchdowns",
++        "receiving.targets", "receiving.receptions", "receiving.yards", "receiving.touchdowns",
++        "fantasyPoints.standard", "fantasyPoints.halfPPR", "fantasyPoints.ppr"
++      ]
++    },
++    {
++      "name": "/api/admin/te-rankings-sandbox",
++      "sources": ["weekly_stats", "player_usage", "bronze_nflfastr_plays", "forge_team_environment", "forge_team_matchup_context"],
++      "fields_returned": [
++        "targets", "receptions", "rec_yards", "rec_tds", "fantasy_points_ppr", "snaps", "routes",
++        "alignment.slot_pct", "alignment.inline_pct", "alignment.outside_pct",
++        "red_zone.rz_targets", "red_zone.10_zone_targets", "red_zone.goal_line_targets", "red_zone.rz_tds",
++        "volatility.weekly_ppr_series", "env_score", "matchup_score"
++      ]
++    },
++    {
++      "name": "/api/admin/qb-rankings-sandbox",
++      "sources": ["bronze_nflfastr_plays", "qb_context_metrics", "qb_epa_reference"],
++      "fields_returned": [
++        "attempts", "completions", "passing_yards", "passing_tds", "interceptions", "air_yards", "epa_avg",
++        "deep/short/intermediate attempts+completions", "red_zone.attempts/tds/ints", "end_zone_attempts",
++        "rushing.carries", "rushing.yards", "rushing.tds", "scrambles", "designed_runs", "rz_rushes/rz_rush_tds",
++        "context.cpoe", "context.pressure_rate", "context.drop_rate", "epa_reference"
++      ]
++    }
++  ],
++  "services": [
++    {
++      "name": "DefenseVsPositionService.calculateDefenseVsPosition",
++      "sources": ["bronze_nflfastr_plays", "player_identity_map"],
++      "fields_generated": [
++        "plays_against", "unique_players", "fantasy_pts_ppr", "fantasy_pts_half_ppr", "fantasy_pts_standard",
++        "avg_epa_allowed", "success_rate_allowed", "touchdowns_allowed", "total_yards_allowed",
++        "receptions_allowed", "targets_allowed", "rank_vs_position", "dvp_rating"
++      ]
++    },
++    {
++      "name": "SnapCountService.fetchSnapCounts/importSnapCounts",
++      "sources": ["nfl_data_py.import_snap_counts", "bronze_nflfastr_snap_counts"],
++      "fields_generated": [
++        "game_id", "pfr_game_id", "season", "week", "player", "pfr_player_id", "position", "team", "opponent",
++        "offense_snaps", "offense_pct", "defense_snaps", "defense_pct", "st_snaps", "st_pct"
++      ]
++    },
++    {
++      "name": "PlayerAdvancedService (WR/RB/TE/QB getters)",
++      "sources": ["wr_advanced_stats_2025", "wr_advanced_weekly_2025", "rb_advanced_stats_2025", "rb_advanced_weekly_2025", "forge_player_advanced_qb", "forge_player_advanced_te"],
++      "fields_returned": [
++        "usage.targets/receptions/carries", "shares.target_share/carry_share/air_yards_share", "air_yards", "yac", "yprr_est",
++        "epa_per_target", "success_rate", "yards_per_target/carry", "fd_per_target", "goal_line_carries", "redzone_targets/carries",
++        "rush_epa_per_att", "catch_rate", "yac_per_rec", "games_played"
++      ]
++    },
++    {
++      "name": "TiberService.calculateTiberScore",
++      "sources": ["bronze_nflfastr_plays", "bronze_nflfastr_snap_counts", "player_identity_map", "tiber_scores", "tiber_season_ratings"],
++      "fields_generated": [
++        "targets", "receptions", "receiving_epa", "receiving_tds", "receiving_first_downs",
++        "rushes", "rushing_epa", "rushing_tds", "rushing_first_downs", "team_abbr",
++        "snap_percentage_avg/trend", "tiber_score", "tier", "season_average"
++      ]
++    }
++  ],
++  "features": {
++    "WR": {
++      "inputs": [
++        "seasonStats.targets", "seasonStats.targetShare (est. if missing)", "seasonStats.airYardsShare (computed)", "seasonStats.redZoneTargets",
++        "advancedMetrics.yprr", "advancedMetrics.epaPerTarget", "seasonStats.receivingYards", "seasonStats.receptions",
++        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.proePct/pacePct", "dvpData.rank"
++      ],
++      "source_tables": ["weekly_stats", "player_usage", "wr_advanced_stats_2025", "wr_advanced_weekly_2025"],
++      "nflfastr_derived": true,
++      "notes": "targetShare/airYardsShare/rzTargets are estimated when null; efficiency capped without advanced stats"
++    },
++    "RB": {
++      "inputs": [
++        "seasonStats.rushAttempts", "seasonStats.targets", "seasonStats.snapShare as opportunityShare", "seasonStats.redZoneCarries", "seasonStats.redZoneTargets",
++        "advancedMetrics.yardsPerCarry", "advancedMetrics.yardsAfterContact", "advancedMetrics.missedTacklesForced", "advancedMetrics.epaPerRush", "advancedMetrics.successRate",
++        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.proePct (converted to rush volume)", "teamEnvironment.olGradePct", "dvpData.rank"
++      ],
++      "source_tables": ["weekly_stats", "player_usage", "rb_advanced_stats_2025", "rb_advanced_weekly_2025"],
++      "nflfastr_derived": true,
++      "notes": "Goal-line/RZ touches estimated when missing; caps applied when advanced metrics absent"
++    },
++    "TE": {
++      "inputs": [
++        "seasonStats.targets/receptions/recYards/recTds", "seasonStats.targetShare", "seasonStats.airYardsShare", "seasonStats.redZoneTargets", "snaps/routes",
++        "advancedMetrics.yprr", "advancedMetrics.epaPerTarget", "advancedMetrics.successRate", "advancedMetrics.catchRateOverExpected", "advancedMetrics.yardsAfterContact",
++        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.passAttemptsPerGame/pace", "dvpData.rank"
++      ],
++      "source_tables": ["weekly_stats", "player_usage", "forge_player_advanced_te"],
++      "nflfastr_derived": true,
++      "notes": "Defaults to neutral contextFit when matchup/environment missing"
++    },
++    "QB": {
++      "inputs": [
++        "seasonStats.passingAttempts (est. from passingYards if missing)", "seasonStats.rushAttempts", "seasonStats.redZoneTargets as rzPass proxy",
++        "seasonStats.passingYards/passingTds/interceptions", "advancedMetrics.epaPerPlay", "advancedMetrics.cpoe", "advancedMetrics.aypa",
++        "weeklyStats.fantasyPointsPpr series", "teamEnvironment.passAttemptsPerGame/pace/proe", "dvpData.rank"
++      ],
++      "source_tables": ["forge_player_advanced_qb", "weekly_stats"],
++      "nflfastr_derived": true,
++      "notes": "Caps efficiency when advanced stats unavailable; sack rate currently placeholder"
++    }
++  }
++}
+diff --git a/package.json b/package.json
+index 85277122..c0be93ae 100644
+--- a/package.json
++++ b/package.json
+@@ -14,7 +14,10 @@
+     "db:studio": "drizzle-kit studio",
+     "test:forge": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/recursiveAlphaEngine.test.ts",
+     "db:generate": "drizzle-kit generate",
+-    "db:migrate": "drizzle-kit migrate"
++    "db:migrate": "drizzle-kit migrate",
++    "seed:metric-matrix": "tsx server/scripts/seedMetricMatrix.ts",
++    "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts",
++    "sync:metric-matrix-registry": "tsx server/scripts/syncAdvancedRegistryFields.ts"
+   },
+   "dependencies": {
+     "@anthropic-ai/sdk": "^0.37.0",
+diff --git a/server/scripts/metricMatrixAudit.ts b/server/scripts/metricMatrixAudit.ts
+new file mode 100644
+index 00000000..94eb4801
+--- /dev/null
++++ b/server/scripts/metricMatrixAudit.ts
+@@ -0,0 +1,522 @@
++import { readFileSync } from 'node:fs';
++import path from 'node:path';
++import process from 'node:process';
++import { Pool } from 'pg';
++
++interface UsageRoute {
++  readonly sources?: string[];
++  readonly fields_returned?: string[];
++}
++
++interface UsageService {
++  readonly sources?: string[];
++  readonly fields_generated?: string[];
++  readonly fields_returned?: string[];
++}
++
++interface UsageFeature {
++  readonly source_tables?: string[];
++  readonly inputs?: string[];
++}
++
++interface UsageInventory {
++  readonly routes?: UsageRoute[];
++  readonly services?: UsageService[];
++  readonly features?: Record<string, UsageFeature>;
++}
++
++type MetricKind = 'table' | 'view' | 'external' | 'unknown';
++type MetricLayer = 'bronze' | 'silver' | 'gold' | 'application' | 'unknown';
++type MetricStatus = 'active' | 'deprecated' | 'missing' | 'unknown';
++
++type RefreshMetadata = {
++  readonly cadence?: string;
++  readonly sla_hours?: number;
++  readonly last_updated_field?: string;
++};
++
++type MetricSource = {
++  readonly name: string;
++  readonly kind: MetricKind;
++  readonly layer: MetricLayer;
++  readonly status: MetricStatus;
++  readonly description?: string;
++  readonly upstream?: string[];
++  readonly fields?: string[];
++  readonly provides_metrics?: string[];
++  readonly consumed_by?: string[];
++  readonly refresh?: RefreshMetadata;
++  readonly tags?: string[];
++};
++
++type MetricMatrix = {
++  readonly sources: MetricSource[];
++};
++
++interface TableColumn {
++  readonly name: string;
++  readonly type?: string;
++}
++
++interface TableDefinition {
++  readonly description?: string;
++  readonly columns?: TableColumn[];
++  readonly primary_key?: string[];
++  readonly indexes?: string[];
++  readonly layer?: MetricLayer;
++  readonly entries?: string[];
++  readonly upstream?: string[];
++}
++
++type TableInventory = Record<string, TableDefinition>;
++
++interface AdvancedAsset {
++  readonly name: string;
++  readonly kind?: string;
++  readonly layer?: string;
++  readonly description?: string;
++  readonly fields?: string[];
++  readonly status?: MetricStatus;
++  readonly upstream?: string[];
++  readonly tags?: string[];
++}
++
++interface AdvancedRegistry {
++  readonly assets?: AdvancedAsset[];
++}
++
++const VALID_KINDS: readonly MetricKind[] = ['table', 'view', 'external', 'unknown'];
++const VALID_LAYERS: readonly MetricLayer[] = ['bronze', 'silver', 'gold', 'application', 'unknown'];
++
++function readJsonFile<T>(relativePath: string): T {
++  const absolutePath = path.resolve(process.cwd(), relativePath);
++  const raw = readFileSync(absolutePath, 'utf8');
++  return JSON.parse(raw) as T;
++}
++
++function collectUsageSources(usage: UsageInventory): string[] {
++  const discovered = new Set<string>();
++
++  (usage.routes ?? []).forEach((route) => {
++    (route.sources ?? []).forEach((source) => discovered.add(source));
++  });
++
++  (usage.services ?? []).forEach((service) => {
++    (service.sources ?? []).forEach((source) => discovered.add(source));
++  });
++
++  const featureGroups = usage.features ?? {};
++  Object.values(featureGroups).forEach((feature) => {
++    (feature.source_tables ?? []).forEach((source) => discovered.add(source));
++  });
++
++  return [...discovered].sort();
++}
++
++function collectMatrixCoverage(matrix: MetricMatrix): Set<string> {
++  const coverage = new Set<string>();
++
++  (matrix.sources ?? []).forEach((source) => {
++    coverage.add(source.name);
++    (source.upstream ?? []).forEach((upstream) => coverage.add(upstream));
++  });
++
++  return coverage;
++}
++
++function detectDuplicateScriptKeys(packageJsonRaw: string): string[] {
++  const scriptsMatch = packageJsonRaw.match(/"scripts"\s*:\s*{([^}]*)}/s);
++  if (!scriptsMatch) return [];
++
++  const scriptsBlock = scriptsMatch[1];
++  const keyRegex = /"([^"\n]+)"\s*:/g;
++  const seen = new Set<string>();
++  const duplicates = new Set<string>();
++
++  let match: RegExpExecArray | null;
++  while ((match = keyRegex.exec(scriptsBlock)) !== null) {
++    const key = match[1];
++    if (seen.has(key)) {
++      duplicates.add(key);
++    } else {
++      seen.add(key);
++    }
++  }
++
++  return [...duplicates].sort();
++}
++
++function detectDuplicateSources(matrix: MetricMatrix): string[] {
++  const seen = new Set<string>();
++  const duplicates = new Set<string>();
++
++  (matrix.sources ?? []).forEach((source) => {
++    if (seen.has(source.name)) {
++      duplicates.add(source.name);
++    } else {
++      seen.add(source.name);
++    }
++  });
++
++  return [...duplicates].sort();
++}
++
++function findDuplicates(values: string[]): string[] {
++  const seen = new Set<string>();
++  const duplicates = new Set<string>();
++
++  values.forEach((value) => {
++    if (seen.has(value)) {
++      duplicates.add(value);
++    } else {
++      seen.add(value);
++    }
++  });
++
++  return [...duplicates].sort();
++}
++
++function buildPool(): Pool | undefined {
++  const connectionString = process.env.DATABASE_URL;
++  if (!connectionString) {
++    return undefined;
++  }
++
++  const isProd = process.env.NODE_ENV === 'production';
++  return new Pool({
++    connectionString,
++    ssl: isProd ? { rejectUnauthorized: false } : false,
++  });
++}
++
++async function fetchViewColumns(pool: Pool, viewName: string): Promise<string[] | null> {
++  const viewResult = await pool.query<{ table_schema: string }>(
++    `
++      SELECT table_schema
++      FROM information_schema.views
++      WHERE table_name = $1
++      LIMIT 1;
++    `,
++    [viewName],
++  );
++
++  if (viewResult.rowCount === 0) {
++    return null;
++  }
++
++  const tableSchema = viewResult.rows[0]?.table_schema ?? 'public';
++  const columnsResult = await pool.query<{ column_name: string }>(
++    `
++      SELECT column_name
++      FROM information_schema.columns
++      WHERE table_name = $1 AND table_schema = $2
++      ORDER BY ordinal_position;
++    `,
++    [viewName, tableSchema],
++  );
++
++  return columnsResult.rows.map((row) => row.column_name);
++}
++
++function validateTableCoverage(
++  tables: Array<[string, TableDefinition]>,
++  matrix: MetricMatrix,
++): {
++  missingSources: string[];
++  fieldMismatches: Array<{ source: string; missingInMatrix: string[]; extraInMatrix: string[] }>;
++  invalidLayers: string[];
++  wrongKinds: string[];
++} {
++  const matrixByName = new Map<string, MetricSource>((matrix.sources ?? []).map((entry) => [entry.name, entry]));
++  const missingSources: string[] = [];
++  const fieldMismatches: Array<{ source: string; missingInMatrix: string[]; extraInMatrix: string[] }> = [];
++  const invalidLayers: string[] = [];
++  const wrongKinds: string[] = [];
++
++  tables.forEach(([name, definition]) => {
++    const layer = definition.layer;
++    if (!layer || !(VALID_LAYERS as readonly string[]).includes(layer) || layer === 'unknown') {
++      invalidLayers.push(name);
++    }
++
++    const entry = matrixByName.get(name);
++    if (!entry) {
++      missingSources.push(name);
++      return;
++    }
++
++    if (entry.kind !== 'table') {
++      wrongKinds.push(name);
++    }
++
++    const inventoryFields = new Set((definition.columns ?? []).map((column) => column.name));
++    const matrixFields = new Set(entry.fields ?? []);
++
++    const missingInMatrix = [...inventoryFields].filter((field) => !matrixFields.has(field)).sort();
++    const extraInMatrix = [...matrixFields].filter((field) => !inventoryFields.has(field)).sort();
++
++    if (missingInMatrix.length > 0 || extraInMatrix.length > 0 || entry.fields === undefined) {
++      fieldMismatches.push({ source: name, missingInMatrix, extraInMatrix });
++    }
++  });
++
++  return {
++    missingSources: missingSources.sort(),
++    fieldMismatches,
++    invalidLayers: invalidLayers.sort(),
++    wrongKinds: wrongKinds.sort(),
++  };
++}
++
++function validateRegistry(advanced: AdvancedRegistry): { invalidKinds: string[]; invalidLayers: string[] } {
++  const invalidKinds = new Set<string>();
++  const invalidLayers = new Set<string>();
++
++  (advanced.assets ?? []).forEach((asset) => {
++    if (!asset.kind || !(VALID_KINDS as readonly string[]).includes(asset.kind as MetricKind) || asset.kind === 'table') {
++      invalidKinds.add(asset.name);
++    }
++
++    if (!asset.layer || !(VALID_LAYERS as readonly string[]).includes(asset.layer as MetricLayer)) {
++      invalidLayers.add(asset.name);
++    }
++  });
++
++  return { invalidKinds: [...invalidKinds].sort(), invalidLayers: [...invalidLayers].sort() };
++}
++
++function partitionTableInventory(
++  tables: TableInventory,
++): { seedable: Array<[string, TableDefinition]>; skipped: string[]; missingColumns: string[] } {
++  const seedable: Array<[string, TableDefinition]> = [];
++  const skipped: string[] = [];
++  const missingColumns: string[] = [];
++
++  Object.entries(tables).forEach(([name, definition]) => {
++    if (!definition.columns || definition.columns.length === 0) {
++      if ((definition as unknown as { entries?: unknown }).entries) {
++        skipped.push(name);
++      } else {
++        missingColumns.push(name);
++      }
++      return;
++    }
++
++    seedable.push([name, definition]);
++  });
++
++  return { seedable, skipped: skipped.sort(), missingColumns: missingColumns.sort() };
++}
++
++function validateNonTableFields(
++  matrix: MetricMatrix,
++): { emptyFieldArrays: string[]; activeMissingFields: string[] } {
++  const emptyFieldArrays: string[] = [];
++  const activeMissingFields: string[] = [];
++
++  (matrix.sources ?? []).forEach((source) => {
++    if (source.kind === 'table') return;
++
++    if (source.fields && source.fields.length === 0) {
++      emptyFieldArrays.push(source.name);
++    }
++
++    const hasNeedsTag = (source.tags ?? []).includes('needs_field_list');
++    if (source.status === 'active' && (!source.fields || source.fields.length === 0)) {
++      activeMissingFields.push(source.name);
++    } else if (source.status === 'unknown' && hasNeedsTag && source.fields && source.fields.length === 0) {
++      emptyFieldArrays.push(source.name);
++    }
++  });
++
++  return { emptyFieldArrays: emptyFieldArrays.sort(), activeMissingFields: activeMissingFields.sort() };
++}
++
++async function validateDbViews(
++  matrix: MetricMatrix,
++  registry: AdvancedRegistry,
++): Promise<{ missingFieldsForExistingViews: string[]; unavailableReason?: string }> {
++  const pool = buildPool();
++  if (!pool) {
++    return { missingFieldsForExistingViews: [], unavailableReason: 'DATABASE_URL not set; skipping DB view validation.' };
++  }
++
++  const matrixByName = new Map<string, MetricSource>((matrix.sources ?? []).map((entry) => [entry.name, entry]));
++  const viewAssets = (registry.assets ?? []).filter((asset) => asset.kind === 'view');
++  const missingFieldsForExistingViews: string[] = [];
++
++  try {
++    for (const asset of viewAssets) {
++      const columns = await fetchViewColumns(pool, asset.name);
++      if (!columns || columns.length === 0) continue;
++
++      const matrixEntry = matrixByName.get(asset.name);
++      if (!matrixEntry || !matrixEntry.fields || matrixEntry.fields.length === 0) {
++        missingFieldsForExistingViews.push(asset.name);
++      }
++    }
++  } catch (error) {
++    return {
++      missingFieldsForExistingViews: [],
++      unavailableReason: `Database error during view field validation: ${error instanceof Error ? error.message : String(error)}`,
++    };
++  } finally {
++    await pool.end();
++  }
++
++  return { missingFieldsForExistingViews: missingFieldsForExistingViews.sort() };
++}
++
++async function main(): Promise<void> {
++  const usage = readJsonFile<UsageInventory>('docs/metric-matrix/nflfastr_inventory_usage.json');
++  const tables = readJsonFile<TableInventory>('docs/metric-matrix/nflfastr_inventory_tables.json');
++  const advancedViews = readJsonFile<AdvancedRegistry>('docs/metric-matrix/advanced_views_registry.json');
++  const metricMatrix = readJsonFile<MetricMatrix>('docs/metric-matrix/metric_matrix.json');
++  const packageJsonRaw = readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8');
++
++  const usageSources = collectUsageSources(usage);
++  const tablePartitions = partitionTableInventory(tables);
++  const catalog = new Set<string>([
++    ...tablePartitions.seedable.map(([name]) => name),
++    ...((advancedViews.assets ?? []).map((asset) => asset.name)),
++  ]);
++
++  const matrixCoverage = collectMatrixCoverage(metricMatrix);
++  const registryNames = (advancedViews.assets ?? []).map((asset) => asset.name);
++
++  const missingCatalog = usageSources.filter((source) => !catalog.has(source));
++  const missingMatrixCoverage = usageSources.filter((source) => !matrixCoverage.has(source));
++
++  const tableCoverage = validateTableCoverage(tablePartitions.seedable, metricMatrix);
++  const duplicateScripts = detectDuplicateScriptKeys(packageJsonRaw);
++  const duplicateSources = detectDuplicateSources(metricMatrix);
++  const registryValidation = validateRegistry(advancedViews);
++  const registryDuplicates = findDuplicates(registryNames);
++  const registryTableCollisions = [...new Set(registryNames.filter((name) => Object.prototype.hasOwnProperty.call(tables, name)))].sort();
++  const nonTableFields = validateNonTableFields(metricMatrix);
++  const dbViewValidation = await validateDbViews(metricMatrix, advancedViews);
++
++  const hasFailures =
++    missingCatalog.length > 0 ||
++    missingMatrixCoverage.length > 0 ||
++    tableCoverage.missingSources.length > 0 ||
++    tableCoverage.fieldMismatches.length > 0 ||
++    tableCoverage.invalidLayers.length > 0 ||
++    tableCoverage.wrongKinds.length > 0 ||
++    tablePartitions.missingColumns.length > 0 ||
++    duplicateScripts.length > 0 ||
++    duplicateSources.length > 0 ||
++    registryValidation.invalidKinds.length > 0 ||
++    registryValidation.invalidLayers.length > 0 ||
++    registryDuplicates.length > 0 ||
++    registryTableCollisions.length > 0 ||
++    nonTableFields.emptyFieldArrays.length > 0 ||
++    nonTableFields.activeMissingFields.length > 0 ||
++    (dbViewValidation.missingFieldsForExistingViews.length > 0 && !dbViewValidation.unavailableReason);
++
++  if (!hasFailures) {
++    if (dbViewValidation.unavailableReason) {
++      console.warn(`Metric matrix audit passed, but DB view validation was skipped: ${dbViewValidation.unavailableReason}`);
++    }
++    console.log('Metric matrix audit passed: usage coverage, inventory alignment, and registry validation succeeded.');
++    return;
++  }
++
++  console.error('Metric matrix audit failed.');
++
++  if (missingCatalog.length > 0) {
++    console.error('\nUncataloged sources (add to tables inventory or advanced_views_registry):');
++    missingCatalog.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (missingMatrixCoverage.length > 0) {
++    console.error('\nSources missing metric_matrix.json coverage (must exist as sources or upstream):');
++    missingMatrixCoverage.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (tableCoverage.missingSources.length > 0) {
++    console.error('\nInventory tables missing in metric_matrix.json:');
++    tableCoverage.missingSources.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (tableCoverage.fieldMismatches.length > 0) {
++    console.error('\nTable field mismatches (matrix fields must equal inventory columns):');
++    tableCoverage.fieldMismatches.forEach((issue) => {
++      console.error(`  - ${issue.source}`);
++      if (issue.missingInMatrix.length > 0) {
++        console.error('    Missing in matrix:');
++        issue.missingInMatrix.forEach((field) => console.error(`      • ${field}`));
++      }
++      if (issue.extraInMatrix.length > 0) {
++        console.error('    Extra in matrix:');
++        issue.extraInMatrix.forEach((field) => console.error(`      • ${field}`));
++      }
++    });
++  }
++
++  if (tableCoverage.invalidLayers.length > 0) {
++    console.error('\nTables with missing/invalid layers (cannot be unknown):');
++    tableCoverage.invalidLayers.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (tableCoverage.wrongKinds.length > 0) {
++    console.error('\nInventory tables that are not marked kind="table" in metric_matrix.json:');
++    tableCoverage.wrongKinds.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (tablePartitions.missingColumns.length > 0) {
++    console.error('\nInventory tables missing column definitions (cannot be seeded or audited):');
++    tablePartitions.missingColumns.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (duplicateSources.length > 0) {
++    console.error('\nDuplicate source names found in metric_matrix.json:');
++    duplicateSources.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (nonTableFields.emptyFieldArrays.length > 0) {
++    console.error('\nNon-table sources have empty fields arrays (omit fields until known):');
++    nonTableFields.emptyFieldArrays.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (nonTableFields.activeMissingFields.length > 0) {
++    console.error('\nNon-table sources marked active must declare fields:');
++    nonTableFields.activeMissingFields.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (dbViewValidation.missingFieldsForExistingViews.length > 0) {
++    console.error('\nDatabase views with columns require fields in metric_matrix.json:');
++    dbViewValidation.missingFieldsForExistingViews.forEach((source) => console.error(`  - ${source}`));
++  } else if (dbViewValidation.unavailableReason) {
++    console.warn(`\nDB view validation skipped: ${dbViewValidation.unavailableReason}`);
++  }
++
++  if (registryValidation.invalidKinds.length > 0) {
++    console.error('\nAdvanced registry assets with invalid kind (must be view, external, or unknown):');
++    registryValidation.invalidKinds.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (registryValidation.invalidLayers.length > 0) {
++    console.error('\nAdvanced registry assets with invalid or missing layer:');
++    registryValidation.invalidLayers.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (registryDuplicates.length > 0) {
++    console.error('\nDuplicate asset names found in advanced_views_registry.json:');
++    registryDuplicates.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (registryTableCollisions.length > 0) {
++    console.error('\nRegistry assets colliding with table names (choose one location for the source):');
++    registryTableCollisions.forEach((source) => console.error(`  - ${source}`));
++  }
++
++  if (duplicateScripts.length > 0) {
++    console.error('\nDuplicate npm scripts found in package.json (ensure keys are unique):');
++    duplicateScripts.forEach((script) => console.error(`  - ${script}`));
++  }
++
++  process.exitCode = 1;
++}
++
++void main();
+diff --git a/server/scripts/seedMetricMatrix.ts b/server/scripts/seedMetricMatrix.ts
+new file mode 100644
+index 00000000..21ca5be4
+--- /dev/null
++++ b/server/scripts/seedMetricMatrix.ts
+@@ -0,0 +1,270 @@
++import { existsSync, readFileSync, writeFileSync } from 'node:fs';
++import path from 'node:path';
++import process from 'node:process';
++
++type Kind = 'table' | 'view' | 'external' | 'unknown';
++type Layer = 'bronze' | 'silver' | 'gold' | 'application' | 'unknown';
++type Status = 'active' | 'deprecated' | 'missing' | 'unknown';
++
++type Refresh = {
++  readonly cadence?: string;
++  readonly sla_hours?: number;
++  readonly last_updated_field?: string;
++};
++
++type MetricSource = {
++  readonly name: string;
++  readonly kind: Kind;
++  readonly layer: Layer;
++  readonly status: Status;
++  readonly description?: string;
++  readonly upstream?: string[];
++  readonly fields?: string[];
++  readonly provides_metrics?: string[];
++  readonly consumed_by?: string[];
++  readonly refresh?: Refresh;
++  readonly tags?: string[];
++};
++
++type TableColumn = {
++  readonly name: string;
++  readonly type?: string;
++};
++
++type TableDefinition = {
++  readonly description?: string;
++  readonly columns?: TableColumn[];
++  readonly primary_key?: string[];
++  readonly indexes?: string[];
++  readonly layer?: Layer;
++  readonly entries?: string[];
++  readonly upstream?: string[];
++};
++
++type TableInventory = Record<string, TableDefinition>;
++
++type AdvancedAsset = {
++  readonly name: string;
++  readonly kind?: string;
++  readonly layer?: string;
++  readonly description?: string;
++  readonly fields?: string[];
++  readonly status?: Status;
++  readonly upstream?: string[];
++  readonly tags?: string[];
++  readonly provides_metrics?: string[];
++  readonly consumed_by?: string[];
++  readonly refresh?: Refresh;
++};
++
++type AdvancedRegistry = {
++  readonly assets?: AdvancedAsset[];
++};
++
++type MetricMatrix = {
++  readonly $schema: string;
++  readonly sources: MetricSource[];
++};
++
++const MATRIX_PATH = path.resolve(process.cwd(), 'docs/metric-matrix/metric_matrix.json');
++
++const VALID_KINDS: readonly Kind[] = ['table', 'view', 'external', 'unknown'];
++const VALID_LAYERS: readonly Layer[] = ['bronze', 'silver', 'gold', 'application', 'unknown'];
++
++function readJsonFile<T>(relativePath: string): T {
++  const absolutePath = path.resolve(process.cwd(), relativePath);
++  const raw = readFileSync(absolutePath, 'utf8');
++  return JSON.parse(raw) as T;
++}
++
++function normalizeFields(columns?: TableColumn[]): string[] {
++  if (!columns) return [];
++  return Array.from(new Set(columns.map((column) => column.name))).sort();
++}
++
++function normalizeArray(values?: string[]): string[] | undefined {
++  if (!values) return undefined;
++  return Array.from(new Set(values)).sort();
++}
++
++function normalizeOptionalFields(values?: string[]): string[] | undefined {
++  if (!values || values.length === 0) return undefined;
++  return Array.from(new Set(values)).sort();
++}
++
++function mergeArrays(primary?: string[], secondary?: string[]): string[] | undefined {
++  const merged = [...(primary ?? []), ...(secondary ?? [])];
++  if (merged.length === 0) return undefined;
++  return Array.from(new Set(merged)).sort();
++}
++
++function assertLayer(name: string, layer: string | undefined, scope: string): Layer {
++  if (!layer) {
++    throw new Error(`${scope} ${name} is missing a required layer value.`);
++  }
++
++  if ((VALID_LAYERS as readonly string[]).includes(layer)) {
++    return layer as Layer;
++  }
++
++  throw new Error(`${scope} ${name} has invalid layer '${layer}'. Allowed: ${VALID_LAYERS.join(', ')}`);
++}
++
++function normalizeKind(name: string, provided?: string): Kind {
++  if (provided === 'table') {
++    throw new Error(`Asset ${name} has invalid kind 'table'. Allowed: view, external, unknown.`);
++  }
++
++  if (provided && (VALID_KINDS as readonly string[]).includes(provided)) {
++    return provided as Kind;
++  }
++
++  throw new Error(`Asset ${name} has invalid kind '${provided ?? 'undefined'}'. Allowed: view, external, unknown.`);
++}
++
++function readExistingMatrix(): MetricMatrix {
++  if (!existsSync(MATRIX_PATH)) {
++    return { $schema: './metric_matrix.schema.json', sources: [] };
++  }
++
++  return readJsonFile<MetricMatrix>('docs/metric-matrix/metric_matrix.json');
++}
++
++function dedupeAndSortSources(sources: MetricSource[]): MetricSource[] {
++  return sources
++    .map((source) => ({
++      ...source,
++      fields: source.fields && source.fields.length > 0 ? [...new Set(source.fields)].sort() : undefined,
++    }))
++    .sort((a, b) => a.name.localeCompare(b.name));
++}
++
++function mergeTableSource(name: string, definition: TableDefinition, existing?: MetricSource): MetricSource {
++  const layer = assertLayer(name, definition.layer, 'Table');
++  const fields = normalizeFields(definition.columns);
++
++  const description = existing?.description && existing.description.trim().length > 0 ? existing.description : definition.description;
++
++  return {
++    name,
++    kind: 'table',
++    layer,
++    status: existing?.status ?? 'active',
++    description,
++    fields,
++    upstream: mergeArrays(definition.upstream as string[] | undefined, existing?.upstream),
++    provides_metrics: normalizeArray(existing?.provides_metrics),
++    consumed_by: normalizeArray(existing?.consumed_by),
++    refresh: existing?.refresh,
++    tags: normalizeArray(existing?.tags),
++  };
++}
++
++function mergeAdvancedSource(asset: AdvancedAsset, existing?: MetricSource): MetricSource {
++  const kind = normalizeKind(asset.name, asset.kind);
++  const layer = assertLayer(asset.name, asset.layer, 'Asset');
++
++  const registryFields = normalizeOptionalFields(asset.fields);
++  const existingFields = normalizeOptionalFields(existing?.fields);
++  const fields = registryFields ?? existingFields;
++
++  const mergedTags = mergeArrays(asset.tags, existing?.tags);
++  const mergedUpstream = asset.upstream ? mergeArrays(asset.upstream, existing?.upstream) : normalizeArray(existing?.upstream);
++
++  const missingFields = !fields || fields.length === 0;
++  const tagsWithNeeds = missingFields ? mergeArrays([...(mergedTags ?? []), 'needs_field_list']) : mergedTags;
++  const status = missingFields ? 'unknown' : asset.status ?? existing?.status ?? 'active';
++
++  const description = existing?.description && existing.description.trim().length > 0 ? existing.description : asset.description;
++
++  return {
++    name: asset.name,
++    kind,
++    layer,
++    status,
++    description,
++    ...(fields ? { fields } : {}),
++    upstream: mergedUpstream,
++    provides_metrics: normalizeArray(asset.provides_metrics ?? existing?.provides_metrics),
++    consumed_by: normalizeArray(asset.consumed_by ?? existing?.consumed_by),
++    refresh: asset.refresh ?? existing?.refresh,
++    tags: tagsWithNeeds,
++  };
++}
++
++function findDuplicates(values: string[]): string[] {
++  const seen = new Set<string>();
++  const duplicates = new Set<string>();
++
++  values.forEach((value) => {
++    if (seen.has(value)) {
++      duplicates.add(value);
++    } else {
++      seen.add(value);
++    }
++  });
++
++  return [...duplicates].sort();
++}
++
++function collectTableEntries(tables: TableInventory): Array<[string, TableDefinition]> {
++  const entries: Array<[string, TableDefinition]> = [];
++
++  Object.entries(tables).forEach(([name, definition]) => {
++    if (!definition.columns || definition.columns.length === 0) {
++      console.warn(`Skipping table inventory entry '${name}' because no columns are defined (treated as grouping/non-table).`);
++      return;
++    }
++
++    entries.push([name, definition]);
++  });
++
++  return entries;
++}
++
++function ensureNoDuplicateNames(tableInventory: TableInventory, registry: AdvancedRegistry, existing: MetricMatrix): void {
++  const tableNames = Object.entries(tableInventory)
++    .filter(([, definition]) => Array.isArray(definition.columns) && definition.columns.length > 0)
++    .map(([name]) => name);
++  const registryNames = (registry.assets ?? []).map((asset) => asset.name);
++  const matrixNames = (existing.sources ?? []).map((source) => source.name);
++
++  const registryDuplicates = findDuplicates(registryNames);
++  if (registryDuplicates.length > 0) {
++    throw new Error(`Duplicate asset names in registry: ${registryDuplicates.join(', ')}`);
++  }
++
++  const overlapping = [...new Set(registryNames.filter((name) => tableNames.includes(name)))];
++  if (overlapping.length > 0) {
++    throw new Error(`Source name collisions between tables and registry: ${overlapping.sort().join(', ')}`);
++  }
++
++  const matrixDuplicates = findDuplicates(matrixNames);
++  if (matrixDuplicates.length > 0) {
++    throw new Error(`Duplicate source names detected in existing metric matrix: ${matrixDuplicates.join(', ')}`);
++  }
++}
++
++function main(): void {
++  const tables = readJsonFile<TableInventory>('docs/metric-matrix/nflfastr_inventory_tables.json');
++  const advancedRegistry = readJsonFile<AdvancedRegistry>('docs/metric-matrix/advanced_views_registry.json');
++  const existingMatrix = readExistingMatrix();
++  const existingByName = new Map<string, MetricSource>((existingMatrix.sources ?? []).map((source) => [source.name, source]));
++
++  ensureNoDuplicateNames(tables, advancedRegistry, existingMatrix);
++
++  const tableSources = collectTableEntries(tables).map(([name, definition]) => mergeTableSource(name, definition, existingByName.get(name)));
++
++  const advancedSources = (advancedRegistry.assets ?? []).map((asset) => mergeAdvancedSource(asset, existingByName.get(asset.name)));
++
++  const matrix: MetricMatrix = {
++    $schema: './metric_matrix.schema.json',
++    sources: dedupeAndSortSources([...tableSources, ...advancedSources]),
++  };
++
++  const output = JSON.stringify(matrix, null, 2);
++  writeFileSync(MATRIX_PATH, `${output}\n`, 'utf8');
++  console.log('metric_matrix.json merged from inventories and existing matrix.');
++}
++
++main();
+diff --git a/server/scripts/syncAdvancedRegistryFields.ts b/server/scripts/syncAdvancedRegistryFields.ts
+new file mode 100644
+index 00000000..6fc2e0d2
+--- /dev/null
++++ b/server/scripts/syncAdvancedRegistryFields.ts
+@@ -0,0 +1,153 @@
++import { readFileSync, writeFileSync } from 'node:fs';
++import path from 'node:path';
++import process from 'node:process';
++import { Pool } from 'pg';
++
++type Kind = 'view' | 'external' | 'unknown' | 'table';
++type Layer = 'bronze' | 'silver' | 'gold' | 'application' | 'unknown';
++type Status = 'active' | 'deprecated' | 'missing' | 'unknown';
++
++type AdvancedAsset = {
++  readonly name: string;
++  readonly kind?: Kind;
++  readonly layer?: Layer;
++  readonly description?: string;
++  readonly fields?: string[];
++  readonly status?: Status;
++  readonly upstream?: string[];
++  readonly tags?: string[];
++  readonly provides_metrics?: string[];
++  readonly consumed_by?: string[];
++  readonly refresh?: {
++    readonly cadence?: string;
++    readonly sla_hours?: number;
++    readonly last_updated_field?: string;
++  };
++};
++
++type AdvancedRegistry = {
++  readonly assets?: AdvancedAsset[];
++};
++
++const REGISTRY_PATH = path.resolve(process.cwd(), 'docs/metric-matrix/advanced_views_registry.json');
++
++function readRegistry(): AdvancedRegistry {
++  const raw = readFileSync(REGISTRY_PATH, 'utf8');
++  return JSON.parse(raw) as AdvancedRegistry;
++}
++
++function writeRegistry(registry: AdvancedRegistry): void {
++  const output = JSON.stringify(registry, null, 2);
++  writeFileSync(REGISTRY_PATH, `${output}\n`, 'utf8');
++}
++
++function normalizeList(values?: string[]): string[] | undefined {
++  if (!values) return undefined;
++  const deduped = Array.from(new Set(values));
++  if (deduped.length === 0) return undefined;
++  return deduped.sort();
++}
++
++function buildPool(): Pool | undefined {
++  const connectionString = process.env.DATABASE_URL;
++  if (!connectionString) {
++    console.warn('DATABASE_URL is not set; skipping advanced registry field sync.');
++    return undefined;
++  }
++
++  const isProd = process.env.NODE_ENV === 'production';
++  return new Pool({
++    connectionString,
++    ssl: isProd ? { rejectUnauthorized: false } : false,
++  });
++}
++
++async function fetchViewColumns(pool: Pool, viewName: string): Promise<string[] | null> {
++  const viewResult = await pool.query<{ table_schema: string }>(
++    `
++      SELECT table_schema
++      FROM information_schema.views
++      WHERE table_name = $1
++      LIMIT 1;
++    `,
++    [viewName],
++  );
++
++  if (viewResult.rowCount === 0) {
++    return null;
++  }
++
++  const tableSchema = viewResult.rows[0]?.table_schema ?? 'public';
++  const columnsResult = await pool.query<{ column_name: string }>(
++    `
++      SELECT column_name
++      FROM information_schema.columns
++      WHERE table_name = $1 AND table_schema = $2
++      ORDER BY ordinal_position;
++    `,
++    [viewName, tableSchema],
++  );
++
++  return columnsResult.rows.map((row) => row.column_name);
++}
++
++function cleanTags(existing?: string[], removeTag?: string): string[] | undefined {
++  const filtered = (existing ?? []).filter((tag) => tag !== removeTag);
++  return normalizeList(filtered);
++}
++
++async function main(): Promise<void> {
++  const pool = buildPool();
++  if (!pool) return;
++
++  const registry = readRegistry();
++  const assets = registry.assets ?? [];
++
++  let updated = false;
++
++  try {
++    for (let i = 0; i < assets.length; i += 1) {
++      const asset = assets[i];
++      if (asset.kind !== 'view') continue;
++
++      const fieldsNormalized = normalizeList(asset.fields);
++      if (fieldsNormalized && fieldsNormalized.length > 0) {
++        assets[i] = { ...asset, fields: fieldsNormalized };
++        continue;
++      }
++
++      const columns = await fetchViewColumns(pool, asset.name);
++      if (columns && columns.length > 0) {
++        const tags = cleanTags(asset.tags, 'needs_field_list');
++        assets[i] = {
++          ...asset,
++          fields: normalizeList(columns),
++          status: asset.status === 'unknown' ? 'active' : asset.status,
++          tags,
++        };
++        updated = true;
++        console.log(`Synced fields for view '${asset.name}' from database metadata.`);
++      } else {
++        console.warn(`No columns found for view '${asset.name}'. Keeping fields undefined.`);
++      }
++    }
++  } catch (error) {
++    console.warn(
++      `Database unavailable or query failed while syncing advanced registry: ${
++        error instanceof Error ? error.message : String(error)
++      }`,
++    );
++    return;
++  } finally {
++    await pool.end();
++  }
++
++  if (updated) {
++    writeRegistry({ assets });
++    console.log('advanced_views_registry.json updated with database field metadata.');
++  } else {
++    console.log('No registry updates were necessary.');
++  }
++}
++
++void main();
