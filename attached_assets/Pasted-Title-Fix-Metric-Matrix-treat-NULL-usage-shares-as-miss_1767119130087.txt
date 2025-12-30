@@ -1,0 +1,60 @@
+Title: Fix Metric Matrix: treat NULL usage shares as missing (not zero)
+
+Prompt:
+Implement a data-quality fix in server/modules/metricMatrix/playerVectorService.ts so NULL snap_share_pct (and other share fields) do not get coerced to 0.
+
+Background
+
+In player_usage, snap_share_pct is NULL for many players/weeks. Current vector computation uses u.snapSharePct ?? 0, which converts missing data into zeros and incorrectly crushes usage and context axes (snap_share_pct and role_security components show 0 instead of null/missing). We want missing data to behave as missing: surface in missingInputs, reduce confidence, and use axis defaults.
+
+Requirements
+
+Update deriveRawMetrics():
+
+Compute avgSnapShare using only rows where snapSharePct != null.
+
+If there are no non-null rows, avgSnapShare must be null (not 0).
+
+Values in DB are 0–100 percentages, so if non-null: mean / 100 to convert to 0–1.
+
+Compute avgTargetShare using only rows where targetSharePct != null (same pattern).
+
+If none, return null.
+
+Keep /100 conversion.
+
+Update recentTrend:
+
+Use only non-null snapSharePct rows when calculating the delta.
+
+If fewer than 2 non-null points, return null.
+
+Ensure rawMetrics.role_security mirrors avgSnapShare (so it becomes null when snap share missing).
+
+Do NOT add “auto scaling detection” logic in normalization. Keep existing normalize rules.
+
+Add/adjust unit tests (in the Metric Matrix test suite) to prove:
+
+When snapSharePct is NULL across weeks, snap_share_pct component becomes null, missingInputs includes snap_share_pct, and confidence < 1.
+
+target_share_pct remains correct for values like 21.74 (i.e., normalized output ~21.74, not clamped to 100).
+
+Run tests:
+
+npm run test:forge
+
+Metric Matrix unit tests (the 159 suite)
+
+npm run audit:metric-matrix
+
+Expected outcome
+
+For Ja’Marr Chase 2025 week 3:
+
+snap_share_pct should no longer show 0 if DB is NULL.
+
+missingInputs should include snap_share_pct (and role_security if derived from it).
+
+confidence should drop accordingly.
+
+usage/context axis values should rise to defaults rather than being crushed.
