@@ -1,0 +1,99 @@
+Goal: Deploy the Metric Matrix Player Vector feature to Replit and polish the PlayerDetailDrawer Metric Matrix card so it renders cleanly (no layout jank) and communicates missing data gracefully.
+
+1) Push to Replit (safe deployment)
+
+Ensure latest changes are committed on main (or specified branch).
+
+Pull/Sync into Replit project.
+
+Run migrations (Drizzle/SQL migration runner used in this repo).
+
+Confirm metric_matrix_player_vectors table exists with season and week NOT NULL default 0 (as implemented).
+
+Restart app.
+
+2) Validate API health on Replit
+
+Run these in Replit shell (or equivalent):
+
+npm run audit:metric-matrix
+
+npm run test:forge
+
+npm test (only if it exists and doesn’t take forever)
+
+Confirm endpoint:
+
+curl "<REPLIT_URL>/api/metric-matrix/player-vector?playerId=00-0036900&season=2025&week=3"
+
+Returns success:true and data.axes array length 5.
+
+3) UI Polish Pass — PlayerDetailDrawer Metric Matrix card
+
+File: client/src/components/PlayerDetailDrawer.tsx
+
+A) Confirm no layout jank
+
+Make sure the Metric Matrix card doesn’t “jump” when loading → loaded.
+
+Do this by:
+
+keeping the card’s vertical structure stable
+
+using consistent spacing
+
+using skeleton rows that match the final bar row height
+
+Acceptance: Opening the drawer should feel stable. No big reflow when the query resolves.
+
+B) Add “Missing inputs” line (conditional)
+
+Only show if missingInputs.length > 0
+
+Display as a tiny muted line under the confidence badge or at the bottom of the card.
+
+Example copy (keep it simple):
+
+Missing inputs: snap_share_pct, target_share_pct
+
+Cap the list to avoid ugly overflow:
+
+show first 4 keys, then +N more
+
+If you want it cleaner, map keys to friendlier labels later — not required now.
+
+C) Keep bars neutral for now
+
+Do not implement value-band colors yet (optional later).
+
+Keep current single style so we don’t bikeshed.
+
+4) Quick visual sanity check
+
+Open a few players across positions (WR/RB/TE/QB).
+
+Confirm:
+
+confidence badge looks right
+
+bars render 0–100 properly
+
+missing inputs appears only when relevant
+
+no console errors
+
+5) Report back
+
+Return:
+
+Replit deployment status
+
+Migration status
+
+Screenshot or description of Drawer behavior (loading vs loaded)
+
+Confirmation that missing inputs line behaves correctly
+
+If you want the tiny UI clarity upgrade without changing the math: I’d add one line under the card title like:
+
+Scale: 0–30 low, 30–50 moderate, 50–70 strong, 70+ elite
