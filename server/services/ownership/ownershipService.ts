@@ -198,43 +198,21 @@ export async function getOwnershipForPlayer(params: {
       }
     }
 
-    // Before returning free_agent, check if this player might be in rosters but unmapped
-    // Look up if the canonical player ID exists and has a Sleeper ID
-    const playerMappingResult = await db.execute(sql`
-      SELECT sleeper_id FROM player_identity_map WHERE canonical_id = ${canonicalPlayerId} LIMIT 1
-    `);
-    
-    const hasSleeperMapping = (playerMappingResult.rows as any[]).length > 0 && 
-                               (playerMappingResult.rows[0] as any)?.sleeper_id;
-    
-    if (!hasSleeperMapping) {
-      // Check if this player might exist in rosters but unmapped (by name match in unmapped_sleeper_players)
-      // For now, return unknown_unmapped if we can't determine ownership due to missing mapping
-      // This ensures we don't misclassify roster players as free agents
+    // Player not found in any team's mapped rosters - check if this is a raw Sleeper ID
+    // that exists in rosters but is unmapped (only relevant when caller passes Sleeper ID directly)
+    if (canonicalPlayerId.match(/^\d{3,7}$/)) {
+      // Looks like a raw Sleeper ID - check unmapped_sleeper_players table
       const unmappedCheck = await db.execute(sql`
-        SELECT 1 FROM unmapped_sleeper_players WHERE sleeper_id = ${canonicalPlayerId} LIMIT 1
+        SELECT full_name FROM unmapped_sleeper_players WHERE sleeper_id = ${canonicalPlayerId} LIMIT 1
       `);
       
-      // If we passed all roster checks but have no Sleeper mapping, it might be truly free or unmapped
-      // For safety, check if this looks like a Sleeper ID format being passed in
-      if (canonicalPlayerId.match(/^\d{4,6}$/)) {
-        // Looks like a raw Sleeper ID - check if it's in any roster
-        const rosterCheck = await db.execute(sql`
-          SELECT lt.display_name as team_name, lt.id as team_id
-          FROM league_teams lt
-          WHERE lt.league_id = ${leagueId}
-            AND lt.players @> ${JSON.stringify([canonicalPlayerId])}::jsonb
-          LIMIT 1
-        `);
-        
-        if ((rosterCheck.rows as any[]).length > 0) {
-          return {
-            status: 'unknown_unmapped',
-            leagueId,
-            hint: 'This player is in Sleeper rosters but not mapped to a canonical ID yet. Run identity enrichment.',
-            source: 'db',
-          };
-        }
+      if ((unmappedCheck.rows as any[]).length > 0) {
+        return {
+          status: 'unknown_unmapped',
+          leagueId,
+          hint: `Player "${(unmappedCheck.rows[0] as any).full_name || canonicalPlayerId}" is in rosters but not mapped to canonical data. Run identity enrichment.`,
+          source: 'db',
+        };
       }
     }
     
