@@ -1,0 +1,69 @@
+TIBER — PlayerPage v1.5: Activate League Ownership + Similarity Explanations + UX tighten
+
+Goal
+Turn v1.4 from “cool research demo” into “actually useful in my league” by:
+1) Enabling League Ownership when league context exists
+2) Adding interpretable “why these comps?” explanations to Similar Players
+3) Tightening Tier Neighbors UX (highlight + preserve week/mode)
+
+Part A — League Ownership: enable when context exists
+- Current endpoint: GET /api/league/ownership?playerId=...
+- Update behavior:
+  - Call /api/league-context (or equivalent internal service) to check activeLeague + activeTeam
+  - If missing: return { enabled:false, reason:"No active league selected" }
+  - If present: enabled:true and proceed
+
+Data source preference:
+1) If we have DB tables for league rosters/players (e.g., sleeper_rosters, league_players, league_roster_players, roster_snapshots):
+   - Query DB to determine:
+     - onMyTeam boolean
+     - rostered boolean
+     - ownerTeamId/name if owned
+2) If we do NOT have reliable DB tables yet:
+   - Implement Sleeper fetch path:
+     - GET https://api.sleeper.app/v1/league/{leagueId}/rosters
+     - Map roster_id -> owner_id / user_id and players array
+     - Determine owner roster for canonical playerId (ensure mapping works)
+   - Cache result per (leagueId, week?, playerId) for 15 minutes (in-memory or DB table)
+   - Return:
+     { enabled:true, status:"mine"|"owned"|"free_agent", ownerTeamName?, ownerTeamId? }
+
+Important:
+- Ensure playerId identity is consistent (canonicalId / nflfastrId). If mismatch, add mapping fallback via playerIdentityMap.
+
+Part B — Similar Players: add explanation fields
+For each similar player returned by /api/players/similar:
+- Compute per-axis absolute difference vs base player
+- Identify:
+  - top2ClosestAxes (smallest diff)
+  - biggestDiffAxis (largest diff)
+- Return new fields:
+  { reason: "Similar in Usage + Stability", watch: "Differs most in TD Role" }
+Keep deterministic, no LLM.
+
+Part C — PlayerPage UI upgrades
+Update Similar Players card:
+- Show reason + watch line under each player (small muted text)
+- Add a small “confidence gate” message if base confidence < 0.7
+
+Update Tier Neighbors card:
+- Highlight current player row
+- Clicking a neighbor navigates to /player/:id AND preserves current week + mode in querystring
+  Example: /player/00-... ?season=2025&week=14&mode=weekly
+
+Update League Context card:
+- If enabled, show:
+  - badge: “On your roster” OR “Owned by <team>” OR “Free agent”
+- If disabled, show compact hint: “Select a league to enable ownership context”
+
+Verification / tests
+- Add unit tests for similarity explanation fields
+- Add tests for league ownership enabled/disabled logic
+- Manual:
+  - When league context is present, ownership is enabled
+  - Similar players show reason/watch lines
+  - Neighbor click preserves week/mode
+
+Must keep passing:
+- npm run test:forge
+- npm run audit:metric-matrix
