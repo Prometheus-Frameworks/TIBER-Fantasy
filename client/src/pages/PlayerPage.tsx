@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,13 +25,40 @@ interface PlayerIdentity {
   };
 }
 
+interface CurrentWeekResponse {
+  success: boolean;
+  currentWeek: number;
+  season: number;
+}
+
 export default function PlayerPage() {
   const [, params] = useRoute('/player/:playerId');
   const playerId = params?.playerId || '';
   
   const [mode, setMode] = useState<'weekly' | 'season'>('weekly');
-  const [week, setWeek] = useState(3);
-  const [season] = useState(2025);
+  const [week, setWeek] = useState<number | null>(null);
+  const [season, setSeason] = useState(2025);
+
+  // Fetch current week from system endpoint
+  const { data: currentWeekData } = useQuery<CurrentWeekResponse>({
+    queryKey: ['/api/system/current-week'],
+  });
+
+  // Set defaults from system endpoint
+  useEffect(() => {
+    if (currentWeekData?.success) {
+      if (week === null) {
+        const clampedWeek = Math.max(1, Math.min(currentWeekData.currentWeek, 18));
+        setWeek(clampedWeek);
+      }
+      if (currentWeekData.season) {
+        setSeason(currentWeekData.season);
+      }
+    }
+  }, [currentWeekData, week]);
+
+  // Fallback default if endpoint fails
+  const effectiveWeek = week ?? 3;
 
   const { data: playerData, isLoading: identityLoading, isError: identityError } = useQuery<PlayerIdentity>({
     queryKey: ['/api/player-identity/player', playerId],
@@ -129,8 +156,8 @@ export default function PlayerPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">Week:</span>
             <select
-              value={week}
-              onChange={(e) => setWeek(Number(e.target.value))}
+              value={effectiveWeek}
+              onChange={(e) => setWeek(Math.max(1, Math.min(Number(e.target.value), 18)))}
               className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
               data-testid="select-week"
             >
@@ -152,7 +179,7 @@ export default function PlayerPage() {
           <div className="lg:col-span-2">
             <TiberScoreCard
               nflfastrId={nflfastrId}
-              week={week}
+              week={effectiveWeek}
               season={season}
               mode={mode}
               position={player.position}
@@ -164,7 +191,7 @@ export default function PlayerPage() {
             <MetricMatrixCard
               playerId={nflfastrId}
               season={season}
-              week={week}
+              week={effectiveWeek}
             />
           </div>
         </div>

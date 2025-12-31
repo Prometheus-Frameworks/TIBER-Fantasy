@@ -66,7 +66,9 @@ export default function MetricMatrixCard({ playerId, season, week, enabled = tru
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
               Metric Matrix
             </h3>
-            <p className="text-xs text-gray-500">0–30 low · 30–50 moderate · 50–70 strong · 70+ elite</p>
+            <p className="text-xs text-gray-500">
+              Week {week} data · 0–30 low · 30–50 moderate · 50–70 strong · 70+ elite
+            </p>
           </div>
           <Badge variant="outline" className="text-xs bg-gray-900 border-gray-700 text-gray-200">
             {metricMatrix?.data?.confidence != null
