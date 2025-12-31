@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRoute, Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
+import { addRecentPlayer } from '@/lib/recentPlayers';
 
 interface PlayerIdentity {
   success: boolean;
@@ -100,6 +101,20 @@ export default function PlayerPage() {
 
   const player = playerData?.data;
   const nflfastrId = player?.externalIds?.nfl_data_py || playerId;
+
+  // Track recently viewed players
+  const hasTrackedRef = useRef(false);
+  useEffect(() => {
+    if (player && !hasTrackedRef.current) {
+      addRecentPlayer({
+        playerId: player.canonicalId,
+        name: player.fullName,
+        team: player.nflTeam || 'FA',
+        position: player.position,
+      });
+      hasTrackedRef.current = true;
+    }
+  }, [player]);
 
   if (identityLoading) {
     return (
