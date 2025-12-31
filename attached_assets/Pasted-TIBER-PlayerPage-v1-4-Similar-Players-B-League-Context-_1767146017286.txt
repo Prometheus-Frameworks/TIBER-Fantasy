@@ -1,0 +1,93 @@
+TIBER — PlayerPage v1.4: Similar Players (B) + League Context Overlay (C)
+
+Goal
+Turn /player/:playerId into a research hub by adding:
+(B) Cross-player thinking: Similar Players + Neighbors in Tiers
+(C) League context overlay: ownership + on-my-team indicators using active league/team context
+
+Constraints
+- App uses wouter routing
+- Keep UI clean and deterministic (no AI chat behavior)
+- Must not lie: if data missing/low confidence, show honest fallback text
+- Must be fast: cache similarity results
+
+Deliverables
+
+1) Similar Players API
+Create endpoint:
+GET /api/players/similar?playerId=<id>&season=<n>&week=<n>&mode=forge&limit=8
+
+Logic:
+- Fetch base player's Metric Matrix vector via existing service (getPlayerVector)
+- If confidence < 0.7 OR missingInputs not empty beyond allowed list -> return empty + reason
+- Query candidate players:
+  - same position
+  - same season/week (or latest <= week if needed, but be consistent)
+  - metric_matrix_player_vectors exists
+  - confidence >= 0.7
+- Compute distance between axis vectors (usage, efficiency, td_role, stability, context)
+  - weights: stability 1.2, context 1.2, usage 1.0, efficiency 1.0, td_role 0.9
+  - distance = weighted euclidean OR cosine (choose one and document)
+- Return the top N closest, with:
+  { playerId, playerName, team, position, distance, axesSummary }
+- Add caching:
+  Table metric_matrix_similar_cache (player_id, season, week, mode, payload_json, computed_at)
+  OR reuse existing cache table pattern.
+
+2) Tiers Neighbors API (simple)
+Create endpoint:
+GET /api/tiers/neighbors?playerId=<id>&format=dynasty&position=WR&limit=5
+
+Behavior:
+- Determine which list powers /tiers (whatever the existing source is)
+- Find player index and return N above + N below
+- Return minimal payload: { above: [...], below: [...] }
+
+3) League Ownership API
+Create endpoint:
+GET /api/league/ownership?playerId=<id>
+
+Behavior:
+- Use active league/team context (existing system)
+- Determine if player is:
+  - on my roster
+  - on another roster (return owner team name)
+  - free agent
+- If league context missing, return { enabled:false, reason:"No active league selected" }
+- Implement with DB if roster tables exist; otherwise call Sleeper API and cache (short TTL).
+
+4) PlayerPage UI integration
+Update client/src/pages/PlayerPage.tsx to add two new cards:
+
+A) League Context card
+- Shows:
+  - “On your roster” badge OR “Owned by <Team>” OR “Free agent”
+  - Optional: “League Need: WR High/Medium/Low” (only if easy; otherwise omit)
+
+B) Research Hub section
+- Similar Players list (clickable -> navigates to /player/:id)
+- Neighbors in Tiers list (above/below)
+- Must respect current week/mode selectors
+- Skeletons for loading, compact error messages
+
+5) Drawer integration
+In PlayerDetailDrawer.tsx ensure:
+- “View Full Profile” link remains correct and not nested buttons.
+- Optional: add “Similar Players” teaser link that navigates to full page (do NOT cram list in drawer).
+
+Testing / Verification
+- Add unit tests for similarity:
+  - excludes self
+  - respects position filter
+  - confidence gating works
+- Quick manual checks:
+  - /player/00-0036900 shows Similar Players and League Context
+  - Similar Players results stable across refresh (cache)
+  - If metric matrix missing inputs, UI shows honest fallback message
+
+Do not break existing:
+- npm run test:forge must pass
+- npm run audit:metric-matrix must pass
+
+Output
+Provide a concise summary of files changed + how to test endpoints + UI.
