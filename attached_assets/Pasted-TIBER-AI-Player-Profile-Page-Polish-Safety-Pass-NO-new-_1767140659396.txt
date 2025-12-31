@@ -1,0 +1,49 @@
+TIBER.AI — Player Profile Page Polish + Safety Pass (NO new features)
+
+Goal:
+Ensure the new /player/:playerId page is production-stable, consistent with drawer behavior, and has clean loading/error UX. Do not add new features or redesign the app.
+
+Checklist (must complete all):
+
+1) Route verification (Wouter)
+- Confirm /player/:playerId is registered in client/src/App.tsx and does not conflict with other routes.
+- Add a quick manual test note in PR summary: routes visited and expected behavior.
+
+2) PlayerId consistency + navigation
+- Ensure "View Full Profile" link in PlayerDetailDrawer uses the same playerId used in API calls (nflfastr/GSIS canonical id).
+- Ensure "Back to Tiers" link navigates correctly to /tiers.
+
+3) Defaults + guardrails
+- If week/season are missing or invalid, default to:
+  - season = current season already used elsewhere in app (fallback to 2025 if needed)
+  - week = current week detection util if available; otherwise max available week for that player (via existing player stats endpoints).
+- Clamp week between 1–18 always.
+
+4) Loading + error UX
+- Add skeletons and/or placeholder states for:
+  - player identity fetch
+  - tiber score fetch
+  - metric matrix fetch
+- If any endpoint fails, show a compact error message in that card and keep the page usable.
+- Avoid layout jank: skeleton sizes should match final layout.
+
+5) Data integrity labels
+- Make sure Metric Matrix label clarifies it is “through selected week” if season mode exists.
+- Do not imply season aggregation unless the backend actually aggregates.
+
+6) Quick regression check
+- Confirm PlayerSearchBar still opens the drawer correctly.
+- Confirm drawer still renders and now includes the "View Full Profile" link without breaking layout.
+
+Verification required (run and report results):
+- npm run test:forge
+- npm run audit:metric-matrix
+- Run dev server and manually visit:
+  - /player/00-0036900 (Chase)
+  - /tiers then open drawer for the same player
+- Provide a brief summary of what was changed and why.
+
+Constraints:
+- No new endpoints.
+- No schema changes.
+- No major UI redesign.
