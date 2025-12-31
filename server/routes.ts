@@ -2706,6 +2706,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   console.log('⏰ System current week endpoint mounted at /api/system/current-week');
 
+  // Feature Audit endpoint - System integrity checks
+  app.get('/api/system/feature-audit', async (req, res) => {
+    try {
+      const { runFeatureAudit } = await import('./services/system/featureAuditService');
+      const season = req.query.season ? parseInt(req.query.season as string) : undefined;
+      const week = req.query.week ? parseInt(req.query.week as string) : undefined;
+      const playerId = req.query.playerId as string | undefined;
+      
+      const result = await runFeatureAudit({ season, week, playerId });
+      
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('[FeatureAudit] error:', error);
+      res.json({
+        success: true,
+        data: {
+          status: 'critical',
+          generatedAt: new Date().toISOString(),
+          checks: [{
+            key: 'system.error',
+            status: 'critical',
+            details: { error: error instanceof Error ? error.message : 'Unknown error' }
+          }]
+        }
+      });
+    }
+  });
+  console.log('🔍 System feature audit endpoint mounted at /api/system/feature-audit');
+
   // Weekly Takes routes
   app.use('/api/weekly-takes', weeklyTakesRoutes);
   console.log('📝 Weekly Takes routes mounted at /api/weekly-takes/*');
