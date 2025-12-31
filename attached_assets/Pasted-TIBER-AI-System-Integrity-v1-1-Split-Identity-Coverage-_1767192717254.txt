@@ -1,0 +1,54 @@
+TIBER.AI — System Integrity v1.1: Split Identity Coverage Checks
+
+Goal:
+The current /api/system/feature-audit “identity mapping coverage” is technically correct but misleading: it measures global player_identity_map.sleeper_id population (495/1238 ~40%), which is not a blocker for League Ownership. Replace the single check with TWO separate checks: (1) roster-relevant bridge coverage (PRIMARY) and (2) global sleeper_id population (SECONDARY, non-blocking).
+
+Requirements:
+
+1) Update /api/system/feature-audit:
+- Replace the existing identity check with:
+  A) identity.roster_bridge_coverage (PRIMARY)
+  B) identity.global_sleeper_id_population (SECONDARY)
+
+2) identity.roster_bridge_coverage logic:
+- Determine active league context (use existing user_league_preferences / active league/team logic already used by ownership service).
+- Pull roster Sleeper IDs from league_teams.players for the active league (all teams).
+- Denominator = count of unique Sleeper IDs found on rosters.
+- Numerator = count that map to canonical_id via player_identity_map.sleeper_id.
+- Include details:
+  - mapped, total, coveragePct
+  - unmappedSample: up to 10 Sleeper IDs that failed mapping
+  - note: “Roster coverage is what ownership + player UX depends on.”
+
+- Status thresholds:
+  - healthy >= 0.85
+  - warning >= 0.70
+  - critical < 0.70
+- This check SHOULD affect overallStatus (critical should make overall critical).
+
+3) identity.global_sleeper_id_population logic:
+- Denominator = active canonical players in player_identity_map (same as current: 1238).
+- Numerator = players with non-null sleeper_id.
+- Status thresholds (non-blocking):
+  - healthy >= 0.70
+  - warning >= 0.40
+  - info < 0.40
+- IMPORTANT: This check must NEVER return “critical”.
+- It should NOT force overallStatus to critical by itself.
+
+4) Admin UI card (/admin/forge):
+- Update labels to show both checks.
+- Ensure the top-level status pill reflects roster_bridge_coverage primarily.
+- Keep the UI compact; do not add new pages.
+
+5) Docs:
+- Update docs/dev/FEATURE_LINK_MAP.md to reflect the split: global identity coverage is enrichment, roster bridge coverage is correctness dependency.
+
+6) Sanity checks (must run):
+- curl /api/system/feature-audit with no params (default)
+- curl /api/system/feature-audit?playerId=00-0036900&season=2025&week=3
+- Confirm audit returns structured JSON, never throws.
+- Ensure existing checks still return.
+
+Deliverable:
+- PR-style summary: what changed, where, and the resulting audit statuses (expected: roster coverage ~66% => warning/critical depending thresholds; global ~40% => warning/info).
