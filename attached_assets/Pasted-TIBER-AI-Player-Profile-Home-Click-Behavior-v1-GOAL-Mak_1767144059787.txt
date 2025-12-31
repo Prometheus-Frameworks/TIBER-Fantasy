@@ -1,0 +1,94 @@
+TIBER.AI — Player Profile Home + Click Behavior (v1)
+
+GOAL
+Make Player Profile a first-class experience:
+1) Add a “Player Search + Recently Viewed” module on the homepage (/)
+2) Make player-name clicks across the app (starting with /tiers) route to /player/:playerId by default
+3) Keep the drawer as “Quick View” via an icon/button (optional but strongly preferred)
+4) Persist recently viewed players in localStorage and show them on the homepage
+
+IMPORTANT CONTEXT
+- Frontend routing uses wouter (NOT React Router).
+- Dedicated /player/:playerId route already exists and is working.
+- Drawer already exists: client/src/components/PlayerDetailDrawer.tsx
+- Search endpoint exists: /api/player-identity/search
+- Player identity endpoint exists: /api/player-identity/player/:playerId
+
+SCOPE (DO THIS IN ORDER)
+
+A) HOMEPAGE: Add “Player Research” module
+1. Update client/src/pages/Homepage.tsx (or whatever the homepage component is called) to include:
+   - A “Player Search” input (reuse PlayerSearchBar if possible, or create a new lightweight component)
+   - Search results dropdown/list
+   - Clicking a result navigates to /player/:playerId (NOT opening drawer by default)
+
+2. Add “Recently Viewed” section under the search:
+   - Show last 8 players (name, team, position)
+   - Each item links to /player/:playerId
+   - Provide a small “Clear” button to wipe recents (localStorage)
+   - If no recents, show a friendly placeholder (“No recent profiles yet”)
+
+3. Persist recents in localStorage:
+   - Key: tiber_recent_players_v1
+   - Store array of objects: { playerId, name, team, position, viewedAt }
+   - Deduplicate by playerId
+   - Most recent first
+   - Cap at 8 entries
+
+B) TRACK VIEW EVENTS: When visiting PlayerPage, write to recents
+1. In client/src/pages/PlayerPage.tsx:
+   - After identity fetch succeeds (player name/team/position known), push into localStorage recents
+   - Don’t spam writes: only update when playerId changes or identity data becomes available
+   - Update viewedAt timestamp
+
+C) TIERS: Make player name click route to full profile
+1. In the /tiers page (find the table/list component):
+   - Change the player name cell to be a link to /player/:playerId using wouter <Link>
+   - Ensure you’re using the canonical ID (the same ID used by TIBER score + metric matrix endpoints)
+   - Do NOT break existing sorting, row selection, or hover styles
+
+2. Add Quick View (optional but preferred):
+   - Add a small icon button (e.g., lucide “Eye” or “PanelRightOpen”) in the row actions area
+   - Clicking that opens PlayerDetailDrawer for fast scan
+   - Player name click should still route to the full page
+
+D) USER PREFERENCE (optional if time allows, but keep it simple)
+Implement a boolean preference in localStorage:
+- Key: tiber_player_click_pref_v1
+- Values: "page" | "drawer"
+Default: "page"
+If set to "drawer", player name click opens drawer instead of routing.
+(If you implement this, add a small toggle on /tiers page header: “Player click opens: Page / Quick View”)
+
+UI REQUIREMENTS
+- Keep styling consistent with the existing dark UI.
+- Homepage module should feel like a core feature, not an admin panel.
+- Recent players should be compact chips/cards with subtle hover.
+- Don’t introduce layout jank: use skeletons / placeholder blocks where needed.
+
+SANITY CHECKS (MUST DO)
+1) Routing:
+   - Homepage loads
+   - Search → click result → lands on /player/:playerId
+   - Browser back works cleanly
+2) Recents:
+   - Visit 2–3 player pages → homepage shows them
+   - Duplicate visit moves player to top (does not create duplicates)
+   - Clears properly
+3) Tiers integration:
+   - Player name click routes to /player/:playerId
+   - Quick view icon opens drawer without navigating (if implemented)
+4) Data integrity:
+   - Ensure the ID used in routing is the same ID used by:
+     /api/tiber/score/:id
+     /api/metric-matrix/player-vector?playerId=:id
+5) No console errors, no broken imports
+
+DELIVERABLES
+- Code changes committed
+- Short summary of files changed and what was done
+- Screenshots: homepage module + tiers row behavior + a recents example
+
+NOTES
+- Prefer reusing existing PlayerSearchBar logic if it’s clean, but adapt behavior so search on homepage routes to full profile.
+- Avoid duplicating large UI chunks; create a small reusable “RecentPlayers” component if needed.

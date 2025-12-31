@@ -1,0 +1,135 @@
+TIBER.AI — PlayerPage v1.3 Polish Pass (Sticky Header + Unified Cards + Deterministic Summary)
+
+GOAL
+Upgrade the dedicated player profile page (/player/:playerId) so it feels like a real product page, not a “drawer but bigger”.
+Implement:
+1) Sticky smart header (player identity + controls stay usable while scrolling)
+2) Unified card styling across TiberScoreCard + MetricMatrixCard (same padding, title style, meta line style)
+3) Deterministic summary line (non-AI) derived from Metric Matrix axis values
+4) Run sanity checks + document results
+
+CONSTRAINTS
+- App uses wouter (not React Router). Don’t introduce react-router.
+- Keep existing data sources/endpoints.
+- Avoid layout jank: skeletons must match final layout heights.
+- No “AI generated” narrative text. Summary must be deterministic based on axis bands.
+- Don’t change backend logic unless absolutely required for UI correctness.
+
+FILES YOU’LL LIKELY TOUCH
+- client/src/pages/PlayerPage.tsx
+- client/src/components/tiber/TiberScoreCard.tsx
+- client/src/components/metricMatrix/MetricMatrixCard.tsx
+(Optionally create a tiny shared card wrapper component if it reduces duplication.)
+
+================================================================================
+1) STICKY SMART HEADER
+Implement a sticky header on PlayerPage:
+- Header contains: Player name, team, position badge(s), and right-side controls:
+  - Mode toggle (Weekly/Season)
+  - Week selector (1–18) with “—” suffix for weeks without data (already exists)
+  - Optional small “Back to Tiers” link/button
+- Sticky behavior:
+  - Use CSS sticky (position: sticky; top: 0; z-index high; backdrop blur) so it stays visible on scroll
+  - Add subtle bottom border/gradient so it separates from content
+- Responsive:
+  - Desktop: name left, controls right
+  - Mobile: stack controls under name but still within sticky container
+
+Prevent layout shift:
+- When identity is loading, render skeleton placeholders in the header that match the final height.
+
+================================================================================
+2) UNIFIED CARD STYLING (TiberScoreCard + MetricMatrixCard)
+Unify visual language so both cards feel from same system.
+
+Create a consistent card structure:
+- Outer container: same background, same border, same rounding, same padding
+- Title row:
+  - Left: uppercase title (e.g., “TIBER SCORE”, “METRIC MATRIX”)
+  - Right: compact meta badge(s)
+- Meta line below title (muted):
+  - Example for Metric Matrix: “Week {week} data • Confidence {pct}%” (or “Season data” if season mode)
+  - Example for Tiber: “Week {week} scoring” / “Season total” + tier badge
+
+Skeletons:
+- Replace any generic skeleton blocks with a skeleton that mirrors final layout:
+  - Title row skeleton
+  - Meta line skeleton
+  - Body skeleton rows that match bar/row heights
+
+Error states:
+- Keep compact per-card error message style consistent (same muted text size + spacing).
+- Ensure “No game data” messages only show when there truly is no data (respect the existing hasDataForWeek + query result fix).
+
+If it’s cleaner, create a small shared component:
+- client/src/components/ui/UnifiedCardShell.tsx (or similar)
+- Accepts title, metaLine, rightBadges, children, loading/error states
+But keep it lightweight; don’t refactor the whole UI.
+
+================================================================================
+3) DETERMINISTIC SUMMARY LINE (Metric Matrix driven)
+Add a one-line summary near top of PlayerPage content (below sticky header), or inside MetricMatrixCard header area.
+
+Inputs:
+- Use Metric Matrix axes: usage, efficiency, td_role, stability, context
+- For each axis value 0–100 map to a label band:
+  - 0–30 => “Low”
+  - 30–50 => “Moderate”
+  - 50–70 => “Strong”
+  - 70+ => “Elite”
+
+Output format (single line, deterministic):
+“Efficiency: Elite • Usage: Strong • TD Role: Low • Stability: Moderate • Context: Moderate”
+
+Rules:
+- Only render when metric matrix data is successfully loaded.
+- If metric matrix is missing/errored, hide the summary (don’t invent it).
+- If missingInputs exists and is non-empty, append a subtle suffix:
+  “(limited data)” OR “(missing inputs)” — keep it short.
+
+Make sure ordering is consistent:
+Efficiency • Usage • TD Role • Stability • Context
+
+================================================================================
+4) SANITY CHECKS (RUN + DOCUMENT RESULTS)
+After implementing, run these manual checks and report results in your summary:
+
+A) Season change:
+- Switch season 2025 -> 2024 -> back to 2025
+- Confirm defaults re-resolve to that season’s latest available week for that player
+- Confirm no stale UI artifacts (summary line matches new season/week)
+
+B) Player change:
+- Navigate from Chase -> another player with sparse data (e.g., TE or backup RB)
+- Confirm latest week detection works or gracefully falls back
+- Confirm “No game data” only appears when truly no data
+
+C) No-data season:
+- Pick a season you know has no weekly data for that player
+- Confirm UI shows calm empty states (not console spam, not hard error screens)
+- Summary line should hide if no metric matrix data
+
+D) Sticky header:
+- Scroll page: header remains visible and usable
+- No overlap with content, no “jump” on load
+
+E) Layout jank:
+- Open /player/:id with cache cold (hard refresh)
+- Confirm skeletons match final sizes; page doesn’t reflow wildly when data arrives
+
+================================================================================
+DELIVERABLES
+1) Code changes implementing v1.3
+2) Short summary:
+- What files changed
+- What was added
+- Sanity check results A–E (pass/fail + notes)
+3) Include screenshots optional if available; otherwise describe the visual result.
+
+DO NOT
+- Introduce a new router
+- Change backend endpoints unless absolutely required
+- Add heavy UI libraries
+- Add “AI text” explanations
+
+Start from current working code and keep diffs clean.
