@@ -137,6 +137,60 @@ router.get('/search', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/player-identity/player/:id/weeks
+ * Get available weeks with data for a player in a given season
+ */
+router.get('/player/:id/weeks', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Player ID is required'
+      });
+    }
+
+    // Import db and query weekly_stats for available weeks
+    const { db } = await import('../infra/db');
+    const { weeklyStats } = await import('@shared/schema');
+    const { eq, and } = await import('drizzle-orm');
+
+    // Query distinct weeks where this player has data
+    const result = await db
+      .select({ week: weeklyStats.week })
+      .from(weeklyStats)
+      .where(and(
+        eq(weeklyStats.playerId, id),
+        eq(weeklyStats.season, season)
+      ))
+      .orderBy(weeklyStats.week);
+
+    const availableWeeks = result.map((r: { week: number }) => r.week);
+    const latestWeek = availableWeeks.length > 0 ? Math.max(...availableWeeks) : null;
+
+    res.json({
+      success: true,
+      data: {
+        playerId: id,
+        season,
+        availableWeeks,
+        latestWeek,
+        totalWeeks: availableWeeks.length
+      }
+    });
+  } catch (error) {
+    console.error('[PlayerIdentityRoutes] Error getting available weeks:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/player-identity/stats
  * Get system statistics and health information
  */

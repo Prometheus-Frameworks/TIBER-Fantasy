@@ -58,9 +58,10 @@ interface TiberScoreCardProps {
   mode: 'weekly' | 'season';
   position: string;
   enabled?: boolean;
+  hasDataForWeek?: boolean;
 }
 
-export default function TiberScoreCard({ nflfastrId, week, season, mode, position, enabled = true }: TiberScoreCardProps) {
+export default function TiberScoreCard({ nflfastrId, week, season, mode, position, enabled = true, hasDataForWeek = true }: TiberScoreCardProps) {
   const { data: tiberData, isLoading } = useQuery<TiberScoreData>({
     queryKey: ['/api/tiber/score', nflfastrId, week, season, mode],
     queryFn: async () => {
@@ -119,10 +120,15 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
     );
   }
 
-  if (!tiberData || !tiberData.data) {
+  if (!tiberData || !tiberData.data || !hasDataForWeek) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        No TIBER data available for this player
+      <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-8 text-center">
+        <p className="text-gray-400">
+          No game data available for Week {week}
+        </p>
+        <p className="text-xs text-gray-600 mt-2">
+          This player didn't have recorded stats for this week.
+        </p>
       </div>
     );
   }

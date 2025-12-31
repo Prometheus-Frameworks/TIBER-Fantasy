@@ -31,6 +31,17 @@ interface CurrentWeekResponse {
   season: number;
 }
 
+interface AvailableWeeksResponse {
+  success: boolean;
+  data: {
+    playerId: string;
+    season: number;
+    availableWeeks: number[];
+    latestWeek: number | null;
+    totalWeeks: number;
+  };
+}
+
 export default function PlayerPage() {
   const [, params] = useRoute('/player/:playerId');
   const playerId = params?.playerId || '';
@@ -39,26 +50,43 @@ export default function PlayerPage() {
   const [week, setWeek] = useState<number | null>(null);
   const [season, setSeason] = useState(2025);
 
-  // Fetch current week from system endpoint
+  // Fetch current week from system endpoint (fallback only)
   const { data: currentWeekData } = useQuery<CurrentWeekResponse>({
     queryKey: ['/api/system/current-week'],
   });
 
-  // Set defaults from system endpoint
+  // Fetch available weeks for this player
+  const { data: weeksData } = useQuery<AvailableWeeksResponse>({
+    queryKey: ['/api/player-identity/player', playerId, 'weeks', season],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-identity/player/${playerId}/weeks?season=${season}`);
+      if (!res.ok) throw new Error('Failed to fetch weeks');
+      return res.json();
+    },
+    enabled: !!playerId,
+  });
+
+  const availableWeeks = weeksData?.data?.availableWeeks || [];
+  const latestAvailableWeek = weeksData?.data?.latestWeek;
+
+  // Set defaults: prefer latest available week, fallback to system current week
   useEffect(() => {
-    if (currentWeekData?.success) {
-      if (week === null) {
+    if (week === null) {
+      if (latestAvailableWeek) {
+        setWeek(latestAvailableWeek);
+      } else if (currentWeekData?.success) {
         const clampedWeek = Math.max(1, Math.min(currentWeekData.currentWeek, 18));
         setWeek(clampedWeek);
       }
-      if (currentWeekData.season) {
-        setSeason(currentWeekData.season);
-      }
     }
-  }, [currentWeekData, week]);
+    if (currentWeekData?.season && season !== currentWeekData.season) {
+      setSeason(currentWeekData.season);
+    }
+  }, [latestAvailableWeek, currentWeekData, week, season]);
 
-  // Fallback default if endpoint fails
+  // Fallback default if both endpoints fail
   const effectiveWeek = week ?? 3;
+  const hasDataForWeek = availableWeeks.includes(effectiveWeek);
 
   const { data: playerData, isLoading: identityLoading, isError: identityError } = useQuery<PlayerIdentity>({
     queryKey: ['/api/player-identity/player', playerId],
@@ -161,10 +189,18 @@ export default function PlayerPage() {
               className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
               data-testid="select-week"
             >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((w) => (
-                <option key={w} value={w}>Week {w}</option>
-              ))}
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((w) => {
+                const hasData = availableWeeks.includes(w);
+                return (
+                  <option key={w} value={w} className={hasData ? '' : 'text-gray-500'}>
+                    Week {w}{!hasData ? ' —' : ''}
+                  </option>
+                );
+              })}
             </select>
+            {!hasDataForWeek && (
+              <span className="text-xs text-yellow-500/80">No data</span>
+            )}
           </div>
 
           {/* Season Display */}
@@ -183,6 +219,7 @@ export default function PlayerPage() {
               season={season}
               mode={mode}
               position={player.position}
+              hasDataForWeek={hasDataForWeek}
             />
           </div>
 
@@ -192,6 +229,7 @@ export default function PlayerPage() {
               playerId={nflfastrId}
               season={season}
               week={effectiveWeek}
+              hasDataForWeek={hasDataForWeek}
             />
           </div>
         </div>

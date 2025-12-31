@@ -29,9 +29,10 @@ interface MetricMatrixCardProps {
   season: number;
   week: number;
   enabled?: boolean;
+  hasDataForWeek?: boolean;
 }
 
-export default function MetricMatrixCard({ playerId, season, week, enabled = true }: MetricMatrixCardProps) {
+export default function MetricMatrixCard({ playerId, season, week, enabled = true, hasDataForWeek = true }: MetricMatrixCardProps) {
   const { data: metricMatrix, isLoading, isError } = useQuery<MetricMatrixResponse>({
     queryKey: ['/api/metric-matrix/player-vector', playerId, season, week],
     queryFn: async () => {
@@ -91,13 +92,13 @@ export default function MetricMatrixCard({ playerId, season, week, enabled = tru
           </div>
         )}
 
-        {isError && (
+        {(isError || !hasDataForWeek) && (
           <p className="text-xs text-gray-500">
-            Metric Matrix unavailable right now. Check back later.
+            No game data available for Week {week}. Try selecting a different week.
           </p>
         )}
 
-        {!isLoading && !isError && metricMatrix?.data?.axes && (
+        {!isLoading && !isError && hasDataForWeek && metricMatrix?.data?.axes && (
           <div className="space-y-3">
             {metricMatrix.data.axes.map((axis) => (
               <div key={axis.key} data-testid={`metric-axis-${axis.key}`}>
