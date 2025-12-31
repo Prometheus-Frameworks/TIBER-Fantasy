@@ -24,8 +24,10 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
+import PlayerDetailDrawer from '@/components/PlayerDetailDrawer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -448,12 +450,14 @@ function PlayerRow({
   player, 
   rank, 
   scoringFormat,
-  position 
+  position,
+  onQuickView
 }: { 
   player: RankedPlayer; 
   rank: number; 
   scoringFormat: ScoringFormat;
   position: Position;
+  onQuickView: (player: RankedPlayer) => void;
 }) {
   const tierInfo = getTierFromAlpha(player.adjustedAlpha, player.position);
   const stats = player.fantasyStats;
@@ -466,7 +470,7 @@ function PlayerRow({
   const volumeValue = position === 'RB' ? stats?.touches : stats?.targets;
 
   return (
-    <tr className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors" data-testid={`player-row-${player.playerId}`}>
+    <tr className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors group" data-testid={`player-row-${player.playerId}`}>
       {/* Rank */}
       <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
         <span className="text-slate-400 font-mono text-xs sm:text-sm">{rank}</span>
@@ -480,7 +484,24 @@ function PlayerRow({
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="font-medium text-white text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{player.playerName}</span>
+              <Link 
+                href={`/player/${player.playerId}`}
+                className="font-medium text-white text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none hover:text-purple-400 transition-colors"
+                data-testid={`player-link-${player.playerId}`}
+              >
+                {player.playerName}
+              </Link>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickView(player);
+                }}
+                className="p-0.5 rounded hover:bg-slate-700/50 text-slate-500 hover:text-purple-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Quick View"
+                data-testid={`quick-view-${player.playerId}`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </button>
               {player.issues && player.issues.length > 0 && (
                 <Tooltip>
                   <TooltipTrigger>
@@ -663,6 +684,13 @@ function PlayerRow({
   );
 }
 
+interface DrawerPlayerInfo {
+  playerId: string;
+  playerName: string;
+  team: string;
+  position: string;
+}
+
 export default function TiberTiers() {
   const [position, setPosition] = useState<Position>('WR');
   const [viewMode, setViewMode] = useState<ViewMode>('season');
@@ -673,6 +701,7 @@ export default function TiberTiers() {
   const [weekRange, setWeekRange] = useState<WeekRange>('full');
   const [sortColumn, setSortColumn] = useState<SortColumn>('alpha');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [drawerPlayer, setDrawerPlayer] = useState<DrawerPlayerInfo | null>(null);
   
   const { currentWeek, isLoading: weekLoading } = useCurrentNFLWeek();
   const displayWeek = currentWeek || 14;
@@ -1189,6 +1218,12 @@ export default function TiberTiers() {
                         rank={index + 1}
                         scoringFormat={scoringFormat}
                         position={position}
+                        onQuickView={(p) => setDrawerPlayer({
+                          playerId: p.playerId,
+                          playerName: p.playerName,
+                          team: p.nflTeam || 'FA',
+                          position: p.position,
+                        })}
                       />
                     ))}
                   </tbody>
@@ -1213,6 +1248,20 @@ export default function TiberTiers() {
           </div>
         </main>
       </div>
+
+      {/* Quick View Drawer */}
+      {drawerPlayer && (
+        <PlayerDetailDrawer
+          isOpen={!!drawerPlayer}
+          onClose={() => setDrawerPlayer(null)}
+          nflfastrId={drawerPlayer.playerId}
+          playerName={drawerPlayer.playerName}
+          team={drawerPlayer.team}
+          position={drawerPlayer.position}
+          week={displayWeek}
+          season={2025}
+        />
+      )}
     </TooltipProvider>
   );
 }
