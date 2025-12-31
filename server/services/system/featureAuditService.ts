@@ -44,11 +44,11 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
     
     const rosterResult = await db.execute(sql`
       WITH roster_sleeper_ids AS (
-        SELECT DISTINCT unnest(players) as sleeper_id
+        SELECT DISTINCT jsonb_array_elements_text(players) as sleeper_id
         FROM league_teams
         WHERE league_id = ${leagueId}
           AND players IS NOT NULL
-          AND array_length(players, 1) > 0
+          AND jsonb_array_length(players) > 0
       ),
       mapped_ids AS (
         SELECT 
