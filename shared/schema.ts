@@ -502,6 +502,18 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   needsReviewIdx: index("pim_needs_review_idx").on(table.needsReview).where(sql`${table.needsReview} = true`),
 }));
 
+// Unmapped Sleeper Players - Roster players that couldn't be matched to canonical IDs
+export const unmappedSleeperPlayers = pgTable("unmapped_sleeper_players", {
+  sleeperId: text("sleeper_id").primaryKey(),
+  fullName: text("full_name").notNull(),
+  position: text("position"),
+  team: text("team"),
+  statusReason: text("status_reason").notNull(), // 'no_match', 'ambiguous', 'inactive', etc.
+  rawJson: jsonb("raw_json"), // Full Sleeper player payload for debugging
+  firstSeenAt: timestamp("first_seen_at").defaultNow(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow(),
+});
+
 // NFL Teams Dimension Table
 export const nflTeamsDim = pgTable("nfl_teams_dim", {
   teamCode: text("team_code").primaryKey(), // "KC", "SF", etc.
