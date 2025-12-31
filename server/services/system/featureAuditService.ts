@@ -24,6 +24,7 @@ interface AuditParams {
 
 async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
   try {
+    // Branch A: Check if any active league exists
     const leagueResult = await db.execute(sql`
       SELECT l.id as league_id 
       FROM leagues l
@@ -33,15 +34,38 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
     `);
     
     if ((leagueResult.rows as any[]).length === 0) {
+      // Branch A: No active league => SKIPPED
       return {
         key: 'identity.roster_bridge_coverage',
         status: 'skipped',
-        details: { note: 'No Sleeper leagues configured - roster bridge check not applicable' }
+        details: { 
+          note: 'No active league selected/connected.',
+          actionHint: 'Connect a Sleeper league to enable roster bridge coverage check.'
+        }
       };
     }
     
     const leagueId = (leagueResult.rows as any[])[0].league_id;
     
+    // Get diagnostic info: team count and sample teams
+    const teamsResult = await db.execute(sql`
+      SELECT 
+        id as team_id,
+        COALESCE(jsonb_array_length(players), 0) as players_count
+      FROM league_teams
+      WHERE league_id = ${leagueId}
+      ORDER BY id
+      LIMIT 10
+    `);
+    
+    const allTeams = teamsResult.rows as { team_id: string; players_count: number }[];
+    const teamCount = allTeams.length;
+    const sampleTeams = allTeams.slice(0, 3).map(t => ({
+      teamId: t.team_id,
+      playersCount: parseInt(String(t.players_count)) || 0
+    }));
+    
+    // Get roster coverage data
     const rosterResult = await db.execute(sql`
       WITH roster_sleeper_ids AS (
         SELECT DISTINCT jsonb_array_elements_text(players) as sleeper_id
@@ -59,29 +83,44 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
       )
       SELECT 
         COUNT(*) as total,
+        COUNT(DISTINCT sleeper_id) as unique_ids,
         COUNT(canonical_id) as mapped,
         array_agg(sleeper_id) FILTER (WHERE canonical_id IS NULL) as unmapped_ids
       FROM mapped_ids
     `);
     
-    const row = (rosterResult.rows as any[])[0] || { total: 0, mapped: 0, unmapped_ids: [] };
-    const total = parseInt(row.total) || 0;
+    const row = (rosterResult.rows as any[])[0] || { total: 0, unique_ids: 0, mapped: 0, unmapped_ids: [] };
+    const totalRosterSleeperIds = parseInt(row.total) || 0;
+    const uniqueRosterSleeperIds = parseInt(row.unique_ids) || 0;
     const mapped = parseInt(row.mapped) || 0;
     const unmappedIds: string[] = row.unmapped_ids || [];
     
-    if (total === 0) {
+    // Diagnostic payload for debugging
+    const diagnostics = {
+      leagueId,
+      teamCount,
+      totalRosterSleeperIds,
+      uniqueRosterSleeperIds,
+      sampleTeams
+    };
+    
+    // Branch B: League exists but no roster players => CRITICAL
+    if (totalRosterSleeperIds === 0) {
       return {
         key: 'identity.roster_bridge_coverage',
-        status: 'warning',
+        status: 'critical',
         value: 0,
         details: {
-          leagueId,
-          note: 'No roster players found - teams may not be synced yet'
+          ...diagnostics,
+          note: 'Active league set but no roster players found in league_teams.players (roster sync missing).',
+          actionHint: 'Run Sleeper roster sync or verify league_teams population.',
+          thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70 or empty rosters' }
         }
       };
     }
     
-    const coveragePct = mapped / total;
+    // Branch C: Has roster players => compute coverage normally
+    const coveragePct = mapped / totalRosterSleeperIds;
     
     let status: CheckStatus = 'healthy';
     if (coveragePct < 0.70) status = 'critical';
@@ -94,9 +133,8 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
       status,
       value: Math.round(coveragePct * 100) / 100,
       details: {
-        leagueId,
+        ...diagnostics,
         mapped,
-        total,
         coveragePct: Math.round(coveragePct * 100) / 100,
         unmappedSample,
         thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70' },

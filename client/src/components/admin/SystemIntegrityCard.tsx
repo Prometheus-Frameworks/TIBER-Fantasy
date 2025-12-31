@@ -53,18 +53,27 @@ function CheckRow({ check }: { check: AuditCheck }) {
   const valueStr = check.value !== undefined 
     ? `${Math.round(check.value * 100)}%` 
     : null;
+  
+  const actionHint = check.details?.actionHint as string | undefined;
+  const isRosterBridge = check.key === 'identity.roster_bridge_coverage';
+  const showHint = isRosterBridge && (check.status === 'skipped' || check.status === 'critical') && actionHint;
 
   return (
-    <div className="flex items-center justify-between py-1.5">
-      <div className="flex items-center gap-2">
-        <StatusDot status={check.status} />
-        <span className="text-sm text-gray-300">{label}</span>
+    <div className="py-1.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <StatusDot status={check.status} />
+          <span className="text-sm text-gray-300">{label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {valueStr && (
+            <span className={`text-xs font-mono ${config.textColor}`}>{valueStr}</span>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        {valueStr && (
-          <span className={`text-xs font-mono ${config.textColor}`}>{valueStr}</span>
-        )}
-      </div>
+      {showHint && (
+        <p className="text-xs text-gray-500 ml-4.5 mt-0.5 pl-4">{actionHint}</p>
+      )}
     </div>
   );
 }
