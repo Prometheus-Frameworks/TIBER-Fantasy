@@ -1,6 +1,7 @@
 # League Ownership Feature - Database & Implementation Notes
 
-**Last Updated:** 2024-12-31
+**Last Updated:** 2025-01-01
+**Status:** v1 IMPLEMENTED - DB-first with Sleeper→Canonical ID bridge
 
 ## Overview
 
@@ -183,14 +184,62 @@ getUserPlatformProfile(userId: string, platform: string): Promise<UserPlatformPr
 ## Related Files
 
 - `shared/schema.ts` - Table definitions
-- `server/routes.ts` - API endpoints (lines ~3025-3070)
-- `server/modules/metricMatrix/leagueOwnershipService.ts` - Ownership logic
+- `server/routes.ts` - API endpoints (lines ~3028-3078)
+- `server/services/ownership/ownershipService.ts` - **NEW v1 implementation**
 - `server/storage.ts` - Database interface
 - `client/src/pages/PlayerPage.tsx` - UI consumption
+
+## v1 Implementation (2025-01-01)
+
+### Service: `server/services/ownership/ownershipService.ts`
+
+**Key functions:**
+- `getOwnershipForPlayer({ userId, canonicalPlayerId })` - Main ownership check
+- `getLeagueOwnershipDebug(leagueId)` - Debug endpoint for mapping coverage
+- `clearOwnershipCache(leagueId?)` - Cache invalidation
+
+**How it works:**
+1. Fetches active league from `user_league_preferences`
+2. Fetches all teams from `league_teams` for that league
+3. Extracts `players` jsonb array (Sleeper IDs) from each team
+4. Batch queries `player_identity_map` to convert Sleeper IDs → canonical IDs
+5. Builds a per-team Set of canonical IDs
+6. Checks if requested player is in any team's Set
+
+**Caching:**
+- League roster maps cached for 15 minutes via LRU cache
+- Cache key: `leagueId`
+- Cache stores: all teams + canonical ID sets for that league
+
+### Curl Examples
+
+```bash
+# Check ownership (owned by another team)
+curl "http://localhost:5000/api/league/ownership?playerId=jamarr-chase"
+# Response: {"success":true,"enabled":true,"data":{"status":"owned_by_other","teamId":"...","teamName":"TARX DOOKU","leagueId":"...","source":"db"}}
+
+# Check ownership (free agent)
+curl "http://localhost:5000/api/league/ownership?playerId=random-player"
+# Response: {"success":true,"enabled":true,"data":{"status":"free_agent","leagueId":"...","source":"db"}}
+
+# Check ownership (no league connected)
+curl "http://localhost:5000/api/league/ownership?playerId=jamarr-chase&user_id=nobody"
+# Response: {"success":true,"enabled":false,"data":{"status":"disabled","hint":"Connect a Sleeper league to see ownership","source":"disabled"}}
+
+# Debug endpoint
+curl "http://localhost:5000/api/league/ownership/debug?leagueId=a15b00f5-7475-4922-8ba0-762e163fbe20"
+# Returns team roster counts, mapping coverage %, and notes
+```
+
+## Known Limitations
+
+- Mapping coverage is ~66% for existing league (285 players, 187 mapped)
+- Sleeper API fallback not yet implemented for low-coverage leagues
+- `owned_by_me` requires `active_team_id` to match team with player
 
 ## Notes
 
 - The `league_teams.players` column stores Sleeper player IDs (not canonical IDs)
-- Need to join with `player_identity_map` to resolve canonical IDs
-- Consider adding `canonical_player_ids` computed column for faster lookups
-- UI shows "Connect a league for ownership" hint when no league is connected
+- Bridge via `player_identity_map.sleeper_id` → `canonical_id`
+- UI shows hint text from `data.hint` when ownership is disabled
+- Never returns 500 - always a safe structured response
