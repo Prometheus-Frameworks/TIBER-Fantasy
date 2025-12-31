@@ -1,7 +1,7 @@
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 
-export type CheckStatus = 'healthy' | 'warning' | 'critical' | 'skipped';
+export type CheckStatus = 'healthy' | 'warning' | 'critical' | 'skipped' | 'info';
 
 export interface AuditCheck {
   key: string;
@@ -22,7 +22,97 @@ interface AuditParams {
   playerId?: string;
 }
 
-async function checkIdentityMappingCoverage(): Promise<AuditCheck> {
+async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
+  try {
+    const leagueResult = await db.execute(sql`
+      SELECT l.id as league_id 
+      FROM leagues l
+      WHERE l.platform = 'sleeper'
+      ORDER BY l.id DESC
+      LIMIT 1
+    `);
+    
+    if ((leagueResult.rows as any[]).length === 0) {
+      return {
+        key: 'identity.roster_bridge_coverage',
+        status: 'skipped',
+        details: { note: 'No Sleeper leagues configured - roster bridge check not applicable' }
+      };
+    }
+    
+    const leagueId = (leagueResult.rows as any[])[0].league_id;
+    
+    const rosterResult = await db.execute(sql`
+      WITH roster_sleeper_ids AS (
+        SELECT DISTINCT unnest(players) as sleeper_id
+        FROM league_teams
+        WHERE league_id = ${leagueId}
+          AND players IS NOT NULL
+          AND array_length(players, 1) > 0
+      ),
+      mapped_ids AS (
+        SELECT 
+          r.sleeper_id,
+          p.canonical_id
+        FROM roster_sleeper_ids r
+        LEFT JOIN player_identity_map p ON p.sleeper_id = r.sleeper_id
+      )
+      SELECT 
+        COUNT(*) as total,
+        COUNT(canonical_id) as mapped,
+        array_agg(sleeper_id) FILTER (WHERE canonical_id IS NULL) as unmapped_ids
+      FROM mapped_ids
+    `);
+    
+    const row = (rosterResult.rows as any[])[0] || { total: 0, mapped: 0, unmapped_ids: [] };
+    const total = parseInt(row.total) || 0;
+    const mapped = parseInt(row.mapped) || 0;
+    const unmappedIds: string[] = row.unmapped_ids || [];
+    
+    if (total === 0) {
+      return {
+        key: 'identity.roster_bridge_coverage',
+        status: 'warning',
+        value: 0,
+        details: {
+          leagueId,
+          note: 'No roster players found - teams may not be synced yet'
+        }
+      };
+    }
+    
+    const coveragePct = mapped / total;
+    
+    let status: CheckStatus = 'healthy';
+    if (coveragePct < 0.70) status = 'critical';
+    else if (coveragePct < 0.85) status = 'warning';
+    
+    const unmappedSample = unmappedIds.slice(0, 10);
+    
+    return {
+      key: 'identity.roster_bridge_coverage',
+      status,
+      value: Math.round(coveragePct * 100) / 100,
+      details: {
+        leagueId,
+        mapped,
+        total,
+        coveragePct: Math.round(coveragePct * 100) / 100,
+        unmappedSample,
+        thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70' },
+        note: 'Roster coverage is what ownership + player UX depends on.'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'identity.roster_bridge_coverage',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkGlobalSleeperIdPopulation(): Promise<AuditCheck> {
   try {
     const result = await db.execute(sql`
       SELECT 
@@ -40,23 +130,24 @@ async function checkIdentityMappingCoverage(): Promise<AuditCheck> {
     const coveragePct = total > 0 ? withSleeper / total : 0;
     
     let status: CheckStatus = 'healthy';
-    if (coveragePct < 0.50) status = 'critical';
+    if (coveragePct < 0.40) status = 'info';
     else if (coveragePct < 0.70) status = 'warning';
     
     return {
-      key: 'identity.mappingCoverage',
+      key: 'identity.global_sleeper_id_population',
       status,
       value: Math.round(coveragePct * 100) / 100,
       details: {
         totalActivePlayers: total,
         withSleeperId: withSleeper,
         withNflDataPyId: parseInt(row.with_nfl_data_py) || 0,
-        thresholds: { healthy: '>=0.70', warning: '0.50-0.69', critical: '<0.50' }
+        thresholds: { healthy: '>=0.70', warning: '0.40-0.69', info: '<0.40' },
+        note: 'Global enrichment metric - does NOT block ownership. Many active players are practice squad/reserves without Sleeper presence.'
       }
     };
   } catch (error) {
     return {
-      key: 'identity.mappingCoverage',
+      key: 'identity.global_sleeper_id_population',
       status: 'skipped',
       details: { error: error instanceof Error ? error.message : 'Unknown error' }
     };
@@ -416,7 +507,8 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
   const playerId = params.playerId || 'jamarr-chase';
   
   const checks: AuditCheck[] = await Promise.all([
-    checkIdentityMappingCoverage(),
+    checkRosterBridgeCoverage(),
+    checkGlobalSleeperIdPopulation(),
     checkMetricMatrixCoverage(season, week),
     checkPercentScaleSanity(season),
     checkCacheFreshness(),

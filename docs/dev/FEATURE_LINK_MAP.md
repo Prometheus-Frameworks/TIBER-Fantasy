@@ -210,18 +210,39 @@
 - Cache invalidation on weekly data refresh
 - Audit check: flag if >20% of vectors older than 7 days
 
-### 4.4 Identity Mapping Coverage
+### 4.4 Identity Coverage (Split Checks)
 
-**Risk:** Sleeper IDs not mapped to canonical IDs break ownership detection.
+Identity coverage is now measured by **two separate checks**:
 
-**Current State:** ~66% mapping coverage (187/285 players in test league)
+#### 4.4.1 Roster Bridge Coverage (PRIMARY)
+
+**What it measures:** Of all Sleeper player IDs on synced league rosters, how many resolve to a `canonical_id` via `player_identity_map.sleeper_id`.
+
+**Why it matters:** This is what ownership + player UX **directly depends on**. If a rostered player can't be resolved, ownership detection fails for that player.
+
+**Thresholds:**
+- ≥85%: healthy
+- 70-84%: warning  
+- <70%: critical (blocks ownership accuracy)
+
+**Response includes:** `mapped`, `total`, `coveragePct`, `unmappedSample` (up to 10 unresolved Sleeper IDs)
+
+#### 4.4.2 Global Sleeper ID Population (SECONDARY)
+
+**What it measures:** Of all active players in `player_identity_map`, how many have a non-null `sleeper_id`.
+
+**Why it matters:** This is an **enrichment quality metric**, not a correctness dependency. Many active NFL players (practice squad, deep reserves) never appear on Sleeper, so low global coverage is expected.
 
 **Thresholds:**
 - ≥70%: healthy
-- 50-69%: warning  
-- <50%: critical
+- 40-69%: warning
+- <40%: info (non-blocking)
 
-**Guardrail:** `/api/league/ownership/debug` endpoint reports coverage stats.
+**Key difference:** This check **cannot** trigger `critical` status. It uses `info` for low values instead, preventing false alarms about the overall system health.
+
+**Guardrails:** 
+- `/api/system/feature-audit` returns both checks with structured details
+- Admin UI shows both in System Integrity card
 
 ### 4.5 Week Data Gaps
 

@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface AuditCheck {
   key: string;
-  status: 'healthy' | 'warning' | 'critical' | 'skipped';
+  status: 'healthy' | 'warning' | 'critical' | 'skipped' | 'info';
   value?: number;
   details: Record<string, unknown>;
 }
@@ -25,11 +25,13 @@ const STATUS_CONFIG = {
   healthy: { color: 'bg-emerald-500', textColor: 'text-emerald-400', icon: CheckCircle2, label: 'Healthy' },
   warning: { color: 'bg-amber-500', textColor: 'text-amber-400', icon: AlertTriangle, label: 'Warning' },
   critical: { color: 'bg-red-500', textColor: 'text-red-400', icon: XCircle, label: 'Critical' },
+  info: { color: 'bg-blue-500', textColor: 'text-blue-400', icon: CheckCircle2, label: 'Info' },
   skipped: { color: 'bg-gray-500', textColor: 'text-gray-400', icon: MinusCircle, label: 'Skipped' },
 };
 
 const CHECK_LABELS: Record<string, string> = {
-  'identity.mappingCoverage': 'Identity Mapping',
+  'identity.roster_bridge_coverage': 'Roster Bridge',
+  'identity.global_sleeper_id_population': 'Global Sleeper IDs',
   'metricMatrix.vectorCoverage': 'Vector Coverage',
   'metricMatrix.percentScaleSanity': 'Percent Scale',
   'metricMatrix.cacheFreshness': 'Cache Freshness',
