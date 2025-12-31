@@ -120,7 +120,11 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
     );
   }
 
-  if (!tiberData || !tiberData.data || !hasDataForWeek) {
+  // Show no data message only when we know there's no data for this week
+  // (either via hasDataForWeek flag or actual query returned no data)
+  const noDataAvailable = (!hasDataForWeek && !tiberData?.data) || (!tiberData?.data && !isLoading);
+  
+  if (noDataAvailable || !tiberData?.data) {
     return (
       <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-8 text-center">
         <p className="text-gray-400">
@@ -133,22 +137,24 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
     );
   }
 
+  const data = tiberData.data;
+
   return (
     <div className="space-y-6">
       {/* Score Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`px-4 py-3 rounded-lg font-bold text-3xl border ${getTierColor(tiberData.data.tier)}`}>
-            {tiberData.data.tiberScore}
+          <div className={`px-4 py-3 rounded-lg font-bold text-3xl border ${getTierColor(data.tier)}`}>
+            {data.tiberScore}
           </div>
-          <Badge className={getTierColor(tiberData.data.tier)}>
-            {tiberData.data.tier.toUpperCase()}
+          <Badge className={getTierColor(data.tier)}>
+            {data.tier.toUpperCase()}
           </Badge>
         </div>
       </div>
 
       {/* TIBER Score Breakdown */}
-      {tiberData.data.breakdown && (
+      {data.breakdown && (
         <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5 space-y-1">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
             <Activity className="text-red-400" size={16} />
@@ -158,17 +164,17 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
             Each component contributes to the overall TIBER score (max 100)
           </p>
           <div className="space-y-4">
-            {renderBreakdownItem('First Down Efficiency', tiberData.data.breakdown.firstDownScore, <Target size={16} />, 20)}
-            {renderBreakdownItem('EPA Impact', tiberData.data.breakdown.epaScore, <TrendingUp size={16} />, 20)}
-            {renderBreakdownItem('Usage/Opportunity', tiberData.data.breakdown.usageScore, <Zap size={16} />, 20)}
-            {renderBreakdownItem('Touchdown Upside', tiberData.data.breakdown.tdScore, <TrendingUp size={16} />, 20)}
-            {renderBreakdownItem('Team Offense Context', tiberData.data.breakdown.teamScore, <Users size={16} />, 20)}
+            {renderBreakdownItem('First Down Efficiency', data.breakdown.firstDownScore, <Target size={16} />, 20)}
+            {renderBreakdownItem('EPA Impact', data.breakdown.epaScore, <TrendingUp size={16} />, 20)}
+            {renderBreakdownItem('Usage/Opportunity', data.breakdown.usageScore, <Zap size={16} />, 20)}
+            {renderBreakdownItem('Touchdown Upside', data.breakdown.tdScore, <TrendingUp size={16} />, 20)}
+            {renderBreakdownItem('Team Offense Context', data.breakdown.teamScore, <Users size={16} />, 20)}
           </div>
         </div>
       )}
 
       {/* Key Metrics */}
-      {tiberData.data.metrics && (
+      {data.metrics && (
         <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center justify-between">
             <span>Key Metrics ({mode === 'weekly' ? `Week ${week}` : 'Season Total'})</span>
@@ -180,29 +186,29 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
             <div className="space-y-1">
               <p className="text-xs text-gray-500">First Down Rate</p>
               <p className="text-lg font-bold text-white">
-                {(tiberData.data.metrics.firstDownRate * 100).toFixed(1)}%
+                {(data.metrics.firstDownRate * 100).toFixed(1)}%
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-gray-500">First Downs</p>
               <p className="text-lg font-bold text-white">
-                {tiberData.data.metrics.totalFirstDowns}
+                {data.metrics.totalFirstDowns}
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-gray-500">EPA per Play</p>
               <p className="text-lg font-bold text-white">
-                {tiberData.data.metrics.epaPerPlay?.toFixed(3) || 'N/A'}
+                {data.metrics.epaPerPlay?.toFixed(3) || 'N/A'}
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-gray-500">Snap %</p>
               <p className="text-lg font-bold text-white flex items-center gap-1">
-                {tiberData.data.metrics.snapPercentAvg.toFixed(1)}%
-                {tiberData.data.metrics.snapTrend === 'up' && (
+                {data.metrics.snapPercentAvg.toFixed(1)}%
+                {data.metrics.snapTrend === 'up' && (
                   <TrendingUp size={14} className="text-green-400" />
                 )}
-                {tiberData.data.metrics.snapTrend === 'down' && (
+                {data.metrics.snapTrend === 'down' && (
                   <TrendingDown size={14} className="text-red-400" />
                 )}
               </p>
@@ -210,13 +216,13 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
             <div className="space-y-1">
               <p className="text-xs text-gray-500">TD Rate</p>
               <p className="text-lg font-bold text-white">
-                {(tiberData.data.metrics.tdRate * 100).toFixed(1)}%
+                {(data.metrics.tdRate * 100).toFixed(1)}%
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-xs text-gray-500">Team Off. Rank</p>
               <p className="text-lg font-bold text-white">
-                #{tiberData.data.metrics.teamOffenseRank}
+                #{data.metrics.teamOffenseRank}
               </p>
             </div>
           </div>
@@ -224,7 +230,7 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
       )}
 
       {/* Game Log Section */}
-      {tiberData.data.gameLog && (
+      {data.gameLog && (
         <div className="bg-[#111217] border border-gray-800/50 rounded-xl p-5">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
             <Trophy className="text-yellow-400" size={16} />
@@ -232,73 +238,73 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
           </h3>
           
           <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-800/50">
-            {mode === 'weekly' && tiberData.data.gameLog.opponent && (
+            {mode === 'weekly' && data.gameLog.opponent && (
               <div className="space-y-1">
                 <p className="text-xs text-gray-500">Opponent</p>
                 <p className="text-lg font-bold text-white">
-                  vs {tiberData.data.gameLog.opponent}
+                  vs {data.gameLog.opponent}
                 </p>
               </div>
             )}
-            {mode === 'season' && tiberData.data.gameLog.gamesPlayed && (
+            {mode === 'season' && data.gameLog.gamesPlayed && (
               <div className="space-y-1">
                 <p className="text-xs text-gray-500">Games Played</p>
                 <p className="text-lg font-bold text-white">
-                  {tiberData.data.gameLog.gamesPlayed}
+                  {data.gameLog.gamesPlayed}
                 </p>
               </div>
             )}
             <div className="space-y-1">
               <p className="text-xs text-gray-500">Fantasy Points (PPR)</p>
               <p className="text-lg font-bold text-green-400">
-                {tiberData.data.gameLog.fantasyPoints?.toFixed(1) || '0.0'}
+                {data.gameLog.fantasyPoints?.toFixed(1) || '0.0'}
               </p>
             </div>
           </div>
 
-          {position === 'QB' && tiberData.data.gameLog.passing.attempts > 0 && (
+          {position === 'QB' && data.gameLog.passing.attempts > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Passing</h4>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">CMP/ATT</p>
                   <p className="text-sm font-bold text-white">
-                    {tiberData.data.gameLog.passing.completions}/{tiberData.data.gameLog.passing.attempts}
+                    {data.gameLog.passing.completions}/{data.gameLog.passing.attempts}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">YDS</p>
-                  <p className="text-sm font-bold text-white">{tiberData.data.gameLog.passing.yards}</p>
+                  <p className="text-sm font-bold text-white">{data.gameLog.passing.yards}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">TD/INT</p>
                   <p className="text-sm font-bold text-white">
-                    {tiberData.data.gameLog.passing.touchdowns}/{tiberData.data.gameLog.passing.interceptions}
+                    {data.gameLog.passing.touchdowns}/{data.gameLog.passing.interceptions}
                   </p>
                 </div>
               </div>
             </div>
           )}
 
-          {(position === 'WR' || position === 'TE') && tiberData.data.gameLog.receiving.targets > 0 && (
+          {(position === 'WR' || position === 'TE') && data.gameLog.receiving.targets > 0 && (
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receiving</h4>
               <div className="grid grid-cols-4 gap-3">
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">TGT</p>
-                  <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.targets}</p>
+                  <p className="text-sm font-bold text-white">{data.gameLog.receiving.targets}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">REC</p>
-                  <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.receptions}</p>
+                  <p className="text-sm font-bold text-white">{data.gameLog.receiving.receptions}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">YDS</p>
-                  <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.yards}</p>
+                  <p className="text-sm font-bold text-white">{data.gameLog.receiving.yards}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-gray-500">TD</p>
-                  <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.receiving.touchdowns}</p>
+                  <p className="text-sm font-bold text-green-400">{data.gameLog.receiving.touchdowns}</p>
                 </div>
               </div>
             </div>
@@ -306,44 +312,44 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
 
           {position === 'RB' && (
             <div className="space-y-4">
-              {tiberData.data.gameLog.rushing.attempts > 0 && (
+              {data.gameLog.rushing.attempts > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Rushing</h4>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">ATT</p>
-                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.rushing.attempts}</p>
+                      <p className="text-sm font-bold text-white">{data.gameLog.rushing.attempts}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">YDS</p>
-                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.rushing.yards}</p>
+                      <p className="text-sm font-bold text-white">{data.gameLog.rushing.yards}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">TD</p>
-                      <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.rushing.touchdowns}</p>
+                      <p className="text-sm font-bold text-green-400">{data.gameLog.rushing.touchdowns}</p>
                     </div>
                   </div>
                 </div>
               )}
-              {tiberData.data.gameLog.receiving.targets > 0 && (
+              {data.gameLog.receiving.targets > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Receiving</h4>
                   <div className="grid grid-cols-4 gap-3">
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">TGT</p>
-                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.targets}</p>
+                      <p className="text-sm font-bold text-white">{data.gameLog.receiving.targets}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">REC</p>
-                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.receptions}</p>
+                      <p className="text-sm font-bold text-white">{data.gameLog.receiving.receptions}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">YDS</p>
-                      <p className="text-sm font-bold text-white">{tiberData.data.gameLog.receiving.yards}</p>
+                      <p className="text-sm font-bold text-white">{data.gameLog.receiving.yards}</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-xs text-gray-500">TD</p>
-                      <p className="text-sm font-bold text-green-400">{tiberData.data.gameLog.receiving.touchdowns}</p>
+                      <p className="text-sm font-bold text-green-400">{data.gameLog.receiving.touchdowns}</p>
                     </div>
                   </div>
                 </div>
@@ -356,23 +362,23 @@ export default function TiberScoreCard({ nflfastrId, week, season, mode, positio
       {/* Why This Score? */}
       <div className="bg-gradient-to-r from-red-500/10 to-transparent border border-red-500/20 rounded-xl p-5">
         <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">
-          Why {tiberData.data.tiberScore}?
+          Why {data.tiberScore}?
         </h3>
         <div className="text-sm text-gray-300 space-y-2 leading-relaxed">
-          {tiberData.data.tier === 'breakout' && (
+          {data.tier === 'breakout' && (
             <p>
               <strong className="text-green-400">Breakout Signal:</strong> High efficiency across multiple categories. 
-              This player is producing at an elite level with {tiberData.data.metrics?.firstDownRate ? (tiberData.data.metrics.firstDownRate * 100).toFixed(0) : 'N/A'}% 
+              This player is producing at an elite level with {data.metrics?.firstDownRate ? (data.metrics.firstDownRate * 100).toFixed(0) : 'N/A'}% 
               first down rate and strong EPA impact.
             </p>
           )}
-          {tiberData.data.tier === 'stable' && (
+          {data.tier === 'stable' && (
             <p>
               <strong className="text-blue-400">Steady Performance:</strong> Consistent production with balanced metrics. 
               Reliable weekly contributor with solid opportunity share.
             </p>
           )}
-          {tiberData.data.tier === 'regression' && (
+          {data.tier === 'regression' && (
             <p>
               <strong className="text-red-400">Concern Alert:</strong> Below-average efficiency or usage metrics. 
               Monitor for improvement before starting with confidence.

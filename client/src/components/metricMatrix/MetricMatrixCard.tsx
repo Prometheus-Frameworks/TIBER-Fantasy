@@ -92,13 +92,13 @@ export default function MetricMatrixCard({ playerId, season, week, enabled = tru
           </div>
         )}
 
-        {(isError || !hasDataForWeek) && (
+        {(isError || (!hasDataForWeek && !metricMatrix?.data?.axes)) && !isLoading && (
           <p className="text-xs text-gray-500">
             No game data available for Week {week}. Try selecting a different week.
           </p>
         )}
 
-        {!isLoading && !isError && hasDataForWeek && metricMatrix?.data?.axes && (
+        {!isLoading && !isError && metricMatrix?.data?.axes && (
           <div className="space-y-3">
             {metricMatrix.data.axes.map((axis) => (
               <div key={axis.key} data-testid={`metric-axis-${axis.key}`}>
