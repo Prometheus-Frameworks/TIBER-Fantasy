@@ -1,0 +1,50 @@
+TASK: Identity Bridge Enrichment v1 (Roster-first) + Ownership Fallback + Audit update
+
+Goal: Increase identity.roster_bridge_coverage by auto-populating missing player_identity_map.sleeper_id for players appearing on synced league rosters, and ensure ownership never misclassifies unmapped players.
+
+A) Add a roster-first enrichment endpoint
+	1.	Create endpoint: POST /api/league/enrich-roster-identity
+	•	Uses active league from user_league_preferences
+	•	Reads all league_teams.players Sleeper IDs
+	•	Finds which are missing in player_identity_map (no row with that sleeper_id)
+	•	For each missing Sleeper ID:
+	•	Fetch Sleeper player metadata from Sleeper players endpoint (cached locally in DB or in-memory for 24h)
+	•	Attempt to match to a canonical player record using deterministic rules:
+	•	First: match by gsis_id / player_id if present in Sleeper payload and matches our canonical GSIS format
+	•	Else: match by full_name + position + team
+	•	If multiple matches → mark ambiguous and skip
+	•	If matched: update player_identity_map.sleeper_id
+	•	If not matched: store in a new table unmapped_sleeper_players with fields:
+	•	sleeper_id (pk), full_name, position, team, status_reason, raw_json, first_seen_at, last_seen_at
+	•	Return summary:
+	•	attempted, matched, ambiguous, unmapped, updatedRows
+	•	plus new_roster_bridge_coverage
+
+B) Ownership service fallback + truth status
+	2.	Update ownership service so unresolved players return unknown_unmapped instead of defaulting to free agent / other.
+	•	Response should include:
+	•	status: owned_by_me | owned_by_other | free_agent | disabled | unknown_unmapped
+	•	hint for unknown_unmapped: “This player is in Sleeper rosters but not mapped to canonical_id yet.”
+	•	Preserve existing behavior for mapped players.
+
+C) Feature audit improvements
+	3.	Update /api/system/feature-audit:
+	•	Keep identity.roster_bridge_coverage thresholds, but:
+	•	If status is critical due to <70%, include:
+	•	actionHint: "Run /api/league/enrich-roster-identity to improve mapping"
+	•	unmappedSample should show sleeper_id + name/team/pos if available from unmapped_sleeper_players
+
+D) Sanity checks required (must paste outputs)
+	4.	Provide these checks in the update:
+	•	Before/after:
+	•	roster_bridge_coverage (mapped/total)
+	•	count(*) unmapped_sleeper_players
+	•	Curl:
+	•	POST /api/league/enrich-roster-identity
+	•	GET /api/system/feature-audit
+	•	GET /api/league/ownership?playerId=<some known unmapped sleeper player’s canonical OR the sleeper id case> (ensure unknown_unmapped returns safely)
+
+Constraints:
+	•	Must be idempotent (running twice shouldn’t duplicate unmapped entries or spam updates)
+	•	Caching: Sleeper players payload should not be fetched repeatedly per player (use bulk fetch once + cache)
+	•	Never throw: endpoints return structured errors
