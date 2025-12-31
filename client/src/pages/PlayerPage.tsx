@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { useRoute, Link } from 'wouter';
+import { useRoute, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import { addRecentPlayer } from '@/lib/recentPlayers';
@@ -41,6 +42,61 @@ interface AvailableWeeksResponse {
     latestWeek: number | null;
     totalWeeks: number;
   };
+}
+
+interface TierNeighbor {
+  playerId: string;
+  playerName: string;
+  team: string;
+  position: string;
+  alpha: number;
+  tier: string;
+}
+
+interface TiersNeighborsResponse {
+  success: boolean;
+  data?: {
+    currentPlayer: TierNeighbor | null;
+    rank: number | null;
+    above: TierNeighbor[];
+    below: TierNeighbor[];
+  };
+  reason?: string;
+}
+
+interface SimilarPlayer {
+  playerId: string;
+  playerName: string | null;
+  team: string | null;
+  position: string | null;
+  distance: number;
+  axesSummary: Record<string, number>;
+}
+
+interface SimilarPlayersResponse {
+  success: boolean;
+  data?: {
+    basePlayer: {
+      playerId: string;
+      playerName: string | null;
+      position: string | null;
+      confidence: number;
+    };
+    similarPlayers: SimilarPlayer[];
+  };
+  reason?: string;
+}
+
+interface LeagueOwnershipResponse {
+  success: boolean;
+  enabled: boolean;
+  data?: {
+    status: 'on_my_roster' | 'owned_by_other' | 'free_agent' | 'unknown';
+    ownerTeamName?: string;
+    ownerDisplayName?: string;
+    isOnMyTeam: boolean;
+  };
+  reason?: string;
 }
 
 export default function PlayerPage() {
@@ -101,6 +157,52 @@ export default function PlayerPage() {
 
   const player = playerData?.data;
   const nflfastrId = player?.externalIds?.nfl_data_py || playerId;
+  const [, navigate] = useLocation();
+
+  // Fetch similar players
+  const { data: similarData, isLoading: similarLoading } = useQuery<SimilarPlayersResponse>({
+    queryKey: ['/api/players/similar', nflfastrId, season, effectiveWeek],
+    queryFn: async () => {
+      const res = await fetch(`/api/players/similar?playerId=${nflfastrId}&season=${season}&week=${effectiveWeek}&limit=6`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, reason: errorData.reason || `HTTP ${res.status}` };
+      }
+      return res.json();
+    },
+    enabled: !!nflfastrId && !!effectiveWeek,
+    staleTime: 4 * 60 * 60 * 1000, // Cache for 4 hours
+  });
+
+  // Fetch tiers neighbors
+  const { data: neighborsData, isLoading: neighborsLoading } = useQuery<TiersNeighborsResponse>({
+    queryKey: ['/api/tiers/neighbors', nflfastrId, player?.position],
+    queryFn: async () => {
+      const res = await fetch(`/api/tiers/neighbors?playerId=${nflfastrId}&position=${player?.position}&limit=3`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, reason: errorData.reason || `HTTP ${res.status}` };
+      }
+      return res.json();
+    },
+    enabled: !!nflfastrId && !!player?.position,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Fetch league ownership (currently no league context)
+  const { data: ownershipData } = useQuery<LeagueOwnershipResponse>({
+    queryKey: ['/api/league/ownership', playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/league/ownership?playerId=${playerId}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, enabled: false, reason: errorData.reason || `HTTP ${res.status}` };
+      }
+      return res.json();
+    },
+    enabled: !!playerId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Track recently viewed players
   const hasTrackedRef = useRef(false);
@@ -159,11 +261,46 @@ export default function PlayerPage() {
         <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-wide" data-testid="text-player-name">
-                {player.fullName}
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-white tracking-wide" data-testid="text-player-name">
+                  {player.fullName}
+                </h1>
+                {/* League Context Badge */}
+                {ownershipData?.enabled && ownershipData.data && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-xs ${
+                      ownershipData.data.status === 'on_my_roster' 
+                        ? 'border-green-500/50 text-green-400 bg-green-500/10' 
+                        : ownershipData.data.status === 'owned_by_other'
+                        ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
+                        : 'border-gray-500/50 text-gray-400 bg-gray-500/10'
+                    }`}
+                    data-testid="badge-ownership"
+                  >
+                    {ownershipData.data.status === 'on_my_roster' && (
+                      <>
+                        <UserCheck size={12} className="mr-1" />
+                        On Your Roster
+                      </>
+                    )}
+                    {ownershipData.data.status === 'owned_by_other' && (
+                      <>
+                        <User size={12} className="mr-1" />
+                        {ownershipData.data.ownerTeamName || 'Owned'}
+                      </>
+                    )}
+                    {ownershipData.data.status === 'free_agent' && 'Free Agent'}
+                  </Badge>
+                )}
+              </div>
               <p className="text-lg text-gray-400 mt-1" data-testid="text-player-info">
                 {player.nflTeam || 'FA'} • {player.position}
+                {neighborsData?.success && neighborsData.data?.rank && (
+                  <span className="ml-2 text-purple-400">
+                    • #{neighborsData.data.rank} {player.position}
+                  </span>
+                )}
               </p>
             </div>
             <div className="text-right">
@@ -246,6 +383,146 @@ export default function PlayerPage() {
               week={effectiveWeek}
               hasDataForWeek={hasDataForWeek}
             />
+          </div>
+        </div>
+
+        {/* Research Hub */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Similar Players */}
+          <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={18} className="text-purple-400" />
+              <h3 className="text-lg font-semibold text-white">Similar Players</h3>
+            </div>
+            
+            {similarLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full bg-gray-800/50" />
+                ))}
+              </div>
+            ) : !similarData?.success ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
+                <AlertCircle size={14} />
+                <span>{similarData?.reason || 'Unable to find similar players'}</span>
+              </div>
+            ) : !similarData.data?.similarPlayers || similarData.data.similarPlayers.length === 0 ? (
+              <p className="text-gray-500 text-sm py-4">No similar players found</p>
+            ) : (
+              <div className="space-y-2">
+                {similarData.data?.similarPlayers.map((p) => (
+                  <button
+                    key={p.playerId}
+                    onClick={() => navigate(`/player/${p.playerId}`)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                    data-testid={`similar-player-${p.playerId}`}
+                  >
+                    <div>
+                      <span className="text-white group-hover:text-purple-300 transition-colors">
+                        {p.playerName || 'Unknown'}
+                      </span>
+                      <span className="ml-2 text-xs text-gray-500">
+                        {p.team} • {p.position}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {(100 - p.distance).toFixed(0)}% match
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tier Neighbors */}
+          <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp size={18} className="text-cyan-400" />
+              <h3 className="text-lg font-semibold text-white">Neighbors in Tiers</h3>
+            </div>
+
+            {neighborsLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-10 w-full bg-gray-800/50" />
+                ))}
+              </div>
+            ) : !neighborsData?.success ? (
+              <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
+                <AlertCircle size={14} />
+                <span>{neighborsData?.reason || 'Unable to load tier rankings'}</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Players Above */}
+                {neighborsData.data?.above.map((p) => (
+                  <button
+                    key={p.playerId}
+                    onClick={() => navigate(`/player/${p.playerId}`)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                    data-testid={`neighbor-above-${p.playerId}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={14} className="text-green-400" />
+                      <span className="text-white group-hover:text-purple-300 transition-colors">
+                        {p.playerName}
+                      </span>
+                      <span className="text-xs text-gray-500">{p.team}</span>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
+                        {p.tier}
+                      </Badge>
+                      <span className="ml-2 text-xs text-cyan-400">{p.alpha.toFixed(0)}</span>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Current Player Marker */}
+                {neighborsData.data?.currentPlayer && (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-300 font-medium">
+                        {neighborsData.data.currentPlayer.playerName}
+                      </span>
+                      <span className="text-xs text-gray-400">← You are here</span>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="text-xs border-purple-500/50 text-purple-300">
+                        {neighborsData.data.currentPlayer.tier}
+                      </Badge>
+                      <span className="ml-2 text-xs text-purple-400 font-medium">
+                        {neighborsData.data.currentPlayer.alpha.toFixed(0)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Players Below */}
+                {neighborsData.data?.below.map((p) => (
+                  <button
+                    key={p.playerId}
+                    onClick={() => navigate(`/player/${p.playerId}`)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                    data-testid={`neighbor-below-${p.playerId}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <TrendingDown size={14} className="text-orange-400" />
+                      <span className="text-white group-hover:text-purple-300 transition-colors">
+                        {p.playerName}
+                      </span>
+                      <span className="text-xs text-gray-500">{p.team}</span>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
+                        {p.tier}
+                      </Badge>
+                      <span className="ml-2 text-xs text-cyan-400">{p.alpha.toFixed(0)}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

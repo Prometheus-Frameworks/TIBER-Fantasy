@@ -2981,6 +2981,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/etl', etlRoutes);
   app.use('/api/player-identity', playerIdentityRoutes);
 
+  // ========================================
+  // SIMILAR PLAYERS + TIERS NEIGHBORS + LEAGUE OWNERSHIP
+  // ========================================
+  
+  // GET /api/players/similar - Find players with similar Metric Matrix profiles
+  app.get('/api/players/similar', async (req, res) => {
+    try {
+      const { getSimilarPlayers } = await import('./modules/metricMatrix/similarPlayersService');
+      
+      const playerId = req.query.playerId as string;
+      const season = req.query.season ? parseInt(req.query.season as string) : undefined;
+      const week = req.query.week ? parseInt(req.query.week as string) : undefined;
+      const mode = (req.query.mode as "forge") || "forge";
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 8;
+
+      const result = await getSimilarPlayers({ playerId, season, week, mode, limit });
+      res.json(result);
+    } catch (error: any) {
+      console.error('[SimilarPlayers] Error:', error);
+      res.status(500).json({ success: false, reason: error.message || 'Server error' });
+    }
+  });
+
+  // GET /api/tiers/neighbors - Get players ranked above/below in FORGE tiers
+  app.get('/api/tiers/neighbors', async (req, res) => {
+    try {
+      const { getTiersNeighbors } = await import('./modules/metricMatrix/tiersNeighborsService');
+      
+      const playerId = req.query.playerId as string;
+      const position = req.query.position as string | undefined;
+      const format = (req.query.format as "dynasty" | "redraft" | "bestball") || "dynasty";
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
+
+      const result = await getTiersNeighbors({ playerId, position, format, limit });
+      res.json(result);
+    } catch (error: any) {
+      console.error('[TiersNeighbors] Error:', error);
+      res.status(500).json({ success: false, reason: error.message || 'Server error' });
+    }
+  });
+
+  // GET /api/league/ownership - Check player ownership in active league
+  app.get('/api/league/ownership', async (req, res) => {
+    try {
+      const { getLeagueOwnership } = await import('./modules/metricMatrix/leagueOwnershipService');
+      
+      const playerId = req.query.playerId as string;
+      const userId = req.query.userId as string | undefined;
+      const leagueId = req.query.leagueId as string | undefined;
+
+      const result = await getLeagueOwnership({ playerId, userId, leagueId });
+      res.json(result);
+    } catch (error: any) {
+      console.error('[LeagueOwnership] Error:', error);
+      res.status(500).json({ success: false, enabled: false, reason: error.message || 'Server error' });
+    }
+  });
+
   // Enhanced player data merging with deterministic ID mapping
   app.get('/api/player-data/merged', async (req, res) => {
     console.log('[MergedPlayerData] Starting merge request with params:', req.query);

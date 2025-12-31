@@ -4813,3 +4813,34 @@ export const insertQbContext2025Schema = createInsertSchema(qbContext2025).omit(
 });
 export type InsertQbContext2025 = z.infer<typeof insertQbContext2025Schema>;
 export type QbContext2025 = typeof qbContext2025.$inferSelect;
+
+// ========================================
+// SIMILAR PLAYERS CACHE
+// ========================================
+
+/**
+ * Cache for similar players computed via Metric Matrix vector distance
+ * Used by /api/players/similar endpoint to avoid recomputation
+ */
+export const similarPlayersCache = pgTable("similar_players_cache", {
+  id: serial("id").primaryKey(),
+  
+  // Query params
+  playerId: text("player_id").notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  mode: text("mode").notNull().default("forge"),
+  
+  // Cached results
+  similarPlayersJson: jsonb("similar_players_json").notNull(), // Array of similar player objects
+  baseConfidence: real("base_confidence"), // Confidence of the base player vector
+  
+  // Metadata
+  computedAt: timestamp("computed_at").defaultNow(),
+}, (table) => ({
+  uniqueQuery: unique("similar_players_cache_unique").on(table.playerId, table.season, table.week, table.mode),
+  playerIdx: index("similar_players_cache_player_idx").on(table.playerId),
+}));
+
+export type SimilarPlayersCache = typeof similarPlayersCache.$inferSelect;
+export type InsertSimilarPlayersCache = typeof similarPlayersCache.$inferInsert;

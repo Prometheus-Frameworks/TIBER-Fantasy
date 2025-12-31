@@ -558,12 +558,16 @@ export default function PlayerDetailDrawer({
           <Link 
             href={`/player/${nflfastrId}`} 
             onClick={onClose}
-            className="flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-medium border border-gray-700 rounded-md hover:bg-gray-800 hover:border-gray-600 transition-colors text-gray-300"
+            className="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium bg-purple-500/10 border border-purple-500/30 rounded-md hover:bg-purple-500/20 hover:border-purple-500/50 transition-colors text-purple-300"
             data-testid="link-view-full-profile"
           >
             <ExternalLink size={16} />
             View Full Profile
           </Link>
+          <p className="text-xs text-gray-400 text-center px-4">
+            <Users size={12} className="inline mr-1" />
+            See similar players, tier neighbors, and more on the full profile page
+          </p>
           <p className="text-xs text-gray-600 tracking-wide text-center">
             TIBER v1.0 — Tactical Index for Breakout Efficiency & Regression
           </p>
