@@ -24,12 +24,13 @@ interface AuditParams {
 
 async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
   try {
-    // Branch A: Check if any active league exists
+    // Branch A: Check if any active league exists (use user_league_preferences like ownershipService)
     const leagueResult = await db.execute(sql`
-      SELECT l.id as league_id 
-      FROM leagues l
-      WHERE l.platform = 'sleeper'
-      ORDER BY l.id DESC
+      SELECT ulp.active_league_id as league_id
+      FROM user_league_preferences ulp
+      JOIN leagues l ON l.id = ulp.active_league_id
+      WHERE ulp.user_id = 'default_user'
+        AND l.platform = 'sleeper'
       LIMIT 1
     `);
     
