@@ -1,0 +1,223 @@
+Feature Link Map + Feature Audit + Admin Card
+
+Title: System Integrity: Feature Link Map + Feature Audit endpoint + Admin Status Card (ties into Metric Matrix + PlayerPage work)
+
+Context (do not skip)
+
+We recently implemented:
+
+Metric Matrix v1.2 (player vectors, caching, percent guardrails, coverage endpoint)
+
+Player profile system (drawer + /player/:playerId page)
+
+Research hub (similar players, tier neighbors)
+
+League ownership v1 (DB-first, Sleeper↔Canonical bridge, safe responses)
+We now need a unified, auditable view to prevent feature drift.
+
+Goal
+
+Add docs/dev/FEATURE_LINK_MAP.md documenting how major features connect, including identity keys and data sources.
+
+Implement GET /api/system/feature-audit returning a JSON integrity report with checks that reflect today’s real issues.
+
+Add a small Admin UI card that pings this endpoint and shows status.
+
+1) Build FEATURE_LINK_MAP.md
+
+Create: docs/dev/FEATURE_LINK_MAP.md
+
+Include sections (keep it tight but real):
+
+Identity Spine
+
+canonical_id vs gsis/nflfastr style IDs (00-xxxxxxx)
+
+which ID /player/:playerId uses today (it appears to be GSIS style — document that)
+
+what endpoints expect as playerId
+
+Time Spine
+
+how current week is resolved (system endpoint)
+
+how player latest week fallback works
+
+how dropdown marks weeks without data
+
+Feature inventory (for each feature include: routes, primary tables, caches, dependencies)
+
+TIBER score endpoint + TiberScoreCard
+
+Metric Matrix player-vector endpoint + MetricMatrixCard
+
+Metric Matrix coverage endpoint
+
+Similar players endpoint (distance on vectors, caching)
+
+Tier neighbors endpoint (must match tiers data source)
+
+League ownership endpoint (DB-first + mapping coverage)
+
+PlayerDetailDrawer (quick view + link to full profile)
+
+PlayerPage (profile + research hub)
+
+Known drift risks + guardrails
+
+percent scaling (ensurePercentScale)
+
+NULL handling (never coerce missing to 0)
+
+vector cache invalidation and computed_at
+
+identity mapping coverage threshold
+
+2) Implement GET /api/system/feature-audit
+
+Add route: GET /api/system/feature-audit
+
+Return JSON like:
+
+{
+  "success": true,
+  "data": {
+    "status": "healthy|warning|critical",
+    "generatedAt": "...",
+    "checks": [
+      { "key":"identity.mappingCoverage", "status":"healthy", "value":0.66, "details":{...} },
+      { "key":"metricMatrix.vectorCoverage", "status":"healthy", "value":0.9934, "details":{...} },
+      { "key":"metricMatrix.percentScaleSanity", "status":"healthy", "details":{...} },
+      { "key":"metricMatrix.cacheFreshness", "status":"warning", "details":{...} },
+      { "key":"playerProfile.routes", "status":"healthy", "details":{...} },
+      { "key":"tiers.playerLinks", "status":"healthy", "details":{...} },
+      { "key":"ownership.service", "status":"healthy|warning", "details":{...} }
+    ]
+  }
+}
+
+Required checks (tie to today’s work)
+
+Implement these checks using existing tables/endpoints where possible:
+
+A) Identity mapping coverage
+
+Measure mapping coverage for the active league roster map (if available) OR overall mapping coverage using player_identity_map presence of sleeper_id or equivalent.
+
+This should reflect the known ~66% coverage from ownership debug.
+
+Status rules:
+
+= 0.70 healthy
+
+0.50–0.69 warning
+
+< 0.50 critical
+
+B) Metric Matrix snap_share_pct coverage
+
+Reuse logic similar to /api/metric-matrix/coverage (or call that service internally if it exists).
+
+Report snap_share_pct coverage for a requested season/week (default to current week + season if discoverable).
+
+If current week data isn’t present, fallback to the latest available week in player_usage for that season.
+
+C) Percent scale sanity (guardrail verification)
+
+Random sample of player_usage.target_share_pct and snap_share_pct rows:
+
+ensure values are within 0–100
+
+flag if many are <= 1.0 (indicating fractions slipped in)
+
+Return counts: fractionLikely, over100, nullCount, sampleSize
+
+D) Metric Matrix cache sanity
+
+Check metric_matrix_player_vectors:
+
+percent of rows with computed_at within last N days (e.g. 7)
+
+number of rows with season/week = 0 (should exist only for fallback cases)
+
+Status:
+
+if >20% of vectors older than 7 days → warning
+
+if table empty → critical
+
+E) Player Profile route integrity
+
+Confirm frontend route exists for /player/:playerId (can’t statically verify in backend, so instead check server-side that:
+
+GET /api/player-identity/player/:id works for a sample playerId
+
+Metric Matrix + Tiber score endpoints succeed for same playerId using the same id format
+
+Use Ja’Marr Chase as a smoke test if present in DB (00-0036900) but don’t hard fail if absent — just mark “skipped”.
+
+F) Similar players + tier neighbors availability
+
+Verify the endpoints respond (fast, no throw):
+
+/api/players/similar?playerId=X&season=Y&week=Z
+
+/api/tiers/neighbors?playerId=X&...
+
+Again: if no sample player available, mark skipped.
+
+Important requirements
+
+The audit endpoint must never throw. It should return success:true with some checks marked skipped or warning, unless something truly catastrophic happens (DB down).
+
+Add a ?season=&week=&playerId= query override so we can audit a specific case easily.
+
+3) Add Admin UI Status Card
+
+Add a small card to an existing admin/home admin page (find a reasonable spot, do not create a brand new admin app):
+
+Title: “System Integrity”
+
+Shows:
+
+overall status pill (healthy/warning/critical)
+
+generated time
+
+3–6 key check rows with colored dots
+
+Add a “Refresh” button
+
+Keep styling consistent with the dark UI theme (simple, clean, no jank)
+
+Sanity checks to run (required)
+
+npm run test:forge
+
+npm run audit:metric-matrix
+
+npm run test (if available; otherwise skip)
+
+Manual:
+
+hit /api/system/feature-audit in browser, confirm JSON
+
+open Admin page, confirm card renders and updates
+
+Deliverables
+
+docs/dev/FEATURE_LINK_MAP.md
+
+API route /api/system/feature-audit
+
+Admin UI card showing audit summary
+
+Notes / Guardrails
+
+Do NOT refactor existing features beyond what’s needed.
+
+Prefer reusing existing coverage logic/services.
+
+Keep the audit lightweight; don’t scan entire DB tables without limits.
+
+If a check depends on data that may not exist (like week 18), mark skipped rather than failing.
