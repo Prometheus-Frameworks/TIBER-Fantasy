@@ -361,6 +361,113 @@ export class SleeperRosterSyncService {
       console.warn('Failed to cache player data:', error);
     }
   }
+  
+  /**
+   * Sync and persist league rosters to database (league_teams table)
+   * This is the main entry point for populating roster data for ownership checks
+   */
+  async syncAndPersistLeague(internalLeagueId: string, sleeperLeagueId: string): Promise<{
+    success: boolean;
+    leagueId: string;
+    teamsUpserted: number;
+    totalPlayersStored: number;
+    error?: string;
+  }> {
+    try {
+      console.log(`🔄 [RosterSync] Starting sync for league ${internalLeagueId} (Sleeper: ${sleeperLeagueId})`);
+      
+      // 1. Fetch complete league data from Sleeper
+      const syncResult = await this.syncCompleteLeague(sleeperLeagueId);
+      
+      if (!syncResult.success || !syncResult.rosters) {
+        return {
+          success: false,
+          leagueId: internalLeagueId,
+          teamsUpserted: 0,
+          totalPlayersStored: 0,
+          error: syncResult.error || 'Failed to fetch league data from Sleeper'
+        };
+      }
+      
+      // 2. Import db for upserts
+      const { db } = await import('./infra/db');
+      const { sql } = await import('drizzle-orm');
+      
+      let teamsUpserted = 0;
+      let totalPlayersStored = 0;
+      
+      // 3. Upsert each roster into league_teams
+      for (const rosterData of syncResult.rosters) {
+        const { roster, user, players } = rosterData;
+        
+        // Extract Sleeper player IDs as JSONB array
+        const playerIds = players.map(p => p.sleeperId);
+        const starterIds = roster.starters || [];
+        
+        // Upsert using external_roster_id as the unique key
+        await db.execute(sql`
+          INSERT INTO league_teams (
+            id,
+            league_id, 
+            external_user_id, 
+            external_roster_id, 
+            display_name, 
+            is_commissioner,
+            avatar,
+            players,
+            starters,
+            last_synced_at,
+            updated_at
+          ) VALUES (
+            gen_random_uuid(),
+            ${internalLeagueId},
+            ${user.user_id},
+            ${String(roster.roster_id)},
+            ${user.display_name || user.username || `Team ${roster.roster_id}`},
+            false,
+            ${user.avatar || null},
+            ${JSON.stringify(playerIds)}::jsonb,
+            ${JSON.stringify(starterIds)}::jsonb,
+            NOW(),
+            NOW()
+          )
+          ON CONFLICT (league_id, external_roster_id) 
+          DO UPDATE SET
+            external_user_id = EXCLUDED.external_user_id,
+            display_name = EXCLUDED.display_name,
+            avatar = EXCLUDED.avatar,
+            players = EXCLUDED.players,
+            starters = EXCLUDED.starters,
+            last_synced_at = NOW(),
+            updated_at = NOW()
+        `);
+        
+        teamsUpserted++;
+        totalPlayersStored += playerIds.length;
+        
+        console.log(`✅ [RosterSync] Upserted team ${user.display_name || user.username}: ${playerIds.length} players`);
+      }
+      
+      console.log(`🎯 [RosterSync] Complete: ${teamsUpserted} teams, ${totalPlayersStored} total players`);
+      
+      return {
+        success: true,
+        leagueId: internalLeagueId,
+        teamsUpserted,
+        totalPlayersStored
+      };
+      
+    } catch (error: any) {
+      console.error('❌ [RosterSync] Sync failed:', error);
+      return {
+        success: false,
+        leagueId: internalLeagueId,
+        teamsUpserted: 0,
+        totalPlayersStored: 0,
+        error: error.message || 'Unknown sync error'
+      };
+    }
+  }
 }
 
 export const sleeperRosterSync = new SleeperRosterSyncService();

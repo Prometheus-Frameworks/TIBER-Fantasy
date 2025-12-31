@@ -3106,6 +3106,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/league/sync-rosters - Sync Sleeper rosters to league_teams for ownership
+  app.post('/api/league/sync-rosters', async (req, res) => {
+    try {
+      const userIdParam = req.query.user_id as string | undefined;
+      const userId = userIdParam || 'default_user';
+      
+      console.log(`🔄 [SyncRosters] Starting sync for user: ${userId}`);
+      
+      // 1. Get active league from user_league_preferences (like ownershipService)
+      const { db } = await import('./infra/db');
+      const { sql } = await import('drizzle-orm');
+      
+      const prefResult = await db.execute(sql`
+        SELECT ulp.active_league_id, l.league_id_external, l.league_name
+        FROM user_league_preferences ulp
+        JOIN leagues l ON l.id = ulp.active_league_id
+        WHERE ulp.user_id = ${userId}
+        LIMIT 1
+      `);
+      
+      const preference = prefResult.rows[0] as { 
+        active_league_id: string | null; 
+        league_id_external: string | null;
+        league_name: string | null;
+      } | undefined;
+      
+      if (!preference?.active_league_id) {
+        res.json({
+          success: false,
+          error: 'No active league found. Connect a Sleeper league first.',
+          leagueId: null,
+          teamsUpserted: 0,
+          totalPlayersStored: 0
+        });
+        return;
+      }
+      
+      if (!preference.league_id_external) {
+        res.json({
+          success: false,
+          error: `League "${preference.league_name}" has no Sleeper league ID. Re-import from Sleeper.`,
+          leagueId: preference.active_league_id,
+          teamsUpserted: 0,
+          totalPlayersStored: 0
+        });
+        return;
+      }
+      
+      // 2. Call the roster sync service
+      const { sleeperRosterSync } = await import('./sleeperRosterSync');
+      
+      const result = await sleeperRosterSync.syncAndPersistLeague(
+        preference.active_league_id,
+        preference.league_id_external
+      );
+      
+      res.json(result);
+      
+    } catch (error: any) {
+      console.error('[SyncRosters] Error:', error);
+      res.json({
+        success: false,
+        error: error.message || 'Sync failed',
+        leagueId: null,
+        teamsUpserted: 0,
+        totalPlayersStored: 0
+      });
+    }
+  });
+
   // Enhanced player data merging with deterministic ID mapping
   app.get('/api/player-data/merged', async (req, res) => {
     console.log('[MergedPlayerData] Starting merge request with params:', req.query);
