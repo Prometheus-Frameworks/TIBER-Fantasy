@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
+import { getRecentPlayers, clearRecentPlayers, type RecentPlayer } from '@/lib/recentPlayers';
 import { 
   ChevronLeft, Search, LayoutDashboard, BarChart3, Calendar, FlaskConical, 
   FileText, ArrowLeftRight, BookOpen, Plus, Send, User, Loader2, Lightbulb, 
@@ -156,6 +157,20 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedPlayerForModal, setSelectedPlayerForModal] = useState<PlayerSearchResult | null>(null);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Recently viewed players
+  const [recentPlayers, setRecentPlayers] = useState<RecentPlayer[]>([]);
+  
+  // Load recently viewed players on mount and when window gains focus
+  const refreshRecents = useCallback(() => {
+    setRecentPlayers(getRecentPlayers());
+  }, []);
+  
+  useEffect(() => {
+    refreshRecents();
+    window.addEventListener('focus', refreshRecents);
+    return () => window.removeEventListener('focus', refreshRecents);
+  }, [refreshRecents]);
   
   // Mobile state
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -542,9 +557,9 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
   };
 
   const handleSelectSearchResult = (player: PlayerSearchResult) => {
-    setSelectedPlayerForModal(player);
     setSearchQuery('');
     setIsSearchOpen(false);
+    navigate(`/player/${player.canonicalId}`);
   };
 
   const handleClosePlayerModal = () => {
@@ -1183,6 +1198,69 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
           {/* Dashboard Content - only show when dashboard is active */}
           {activeFeature === 'dashboard' && (
           <>
+          {/* Player Research Module */}
+          <section className="bg-white/[0.02] border border-purple-500/15 rounded-xl p-3 md:p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wide">Player Research</p>
+                <p className="text-sm text-zinc-300">Search players or revisit recent profiles</p>
+              </div>
+              <Link href="/tiers">
+                <Button size="sm" variant="ghost" className="text-zinc-400 hover:text-zinc-200" data-testid="link-view-all-tiers">
+                  View Tiers →
+                </Button>
+              </Link>
+            </div>
+
+            {/* Recently Viewed Players */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-zinc-400">Recently Viewed</p>
+                {recentPlayers.length > 0 && (
+                  <button
+                    onClick={() => {
+                      clearRecentPlayers();
+                      refreshRecents();
+                    }}
+                    className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors"
+                    data-testid="button-clear-recents"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              
+              {recentPlayers.length === 0 ? (
+                <p className="text-xs text-zinc-500 py-3" data-testid="text-no-recents">
+                  No recent profiles yet. Search for a player or browse the Tiers page.
+                </p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {recentPlayers.map((player) => (
+                    <Link
+                      key={player.playerId}
+                      href={`/player/${player.playerId}`}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-purple-500/20 hover:border-purple-500/40 hover:bg-white/[0.05] transition-all group"
+                      data-testid={`recent-player-${player.playerId}`}
+                    >
+                      <div className="w-7 h-7 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-full flex items-center justify-center font-bold text-white text-[10px]">
+                        {player.position}
+                      </div>
+                      <div className="text-left">
+                        <div className="text-xs text-zinc-200 group-hover:text-purple-400 transition-colors font-medium">
+                          {player.name}
+                        </div>
+                        <div className="text-[10px] text-zinc-500">
+                          {player.team}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Quick Insights Row */}
           <section>
             <h3 className="text-[11px] md:text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2 md:mb-3">
