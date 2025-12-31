@@ -60,6 +60,9 @@ interface TiersNeighborsResponse {
     rank: number | null;
     above: TierNeighbor[];
     below: TierNeighbor[];
+    totalRanked: number;
+    mode: 'dynasty' | 'redraft' | 'bestball';
+    position: string;
   };
   reason?: string;
 }
@@ -71,6 +74,8 @@ interface SimilarPlayer {
   position: string | null;
   distance: number;
   axesSummary: Record<string, number>;
+  reason: string;
+  watch: string;
 }
 
 interface SimilarPlayersResponse {
@@ -83,6 +88,7 @@ interface SimilarPlayersResponse {
       confidence: number;
     };
     similarPlayers: SimilarPlayer[];
+    confidenceWarning?: string;
   };
   reason?: string;
 }
@@ -266,7 +272,7 @@ export default function PlayerPage() {
                   {player.fullName}
                 </h1>
                 {/* League Context Badge */}
-                {ownershipData?.enabled && ownershipData.data && (
+                {ownershipData?.enabled && ownershipData.data ? (
                   <Badge 
                     variant="outline" 
                     className={`text-xs ${
@@ -292,7 +298,11 @@ export default function PlayerPage() {
                     )}
                     {ownershipData.data.status === 'free_agent' && 'Free Agent'}
                   </Badge>
-                )}
+                ) : ownershipData && !ownershipData.enabled ? (
+                  <span className="text-xs text-gray-500 italic" data-testid="text-ownership-hint">
+                    Connect a league for ownership
+                  </span>
+                ) : null}
               </div>
               <p className="text-lg text-gray-400 mt-1" data-testid="text-player-info">
                 {player.nflTeam || 'FA'} • {player.position}
@@ -410,24 +420,37 @@ export default function PlayerPage() {
               <p className="text-gray-500 text-sm py-4">No similar players found</p>
             ) : (
               <div className="space-y-2">
+                {similarData.data?.confidenceWarning && (
+                  <div className="flex items-center gap-2 text-amber-400 text-xs p-2 bg-amber-500/10 rounded-lg mb-3">
+                    <AlertCircle size={12} />
+                    <span>{similarData.data.confidenceWarning}</span>
+                  </div>
+                )}
                 {similarData.data?.similarPlayers.map((p) => (
                   <button
                     key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}`)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}`)}
+                    className="w-full p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
                     data-testid={`similar-player-${p.playerId}`}
                   >
-                    <div>
-                      <span className="text-white group-hover:text-purple-300 transition-colors">
-                        {p.playerName || 'Unknown'}
-                      </span>
-                      <span className="ml-2 text-xs text-gray-500">
-                        {p.team} • {p.position}
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <span className="text-white group-hover:text-purple-300 transition-colors">
+                          {p.playerName || 'Unknown'}
+                        </span>
+                        <span className="ml-2 text-xs text-gray-500">
+                          {p.team} • {p.position}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">
+                        {(100 - p.distance).toFixed(0)}% match
                       </span>
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {(100 - p.distance).toFixed(0)}% match
-                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <span className="text-green-400/80">{p.reason}</span>
+                      <span className="mx-1.5">•</span>
+                      <span className="text-amber-400/70">{p.watch}</span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -454,11 +477,18 @@ export default function PlayerPage() {
               </div>
             ) : (
               <div className="space-y-3">
+                {/* Rank context */}
+                {neighborsData.data?.rank && (
+                  <div className="text-xs text-gray-500 mb-2">
+                    Rank #{neighborsData.data.rank} of {neighborsData.data.totalRanked || '?'} {neighborsData.data.position}s ({neighborsData.data.mode})
+                  </div>
+                )}
+
                 {/* Players Above */}
                 {neighborsData.data?.above.map((p) => (
                   <button
                     key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}`)}
+                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
                     className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
                     data-testid={`neighbor-above-${p.playerId}`}
                   >
@@ -502,7 +532,7 @@ export default function PlayerPage() {
                 {neighborsData.data?.below.map((p) => (
                   <button
                     key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}`)}
+                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
                     className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
                     data-testid={`neighbor-below-${p.playerId}`}
                   >

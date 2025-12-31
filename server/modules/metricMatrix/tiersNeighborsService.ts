@@ -24,6 +24,9 @@ type TiersNeighborsResponse = {
     rank: number | null;
     above: TierNeighbor[];
     below: TierNeighbor[];
+    totalRanked: number;
+    mode: "dynasty" | "redraft" | "bestball";
+    position: string;
   };
   reason?: string;
 };
@@ -69,7 +72,7 @@ export async function getTiersNeighbors(
       const playerIndex = scores.findIndex((s) => s.playerId === playerId);
       
       if (playerIndex !== -1) {
-        return buildNeighborsResponse(scores, playerIndex, limit);
+        return buildNeighborsResponse(scores, playerIndex, limit, format, pos);
       }
     }
 
@@ -83,7 +86,9 @@ export async function getTiersNeighbors(
 function buildNeighborsResponse(
   scores: TierNeighbor[],
   playerIndex: number,
-  limit: number
+  limit: number,
+  mode: "dynasty" | "redraft" | "bestball",
+  position: string
 ): TiersNeighborsResponse {
   const currentPlayer = scores[playerIndex];
 
@@ -102,6 +107,9 @@ function buildNeighborsResponse(
       rank: playerIndex + 1,
       above,
       below,
+      totalRanked: scores.length,
+      mode,
+      position,
     },
   };
 }

@@ -25,7 +25,48 @@ type SimilarPlayer = {
   position: string | null;
   distance: number;
   axesSummary: Record<string, number>;
+  reason: string;
+  watch: string;
 };
+
+const AXIS_LABELS: Record<string, string> = {
+  usage: "Usage",
+  efficiency: "Efficiency",
+  td_role: "TD Role",
+  stability: "Stability",
+  context: "Context",
+};
+
+function computeAxisDifferences(
+  baseAxes: Record<string, number>,
+  candidateAxes: Record<string, number>
+): { axis: string; diff: number }[] {
+  const diffs: { axis: string; diff: number }[] = [];
+  for (const key of Object.keys(AXIS_WEIGHTS)) {
+    const valA = baseAxes[key] ?? 50;
+    const valB = candidateAxes[key] ?? 50;
+    diffs.push({ axis: key, diff: Math.abs(valA - valB) });
+  }
+  return diffs.sort((a, b) => a.diff - b.diff);
+}
+
+function generateExplanation(
+  baseAxes: Record<string, number>,
+  candidateAxes: Record<string, number>
+): { reason: string; watch: string } {
+  const sortedDiffs = computeAxisDifferences(baseAxes, candidateAxes);
+  
+  const top2Closest = sortedDiffs.slice(0, 2);
+  const biggestDiff = sortedDiffs[sortedDiffs.length - 1];
+  
+  const closestLabels = top2Closest.map(d => AXIS_LABELS[d.axis] || d.axis);
+  const watchLabel = AXIS_LABELS[biggestDiff.axis] || biggestDiff.axis;
+  
+  return {
+    reason: `Similar in ${closestLabels.join(" + ")}`,
+    watch: `Differs most in ${watchLabel}`,
+  };
+}
 
 type SimilarPlayersRequest = {
   playerId: string;
@@ -45,6 +86,7 @@ type SimilarPlayersResponse = {
       confidence: number;
     };
     similarPlayers: SimilarPlayer[];
+    confidenceWarning?: string;
   };
   reason?: string;
 };
@@ -240,6 +282,7 @@ export async function getSimilarPlayers(
     const scoredCandidates: SimilarPlayer[] = samePositionCandidates.map((c) => {
       const candidateAxesRecord = vectorToRecord(c.axes);
       const distance = computeWeightedEuclideanDistance(baseAxesRecord, candidateAxesRecord);
+      const explanation = generateExplanation(baseAxesRecord, candidateAxesRecord);
 
       return {
         playerId: c.playerId,
@@ -248,6 +291,8 @@ export async function getSimilarPlayers(
         position: c.position,
         distance,
         axesSummary: candidateAxesRecord,
+        reason: explanation.reason,
+        watch: explanation.watch,
       };
     });
 
@@ -255,6 +300,10 @@ export async function getSimilarPlayers(
     const topN = scoredCandidates.slice(0, limit);
 
     await writeCachedSimilarPlayers(playerId, season, week, mode, topN, baseVector.confidence);
+
+    const confidenceWarning = baseVector.confidence < 0.8 
+      ? `Data confidence is ${(baseVector.confidence * 100).toFixed(0)}% — comparisons may be less reliable`
+      : undefined;
 
     return {
       success: true,
@@ -266,6 +315,7 @@ export async function getSimilarPlayers(
           confidence: baseVector.confidence,
         },
         similarPlayers: topN,
+        confidenceWarning,
       },
     };
   } catch (error: any) {

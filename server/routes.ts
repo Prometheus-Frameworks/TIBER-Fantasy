@@ -3028,10 +3028,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { getLeagueOwnership } = await import('./modules/metricMatrix/leagueOwnershipService');
       
       const playerId = req.query.playerId as string;
-      const userId = req.query.userId as string | undefined;
-      const leagueId = req.query.leagueId as string | undefined;
+      const userIdParam = req.query.user_id as string | undefined;
+      const userId = userIdParam || 'default_user';
+      
+      const leagueContext = await storage.getUserLeagueContext(userId);
+      
+      if (!leagueContext || !leagueContext.activeLeague) {
+        res.json({
+          success: true,
+          enabled: false,
+          reason: "No active league selected. Connect a Sleeper league to see ownership."
+        });
+        return;
+      }
+      
+      const externalLeagueId = (leagueContext.activeLeague as any).leagueIdExternal || 
+                               (leagueContext.activeLeague as any).league_id_external;
+      
+      if (!externalLeagueId) {
+        res.json({
+          success: true,
+          enabled: false,
+          reason: "League not connected to Sleeper API."
+        });
+        return;
+      }
+      
+      const platformProfile = await storage.getUserPlatformProfile(userId, 'sleeper');
+      const sleeperUserId = platformProfile ? 
+        ((platformProfile as any).externalUserId ?? (platformProfile as any).external_user_id) : null;
 
-      const result = await getLeagueOwnership({ playerId, userId, leagueId });
+      const result = await getLeagueOwnership({ 
+        playerId, 
+        userId: sleeperUserId, 
+        leagueId: externalLeagueId 
+      });
       res.json(result);
     } catch (error: any) {
       console.error('[LeagueOwnership] Error:', error);
