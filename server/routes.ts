@@ -3176,6 +3176,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/league/enrich-roster-identity - Auto-enrich identity map from roster players
+  app.post('/api/league/enrich-roster-identity', async (req, res) => {
+    try {
+      const userIdParam = req.query.user_id as string | undefined;
+      const userId = userIdParam || 'default_user';
+      
+      console.log(`🔧 [EnrichIdentity] Starting enrichment for user: ${userId}`);
+      
+      const { enrichRosterIdentities } = await import('./services/identity/rosterIdentityEnrichment');
+      const result = await enrichRosterIdentities(userId);
+      
+      res.json(result);
+      
+    } catch (error: any) {
+      console.error('[EnrichIdentity] Error:', error);
+      res.json({
+        success: false,
+        error: error.message || 'Enrichment failed',
+        leagueId: null,
+        attempted: 0,
+        matched: 0,
+        ambiguous: 0,
+        unmapped: 0,
+        updatedRows: 0,
+        newRosterBridgeCoverage: 0
+      });
+    }
+  });
+
   // Enhanced player data merging with deterministic ID mapping
   app.get('/api/player-data/merged', async (req, res) => {
     console.log('[MergedPlayerData] Starting merge request with params:', req.query);

@@ -127,7 +127,36 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
     if (coveragePct < 0.70) status = 'critical';
     else if (coveragePct < 0.85) status = 'warning';
     
-    const unmappedSample = unmappedIds.slice(0, 10);
+    // Get unmapped sample with player details from unmapped_sleeper_players table
+    const unmappedSampleIds = unmappedIds.slice(0, 10);
+    let unmappedSample: { sleeperId: string; fullName?: string; position?: string; team?: string }[] = [];
+    
+    if (unmappedSampleIds.length > 0) {
+      const unmappedDetailsResult = await db.execute(sql`
+        SELECT sleeper_id, full_name, position, team
+        FROM unmapped_sleeper_players
+        WHERE sleeper_id = ANY(ARRAY[${sql.join(unmappedSampleIds.map(id => sql`${id}`), sql`, `)}]::text[])
+      `);
+      
+      const detailsMap = new Map((unmappedDetailsResult.rows as any[]).map(r => [r.sleeper_id, r]));
+      
+      unmappedSample = unmappedSampleIds.map(id => {
+        const details = detailsMap.get(id);
+        return {
+          sleeperId: id,
+          fullName: details?.full_name,
+          position: details?.position,
+          team: details?.team
+        };
+      });
+    }
+    
+    // Add actionHint for critical status
+    const actionHint = status === 'critical' 
+      ? 'Run POST /api/league/enrich-roster-identity to improve mapping'
+      : status === 'warning' 
+        ? 'Consider running identity enrichment to reach 85% coverage'
+        : undefined;
     
     return {
       key: 'identity.roster_bridge_coverage',
@@ -138,6 +167,7 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
         mapped,
         coveragePct: Math.round(coveragePct * 100) / 100,
         unmappedSample,
+        ...(actionHint && { actionHint }),
         thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70' },
         note: 'Roster coverage is what ownership + player UX depends on.'
       }
