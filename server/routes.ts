@@ -3022,51 +3022,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/league/ownership - Check player ownership in active league
+  // GET /api/league/ownership - Check player ownership in active league (v2 with Sleeper→Canonical bridge)
   app.get('/api/league/ownership', async (req, res) => {
     try {
-      const { getLeagueOwnership } = await import('./modules/metricMatrix/leagueOwnershipService');
+      const { getOwnershipForPlayer } = await import('./services/ownership/ownershipService');
       
       const playerId = req.query.playerId as string;
       const userIdParam = req.query.user_id as string | undefined;
       const userId = userIdParam || 'default_user';
       
-      const leagueContext = await storage.getUserLeagueContext(userId);
-      
-      if (!leagueContext || !leagueContext.activeLeague) {
-        res.json({
-          success: true,
-          enabled: false,
-          reason: "No active league selected. Connect a Sleeper league to see ownership."
-        });
-        return;
-      }
-      
-      const externalLeagueId = (leagueContext.activeLeague as any).leagueIdExternal || 
-                               (leagueContext.activeLeague as any).league_id_external;
-      
-      if (!externalLeagueId) {
-        res.json({
-          success: true,
-          enabled: false,
-          reason: "League not connected to Sleeper API."
-        });
-        return;
-      }
-      
-      const platformProfile = await storage.getUserPlatformProfile(userId, 'sleeper');
-      const sleeperUserId = platformProfile ? 
-        ((platformProfile as any).externalUserId ?? (platformProfile as any).external_user_id) : null;
-
-      const result = await getLeagueOwnership({ 
-        playerId, 
-        userId: sleeperUserId, 
-        leagueId: externalLeagueId 
+      const result = await getOwnershipForPlayer({ 
+        userId, 
+        canonicalPlayerId: playerId 
       });
-      res.json(result);
+      
+      res.json({
+        success: true,
+        enabled: result.status !== 'disabled' && result.status !== 'fallback',
+        data: result
+      });
     } catch (error: any) {
       console.error('[LeagueOwnership] Error:', error);
-      res.status(500).json({ success: false, enabled: false, reason: error.message || 'Server error' });
+      res.json({
+        success: true,
+        enabled: false,
+        data: {
+          status: 'fallback' as const,
+          hint: 'Unable to check ownership. Try again later.',
+          source: 'disabled' as const
+        }
+      });
+    }
+  });
+
+  // GET /api/league/ownership/debug - Debug endpoint for mapping coverage
+  app.get('/api/league/ownership/debug', async (req, res) => {
+    try {
+      const { getLeagueOwnershipDebug } = await import('./services/ownership/ownershipService');
+      
+      const leagueId = req.query.leagueId as string;
+      if (!leagueId) {
+        res.status(400).json({ success: false, error: 'leagueId is required' });
+        return;
+      }
+      
+      const result = await getLeagueOwnershipDebug(leagueId);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      console.error('[LeagueOwnershipDebug] Error:', error);
+      res.status(500).json({ success: false, error: error.message || 'Server error' });
     }
   });
 
