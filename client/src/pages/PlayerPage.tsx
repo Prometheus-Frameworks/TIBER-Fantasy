@@ -97,10 +97,12 @@ interface LeagueOwnershipResponse {
   success: boolean;
   enabled: boolean;
   data?: {
-    status: 'on_my_roster' | 'owned_by_other' | 'free_agent' | 'unknown';
-    ownerTeamName?: string;
-    ownerDisplayName?: string;
-    isOnMyTeam: boolean;
+    status: 'owned_by_me' | 'owned_by_other' | 'free_agent' | 'disabled' | 'fallback';
+    teamId?: string;
+    teamName?: string;
+    leagueId?: string;
+    hint?: string;
+    source: 'db' | 'sleeper_api' | 'disabled';
   };
   reason?: string;
 }
@@ -276,7 +278,7 @@ export default function PlayerPage() {
                   <Badge 
                     variant="outline" 
                     className={`text-xs ${
-                      ownershipData.data.status === 'on_my_roster' 
+                      ownershipData.data.status === 'owned_by_me' 
                         ? 'border-green-500/50 text-green-400 bg-green-500/10' 
                         : ownershipData.data.status === 'owned_by_other'
                         ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
@@ -284,7 +286,7 @@ export default function PlayerPage() {
                     }`}
                     data-testid="badge-ownership"
                   >
-                    {ownershipData.data.status === 'on_my_roster' && (
+                    {ownershipData.data.status === 'owned_by_me' && (
                       <>
                         <UserCheck size={12} className="mr-1" />
                         On Your Roster
@@ -293,14 +295,14 @@ export default function PlayerPage() {
                     {ownershipData.data.status === 'owned_by_other' && (
                       <>
                         <User size={12} className="mr-1" />
-                        {ownershipData.data.ownerTeamName || 'Owned'}
+                        {ownershipData.data.teamName || 'Owned'}
                       </>
                     )}
-                    {ownershipData.data.status === 'free_agent' && 'Free Agent'}
+                    {ownershipData.data.status === 'free_agent' && 'Available'}
                   </Badge>
-                ) : ownershipData && !ownershipData.enabled ? (
+                ) : ownershipData && !ownershipData.enabled && ownershipData.data?.hint ? (
                   <span className="text-xs text-gray-500 italic" data-testid="text-ownership-hint">
-                    Connect a league for ownership
+                    {ownershipData.data.hint}
                   </span>
                 ) : null}
               </div>

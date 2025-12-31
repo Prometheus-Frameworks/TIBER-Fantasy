@@ -31,7 +31,7 @@ async function fetchSleeperToCanonicalMap(sleeperIds: string[]): Promise<Map<str
   const result = await db.execute(sql`
     SELECT sleeper_id, canonical_id 
     FROM player_identity_map 
-    WHERE sleeper_id = ANY(${sleeperIds})
+    WHERE sleeper_id = ANY(ARRAY[${sql.join(sleeperIds.map(id => sql`${id}`), sql`, `)}]::text[])
   `);
   
   const map = new Map<string, string>();
