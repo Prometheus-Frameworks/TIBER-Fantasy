@@ -1,0 +1,131 @@
+TIBER.AI — Player Ownership v1 (DB-first) + Canonical↔Sleeper ID Bridge + Sanity Checks
+
+GOAL
+Implement a reliable league ownership signal that works across PlayerPage + Tiers + Drawer:
+- “Owned by you”, “Owned by another team”, or “Free agent”
+- Deterministic from DB when league rosters exist
+- Fallback to Sleeper API only if DB is missing/insufficient
+- Never 500s; always returns a safe shape
+
+CONTEXT
+We already have tables:
+- leagues
+- league_teams (players jsonb array storing Sleeper player IDs)
+- user_league_preferences (active league/team per user)
+- user_platform_profiles (links user → Sleeper)
+- player_identity_map (contains sleeper_id and canonical_id)
+Ownership currently returns "disabled" without league connection.
+
+IMPORTANT: ID mismatch is the blocker:
+- league_teams.players contains Sleeper IDs
+- app routes often use canonical IDs (canonicalId == player_identity_map.canonical_id)
+We must bridge Sleeper → canonical via player_identity_map.sleeper_id.
+
+REQUIREMENTS
+
+A) New Service: server/services/ownership/ownershipService.ts
+Implement:
+1) getOwnershipForPlayer(params)
+Inputs:
+- userId (from auth/session where available; if not available, treat as anonymous and return disabled with hint)
+- canonicalPlayerId (the ID used in /player/:playerId route)
+- season/week optional but not required
+
+Outputs (strict):
+{
+  status: "owned_by_me" | "owned_by_other" | "free_agent" | "disabled" | "fallback",
+  teamId?: string,
+  teamName?: string,
+  leagueId?: string,
+  hint?: string,
+  source: "db" | "sleeper_api" | "disabled"
+}
+
+Logic:
+- Fetch active league/team for user (user_league_preferences). If missing → disabled + hint "Connect a league"
+- Fetch league_teams rows for that league.
+- Build roster map from league_teams.players:
+  - players is JSON array of Sleeper IDs (strings). Normalize to string array.
+  - Convert Sleeper IDs → canonical IDs:
+    - Batch query player_identity_map WHERE sleeper_id IN (...)
+    - Create Map<sleeperId, canonicalId>
+  - Create Set of canonical IDs for each team
+- Determine ownership:
+  - If canonicalPlayerId is in active team set → owned_by_me
+  - Else if in any other team set → owned_by_other (include that team info)
+  - Else → free_agent
+- CACHE:
+  - Cache “league ownership map” per (leagueId) for 15 minutes
+  - It should cache the roster lookup map, not just single-player results
+
+Fallback to Sleeper API:
+- If league exists but rosters are empty OR mapping coverage < threshold (e.g., <70% of sleeper IDs mapped):
+  - Use Sleeper API to fetch rosters for league + map Sleeper IDs → canonical via player_identity_map.sleeper_id
+  - Return source "sleeper_api" and status accordingly
+- If Sleeper API also fails → return disabled/fallback with hint, never 500
+
+B) API ROUTE
+Create/upgrade route:
+GET /api/league/ownership?playerId=<canonicalId>
+Return:
+{ success: true, data: <ownershipResult> }
+On all failures: success: true, status disabled/fallback with hint. (No throwing errors to client.)
+
+C) DEBUG ENDPOINT (sanity checks)
+Add:
+GET /api/league/ownership/debug?leagueId=<id>
+Returns:
+{
+  leagueId,
+  teams: [{ teamId, teamName, rosterCountSleeper, mappedCountCanonical }],
+  mappingCoveragePct,
+  sourceCandidate: "db" | "sleeper_api",
+  notes: [...]
+}
+This is for internal debugging; keep it behind admin check if you have one, otherwise keep it harmless.
+
+D) FRONTEND INTEGRATION
+1) PlayerPage header:
+- Call /api/league/ownership?playerId=...
+- Show badge:
+  - owned_by_me: green “On your roster”
+  - owned_by_other: orange “Owned by <teamName>”
+  - free_agent: gray “Available”
+  - disabled/fallback: gray “Connect a league” + small hint text
+2) Tiers page:
+- Add a subtle badge/icon next to player name (optional), but do not bloat the UI.
+- Must not slow down tiers list: only fetch ownership on hover or when opening drawer, OR batch endpoint if you already have infra.
+
+E) UNIT TESTS
+Add tests for ownershipService:
+- No league context → disabled
+- DB rosters populated + mapping exists → owned_by_me / owned_by_other / free_agent
+- Mapping coverage low triggers fallback path (mock)
+- Never throws; always returns a safe object
+
+F) SANITY CHECKS (must run)
+- npm run test:forge
+- npm run audit:metric-matrix
+- Run any existing metric matrix unit tests
+- Manual curl examples:
+  - /api/league/ownership?playerId=00-0036900
+  - /api/league/ownership/debug?leagueId=<id>
+
+G) IMPLEMENTATION NOTES / GOTCHAS
+- Treat league_teams.players as jsonb that may be null, array, or stringified; normalize defensively.
+- player_identity_map.sleeper_id may be null for some canonical players; handle missing mapping gracefully.
+- Cache invalidation is OK to be time-based for now (15 minutes); no need for event-driven invalidation yet.
+- Never block the UI if ownership is unavailable.
+
+DELIVERABLES
+- ownershipService + cache
+- API route(s)
+- debug endpoint
+- frontend badge in PlayerPage (required), optional tiers/drawer enhancement
+- tests + passing checks
+
+When done, respond with:
+1) Files changed list
+2) How to test locally (commands + curl)
+3) Example JSON output for owned_by_me and free_agent
+4) Any known limitations
