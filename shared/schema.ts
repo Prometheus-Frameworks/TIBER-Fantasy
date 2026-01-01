@@ -514,6 +514,33 @@ export const unmappedSleeperPlayers = pgTable("unmapped_sleeper_players", {
   lastSeenAt: timestamp("last_seen_at").defaultNow(),
 });
 
+// Identity Enrichment Log - Traces every Sleeper→Canonical match attempt
+export const identityEnrichmentLog = pgTable("identity_enrichment_log", {
+  id: serial("id").primaryKey(),
+  createdAt: timestamp("created_at").defaultNow(),
+  leagueId: uuid("league_id"),
+  sleeperPlayerId: text("sleeper_player_id").notNull(),
+  sleeperFullName: text("sleeper_full_name"),
+  sleeperPosition: text("sleeper_position"),
+  sleeperTeam: text("sleeper_team"),
+  sleeperGsisId: text("sleeper_gsis_id"),
+  sleeperFantasyDataId: text("sleeper_fantasy_data_id"),
+  matchedCanonicalId: text("matched_canonical_id"),
+  matchConfidence: text("match_confidence").notNull(), // 'exact' | 'high' | 'medium' | 'none'
+  matchStrategy: text("match_strategy").notNull(), // 'gsis' | 'fantasy_data' | 'name_pos_team' | 'name_pos' | 'none'
+  candidateCount: integer("candidate_count").notNull().default(0),
+  candidateSample: jsonb("candidate_sample"), // First 5 candidates for debugging
+  notes: text("notes"),
+}, (table) => ({
+  leagueCreatedIdx: index("iel_league_created_idx").on(table.leagueId, table.createdAt),
+  sleeperIdIdx: index("iel_sleeper_id_idx").on(table.sleeperPlayerId),
+  canonicalIdIdx: index("iel_canonical_id_idx").on(table.matchedCanonicalId),
+  strategyIdx: index("iel_strategy_idx").on(table.matchStrategy),
+}));
+
+export type IdentityEnrichmentLog = typeof identityEnrichmentLog.$inferSelect;
+export type InsertIdentityEnrichmentLog = typeof identityEnrichmentLog.$inferInsert;
+
 // NFL Teams Dimension Table
 export const nflTeamsDim = pgTable("nfl_teams_dim", {
   teamCode: text("team_code").primaryKey(), // "KC", "SF", etc.
