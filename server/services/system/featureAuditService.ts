@@ -285,6 +285,129 @@ async function checkEnrichmentRecentActivity(): Promise<AuditCheck> {
   }
 }
 
+async function checkGsisDuplicates(): Promise<AuditCheck> {
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        gsis_id, 
+        COUNT(*) as count, 
+        array_agg(canonical_id) as players
+      FROM player_identity_map
+      WHERE gsis_id IS NOT NULL
+        AND position IN ('QB', 'RB', 'WR', 'TE')
+        AND is_active = true
+      GROUP BY gsis_id
+      HAVING COUNT(*) > 1
+    `);
+    
+    const duplicates = result.rows as any[];
+    const duplicateCount = duplicates.length;
+    
+    let status: CheckStatus = 'healthy';
+    if (duplicateCount > 0) {
+      status = 'warning';
+    }
+    
+    const sample = duplicates.slice(0, 3).map(d => ({
+      gsisId: d.gsis_id,
+      count: parseInt(d.count),
+      players: d.players
+    }));
+    
+    return {
+      key: 'identity.gsis_duplicates',
+      status,
+      value: duplicateCount,
+      details: {
+        duplicateCount,
+        sample,
+        actionHint: duplicateCount > 0 
+          ? 'Use POST /api/identity/resolve-duplicate to mark merged players'
+          : undefined,
+        note: 'Duplicate GSIS IDs may cause ambiguous player matching'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'identity.gsis_duplicates',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkEnrichmentQuality(): Promise<AuditCheck> {
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        match_confidence,
+        COUNT(*) as count
+      FROM identity_enrichment_log
+      WHERE created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY match_confidence
+    `);
+    
+    const rows = result.rows as any[];
+    const confidenceBreakdown: Record<string, number> = {};
+    let total = 0;
+    
+    for (const row of rows) {
+      const confidence = row.match_confidence || 'none';
+      const count = parseInt(row.count) || 0;
+      confidenceBreakdown[confidence] = count;
+      total += count;
+    }
+    
+    if (total === 0) {
+      return {
+        key: 'identity.enrichment_quality',
+        status: 'info',
+        details: { 
+          note: 'No enrichment runs in last 7 days',
+          confidenceBreakdown: {}
+        }
+      };
+    }
+    
+    const exactCount = confidenceBreakdown['exact'] || 0;
+    const highCount = confidenceBreakdown['high'] || 0;
+    const mediumCount = confidenceBreakdown['medium'] || 0;
+    const noneCount = confidenceBreakdown['none'] || 0;
+    
+    const exactPct = Math.round((exactCount / total) * 100);
+    const highPct = Math.round((highCount / total) * 100);
+    const mediumPct = Math.round((mediumCount / total) * 100);
+    const nonePct = Math.round((noneCount / total) * 100);
+    
+    let status: CheckStatus = 'healthy';
+    if (mediumPct > 10) {
+      status = 'warning';
+    }
+    
+    return {
+      key: 'identity.enrichment_quality',
+      status,
+      value: exactPct + highPct,
+      details: {
+        total,
+        exactPct,
+        highPct,
+        mediumPct,
+        nonePct,
+        confidenceBreakdown,
+        thresholds: { healthy: 'medium <= 10%', warning: 'medium > 10%' },
+        note: 'Quality of identity enrichment matches. High exact/high rates indicate reliable matching.'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'identity.enrichment_quality',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
 async function checkMetricMatrixCoverage(season: number, week?: number): Promise<AuditCheck> {
   try {
     const weekFilter = week ? sql`AND week = ${week}` : sql``;
@@ -641,6 +764,8 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
     checkRosterBridgeCoverage(),
     checkGlobalSleeperIdPopulation(),
     checkEnrichmentRecentActivity(),
+    checkGsisDuplicates(),
+    checkEnrichmentQuality(),
     checkMetricMatrixCoverage(season, week),
     checkPercentScaleSanity(season),
     checkCacheFreshness(),
