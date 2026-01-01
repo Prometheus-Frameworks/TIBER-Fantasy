@@ -77,16 +77,17 @@ def populate_players(season=2024):
         
         execute_values(cur, """
             INSERT INTO player_identity_map 
-            (canonical_id, full_name, first_name, last_name, position, nfl_team, nfl_data_py_id, is_active)
+            (canonical_id, full_name, first_name, last_name, position, nfl_team, nfl_data_py_id, gsis_id, is_active)
             VALUES %s
             ON CONFLICT (canonical_id) DO UPDATE
             SET nfl_data_py_id = EXCLUDED.nfl_data_py_id,
+                gsis_id = COALESCE(player_identity_map.gsis_id, EXCLUDED.gsis_id),
                 nfl_team = EXCLUDED.nfl_team,
                 position = EXCLUDED.position,
                 full_name = EXCLUDED.full_name,
                 first_name = EXCLUDED.first_name,
                 last_name = EXCLUDED.last_name
-        """, [(p[0], p[1], p[2], p[3], p[4], p[5], p[6], True) for p in players_to_insert])
+        """, [(p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[6], True) for p in players_to_insert])
         
         conn.commit()
         print(f"✅ Populated player_identity_map: {len(players_to_insert)} players", file=sys.stderr)

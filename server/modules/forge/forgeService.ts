@@ -324,6 +324,7 @@ class ForgeService implements IForgeService {
           FROM player_identity_map p
           INNER JOIN weekly_stats w ON (
             w.player_id = p.sleeper_id 
+            OR w.player_id = p.gsis_id
             OR w.player_id = p.nfl_data_py_id
             OR w.player_id = p.canonical_id
           )

@@ -174,9 +174,9 @@ async function fetchSeasonStats(
       }
       
       // Fallback to old season snapshot if enriched weekly data not available
-      const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
-      if (nflDataPyId) {
-        const datadiveStats = await getSnapshotSeasonStats(nflDataPyId, season);
+      const gsisIdFallback = await getGsisIdForCanonical(canonicalId);
+      if (gsisIdFallback) {
+        const datadiveStats = await getSnapshotSeasonStats(gsisIdFallback, season);
         if (datadiveStats && datadiveStats.gamesPlayed > 0) {
           console.log(`[FORGE/Context] Fallback to Datadive season snapshot for ${canonicalId}: ${datadiveStats.gamesPlayed} games`);
           return toForgeSeasonStats(datadiveStats);
@@ -294,19 +294,24 @@ async function fetchSeasonStats(
 }
 
 /**
- * Get nfl_data_py_id (GSIS format) for a canonical player ID from identity map
+ * Get GSIS ID for a canonical player ID from identity map
+ * Prefers gsis_id column, falls back to nfl_data_py_id for legacy data
  */
-async function getNflDataPyIdForCanonical(canonicalId: string): Promise<string | null> {
+async function getGsisIdForCanonical(canonicalId: string): Promise<string | null> {
   try {
     const identity = await db
-      .select({ nflDataPyId: playerIdentityMap.nflDataPyId })
+      .select({ 
+        gsisId: playerIdentityMap.gsisId,
+        nflDataPyId: playerIdentityMap.nflDataPyId 
+      })
       .from(playerIdentityMap)
       .where(eq(playerIdentityMap.canonicalId, canonicalId))
       .limit(1);
     
-    return identity[0]?.nflDataPyId ?? null;
+    // Prefer gsis_id, fall back to nfl_data_py_id
+    return identity[0]?.gsisId ?? identity[0]?.nflDataPyId ?? null;
   } catch (error) {
-    console.error(`[FORGE/Context] Error fetching nflDataPyId for ${canonicalId}:`, error);
+    console.error(`[FORGE/Context] Error fetching gsisId for ${canonicalId}:`, error);
     return null;
   }
 }
@@ -323,8 +328,8 @@ async function fetchFromWeeklyStats(
   startWeek?: number
 ): Promise<ForgeContext['seasonStats'] | null> {
   try {
-    const nflDataPyId = await getNflDataPyIdForCanonical(canonicalId);
-    if (!nflDataPyId) return null;
+    const gsisId = await getGsisIdForCanonical(canonicalId);
+    if (!gsisId) return null;
     
     // Build week range condition: startWeek <= week <= asOfWeek
     let weekCondition;
@@ -365,7 +370,7 @@ async function fetchFromWeeklyStats(
       .from(weeklyStats)
       .where(
         and(
-          eq(weeklyStats.playerId, nflDataPyId),
+          eq(weeklyStats.playerId, gsisId),
           eq(weeklyStats.season, season),
           weekCondition
         )
@@ -520,7 +525,7 @@ async function fetchAdvancedMetrics(
       }
       
       // Fallback to old Datadive snapshot
-      const nflId = await getNflDataPyIdForCanonical(canonicalId);
+      const nflId = await getGsisIdForCanonical(canonicalId);
       if (nflId) {
         const datadiveStats = await getSnapshotSeasonStats(nflId, season);
         if (datadiveStats && datadiveStats.gamesPlayed > 0) {
@@ -560,7 +565,7 @@ async function fetchAdvancedMetrics(
     }
     
     // Translate canonical ID to NFL GSIS ID for legacy paths
-    const nflId = await getNflDataPyIdForCanonical(canonicalId);
+    const nflId = await getGsisIdForCanonical(canonicalId);
     if (!nflId) {
       return undefined;
     }
