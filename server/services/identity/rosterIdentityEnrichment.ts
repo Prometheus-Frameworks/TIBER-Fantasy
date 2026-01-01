@@ -1,6 +1,7 @@
 /**
- * Roster Identity Enrichment Service v1
+ * Roster Identity Enrichment Service v1.1
  * Auto-populates missing player_identity_map.sleeper_id for players in synced league rosters
+ * With full logging and safety-hardened matching strategies
  */
 
 import { db } from '../../infra/db';
@@ -32,7 +33,17 @@ interface EnrichmentResult {
   unmapped: number;
   updatedRows: number;
   newRosterBridgeCoverage: number;
+  strategyBreakdown?: Record<string, number>;
   error?: string;
+}
+
+interface MatchResult {
+  canonicalId: string | null;
+  confidence: 'exact' | 'high' | 'medium' | 'none';
+  strategy: 'gsis' | 'fantasy_data' | 'name_pos_team' | 'name_pos' | 'none';
+  candidateCount: number;
+  candidateSample: { canonicalId: string; fullName: string; position: string; team: string | null }[];
+  notes?: string;
 }
 
 // In-memory cache for Sleeper players (24h TTL)
@@ -40,7 +51,6 @@ let sleeperPlayersCache: { data: Record<string, SleeperPlayerData>; timestamp: n
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 async function fetchSleeperPlayers(): Promise<Record<string, SleeperPlayerData>> {
-  // Check cache first
   if (sleeperPlayersCache && Date.now() - sleeperPlayersCache.timestamp < CACHE_TTL_MS) {
     console.log(`[EnrichmentService] Using cached Sleeper players (${Object.keys(sleeperPlayersCache.data).length} players)`);
     return sleeperPlayersCache.data;
@@ -62,7 +72,6 @@ async function fetchSleeperPlayers(): Promise<Record<string, SleeperPlayerData>>
     
     const players = await response.json() as Record<string, SleeperPlayerData>;
     
-    // Update cache
     sleeperPlayersCache = {
       data: players,
       timestamp: Date.now()
@@ -80,90 +89,215 @@ async function fetchSleeperPlayers(): Promise<Record<string, SleeperPlayerData>>
 function normalizeNameForMatching(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z\s]/g, '') // Remove non-letters except spaces
-    .replace(/\s+/g, ' ')     // Normalize spaces
+    .replace(/[^a-z\s]/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
-async function findCanonicalMatch(
-  sleeperPlayer: SleeperPlayerData
-): Promise<{ canonicalId: string; confidence: 'exact' | 'high' | 'medium' } | null> {
-  const { full_name, position, team, gsis_id, sportradar_id, fantasy_data_id } = sleeperPlayer;
+function formatCandidates(rows: any[]): { canonicalId: string; fullName: string; position: string; team: string | null }[] {
+  return rows.slice(0, 5).map(r => ({
+    canonicalId: r.canonical_id,
+    fullName: r.full_name,
+    position: r.position,
+    team: r.nfl_team || null
+  }));
+}
+
+async function findCanonicalMatch(sleeperPlayer: SleeperPlayerData): Promise<MatchResult> {
+  const { full_name, position, team, gsis_id, fantasy_data_id } = sleeperPlayer;
   
-  // Strategy 1: Match by GSIS ID (most reliable)
+  // Strategy 1: Match by GSIS ID (strict equality on nfl_data_py_id)
+  // FIXED: Removed unsafe LIKE pattern - now uses strict equality only
   if (gsis_id) {
     const gsisResult = await db.execute(sql`
-      SELECT canonical_id FROM player_identity_map
-      WHERE canonical_id LIKE '%' || ${gsis_id} || '%'
-        OR nfl_data_py_id = ${gsis_id}
-      LIMIT 1
+      SELECT canonical_id, full_name, position, nfl_team
+      FROM player_identity_map
+      WHERE nfl_data_py_id = ${gsis_id}
+      LIMIT 5
     `);
     
-    if ((gsisResult.rows as any[]).length > 0) {
-      return { canonicalId: (gsisResult.rows[0] as any).canonical_id, confidence: 'exact' };
+    const rows = gsisResult.rows as any[];
+    if (rows.length === 1) {
+      return {
+        canonicalId: rows[0].canonical_id,
+        confidence: 'exact',
+        strategy: 'gsis',
+        candidateCount: 1,
+        candidateSample: formatCandidates(rows),
+        notes: `GSIS match on nfl_data_py_id=${gsis_id}`
+      };
+    } else if (rows.length > 1) {
+      return {
+        canonicalId: null,
+        confidence: 'none',
+        strategy: 'gsis',
+        candidateCount: rows.length,
+        candidateSample: formatCandidates(rows),
+        notes: `Ambiguous GSIS match: ${rows.length} candidates for gsis_id=${gsis_id}`
+      };
     }
   }
   
   // Strategy 2: Match by FantasyData ID
   if (fantasy_data_id) {
     const fdResult = await db.execute(sql`
-      SELECT canonical_id FROM player_identity_map
+      SELECT canonical_id, full_name, position, nfl_team
+      FROM player_identity_map
       WHERE fantasy_data_id = ${String(fantasy_data_id)}
-      LIMIT 1
+      LIMIT 5
     `);
     
-    if ((fdResult.rows as any[]).length > 0) {
-      return { canonicalId: (fdResult.rows[0] as any).canonical_id, confidence: 'exact' };
+    const rows = fdResult.rows as any[];
+    if (rows.length === 1) {
+      return {
+        canonicalId: rows[0].canonical_id,
+        confidence: 'exact',
+        strategy: 'fantasy_data',
+        candidateCount: 1,
+        candidateSample: formatCandidates(rows),
+        notes: `FantasyData match on id=${fantasy_data_id}`
+      };
+    } else if (rows.length > 1) {
+      return {
+        canonicalId: null,
+        confidence: 'none',
+        strategy: 'fantasy_data',
+        candidateCount: rows.length,
+        candidateSample: formatCandidates(rows),
+        notes: `Ambiguous FantasyData match: ${rows.length} candidates`
+      };
     }
   }
   
   // Strategy 3: Match by exact name + position + team
   if (full_name && position && team) {
     const namePositionTeamResult = await db.execute(sql`
-      SELECT canonical_id FROM player_identity_map
+      SELECT canonical_id, full_name, position, nfl_team
+      FROM player_identity_map
       WHERE LOWER(full_name) = LOWER(${full_name})
         AND position = ${position}
         AND nfl_team = ${team}
         AND sleeper_id IS NULL
-      LIMIT 2
+      LIMIT 5
     `);
     
     const rows = namePositionTeamResult.rows as any[];
     if (rows.length === 1) {
-      return { canonicalId: rows[0].canonical_id, confidence: 'high' };
+      return {
+        canonicalId: rows[0].canonical_id,
+        confidence: 'high',
+        strategy: 'name_pos_team',
+        candidateCount: 1,
+        candidateSample: formatCandidates(rows),
+        notes: `Name+Position+Team exact match`
+      };
+    } else if (rows.length > 1) {
+      return {
+        canonicalId: null,
+        confidence: 'none',
+        strategy: 'name_pos_team',
+        candidateCount: rows.length,
+        candidateSample: formatCandidates(rows),
+        notes: `Ambiguous name+pos+team: ${rows.length} candidates`
+      };
     }
-    // If more than 1, it's ambiguous - skip
   }
   
-  // Strategy 4: Match by exact name + position (if team is null/different)
+  // Strategy 4: Match by exact name + position (fallback)
   if (full_name && position) {
     const normalizedName = normalizeNameForMatching(full_name);
     
     const namePositionResult = await db.execute(sql`
-      SELECT canonical_id FROM player_identity_map
+      SELECT canonical_id, full_name, position, nfl_team
+      FROM player_identity_map
       WHERE (
         LOWER(full_name) = LOWER(${full_name})
         OR name_fingerprint = ${normalizedName}
       )
         AND position = ${position}
         AND sleeper_id IS NULL
-      LIMIT 2
+      LIMIT 5
     `);
     
     const rows = namePositionResult.rows as any[];
     if (rows.length === 1) {
-      return { canonicalId: rows[0].canonical_id, confidence: 'medium' };
+      return {
+        canonicalId: rows[0].canonical_id,
+        confidence: 'medium',
+        strategy: 'name_pos',
+        candidateCount: 1,
+        candidateSample: formatCandidates(rows),
+        notes: `Name+Position match (team ignored)`
+      };
+    } else if (rows.length > 1) {
+      return {
+        canonicalId: null,
+        confidence: 'none',
+        strategy: 'name_pos',
+        candidateCount: rows.length,
+        candidateSample: formatCandidates(rows),
+        notes: `Ambiguous name+pos: ${rows.length} candidates - skipped for safety`
+      };
     }
   }
   
-  return null;
+  return {
+    canonicalId: null,
+    confidence: 'none',
+    strategy: 'none',
+    candidateCount: 0,
+    candidateSample: [],
+    notes: 'No matching strategy found candidates'
+  };
+}
+
+async function logEnrichmentAttempt(
+  leagueId: string | null,
+  sleeperPlayer: SleeperPlayerData | null,
+  sleeperId: string,
+  matchResult: MatchResult
+): Promise<void> {
+  try {
+    await db.execute(sql`
+      INSERT INTO identity_enrichment_log (
+        league_id,
+        sleeper_player_id,
+        sleeper_full_name,
+        sleeper_position,
+        sleeper_team,
+        sleeper_gsis_id,
+        sleeper_fantasy_data_id,
+        matched_canonical_id,
+        match_confidence,
+        match_strategy,
+        candidate_count,
+        candidate_sample,
+        notes
+      ) VALUES (
+        ${leagueId}::uuid,
+        ${sleeperId},
+        ${sleeperPlayer?.full_name || null},
+        ${sleeperPlayer?.position || null},
+        ${sleeperPlayer?.team || null},
+        ${sleeperPlayer?.gsis_id || null},
+        ${sleeperPlayer?.fantasy_data_id ? String(sleeperPlayer.fantasy_data_id) : null},
+        ${matchResult.canonicalId},
+        ${matchResult.confidence},
+        ${matchResult.strategy},
+        ${matchResult.candidateCount},
+        ${matchResult.candidateSample.length > 0 ? JSON.stringify(matchResult.candidateSample) : null}::jsonb,
+        ${matchResult.notes || null}
+      )
+    `);
+  } catch (error: any) {
+    console.error('[EnrichmentService] Failed to log enrichment attempt:', error.message);
+  }
 }
 
 export async function enrichRosterIdentities(userId: string = 'default_user'): Promise<EnrichmentResult> {
   try {
-    console.log(`[EnrichmentService] Starting enrichment for user: ${userId}`);
+    console.log(`[EnrichmentService v1.1] Starting enrichment for user: ${userId}`);
     
-    // 1. Get active league
     const prefResult = await db.execute(sql`
       SELECT ulp.active_league_id, l.league_id_external, l.league_name
       FROM user_league_preferences ulp
@@ -189,7 +323,6 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
     
     const leagueId = pref.active_league_id;
     
-    // 2. Get unmapped Sleeper IDs from rosters
     const unmappedResult = await db.execute(sql`
       WITH roster_ids AS (
         SELECT DISTINCT jsonb_array_elements_text(players) as sleeper_id
@@ -207,7 +340,6 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
     console.log(`[EnrichmentService] Found ${unmappedSleeperIds.length} unmapped Sleeper IDs`);
     
     if (unmappedSleeperIds.length === 0) {
-      // Calculate current coverage
       const coverageResult = await db.execute(sql`
         WITH roster_ids AS (
           SELECT DISTINCT jsonb_array_elements_text(players) as sleeper_id
@@ -235,7 +367,6 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
       };
     }
     
-    // 3. Fetch Sleeper player database (cached)
     const sleeperPlayers = await fetchSleeperPlayers();
     
     let attempted = 0;
@@ -243,14 +374,30 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
     let ambiguous = 0;
     let unmapped = 0;
     let updatedRows = 0;
+    const strategyBreakdown: Record<string, number> = {
+      gsis: 0,
+      fantasy_data: 0,
+      name_pos_team: 0,
+      name_pos: 0,
+      none: 0
+    };
     
-    // 4. Process each unmapped Sleeper ID
     for (const sleeperId of unmappedSleeperIds) {
       attempted++;
       
       const sleeperPlayer = sleeperPlayers[sleeperId];
       if (!sleeperPlayer) {
-        // Player not in Sleeper database (may be retired/removed)
+        const noMatchResult: MatchResult = {
+          canonicalId: null,
+          confidence: 'none',
+          strategy: 'none',
+          candidateCount: 0,
+          candidateSample: [],
+          notes: 'Player not found in Sleeper database (may be retired/removed)'
+        };
+        
+        await logEnrichmentAttempt(leagueId, null, sleeperId, noMatchResult);
+        
         await upsertUnmapped(sleeperId, {
           fullName: `Unknown (${sleeperId})`,
           position: null,
@@ -259,27 +406,38 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
           rawJson: null
         });
         unmapped++;
+        strategyBreakdown.none++;
         continue;
       }
       
-      // Try to match to canonical
-      const match = await findCanonicalMatch(sleeperPlayer);
+      const matchResult = await findCanonicalMatch(sleeperPlayer);
       
-      if (match) {
-        // Update player_identity_map with sleeper_id
+      await logEnrichmentAttempt(leagueId, sleeperPlayer, sleeperId, matchResult);
+      
+      strategyBreakdown[matchResult.strategy]++;
+      
+      if (matchResult.canonicalId) {
         await db.execute(sql`
           UPDATE player_identity_map
           SET sleeper_id = ${sleeperId},
               updated_at = NOW()
-          WHERE canonical_id = ${match.canonicalId}
+          WHERE canonical_id = ${matchResult.canonicalId}
             AND sleeper_id IS NULL
         `);
         
         matched++;
         updatedRows++;
-        console.log(`[EnrichmentService] Matched ${sleeperPlayer.full_name} -> ${match.canonicalId} (${match.confidence})`);
+        console.log(`[EnrichmentService] Matched ${sleeperPlayer.full_name} -> ${matchResult.canonicalId} (${matchResult.strategy}/${matchResult.confidence})`);
+      } else if (matchResult.candidateCount > 1) {
+        await upsertUnmapped(sleeperId, {
+          fullName: sleeperPlayer.full_name || `Unknown (${sleeperId})`,
+          position: sleeperPlayer.position || null,
+          team: sleeperPlayer.team || null,
+          statusReason: 'ambiguous',
+          rawJson: sleeperPlayer
+        });
+        ambiguous++;
       } else {
-        // Store as unmapped
         await upsertUnmapped(sleeperId, {
           fullName: sleeperPlayer.full_name || `Unknown (${sleeperId})`,
           position: sleeperPlayer.position || null,
@@ -291,7 +449,6 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
       }
     }
     
-    // 5. Calculate new coverage
     const coverageResult = await db.execute(sql`
       WITH roster_ids AS (
         SELECT DISTINCT jsonb_array_elements_text(players) as sleeper_id
@@ -308,6 +465,7 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
     const newCoverage = cr.total > 0 ? cr.mapped / cr.total : 0;
     
     console.log(`[EnrichmentService] Complete: ${matched} matched, ${ambiguous} ambiguous, ${unmapped} unmapped`);
+    console.log(`[EnrichmentService] Strategy breakdown:`, strategyBreakdown);
     console.log(`[EnrichmentService] New coverage: ${Math.round(newCoverage * 100)}%`);
     
     return {
@@ -318,7 +476,8 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
       ambiguous,
       unmapped,
       updatedRows,
-      newRosterBridgeCoverage: Math.round(newCoverage * 100) / 100
+      newRosterBridgeCoverage: Math.round(newCoverage * 100) / 100,
+      strategyBreakdown
     };
     
   } catch (error: any) {
@@ -333,6 +492,53 @@ export async function enrichRosterIdentities(userId: string = 'default_user'): P
       updatedRows: 0,
       newRosterBridgeCoverage: 0,
       error: error.message || 'Enrichment failed'
+    };
+  }
+}
+
+export async function getEnrichmentLogs(limit: number = 50): Promise<{
+  success: boolean;
+  logs: any[];
+  totalCount: number;
+}> {
+  try {
+    const logsResult = await db.execute(sql`
+      SELECT 
+        id,
+        created_at,
+        league_id,
+        sleeper_player_id,
+        sleeper_full_name,
+        sleeper_position,
+        sleeper_team,
+        sleeper_gsis_id,
+        sleeper_fantasy_data_id,
+        matched_canonical_id,
+        match_confidence,
+        match_strategy,
+        candidate_count,
+        candidate_sample,
+        notes
+      FROM identity_enrichment_log
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `);
+    
+    const countResult = await db.execute(sql`
+      SELECT COUNT(*) as total FROM identity_enrichment_log
+    `);
+    
+    return {
+      success: true,
+      logs: logsResult.rows as any[],
+      totalCount: parseInt((countResult.rows[0] as any).total) || 0
+    };
+  } catch (error: any) {
+    console.error('[EnrichmentService] Failed to fetch logs:', error);
+    return {
+      success: false,
+      logs: [],
+      totalCount: 0
     };
   }
 }

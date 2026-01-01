@@ -223,6 +223,68 @@ async function checkGlobalSleeperIdPopulation(): Promise<AuditCheck> {
   }
 }
 
+async function checkEnrichmentRecentActivity(): Promise<AuditCheck> {
+  try {
+    const result = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN created_at >= NOW() - INTERVAL '24 hours' THEN 1 END) as recent_count,
+        MAX(created_at) as last_run,
+        COUNT(CASE WHEN matched_canonical_id IS NOT NULL THEN 1 END) as matched_count,
+        COUNT(DISTINCT match_strategy) as strategies_used
+      FROM identity_enrichment_log
+    `);
+    
+    const row = (result.rows as any[])[0] || { total_count: 0, recent_count: 0, last_run: null };
+    const totalCount = parseInt(row.total_count) || 0;
+    const recentCount = parseInt(row.recent_count) || 0;
+    const matchedCount = parseInt(row.matched_count) || 0;
+    const strategiesUsed = parseInt(row.strategies_used) || 0;
+    
+    let status: CheckStatus = 'healthy';
+    if (recentCount === 0 && totalCount === 0) {
+      status = 'info';
+    } else if (recentCount === 0) {
+      status = 'info';
+    }
+    
+    // Get strategy breakdown
+    const strategyResult = await db.execute(sql`
+      SELECT match_strategy, COUNT(*) as count
+      FROM identity_enrichment_log
+      GROUP BY match_strategy
+      ORDER BY count DESC
+    `);
+    
+    const strategyBreakdown: Record<string, number> = {};
+    for (const r of strategyResult.rows as any[]) {
+      strategyBreakdown[r.match_strategy] = parseInt(r.count);
+    }
+    
+    return {
+      key: 'identity.enrichment_recent_activity',
+      status,
+      value: recentCount,
+      details: {
+        totalLogs: totalCount,
+        recentLogs24h: recentCount,
+        matchedTotal: matchedCount,
+        matchRate: totalCount > 0 ? Math.round((matchedCount / totalCount) * 100) / 100 : 0,
+        lastRun: row.last_run,
+        strategiesUsed,
+        strategyBreakdown,
+        note: 'Tracks identity enrichment runs. Recent activity indicates active maintenance.'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'identity.enrichment_recent_activity',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
 async function checkMetricMatrixCoverage(season: number, week?: number): Promise<AuditCheck> {
   try {
     const weekFilter = week ? sql`AND week = ${week}` : sql``;
@@ -578,6 +640,7 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
   const checks: AuditCheck[] = await Promise.all([
     checkRosterBridgeCoverage(),
     checkGlobalSleeperIdPopulation(),
+    checkEnrichmentRecentActivity(),
     checkMetricMatrixCoverage(season, week),
     checkPercentScaleSanity(season),
     checkCacheFreshness(),

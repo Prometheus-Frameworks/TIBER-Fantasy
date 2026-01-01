@@ -3205,6 +3205,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/league/enrich-roster-identity/logs - View enrichment logs
+  app.get('/api/league/enrich-roster-identity/logs', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const { getEnrichmentLogs } = await import('./services/identity/rosterIdentityEnrichment');
+      const result = await getEnrichmentLogs(Math.min(limit, 500));
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error('[EnrichmentLogs] Error:', error);
+      res.json({
+        success: false,
+        logs: [],
+        totalCount: 0,
+        error: error.message
+      });
+    }
+  });
+
   // Enhanced player data merging with deterministic ID mapping
   app.get('/api/player-data/merged', async (req, res) => {
     console.log('[MergedPlayerData] Starting merge request with params:', req.query);
