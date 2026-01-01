@@ -3225,6 +3225,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/identity/backfill-gsis - Backfill GSIS IDs from weekly_stats
+  app.post('/api/identity/backfill-gsis', async (req, res) => {
+    try {
+      const { backfillGsisIds, reportGsisCoverage } = await import('./scripts/backfillGsisId');
+      
+      console.log('[BackfillGSIS] Starting backfill via API...');
+      const result = await backfillGsisIds();
+      const coverage = await reportGsisCoverage();
+      
+      res.json({
+        ...result,
+        coverage
+      });
+    } catch (error: any) {
+      console.error('[BackfillGSIS] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // GET /api/identity/gsis-coverage - Report GSIS ID coverage
+  app.get('/api/identity/gsis-coverage', async (req, res) => {
+    try {
+      const { reportGsisCoverage } = await import('./scripts/backfillGsisId');
+      const coverage = await reportGsisCoverage();
+      res.json({ success: true, ...coverage });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Enhanced player data merging with deterministic ID mapping
   app.get('/api/player-data/merged', async (req, res) => {
     console.log('[MergedPlayerData] Starting merge request with params:', req.query);

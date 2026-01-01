@@ -106,13 +106,13 @@ function formatCandidates(rows: any[]): { canonicalId: string; fullName: string;
 async function findCanonicalMatch(sleeperPlayer: SleeperPlayerData): Promise<MatchResult> {
   const { full_name, position, team, gsis_id, fantasy_data_id } = sleeperPlayer;
   
-  // Strategy 1: Match by GSIS ID (strict equality on nfl_data_py_id)
-  // FIXED: Removed unsafe LIKE pattern - now uses strict equality only
+  // Strategy 1: Match by GSIS ID (strict equality on dedicated gsis_id column)
+  // Uses the backfilled gsis_id column for deterministic identity resolution
   if (gsis_id) {
     const gsisResult = await db.execute(sql`
       SELECT canonical_id, full_name, position, nfl_team
       FROM player_identity_map
-      WHERE nfl_data_py_id = ${gsis_id}
+      WHERE gsis_id = ${gsis_id}
       LIMIT 5
     `);
     
