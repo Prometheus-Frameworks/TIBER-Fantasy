@@ -96,6 +96,9 @@ async function getWeeklyStatsCount(canonicalId: string): Promise<number> {
          SELECT sleeper_id FROM player_identity_map WHERE canonical_id = ${canonicalId}
        )
        OR player_id IN (
+         SELECT gsis_id FROM player_identity_map WHERE canonical_id = ${canonicalId}
+       )
+       OR player_id IN (
          SELECT nfl_data_py_id FROM player_identity_map WHERE canonical_id = ${canonicalId}
        )
   `);

@@ -426,7 +426,7 @@ export async function getDatadiveEligiblePlayers(
           COALESCE(pls.current_team, pim.nfl_team) as team,
           COALESCE(dss.total_fpts_ppr, 0) as total_fpts
         FROM datadive_snapshot_player_season dss
-        JOIN player_identity_map pim ON pim.nfl_data_py_id = dss.player_id
+        JOIN player_identity_map pim ON (pim.gsis_id = dss.player_id OR pim.nfl_data_py_id = dss.player_id)
         LEFT JOIN player_live_status pls ON pls.canonical_id = pim.canonical_id
         WHERE dss.snapshot_id = ${snapshot.snapshotId}
           AND dss.season = ${snapshot.season}
@@ -548,7 +548,8 @@ export function toForgeAdvancedMetrics(input: ForgeDatadiveInput): {
 export interface EnrichedPlayerData {
   // Core identity
   canonicalId: string;
-  nflDataPyId: string;
+  gsisId: string | null;
+  nflDataPyId: string | null;
   playerName: string;
   position: string;
   team: string | null;
@@ -596,17 +597,38 @@ export interface EnrichedPlayerData {
   enrichmentList: string[];
 }
 
+interface PlayerIdResult {
+  playerId: string;
+  gsisId: string | null;
+  nflDataPyId: string | null;
+}
+
 /**
- * Get the nfl_data_py_id for a canonical player ID
+ * Get the player IDs for data joins (prefers gsis_id, falls back to nfl_data_py_id)
+ * Returns all IDs so callers can preserve proper field values
  */
-async function getNflDataPyIdFromCanonical(canonicalId: string): Promise<string | null> {
+async function getPlayerIdsForDataJoins(canonicalId: string): Promise<PlayerIdResult | null> {
   const result = await db
-    .select({ nflDataPyId: playerIdentityMap.nflDataPyId })
+    .select({ 
+      gsisId: playerIdentityMap.gsisId,
+      nflDataPyId: playerIdentityMap.nflDataPyId 
+    })
     .from(playerIdentityMap)
     .where(eq(playerIdentityMap.canonicalId, canonicalId))
     .limit(1);
   
-  return result[0]?.nflDataPyId ?? null;
+  const record = result[0];
+  if (!record) return null;
+  
+  // Prefer gsis_id for matching, but return both for accurate field exposure
+  const playerId = record.gsisId ?? record.nflDataPyId ?? null;
+  if (!playerId) return null;
+  
+  return {
+    playerId,
+    gsisId: record.gsisId,
+    nflDataPyId: record.nflDataPyId
+  };
 }
 
 /**
@@ -633,12 +655,13 @@ export async function getEnrichedPlayerWeek(
   startWeek?: number
 ): Promise<EnrichedPlayerData | null> {
   try {
-    // Get the nfl_data_py_id for this canonical ID
-    const nflDataPyId = await getNflDataPyIdFromCanonical(canonicalId);
-    if (!nflDataPyId) {
-      console.log(`[DatadiveContext] No nfl_data_py_id for canonical ${canonicalId}`);
+    // Get the player IDs for data joins (prefers gsis_id, falls back to nfl_data_py_id)
+    const playerIdResult = await getPlayerIdsForDataJoins(canonicalId);
+    if (!playerIdResult) {
+      console.log(`[DatadiveContext] No gsis_id or nfl_data_py_id for canonical ${canonicalId}`);
       return null;
     }
+    const { playerId, gsisId, nflDataPyId: legacyNflDataPyId } = playerIdResult;
     
     // Get all official snapshot IDs for the season within week range
     // v1.2: Added startWeek support for week range filtering
@@ -735,7 +758,7 @@ export async function getEnrichedPlayerWeek(
         fpts_half,
         fpts_ppr
       FROM datadive_snapshot_player_week
-      WHERE player_id = ${nflDataPyId}
+      WHERE player_id = ${playerId}
         AND season = ${season}
         AND week >= ${weekFilterMin}
         AND week <= ${weekFilterMax}
@@ -744,7 +767,7 @@ export async function getEnrichedPlayerWeek(
     `);
     
     if (weeklyRows.rows.length === 0) {
-      console.log(`[DatadiveContext] No weekly data for player ${canonicalId} (${nflDataPyId})`);
+      console.log(`[DatadiveContext] No weekly data for player ${canonicalId} (${playerId})`);
       return null;
     }
     
@@ -887,7 +910,8 @@ export async function getEnrichedPlayerWeek(
     
     return {
       canonicalId,
-      nflDataPyId,
+      gsisId,
+      nflDataPyId: legacyNflDataPyId,
       playerName,
       position,
       team,

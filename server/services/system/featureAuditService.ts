@@ -835,7 +835,7 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
       overallStatus = 'critical';
       break;
     }
-    if (check.status === 'warning' && overallStatus !== 'critical') {
+    if (check.status === 'warning') {
       overallStatus = 'warning';
     }
   }

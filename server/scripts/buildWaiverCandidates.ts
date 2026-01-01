@@ -283,7 +283,8 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
       );
     }
     
-    // Fetch player identity mapping to resolve nfl_data_py_id → sleeper_id
+    // Fetch player identity mapping to resolve player IDs → sleeper_id
+    // Uses gsis_id as primary key, falls back to nfl_data_py_id for legacy data
     const identityRecords = await db
       .select()
       .from(playerIdentityMap)
@@ -291,15 +292,19 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
     
     console.log(`   ✅ Fetched ${identityRecords.length} player identity mappings`);
     
-    // Build ID resolution map: nfl_data_py_id → sleeper_id
+    // Build ID resolution map: gsis_id/nfl_data_py_id → sleeper_id
     const idResolutionMap = new Map<string, string>();
     for (const record of identityRecords) {
+      // Prefer gsis_id for matching, fallback to nfl_data_py_id
+      if (record.gsisId && record.sleeperId) {
+        idResolutionMap.set(record.gsisId, record.sleeperId);
+      }
       if (record.nflDataPyId && record.sleeperId) {
         idResolutionMap.set(record.nflDataPyId, record.sleeperId);
       }
     }
     
-    console.log(`   🔗 Built ID resolution map with ${idResolutionMap.size} mappings`);
+    console.log(`   🔗 Built ID resolution map with ${idResolutionMap.size} mappings (gsis_id + nfl_data_py_id)`);
     
     // Build ownership map (keyed by Sleeper ID, only include players with valid ownership data)
     const ownershipMap = new Map<string, number>();
@@ -325,7 +330,7 @@ export async function buildWaiverCandidates(options: WaiverBuilderOptions) {
     
     // Convert Map to array for iteration (fixes TS downlevelIteration error)
     for (const [playerId, stats] of Array.from(playerStatsMap.entries())) {
-      // CRITICAL: Resolve nfl_data_py_id → sleeper_id before ownership lookup
+      // CRITICAL: Resolve player_id (gsis_id or nfl_data_py_id) → sleeper_id before ownership lookup
       const sleeperId = idResolutionMap.get(playerId);
       
       // Skip if player has no Sleeper ID mapping

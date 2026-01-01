@@ -133,7 +133,7 @@ export async function calculateWRAdvancedMetrics(
           ws.rec_yd,
           ws.fantasy_points_ppr
         FROM weekly_stats ws
-        INNER JOIN player_identity_map pim ON pim.nfl_data_py_id = ws.player_id
+        INNER JOIN player_identity_map pim ON (pim.gsis_id = ws.player_id OR pim.nfl_data_py_id = ws.player_id)
         WHERE ws.season = ${season}
           AND pim.position = 'WR'
           AND ws.targets IS NOT NULL
@@ -149,7 +149,7 @@ export async function calculateWRAdvancedMetrics(
           ws.rec_yd,
           ws.fantasy_points_ppr
         FROM weekly_stats ws
-        INNER JOIN player_identity_map pim ON pim.nfl_data_py_id = ws.player_id
+        INNER JOIN player_identity_map pim ON (pim.gsis_id = ws.player_id OR pim.nfl_data_py_id = ws.player_id)
         WHERE ws.season = ${season}
           AND pim.position = 'WR'
           AND ws.targets IS NOT NULL

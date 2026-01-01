@@ -117,26 +117,33 @@ export class DatadiveSnapshotService {
     console.log(`📊 [DataDive] Found ${weeklyData.length} rows in weekly_stats`);
 
     // Load player_identity_map for canonical names and positions
+    // Build lookup by both gsis_id and nfl_data_py_id for maximum matching
     const identityData = await db
       .select({
+        gsisId: playerIdentityMap.gsisId,
         nflDataPyId: playerIdentityMap.nflDataPyId,
         fullName: playerIdentityMap.fullName,
         position: playerIdentityMap.position,
       })
       .from(playerIdentityMap)
-      .where(sql`${playerIdentityMap.nflDataPyId} IS NOT NULL`);
+      .where(sql`${playerIdentityMap.gsisId} IS NOT NULL OR ${playerIdentityMap.nflDataPyId} IS NOT NULL`);
 
-    // Create lookup map by nfl_data_py_id
+    // Create lookup map by gsis_id and nfl_data_py_id
     const identityMap = new Map<string, { fullName: string; position: string | null }>();
     for (const identity of identityData) {
+      const entry = {
+        fullName: identity.fullName,
+        position: identity.position,
+      };
+      // Add both identifiers for matching
+      if (identity.gsisId) {
+        identityMap.set(identity.gsisId, entry);
+      }
       if (identity.nflDataPyId) {
-        identityMap.set(identity.nflDataPyId, {
-          fullName: identity.fullName,
-          position: identity.position,
-        });
+        identityMap.set(identity.nflDataPyId, entry);
       }
     }
-    console.log(`📊 [DataDive] Loaded ${identityMap.size} player identities for canonical mapping`);
+    console.log(`📊 [DataDive] Loaded ${identityMap.size} player identities for canonical mapping (gsis_id + nfl_data_py_id)`);
 
     // Load snap counts from bronze_nflfastr_snap_counts
     const snapCounts = await db
