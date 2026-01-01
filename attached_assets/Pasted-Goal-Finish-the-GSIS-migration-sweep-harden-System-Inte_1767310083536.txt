@@ -1,0 +1,121 @@
+Goal: Finish the GSIS migration sweep + harden System Integrity so identity is a single unified spine across Tiber/FORGE/Metric Matrix/Ownership.
+
+A) Document “activeSkillPlayers” definition
+
+Update docs/dev/FEATURE_LINK_MAP.md (or docs/dev/replit.md if that’s your convention):
+
+Add the exact SQL WHERE clause used to compute activeSkillPlayers
+
+Explain what “active” means (positions included, exclusions like merged/deactivated, etc.)
+
+Include a short note: why global identity coverage is informational, while roster bridge coverage is primary for Ownership.
+
+Acceptance: anyone can reproduce the count by copy/pasting the SQL.
+
+B) Add Identity Spine checks to /api/system/feature-audit
+
+Add three new checks (or extend existing identity block) with structured output:
+
+1) identity.gsis_duplicates_active
+
+Query for duplicates among active players only.
+
+Status rules:
+
+healthy if duplicates = 0
+
+critical if duplicates > 0
+
+Include duplicateSample (up to 10 groups with gsis_id + canonical_ids).
+
+2) identity.merged_rows_excluded
+
+Confirm merged/deactivated rows are excluded from active counts.
+
+Two ways (pick one, but be deterministic):
+
+Validate that the active-player query filters merged_into IS NULL (or equivalent), OR
+
+Compare active count with/without merged rows and ensure merged rows don’t inflate the “active” pool.
+
+Status rules:
+
+healthy if exclusion is enforced
+
+warning if ambiguous but not provably wrong
+
+critical if merged rows are included
+
+3) identity.roster_bridge_post_enrichment
+
+If rosters exist:
+
+compute roster bridge coverage
+
+status:
+
+healthy ≥ 95%
+
+warning 85–94%
+
+critical < 85%
+
+If no league connected: skipped
+
+If league exists but rosters empty: critical with hint “Run Sleeper roster sync”
+
+Include unmappedSample (up to 10 entries with sleeper_id, name, pos, team if available)
+
+Acceptance: feature-audit never throws; it always returns structured checks.
+
+C) Migrate remaining services off nfl_data_py_id (JOINs + lookups)
+
+Update these files to prefer gsis_id:
+
+datadiveContext.ts
+
+wrAdvancedMetricsService.ts
+
+buildWaiverCandidates.ts
+
+Rules:
+
+Primary join key for nflfastR-ish data should be gsis_id.
+
+Keep a fallback to nfl_data_py_id only if required for backwards compatibility, but make it explicit and logged once.
+
+Add a small helper in shared/server identity utilities if needed (e.g., resolveGsisId(canonicalId)).
+
+Acceptance:
+
+git grep -n "nfl_data_py_id" server | wc -l should drop, and remaining usages must be either:
+
+ingestion/backfill scripts, OR
+
+explicit fallback paths with comments
+
+D) Sanity checks (must run + paste results)
+
+Run and paste outputs:
+
+npm run audit:metric-matrix
+
+npm run test:forge
+
+curl /api/system/feature-audit | jq (show identity section)
+
+Quick smoke:
+
+PlayerPage loads for Chase /player/00-0036900
+
+Ownership badge still works
+
+Metric Matrix axes still populate
+
+Notes
+
+Do not change schema unless necessary.
+
+No UI redesign needed beyond whatever System Integrity card already does to render the new checks.
+
+Keep all responses safe + non-throwing.

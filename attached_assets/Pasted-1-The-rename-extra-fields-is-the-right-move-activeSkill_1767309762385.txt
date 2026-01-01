@@ -1,0 +1,60 @@
+1) The rename + extra fields is the right move
+
+activeSkillPlayers + totalIdentityMapRows + totalWithAnyExternalId makes the endpoint semantically honest. That’s huge. Now the audit can say “your fantasy pool is good” without pretending you’ve mapped every human who ever wore shoulder pads.
+
+Sanity check: make sure the endpoint definition of activeSkillPlayers is documented (exact WHERE clause). “Active” tends to rot over time if nobody pins it down.
+
+2) The GSIS duplicate fix is acceptable — but enforce the rule
+
+Deactivating the duplicate, clearing its GSIS, and setting merged_into is correct.
+
+But I want one more guardrail:
+
+Ensure any query that pulls “active” players excludes merged/deactivated rows (or you’ll keep seeing weird counts later).
+
+If you added a unique constraint on gsis_id, it should be:
+
+unique where gsis_id is not null (or plain unique if you never allow null)
+
+and ideally unique on active rows only if your table retains historical/dead records
+
+If Postgres partial unique index was used (best option), you’re golden.
+
+3) Migrating from nfl_data_py_id → gsis_id is a must
+
+This is the part that prevents “drift-by-legacy-code.” Nice.
+
+What I’d verify quickly (no excuses, just do it):
+
+git grep -n "nfl_data_py_id" server shared client
+Anything left should be intentional (e.g., backfill scripts or ingestion), not used for identity matching.
+
+Same for "LIKE '%' || gsis_id" patterns — those should be dead now.
+
+4) That 99.92% number means exactly one player missing GSIS
+
+1237/1238 = 0.99919… → 99.92%. So one record still doesn’t have gsis_id.
+
+That’s fine. But make it actionable:
+
+Have /api/identity/gsis-coverage return sampleMissingGsis (like up to 10 rows) so you can fix it in 30 seconds instead of guessing.
+
+5) Impact on Ownership + Metric Matrix
+
+This is the payoff:
+
+Ownership now has a stable “bridge spine” (Sleeper ↔ canonical ↔ GSIS)
+
+Metric Matrix player vectors become more reliable because player identity won’t randomly fail on edge players
+
+Next step I’d push (strong opinion)
+
+Add one “Identity Spine” check to /api/system/feature-audit that asserts:
+
+No duplicate gsis_id among active players (should always be 0 now)
+
+Any merged_into rows are excluded from active counts
+
+Roster bridge coverage ≥ 95% after enrichment (since you basically hit 99.6% already)
+
+If you paste the updated /api/identity/gsis-coverage output after your rename, I’ll tell you if the “activeSkillPlayers” definition is tight or if it’s still sneaking in junk rows.
