@@ -452,6 +452,7 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   fantasyprosId: text("fantasypros_id"),
   mysportsfeedsId: text("mysportsfeeds_id"),
   nflDataPyId: text("nfl_data_py_id"),
+  gsisId: text("gsis_id"), // NFL GSIS ID for identity resolution
   
   // Player attributes for identity resolution
   jerseyNumber: integer("jersey_number"),
