@@ -3176,8 +3176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/league/enrich-roster-identity - Auto-enrich identity map from roster players
-  app.post('/api/league/enrich-roster-identity', async (req, res) => {
+  // POST /api/league/enrich-roster-identity - Auto-enrich identity map from roster players (admin only)
+  app.post('/api/league/enrich-roster-identity', requireAdminAuth, async (req, res) => {
     try {
       const userIdParam = req.query.user_id as string | undefined;
       const userId = userIdParam || 'default_user';
@@ -3225,8 +3225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/identity/backfill-gsis - Backfill GSIS IDs from weekly_stats
-  app.post('/api/identity/backfill-gsis', async (req, res) => {
+  // POST /api/identity/backfill-gsis - Backfill GSIS IDs from weekly_stats (admin only)
+  app.post('/api/identity/backfill-gsis', requireAdminAuth, async (req, res) => {
     try {
       const { backfillGsisIds, reportGsisCoverage } = await import('./scripts/backfillGsisId');
       
@@ -3253,6 +3253,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { reportGsisCoverage } = await import('./scripts/backfillGsisId');
       const coverage = await reportGsisCoverage();
       res.json({ success: true, ...coverage });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // GET /api/identity/gsis-duplicates - Find duplicate GSIS IDs
+  app.get('/api/identity/gsis-duplicates', async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          gsis_id, 
+          COUNT(*) as count, 
+          array_agg(
+            json_build_object(
+              'canonical_id', canonical_id,
+              'full_name', full_name,
+              'position', position,
+              'team', team,
+              'needs_review', needs_review,
+              'merged_into', merged_into
+            )
+          ) as players
+        FROM player_identity_map
+        WHERE gsis_id IS NOT NULL
+          AND position IN ('QB', 'RB', 'WR', 'TE')
+          AND is_active = true
+        GROUP BY gsis_id
+        HAVING COUNT(*) > 1
+        ORDER BY COUNT(*) DESC
+      `);
+      
+      const duplicates = (result.rows as any[]).map(row => ({
+        gsisId: row.gsis_id,
+        count: parseInt(row.count),
+        players: row.players
+      }));
+      
+      res.json({
+        success: true,
+        duplicateCount: duplicates.length,
+        duplicates
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // POST /api/identity/resolve-duplicate - Mark duplicate for review/merge (admin only)
+  app.post('/api/identity/resolve-duplicate', requireAdminAuth, async (req, res) => {
+    try {
+      const { canonicalId, mergedInto, notes } = req.body;
+      
+      if (!canonicalId) {
+        return res.status(400).json({ success: false, error: 'canonicalId is required' });
+      }
+      
+      const updateFields: any = { needsReview: true };
+      if (mergedInto) {
+        updateFields.mergedInto = mergedInto;
+      }
+      
+      const result = await db.execute(sql`
+        UPDATE player_identity_map
+        SET 
+          needs_review = true,
+          merged_into = ${mergedInto || null}
+        WHERE canonical_id = ${canonicalId}
+        RETURNING canonical_id, full_name, needs_review, merged_into
+      `);
+      
+      if ((result.rows as any[]).length === 0) {
+        return res.status(404).json({ success: false, error: 'Player not found' });
+      }
+      
+      const updated = (result.rows as any[])[0];
+      console.log(`[Identity] Resolved duplicate: ${canonicalId} -> merged_into: ${mergedInto || 'none'}`);
+      
+      res.json({
+        success: true,
+        updated: {
+          canonicalId: updated.canonical_id,
+          fullName: updated.full_name,
+          needsReview: updated.needs_review,
+          mergedInto: updated.merged_into
+        },
+        notes
+      });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
