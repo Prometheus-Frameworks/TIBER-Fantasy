@@ -3270,7 +3270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               'canonical_id', canonical_id,
               'full_name', full_name,
               'position', position,
-              'team', team,
+              'nfl_team', nfl_team,
               'needs_review', needs_review,
               'merged_into', merged_into
             )
