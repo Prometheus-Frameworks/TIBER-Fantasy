@@ -23,7 +23,16 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Backend**: Node.js/TypeScript (Express.js) and Python (Flask).
 - **Frontend**: React 18, TypeScript, Tailwind CSS, TanStack Query, shadcn/ui.
 - **Database**: PostgreSQL with Drizzle ORM and `pgvector` extension.
-- **Player Identity**: Unified resolution across major fantasy platforms.
+- **Player Identity**: Unified resolution across major fantasy platforms via Identity Bridge.
+  - **GSIS ID**: Primary NFL player identifier (format: `00-XXXXXXX`), stored in dedicated `gsis_id` column with unique partial index.
+  - **activeSkillPlayers Definition**: 
+    ```sql
+    SELECT COUNT(*) FROM player_identity_map
+    WHERE is_active = true AND position IN ('QB', 'RB', 'WR', 'TE')
+    ```
+    - "Active" = `is_active = true` (excludes merged/deactivated players where `merged_into IS NOT NULL`)
+    - Positions = skill positions only (QB, RB, WR, TE) - no kickers, defense, or linemen
+  - **Roster Bridge vs Global Identity**: Roster bridge coverage (Sleeper roster players mapped to canonical IDs) is primary for Ownership features. Global identity coverage is informational only - many practice squad/reserve players have no Sleeper presence.
 - **Data Quality**: Multi-dimensional validation, data lineage, and confidence scoring.
 
 **UI/UX Decisions**:

@@ -115,7 +115,7 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
           ...diagnostics,
           note: 'Active league set but no roster players found in league_teams.players (roster sync missing).',
           actionHint: 'Run Sleeper roster sync or verify league_teams population.',
-          thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70 or empty rosters' }
+          thresholds: { healthy: '>=0.95', warning: '0.85-0.94', critical: '<0.85 or empty rosters' }
         }
       };
     }
@@ -124,8 +124,8 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
     const coveragePct = mapped / totalRosterSleeperIds;
     
     let status: CheckStatus = 'healthy';
-    if (coveragePct < 0.70) status = 'critical';
-    else if (coveragePct < 0.85) status = 'warning';
+    if (coveragePct < 0.85) status = 'critical';
+    else if (coveragePct < 0.95) status = 'warning';
     
     // Get unmapped sample with player details from unmapped_sleeper_players table
     const unmappedSampleIds = unmappedIds.slice(0, 10);
@@ -168,7 +168,7 @@ async function checkRosterBridgeCoverage(): Promise<AuditCheck> {
         coveragePct: Math.round(coveragePct * 100) / 100,
         unmappedSample,
         ...(actionHint && { actionHint }),
-        thresholds: { healthy: '>=0.85', warning: '0.70-0.84', critical: '<0.70' },
+        thresholds: { healthy: '>=0.95', warning: '0.85-0.94', critical: '<0.85' },
         note: 'Roster coverage is what ownership + player UX depends on.'
       }
     };
@@ -285,51 +285,104 @@ async function checkEnrichmentRecentActivity(): Promise<AuditCheck> {
   }
 }
 
-async function checkGsisDuplicates(): Promise<AuditCheck> {
+async function checkGsisDuplicatesActive(): Promise<AuditCheck> {
   try {
     const result = await db.execute(sql`
       SELECT 
         gsis_id, 
         COUNT(*) as count, 
-        array_agg(canonical_id) as players
+        array_agg(
+          json_build_object(
+            'canonical_id', canonical_id,
+            'full_name', full_name,
+            'position', position,
+            'nfl_team', nfl_team
+          )
+        ) as players
       FROM player_identity_map
       WHERE gsis_id IS NOT NULL
         AND position IN ('QB', 'RB', 'WR', 'TE')
         AND is_active = true
+        AND merged_into IS NULL
       GROUP BY gsis_id
       HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC
+      LIMIT 10
     `);
     
     const duplicates = result.rows as any[];
     const duplicateCount = duplicates.length;
     
-    let status: CheckStatus = 'healthy';
-    if (duplicateCount > 0) {
-      status = 'warning';
-    }
-    
-    const sample = duplicates.slice(0, 3).map(d => ({
+    const duplicateSample = duplicates.map(d => ({
       gsisId: d.gsis_id,
       count: parseInt(d.count),
-      players: d.players
+      canonicalIds: d.players
     }));
     
     return {
-      key: 'identity.gsis_duplicates',
-      status,
+      key: 'identity.gsis_duplicates_active',
+      status: duplicateCount > 0 ? 'critical' : 'healthy',
       value: duplicateCount,
       details: {
         duplicateCount,
-        sample,
+        duplicateSample,
         actionHint: duplicateCount > 0 
           ? 'Use POST /api/identity/resolve-duplicate to mark merged players'
           : undefined,
-        note: 'Duplicate GSIS IDs may cause ambiguous player matching'
+        note: 'Duplicate GSIS IDs among ACTIVE players break identity resolution'
       }
     };
   } catch (error) {
     return {
-      key: 'identity.gsis_duplicates',
+      key: 'identity.gsis_duplicates_active',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkMergedRowsExcluded(): Promise<AuditCheck> {
+  try {
+    const result = await db.execute(sql`
+      WITH active_counts AS (
+        SELECT 
+          COUNT(*) FILTER (WHERE is_active = true) as active_count,
+          COUNT(*) FILTER (WHERE is_active = true AND merged_into IS NULL) as active_not_merged,
+          COUNT(*) FILTER (WHERE is_active = true AND merged_into IS NOT NULL) as active_but_merged,
+          COUNT(*) FILTER (WHERE merged_into IS NOT NULL) as total_merged
+        FROM player_identity_map
+        WHERE position IN ('QB', 'RB', 'WR', 'TE')
+      )
+      SELECT * FROM active_counts
+    `);
+    
+    const row = (result.rows as any[])[0] || {};
+    const activeCount = parseInt(row.active_count) || 0;
+    const activeNotMerged = parseInt(row.active_not_merged) || 0;
+    const activeButMerged = parseInt(row.active_but_merged) || 0;
+    const totalMerged = parseInt(row.total_merged) || 0;
+    
+    const mergedRowsInflateActive = activeButMerged > 0;
+    
+    return {
+      key: 'identity.merged_rows_excluded',
+      status: mergedRowsInflateActive ? 'critical' : 'healthy',
+      value: activeButMerged,
+      details: {
+        activeSkillPlayers: activeCount,
+        activeNotMerged,
+        activeButMerged,
+        totalMergedRows: totalMerged,
+        exclusionEnforced: !mergedRowsInflateActive,
+        actionHint: mergedRowsInflateActive 
+          ? 'Set is_active=false for merged rows (WHERE merged_into IS NOT NULL)'
+          : undefined,
+        note: 'Merged rows should have is_active=false to not inflate active player counts'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'identity.merged_rows_excluded',
       status: 'skipped',
       details: { error: error instanceof Error ? error.message : 'Unknown error' }
     };
@@ -764,7 +817,8 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
     checkRosterBridgeCoverage(),
     checkGlobalSleeperIdPopulation(),
     checkEnrichmentRecentActivity(),
-    checkGsisDuplicates(),
+    checkGsisDuplicatesActive(),
+    checkMergedRowsExcluded(),
     checkEnrichmentQuality(),
     checkMetricMatrixCoverage(season, week),
     checkPercentScaleSanity(season),
