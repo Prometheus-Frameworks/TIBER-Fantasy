@@ -79,13 +79,16 @@ export async function backfillGsisIds(): Promise<BackfillResult> {
 
 // Report current GSIS coverage
 export async function reportGsisCoverage(): Promise<{
-  totalActive: number;
+  activeSkillPlayers: number;
   withGsisId: number;
-  coveragePct: number;
+  gsisSkillCoveragePct: number;
+  totalIdentityMapRows: number;
+  totalWithAnyExternalId: number;
   sampleWithGsis: Array<{ canonical_id: string; full_name: string; gsis_id: string }>;
   sampleWithoutGsis: Array<{ canonical_id: string; full_name: string; position: string }>;
 }> {
-  const countResult = await db.execute(sql`
+  // Active skill position players (QB, RB, WR, TE)
+  const skillCountResult = await db.execute(sql`
     SELECT 
       COUNT(*) as total,
       COUNT(gsis_id) as with_gsis
@@ -94,9 +97,21 @@ export async function reportGsisCoverage(): Promise<{
       AND position IN ('QB', 'RB', 'WR', 'TE')
   `);
 
-  const row = (countResult.rows as any[])[0];
-  const total = parseInt(row.total) || 0;
-  const withGsis = parseInt(row.with_gsis) || 0;
+  const skillRow = (skillCountResult.rows as any[])[0];
+  const activeSkillPlayers = parseInt(skillRow.total) || 0;
+  const withGsis = parseInt(skillRow.with_gsis) || 0;
+
+  // Total identity map rows (all positions, all active/inactive)
+  const totalResult = await db.execute(sql`
+    SELECT 
+      COUNT(*) as total_rows,
+      COUNT(CASE WHEN sleeper_id IS NOT NULL OR gsis_id IS NOT NULL OR espn_id IS NOT NULL OR fantasy_data_id IS NOT NULL THEN 1 END) as with_any_external
+    FROM player_identity_map
+  `);
+
+  const totalRow = (totalResult.rows as any[])[0];
+  const totalIdentityMapRows = parseInt(totalRow.total_rows) || 0;
+  const totalWithAnyExternalId = parseInt(totalRow.with_any_external) || 0;
 
   const sampleWithResult = await db.execute(sql`
     SELECT canonical_id, full_name, gsis_id
@@ -116,9 +131,11 @@ export async function reportGsisCoverage(): Promise<{
   `);
 
   return {
-    totalActive: total,
+    activeSkillPlayers,
     withGsisId: withGsis,
-    coveragePct: total > 0 ? Math.round((withGsis / total) * 10000) / 100 : 0,
+    gsisSkillCoveragePct: activeSkillPlayers > 0 ? Math.round((withGsis / activeSkillPlayers) * 10000) / 100 : 0,
+    totalIdentityMapRows,
+    totalWithAnyExternalId,
     sampleWithGsis: sampleWithResult.rows as any[],
     sampleWithoutGsis: sampleWithoutResult.rows as any[]
   };
