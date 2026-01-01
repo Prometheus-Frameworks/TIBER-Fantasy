@@ -1,0 +1,137 @@
+Title: Identity Enrichment v1.1 — Logging + Safety Hardening
+
+Goal: Add full observability to POST /api/league/enrich-roster-identity so every Sleeper→Canonical match is traceable (strategy, candidates, before/after), and fix any unsafe matching bugs (including the GSIS branch).
+
+1) Create DB table + migration
+
+Create migration file: migrations/00xx_identity_enrichment_log.sql
+
+Table: identity_enrichment_log
+
+Columns:
+
+id serial primary key
+
+created_at timestamptz default now()
+
+league_id uuid null
+
+sleeper_player_id text not null
+
+sleeper_full_name text null
+
+sleeper_position text null
+
+sleeper_team text null
+
+sleeper_gsis_id text null
+
+sleeper_fantasy_data_id text null
+
+matched_canonical_id text null
+
+match_confidence text not null -- 'exact' | 'high' | 'medium' | 'none'
+
+match_strategy text not null -- 'gsis' | 'fantasy_data' | 'name_pos_team' | 'name_pos' | 'none'
+
+candidate_count integer not null default 0
+
+candidate_sample jsonb null -- store up to first 5 candidates (canonical_id, name, team, position)
+
+notes text null -- for debug
+Indexes:
+
+(league_id, created_at desc)
+
+(sleeper_player_id)
+
+(matched_canonical_id)
+
+(match_strategy)
+
+2) Add drizzle schema
+
+Update shared/schema.ts with identityEnrichmentLog pgTable + types.
+
+3) Fix GSIS branch correctness
+
+In server/services/identity/rosterIdentityEnrichment.ts:
+
+Fix the rows[0] bug.
+
+Remove canonical_id LIKE '%gsis_id%' unless canonical_id is known to contain GSIS.
+
+Prefer strict equality against a real GSIS column if it exists.
+
+If no GSIS column exists, add one OR use the correct column that already stores GSIS.
+
+Rule: GSIS match must be equality match on a dedicated field, not substring.
+
+4) Instrument all strategies with logging
+
+Modify findCanonicalMatch() to return:
+
+canonicalId
+
+confidence
+
+strategy
+
+candidateCount
+
+candidateSample
+
+And regardless of match outcome, insert one row into identity_enrichment_log for every Sleeper player processed:
+
+If matched: strategy/confidence filled
+
+If not matched: confidence='none', strategy='none', candidate_count=0
+
+5) Add endpoint to inspect logs
+
+Add:
+GET /api/league/enrich-roster-identity/logs?limit=50
+
+Return most recent logs with fields above (no throwing; always structured).
+
+6) Add feature-audit check upgrade
+
+In /api/system/feature-audit:
+
+Add a check: identity.enrichment_recent_activity
+
+Criteria: if identity_enrichment_log has entries in last 24h -> healthy, else info
+
+Include count and last timestamp.
+
+7) Sanity checks to run
+
+Run npm run audit:metric-matrix
+
+Run npm run test:forge
+
+Run the identity enrichment endpoint once
+
+Verify:
+
+Logs created
+
+Strategies show distribution
+
+No “name_pos” matches happen when multiple candidates exist
+
+GSIS strategy fires for players that have gsis_id
+
+Deliverables:
+
+Migration file
+
+Schema update
+
+Updated enrichment service
+
+New logs endpoint
+
+Updated system audit check
+
+Short summary + example curl outputs
