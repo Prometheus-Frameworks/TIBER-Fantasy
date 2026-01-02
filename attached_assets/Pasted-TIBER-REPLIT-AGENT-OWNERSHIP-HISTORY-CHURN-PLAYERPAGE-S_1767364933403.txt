@@ -1,0 +1,116 @@
+TIBER REPLIT AGENT — OWNERSHIP HISTORY + CHURN + PLAYERPAGE SURFACING (MINIMAL DIFF)
+
+Context:
+- Sleeper Sync v2 is live: sleeper_roster_current + ownership_events + scheduler.
+- Baseline sync does NOT emit events (good).
+- Existing ownership endpoint behavior must remain unchanged.
+
+ABSOLUTE RULES:
+1) Do NOT change existing ownership endpoint output/logic (owned_by_me / owned_by_other / free_agent / disabled).
+2) Use player_key consistently:
+   - prefer GSIS id when available (player_key == gsis_id)
+   - otherwise player_key == "sleeper:<id>" fallback
+3) All new features are additive.
+4) Keep type-safety and repo conventions.
+
+PHASE 0 — DISCOVERY (NO CHANGES YET)
+- Search repo for existing endpoints:
+  - /api/ownership/history
+  - /api/ownership/churn
+  - ownership_events usage
+- If they already exist, do NOT duplicate; extend if needed.
+- Identify PlayerPage component(s) to surface info:
+  likely client/src/pages/player/* or similar.
+
+PHASE 1 — API ENDPOINT: OWNERSHIP HISTORY
+Add:
+GET /api/ownership/history?leagueId=...&playerKey=...
+Behavior:
+- validate leagueId + playerKey required; return 400 if missing.
+- query ownership_events for league_id + player_key
+- order by event_at DESC
+- limit 50
+Return:
+{
+  success: true,
+  data: {
+    leagueId,
+    playerKey,
+    events: [
+      { eventType, fromTeamId, toTeamId, eventAt, week, season, source }
+    ]
+  }
+}
+
+Important:
+- Map DB snake_case -> API camelCase in response (eventType, fromTeamId, toTeamId, eventAt).
+
+PHASE 2 — API ENDPOINT: CHURN (MOST ADDED/DROPPED/TRADED)
+Add:
+GET /api/ownership/churn?leagueId=...&since=ISO
+Behavior:
+- validate leagueId required
+- since optional; default to last 7 days if missing
+- query aggregates from ownership_events where league_id and event_at >= since
+- produce top 20 each:
+  - mostAdded: event_type='ADD'
+  - mostDropped: event_type='DROP'
+  - mostTraded: event_type='TRADE'
+Return:
+{
+  success: true,
+  data: {
+    leagueId,
+    since,
+    mostAdded: [{ playerKey, count }],
+    mostDropped: [{ playerKey, count }],
+    mostTraded: [{ playerKey, count }]
+  }
+}
+
+Performance:
+- Ensure DB has an index supporting (league_id, event_at). If missing, add (but it should already exist).
+
+PHASE 3 — PLAYERPAGE SURFACING (RESEARCH TERMINAL STYLE)
+Add a compact section on PlayerPage:
+Title: "League Activity"
+Content:
+A) Ownership badge already exists — keep it.
+B) New: "Recent Moves" (from /api/ownership/history)
+   - Show up to last 5 events (excluding baseline since baseline emits none)
+   - Format examples:
+     - "ADD → Team X" (date)
+     - "DROP ← Team X" (date)
+     - "TRADE Team A → Team B" (date)
+C) New: "Churn Snapshot" (from /api/ownership/churn since last 7 days)
+   - Only show if player appears in any list, otherwise show “No notable movement (7d)”.
+
+League context:
+- Use the user’s active leagueId if available in the app context.
+- If no active league is set, hide the section and show a small hint:
+  “Set an active league to see activity.”
+Do not prompt for credentials; just handle the state.
+
+UI constraints:
+- Minimal, clean, collapsible section if you already have collapsibles.
+- Avoid heavy new styling systems; match existing components.
+- No new global dependencies.
+
+PHASE 4 — TESTS (LIGHT BUT REAL)
+- Add route tests if repo has a test harness; otherwise add minimal integration verification steps in comments and confirm manually.
+- At minimum: ensure endpoints return 400 when missing params.
+
+PHASE 5 — OUTPUT
+Provide:
+- File paths changed/added
+- Example curl calls:
+  * history
+  * churn
+- Screenshot-equivalent description of PlayerPage section placement
+- Confirm existing ownership endpoint unchanged.
+
+Example curls:
+curl -s "http://localhost:5000/api/ownership/history?leagueId=LEAGUE&playerKey=PLAYERKEY" | jq .
+curl -s "http://localhost:5000/api/ownership/churn?leagueId=LEAGUE&since=2026-01-01T00:00:00.000Z" | jq .
+
+BEGIN.
