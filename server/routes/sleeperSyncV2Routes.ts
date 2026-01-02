@@ -60,6 +60,7 @@ router.post('/run', async (req: Request, res: Response) => {
         leagueId: result.leagueId,
         eventsInserted: result.eventsInserted,
         shortCircuited: result.shortCircuited,
+        baseline: result.baseline,
         durationMs: result.durationMs,
         hash: result.hash,
         resolverStats: result.resolverStats
