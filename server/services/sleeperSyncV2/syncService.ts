@@ -231,6 +231,11 @@ export async function syncLeague(
   const startTime = Date.now();
   const { force = false, week = getCurrentNflWeek(), season = getCurrentNflSeason() } = options;
   
+  // Defensive guard: validate leagueId
+  if (!leagueId || typeof leagueId !== 'string' || leagueId.trim() === '') {
+    throw new Error('leagueId required: must be a non-empty string');
+  }
+  
   // Reset resolver stats and cache for this sync
   resetResolverStats();
   clearResolverCache();
@@ -299,16 +304,23 @@ export async function syncLeague(
       // 7b. Insert ownership events with dedupe keys (ON CONFLICT for extra safety)
       if (events.length > 0) {
         const eventValues = events.map(event => ({
-          leagueId,
-          playerKey: event.playerKey,
-          fromTeamId: event.fromTeamId,
-          toTeamId: event.toTeamId,
-          eventType: event.eventType,
+          league_id: leagueId,
+          player_key: event.playerKey,
+          from_team_id: event.fromTeamId,
+          to_team_id: event.toTeamId,
+          event_type: event.eventType,
           week,
           season,
           source: 'sleeper',
-          dedupeKey: generateDedupeKey(leagueId, event, currentChangeSeq)
+          dedupe_key: generateDedupeKey(leagueId, event, currentChangeSeq)
         }));
+        
+        // Runtime assertion: verify all rows have league_id before insert
+        for (const row of eventValues) {
+          if (!row.league_id) {
+            throw new Error(`Insert assertion failed: league_id is null/undefined. Row keys: ${Object.keys(row).join(', ')}`);
+          }
+        }
         
         // Insert with ON CONFLICT DO NOTHING for idempotency
         const insertResult = await tx.execute(sql`
