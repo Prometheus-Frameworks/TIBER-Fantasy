@@ -281,14 +281,16 @@ export default function PlayerPage() {
   // Use first synced league as active league context
   const activeLeagueId = leaguesData?.data?.leagues?.[0]?.leagueId;
 
-  // Derive playerKey for ownership queries: use sleeper:<id> format if available, else canonical ID
+  // Derive playerKey for ownership queries: GSIS ID first, then sleeper:<id>, else undefined
+  const gsisId = player?.externalIds?.nfl_data_py; // GSIS ID stored as nfl_data_py
   const sleeperPlayerId = player?.externalIds?.sleeper;
-  const ownershipPlayerKey = sleeperPlayerId ? `sleeper:${sleeperPlayerId}` : playerId;
+  const ownershipPlayerKey = gsisId || (sleeperPlayerId ? `sleeper:${sleeperPlayerId}` : undefined);
 
   // Fetch ownership history for this player in the active league
   const { data: historyData, isLoading: historyLoading } = useQuery<OwnershipHistoryResponse>({
-    queryKey: ['/api/ownership/history', activeLeagueId, ownershipPlayerKey],
+    queryKey: ['/api/ownership/history', activeLeagueId, ownershipPlayerKey ?? ''],
     queryFn: async () => {
+      if (!ownershipPlayerKey) return { success: false, error: 'No player key available' };
       const res = await fetch(`/api/ownership/history?leagueId=${activeLeagueId}&playerKey=${encodeURIComponent(ownershipPlayerKey)}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
