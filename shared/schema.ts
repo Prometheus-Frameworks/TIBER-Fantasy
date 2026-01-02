@@ -4140,6 +4140,7 @@ export const sleeperSyncState = pgTable("sleeper_sync_state", {
   lastDurationMs: integer("last_duration_ms"),
   lastError: text("last_error"),
   lastHash: text("last_hash"), // SHA256 of canonical roster string for change detection
+  changeSeq: integer("change_seq").notNull().default(0), // Increments on each roster change for dedupe
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
