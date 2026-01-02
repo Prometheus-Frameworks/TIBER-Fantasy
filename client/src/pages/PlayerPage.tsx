@@ -281,18 +281,22 @@ export default function PlayerPage() {
   // Use first synced league as active league context
   const activeLeagueId = leaguesData?.data?.leagues?.[0]?.leagueId;
 
+  // Derive playerKey for ownership queries: use sleeper:<id> format if available, else canonical ID
+  const sleeperPlayerId = player?.externalIds?.sleeper;
+  const ownershipPlayerKey = sleeperPlayerId ? `sleeper:${sleeperPlayerId}` : playerId;
+
   // Fetch ownership history for this player in the active league
   const { data: historyData, isLoading: historyLoading } = useQuery<OwnershipHistoryResponse>({
-    queryKey: ['/api/ownership/history', activeLeagueId, playerId],
+    queryKey: ['/api/ownership/history', activeLeagueId, ownershipPlayerKey],
     queryFn: async () => {
-      const res = await fetch(`/api/ownership/history?leagueId=${activeLeagueId}&playerKey=${playerId}`);
+      const res = await fetch(`/api/ownership/history?leagueId=${activeLeagueId}&playerKey=${encodeURIComponent(ownershipPlayerKey)}`);
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
         return { success: false, error: errorData.error || `HTTP ${res.status}` };
       }
       return res.json();
     },
-    enabled: !!activeLeagueId && !!playerId,
+    enabled: !!activeLeagueId && !!ownershipPlayerKey,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
@@ -311,11 +315,11 @@ export default function PlayerPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Check if player appears in churn lists
+  // Check if player appears in churn lists (match by sleeper key if available)
   const playerInChurn = {
-    added: churnData?.data?.mostAdded?.find(e => e.playerKey === playerId),
-    dropped: churnData?.data?.mostDropped?.find(e => e.playerKey === playerId),
-    traded: churnData?.data?.mostTraded?.find(e => e.playerKey === playerId),
+    added: churnData?.data?.mostAdded?.find(e => e.playerKey === ownershipPlayerKey),
+    dropped: churnData?.data?.mostDropped?.find(e => e.playerKey === ownershipPlayerKey),
+    traded: churnData?.data?.mostTraded?.find(e => e.playerKey === ownershipPlayerKey),
   };
   const hasChurnActivity = playerInChurn.added || playerInChurn.dropped || playerInChurn.traded;
 
