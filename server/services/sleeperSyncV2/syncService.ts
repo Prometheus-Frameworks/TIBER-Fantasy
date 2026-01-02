@@ -47,6 +47,7 @@ export interface SyncResult {
   leagueId: string;
   eventsInserted: number;
   shortCircuited: boolean;
+  baseline?: boolean;
   durationMs: number;
   hash: string;
   resolverStats: {
@@ -268,6 +269,7 @@ export async function syncLeague(
     let shortCircuited = false;
     let eventsInserted = 0;
     let currentChangeSeq = 0;
+    let isBaseline = false;
     
     await db.transaction(async (tx) => {
       // 7a. Lock and check hash WITH FOR UPDATE to prevent concurrent race conditions
@@ -280,6 +282,9 @@ export async function syncLeague(
       const existingRow = (existingStateResult.rows as any[])[0];
       const existingHash = existingRow?.last_hash;
       const existingChangeSeq = existingRow?.change_seq ?? 0;
+      
+      // Detect baseline: first sync for this league (no prior state OR change_seq=0 OR no prev roster)
+      isBaseline = !existingRow || existingChangeSeq === 0 || prevRosterMap.size === 0;
       
       if (!force && existingHash === newHash) {
         console.log(`[SleeperSyncV2] No changes detected (hash match), short-circuiting`);
@@ -299,10 +304,15 @@ export async function syncLeague(
           updated_at = NOW()
       `);
       
-      console.log(`[SleeperSyncV2] Hash differs, incrementing changeSeq to ${currentChangeSeq}`);
+      if (isBaseline) {
+        console.log(`[SleeperSyncV2] Baseline sync detected, skipping ownership_events insert`);
+      } else {
+        console.log(`[SleeperSyncV2] Hash differs, incrementing changeSeq to ${currentChangeSeq}`);
+      }
       
       // 7b. Insert ownership events with dedupe keys (ON CONFLICT for extra safety)
-      if (events.length > 0) {
+      // SKIP on baseline to avoid polluting churn data with initial ADDs
+      if (events.length > 0 && !isBaseline) {
         const eventValues = events.map(event => ({
           league_id: leagueId,
           player_key: event.playerKey,
@@ -374,13 +384,14 @@ export async function syncLeague(
     const durationMs = Date.now() - startTime;
     await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash, changeSeq: currentChangeSeq });
     
-    console.log(`[SleeperSyncV2] Sync complete: ${eventsInserted} events, changeSeq=${currentChangeSeq} in ${durationMs}ms`);
+    console.log(`[SleeperSyncV2] Sync complete: ${eventsInserted} events, changeSeq=${currentChangeSeq}, baseline=${isBaseline} in ${durationMs}ms`);
     
     return {
       success: true,
       leagueId,
       eventsInserted,
       shortCircuited: false,
+      baseline: isBaseline,
       durationMs,
       hash: newHash,
       resolverStats: getResolverStats()
