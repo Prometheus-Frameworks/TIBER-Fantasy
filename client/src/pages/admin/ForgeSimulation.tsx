@@ -59,7 +59,7 @@ import {
   Area,
   ComposedChart,
 } from 'recharts';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest } from '@/lib/queryClient';
 
 interface SimulationParameters {
   decayRatio: number;
