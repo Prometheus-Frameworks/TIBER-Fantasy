@@ -665,6 +665,139 @@ export default function PlayerPage() {
           </div>
         </div>
 
+        {/* League Activity Section */}
+        <div className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setActivityExpanded(!activityExpanded)}
+            className="w-full flex items-center justify-between p-5 hover:bg-gray-800/20 transition-colors"
+            data-testid="button-toggle-activity"
+          >
+            <div className="flex items-center gap-2">
+              <Activity size={18} className="text-blue-400" />
+              <h3 className="text-lg font-semibold text-white">League Activity</h3>
+            </div>
+            {activityExpanded ? (
+              <ChevronUp size={18} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={18} className="text-gray-400" />
+            )}
+          </button>
+          
+          {activityExpanded && (
+            <div className="px-5 pb-5 space-y-4">
+              {!activeLeagueId ? (
+                <div className="text-sm text-gray-500 italic py-2" data-testid="text-no-league-hint">
+                  Set an active league to see activity.
+                </div>
+              ) : (
+                <>
+                  {/* Recent Moves */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">Recent Moves</h4>
+                    {historyLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2].map((i) => (
+                          <Skeleton key={i} className="h-8 w-full bg-gray-800/50" />
+                        ))}
+                      </div>
+                    ) : !historyData?.success || !historyData.data?.events?.length ? (
+                      <p className="text-sm text-gray-500 py-2" data-testid="text-no-recent-moves">
+                        No recent moves tracked
+                      </p>
+                    ) : (
+                      <div className="space-y-2" data-testid="list-recent-moves">
+                        {historyData.data.events.slice(0, 5).map((event) => {
+                          const eventDate = new Date(event.eventAt);
+                          const dateStr = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          
+                          return (
+                            <div
+                              key={event.id}
+                              className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30 text-sm"
+                              data-testid={`move-event-${event.id}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {event.eventType === 'ADD' && (
+                                  <>
+                                    <Badge variant="outline" className="text-xs border-green-500/50 text-green-400 bg-green-500/10">
+                                      ADD
+                                    </Badge>
+                                    <span className="text-gray-300">
+                                      → Team {event.toTeamId?.slice(-4) || '?'}
+                                    </span>
+                                  </>
+                                )}
+                                {event.eventType === 'DROP' && (
+                                  <>
+                                    <Badge variant="outline" className="text-xs border-red-500/50 text-red-400 bg-red-500/10">
+                                      DROP
+                                    </Badge>
+                                    <span className="text-gray-300">
+                                      ← Team {event.fromTeamId?.slice(-4) || '?'}
+                                    </span>
+                                  </>
+                                )}
+                                {event.eventType === 'TRADE' && (
+                                  <>
+                                    <Badge variant="outline" className="text-xs border-purple-500/50 text-purple-400 bg-purple-500/10">
+                                      TRADE
+                                    </Badge>
+                                    <span className="text-gray-300">
+                                      {event.fromTeamId?.slice(-4) || '?'} → {event.toTeamId?.slice(-4) || '?'}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-500">{dateStr}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Churn Snapshot */}
+                  <div className="border-t border-gray-700/50 pt-4">
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">Churn Snapshot (7d)</h4>
+                    {hasChurnActivity ? (
+                      <div className="space-y-1.5" data-testid="churn-snapshot">
+                        {playerInChurn.added && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <TrendingUp size={14} className="text-green-400" />
+                            <span className="text-gray-300">
+                              Added <span className="text-green-400 font-medium">{playerInChurn.added.count}x</span> in league
+                            </span>
+                          </div>
+                        )}
+                        {playerInChurn.dropped && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <TrendingDown size={14} className="text-red-400" />
+                            <span className="text-gray-300">
+                              Dropped <span className="text-red-400 font-medium">{playerInChurn.dropped.count}x</span> in league
+                            </span>
+                          </div>
+                        )}
+                        {playerInChurn.traded && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Activity size={14} className="text-purple-400" />
+                            <span className="text-gray-300">
+                              Traded <span className="text-purple-400 font-medium">{playerInChurn.traded.count}x</span> in league
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500" data-testid="text-no-churn">
+                        No notable movement (7d)
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Footer */}
         <div className="text-center pt-6 border-t border-gray-800/50">
           <p className="text-xs text-gray-600 tracking-wide">
