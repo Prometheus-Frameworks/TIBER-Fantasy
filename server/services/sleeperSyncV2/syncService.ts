@@ -243,39 +243,33 @@ export async function syncLeague(
     const canonicalStr = canonicalRosterString(nextRosterMap);
     const newHash = createHash('sha256').update(canonicalStr).digest('hex');
     
-    // 6. Check for short-circuit (no changes)
-    if (!force) {
-      const existingState = await db
-        .select({ lastHash: sleeperSyncState.lastHash })
-        .from(sleeperSyncState)
-        .where(eq(sleeperSyncState.leagueId, leagueId))
-        .limit(1);
-      
-      if (existingState.length > 0 && existingState[0].lastHash === newHash) {
-        const durationMs = Date.now() - startTime;
-        console.log(`[SleeperSyncV2] No changes detected, short-circuiting`);
-        
-        await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash });
-        
-        return {
-          success: true,
-          leagueId,
-          eventsInserted: 0,
-          shortCircuited: true,
-          durationMs,
-          hash: newHash,
-          resolverStats: getResolverStats()
-        };
-      }
-    }
-    
-    // 7. Compute diff events
+    // 6. Compute diff events
     const events = computeRosterDiff(prevRosterMap, nextRosterMap);
     console.log(`[SleeperSyncV2] Detected ${events.length} roster changes`);
     
-    // 8. Execute transaction: insert events + replace roster state
+    // 7. Execute transaction with hash check inside for concurrency safety
+    let shortCircuited = false;
+    let eventsInserted = 0;
+    
     await db.transaction(async (tx) => {
-      // 8a. Insert ownership events with dedupe keys
+      // 7a. Lock and check hash WITH FOR UPDATE to prevent concurrent race conditions
+      if (!force) {
+        const existingStateResult = await tx.execute(sql`
+          SELECT last_hash FROM sleeper_sync_state 
+          WHERE league_id = ${leagueId}
+          FOR UPDATE
+        `);
+        
+        const existingHash = (existingStateResult.rows as any[])[0]?.last_hash;
+        
+        if (existingHash === newHash) {
+          console.log(`[SleeperSyncV2] No changes detected (hash match), short-circuiting`);
+          shortCircuited = true;
+          return; // Exit transaction early - nothing to do
+        }
+      }
+      
+      // 7b. Insert ownership events with dedupe keys (ON CONFLICT for extra safety)
       if (events.length > 0) {
         const eventValues = events.map(event => ({
           leagueId,
@@ -290,7 +284,7 @@ export async function syncLeague(
         }));
         
         // Insert with ON CONFLICT DO NOTHING for idempotency
-        await tx.execute(sql`
+        const insertResult = await tx.execute(sql`
           INSERT INTO ownership_events 
             (league_id, player_key, from_team_id, to_team_id, event_type, week, season, source, dedupe_key)
           SELECT 
@@ -301,9 +295,10 @@ export async function syncLeague(
           )
           ON CONFLICT (dedupe_key) DO NOTHING
         `);
+        eventsInserted = (insertResult as any).rowCount || events.length;
       }
       
-      // 8b. Replace roster state (delete old, insert new)
+      // 7c. Replace roster state (delete old, insert new)
       await tx.delete(sleeperRosterCurrent)
         .where(eq(sleeperRosterCurrent.leagueId, leagueId));
       
@@ -320,16 +315,32 @@ export async function syncLeague(
       }
     });
     
+    // Handle short-circuit response
+    if (shortCircuited) {
+      const durationMs = Date.now() - startTime;
+      await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash });
+      
+      return {
+        success: true,
+        leagueId,
+        eventsInserted: 0,
+        shortCircuited: true,
+        durationMs,
+        hash: newHash,
+        resolverStats: getResolverStats()
+      };
+    }
+    
     // 9. Update sync state to ok
     const durationMs = Date.now() - startTime;
     await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash });
     
-    console.log(`[SleeperSyncV2] Sync complete: ${events.length} events in ${durationMs}ms`);
+    console.log(`[SleeperSyncV2] Sync complete: ${eventsInserted} events in ${durationMs}ms`);
     
     return {
       success: true,
       leagueId,
-      eventsInserted: events.length,
+      eventsInserted,
       shortCircuited: false,
       durationMs,
       hash: newHash,
