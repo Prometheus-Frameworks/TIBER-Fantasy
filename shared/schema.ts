@@ -4508,6 +4508,143 @@ export const forgePlayerState = pgTable("forge_player_state", {
 export type ForgePlayerState = typeof forgePlayerState.$inferSelect;
 export type InsertForgePlayerState = typeof forgePlayerState.$inferInsert;
 
+/**
+ * FORGE Player State Simulation Table
+ * Isolated table for simulation runs - mirrors forge_player_state structure
+ * but keeps simulation data separate from production scoring
+ */
+export const forgePlayerStateSim = pgTable("forge_player_state_sim", {
+  id: serial("id").primaryKey(),
+  
+  // Simulation run identifier
+  simRunId: text("sim_run_id").notNull(),
+  
+  // Identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name"),
+  position: text("position"),
+  team: text("team"),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  
+  // Previous week's state (inputs to current week's Pass 1)
+  alphaPrev: real("alpha_prev"),
+  tierPrev: integer("tier_prev"),
+  volatilityPrev: real("volatility_prev"),
+  momentum: real("momentum"),
+  
+  // Pass 0 output (raw single-pass score)
+  alphaRaw: real("alpha_raw"),
+  
+  // Pass 1 computations (recursive adjustments)
+  expectedAlpha: real("expected_alpha"),
+  surprise: real("surprise"),
+  stabilityAdjustment: real("stability_adjustment"),
+  
+  // Final outputs
+  alphaFinal: real("alpha_final"),
+  tierFinal: integer("tier_final"),
+  confidenceScore: real("confidence_score"),
+  
+  // Volatility computation (for next week)
+  alphaHistory: real("alpha_history").array(),
+  volatilityUpdated: real("volatility_updated"),
+  momentumUpdated: real("momentum_updated"),
+  
+  // Outlier flags
+  outlierFlags: text("outlier_flags").array(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by"),
+  reviewNotes: text("review_notes"),
+  
+  // Metadata
+  computedAt: timestamp("computed_at").defaultNow(),
+  passCount: integer("pass_count").default(2),
+}, (table) => ({
+  simRunIdx: index("forge_sim_run_idx").on(table.simRunId),
+  uniqueSimPlayerSeasonWeek: unique("forge_sim_unique").on(table.simRunId, table.playerId, table.season, table.week),
+  playerIdx: index("forge_sim_player_idx").on(table.playerId),
+  seasonWeekIdx: index("forge_sim_season_week_idx").on(table.season, table.week),
+  positionIdx: index("forge_sim_position_idx").on(table.position),
+  outlierIdx: index("forge_sim_outlier_idx").on(table.outlierFlags),
+}));
+
+export type ForgePlayerStateSim = typeof forgePlayerStateSim.$inferSelect;
+export type InsertForgePlayerStateSim = typeof forgePlayerStateSim.$inferInsert;
+
+/**
+ * FORGE Simulation Presets
+ * Stores named parameter presets for reproducible simulation runs
+ */
+export const forgeSimPresets = pgTable("forge_sim_presets", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  
+  // Tunable parameters
+  decayRatio: real("decay_ratio").notNull().default(0.7),
+  baselineWeight: real("baseline_weight").notNull().default(0.3),
+  volatilityHighThreshold: real("volatility_high_threshold").notNull().default(10),
+  volatilityLowThreshold: real("volatility_low_threshold").notNull().default(5),
+  momentumMultiplier: real("momentum_multiplier").notNull().default(0.15),
+  adjustmentCap: real("adjustment_cap").notNull().default(10),
+  historyWindowVolatility: integer("history_window_volatility").notNull().default(4),
+  historyWindowMomentum: integer("history_window_momentum").notNull().default(3),
+  
+  // Outlier flag thresholds
+  outlierLargeAdjustment: real("outlier_large_adjustment").default(8),
+  outlierVolatilitySpike: real("outlier_volatility_spike").default(15),
+  
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueName: unique("forge_preset_name_unique").on(table.name),
+  defaultIdx: index("forge_preset_default_idx").on(table.isDefault),
+}));
+
+export type ForgeSimPreset = typeof forgeSimPresets.$inferSelect;
+export type InsertForgeSimPreset = typeof forgeSimPresets.$inferInsert;
+
+/**
+ * FORGE Simulation Runs
+ * Tracks each simulation run with its parameters and status
+ */
+export const forgeSimRuns = pgTable("forge_sim_runs", {
+  id: text("id").primaryKey(),
+  presetId: integer("preset_id").references(() => forgeSimPresets.id),
+  presetName: text("preset_name"),
+  
+  // Run configuration
+  season: integer("season").notNull(),
+  weekStart: integer("week_start").notNull(),
+  weekEnd: integer("week_end").notNull(),
+  
+  // Parameters snapshot (in case preset changes later)
+  parametersSnapshot: text("parameters_snapshot"),
+  
+  // Progress tracking
+  status: text("status").notNull().default("pending"),
+  currentWeek: integer("current_week"),
+  totalPlayers: integer("total_players"),
+  processedPlayers: integer("processed_players").default(0),
+  
+  // Results summary
+  outlierCount: integer("outlier_count"),
+  avgAdjustmentMagnitude: real("avg_adjustment_magnitude"),
+  
+  // Timing
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  error: text("error"),
+}, (table) => ({
+  seasonIdx: index("forge_sim_runs_season_idx").on(table.season),
+  statusIdx: index("forge_sim_runs_status_idx").on(table.status),
+}));
+
+export type ForgeSimRun = typeof forgeSimRuns.$inferSelect;
+export type InsertForgeSimRun = typeof forgeSimRuns.$inferInsert;
+
 // ========================================
 // TIBER DATA LAB - OPERATION DATADIVE
 // Snapshot-based NFL data spine for reproducible analytics
