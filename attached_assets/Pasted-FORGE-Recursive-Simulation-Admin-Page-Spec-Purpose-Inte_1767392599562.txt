@@ -1,0 +1,115 @@
+FORGE Recursive Simulation Admin Page Spec
+Purpose
+Internal admin interface for running, tuning, and analyzing FORGE recursive engine simulations against historical NFL data.
+Route
+/admin/forge-simulation (protected, admin-only)
+Core Components
+
+1. Simulation Controls
+Run Simulation Panel
+FieldTypeDefaultNotesSeasonDropdown2025Future-proofed for multiple seasonsWeek RangeDual slider1-17Can run partial season for faster testsUse Isolated StateCheckbox✓Writes to forge_player_state_simClear Previous RunCheckbox✗Wipes sim table before running
+Action Button: Run Simulation
+
+Shows progress bar (Week 3 of 17...)
+Estimated time remaining
+Cancel button
+
+
+2. Parameter Tuning Panel
+Adjustable levers for the recursive engine. Changes apply to next simulation run.
+ParameterCurrent DefaultInput TypeRangeDecay Ratio (prior weight)0.7Slider0.5 - 0.9Baseline Weight0.3Auto-calc1 - decayVolatility High Threshold10Number5 - 20Volatility Low Threshold5Number2 - 10Momentum Multiplier0.15Slider0.05 - 0.3Adjustment Cap±10Number5 - 20History Window (volatility)4 weeksNumber3 - 8History Window (momentum)3 weeksNumber2 - 6
+Action Buttons:
+
+Reset to Defaults
+Save as Preset (name it for comparison later)
+Load Preset dropdown
+
+
+3. Output Table
+Sortable, filterable table of simulation results.
+Columns:
+ColumnDescriptionPlayerName + positionWeek1-17Alpha RawPass 0 scoreAlpha FinalPass 1 score (after recursion)AdjustmentDelta (final - raw)VolatilityCalculated volatility at that weekMomentumCalculated momentum at that weekSurpriseHow much raw differed from expected
+Filters:
+
+Position (QB/RB/WR/TE)
+Week range
+Adjustment magnitude (e.g., show only |adjustment| > 5)
+Player search
+
+Sorting: Click any column header
+
+4. Diff View
+Side-by-side comparison for a single player across the season.
+Layout:
+┌─────────────────────────────────────────────────────┐
+│  Player: [Dropdown or Search]                       │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Line Chart:                                        │
+│  - Blue line: Alpha Raw (pass 0)                    │
+│  - Green line: Alpha Final (pass 1)                 │
+│  - Shaded area: Adjustment delta                    │
+│                                                     │
+│  X-axis: Weeks 1-17                                 │
+│  Y-axis: Alpha score (0-100)                        │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│  Weekly Breakdown Table:                            │
+│  Week | Raw | Final | Adj | Vol | Mom | Surprise    │
+├─────────────────────────────────────────────────────┤
+│  Narrative Summary (optional):                      │
+│  "Player X showed high volatility weeks 4-8,       │
+│   dampening adjustments averaged -3.2. Momentum    │
+│   kicked in week 12 (+2.1 avg through week 17)."   │
+└─────────────────────────────────────────────────────┘
+
+5. Outlier Flags
+Auto-flag results that need manual review.
+Flag Conditions (configurable):
+ConditionDefault ThresholdLarge adjustment|adj| > 8Unexpected directionMomentum positive but adjustment negativeMissing weeksGap in player's week sequenceScore at boundsAlpha final = 0 or 100Volatility spikeVol > 15
+Outlier Panel:
+
+List of flagged player-weeks
+Click to jump to that player's diff view
+Mark as "Reviewed" or "Needs Fix"
+
+
+6. Comparison Mode (Optional, V2)
+Compare two simulation runs with different parameters.
+MetricRun A (default)Run B (tuned)DeltaAvg adjustment magnitude2.33.1+0.8Outliers flagged4731-16Correlation with actual fantasy finish0.720.76+0.04
+
+Data Flow
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ NFLfastR     │────▶│ FORGE Pass 0 │────▶│ Recursive    │
+│ 2025 Data    │     │ (alphaEngine)│     │ Pass 1       │
+└──────────────┘     └──────────────┘     └──────────────┘
+                                                 │
+                                                 ▼
+                                    ┌──────────────────────┐
+                                    │ forge_player_state_  │
+                                    │ sim (isolated table) │
+                                    └──────────────────────┘
+                                                 │
+                                                 ▼
+                                    ┌──────────────────────┐
+                                    │ Admin UI renders     │
+                                    │ outputs + analysis   │
+                                    └──────────────────────┘
+
+Tech Notes
+
+Isolation: Simulation writes to forge_player_state_sim, never touches production forge_player_state
+Idempotent: Re-running same params overwrites previous sim results
+Performance: For 17 weeks × ~500 relevant players, expect 2-5 min runtime. Show progress.
+Presets stored: Save tuning presets to forge_sim_presets table for reproducibility
+
+
+Success Criteria
+Simulation is ready for 2025 live use when:
+
+ Full 17-week run completes without errors
+ Outlier count is manageable (<30 needing review)
+ Spot-check 10 players you know well—do adjustments match intuition?
+ Tuning levers feel stable (small changes don't cause wild swings)
+ Diff view narratives make sense
+
