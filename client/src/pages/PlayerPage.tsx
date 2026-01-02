@@ -1103,7 +1103,7 @@ interface CompareDrawerContentProps {
 
 interface ForgeEgResponse {
   success: boolean;
-  data?: {
+  score?: {
     alpha: number;
     tier: string;
     pillars: {
@@ -1150,9 +1150,9 @@ function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }:
   ];
 
   const getValue = (data: ForgeEgResponse | undefined, key: string, isPillar: boolean) => {
-    if (!data?.success || !data.data) return null;
-    if (isPillar) return (data.data.pillars as Record<string, number>)[key] ?? null;
-    if (key === 'alpha') return data.data.alpha;
+    if (!data?.success || !data.score) return null;
+    if (isPillar) return (data.score.pillars as Record<string, number>)[key] ?? null;
+    if (key === 'alpha') return data.score.alpha;
     return null;
   };
 
@@ -1178,17 +1178,17 @@ function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }:
       </div>
 
       {/* Tier Comparison */}
-      {!isLoading && baseForge?.data && compareForge?.data && (
+      {!isLoading && baseForge?.score && compareForge?.score && (
         <div className="flex justify-center gap-8 py-2 border-y border-gray-800/50">
           <div className="text-center">
             <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
-              {baseForge.data.tier}
+              {baseForge.score.tier}
             </Badge>
           </div>
           <div className="text-xs text-gray-500 self-center">vs</div>
           <div className="text-center">
             <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
-              {compareForge.data.tier}
+              {compareForge.score.tier}
             </Badge>
           </div>
         </div>
