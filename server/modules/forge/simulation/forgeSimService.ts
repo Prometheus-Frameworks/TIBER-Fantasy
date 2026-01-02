@@ -297,7 +297,7 @@ async function scorePlayerWeek(
   
   let context: ForgeContext;
   try {
-    context = await fetchContext(playerId, position, season, week, 1);
+    context = await fetchContext(playerId, season, week, 1);
   } catch (err) {
     throw new Error(`Failed to fetch context for ${playerName}: ${err}`);
   }

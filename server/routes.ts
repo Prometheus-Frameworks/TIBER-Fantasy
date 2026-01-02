@@ -107,6 +107,7 @@ import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import dataLabRoutes from './routes/dataLabRoutes';
 import { registerPowerProcessingRoutes } from './routes/powerProcessing';
 import weeklyTakesRoutes from './routes/weeklyTakesRoutes';
+import forgeSimRoutes from './routes/forgeSimRoutes';
 import playerComparePilotRoutes from './routes/playerComparePilotRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import teamReportsRoutes from './routes/teamReportsRoutes';
@@ -2396,6 +2397,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use('/api/data-lab', dataLabRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
+  
+  app.use('/api/forge/simulation', forgeSimRoutes);
+  console.log('🔧 FORGE Simulation routes mounted at /api/forge/simulation/*');
   
   // TIBER Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);
