@@ -1,0 +1,50 @@
+TIBER REPLIT AGENT — PULSE DRIVERS ROW v1 (FRONTEND ONLY, MINIMAL)
+
+Goal:
+Under the existing 3W Pulse row in PlayerPage Usage section, add a compact “Drivers” line explaining what most contributed to the pulse score.
+
+Constraints:
+- Frontend only (no endpoint changes)
+- Must be consistent with the exact pulse computation already implemented (same windows, same weights, same selected-week fallback)
+- Minimal diff
+
+Definition:
+You already compute component deltas per metric (avgA - avgB) and apply weights.
+For each included metric, compute contribution:
+  contribution = weight * delta
+
+Drivers selection:
+- Sort metrics by ABS(contribution) desc
+- Take top 2 (or top 3 if the third is >= 50% of the second)
+- Each driver displayed as:
+  "<MetricName> ↑" if delta > 0
+  "<MetricName> ↓" if delta < 0
+  "<MetricName> →" if delta == 0
+- Also include the numeric delta in tooltip only (keep row clean)
+
+UI:
+- Row text (small, terminal style):
+  "Drivers: Targets ↑, Routes ↓"
+- Color the arrows (green/red/gray) but keep metric names neutral
+- If pulse is “— Not enough weeks” or “— Insufficient data”:
+  show "Drivers: —" and match tooltip reason.
+
+Tooltip (on hover of Drivers row):
+- List each shown driver with delta and contribution, e.g.
+  Targets: Δ +2.3 (w=1.0, contrib=+2.3)
+  Routes: Δ -1.5 (w=0.6, contrib=-0.9)
+- If fallback week used, include the same "(WkX missing, using WkY)" note.
+
+Implementation steps:
+1) Reuse existing pulse calculation outputs (do not recompute windows twice).
+   - If you currently compute pulse inline, refactor slightly into a helper that returns:
+     { pulseScore, classification, metricsUsed: [{key, delta, weight, contribution}] , windowAWeeks, windowBWeeks, fallbackNote }
+2) Build drivers list from metricsUsed.
+3) Render Drivers row beneath Pulse row.
+
+Deliverables:
+- Snippet showing drivers computation
+- Screenshot-style description of how it renders
+- Confirm it matches pulse score contributors exactly (no divergence)
+
+BEGIN.
