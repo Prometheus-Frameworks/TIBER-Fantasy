@@ -9,7 +9,7 @@ import { requireAdminAuth } from '../middleware/adminAuth';
 import { playerIdentityService } from '../services/PlayerIdentityService';
 import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 import { db } from '../infra/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
 
 const router = Router();
@@ -394,31 +394,44 @@ router.get('/player/:playerKey/week-series', async (req: Request, res: Response)
 
     const maxWeek = latestSnapshot[0]?.week || 18;
 
-    const playerWeeks = await db
-      .select({
-        week: datadiveSnapshotPlayerWeek.week,
-        snapShare: datadiveSnapshotPlayerWeek.snapShare,
-        routes: datadiveSnapshotPlayerWeek.routes,
-        targets: datadiveSnapshotPlayerWeek.targets,
-        rushAttempts: datadiveSnapshotPlayerWeek.rushAttempts,
-        airYards: datadiveSnapshotPlayerWeek.airYards,
-        position: datadiveSnapshotPlayerWeek.position,
-        playerName: datadiveSnapshotPlayerWeek.playerName,
-        teamId: datadiveSnapshotPlayerWeek.teamId,
-      })
-      .from(datadiveSnapshotPlayerWeek)
-      .where(and(
-        eq(datadiveSnapshotPlayerWeek.playerId, playerKey),
-        eq(datadiveSnapshotPlayerWeek.season, season)
-      ))
-      .orderBy(datadiveSnapshotPlayerWeek.week);
+    // Use DISTINCT ON (week) to get one deterministic row per week
+    // Prefer highest snapshot_id (latest snapshot) when duplicates exist
+    const playerWeeksResult = await db.execute(sql`
+      SELECT DISTINCT ON (week)
+        week,
+        snap_share as "snapShare",
+        routes,
+        targets,
+        rush_attempts as "rushAttempts",
+        air_yards as "airYards",
+        position,
+        player_name as "playerName",
+        team_id as "teamId"
+      FROM datadive_snapshot_player_week
+      WHERE player_id = ${playerKey}
+        AND season = ${season}
+      ORDER BY week ASC, snapshot_id DESC
+    `);
+
+    const playerWeeks = playerWeeksResult.rows as Array<{
+      week: number;
+      snapShare: number | null;
+      routes: number | null;
+      targets: number | null;
+      rushAttempts: number | null;
+      airYards: number | null;
+      position: string | null;
+      playerName: string | null;
+      teamId: string | null;
+    }>;
 
     const weekMap = new Map<number, typeof playerWeeks[0]>();
     for (const pw of playerWeeks) {
       weekMap.set(pw.week, pw);
     }
 
-    const availableWeeks = playerWeeks.map(pw => pw.week);
+    // Deduplicate + sort ascending using Set
+    const availableWeeks = Array.from(new Set(playerWeeks.map(pw => pw.week))).sort((a, b) => a - b);
     const position = playerWeeks[0]?.position || null;
     const playerName = playerWeeks[0]?.playerName || null;
     const teamId = playerWeeks[0]?.teamId || null;
