@@ -704,10 +704,10 @@ export default function PlayerPage() {
               />
               
               {/* Trend Deltas Row */}
-              <div className="bg-gray-800/20 rounded-lg p-4">
+              <div className="bg-gray-800/20 rounded-lg p-4" data-testid="trend-deltas-container">
                 <div className="flex items-center gap-2 mb-3">
                   <Activity size={14} className="text-cyan-400" />
-                  <h4 className="text-sm font-medium text-white">Trend Deltas</h4>
+                  <h4 className="text-sm font-medium text-white" data-testid="trend-deltas-title">Trend Deltas</h4>
                   <span className="text-xs text-gray-500">Week-over-Week</span>
                 </div>
                 
