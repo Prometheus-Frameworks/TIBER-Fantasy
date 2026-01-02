@@ -4128,6 +4128,64 @@ export const userLeaguePreferences = pgTable("user_league_preferences", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ========================================
+// SLEEPER SYNC V2 TABLES
+// ========================================
+
+// Sync state tracking per league
+export const sleeperSyncState = pgTable("sleeper_sync_state", {
+  leagueId: text("league_id").primaryKey(),
+  lastSyncedAt: timestamp("last_synced_at"),
+  status: text("status").notNull().default("never"), // 'never', 'running', 'ok', 'error'
+  lastDurationMs: integer("last_duration_ms"),
+  lastError: text("last_error"),
+  lastHash: text("last_hash"), // SHA256 of canonical roster string for change detection
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Current roster state (upserted on each sync)
+export const sleeperRosterCurrent = pgTable("sleeper_roster_current", {
+  leagueId: text("league_id").notNull(),
+  teamId: text("team_id").notNull(),
+  playerKey: text("player_key").notNull(), // gsis_id preferred, else 'sleeper:<id>'
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.leagueId, table.teamId, table.playerKey] }),
+  leagueTeamIdx: index("sleeper_roster_current_league_team_idx").on(table.leagueId, table.teamId),
+}));
+
+// Ownership events (append-only history)
+export const ownershipEvents = pgTable("ownership_events", {
+  id: serial("id").primaryKey(),
+  leagueId: text("league_id").notNull(),
+  playerKey: text("player_key").notNull(),
+  fromTeamId: text("from_team_id"),
+  toTeamId: text("to_team_id"),
+  eventType: text("event_type").notNull(), // 'ADD', 'DROP', 'TRADE'
+  eventAt: timestamp("event_at").defaultNow().notNull(),
+  week: integer("week"),
+  season: integer("season"),
+  source: text("source").notNull().default("sleeper"),
+  dedupeKey: text("dedupe_key").notNull(), // Unique constraint for idempotency
+}, (table) => ({
+  dedupeKeyUnique: uniqueIndex("ownership_events_dedupe_key_idx").on(table.dedupeKey),
+  leaguePlayerIdx: index("ownership_events_league_player_idx").on(table.leagueId, table.playerKey),
+  leagueEventAtIdx: index("ownership_events_league_event_at_idx").on(table.leagueId, table.eventAt),
+}));
+
+// Sleeper Sync V2 Insert Schemas
+export const insertSleeperSyncStateSchema = createInsertSchema(sleeperSyncState);
+export const insertSleeperRosterCurrentSchema = createInsertSchema(sleeperRosterCurrent).omit({ updatedAt: true });
+export const insertOwnershipEventSchema = createInsertSchema(ownershipEvents).omit({ id: true, eventAt: true });
+
+// Sleeper Sync V2 Types
+export type SleeperSyncState = typeof sleeperSyncState.$inferSelect;
+export type InsertSleeperSyncState = z.infer<typeof insertSleeperSyncStateSchema>;
+export type SleeperRosterCurrent = typeof sleeperRosterCurrent.$inferSelect;
+export type InsertSleeperRosterCurrent = z.infer<typeof insertSleeperRosterCurrentSchema>;
+export type OwnershipEvent = typeof ownershipEvents.$inferSelect;
+export type InsertOwnershipEvent = z.infer<typeof insertOwnershipEventSchema>;
+
 export const userPlatformProfiles = pgTable("user_platform_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: text("user_id").notNull(),
