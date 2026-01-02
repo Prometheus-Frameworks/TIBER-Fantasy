@@ -1,0 +1,58 @@
+TIBER REPLIT AGENT — SLEEPER SYNC SCHEDULER v1 (MINIMAL DIFF, SAFE)
+
+Goal:
+Add an optional background scheduler that runs syncLeague for all known leagues at a configurable interval.
+Do NOT refactor existing sync service. Add a small scheduler module and wire it on server startup behind env flags.
+
+Requirements:
+1) Env flags:
+- ENABLE_SLEEPER_SYNC (default false)
+- SLEEPER_SYNC_INTERVAL_MINUTES (default 60)
+- SLEEPER_SYNC_JITTER_SECONDS (default 10)
+
+2) League list source:
+- Reuse the same league discovery logic used by GET /api/sleeper/leagues.
+- Implement as a shared function (e.g., getStoredLeagues()) so routes + scheduler share it.
+- Scheduler must handle 0 leagues gracefully.
+
+3) Scheduler behavior:
+- On server boot, if ENABLE_SLEEPER_SYNC is true:
+  A) Start a timer that runs every interval minutes.
+  B) Each run:
+     - fetch leagues
+     - for each league, call syncLeague(leagueId) serially
+     - wait a random jitter (0..JITTER seconds) between leagues
+  C) Do not overlap runs:
+     - if a run is already in progress, skip the next tick and log "scheduler skipped (running)".
+
+4) Logging:
+- Log scheduler start with interval/jitter.
+- Log per-run: leagues count, success count, failure count, duration.
+- Log per-league: ok/error baseline/shortCircuited (but keep it concise).
+
+5) Safety:
+- Catch per-league errors so one failure doesn’t stop the batch.
+- Keep syncLeague’s own transaction behavior unchanged.
+
+6) Add a status endpoint (small, helpful):
+GET /api/sleeper/sync/scheduler
+Return:
+{
+  enabled: boolean,
+  intervalMinutes: number,
+  jitterSeconds: number,
+  running: boolean,
+  lastRunAt: ISO|null,
+  lastRunDurationMs: number|null,
+  lastRunSummary: { leagues: number, ok: number, error: number }|null
+}
+
+7) Tests (minimal):
+- Unit test for "no overlap": if running=true, tick does not start a second run.
+- If tests are hard in this repo, at least add a lightweight runtime guard and document it.
+
+Deliverables:
+- File paths changed/added
+- How to enable via env
+- Example curl to scheduler status endpoint
+- Confirm app still boots with ENABLE_SLEEPER_SYNC unset (no scheduler)
