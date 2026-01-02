@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User, Activity, ChevronDown, ChevronUp, Copy, Check, FileText } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User, Activity, ChevronDown, ChevronUp, Copy, Check, FileText, X, Scale } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import { addRecentPlayer } from '@/lib/recentPlayers';
@@ -172,6 +173,13 @@ interface OwnershipChurnResponse {
   error?: string;
 }
 
+interface CompareTarget {
+  playerId: string;
+  playerName: string;
+  position: string;
+  team: string;
+}
+
 export default function PlayerPage() {
   const [, params] = useRoute('/player/:playerId');
   const playerId = params?.playerId || '';
@@ -190,6 +198,7 @@ export default function PlayerPage() {
   const [activeSection, setActiveSection] = useState<SectionId>('overview');
   const [copiedKey, setCopiedKey] = useState(false);
   const [playerNotes, setPlayerNotes] = useState('');
+  const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
   
   // Section refs for IntersectionObserver
   const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>({
@@ -715,27 +724,47 @@ export default function PlayerPage() {
                         </div>
                       )}
                       {similarData.data?.similarPlayers.slice(0, 5).map((p) => (
-                        <button
+                        <div
                           key={p.playerId}
-                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}`)}
-                          className="w-full p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                          data-testid={`similar-player-${p.playerId}`}
+                          className="flex items-center gap-1 p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm text-white group-hover:text-purple-300 transition-colors">
-                                {p.playerName || 'Unknown'}
+                          <button
+                            onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}`)}
+                            className="flex-1 text-left"
+                            data-testid={`similar-player-${p.playerId}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-sm text-white group-hover:text-purple-300 transition-colors">
+                                  {p.playerName || 'Unknown'}
+                                </span>
+                                <span className="text-[10px] text-gray-500">{p.team}</span>
+                              </div>
+                              <span className="text-[10px] text-gray-400 font-mono">
+                                {(100 - p.distance).toFixed(0)}%
                               </span>
-                              <span className="text-[10px] text-gray-500">{p.team}</span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono">
-                              {(100 - p.distance).toFixed(0)}%
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">
-                            <span className="text-green-400/80">{p.reason}</span>
-                          </div>
-                        </button>
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              <span className="text-green-400/80">{p.reason}</span>
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCompareTarget({
+                                playerId: p.playerId,
+                                playerName: p.playerName || 'Unknown',
+                                position: p.position || player.position,
+                                team: p.team || 'FA',
+                              });
+                            }}
+                            className="p-1 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                            title="Compare players"
+                            data-testid={`compare-similar-${p.playerId}`}
+                          >
+                            <Scale size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -766,18 +795,38 @@ export default function PlayerPage() {
                     <div className="space-y-1.5">
                       {/* Players Above */}
                       {neighborsData.data?.above.map((p) => (
-                        <button
+                        <div
                           key={p.playerId}
-                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
-                          className="w-full flex items-center justify-between p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                          data-testid={`neighbor-above-${p.playerId}`}
+                          className="flex items-center gap-1 p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
                         >
-                          <div className="flex items-center gap-1.5">
-                            <TrendingUp size={12} className="text-green-400" />
-                            <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
-                          </div>
-                          <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
-                        </button>
+                          <button
+                            onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
+                            className="flex-1 flex items-center justify-between text-left"
+                            data-testid={`neighbor-above-${p.playerId}`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <TrendingUp size={12} className="text-green-400" />
+                              <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
+                            </div>
+                            <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCompareTarget({
+                                playerId: p.playerId,
+                                playerName: p.playerName,
+                                position: p.position,
+                                team: p.team,
+                              });
+                            }}
+                            className="p-1 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                            title="Compare players"
+                            data-testid={`compare-above-${p.playerId}`}
+                          >
+                            <Scale size={12} />
+                          </button>
+                        </div>
                       ))}
 
                       {/* Current Player */}
@@ -790,18 +839,38 @@ export default function PlayerPage() {
 
                       {/* Players Below */}
                       {neighborsData.data?.below.map((p) => (
-                        <button
+                        <div
                           key={p.playerId}
-                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
-                          className="w-full flex items-center justify-between p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                          data-testid={`neighbor-below-${p.playerId}`}
+                          className="flex items-center gap-1 p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors group"
                         >
-                          <div className="flex items-center gap-1.5">
-                            <TrendingDown size={12} className="text-orange-400" />
-                            <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
-                          </div>
-                          <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
-                        </button>
+                          <button
+                            onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
+                            className="flex-1 flex items-center justify-between text-left"
+                            data-testid={`neighbor-below-${p.playerId}`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <TrendingDown size={12} className="text-orange-400" />
+                              <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
+                            </div>
+                            <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCompareTarget({
+                                playerId: p.playerId,
+                                playerName: p.playerName,
+                                position: p.position,
+                                team: p.team,
+                              });
+                            }}
+                            className="p-1 rounded hover:bg-purple-500/20 text-gray-500 hover:text-purple-400 transition-colors"
+                            title="Compare players"
+                            data-testid={`compare-below-${p.playerId}`}
+                          >
+                            <Scale size={12} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -996,6 +1065,182 @@ export default function PlayerPage() {
           </p>
         </div>
       </div>
+
+      {/* COMPARE DRAWER */}
+      <Sheet open={!!compareTarget} onOpenChange={(open) => !open && setCompareTarget(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-lg bg-[#0a0e1a] border-l border-gray-800/50 p-0">
+          <div className="h-full overflow-y-auto">
+            <SheetHeader className="sticky top-0 bg-[#0a0e1a]/95 backdrop-blur-sm border-b border-gray-800/50 p-4 z-10">
+              <div className="flex items-center gap-3">
+                <Scale size={18} className="text-purple-400" />
+                <SheetTitle className="text-white text-lg font-semibold">Compare Players</SheetTitle>
+              </div>
+            </SheetHeader>
+
+            {compareTarget && (
+              <CompareDrawerContent
+                basePlayer={{ playerId, name: player.fullName, team: player.nflTeam || 'FA', position: player.position }}
+                comparePlayer={compareTarget}
+                season={season}
+                week={effectiveWeek}
+                mode={mode}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+interface CompareDrawerContentProps {
+  basePlayer: { playerId: string; name: string; team: string; position: string };
+  comparePlayer: CompareTarget;
+  season: number;
+  week: number;
+  mode: 'weekly' | 'season';
+}
+
+interface ForgeEgResponse {
+  success: boolean;
+  data?: {
+    alpha: number;
+    tier: string;
+    pillars: {
+      volume: number;
+      efficiency: number;
+      teamContext: number;
+      stability: number;
+    };
+  };
+  reason?: string;
+}
+
+function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }: CompareDrawerContentProps) {
+  const forgeMode = mode === 'season' ? 'dynasty' : 'redraft';
+
+  const { data: baseForge, isLoading: baseLoading } = useQuery<ForgeEgResponse>({
+    queryKey: ['/api/forge/eg/player', basePlayer.playerId, basePlayer.position, forgeMode],
+    queryFn: async () => {
+      const res = await fetch(`/api/forge/eg/player/${basePlayer.playerId}?position=${basePlayer.position}&mode=${forgeMode}`);
+      if (!res.ok) return { success: false, reason: 'Failed to load' };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: compareForge, isLoading: compareLoading } = useQuery<ForgeEgResponse>({
+    queryKey: ['/api/forge/eg/player', comparePlayer.playerId, comparePlayer.position, forgeMode],
+    queryFn: async () => {
+      const res = await fetch(`/api/forge/eg/player/${comparePlayer.playerId}?position=${comparePlayer.position}&mode=${forgeMode}`);
+      if (!res.ok) return { success: false, reason: 'Failed to load' };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isLoading = baseLoading || compareLoading;
+
+  const metrics = [
+    { key: 'alpha', label: 'Alpha Score', format: (v: number) => v.toFixed(0) },
+    { key: 'volume', label: 'Volume', format: (v: number) => v.toFixed(0), pillar: true },
+    { key: 'efficiency', label: 'Efficiency', format: (v: number) => v.toFixed(0), pillar: true },
+    { key: 'teamContext', label: 'Team Context', format: (v: number) => v.toFixed(0), pillar: true },
+    { key: 'stability', label: 'Stability', format: (v: number) => v.toFixed(0), pillar: true },
+  ];
+
+  const getValue = (data: ForgeEgResponse | undefined, key: string, isPillar: boolean) => {
+    if (!data?.success || !data.data) return null;
+    if (isPillar) return (data.data.pillars as Record<string, number>)[key] ?? null;
+    if (key === 'alpha') return data.data.alpha;
+    return null;
+  };
+
+  const getDiff = (base: number | null, comp: number | null) => {
+    if (base === null || comp === null) return null;
+    return base - comp;
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Player Headers */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-400 mb-1">Base Player</p>
+          <p className="text-sm font-semibold text-white">{basePlayer.name}</p>
+          <p className="text-[10px] text-gray-500">{basePlayer.team} · {basePlayer.position}</p>
+        </div>
+        <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-400 mb-1">Compare To</p>
+          <p className="text-sm font-semibold text-white">{comparePlayer.playerName}</p>
+          <p className="text-[10px] text-gray-500">{comparePlayer.team} · {comparePlayer.position}</p>
+        </div>
+      </div>
+
+      {/* Tier Comparison */}
+      {!isLoading && baseForge?.data && compareForge?.data && (
+        <div className="flex justify-center gap-8 py-2 border-y border-gray-800/50">
+          <div className="text-center">
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+              {baseForge.data.tier}
+            </Badge>
+          </div>
+          <div className="text-xs text-gray-500 self-center">vs</div>
+          <div className="text-center">
+            <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
+              {compareForge.data.tier}
+            </Badge>
+          </div>
+        </div>
+      )}
+
+      {/* Metrics Table */}
+      <div className="bg-[#141824] rounded-lg overflow-hidden border border-gray-800/50">
+        <div className="grid grid-cols-4 text-xs font-medium text-gray-400 bg-gray-800/30 p-2">
+          <div>Metric</div>
+          <div className="text-center text-purple-400">{basePlayer.name.split(' ')[1] || 'Base'}</div>
+          <div className="text-center text-cyan-400">{comparePlayer.playerName.split(' ')[1] || 'Comp'}</div>
+          <div className="text-center">Diff</div>
+        </div>
+        
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-8 w-full bg-gray-800/50" />
+            ))}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-800/30">
+            {metrics.map(({ key, label, format, pillar }) => {
+              const baseVal = getValue(baseForge, key, !!pillar);
+              const compVal = getValue(compareForge, key, !!pillar);
+              const diff = getDiff(baseVal, compVal);
+
+              return (
+                <div key={key} className="grid grid-cols-4 text-sm p-2 items-center">
+                  <div className="text-gray-400 text-xs">{label}</div>
+                  <div className="text-center text-white font-mono">
+                    {baseVal !== null ? format(baseVal) : '-'}
+                  </div>
+                  <div className="text-center text-white font-mono">
+                    {compVal !== null ? format(compVal) : '-'}
+                  </div>
+                  <div className={`text-center font-mono text-xs ${
+                    diff === null ? 'text-gray-500' : diff > 0 ? 'text-green-400' : diff < 0 ? 'text-red-400' : 'text-gray-400'
+                  }`}>
+                    {diff !== null ? (diff > 0 ? '+' : '') + diff.toFixed(0) : '-'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Note */}
+      <p className="text-[10px] text-gray-600 text-center">
+        {forgeMode.charAt(0).toUpperCase() + forgeMode.slice(1)} mode • Season {season}
+      </p>
     </div>
   );
 }
