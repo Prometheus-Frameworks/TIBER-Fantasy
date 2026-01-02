@@ -171,8 +171,8 @@ export default function ForgeSimulation() {
   const [controlsOpen, setControlsOpen] = useState(true);
   const [paramsOpen, setParamsOpen] = useState(true);
   
-  const [positionFilter, setPositionFilter] = useState<string>('');
-  const [weekFilter, setWeekFilter] = useState<string>('');
+  const [positionFilter, setPositionFilter] = useState<string>('all');
+  const [weekFilter, setWeekFilter] = useState<string>('all');
   const [minAdjustment, setMinAdjustment] = useState<string>('');
   const [playerSearch, setPlayerSearch] = useState('');
   const [outlierOnly, setOutlierOnly] = useState(false);
@@ -210,9 +210,9 @@ export default function ForgeSimulation() {
     enabled: !!selectedRunId,
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (positionFilter) params.set('position', positionFilter);
-      if (weekFilter) params.set('weekStart', weekFilter);
-      if (weekFilter) params.set('weekEnd', weekFilter);
+      if (positionFilter && positionFilter !== 'all') params.set('position', positionFilter);
+      if (weekFilter && weekFilter !== 'all') params.set('weekStart', weekFilter);
+      if (weekFilter && weekFilter !== 'all') params.set('weekEnd', weekFilter);
       if (minAdjustment) params.set('minAdjustment', minAdjustment);
       if (playerSearch) params.set('playerSearch', playerSearch);
       if (outlierOnly) params.set('outlierOnly', 'true');
@@ -740,7 +740,7 @@ export default function ForgeSimulation() {
                               <SelectValue placeholder="Position" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">All</SelectItem>
+                              <SelectItem value="all">All</SelectItem>
                               <SelectItem value="QB">QB</SelectItem>
                               <SelectItem value="RB">RB</SelectItem>
                               <SelectItem value="WR">WR</SelectItem>
@@ -753,7 +753,7 @@ export default function ForgeSimulation() {
                               <SelectValue placeholder="Week" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">All</SelectItem>
+                              <SelectItem value="all">All</SelectItem>
                               {Array.from({ length: 17 }, (_, i) => i + 1).map(w => (
                                 <SelectItem key={w} value={w.toString()}>Week {w}</SelectItem>
                               ))}
