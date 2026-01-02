@@ -8,6 +8,9 @@ import { Router, Request, Response } from 'express';
 import { requireAdminAuth } from '../middleware/adminAuth';
 import { playerIdentityService } from '../services/PlayerIdentityService';
 import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
+import { db } from '../infra/db';
+import { eq, and, desc } from 'drizzle-orm';
+import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
 
 const router = Router();
 
@@ -353,6 +356,124 @@ router.post('/admin/create-player', async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error('[PlayerIdentityRoutes] Error creating player:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/player-identity/player/:playerKey/week-series
+ * Returns gap-filled week-by-week usage metrics for a player
+ * Missing weeks are included with missing=true and null metrics (NULL-honest)
+ */
+router.get('/player/:playerKey/week-series', async (req: Request, res: Response) => {
+  try {
+    const { playerKey } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+    const metricSet = (req.query.metricSet as string) || 'usage';
+
+    if (!playerKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'playerKey is required'
+      });
+    }
+
+    const latestSnapshot = await db
+      .select({ id: datadiveSnapshotMeta.id, week: datadiveSnapshotMeta.week })
+      .from(datadiveSnapshotMeta)
+      .where(and(
+        eq(datadiveSnapshotMeta.season, season),
+        eq(datadiveSnapshotMeta.isOfficial, true)
+      ))
+      .orderBy(desc(datadiveSnapshotMeta.week))
+      .limit(1);
+
+    const maxWeek = latestSnapshot[0]?.week || 18;
+
+    const playerWeeks = await db
+      .select({
+        week: datadiveSnapshotPlayerWeek.week,
+        snapShare: datadiveSnapshotPlayerWeek.snapShare,
+        routes: datadiveSnapshotPlayerWeek.routes,
+        targets: datadiveSnapshotPlayerWeek.targets,
+        rushAttempts: datadiveSnapshotPlayerWeek.rushAttempts,
+        airYards: datadiveSnapshotPlayerWeek.airYards,
+        position: datadiveSnapshotPlayerWeek.position,
+        playerName: datadiveSnapshotPlayerWeek.playerName,
+        teamId: datadiveSnapshotPlayerWeek.teamId,
+      })
+      .from(datadiveSnapshotPlayerWeek)
+      .where(and(
+        eq(datadiveSnapshotPlayerWeek.playerId, playerKey),
+        eq(datadiveSnapshotPlayerWeek.season, season)
+      ))
+      .orderBy(datadiveSnapshotPlayerWeek.week);
+
+    const weekMap = new Map<number, typeof playerWeeks[0]>();
+    for (const pw of playerWeeks) {
+      weekMap.set(pw.week, pw);
+    }
+
+    const availableWeeks = playerWeeks.map(pw => pw.week);
+    const position = playerWeeks[0]?.position || null;
+    const playerName = playerWeeks[0]?.playerName || null;
+    const teamId = playerWeeks[0]?.teamId || null;
+
+    const weeks: Array<{
+      week: number;
+      missing: boolean;
+      snapPct: number | null;
+      routes: number | null;
+      targets: number | null;
+      carries: number | null;
+      airYards: number | null;
+    }> = [];
+
+    for (let w = 1; w <= maxWeek; w++) {
+      const data = weekMap.get(w);
+      if (data) {
+        weeks.push({
+          week: w,
+          missing: false,
+          snapPct: data.snapShare !== null ? Math.round(data.snapShare * 100) : null,
+          routes: data.routes,
+          targets: data.targets,
+          carries: data.rushAttempts,
+          airYards: data.airYards,
+        });
+      } else {
+        weeks.push({
+          week: w,
+          missing: true,
+          snapPct: null,
+          routes: null,
+          targets: null,
+          carries: null,
+          airYards: null,
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        playerKey,
+        playerName,
+        position,
+        teamId,
+        season,
+        maxWeek,
+        metricSet,
+        weeks,
+        availableWeeks,
+      }
+    });
+  } catch (error) {
+    console.error('[PlayerIdentityRoutes] Error fetching week series:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
