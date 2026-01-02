@@ -855,7 +855,7 @@ export default function PlayerPage() {
                 })()}
               </div>
               
-              {/* 3-Week Pulse Row */}
+              {/* 3-Week Pulse Row + Drivers */}
               <div className="bg-gray-800/20 rounded-lg p-4" data-testid="pulse-container">
                 <div className="flex items-center gap-2 mb-2">
                   <Activity size={14} className="text-purple-400" />
@@ -864,7 +864,10 @@ export default function PlayerPage() {
                 </div>
                 
                 {weekSeriesLoading ? (
-                  <Skeleton className="h-6 w-24 bg-gray-800/50" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-24 bg-gray-800/50" />
+                    <Skeleton className="h-4 w-32 bg-gray-800/50" />
+                  </div>
                 ) : (() => {
                   const weeks = weekSeriesData?.data?.weeks || [];
                   const position = player.position;
@@ -890,11 +893,18 @@ export default function PlayerPage() {
                   const windowA = usableWeeks.slice(0, 3);
                   const windowB = usableWeeks.slice(3, 6);
                   
+                  const fallbackNote = usingPulseFallback ? `(Wk${effectiveWeek} missing, using Wk${pulseCurrentWeek})` : '';
+                  
                   if (windowA.length < 3 || windowB.length < 3) {
                     return (
-                      <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Need at least 6 non-missing weeks for pulse calculation">
-                        <span className="text-sm font-semibold">—</span>
-                        <span>Not enough weeks</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Need at least 6 non-missing weeks for pulse calculation">
+                          <span className="text-sm font-semibold">—</span>
+                          <span>Not enough weeks</span>
+                        </div>
+                        <div className="text-[10px] text-gray-600 font-mono" title="Need at least 6 non-missing weeks">
+                          Drivers: —
+                        </div>
                       </div>
                     );
                   }
@@ -930,19 +940,20 @@ export default function PlayerPage() {
                     targets: 1.0,
                     routes: 0.6,
                     carries: 0.8,
-                    snapPct: 0.05, // small weight since it's 0-100
-                    airYards: 0.04, // small weight since it's large numbers
+                    snapPct: 0.05,
+                    airYards: 0.04,
                   };
                   
-                  // Build pulse components based on position
-                  const components: { name: string; delta: number; weight: number }[] = [];
+                  // Build pulse components based on position (with contribution)
+                  const components: { name: string; delta: number; weight: number; contribution: number }[] = [];
                   
                   // Targets (all positions)
                   if (isMetricUsable(targetsA, targetsB)) {
                     const avgA = mean(targetsA);
                     const avgB = mean(targetsB);
                     if (avgA !== null && avgB !== null) {
-                      components.push({ name: 'Targets', delta: avgA - avgB, weight: weights.targets });
+                      const delta = avgA - avgB;
+                      components.push({ name: 'Targets', delta, weight: weights.targets, contribution: delta * weights.targets });
                     }
                   }
                   
@@ -951,7 +962,8 @@ export default function PlayerPage() {
                     const avgA = mean(routesA);
                     const avgB = mean(routesB);
                     if (avgA !== null && avgB !== null) {
-                      components.push({ name: 'Routes', delta: avgA - avgB, weight: weights.routes });
+                      const delta = avgA - avgB;
+                      components.push({ name: 'Routes', delta, weight: weights.routes, contribution: delta * weights.routes });
                     }
                   }
                   
@@ -960,7 +972,8 @@ export default function PlayerPage() {
                     const avgA = mean(carriesA);
                     const avgB = mean(carriesB);
                     if (avgA !== null && avgB !== null) {
-                      components.push({ name: 'Carries', delta: avgA - avgB, weight: weights.carries });
+                      const delta = avgA - avgB;
+                      components.push({ name: 'Carries', delta, weight: weights.carries, contribution: delta * weights.carries });
                     }
                   }
                   
@@ -969,7 +982,8 @@ export default function PlayerPage() {
                     const avgA = mean(airYardsA);
                     const avgB = mean(airYardsB);
                     if (avgA !== null && avgB !== null) {
-                      components.push({ name: 'AirYards', delta: avgA - avgB, weight: weights.airYards });
+                      const delta = avgA - avgB;
+                      components.push({ name: 'AirYards', delta, weight: weights.airYards, contribution: delta * weights.airYards });
                     }
                   }
                   
@@ -978,21 +992,27 @@ export default function PlayerPage() {
                     const avgA = mean(snapPctA);
                     const avgB = mean(snapPctB);
                     if (avgA !== null && avgB !== null) {
-                      components.push({ name: 'Snap%', delta: avgA - avgB, weight: weights.snapPct });
+                      const delta = avgA - avgB;
+                      components.push({ name: 'Snap%', delta, weight: weights.snapPct, contribution: delta * weights.snapPct });
                     }
                   }
                   
                   if (components.length === 0) {
                     return (
-                      <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Not enough metric data">
-                        <span className="text-sm font-semibold">—</span>
-                        <span>Insufficient data</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Not enough metric data">
+                          <span className="text-sm font-semibold">—</span>
+                          <span>Insufficient data</span>
+                        </div>
+                        <div className="text-[10px] text-gray-600 font-mono" title="Not enough metric data">
+                          Drivers: —
+                        </div>
                       </div>
                     );
                   }
                   
                   // Compute composite pulse score
-                  const pulseScore = components.reduce((sum, c) => sum + (c.delta * c.weight), 0);
+                  const pulseScore = components.reduce((sum, c) => sum + c.contribution, 0);
                   
                   // Classification
                   let pulseLabel: string;
@@ -1013,27 +1033,80 @@ export default function PlayerPage() {
                     pulseIcon = <span className="text-gray-400 text-sm">→</span>;
                   }
                   
-                  // Build tooltip
+                  // Build pulse tooltip
                   const windowAWeeks = windowA.map(w => w.week).join(', ');
                   const windowBWeeks = windowB.map(w => w.week).join(', ');
                   const componentDetails = components.map(c => {
                     const sign = c.delta >= 0 ? '+' : '';
                     return `${c.name}: ${sign}${c.delta.toFixed(1)}`;
                   }).join(' | ');
-                  const fallbackNote = usingPulseFallback ? ` (Wk${effectiveWeek} missing, using Wk${pulseCurrentWeek})` : '';
-                  const tooltip = `WindowA: Wk${windowAWeeks} vs WindowB: Wk${windowBWeeks}\n${componentDetails}\nScore: ${pulseScore.toFixed(2)}${fallbackNote}`;
+                  const pulseTooltip = `WindowA: Wk${windowAWeeks} vs WindowB: Wk${windowBWeeks}\n${componentDetails}\nScore: ${pulseScore.toFixed(2)}${fallbackNote ? '\n' + fallbackNote : ''}`;
+                  
+                  // === DRIVERS SELECTION ===
+                  // Sort by absolute contribution descending
+                  const sortedByContrib = [...components].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+                  
+                  // Take top 2, optionally top 3 if third is >= 50% of second
+                  const drivers: typeof components = [];
+                  if (sortedByContrib.length >= 1) drivers.push(sortedByContrib[0]);
+                  if (sortedByContrib.length >= 2) drivers.push(sortedByContrib[1]);
+                  if (sortedByContrib.length >= 3) {
+                    const thirdAbs = Math.abs(sortedByContrib[2].contribution);
+                    const secondAbs = Math.abs(sortedByContrib[1].contribution);
+                    if (secondAbs > 0 && thirdAbs >= 0.5 * secondAbs) {
+                      drivers.push(sortedByContrib[2]);
+                    }
+                  }
+                  
+                  // Build drivers display
+                  const getDriverArrow = (delta: number) => {
+                    if (delta > 0) return { arrow: '↑', color: 'text-green-400' };
+                    if (delta < 0) return { arrow: '↓', color: 'text-red-400' };
+                    return { arrow: '→', color: 'text-gray-400' };
+                  };
+                  
+                  // Build drivers tooltip
+                  const driversTooltipLines = drivers.map(d => {
+                    const sign = d.delta >= 0 ? '+' : '';
+                    const contribSign = d.contribution >= 0 ? '+' : '';
+                    return `${d.name}: Δ ${sign}${d.delta.toFixed(1)} (w=${d.weight}, contrib=${contribSign}${d.contribution.toFixed(2)})`;
+                  });
+                  if (fallbackNote) driversTooltipLines.push(fallbackNote);
+                  const driversTooltip = driversTooltipLines.join('\n');
                   
                   return (
-                    <div 
-                      className="flex items-center gap-2" 
-                      title={tooltip}
-                      data-testid="pulse-indicator"
-                    >
-                      {pulseIcon}
-                      <span className={`text-sm font-semibold ${pulseColor}`}>{pulseLabel}</span>
-                      <span className="text-[10px] text-gray-600 ml-2">
-                        Wk{windowA[windowA.length - 1].week}-{windowA[0].week} vs Wk{windowB[windowB.length - 1].week}-{windowB[0].week}
-                      </span>
+                    <div className="space-y-2">
+                      {/* Pulse Indicator Row */}
+                      <div 
+                        className="flex items-center gap-2" 
+                        title={pulseTooltip}
+                        data-testid="pulse-indicator"
+                      >
+                        {pulseIcon}
+                        <span className={`text-sm font-semibold ${pulseColor}`}>{pulseLabel}</span>
+                        <span className="text-[10px] text-gray-600 ml-2">
+                          Wk{windowA[windowA.length - 1].week}-{windowA[0].week} vs Wk{windowB[windowB.length - 1].week}-{windowB[0].week}
+                        </span>
+                      </div>
+                      
+                      {/* Drivers Row */}
+                      <div 
+                        className="text-[10px] text-gray-500 font-mono flex items-center gap-1 flex-wrap"
+                        title={driversTooltip}
+                        data-testid="pulse-drivers"
+                      >
+                        <span className="text-gray-600">Drivers:</span>
+                        {drivers.map((d, idx) => {
+                          const { arrow, color } = getDriverArrow(d.delta);
+                          return (
+                            <span key={d.name} className="flex items-center">
+                              {idx > 0 && <span className="text-gray-700 mx-0.5">,</span>}
+                              <span className="text-gray-400">{d.name}</span>
+                              <span className={`ml-0.5 ${color}`}>{arrow}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })()}
