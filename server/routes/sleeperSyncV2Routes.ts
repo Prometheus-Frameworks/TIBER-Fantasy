@@ -239,12 +239,12 @@ ownershipRouter.get('/history', async (req: Request, res: Response) => {
  * 
  * Query:
  *   leagueId: string (required) - League ID
- *   since: string (required) - ISO timestamp to filter events from
+ *   since: string (optional) - ISO timestamp to filter events from (defaults to 7 days ago)
  */
 ownershipRouter.get('/churn', async (req: Request, res: Response) => {
   try {
     const leagueId = req.query.leagueId as string;
-    const since = req.query.since as string;
+    const since = req.query.since as string | undefined;
     
     if (!leagueId) {
       return res.status(400).json({
@@ -253,19 +253,18 @@ ownershipRouter.get('/churn', async (req: Request, res: Response) => {
       });
     }
     
-    if (!since) {
-      return res.status(400).json({
-        success: false,
-        error: 'since query parameter is required (ISO timestamp)'
-      });
-    }
-    
-    const sinceDate = new Date(since);
-    if (isNaN(sinceDate.getTime())) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid since timestamp format. Use ISO 8601 format.'
-      });
+    // Default to 7 days ago if since not provided
+    let sinceDate: Date;
+    if (since) {
+      sinceDate = new Date(since);
+      if (isNaN(sinceDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid since timestamp format. Use ISO 8601 format.'
+        });
+      }
+    } else {
+      sinceDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     }
     
     // Query for most added players
