@@ -1,0 +1,115 @@
+TIBER REPLIT AGENT — PLAYERPAGE UX ITERATION (RESEARCH TERMINAL v1)
+Scope: Frontend only unless a tiny backend helper is absolutely necessary. Minimal diffs. No refactors for sport.
+
+GOAL
+Make /player/:id feel like a “research terminal”:
+- fast scanning
+- collapsible sections
+- quick comparisons
+- trend deltas visible
+- less vanilla, more “tool”
+
+NON-NEGOTIABLES
+1) Do NOT break existing navigation (Drawer → Full Profile) or routes.
+2) Do NOT change any existing endpoint contracts.
+3) Keep layout clean, dense-but-readable (like a terminal, not a marketing site).
+4) Must gracefully handle missing data / nulls (keep your “NULL-honest” philosophy).
+5) No new heavy dependencies. Use existing UI components/patterns in repo.
+
+PHASE 0 — BASELINE REVIEW (NO CHANGES YET)
+- Inspect current PlayerPage.tsx structure.
+- List the current sections in order.
+- Identify what data is already available for:
+  - Metric Matrix
+  - Similar Players
+  - Tier Neighbors
+  - Ownership + League Activity
+  - Week detection / trend inputs (if present)
+
+PHASE 1 — INFORMATION ARCHITECTURE (THE CORE UX WIN)
+Implement a “sticky section nav” at top of PlayerPage:
+- small horizontal nav pills: Overview | Usage | Efficiency | Context | Comps | League | Notes
+- clicking scrolls to section anchors
+- highlight active section as you scroll (simple IntersectionObserver)
+
+PHASE 2 — COLLAPSIBLE RESEARCH SECTIONS
+Convert major blocks into collapsible panels with:
+- header row: title + 1-line key insight + collapse toggle
+- collapsed state persists per player page session (use local state; optional localStorage)
+
+Recommended sections:
+A) Overview (always expanded)
+- player name, team, position
+- ownership badge (existing)
+- quick tags (tier, archetype if available)
+- “Last updated / week used” line
+
+B) Usage & Role
+- targets/routes/snap share metrics (Metric Matrix)
+- show “delta vs last week” if you have prior week values
+- If you don’t have deltas yet, show “trend: stable / up / down” based on last 3 weeks if available; otherwise hide.
+
+C) Efficiency
+- key efficiency metrics (YPRR, TPRR, EPA-ish, etc. whatever exists)
+- emphasize outliers with subtle badges (no neon)
+
+D) Context
+- QB / team context signals if present
+- schedule/SoS if present
+- injuries/return notes if present
+
+E) Comparisons (Similar Players + Tier Neighbors)
+- make this section a 2-column layout on desktop
+- add a “Compare” button on each comp row to open compare drawer (Phase 3)
+
+F) League Activity (existing section)
+- keep it, but tighten presentation:
+  - “Recent Moves” list compact
+  - “Churn Snapshot” mini-row
+- if no active league, show the hint (already exists)
+
+G) Notes / Flags (local only)
+- Add a small “Notes” text area stored in localStorage keyed by player id
+- Purpose: Boss Man J can jot quick takes without needing backend.
+- Keep it minimal.
+
+PHASE 3 — COMPARE DRAWER (BIG VALUE, SMALL CODE)
+Add a compare drawer/modal:
+- user clicks “Compare” on a player (from Similar Players or Tier Neighbors)
+- drawer shows:
+  - Player A vs Player B side-by-side for a small set of core metrics (6–10 max)
+  - include “difference” column (+/-)
+- Data source:
+  - Use already-loaded player data if available
+  - Otherwise fetch the compared player’s profile endpoint (whatever PlayerPage already uses) and cache it in-memory.
+
+Must handle missing values without breaking layout.
+
+PHASE 4 — LOADING + EMPTY STATES (MAKE IT FEEL PROFESSIONAL)
+- Add skeleton loaders for the main card + metric blocks.
+- Ensure “no data” states are crisp:
+  - “No weekly usage data available” (not blank)
+  - “No comps found” (not blank)
+
+PHASE 5 — POLISH (NOT A REDESIGN)
+- Reduce vertical whitespace
+- Make key numbers easier to scan (monospace for numbers if you already have a class/pattern)
+- Add a subtle “copy player key” action (GSIS) for debugging / power users
+- Ensure mobile doesn’t become a scroll nightmare (collapse defaults matter)
+
+ACCEPTANCE CHECKLIST
+- PlayerPage still loads and navigates correctly
+- Sections collapse/expand smoothly
+- Sticky nav works and highlights current section
+- Compare drawer works for at least 2 players and doesn’t crash on missing stats
+- Notes persist per player
+- No endpoint changes required
+- No console errors
+
+DELIVERABLES
+- list files changed
+- describe new UI structure and where each section sits
+- confirm no backend changes
+- provide before/after screenshot-style description of the page layout
+
+BEGIN.
