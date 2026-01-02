@@ -848,7 +848,7 @@ export default function PlayerPage() {
                         )}
                         
                         <div className="flex-1 flex items-end justify-end">
-                          <span className="text-[10px] text-gray-600">Wk{currentWeek} vs Wk{priorWeekData.week}</span>
+                          <span className="text-[10px] text-gray-600">Wk{priorWeekData.week} → Wk{currentWeek}</span>
                         </div>
                       </div>
                     </div>
@@ -1034,14 +1034,14 @@ export default function PlayerPage() {
                     pulseIcon = <span className="text-gray-400 text-sm">→</span>;
                   }
                   
-                  // Build pulse tooltip
-                  const windowAWeeks = windowA.map(w => w.week).join(', ');
-                  const windowBWeeks = windowB.map(w => w.week).join(', ');
+                  // Build pulse tooltip with sorted ASC week arrays
+                  const windowAWeeksSorted = windowA.map(w => w.week).sort((a, b) => a - b);
+                  const windowBWeeksSorted = windowB.map(w => w.week).sort((a, b) => a - b);
                   const componentDetails = components.map(c => {
                     const sign = c.delta >= 0 ? '+' : '';
                     return `${c.name}: ${sign}${c.delta.toFixed(1)}`;
                   }).join(' | ');
-                  const pulseTooltip = `WindowA: Wk${windowAWeeks} vs WindowB: Wk${windowBWeeks}\n${componentDetails}\nScore: ${pulseScore.toFixed(2)}${fallbackNote ? '\n' + fallbackNote : ''}`;
+                  const pulseTooltip = `WindowA: ${formatWeekRange(windowAWeeksSorted)} vs WindowB: ${formatWeekRange(windowBWeeksSorted)}\n${componentDetails}\nScore: ${pulseScore.toFixed(2)}${fallbackNote ? '\n' + fallbackNote : ''}`;
                   
                   // === DRIVERS SELECTION ===
                   // Sort by absolute contribution descending
@@ -1086,7 +1086,7 @@ export default function PlayerPage() {
                         {pulseIcon}
                         <span className={`text-sm font-semibold ${pulseColor}`}>{pulseLabel}</span>
                         <span className="text-[10px] text-gray-600 ml-2">
-                          Wk{windowA[windowA.length - 1].week}-{windowA[0].week} vs Wk{windowB[windowB.length - 1].week}-{windowB[0].week}
+                          {formatWeekRange(windowAWeeksSorted)} vs {formatWeekRange(windowBWeeksSorted)}
                         </span>
                       </div>
                       
