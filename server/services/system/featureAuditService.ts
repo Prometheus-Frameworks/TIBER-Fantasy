@@ -808,6 +808,171 @@ async function checkOwnershipService(): Promise<AuditCheck> {
   }
 }
 
+// ========================================
+// SLEEPER SYNC V2 CHECKS
+// ========================================
+
+async function checkSleeperSyncRecent(): Promise<AuditCheck> {
+  try {
+    // Check if any sync has happened recently (within 2 hours)
+    const result = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_leagues,
+        COUNT(CASE WHEN status = 'ok' THEN 1 END) as healthy_leagues,
+        COUNT(CASE WHEN status = 'error' THEN 1 END) as error_leagues,
+        COUNT(CASE WHEN status = 'running' THEN 1 END) as running_leagues,
+        MAX(last_synced_at) as most_recent_sync
+      FROM sleeper_sync_state
+    `);
+    
+    const row = (result.rows as any[])[0] || {};
+    const totalLeagues = parseInt(row.total_leagues) || 0;
+    const healthyLeagues = parseInt(row.healthy_leagues) || 0;
+    const errorLeagues = parseInt(row.error_leagues) || 0;
+    const mostRecentSync = row.most_recent_sync ? new Date(row.most_recent_sync) : null;
+    
+    if (totalLeagues === 0) {
+      return {
+        key: 'sleeper.sync_recent',
+        status: 'info',
+        details: { note: 'No leagues synced yet', syncIntervalMinutes: 60 }
+      };
+    }
+    
+    // Check if most recent sync was within 2 hours (2x the 60 min interval)
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const isRecent = mostRecentSync && mostRecentSync > twoHoursAgo;
+    
+    if (errorLeagues > 0) {
+      return {
+        key: 'sleeper.sync_recent',
+        status: 'warning',
+        value: healthyLeagues / totalLeagues,
+        details: {
+          totalLeagues,
+          healthyLeagues,
+          errorLeagues,
+          mostRecentSync: mostRecentSync?.toISOString() ?? null
+        }
+      };
+    }
+    
+    return {
+      key: 'sleeper.sync_recent',
+      status: isRecent ? 'healthy' : 'warning',
+      value: healthyLeagues / totalLeagues,
+      details: {
+        totalLeagues,
+        healthyLeagues,
+        mostRecentSync: mostRecentSync?.toISOString() ?? null,
+        note: isRecent ? 'Sync within expected interval' : 'Sync is stale (>2 hours)'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'sleeper.sync_recent',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkSleeperUnresolvedPlayers(): Promise<AuditCheck> {
+  try {
+    // Count unresolved players (player_key starts with 'sleeper:')
+    const result = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_players,
+        COUNT(CASE WHEN player_key LIKE 'sleeper:%' THEN 1 END) as unresolved_players
+      FROM sleeper_roster_current
+    `);
+    
+    const row = (result.rows as any[])[0] || {};
+    const totalPlayers = parseInt(row.total_players) || 0;
+    const unresolvedPlayers = parseInt(row.unresolved_players) || 0;
+    
+    if (totalPlayers === 0) {
+      return {
+        key: 'sleeper.unresolved_players',
+        status: 'info',
+        value: 0,
+        details: { note: 'No roster data yet' }
+      };
+    }
+    
+    const unresolvedPercent = (unresolvedPlayers / totalPlayers) * 100;
+    
+    return {
+      key: 'sleeper.unresolved_players',
+      status: 'info', // Informational only, not a failure
+      value: unresolvedPlayers,
+      details: {
+        totalPlayers,
+        unresolvedPlayers,
+        unresolvedPercent: unresolvedPercent.toFixed(1) + '%',
+        note: unresolvedPlayers > 0 
+          ? `${unresolvedPlayers} players using sleeper:<id> fallback keys`
+          : 'All players resolved to GSIS IDs'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'sleeper.unresolved_players',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
+async function checkSleeperSyncStatus(): Promise<AuditCheck> {
+  try {
+    // Get aggregate sync status
+    const result = await db.execute(sql`
+      SELECT 
+        status,
+        COUNT(*) as count
+      FROM sleeper_sync_state
+      GROUP BY status
+    `);
+    
+    const rows = result.rows as { status: string; count: string }[];
+    const statusCounts: Record<string, number> = {};
+    let totalLeagues = 0;
+    
+    for (const row of rows) {
+      statusCounts[row.status] = parseInt(row.count) || 0;
+      totalLeagues += statusCounts[row.status];
+    }
+    
+    if (totalLeagues === 0) {
+      return {
+        key: 'sleeper.sync_status',
+        status: 'info',
+        details: { note: 'No leagues configured for sync' }
+      };
+    }
+    
+    const hasErrors = (statusCounts['error'] || 0) > 0;
+    const allOk = (statusCounts['ok'] || 0) === totalLeagues;
+    
+    return {
+      key: 'sleeper.sync_status',
+      status: hasErrors ? 'warning' : (allOk ? 'healthy' : 'info'),
+      details: {
+        totalLeagues,
+        statusCounts,
+        note: hasErrors ? 'Some leagues have sync errors' : 'All syncs healthy'
+      }
+    };
+  } catch (error) {
+    return {
+      key: 'sleeper.sync_status',
+      status: 'skipped',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' }
+    };
+  }
+}
+
 export async function runFeatureAudit(params: AuditParams = {}): Promise<FeatureAuditResult> {
   const season = params.season || 2024;
   const week = params.week;
@@ -825,7 +990,11 @@ export async function runFeatureAudit(params: AuditParams = {}): Promise<Feature
     checkCacheFreshness(),
     checkPlayerProfileRoutes(playerId, season, week || 1),
     checkSimilarAndTierNeighbors(playerId, season),
-    checkOwnershipService()
+    checkOwnershipService(),
+    // Sleeper Sync V2 checks
+    checkSleeperSyncRecent(),
+    checkSleeperUnresolvedPlayers(),
+    checkSleeperSyncStatus()
   ]);
   
   let overallStatus: 'healthy' | 'warning' | 'critical' = 'healthy';
