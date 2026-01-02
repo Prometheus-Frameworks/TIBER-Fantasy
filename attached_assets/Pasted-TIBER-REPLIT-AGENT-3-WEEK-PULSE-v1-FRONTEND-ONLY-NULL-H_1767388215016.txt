@@ -1,0 +1,72 @@
+TIBER REPLIT AGENT — 3-WEEK PULSE v1 (FRONTEND ONLY, NULL-HONEST)
+
+Goal:
+Add a compact “3W Pulse” indicator in PlayerPage’s Usage & Scores section:
+- compares last 3 non-missing weeks vs the 3 non-missing weeks before that
+- outputs: ↑ Up / → Flat / ↓ Down
+- based on a composite of core usage metrics (position-aware)
+
+Constraints:
+- Frontend only (no endpoint changes)
+- Must respect missing weeks (use only weeks where missing=false)
+- Must not fabricate values
+- Minimal diff in PlayerPage.tsx
+
+Definitions:
+- Let usableWeeks = weeks.filter(w => !w.missing)
+- Let currentWeek = already-computed “effective current week” (your snap logic)
+- Let windowA = last 3 usableWeeks with week <= currentWeek
+- Let windowB = the 3 usableWeeks immediately before windowA
+
+If either window has <3 weeks:
+- show “3W Pulse: —” with tooltip “Not enough prior weeks”
+
+Metrics by position:
+- Base metrics (all): targets
+- WR/TE: routes + targets (+ optional airYards if present)
+- RB/QB: carries + targets
+- SnapPct only if consistently present (if most values are null, ignore it)
+
+Compute:
+- For each metric, avgA = mean(windowA.metric), avgB = mean(windowB.metric)
+- metricDelta = avgA - avgB
+
+Composite score:
+- For each metric included, normalize delta lightly to avoid one stat dominating:
+  - e.g. targetsWeight=1.0, routesWeight=0.6, carriesWeight=0.8, airYardsWeight=0.04 (since it’s large)
+- pulseScore = Σ(weight * delta)
+
+Classification thresholds (keep simple):
+- Up if pulseScore >= +1.0
+- Down if pulseScore <= -1.0
+- Flat otherwise
+
+UI:
+- Add row near Trend Deltas (same area):
+  “3W Pulse: ↑ Up” (green), “→ Flat” (gray), “↓ Down” (red), or “—” (gray)
+- Tooltip should show:
+  - which weeks are in windowA and windowB
+  - the component deltas (e.g., targets +2.0, routes +5.3, carries -1.0)
+- If selected week is missing and you’re using fallback week, pulse should use the fallback currentWeek (same as deltas) and mention that in tooltip.
+
+Implementation steps:
+1) Create helper functions inside PlayerPage.tsx:
+   - getNonMissingWeeksUpTo(weeks, currentWeek)
+   - mean(values)
+   - buildPulse(position, windowA, windowB)
+2) Determine included metrics based on position and non-null availability:
+   - a metric is “usable” if at least 4 of the 6 window values (A+B) are non-null numbers
+3) Render Pulse row and tooltip.
+
+Deliverables:
+- Exact code snippet for pulse computation
+- Where you placed it in the Usage section
+- Screenshot-style description of how it looks
+- Confirm it handles missing weeks and early season gracefully
+
+Verification checklist (manual):
+- Player with bye week: selecting missing week should still produce pulse (using fallback currentWeek)
+- Early season week 2: pulse shows “—”
+- WR/TE uses routes+targets; RB uses carries+targets
+
+BEGIN.
