@@ -1,0 +1,125 @@
+TIBER REPLIT AGENT — TREND DELTAS v1 + POPULATE MISSING WEEKS (GSIS-FIRST, NULL-HONEST)
+
+GOAL
+1) Add Trend Deltas to PlayerPage (Usage section):
+   - Δ Snap%
+   - Δ Routes
+   - Δ Targets
+   - Δ Carries (if RB)
+   - optional: Δ AirYards / Δ RZ targets if already available
+2) Ensure missing weeks are handled consistently by populating gaps so deltas are stable:
+   - Byes and missing-data weeks should not break trend calculations
+   - Trend logic should use “previous available week” while still showing gap weeks as missing
+
+NON-NEGOTIABLES
+- Keep NULL-honest philosophy (do not fabricate stats).
+- GSIS is canonical player key.
+- No breaking changes to existing endpoints.
+- If backfill/persistence is too risky, implement server-side “gap-fill” in the API response (preferred) and ONLY persist if easy/safe.
+
+PHASE 0 — DISCOVERY (NO CHANGES YET)
+- Identify what powers PlayerPage “Metric Matrix / weekly usage”.
+- Find the table(s) and/or endpoint(s) used:
+  - snapshot_player_week / weekly_stats / metric_matrix_weekly / datadiveSnapshot etc.
+- Confirm:
+  - available fields for snap, routes, targets, carries
+  - how week + season are stored
+  - how “latest available week” is determined today
+
+PHASE 1 — NEW API: WEEK SERIES (GAP-FILLED, NULL-HONEST)
+Add a new endpoint (additive):
+GET /api/player/:playerKey/week-series?season=2025&metricSet=usage
+
+Response:
+{
+  success: true,
+  data: {
+    playerKey,
+    season,
+    maxWeek,               // latest week in dataset for that player or league
+    weeks: [
+      {
+        week: 1,
+        missing: boolean,   // true if no underlying row exists
+        snapPct: number|null,
+        routes: number|null,
+        targets: number|null,
+        carries: number|null
+      },
+      ...
+    ],
+    availableWeeks: [1,2,4,5,...] // underlying weeks that exist
+  }
+}
+
+Critical behavior:
+- Build a contiguous week array from 1..maxWeek
+- For weeks without a row: include an entry with missing=true and all metrics null
+- Do NOT invent values; keep null.
+- This is “populate missing weeks” at the API layer (safe, no DB writes).
+
+Implementation notes:
+- Determine maxWeek:
+  - Prefer: player’s latest available week
+  - If player has no rows, fall back to global latest week (system “current week” detection logic)
+- Make sure this query is indexed and not N+1. Do one query to get all weeks for player-season.
+
+PHASE 2 — OPTIONAL PERSISTED BACKFILL (ONLY IF EASY)
+If and ONLY if it is straightforward and consistent with existing snapshot architecture:
+Add an admin endpoint:
+POST /api/admin/player-week/backfill-missing?season=2025
+- Backfills missing week rows for ACTIVE roster players (or for rostered players only)
+- Inserts “gap rows” into a dedicated table (recommended) such as:
+  player_week_gapfill (player_key, season, week, missing=true)
+OR into an existing snapshot table only if there is a clear “missing flag” column.
+
+But again: API gap-fill is enough for v1. Persist only if clean.
+
+PHASE 3 — PLAYERPAGE TREND DELTAS (USAGE SECTION)
+In client/src/pages/PlayerPage.tsx:
+- Fetch /api/player/:playerKey/week-series?season=...&metricSet=usage
+- Identify “currentWeek” as the latest non-missing week with any usage metric present.
+- Identify “prevWeek” as the closest earlier non-missing week.
+- Compute deltas:
+  delta = current - prev
+- Display in a compact row:
+  Δ Snap% | Δ Routes | Δ Targets | Δ Carries
+Formatting:
+- Show arrows + color:
+  - positive => ↑ and green
+  - negative => ↓ and red
+  - zero => → and gray
+- If prevWeek missing (no prior data), show “—” and a tooltip “No prior week data”
+- Also show “Current Week: X (prev: Y)” to keep it honest.
+
+Also add a mini 3-week trend (optional but valuable):
+- last3Avg = avg of last 3 non-missing weeks (including current)
+- prev3Avg = avg of 3 non-missing weeks before that (if available)
+- show “3W Trend: Up/Flat/Down” based on last3Avg - prev3Avg
+
+PHASE 4 — UI POLISH / FAILSAFES
+- If activeWeekSeries is loading: show a small skeleton line in Usage panel.
+- If weeks array is empty: show “No weekly usage series available.”
+- If player is QB/DEF etc, hide irrelevant deltas (carries/routes logic should adapt by position if position is available).
+
+PHASE 5 — TESTS / VERIFICATION
+Backend:
+- Unit test for gap-fill builder:
+  - input weeks [1,2,4] => output weeks [1..4] with week 3 missing=true
+- Verify response uses correct season/week ordering
+
+Frontend:
+- Minimal test or manual verification steps included in summary:
+  - player with bye/missing week still shows deltas using prev available week
+  - deltas render correctly for positive/negative
+
+DELIVERABLES
+- Files changed
+- New endpoint path + example curl
+- Screenshot-style description of the Trend Delta row
+- Confirm missing weeks are represented as missing=true with null metrics (no fake data)
+
+Example curl:
+curl -s "http://localhost:5000/api/player/00-0039338/week-series?season=2025&metricSet=usage" | jq .
+
+BEGIN.
