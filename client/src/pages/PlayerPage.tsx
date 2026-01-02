@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import { addRecentPlayer } from '@/lib/recentPlayers';
+import { computePulse, computeTrendDeltas, getTopDrivers, formatWeekRange, getDeltaArrow, getPulseColor, type WeekData } from '@/lib/pulseUtils';
 
 const SECTION_NAV_ITEMS = [
   { id: 'overview', label: 'Overview' },
@@ -1562,8 +1563,24 @@ interface ForgeEgResponse {
   reason?: string;
 }
 
+interface CompareWeekSeriesResponse {
+  success: boolean;
+  data?: {
+    weeks: Array<{
+      week: number;
+      missing: boolean;
+      snapPct: number | null;
+      routes: number | null;
+      targets: number | null;
+      carries: number | null;
+      airYards: number | null;
+    }>;
+  };
+}
+
 function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }: CompareDrawerContentProps) {
   const forgeMode = mode === 'season' ? 'dynasty' : 'redraft';
+  const [showTrends, setShowTrends] = useState(true);
 
   const { data: baseForge, isLoading: baseLoading } = useQuery<ForgeEgResponse>({
     queryKey: ['/api/forge/eg/player', basePlayer.playerId, basePlayer.position, forgeMode],
@@ -1580,6 +1597,26 @@ function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }:
     queryFn: async () => {
       const res = await fetch(`/api/forge/eg/player/${comparePlayer.playerId}?position=${comparePlayer.position}&mode=${forgeMode}`);
       if (!res.ok) return { success: false, reason: 'Failed to load' };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: baseWeekSeries, isLoading: baseWeeksLoading } = useQuery<CompareWeekSeriesResponse>({
+    queryKey: ['/api/player-identity/player', basePlayer.playerId, 'week-series', season],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-identity/player/${basePlayer.playerId}/week-series?season=${season}&metricSet=usage`);
+      if (!res.ok) return { success: false };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: compareWeekSeries, isLoading: compareWeeksLoading } = useQuery<CompareWeekSeriesResponse>({
+    queryKey: ['/api/player-identity/player', comparePlayer.playerId, 'week-series', season],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-identity/player/${comparePlayer.playerId}/week-series?season=${season}&metricSet=usage`);
+      if (!res.ok) return { success: false };
       return res.json();
     },
     staleTime: 5 * 60 * 1000,
@@ -1679,6 +1716,109 @@ function CompareDrawerContent({ basePlayer, comparePlayer, season, week, mode }:
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Trends Section */}
+      <div className="bg-[#141824] rounded-lg overflow-hidden border border-gray-800/50">
+        <button
+          onClick={() => setShowTrends(!showTrends)}
+          className="w-full flex items-center justify-between p-3 hover:bg-gray-800/20 transition-colors"
+          data-testid="button-toggle-trends"
+        >
+          <div className="flex items-center gap-2">
+            <Activity size={14} className="text-purple-400" />
+            <span className="text-sm font-medium text-white">Trends</span>
+            <span className="text-xs text-gray-500">3W Pulse + Deltas</span>
+          </div>
+          {showTrends ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+        </button>
+        
+        {showTrends && (
+          <div className="px-3 pb-3 space-y-3">
+            {(baseWeeksLoading || compareWeeksLoading) ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Skeleton className="h-20 w-full bg-gray-800/50" />
+                <Skeleton className="h-20 w-full bg-gray-800/50" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { player: basePlayer, weeks: baseWeekSeries?.data?.weeks || [], color: 'purple' },
+                  { player: { playerId: comparePlayer.playerId, name: comparePlayer.playerName, position: comparePlayer.position, team: comparePlayer.team }, weeks: compareWeekSeries?.data?.weeks || [], color: 'cyan' }
+                ].map(({ player, weeks, color }) => {
+                  const weekData = weeks as WeekData[];
+                  const pulse = computePulse(weekData, player.position, week);
+                  const deltas = computeTrendDeltas(weekData, player.position, week);
+                  const drivers = pulse.status === 'success' ? getTopDrivers(pulse.components) : [];
+                  
+                  const pulseTooltip = pulse.status === 'success'
+                    ? `${formatWeekRange(pulse.windowAWeeks)} vs ${formatWeekRange(pulse.windowBWeeks)}\nScore: ${pulse.pulseScore.toFixed(2)}${pulse.fallbackNote ? '\n' + pulse.fallbackNote : ''}`
+                    : pulse.status === 'not_enough_weeks' ? 'Need 6+ non-missing weeks' : 'Insufficient metric data';
+                  
+                  const driversTooltip = drivers.map(d => {
+                    const sign = d.delta >= 0 ? '+' : '';
+                    return `${d.name}: Δ ${sign}${d.delta.toFixed(1)} (contrib=${d.contribution >= 0 ? '+' : ''}${d.contribution.toFixed(2)})`;
+                  }).join('\n') + (pulse.fallbackNote ? '\n' + pulse.fallbackNote : '');
+                  
+                  const borderColor = color === 'purple' ? 'border-purple-500/30' : 'border-cyan-500/30';
+                  const bgColor = color === 'purple' ? 'bg-purple-500/5' : 'bg-cyan-500/5';
+                  
+                  return (
+                    <div key={player.playerId} className={`${bgColor} ${borderColor} border rounded-lg p-2 space-y-2`}>
+                      <div className="text-[10px] text-gray-400 text-center truncate">{player.name.split(' ')[1] || player.name}</div>
+                      
+                      {/* Pulse */}
+                      <div className="text-center" title={pulseTooltip}>
+                        {pulse.status === 'success' ? (
+                          <div className="flex items-center justify-center gap-1">
+                            {pulse.classification === 'Up' && <TrendingUp size={12} className="text-green-400" />}
+                            {pulse.classification === 'Down' && <TrendingDown size={12} className="text-red-400" />}
+                            {pulse.classification === 'Flat' && <span className="text-gray-400 text-xs">→</span>}
+                            <span className={`text-xs font-semibold ${getPulseColor(pulse.classification)}`}>{pulse.classification}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500">—</span>
+                        )}
+                      </div>
+                      
+                      {/* Drivers */}
+                      {drivers.length > 0 && (
+                        <div className="text-[9px] text-gray-500 text-center font-mono" title={driversTooltip}>
+                          {drivers.map((d, idx) => {
+                            const { arrow, color: arrowColor } = getDeltaArrow(d.delta);
+                            return (
+                              <span key={d.name}>
+                                {idx > 0 && ', '}
+                                <span className="text-gray-400">{d.name}</span>
+                                <span className={arrowColor}>{arrow}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      
+                      {/* Trend Deltas */}
+                      {deltas.status === 'success' && deltas.priorWeek && (
+                        <div className="text-[9px] text-gray-600 text-center" title={`Wk${deltas.priorWeek} → Wk${deltas.currentWeek}${deltas.fallbackNote ? '\n' + deltas.fallbackNote : ''}`}>
+                          {deltas.deltas.slice(0, 3).map((d, idx) => {
+                            const { color: deltaColor } = getDeltaArrow(d.value);
+                            return (
+                              <span key={d.metric}>
+                                {idx > 0 && ' · '}
+                                <span className="text-gray-500">{d.metric === 'Snap%' ? 'Sn' : d.metric.slice(0, 3)}</span>
+                                <span className={deltaColor}>{d.display}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
