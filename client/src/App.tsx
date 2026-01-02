@@ -18,6 +18,7 @@ import HomepageRedesign from "@/pages/admin/HomepageRedesign";
 import RagStatus from "@/pages/RagStatus";
 import ForgeLab from "@/pages/ForgeLab";
 import TiberDataLab from "@/pages/TiberDataLab";
+import ForgeSimulation from "@/pages/admin/ForgeSimulation";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import PlayerPage from "@/pages/PlayerPage";
@@ -73,6 +74,9 @@ function Router() {
       
       {/* Admin: FORGE Lab - Interactive scoring sandbox */}
       <Route path="/admin/forge-lab" component={ForgeLab} />
+      
+      {/* Admin: FORGE Simulation - Recursive engine tuning */}
+      <Route path="/admin/forge-simulation" component={ForgeSimulation} />
       
       {/* Tiber Data Lab - Snapshot-based NFL data spine */}
       <Route path="/tiber-data-lab" component={TiberDataLab} />
