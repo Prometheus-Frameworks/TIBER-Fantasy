@@ -691,7 +691,11 @@ export default function PlayerPage() {
           
           {activityExpanded && (
             <div className="px-5 pb-5 space-y-4">
-              {!activeLeagueId ? (
+              {!ownershipPlayerKey ? (
+                <div className="text-sm text-gray-500 italic py-2" data-testid="text-no-player-key">
+                  No player key available for activity tracking.
+                </div>
+              ) : !activeLeagueId ? (
                 <div className="text-sm text-gray-500 italic py-2" data-testid="text-no-league-hint">
                   Set an active league to see activity.
                 </div>
