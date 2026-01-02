@@ -1,0 +1,135 @@
+TIBER REPLIT AGENT — SLEEPER SYNC V2 IMPLEMENTATION (SAFE MODE)
+
+Context:
+- GSIS identity spine is complete and healthy. Do not break it.
+- Codex started modifying schema but did not finish. Your first job is to detect current repo/db migration state and proceed safely.
+
+ABSOLUTE RULES:
+1) Do NOT break existing ownership endpoint behavior (owned_by_me / owned_by_other / free_agent / disabled fallback).
+2) GSIS is canonical join key when available. Explicit fallback paths only.
+3) Sync must be idempotent: run twice with no roster changes => 0 new ownership_events on second run.
+4) Unknown/unmatched players must never crash sync. Use player_key = 'sleeper:<id>' fallback and log unresolved.
+5) All league sync writes happen in one DB transaction.
+6) Do not create duplicate competing migrations. If an unfinished migration exists, finish it. If it was applied, do a forward-fix migration.
+
+PHASE 0 — DAMAGE REPORT (NO CHANGES YET)
+- Output:
+  A) git status + list modified/added files
+  B) which migration files exist for sleeper sync (paths)
+  C) whether migrations were applied (check migration ledger table used by this repo)
+  D) any partially created tables already in DB
+  E) concise plan: “continue existing migration” OR “forward-fix migration” OR “revert un-applied migration”
+
+ONLY AFTER PRINTING THIS REPORT, proceed.
+
+PHASE 1 — SCHEMA (MIGRATIONS)
+Ensure these tables exist (names can match repo conventions, but keep semantics):
+A) sleeper_sync_state:
+  - league_id TEXT PRIMARY KEY
+  - last_synced_at TIMESTAMPTZ
+  - status TEXT NOT NULL DEFAULT 'never' (never|running|ok|error)
+  - last_duration_ms INT
+  - last_error TEXT
+  - last_hash TEXT
+  - updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+B) sleeper_roster_current:
+  - league_id TEXT NOT NULL
+  - team_id TEXT NOT NULL
+  - player_key TEXT NOT NULL   (prefer gsis_id; else 'sleeper:<id>')
+  - updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  PRIMARY KEY (league_id, team_id, player_key)
+
+C) ownership_events (append-only history):
+  - id BIGSERIAL PRIMARY KEY
+  - league_id TEXT NOT NULL
+  - player_key TEXT NOT NULL
+  - from_team_id TEXT NULL
+  - to_team_id TEXT NULL
+  - event_type TEXT NOT NULL (ADD|DROP|TRADE)
+  - event_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  - week INT NULL
+  - season INT NULL
+  - source TEXT NOT NULL DEFAULT 'sleeper'
+  - dedupe_key TEXT NOT NULL
+  UNIQUE (dedupe_key)
+
+Indexes:
+- sleeper_roster_current (league_id, team_id)
+- ownership_events (league_id, player_key)
+- ownership_events (league_id, event_at)
+
+PHASE 2 — PURE DIFF ENGINE + TESTS (LOCK IT DOWN)
+Implement a pure deterministic diff function:
+computeRosterDiff(prev: Map<teamId, Set<player_key>>, next: Map<teamId, Set<player_key>>)
+=> events: [{player_key, from_team_id?, to_team_id?, event_type}]
+Rules:
+- Move A -> B in same run => ONE TRADE event (not add+drop spam)
+- Leave roster => DROP
+- New to roster => ADD
+- Deterministic order (sort before emit)
+
+Add unit tests:
+1) no change => 0 events
+2) add => ADD
+3) drop => DROP
+4) move => TRADE (single)
+5) determinism => same logical sets, different insertion order => identical event output
+
+PHASE 3 — IDENTITY RESOLUTION (GSIS-FIRST)
+Create resolver used by sync:
+resolveSleeperPlayerKey(sleeperPlayerId, optional metadata) -> player_key
+Priority:
+1) if existing identity map resolves to gsis_id -> return gsis_id
+2) else try existing enrichment matcher utilities if present
+3) else return `sleeper:<id>` and log unresolved count
+
+Never throw for unknown.
+
+PHASE 4 — SYNC SERVICE + MANUAL ENDPOINTS (NO SCHEDULER YET)
+Implement syncLeague(leagueId, {force?}):
+
+Flow:
+1) update sleeper_sync_state.status='running'
+2) fetch Sleeper rosters for leagueId
+3) build next map teamId -> Set(player_key) using resolver
+4) load prev state from sleeper_roster_current for league
+5) compute diff events
+6) build last_hash = sha256(canonical sorted roster string)
+7) if !force and last_hash == sleeper_sync_state.last_hash => short-circuit (update last_synced_at, status ok, duration). NO event writes.
+8) Else in ONE TRANSACTION:
+   a) insert ownership_events with dedupe_key (must guarantee idempotency)
+      - dedupe_key should be derived from (leagueId, player_key, from, to, event_type, last_hash) or other deterministic content hash.
+   b) replace sleeper_roster_current for the league (delete league rows then insert next)
+9) update sleeper_sync_state: ok/error, duration, last_error, last_hash
+
+Endpoints:
+- POST /api/sleeper/sync/run  body { leagueId, force?: boolean }
+- GET  /api/sleeper/sync/status?leagueId=...
+
+Acceptance:
+- Running sync twice with no roster changes => second run inserts 0 new ownership_events
+- Unknown players do not break sync
+- Existing ownership endpoint outputs unchanged
+
+PHASE 5 — FEATURE AUDIT (TRUTHFUL, ACTIONABLE)
+Extend /api/system/feature-audit with:
+- sleeper.sync_recent: healthy if last_synced_at within 2x interval minutes (assume 60 if no interval config yet)
+- sleeper.unresolved_players: informational count of current roster player_key starting with 'sleeper:'
+- sleeper.sync_status: ok/error/running
+
+PHASE 6 — OPTIONAL SCHEDULER (ONLY IF EVERYTHING ABOVE IS GREEN)
+Implement behind env flag:
+- ENABLE_SLEEPER_SYNC=true/false
+- SLEEPER_SYNC_INTERVAL_MINUTES default 60
+- serially sync known leagues + small jitter
+If any doubt, skip scheduler and just deliver manual endpoints stable.
+
+FINISHING REQUIREMENTS
+- Run typecheck/tests
+- Provide a concise summary:
+  * migrations added/modified
+  * new modules + endpoints
+  * how to test with curl
+  * what tables are now source of truth for “current roster” and “events”
+- Do not leave half-implemented code or TODO stubs.
