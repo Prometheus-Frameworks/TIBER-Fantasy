@@ -180,6 +180,31 @@ interface CompareTarget {
   team: string;
 }
 
+interface WeekMetric {
+  week: number;
+  missing: boolean;
+  snapPct: number | null;
+  routes: number | null;
+  targets: number | null;
+  carries: number | null;
+  airYards: number | null;
+}
+
+interface WeekSeriesResponse {
+  success: boolean;
+  data?: {
+    playerKey: string;
+    playerName: string | null;
+    position: string | null;
+    teamId: string | null;
+    season: number;
+    maxWeek: number;
+    metricSet: string;
+    weeks: WeekMetric[];
+    availableWeeks: number[];
+  };
+}
+
 export default function PlayerPage() {
   const [, params] = useRoute('/player/:playerId');
   const playerId = params?.playerId || '';
@@ -419,6 +444,18 @@ export default function PlayerPage() {
     },
     enabled: !!activeLeagueId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch week-series data for Trend Deltas
+  const { data: weekSeriesData, isLoading: weekSeriesLoading } = useQuery<WeekSeriesResponse>({
+    queryKey: ['/api/player-identity/player', nflfastrId, 'week-series', season],
+    queryFn: async () => {
+      const res = await fetch(`/api/player-identity/player/${nflfastrId}/week-series?season=${season}&metricSet=usage`);
+      if (!res.ok) throw new Error('Failed to fetch week series');
+      return res.json();
+    },
+    enabled: !!nflfastrId,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Check if player appears in churn lists (match by sleeper key if available)
@@ -665,6 +702,131 @@ export default function PlayerPage() {
                 week={effectiveWeek}
                 hasDataForWeek={hasDataForWeek}
               />
+              
+              {/* Trend Deltas Row */}
+              <div className="bg-gray-800/20 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity size={14} className="text-cyan-400" />
+                  <h4 className="text-sm font-medium text-white">Trend Deltas</h4>
+                  <span className="text-xs text-gray-500">Week-over-Week</span>
+                </div>
+                
+                {weekSeriesLoading ? (
+                  <div className="flex gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-12 w-20 bg-gray-800/50" />
+                    ))}
+                  </div>
+                ) : (() => {
+                  const weeks = weekSeriesData?.data?.weeks || [];
+                  const position = player.position;
+                  
+                  const currentWeekData = weeks.find(w => w.week === effectiveWeek && !w.missing);
+                  const priorWeeks = weeks.filter(w => w.week < effectiveWeek && !w.missing);
+                  const priorWeekData = priorWeeks.length > 0 ? priorWeeks[priorWeeks.length - 1] : null;
+                  
+                  if (!currentWeekData) {
+                    return (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
+                        <AlertCircle size={12} />
+                        <span>No data for week {effectiveWeek}</span>
+                      </div>
+                    );
+                  }
+                  
+                  if (!priorWeekData) {
+                    return (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
+                        <AlertCircle size={12} />
+                        <span>No prior week data to compare</span>
+                      </div>
+                    );
+                  }
+                  
+                  const getDelta = (curr: number | null, prev: number | null): { value: number | null; display: string } => {
+                    if (curr === null || prev === null) return { value: null, display: '—' };
+                    const delta = curr - prev;
+                    const sign = delta > 0 ? '+' : '';
+                    return { value: delta, display: `${sign}${delta}` };
+                  };
+                  
+                  const snapDelta = getDelta(currentWeekData.snapPct, priorWeekData.snapPct);
+                  const routesDelta = getDelta(currentWeekData.routes, priorWeekData.routes);
+                  const targetsDelta = getDelta(currentWeekData.targets, priorWeekData.targets);
+                  const carriesDelta = getDelta(currentWeekData.carries, priorWeekData.carries);
+                  
+                  const getDeltaColor = (value: number | null): string => {
+                    if (value === null) return 'text-gray-500';
+                    if (value > 0) return 'text-green-400';
+                    if (value < 0) return 'text-red-400';
+                    return 'text-gray-400';
+                  };
+                  
+                  const getDeltaIcon = (value: number | null) => {
+                    if (value === null) return null;
+                    if (value > 0) return <TrendingUp size={12} className="text-green-400" />;
+                    if (value < 0) return <TrendingDown size={12} className="text-red-400" />;
+                    return null;
+                  };
+                  
+                  const showRoutes = position === 'WR' || position === 'TE';
+                  const showCarries = position === 'RB' || position === 'QB';
+                  
+                  return (
+                    <div className="flex flex-wrap gap-4">
+                      {currentWeekData.snapPct !== null && (
+                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.snapPct ?? '—'}% → Wk${effectiveWeek}: ${currentWeekData.snapPct}%`}>
+                          <span className="text-[10px] text-gray-500 mb-1">Δ Snap%</span>
+                          <div className="flex items-center gap-1">
+                            {getDeltaIcon(snapDelta.value)}
+                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(snapDelta.value)}`}>
+                              {snapDelta.display}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {showRoutes && (
+                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.routes ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.routes}`}>
+                          <span className="text-[10px] text-gray-500 mb-1">Δ Routes</span>
+                          <div className="flex items-center gap-1">
+                            {getDeltaIcon(routesDelta.value)}
+                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(routesDelta.value)}`}>
+                              {routesDelta.display}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.targets ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.targets}`}>
+                        <span className="text-[10px] text-gray-500 mb-1">Δ Targets</span>
+                        <div className="flex items-center gap-1">
+                          {getDeltaIcon(targetsDelta.value)}
+                          <span className={`text-sm font-mono font-semibold ${getDeltaColor(targetsDelta.value)}`}>
+                            {targetsDelta.display}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {showCarries && (
+                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.carries ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.carries}`}>
+                          <span className="text-[10px] text-gray-500 mb-1">Δ Carries</span>
+                          <div className="flex items-center gap-1">
+                            {getDeltaIcon(carriesDelta.value)}
+                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(carriesDelta.value)}`}>
+                              {carriesDelta.display}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 flex items-end justify-end">
+                        <span className="text-[10px] text-gray-600">vs Wk{priorWeekData.week}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
