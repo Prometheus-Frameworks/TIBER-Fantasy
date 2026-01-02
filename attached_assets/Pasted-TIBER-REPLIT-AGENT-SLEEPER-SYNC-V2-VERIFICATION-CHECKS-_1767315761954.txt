@@ -1,0 +1,73 @@
+TIBER REPLIT AGENT — SLEEPER SYNC V2 VERIFICATION CHECKS (NO FEATURE WORK)
+
+Goal: Verify Sleeper Sync v2 is truly idempotent, safe, and reporting correctly.
+Do NOT add new features. Do NOT refactor. Only run checks, print results, and if something fails, identify the exact cause + file/line.
+
+PHASE 0 — DETERMINE SERVER PORT / BASE URL
+1) Print runtime connection info:
+- echo $PORT
+- if empty, determine listening port from logs or `lsof -i -P -n | grep LISTEN | head -n 20` (or `ss -ltnp`)
+2) Set a BASE URL you will use for curl:
+- Prefer: http://localhost:<PORT>
+- If localhost is not reachable in this environment, also print the external repl URL and use it.
+
+PHASE 1 — API SMOKE TEST (MANUAL SYNC)
+Using leagueId = 131212017558267392:
+
+A) Run manual sync:
+- curl -s -X POST "<BASE>/api/sleeper/sync/run?leagueId=131212017558267392" | head -c 500; echo
+- curl -s "<BASE>/api/sleeper/sync/status?leagueId=131212017558267392" | head -c 500; echo
+
+B) Run it again immediately (idempotency check):
+- curl -s -X POST "<BASE>/api/sleeper/sync/run?leagueId=131212017558267392" | head -c 500; echo
+- curl -s "<BASE>/api/sleeper/sync/status?leagueId=131212017558267392" | head -c 500; echo
+
+Print the HTTP status codes too (use curl -i or -w "%{http_code}").
+
+PHASE 2 — DB TRUTH CHECKS (POSTGRES)
+Run SQL queries and print the output tables:
+
+1) Events dedupe integrity:
+SELECT COUNT(*) AS total_events,
+       COUNT(DISTINCT dedupe_key) AS distinct_dedupe_keys
+FROM ownership_events
+WHERE league_id = '131212017558267392';
+
+2) Count events (run before + after second sync; print both counts clearly):
+SELECT COUNT(*) AS events_count
+FROM ownership_events
+WHERE league_id = '131212017558267392';
+
+3) Unresolved players currently on rosters:
+SELECT COUNT(*) AS unresolved
+FROM sleeper_roster_current
+WHERE league_id = '131212017558267392'
+  AND player_key LIKE 'sleeper:%';
+
+4) Current roster row count:
+SELECT COUNT(*) AS roster_rows
+FROM sleeper_roster_current
+WHERE league_id = '131212017558267392';
+
+PHASE 3 — DEDUPE KEY SANITY (CRITICAL)
+Locate the code that generates dedupe_key for ownership_events and print:
+- the function/path
+- the exact formula (what fields go into it)
+- confirm whether it includes BOTH prev_hash and next_hash (or a diff hash).
+If it does NOT, explain the risk (e.g., blocking legitimate repeat adds/drops later) and propose a minimal safe fix, but DO NOT implement the fix unless asked.
+
+PHASE 4 — FEATURE AUDIT
+Hit the system audit endpoint and show only the sleeper-related checks:
+- curl -s "<BASE>/api/system/feature-audit" | (filter to sleeper checks)
+Confirm:
+- sync status transitions running -> ok
+- sync_recent is healthy after a run
+- unresolved is informational (not blocking)
+
+OUTPUT FORMAT REQUIREMENTS
+- Print a clean checklist with ✅/❌ for each phase
+- Include the exact BASE URL and port used
+- Include raw outputs for curl and SQL (truncated if massive, but keep the important lines)
+- If anything fails, point to the exact probable root cause and where in code it lives.
+
+BEGIN NOW.
