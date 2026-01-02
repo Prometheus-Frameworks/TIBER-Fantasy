@@ -721,15 +721,31 @@ export default function PlayerPage() {
                   const weeks = weekSeriesData?.data?.weeks || [];
                   const position = player.position;
                   
-                  const currentWeekData = weeks.find(w => w.week === effectiveWeek && !w.missing);
-                  const priorWeeks = weeks.filter(w => w.week < effectiveWeek && !w.missing);
+                  // Check if selected week has data
+                  const selectedWeekData = weeks.find(w => w.week === effectiveWeek && !w.missing);
+                  
+                  // If selected week is missing, find nearest previous non-missing week
+                  let currentWeekData = selectedWeekData;
+                  let usingFallbackWeek = false;
+                  
+                  if (!selectedWeekData) {
+                    const availableBeforeSelected = weeks.filter(w => w.week <= effectiveWeek && !w.missing);
+                    if (availableBeforeSelected.length > 0) {
+                      currentWeekData = availableBeforeSelected[availableBeforeSelected.length - 1];
+                      usingFallbackWeek = true;
+                    }
+                  }
+                  
+                  // Prior week is nearest earlier non-missing week before currentWeekData
+                  const currentWeek = currentWeekData?.week || effectiveWeek;
+                  const priorWeeks = weeks.filter(w => w.week < currentWeek && !w.missing);
                   const priorWeekData = priorWeeks.length > 0 ? priorWeeks[priorWeeks.length - 1] : null;
                   
                   if (!currentWeekData) {
                     return (
                       <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
                         <AlertCircle size={12} />
-                        <span>No data for week {effectiveWeek}</span>
+                        <span>No data available</span>
                       </div>
                     );
                   }
@@ -739,6 +755,9 @@ export default function PlayerPage() {
                       <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
                         <AlertCircle size={12} />
                         <span>No prior week data to compare</span>
+                        {usingFallbackWeek && (
+                          <span className="text-yellow-500/80 ml-2">(Selected week missing; using Wk{currentWeek})</span>
+                        )}
                       </div>
                     );
                   }
@@ -773,55 +792,63 @@ export default function PlayerPage() {
                   const showCarries = position === 'RB' || position === 'QB';
                   
                   return (
-                    <div className="flex flex-wrap gap-4">
-                      {currentWeekData.snapPct !== null && (
-                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.snapPct ?? '—'}% → Wk${effectiveWeek}: ${currentWeekData.snapPct}%`}>
-                          <span className="text-[10px] text-gray-500 mb-1">Δ Snap%</span>
+                    <div className="space-y-2">
+                      {usingFallbackWeek && (
+                        <div className="text-[10px] text-yellow-500/80 flex items-center gap-1">
+                          <AlertCircle size={10} />
+                          <span>Selected week missing; using Wk{currentWeek}</span>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-4">
+                        {currentWeekData.snapPct !== null && (
+                          <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.snapPct ?? '—'}% → Wk${currentWeek}: ${currentWeekData.snapPct}%`}>
+                            <span className="text-[10px] text-gray-500 mb-1">Δ Snap%</span>
+                            <div className="flex items-center gap-1">
+                              {getDeltaIcon(snapDelta.value)}
+                              <span className={`text-sm font-mono font-semibold ${getDeltaColor(snapDelta.value)}`}>
+                                {snapDelta.display}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {showRoutes && (
+                          <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.routes ?? '—'} → Wk${currentWeek}: ${currentWeekData.routes}`}>
+                            <span className="text-[10px] text-gray-500 mb-1">Δ Routes</span>
+                            <div className="flex items-center gap-1">
+                              {getDeltaIcon(routesDelta.value)}
+                              <span className={`text-sm font-mono font-semibold ${getDeltaColor(routesDelta.value)}`}>
+                                {routesDelta.display}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.targets ?? '—'} → Wk${currentWeek}: ${currentWeekData.targets}`}>
+                          <span className="text-[10px] text-gray-500 mb-1">Δ Targets</span>
                           <div className="flex items-center gap-1">
-                            {getDeltaIcon(snapDelta.value)}
-                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(snapDelta.value)}`}>
-                              {snapDelta.display}
+                            {getDeltaIcon(targetsDelta.value)}
+                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(targetsDelta.value)}`}>
+                              {targetsDelta.display}
                             </span>
                           </div>
                         </div>
-                      )}
-                      
-                      {showRoutes && (
-                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.routes ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.routes}`}>
-                          <span className="text-[10px] text-gray-500 mb-1">Δ Routes</span>
-                          <div className="flex items-center gap-1">
-                            {getDeltaIcon(routesDelta.value)}
-                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(routesDelta.value)}`}>
-                              {routesDelta.display}
-                            </span>
+                        
+                        {showCarries && (
+                          <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.carries ?? '—'} → Wk${currentWeek}: ${currentWeekData.carries}`}>
+                            <span className="text-[10px] text-gray-500 mb-1">Δ Carries</span>
+                            <div className="flex items-center gap-1">
+                              {getDeltaIcon(carriesDelta.value)}
+                              <span className={`text-sm font-mono font-semibold ${getDeltaColor(carriesDelta.value)}`}>
+                                {carriesDelta.display}
+                              </span>
+                            </div>
                           </div>
+                        )}
+                        
+                        <div className="flex-1 flex items-end justify-end">
+                          <span className="text-[10px] text-gray-600">Wk{currentWeek} vs Wk{priorWeekData.week}</span>
                         </div>
-                      )}
-                      
-                      <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.targets ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.targets}`}>
-                        <span className="text-[10px] text-gray-500 mb-1">Δ Targets</span>
-                        <div className="flex items-center gap-1">
-                          {getDeltaIcon(targetsDelta.value)}
-                          <span className={`text-sm font-mono font-semibold ${getDeltaColor(targetsDelta.value)}`}>
-                            {targetsDelta.display}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {showCarries && (
-                        <div className="flex flex-col items-center" title={`Wk${priorWeekData.week}: ${priorWeekData.carries ?? '—'} → Wk${effectiveWeek}: ${currentWeekData.carries}`}>
-                          <span className="text-[10px] text-gray-500 mb-1">Δ Carries</span>
-                          <div className="flex items-center gap-1">
-                            {getDeltaIcon(carriesDelta.value)}
-                            <span className={`text-sm font-mono font-semibold ${getDeltaColor(carriesDelta.value)}`}>
-                              {carriesDelta.display}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 flex items-end justify-end">
-                        <span className="text-[10px] text-gray-600">vs Wk{priorWeekData.week}</span>
                       </div>
                     </div>
                   );
