@@ -26,3 +26,10 @@ export {
   type SyncOptions,
   type SyncResult
 } from './syncService';
+
+export {
+  getStoredLeagues,
+  startScheduler,
+  stopScheduler,
+  getSchedulerStatus
+} from './scheduler';

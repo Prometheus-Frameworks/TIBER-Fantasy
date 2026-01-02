@@ -134,14 +134,12 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
     () => log(`[express] serving on port ${PORT}`)
   );
 
-  // ---- OPTIONAL: background jobs later (keep commented until needed) ----
-  // setImmediate(async () => {
-  //   try {
-  //     const { sleeperSyncService } = await import("./services/sleeperSyncService");
-  //     await sleeperSyncService.syncPlayers();
-  //     log("✅ Sleeper sync booted");
-  //   } catch (e) {
-  //     console.warn("Sleeper sync skipped:", e);
-  //   }
-  // });
+  // ---- Sleeper Sync Scheduler (optional background job) ----
+  // Enabled via ENABLE_SLEEPER_SYNC=true env flag
+  try {
+    const { startScheduler } = await import("./services/sleeperSyncV2/scheduler");
+    startScheduler();
+  } catch (e) {
+    console.warn("Sleeper scheduler init failed (non-fatal):", e);
+  }
 })();

@@ -11,7 +11,7 @@
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { syncLeague, getSyncStatus, getUnresolvedPlayerCount } from '../services/sleeperSyncV2';
+import { syncLeague, getSyncStatus, getUnresolvedPlayerCount, getStoredLeagues, getSchedulerStatus } from '../services/sleeperSyncV2';
 import { db } from '../infra/db';
 import { ownershipEvents, sleeperSyncState } from '@shared/schema';
 import { eq, and, gte, desc, sql } from 'drizzle-orm';
@@ -338,19 +338,11 @@ export const leaguesRouter = Router();
 /**
  * GET /api/sleeper/leagues
  * Discover all leagues that have been synced/configured
- * Source: sleeper_sync_state table
+ * Source: sleeper_sync_state table (via shared getStoredLeagues)
  */
 leaguesRouter.get('/leagues', async (req: Request, res: Response) => {
   try {
-    const leagues = await db
-      .select({
-        leagueId: sleeperSyncState.leagueId,
-        status: sleeperSyncState.status,
-        lastSyncedAt: sleeperSyncState.lastSyncedAt,
-        changeSeq: sleeperSyncState.changeSeq,
-      })
-      .from(sleeperSyncState)
-      .orderBy(desc(sleeperSyncState.lastSyncedAt));
+    const leagues = await getStoredLeagues();
     
     const formatted = leagues.map(l => ({
       leagueId: l.leagueId,
@@ -369,6 +361,28 @@ leaguesRouter.get('/leagues', async (req: Request, res: Response) => {
     
   } catch (error: any) {
     console.error('[SleeperSyncV2Routes] Leagues discovery error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/sleeper/sync/scheduler
+ * Get scheduler status
+ */
+router.get('/scheduler', async (req: Request, res: Response) => {
+  try {
+    const status = getSchedulerStatus();
+    
+    return res.json({
+      success: true,
+      data: status
+    });
+    
+  } catch (error: any) {
+    console.error('[SleeperSyncV2Routes] Scheduler status error:', error);
     return res.status(500).json({
       success: false,
       error: error?.message || 'Internal server error'
