@@ -4,6 +4,7 @@
  * 
  * POST /api/sleeper/sync/run - Run sync for a league
  * GET  /api/sleeper/sync/status - Get sync status for a league
+ * GET  /api/sleeper/leagues - Discover all synced leagues
  * GET  /api/ownership/history - Get ownership event history for a player
  * GET  /api/ownership/churn - Get ownership churn analytics (most added/dropped/traded)
  */
@@ -12,7 +13,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { syncLeague, getSyncStatus, getUnresolvedPlayerCount } from '../services/sleeperSyncV2';
 import { db } from '../infra/db';
-import { ownershipEvents } from '@shared/schema';
+import { ownershipEvents, sleeperSyncState } from '@shared/schema';
 import { eq, and, gte, desc, sql } from 'drizzle-orm';
 
 const router = Router();
@@ -330,5 +331,49 @@ ownershipRouter.get('/churn', async (req: Request, res: Response) => {
   }
 });
 
-// Export sync router as default, ownership router as named export
+// Separate leagues discovery router (mounted at /api/sleeper)
+export const leaguesRouter = Router();
+
+/**
+ * GET /api/sleeper/leagues
+ * Discover all leagues that have been synced/configured
+ * Source: sleeper_sync_state table
+ */
+leaguesRouter.get('/leagues', async (req: Request, res: Response) => {
+  try {
+    const leagues = await db
+      .select({
+        leagueId: sleeperSyncState.leagueId,
+        status: sleeperSyncState.status,
+        lastSyncedAt: sleeperSyncState.lastSyncedAt,
+        changeSeq: sleeperSyncState.changeSeq,
+      })
+      .from(sleeperSyncState)
+      .orderBy(desc(sleeperSyncState.lastSyncedAt));
+    
+    const formatted = leagues.map(l => ({
+      leagueId: l.leagueId,
+      status: l.status,
+      lastSyncedAt: l.lastSyncedAt?.toISOString() ?? null,
+      changeSeq: l.changeSeq,
+    }));
+    
+    return res.json({
+      success: true,
+      data: {
+        leagues: formatted,
+        count: formatted.length
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('[SleeperSyncV2Routes] Leagues discovery error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Internal server error'
+    });
+  }
+});
+
+// Export sync router as default, ownership router and leagues router as named exports
 export default router;

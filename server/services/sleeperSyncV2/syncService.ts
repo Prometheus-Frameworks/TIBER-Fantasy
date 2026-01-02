@@ -154,20 +154,21 @@ async function loadPreviousRosterState(leagueId: string): Promise<Map<string, Se
 }
 
 /**
- * Generate dedupe key for an event (content-based hash)
+ * Generate dedupe key for an event (sequence-based hash)
+ * Uses changeSeq instead of rosterHash for deterministic idempotency
  */
 function generateDedupeKey(
   leagueId: string,
   event: RosterEvent,
-  rosterHash: string
+  changeSeq: number
 ): string {
   const content = [
     leagueId,
+    String(changeSeq),
     event.playerKey,
     event.fromTeamId ?? '',
     event.toTeamId ?? '',
-    event.eventType,
-    rosterHash
+    event.eventType
   ].join(':');
   
   return createHash('sha256').update(content).digest('hex').substring(0, 32);
@@ -175,6 +176,8 @@ function generateDedupeKey(
 
 /**
  * Update sync state
+ * Note: changeSeq is ONLY incremented inside the transaction when roster changes.
+ * This function preserves existing changeSeq unless explicitly set.
  */
 async function updateSyncState(
   leagueId: string,
@@ -183,8 +186,23 @@ async function updateSyncState(
     durationMs?: number;
     lastHash?: string;
     lastError?: string;
+    changeSeq?: number;  // Only set when roster actually changed
   }
 ): Promise<void> {
+  const setClause: Record<string, any> = {
+    status,
+    lastSyncedAt: status !== 'running' ? new Date() : sql`${sleeperSyncState.lastSyncedAt}`,
+    lastDurationMs: options?.durationMs ?? sql`${sleeperSyncState.lastDurationMs}`,
+    lastHash: options?.lastHash ?? sql`${sleeperSyncState.lastHash}`,
+    lastError: options?.lastError ?? null,
+    updatedAt: new Date()
+  };
+  
+  // Only update changeSeq if explicitly provided (i.e., roster changed)
+  if (options?.changeSeq !== undefined) {
+    setClause.changeSeq = options.changeSeq;
+  }
+  
   await db
     .insert(sleeperSyncState)
     .values({
@@ -194,18 +212,12 @@ async function updateSyncState(
       lastDurationMs: options?.durationMs,
       lastHash: options?.lastHash,
       lastError: options?.lastError,
+      changeSeq: options?.changeSeq ?? 0,
       updatedAt: new Date()
     })
     .onConflictDoUpdate({
       target: sleeperSyncState.leagueId,
-      set: {
-        status,
-        lastSyncedAt: status !== 'running' ? new Date() : sql`${sleeperSyncState.lastSyncedAt}`,
-        lastDurationMs: options?.durationMs ?? sql`${sleeperSyncState.lastDurationMs}`,
-        lastHash: options?.lastHash ?? sql`${sleeperSyncState.lastHash}`,
-        lastError: options?.lastError ?? null,
-        updatedAt: new Date()
-      }
+      set: setClause
     });
 }
 
@@ -250,24 +262,39 @@ export async function syncLeague(
     // 7. Execute transaction with hash check inside for concurrency safety
     let shortCircuited = false;
     let eventsInserted = 0;
+    let currentChangeSeq = 0;
     
     await db.transaction(async (tx) => {
       // 7a. Lock and check hash WITH FOR UPDATE to prevent concurrent race conditions
-      if (!force) {
-        const existingStateResult = await tx.execute(sql`
-          SELECT last_hash FROM sleeper_sync_state 
-          WHERE league_id = ${leagueId}
-          FOR UPDATE
-        `);
-        
-        const existingHash = (existingStateResult.rows as any[])[0]?.last_hash;
-        
-        if (existingHash === newHash) {
-          console.log(`[SleeperSyncV2] No changes detected (hash match), short-circuiting`);
-          shortCircuited = true;
-          return; // Exit transaction early - nothing to do
-        }
+      const existingStateResult = await tx.execute(sql`
+        SELECT last_hash, change_seq FROM sleeper_sync_state 
+        WHERE league_id = ${leagueId}
+        FOR UPDATE
+      `);
+      
+      const existingRow = (existingStateResult.rows as any[])[0];
+      const existingHash = existingRow?.last_hash;
+      const existingChangeSeq = existingRow?.change_seq ?? 0;
+      
+      if (!force && existingHash === newHash) {
+        console.log(`[SleeperSyncV2] No changes detected (hash match), short-circuiting`);
+        shortCircuited = true;
+        currentChangeSeq = existingChangeSeq;
+        return; // Exit transaction early - nothing to do
       }
+      
+      // 7a2. Increment changeSeq for this roster change
+      currentChangeSeq = existingChangeSeq + 1;
+      
+      await tx.execute(sql`
+        INSERT INTO sleeper_sync_state (league_id, status, change_seq, updated_at)
+        VALUES (${leagueId}, 'running', ${currentChangeSeq}, NOW())
+        ON CONFLICT (league_id) DO UPDATE SET 
+          change_seq = ${currentChangeSeq},
+          updated_at = NOW()
+      `);
+      
+      console.log(`[SleeperSyncV2] Hash differs, incrementing changeSeq to ${currentChangeSeq}`);
       
       // 7b. Insert ownership events with dedupe keys (ON CONFLICT for extra safety)
       if (events.length > 0) {
@@ -280,7 +307,7 @@ export async function syncLeague(
           week,
           season,
           source: 'sleeper',
-          dedupeKey: generateDedupeKey(leagueId, event, newHash)
+          dedupeKey: generateDedupeKey(leagueId, event, currentChangeSeq)
         }));
         
         // Insert with ON CONFLICT DO NOTHING for idempotency
@@ -331,11 +358,11 @@ export async function syncLeague(
       };
     }
     
-    // 9. Update sync state to ok
+    // 9. Update sync state to ok (with new changeSeq since roster changed)
     const durationMs = Date.now() - startTime;
-    await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash });
+    await updateSyncState(leagueId, 'ok', { durationMs, lastHash: newHash, changeSeq: currentChangeSeq });
     
-    console.log(`[SleeperSyncV2] Sync complete: ${eventsInserted} events in ${durationMs}ms`);
+    console.log(`[SleeperSyncV2] Sync complete: ${eventsInserted} events, changeSeq=${currentChangeSeq} in ${durationMs}ms`);
     
     return {
       success: true,
