@@ -1,0 +1,70 @@
+TIBER REPLIT AGENT — COMPARE DRAWER v2 + FIX WEEK DISPLAY ISSUES (MINIMAL DIFF)
+
+GOAL A — COMPARE DRAWER v2 (TREND-AWARE COMPARISON)
+Upgrade the existing Compare Drawer so it compares *direction*, not just raw scores.
+
+In Compare Drawer, add a “Trends” block for BOTH players:
+1) Trend Deltas (same set used on PlayerPage):
+   - Δ Snap% (if usable)
+   - Δ Routes (WR/TE only)
+   - Δ Targets (all)
+   - Δ Carries (RB/QB only)
+   - optional Δ AirYards if already in week-series and currently used
+
+2) 3W Pulse:
+   - show classification (↑ Up / → Flat / ↓ Down)
+   - show pulse score (small text, optional)
+   - show Drivers row (same logic as PlayerPage)
+
+Compare Drawer layout:
+- Keep it compact: Player A column | Player B column
+- Under each player’s “core 5 metrics” add a collapsible “Trends” subsection (default expanded)
+- Must reuse the same logic/components used on PlayerPage so Compare v2 cannot drift from PlayerPage behavior.
+
+Data:
+- Use the existing week-series endpoint:
+  GET /api/player-identity/player/:playerKey/week-series?season=YYYY&metricSet=usage
+- Cache week-series per playerKey in-memory in the component (Map) to avoid refetch spam.
+- Respect the existing missing-week snap logic:
+  - selectedWeek missing => snap backward to nearest non-missing week
+  - prevWeek = nearest earlier non-missing
+- If user hasn’t selected a week, default to latest available non-missing week for each player (independently).
+
+GOAL B — FIX “WEEKS” ISSUES (LABELS / ORDER / CLARITY)
+There is still a UI/UX issue with week labeling/order in Trend + Pulse displays (example confusing output like “Wk11-9 vs Wk8-5” or non-chronological week lists).
+
+Fix requirements:
+1) Any week list shown in UI or tooltip must be sorted ASC (chronological).
+2) Any range label must be unambiguous:
+   - If weeks are contiguous, show “Wk9–Wk11”
+   - If weeks are NOT contiguous (gaps), show “Wk8, Wk9, Wk11”
+3) Trend Deltas label should be consistent everywhere:
+   - “Comparing Wk{prev} → Wk{current}”
+4) Pulse label should show WindowA and WindowB clearly:
+   - “WindowA: … vs WindowB: …” (short form ok)
+5) Tooltips should always include the exact week arrays used (sorted):
+   - WindowA weeks: [..]
+   - WindowB weeks: [..]
+   - fallback note if applicable
+
+IMPORTANT:
+- Do NOT change backend data generation. This is presentation + sorting + shared helper logic.
+- Ensure PlayerPage and Compare Drawer both use the same formatter helpers so this doesn’t regress.
+
+VALIDATION CHECKLIST
+- Compare Drawer opens and renders Trends for both players
+- If week-series missing weeks exist, Compare Drawer still computes deltas/pulse correctly
+- Week labels are chronological and consistent across:
+  - Trend Deltas row
+  - Pulse row
+  - Drivers tooltip
+  - Compare Drawer trends
+- No console errors
+- No endpoint contract changes
+
+DELIVERABLES
+- Files changed
+- Screenshot-style description of Compare Drawer v2
+- Example of corrected week label output (contiguous + non-contiguous cases)
+
+BEGIN.
