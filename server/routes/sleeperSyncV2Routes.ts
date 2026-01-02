@@ -1,14 +1,19 @@
 /**
  * Sleeper Sync V2 Routes
- * Manual endpoints for roster synchronization
+ * Manual endpoints for roster synchronization and ownership analytics
  * 
  * POST /api/sleeper/sync/run - Run sync for a league
  * GET  /api/sleeper/sync/status - Get sync status for a league
+ * GET  /api/ownership/history - Get ownership event history for a player
+ * GET  /api/ownership/churn - Get ownership churn analytics (most added/dropped/traded)
  */
 
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { syncLeague, getSyncStatus, getUnresolvedPlayerCount } from '../services/sleeperSyncV2';
+import { db } from '../infra/db';
+import { ownershipEvents } from '@shared/schema';
+import { eq, and, gte, desc, sql } from 'drizzle-orm';
 
 const router = Router();
 
@@ -122,4 +127,208 @@ router.get('/status', async (req: Request, res: Response) => {
   }
 });
 
+// ========================================
+// OWNERSHIP ANALYTICS ROUTES
+// ========================================
+
+export const ownershipRouter = Router();
+
+// Response types for type safety
+interface OwnershipEvent {
+  id: number;
+  leagueId: string;
+  playerKey: string;
+  fromTeamId: string | null;
+  toTeamId: string | null;
+  eventType: string;
+  eventAt: string;
+  week: number | null;
+  season: number | null;
+  source: string | null;
+}
+
+interface ChurnEntry {
+  playerKey: string;
+  count: number;
+}
+
+interface ChurnResponse {
+  mostAdded: ChurnEntry[];
+  mostDropped: ChurnEntry[];
+  mostTraded: ChurnEntry[];
+  since: string;
+  leagueId: string;
+}
+
+/**
+ * GET /api/ownership/history
+ * Get ownership event history for a player in a league
+ * 
+ * Query:
+ *   leagueId: string (required) - League ID
+ *   playerKey: string (required) - Player key (GSIS ID or sleeper:<id>)
+ */
+ownershipRouter.get('/history', async (req: Request, res: Response) => {
+  try {
+    const leagueId = req.query.leagueId as string;
+    const playerKey = req.query.playerKey as string;
+    
+    if (!leagueId) {
+      return res.status(400).json({
+        success: false,
+        error: 'leagueId query parameter is required'
+      });
+    }
+    
+    if (!playerKey) {
+      return res.status(400).json({
+        success: false,
+        error: 'playerKey query parameter is required'
+      });
+    }
+    
+    const events = await db
+      .select()
+      .from(ownershipEvents)
+      .where(
+        and(
+          eq(ownershipEvents.leagueId, leagueId),
+          eq(ownershipEvents.playerKey, playerKey)
+        )
+      )
+      .orderBy(desc(ownershipEvents.eventAt))
+      .limit(50);
+    
+    const formatted: OwnershipEvent[] = events.map(e => ({
+      id: e.id,
+      leagueId: e.leagueId,
+      playerKey: e.playerKey,
+      fromTeamId: e.fromTeamId,
+      toTeamId: e.toTeamId,
+      eventType: e.eventType,
+      eventAt: e.eventAt.toISOString(),
+      week: e.week,
+      season: e.season,
+      source: e.source
+    }));
+    
+    return res.json({
+      success: true,
+      data: {
+        leagueId,
+        playerKey,
+        events: formatted,
+        count: formatted.length
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('[OwnershipRoutes] History error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/ownership/churn
+ * Get ownership churn analytics (most added/dropped/traded players)
+ * 
+ * Query:
+ *   leagueId: string (required) - League ID
+ *   since: string (required) - ISO timestamp to filter events from
+ */
+ownershipRouter.get('/churn', async (req: Request, res: Response) => {
+  try {
+    const leagueId = req.query.leagueId as string;
+    const since = req.query.since as string;
+    
+    if (!leagueId) {
+      return res.status(400).json({
+        success: false,
+        error: 'leagueId query parameter is required'
+      });
+    }
+    
+    if (!since) {
+      return res.status(400).json({
+        success: false,
+        error: 'since query parameter is required (ISO timestamp)'
+      });
+    }
+    
+    const sinceDate = new Date(since);
+    if (isNaN(sinceDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid since timestamp format. Use ISO 8601 format.'
+      });
+    }
+    
+    // Query for most added players
+    const addedResult = await db.execute(sql`
+      SELECT player_key, COUNT(*) as count
+      FROM ownership_events
+      WHERE league_id = ${leagueId}
+        AND event_at >= ${sinceDate}
+        AND event_type = 'ADD'
+      GROUP BY player_key
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+    
+    // Query for most dropped players
+    const droppedResult = await db.execute(sql`
+      SELECT player_key, COUNT(*) as count
+      FROM ownership_events
+      WHERE league_id = ${leagueId}
+        AND event_at >= ${sinceDate}
+        AND event_type = 'DROP'
+      GROUP BY player_key
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+    
+    // Query for most traded players
+    const tradedResult = await db.execute(sql`
+      SELECT player_key, COUNT(*) as count
+      FROM ownership_events
+      WHERE league_id = ${leagueId}
+        AND event_at >= ${sinceDate}
+        AND event_type = 'TRADE'
+      GROUP BY player_key
+      ORDER BY count DESC
+      LIMIT 20
+    `);
+    
+    const formatEntries = (rows: any[]): ChurnEntry[] => 
+      rows.map(r => ({
+        playerKey: r.player_key,
+        count: parseInt(r.count) || 0
+      }));
+    
+    const response: ChurnResponse = {
+      leagueId,
+      since: sinceDate.toISOString(),
+      mostAdded: formatEntries(addedResult.rows as any[]),
+      mostDropped: formatEntries(droppedResult.rows as any[]),
+      mostTraded: formatEntries(tradedResult.rows as any[])
+    };
+    
+    return res.json({
+      success: true,
+      data: response
+    });
+    
+  } catch (error: any) {
+    console.error('[OwnershipRoutes] Churn error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Internal server error'
+    });
+  }
+});
+
+// Export sync router as default, ownership router as named export
 export default router;
