@@ -854,6 +854,190 @@ export default function PlayerPage() {
                   );
                 })()}
               </div>
+              
+              {/* 3-Week Pulse Row */}
+              <div className="bg-gray-800/20 rounded-lg p-4" data-testid="pulse-container">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity size={14} className="text-purple-400" />
+                  <h4 className="text-sm font-medium text-white">3W Pulse</h4>
+                  <span className="text-xs text-gray-500">Rolling Trend</span>
+                </div>
+                
+                {weekSeriesLoading ? (
+                  <Skeleton className="h-6 w-24 bg-gray-800/50" />
+                ) : (() => {
+                  const weeks = weekSeriesData?.data?.weeks || [];
+                  const position = player.position;
+                  
+                  // Get non-missing weeks up to currentWeek (use same fallback logic as Trend Deltas)
+                  const selectedWeekData = weeks.find(w => w.week === effectiveWeek && !w.missing);
+                  let pulseCurrentWeek = effectiveWeek;
+                  let usingPulseFallback = false;
+                  
+                  if (!selectedWeekData) {
+                    const availableBeforeSelected = weeks.filter(w => w.week <= effectiveWeek && !w.missing);
+                    if (availableBeforeSelected.length > 0) {
+                      pulseCurrentWeek = availableBeforeSelected[availableBeforeSelected.length - 1].week;
+                      usingPulseFallback = true;
+                    }
+                  }
+                  
+                  const usableWeeks = weeks
+                    .filter(w => !w.missing && w.week <= pulseCurrentWeek)
+                    .sort((a, b) => b.week - a.week); // descending by week
+                  
+                  // WindowA = last 3 usable weeks, WindowB = 3 before that
+                  const windowA = usableWeeks.slice(0, 3);
+                  const windowB = usableWeeks.slice(3, 6);
+                  
+                  if (windowA.length < 3 || windowB.length < 3) {
+                    return (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Need at least 6 non-missing weeks for pulse calculation">
+                        <span className="text-sm font-semibold">—</span>
+                        <span>Not enough weeks</span>
+                      </div>
+                    );
+                  }
+                  
+                  // Helper: compute mean of non-null values
+                  const mean = (values: (number | null)[]): number | null => {
+                    const valid = values.filter((v): v is number => v !== null);
+                    if (valid.length < 2) return null; // require at least 2 values
+                    return valid.reduce((a, b) => a + b, 0) / valid.length;
+                  };
+                  
+                  // Helper: check if metric is usable (at least 4 of 6 values non-null)
+                  const isMetricUsable = (valuesA: (number | null)[], valuesB: (number | null)[]): boolean => {
+                    const all = [...valuesA, ...valuesB];
+                    const nonNull = all.filter(v => v !== null).length;
+                    return nonNull >= 4;
+                  };
+                  
+                  // Extract metric arrays
+                  const targetsA = windowA.map(w => w.targets);
+                  const targetsB = windowB.map(w => w.targets);
+                  const routesA = windowA.map(w => w.routes);
+                  const routesB = windowB.map(w => w.routes);
+                  const carriesA = windowA.map(w => w.carries);
+                  const carriesB = windowB.map(w => w.carries);
+                  const snapPctA = windowA.map(w => w.snapPct);
+                  const snapPctB = windowB.map(w => w.snapPct);
+                  const airYardsA = windowA.map(w => w.airYards);
+                  const airYardsB = windowB.map(w => w.airYards);
+                  
+                  // Weights by metric
+                  const weights = {
+                    targets: 1.0,
+                    routes: 0.6,
+                    carries: 0.8,
+                    snapPct: 0.05, // small weight since it's 0-100
+                    airYards: 0.04, // small weight since it's large numbers
+                  };
+                  
+                  // Build pulse components based on position
+                  const components: { name: string; delta: number; weight: number }[] = [];
+                  
+                  // Targets (all positions)
+                  if (isMetricUsable(targetsA, targetsB)) {
+                    const avgA = mean(targetsA);
+                    const avgB = mean(targetsB);
+                    if (avgA !== null && avgB !== null) {
+                      components.push({ name: 'Targets', delta: avgA - avgB, weight: weights.targets });
+                    }
+                  }
+                  
+                  // Routes (WR/TE only)
+                  if ((position === 'WR' || position === 'TE') && isMetricUsable(routesA, routesB)) {
+                    const avgA = mean(routesA);
+                    const avgB = mean(routesB);
+                    if (avgA !== null && avgB !== null) {
+                      components.push({ name: 'Routes', delta: avgA - avgB, weight: weights.routes });
+                    }
+                  }
+                  
+                  // Carries (RB/QB only)
+                  if ((position === 'RB' || position === 'QB') && isMetricUsable(carriesA, carriesB)) {
+                    const avgA = mean(carriesA);
+                    const avgB = mean(carriesB);
+                    if (avgA !== null && avgB !== null) {
+                      components.push({ name: 'Carries', delta: avgA - avgB, weight: weights.carries });
+                    }
+                  }
+                  
+                  // AirYards (WR/TE bonus)
+                  if ((position === 'WR' || position === 'TE') && isMetricUsable(airYardsA, airYardsB)) {
+                    const avgA = mean(airYardsA);
+                    const avgB = mean(airYardsB);
+                    if (avgA !== null && avgB !== null) {
+                      components.push({ name: 'AirYards', delta: avgA - avgB, weight: weights.airYards });
+                    }
+                  }
+                  
+                  // SnapPct (if consistently present)
+                  if (isMetricUsable(snapPctA, snapPctB)) {
+                    const avgA = mean(snapPctA);
+                    const avgB = mean(snapPctB);
+                    if (avgA !== null && avgB !== null) {
+                      components.push({ name: 'Snap%', delta: avgA - avgB, weight: weights.snapPct });
+                    }
+                  }
+                  
+                  if (components.length === 0) {
+                    return (
+                      <div className="flex items-center gap-2 text-gray-500 text-xs py-1" title="Not enough metric data">
+                        <span className="text-sm font-semibold">—</span>
+                        <span>Insufficient data</span>
+                      </div>
+                    );
+                  }
+                  
+                  // Compute composite pulse score
+                  const pulseScore = components.reduce((sum, c) => sum + (c.delta * c.weight), 0);
+                  
+                  // Classification
+                  let pulseLabel: string;
+                  let pulseColor: string;
+                  let pulseIcon: JSX.Element;
+                  
+                  if (pulseScore >= 1.0) {
+                    pulseLabel = 'Up';
+                    pulseColor = 'text-green-400';
+                    pulseIcon = <TrendingUp size={14} className="text-green-400" />;
+                  } else if (pulseScore <= -1.0) {
+                    pulseLabel = 'Down';
+                    pulseColor = 'text-red-400';
+                    pulseIcon = <TrendingDown size={14} className="text-red-400" />;
+                  } else {
+                    pulseLabel = 'Flat';
+                    pulseColor = 'text-gray-400';
+                    pulseIcon = <span className="text-gray-400 text-sm">→</span>;
+                  }
+                  
+                  // Build tooltip
+                  const windowAWeeks = windowA.map(w => w.week).join(', ');
+                  const windowBWeeks = windowB.map(w => w.week).join(', ');
+                  const componentDetails = components.map(c => {
+                    const sign = c.delta >= 0 ? '+' : '';
+                    return `${c.name}: ${sign}${c.delta.toFixed(1)}`;
+                  }).join(' | ');
+                  const fallbackNote = usingPulseFallback ? ` (Wk${effectiveWeek} missing, using Wk${pulseCurrentWeek})` : '';
+                  const tooltip = `WindowA: Wk${windowAWeeks} vs WindowB: Wk${windowBWeeks}\n${componentDetails}\nScore: ${pulseScore.toFixed(2)}${fallbackNote}`;
+                  
+                  return (
+                    <div 
+                      className="flex items-center gap-2" 
+                      title={tooltip}
+                      data-testid="pulse-indicator"
+                    >
+                      {pulseIcon}
+                      <span className={`text-sm font-semibold ${pulseColor}`}>{pulseLabel}</span>
+                      <span className="text-[10px] text-gray-600 ml-2">
+                        Wk{windowA[windowA.length - 1].week}-{windowA[0].week} vs Wk{windowB[windowB.length - 1].week}-{windowB[0].week}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
