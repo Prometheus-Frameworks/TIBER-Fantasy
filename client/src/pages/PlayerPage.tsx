@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRoute, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -107,6 +107,60 @@ interface LeagueOwnershipResponse {
   reason?: string;
 }
 
+interface LeaguesResponse {
+  success: boolean;
+  data: {
+    leagues: Array<{
+      leagueId: string;
+      status: string;
+      lastSyncedAt: string;
+      changeSeq: number;
+    }>;
+    count: number;
+  };
+}
+
+interface OwnershipHistoryEvent {
+  id: number;
+  leagueId: string;
+  playerKey: string;
+  fromTeamId: string | null;
+  toTeamId: string | null;
+  eventType: string;
+  eventAt: string;
+  week: number | null;
+  season: number | null;
+  source: string | null;
+}
+
+interface OwnershipHistoryResponse {
+  success: boolean;
+  data?: {
+    leagueId: string;
+    playerKey: string;
+    events: OwnershipHistoryEvent[];
+    count: number;
+  };
+  error?: string;
+}
+
+interface ChurnEntry {
+  playerKey: string;
+  count: number;
+}
+
+interface OwnershipChurnResponse {
+  success: boolean;
+  data?: {
+    leagueId: string;
+    since: string;
+    mostAdded: ChurnEntry[];
+    mostDropped: ChurnEntry[];
+    mostTraded: ChurnEntry[];
+  };
+  error?: string;
+}
+
 export default function PlayerPage() {
   const [, params] = useRoute('/player/:playerId');
   const playerId = params?.playerId || '';
@@ -114,6 +168,7 @@ export default function PlayerPage() {
   const [mode, setMode] = useState<'weekly' | 'season'>('weekly');
   const [week, setWeek] = useState<number | null>(null);
   const [season, setSeason] = useState(2025);
+  const [activityExpanded, setActivityExpanded] = useState(true);
 
   // Fetch current week from system endpoint (fallback only)
   const { data: currentWeekData } = useQuery<CurrentWeekResponse>({
@@ -211,6 +266,58 @@ export default function PlayerPage() {
     enabled: !!playerId,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Fetch synced leagues for ownership activity
+  const { data: leaguesData } = useQuery<LeaguesResponse>({
+    queryKey: ['/api/sleeper/leagues'],
+    queryFn: async () => {
+      const res = await fetch('/api/sleeper/leagues');
+      if (!res.ok) return { success: false, data: { leagues: [], count: 0 } };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Use first synced league as active league context
+  const activeLeagueId = leaguesData?.data?.leagues?.[0]?.leagueId;
+
+  // Fetch ownership history for this player in the active league
+  const { data: historyData, isLoading: historyLoading } = useQuery<OwnershipHistoryResponse>({
+    queryKey: ['/api/ownership/history', activeLeagueId, playerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/ownership/history?leagueId=${activeLeagueId}&playerKey=${playerId}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, error: errorData.error || `HTTP ${res.status}` };
+      }
+      return res.json();
+    },
+    enabled: !!activeLeagueId && !!playerId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
+
+  // Fetch churn data for the active league (7-day default)
+  const { data: churnData } = useQuery<OwnershipChurnResponse>({
+    queryKey: ['/api/ownership/churn', activeLeagueId],
+    queryFn: async () => {
+      const res = await fetch(`/api/ownership/churn?leagueId=${activeLeagueId}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        return { success: false, error: errorData.error || `HTTP ${res.status}` };
+      }
+      return res.json();
+    },
+    enabled: !!activeLeagueId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Check if player appears in churn lists
+  const playerInChurn = {
+    added: churnData?.data?.mostAdded?.find(e => e.playerKey === playerId),
+    dropped: churnData?.data?.mostDropped?.find(e => e.playerKey === playerId),
+    traded: churnData?.data?.mostTraded?.find(e => e.playerKey === playerId),
+  };
+  const hasChurnActivity = playerInChurn.added || playerInChurn.dropped || playerInChurn.traded;
 
   // Track recently viewed players
   const hasTrackedRef = useRef(false);
