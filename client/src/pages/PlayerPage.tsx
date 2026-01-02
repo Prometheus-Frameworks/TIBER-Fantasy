@@ -1,14 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoute, Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, TrendingDown, AlertCircle, UserCheck, User, Activity, ChevronDown, ChevronUp, Copy, Check, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import { addRecentPlayer } from '@/lib/recentPlayers';
+
+const SECTION_NAV_ITEMS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'usage', label: 'Usage' },
+  { id: 'comps', label: 'Comps' },
+  { id: 'league', label: 'League' },
+  { id: 'notes', label: 'Notes' },
+] as const;
+
+type SectionId = typeof SECTION_NAV_ITEMS[number]['id'];
 
 interface PlayerIdentity {
   success: boolean;
@@ -168,7 +179,55 @@ export default function PlayerPage() {
   const [mode, setMode] = useState<'weekly' | 'season'>('weekly');
   const [week, setWeek] = useState<number | null>(null);
   const [season, setSeason] = useState(2025);
-  const [activityExpanded, setActivityExpanded] = useState(true);
+  
+  // Research Terminal: Section collapse state
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    usage: false,
+    comps: false,
+    league: false,
+    notes: true, // Notes collapsed by default
+  });
+  const [activeSection, setActiveSection] = useState<SectionId>('overview');
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [playerNotes, setPlayerNotes] = useState('');
+  
+  // Section refs for IntersectionObserver
+  const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>({
+    overview: null,
+    usage: null,
+    comps: null,
+    league: null,
+    notes: null,
+  });
+  
+  const toggleSection = useCallback((section: string) => {
+    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  }, []);
+  
+  // Load notes from localStorage
+  useEffect(() => {
+    if (playerId) {
+      const saved = localStorage.getItem(`tiber-notes-${playerId}`);
+      if (saved) setPlayerNotes(saved);
+    }
+  }, [playerId]);
+  
+  // Save notes to localStorage
+  const handleNotesChange = useCallback((value: string) => {
+    setPlayerNotes(value);
+    localStorage.setItem(`tiber-notes-${playerId}`, value);
+  }, [playerId]);
+  
+  const scrollToSection = useCallback((sectionId: SectionId) => {
+    const el = sectionRefs.current[sectionId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Expand section if collapsed
+      if (collapsedSections[sectionId]) {
+        setCollapsedSections(prev => ({ ...prev, [sectionId]: false }));
+      }
+    }
+  }, [collapsedSections]);
 
   // Fetch current week from system endpoint (fallback only)
   const { data: currentWeekData } = useQuery<CurrentWeekResponse>({
@@ -221,6 +280,42 @@ export default function PlayerPage() {
   const player = playerData?.data;
   const nflfastrId = player?.externalIds?.nfl_data_py || playerId;
   const [, navigate] = useLocation();
+
+  // Copy player key (GSIS ID)
+  const copyPlayerKey = useCallback(async () => {
+    const gsisId = player?.externalIds?.nfl_data_py;
+    if (gsisId) {
+      await navigator.clipboard.writeText(gsisId);
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    }
+  }, [player]);
+
+  // IntersectionObserver for sticky nav highlighting
+  useEffect(() => {
+    const observers: IntersectionObserver[] = [];
+    
+    SECTION_NAV_ITEMS.forEach(({ id }) => {
+      const el = sectionRefs.current[id];
+      if (!el) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+              setActiveSection(id);
+            }
+          });
+        },
+        { threshold: [0.3, 0.5], rootMargin: '-80px 0px -50% 0px' }
+      );
+      
+      observer.observe(el);
+      observers.push(observer);
+    });
+    
+    return () => observers.forEach(o => o.disconnect());
+  }, [player]);
 
   // Fetch similar players
   const { data: similarData, isLoading: similarLoading } = useQuery<SimilarPlayersResponse>({
@@ -378,99 +473,139 @@ export default function PlayerPage() {
           <span>Back to Tiers</span>
         </Link>
 
-        {/* Player Header */}
-        <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-white tracking-wide" data-testid="text-player-name">
-                  {player.fullName}
-                </h1>
-                {/* League Context Badge */}
-                {ownershipData?.enabled && ownershipData.data ? (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-xs ${
-                      ownershipData.data.status === 'owned_by_me' 
-                        ? 'border-green-500/50 text-green-400 bg-green-500/10' 
-                        : ownershipData.data.status === 'owned_by_other'
-                        ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
-                        : 'border-gray-500/50 text-gray-400 bg-gray-500/10'
-                    }`}
-                    data-testid="badge-ownership"
-                  >
-                    {ownershipData.data.status === 'owned_by_me' && (
-                      <>
-                        <UserCheck size={12} className="mr-1" />
-                        On Your Roster
-                      </>
-                    )}
-                    {ownershipData.data.status === 'owned_by_other' && (
-                      <>
-                        <User size={12} className="mr-1" />
-                        {ownershipData.data.teamName || 'Owned'}
-                      </>
-                    )}
-                    {ownershipData.data.status === 'free_agent' && 'Available'}
-                  </Badge>
-                ) : ownershipData && !ownershipData.enabled && ownershipData.data?.hint ? (
-                  <span className="text-xs text-gray-500 italic" data-testid="text-ownership-hint">
-                    {ownershipData.data.hint}
-                  </span>
-                ) : null}
+        {/* Sticky Section Nav */}
+        <nav className="sticky top-0 z-20 bg-[#0a0e1a]/95 backdrop-blur-sm -mx-6 px-6 py-2 border-b border-gray-800/50">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+            {SECTION_NAV_ITEMS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => scrollToSection(id)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                  activeSection === id
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+                data-testid={`nav-${id}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        {/* OVERVIEW SECTION */}
+        <div 
+          ref={(el) => { sectionRefs.current.overview = el; }}
+          id="section-overview"
+          className="scroll-mt-16"
+        >
+          {/* Player Header */}
+          <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl font-bold text-white tracking-wide" data-testid="text-player-name">
+                    {player.fullName}
+                  </h1>
+                  {/* League Context Badge */}
+                  {ownershipData?.enabled && ownershipData.data ? (
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${
+                        ownershipData.data.status === 'owned_by_me' 
+                          ? 'border-green-500/50 text-green-400 bg-green-500/10' 
+                          : ownershipData.data.status === 'owned_by_other'
+                          ? 'border-orange-500/50 text-orange-400 bg-orange-500/10'
+                          : 'border-gray-500/50 text-gray-400 bg-gray-500/10'
+                      }`}
+                      data-testid="badge-ownership"
+                    >
+                      {ownershipData.data.status === 'owned_by_me' && (
+                        <>
+                          <UserCheck size={12} className="mr-1" />
+                          Rostered
+                        </>
+                      )}
+                      {ownershipData.data.status === 'owned_by_other' && (
+                        <>
+                          <User size={12} className="mr-1" />
+                          {ownershipData.data.teamName || 'Owned'}
+                        </>
+                      )}
+                      {ownershipData.data.status === 'free_agent' && 'FA'}
+                    </Badge>
+                  ) : null}
+                  {neighborsData?.success && neighborsData.data?.currentPlayer?.tier && (
+                    <Badge variant="outline" className="text-xs border-cyan-500/50 text-cyan-400 bg-cyan-500/10">
+                      {neighborsData.data.currentPlayer.tier}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400 mt-1" data-testid="text-player-info">
+                  {player.nflTeam || 'FA'} • {player.position}
+                  {neighborsData?.success && neighborsData.data?.rank && (
+                    <span className="ml-2 text-purple-400">
+                      • #{neighborsData.data.rank} {player.position}
+                    </span>
+                  )}
+                </p>
               </div>
-              <p className="text-lg text-gray-400 mt-1" data-testid="text-player-info">
-                {player.nflTeam || 'FA'} • {player.position}
-                {neighborsData?.success && neighborsData.data?.rank && (
-                  <span className="ml-2 text-purple-400">
-                    • #{neighborsData.data.rank} {player.position}
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Player ID</p>
-              <p className="text-sm font-mono text-gray-400">{playerId}</p>
+              <div className="text-right flex-shrink-0">
+                <button
+                  onClick={copyPlayerKey}
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors group"
+                  title="Copy GSIS ID"
+                  data-testid="button-copy-key"
+                >
+                  {copiedKey ? (
+                    <>
+                      <Check size={12} className="text-green-400" />
+                      <span className="text-green-400">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} />
+                      <span className="font-mono">{nflfastrId.slice(0, 12)}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Mode Toggle */}
+        {/* Controls Row */}
+        <div className="flex flex-wrap items-center gap-3">
           <Tabs value={mode} onValueChange={(v) => setMode(v as 'weekly' | 'season')} className="w-auto">
-            <TabsList className="bg-gray-800/50 border border-gray-700/50">
+            <TabsList className="bg-gray-800/50 border border-gray-700/50 h-8">
               <TabsTrigger 
                 value="weekly" 
                 data-testid="tab-mode-weekly"
-                className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
+                className="text-xs data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-400"
               >
                 Weekly
               </TabsTrigger>
               <TabsTrigger 
                 value="season" 
                 data-testid="tab-mode-season"
-                className="data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
+                className="text-xs data-[state=active]:bg-purple-500/20 data-[state=active]:text-purple-400"
               >
                 Season
               </TabsTrigger>
             </TabsList>
           </Tabs>
-
-          {/* Week Selector */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">Week:</span>
             <select
               value={effectiveWeek}
               onChange={(e) => setWeek(Math.max(1, Math.min(Number(e.target.value), 18)))}
-              className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm text-white"
+              className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white h-8"
               data-testid="select-week"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map((w) => {
                 const hasData = availableWeeks.includes(w);
                 return (
                   <option key={w} value={w} className={hasData ? '' : 'text-gray-500'}>
-                    Week {w}{!hasData ? ' —' : ''}
+                    Wk {w}{!hasData ? ' —' : ''}
                   </option>
                 );
               })}
@@ -479,217 +614,226 @@ export default function PlayerPage() {
               <span className="text-xs text-yellow-500/80">No data</span>
             )}
           </div>
-
-          {/* Season Display */}
-          <div className="text-sm text-gray-400">
-            Season: <span className="text-white font-medium">{season}</span>
-          </div>
+          <span className="text-xs text-gray-500">{season}</span>
         </div>
 
-        {/* Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* TIBER Score Card */}
-          <div className="lg:col-span-2">
-            <TiberScoreCard
-              nflfastrId={nflfastrId}
-              week={effectiveWeek}
-              season={season}
-              mode={mode}
-              position={player.position}
-              hasDataForWeek={hasDataForWeek}
-            />
-          </div>
-
-          {/* Metric Matrix Card */}
-          <div className="lg:col-span-2">
-            <MetricMatrixCard
-              playerId={nflfastrId}
-              season={season}
-              week={effectiveWeek}
-              hasDataForWeek={hasDataForWeek}
-            />
-          </div>
+        {/* USAGE SECTION */}
+        <div 
+          ref={(el) => { sectionRefs.current.usage = el; }}
+          id="section-usage"
+          className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden scroll-mt-16"
+        >
+          <button
+            onClick={() => toggleSection('usage')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-800/20 transition-colors"
+            data-testid="button-toggle-usage"
+          >
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} className="text-cyan-400" />
+              <h3 className="text-base font-semibold text-white">Usage & Scores</h3>
+              <span className="text-xs text-gray-500">TIBER + Metrics</span>
+            </div>
+            {!collapsedSections.usage ? (
+              <ChevronUp size={16} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={16} className="text-gray-400" />
+            )}
+          </button>
+          
+          {!collapsedSections.usage && (
+            <div className="px-4 pb-4 space-y-4">
+              <TiberScoreCard
+                nflfastrId={nflfastrId}
+                week={effectiveWeek}
+                season={season}
+                mode={mode}
+                position={player.position}
+                hasDataForWeek={hasDataForWeek}
+              />
+              <MetricMatrixCard
+                playerId={nflfastrId}
+                season={season}
+                week={effectiveWeek}
+                hasDataForWeek={hasDataForWeek}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Research Hub */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Similar Players */}
-          <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Users size={18} className="text-purple-400" />
-              <h3 className="text-lg font-semibold text-white">Similar Players</h3>
+        {/* COMPS SECTION */}
+        <div 
+          ref={(el) => { sectionRefs.current.comps = el; }}
+          id="section-comps"
+          className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden scroll-mt-16"
+        >
+          <button
+            onClick={() => toggleSection('comps')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-800/20 transition-colors"
+            data-testid="button-toggle-comps"
+          >
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-purple-400" />
+              <h3 className="text-base font-semibold text-white">Comparisons</h3>
+              <span className="text-xs text-gray-500">Similar + Neighbors</span>
             </div>
-            
-            {similarLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full bg-gray-800/50" />
-                ))}
-              </div>
-            ) : !similarData?.success ? (
-              <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
-                <AlertCircle size={14} />
-                <span>{similarData?.reason || 'Unable to find similar players'}</span>
-              </div>
-            ) : !similarData.data?.similarPlayers || similarData.data.similarPlayers.length === 0 ? (
-              <p className="text-gray-500 text-sm py-4">No similar players found</p>
+            {!collapsedSections.comps ? (
+              <ChevronUp size={16} className="text-gray-400" />
             ) : (
-              <div className="space-y-2">
-                {similarData.data?.confidenceWarning && (
-                  <div className="flex items-center gap-2 text-amber-400 text-xs p-2 bg-amber-500/10 rounded-lg mb-3">
-                    <AlertCircle size={12} />
-                    <span>{similarData.data.confidenceWarning}</span>
-                  </div>
-                )}
-                {similarData.data?.similarPlayers.map((p) => (
-                  <button
-                    key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}`)}
-                    className="w-full p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                    data-testid={`similar-player-${p.playerId}`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div>
-                        <span className="text-white group-hover:text-purple-300 transition-colors">
-                          {p.playerName || 'Unknown'}
-                        </span>
-                        <span className="ml-2 text-xs text-gray-500">
-                          {p.team} • {p.position}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {(100 - p.distance).toFixed(0)}% match
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      <span className="text-green-400/80">{p.reason}</span>
-                      <span className="mx-1.5">•</span>
-                      <span className="text-amber-400/70">{p.watch}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <ChevronDown size={16} className="text-gray-400" />
             )}
-          </div>
+          </button>
+          
+          {!collapsedSections.comps && (
+            <div className="px-4 pb-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                {/* Similar Players */}
+                <div className="bg-gray-800/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users size={14} className="text-purple-400" />
+                    <h4 className="text-sm font-medium text-white">Similar Players</h4>
+                  </div>
+                  
+                  {similarLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-8 w-full bg-gray-800/50" />
+                      ))}
+                    </div>
+                  ) : !similarData?.success ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
+                      <AlertCircle size={12} />
+                      <span>{similarData?.reason || 'No comps available'}</span>
+                    </div>
+                  ) : !similarData.data?.similarPlayers?.length ? (
+                    <p className="text-gray-500 text-xs py-2">No similar players found</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {similarData.data?.confidenceWarning && (
+                        <div className="flex items-center gap-2 text-amber-400 text-xs p-1.5 bg-amber-500/10 rounded mb-2">
+                          <AlertCircle size={10} />
+                          <span className="text-[10px]">{similarData.data.confidenceWarning}</span>
+                        </div>
+                      )}
+                      {similarData.data?.similarPlayers.slice(0, 5).map((p) => (
+                        <button
+                          key={p.playerId}
+                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}`)}
+                          className="w-full p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                          data-testid={`similar-player-${p.playerId}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm text-white group-hover:text-purple-300 transition-colors">
+                                {p.playerName || 'Unknown'}
+                              </span>
+                              <span className="text-[10px] text-gray-500">{p.team}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              {(100 - p.distance).toFixed(0)}%
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            <span className="text-green-400/80">{p.reason}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-          {/* Tier Neighbors */}
-          <div className="bg-[#141824] border border-gray-800/50 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp size={18} className="text-cyan-400" />
-              <h3 className="text-lg font-semibold text-white">Neighbors in Tiers</h3>
+                {/* Tier Neighbors */}
+                <div className="bg-gray-800/20 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp size={14} className="text-cyan-400" />
+                    <h4 className="text-sm font-medium text-white">Tier Neighbors</h4>
+                    {neighborsData?.data?.rank && (
+                      <span className="text-[10px] text-gray-500">#{neighborsData.data.rank}</span>
+                    )}
+                  </div>
+
+                  {neighborsLoading ? (
+                    <div className="space-y-2">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-8 w-full bg-gray-800/50" />
+                      ))}
+                    </div>
+                  ) : !neighborsData?.success ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-xs py-2">
+                      <AlertCircle size={12} />
+                      <span>{neighborsData?.reason || 'Unable to load'}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {/* Players Above */}
+                      {neighborsData.data?.above.map((p) => (
+                        <button
+                          key={p.playerId}
+                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
+                          className="w-full flex items-center justify-between p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                          data-testid={`neighbor-above-${p.playerId}`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <TrendingUp size={12} className="text-green-400" />
+                            <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
+                          </div>
+                          <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
+                        </button>
+                      ))}
+
+                      {/* Current Player */}
+                      {neighborsData.data?.currentPlayer && (
+                        <div className="flex items-center justify-between p-2 rounded bg-purple-500/10 border border-purple-500/30">
+                          <span className="text-sm text-purple-300 font-medium">{neighborsData.data.currentPlayer.playerName}</span>
+                          <span className="text-[10px] text-purple-400 font-mono font-medium">{neighborsData.data.currentPlayer.alpha.toFixed(0)}</span>
+                        </div>
+                      )}
+
+                      {/* Players Below */}
+                      {neighborsData.data?.below.map((p) => (
+                        <button
+                          key={p.playerId}
+                          onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
+                          className="w-full flex items-center justify-between p-2 rounded bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
+                          data-testid={`neighbor-below-${p.playerId}`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <TrendingDown size={12} className="text-orange-400" />
+                            <span className="text-sm text-white group-hover:text-purple-300">{p.playerName}</span>
+                          </div>
+                          <span className="text-[10px] text-cyan-400 font-mono">{p.alpha.toFixed(0)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-
-            {neighborsLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-10 w-full bg-gray-800/50" />
-                ))}
-              </div>
-            ) : !neighborsData?.success ? (
-              <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
-                <AlertCircle size={14} />
-                <span>{neighborsData?.reason || 'Unable to load tier rankings'}</span>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {/* Rank context */}
-                {neighborsData.data?.rank && (
-                  <div className="text-xs text-gray-500 mb-2">
-                    Rank #{neighborsData.data.rank} of {neighborsData.data.totalRanked || '?'} {neighborsData.data.position}s ({neighborsData.data.mode})
-                  </div>
-                )}
-
-                {/* Players Above */}
-                {neighborsData.data?.above.map((p) => (
-                  <button
-                    key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                    data-testid={`neighbor-above-${p.playerId}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <TrendingUp size={14} className="text-green-400" />
-                      <span className="text-white group-hover:text-purple-300 transition-colors">
-                        {p.playerName}
-                      </span>
-                      <span className="text-xs text-gray-500">{p.team}</span>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
-                        {p.tier}
-                      </Badge>
-                      <span className="ml-2 text-xs text-cyan-400">{p.alpha.toFixed(0)}</span>
-                    </div>
-                  </button>
-                ))}
-
-                {/* Current Player Marker */}
-                {neighborsData.data?.currentPlayer && (
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                    <div className="flex items-center gap-2">
-                      <span className="text-purple-300 font-medium">
-                        {neighborsData.data.currentPlayer.playerName}
-                      </span>
-                      <span className="text-xs text-gray-400">← You are here</span>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="text-xs border-purple-500/50 text-purple-300">
-                        {neighborsData.data.currentPlayer.tier}
-                      </Badge>
-                      <span className="ml-2 text-xs text-purple-400 font-medium">
-                        {neighborsData.data.currentPlayer.alpha.toFixed(0)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Players Below */}
-                {neighborsData.data?.below.map((p) => (
-                  <button
-                    key={p.playerId}
-                    onClick={() => navigate(`/player/${p.playerId}?season=${season}&week=${effectiveWeek}&mode=${mode}`)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-lg bg-gray-800/30 hover:bg-gray-800/60 transition-colors text-left group"
-                    data-testid={`neighbor-below-${p.playerId}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <TrendingDown size={14} className="text-orange-400" />
-                      <span className="text-white group-hover:text-purple-300 transition-colors">
-                        {p.playerName}
-                      </span>
-                      <span className="text-xs text-gray-500">{p.team}</span>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
-                        {p.tier}
-                      </Badge>
-                      <span className="ml-2 text-xs text-cyan-400">{p.alpha.toFixed(0)}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* League Activity Section */}
-        <div className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden">
+        <div 
+          ref={(el) => { sectionRefs.current.league = el; }}
+          id="section-league"
+          className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden scroll-mt-20"
+        >
           <button
-            onClick={() => setActivityExpanded(!activityExpanded)}
-            className="w-full flex items-center justify-between p-5 hover:bg-gray-800/20 transition-colors"
+            onClick={() => toggleSection('league')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-800/20 transition-colors"
             data-testid="button-toggle-activity"
           >
             <div className="flex items-center gap-2">
               <Activity size={18} className="text-blue-400" />
-              <h3 className="text-lg font-semibold text-white">League Activity</h3>
+              <h3 className="text-base font-semibold text-white">League Activity</h3>
             </div>
-            {activityExpanded ? (
+            {!collapsedSections.league ? (
               <ChevronUp size={18} className="text-gray-400" />
             ) : (
               <ChevronDown size={18} className="text-gray-400" />
             )}
           </button>
           
-          {activityExpanded && (
+          {!collapsedSections.league && (
             <div className="px-5 pb-5 space-y-4">
               {!ownershipPlayerKey ? (
                 <div className="text-sm text-gray-500 italic py-2" data-testid="text-no-player-key">
@@ -808,10 +952,47 @@ export default function PlayerPage() {
           )}
         </div>
 
+        {/* NOTES SECTION */}
+        <div 
+          ref={(el) => { sectionRefs.current.notes = el; }}
+          id="section-notes"
+          className="bg-[#141824] border border-gray-800/50 rounded-xl overflow-hidden scroll-mt-16"
+        >
+          <button
+            onClick={() => toggleSection('notes')}
+            className="w-full flex items-center justify-between p-4 hover:bg-gray-800/20 transition-colors"
+            data-testid="button-toggle-notes"
+          >
+            <div className="flex items-center gap-2">
+              <FileText size={16} className="text-amber-400" />
+              <h3 className="text-base font-semibold text-white">Notes</h3>
+              <span className="text-xs text-gray-500">Local only</span>
+            </div>
+            {!collapsedSections.notes ? (
+              <ChevronUp size={16} className="text-gray-400" />
+            ) : (
+              <ChevronDown size={16} className="text-gray-400" />
+            )}
+          </button>
+          
+          {!collapsedSections.notes && (
+            <div className="px-4 pb-4">
+              <Textarea
+                value={playerNotes}
+                onChange={(e) => handleNotesChange(e.target.value)}
+                placeholder="Add personal notes about this player..."
+                className="bg-gray-800/50 border-gray-700 text-gray-300 placeholder:text-gray-600 text-sm resize-none min-h-[80px]"
+                data-testid="textarea-notes"
+              />
+              <p className="text-[10px] text-gray-600 mt-1.5">Saved to browser storage</p>
+            </div>
+          )}
+        </div>
+
         {/* Footer */}
-        <div className="text-center pt-6 border-t border-gray-800/50">
-          <p className="text-xs text-gray-600 tracking-wide">
-            TIBER v1.0 — Tactical Index for Breakout Efficiency & Regression
+        <div className="text-center pt-4 border-t border-gray-800/50">
+          <p className="text-[10px] text-gray-600 tracking-wide">
+            TIBER v1.0 — Research Terminal
           </p>
         </div>
       </div>
