@@ -113,6 +113,7 @@ import teamReportsRoutes from './routes/teamReportsRoutes';
 import { leagueSyncRouter } from './routes/leagueSyncRoutes';
 import { userIntegrationRouter } from './routes/userIntegrationRoutes';
 import { leagueDashboardRouter } from './routes/leagueDashboardRoutes';
+import sleeperSyncV2Routes from './routes/sleeperSyncV2Routes';
 import weekSummaryRouter from './routes/debug/week-summary';
 import { registerForgeRoutes } from './modules/forge';
 import adminForgeRouter from './routes/adminForge';
@@ -198,6 +199,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(leagueSyncRouter);
   app.use(userIntegrationRouter);
   app.use(leagueDashboardRouter);
+  
+  // Sleeper Sync V2 - Roster tracking and ownership events
+  app.use('/api/sleeper/sync', sleeperSyncV2Routes);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS
