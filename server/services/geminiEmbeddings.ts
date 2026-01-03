@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import jargonMapping from '../data/nflfastr_jargon_mapping.json';
 import { detectLayer, injectLayerContext } from './river-detection';
 import { detectFormat, logFormatDetection } from '../lib/format-detector';
@@ -8,6 +9,13 @@ import { detectFormat, logFormatDetection } from '../lib/format-detector';
 // Gemini Developer API Key (not Vertex AI)
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+
+// OpenRouter client for Grok access via Replit AI Integrations
+// This uses Replit's managed credentials - no API key needed from user
+const openrouter = new OpenAI({
+  baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL,
+  apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
+});
 
 /**
  * ═══════════════════════════════════════════════════════════════
@@ -54,6 +62,88 @@ export async function callGeminiTiber(
     console.error("❌ [Tiber/Gemini] Failed to generate response:", error);
     throw error;
   }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * TIBER v2 GROK CALL (via OpenRouter AI Integrations)
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * Alternative to callGeminiTiber that uses xAI's Grok model.
+ * Uses Replit AI Integrations for OpenRouter access - no API key needed.
+ * Charges are billed to your Replit credits at the public API price.
+ * 
+ * Model: x-ai/grok-4-fast ($0.20/M input, $0.50/M output)
+ * 
+ * @param systemPrompt - The complete prompt from TiberPromptBuilder (includes identity, memory, ForgeContext)
+ * @param userMessage - The current user message
+ * @returns Generated response text
+ */
+export async function callGrokTiber(
+  systemPrompt: string,
+  userMessage: string
+): Promise<string> {
+  try {
+    if (!process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL) {
+      throw new Error("AI_INTEGRATIONS_OPENROUTER_BASE_URL is not set - OpenRouter integration not configured");
+    }
+    
+    if (!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY) {
+      throw new Error("AI_INTEGRATIONS_OPENROUTER_API_KEY is not set - OpenRouter API key missing");
+    }
+
+    console.log(`[Tiber/Grok] Calling Grok 4 Fast via OpenRouter (${systemPrompt.length} chars system prompt)`);
+
+    const response = await openrouter.chat.completions.create({
+      model: "x-ai/grok-4-fast",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 500,
+    });
+
+    const text = response.choices[0]?.message?.content;
+    
+    if (!text) {
+      throw new Error("No text response from Grok");
+    }
+
+    console.log(`[Tiber/Grok] Response generated (${text.length} chars)`);
+    return text;
+  } catch (error) {
+    console.error("❌ [Tiber/Grok] Failed to generate response:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unified Tiber Chat Generation
+ * 
+ * Calls either Gemini or Grok based on the provider parameter.
+ * Provides a single interface for the RAG chat endpoint.
+ * Falls back to Gemini if Grok fails (configuration issues, rate limits, etc.)
+ * 
+ * @param systemPrompt - Full system prompt from TiberPromptBuilder
+ * @param userMessage - User's message
+ * @param provider - 'gemini' (default) or 'grok'
+ * @returns Generated response text
+ */
+export async function callTiberChat(
+  systemPrompt: string,
+  userMessage: string,
+  provider: 'gemini' | 'grok' = 'gemini'
+): Promise<string> {
+  if (provider === 'grok') {
+    try {
+      return await callGrokTiber(systemPrompt, userMessage);
+    } catch (error) {
+      console.warn(`⚠️ [Tiber/Chat] Grok failed, falling back to Gemini:`, error);
+      return callGeminiTiber(systemPrompt, userMessage);
+    }
+  }
+  return callGeminiTiber(systemPrompt, userMessage);
 }
 
 /**
@@ -353,11 +443,20 @@ export async function generateChatResponse(
   userMessage: string,
   context: string[],
   userLevel: number = 1,
-  hasLeagueContext: boolean = false
+  hasLeagueContext: boolean = false,
+  provider: 'gemini' | 'grok' = 'gemini'
 ): Promise<string> {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY environment variable is not set");
+    // Check for appropriate API configuration based on provider
+    if (provider === 'grok') {
+      if (!process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL) {
+        throw new Error("AI_INTEGRATIONS_OPENROUTER_BASE_URL is not set - OpenRouter integration not configured");
+      }
+      console.log(`[TIBER/Grok] Using Grok 4 Fast via OpenRouter AI Integrations`);
+    } else {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY environment variable is not set");
+      }
     }
 
     // Detect casual greetings (only true small-talk, not fantasy questions)
@@ -1100,21 +1199,37 @@ RESPONSE LENGTH & STRUCTURE
     
     contextText += `\n\nUser question: ${userMessage}`;
 
-    // Use Gemini Flash with proper role separation to prevent prompt injection
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: contextText,
-      config: {
-        systemInstruction,
-        temperature: 0.7,
-        maxOutputTokens: 400, // Reduced from 1024 to enforce 150-200 word responses
-      },
-    });
+    let text: string | null = null;
 
-    const text = response.text;
+    if (provider === 'grok') {
+      // Use Grok 4 Fast via OpenRouter AI Integrations
+      const grokResponse = await openrouter.chat.completions.create({
+        model: "x-ai/grok-4-fast",
+        messages: [
+          { role: "system", content: systemInstruction },
+          { role: "user", content: contextText }
+        ],
+        temperature: 0.7,
+        max_tokens: 400,
+      });
+      text = grokResponse.choices[0]?.message?.content || null;
+      console.log(`[TIBER/Grok] Response generated (${text?.length || 0} chars)`);
+    } else {
+      // Use Gemini Flash with proper role separation to prevent prompt injection
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: contextText,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+          maxOutputTokens: 400, // Reduced from 1024 to enforce 150-200 word responses
+        },
+      });
+      text = response.text ?? null;
+    }
     
     if (!text) {
-      throw new Error("No text response from Gemini");
+      throw new Error(`No text response from ${provider === 'grok' ? 'Grok' : 'Gemini'}`);
     }
 
     // Apply pressure lexicon guard for teaching/river responses

@@ -938,7 +938,7 @@ router.get('/health', (req, res) => {
 
 import { TiberMemoryManager } from '../services/tiberMemoryManager';
 import { buildTiberPrompt, TrimmedForgeContext, TiberChatMode } from '../services/tiberPromptBuilder';
-import { callGeminiTiber } from '../services/geminiEmbeddings';
+import { callGeminiTiber, callTiberChat } from '../services/geminiEmbeddings';
 import { loadForgeContext, trimForgeContext, ForgeContext } from '../services/forgeContextLoader';
 import { detectPlayers } from '../services/playerNameDetector';
 
@@ -952,7 +952,11 @@ router.post('/chat', async (req, res) => {
       forgePosition,
       forgeTeamId,
       chatMode = 'insight', // 'insight' (default) or 'analyst'
+      model = 'gemini', // 'gemini' (default) or 'grok'
     } = req.body;
+    
+    const chatProvider: 'gemini' | 'grok' = model === 'grok' ? 'grok' : 'gemini';
+    console.log(`🤖 [Tiber/Chat] Using ${chatProvider.toUpperCase()} for generation`);
     
     const userId = (req as any).user?.id ?? "anon";
 
@@ -1033,9 +1037,10 @@ router.post('/chat', async (req, res) => {
       chatMode: validChatMode,
     });
 
-    // Use clean Gemini call with TiberPromptBuilder output as system prompt
+    // Use clean Tiber chat call with TiberPromptBuilder output as system prompt
     // This bypasses the legacy 3-layer consciousness system with hardcoded VORP examples
-    const tiberReply = await callGeminiTiber(prompt, message);
+    // Supports both Gemini and Grok via the provider parameter
+    const tiberReply = await callTiberChat(prompt, message, chatProvider);
 
     await TiberMemoryManager.appendMessage(conversationId, "TIBER", tiberReply);
 

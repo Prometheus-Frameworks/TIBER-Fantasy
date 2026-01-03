@@ -45,7 +45,7 @@ import { generateWRSnapData } from './api/generate-wr-snap-data';
 // REMOVED: sleeperStrictSnapService and wrRatingsService (LEGACY_UNUSED)
 import { wrGameLogsService } from './services/wrGameLogsService';
 import { playerPoolService } from './playerPool';
-import { generateEmbedding, generateChatResponse, detectQueryMode } from './services/geminiEmbeddings';
+import { generateEmbedding, generateChatResponse, detectQueryMode, callTiberChat } from './services/geminiEmbeddings';
 import { detectLayerWithIntents } from './services/river-detection';
 import { detectFormat } from './lib/format-detector';
 import { formatTradeResponse, handleConfessionResponse, formatStatsResponse, applyRookieGuard, applyRiverSnapback } from './lib/responsePostProcessors';
@@ -9525,7 +9525,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RAG Chat endpoint with citation tracking + league context
   app.post('/api/rag/chat', async (req, res) => {
     try {
-      const { session_id, message, user_level = 1, league_id } = req.body;
+      const { session_id, message, user_level = 1, league_id, model = 'gemini' } = req.body;
+      const chatProvider: 'gemini' | 'grok' = model === 'grok' ? 'grok' : 'gemini';
+      console.log(`🤖 [RAG Chat] Using ${chatProvider.toUpperCase()} for generation`);
 
       if (!message || typeof message !== 'string') {
         return res.status(400).json({
@@ -9992,8 +9994,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasLeagueContext = !!rosterSnapshot || (league_id && leagueChunksCount > 0);
       console.log(`🎯 [RAG Chat] Final context: ${pinnedContext.length} pinned + ${retrievalContext.length} retrieval = ${fullContext.length} total`);
       
-      let aiResponse = await generateChatResponse(message, fullContext, user_level, hasLeagueContext);
-      console.log(`✅ [RAG Chat] Response generated: ${aiResponse.substring(0, 100)}...`);
+      let aiResponse = await generateChatResponse(message, fullContext, user_level, hasLeagueContext, chatProvider);
+      console.log(`✅ [RAG Chat] Response generated (${chatProvider}): ${aiResponse.substring(0, 100)}...`);
 
       // Temporal Guard: Validate response adheres to requested year
       const temporalCheck = validateTemporalPrecision(message, aiResponse);
@@ -10005,8 +10007,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const yearReminder = `CRITICAL: User asked specifically about ${temporalCheck.requestedYears.join(' and ')}. Do NOT mention ${temporalCheck.violatingYears.join(' or ')} unless explicitly invited.`;
         const enhancedContext = [yearReminder, ...fullContext];
         
-        aiResponse = await generateChatResponse(message, enhancedContext, user_level, hasLeagueContext);
-        console.log(`✅ [Temporal Guard] Regenerated response: ${aiResponse.substring(0, 100)}...`);
+        aiResponse = await generateChatResponse(message, enhancedContext, user_level, hasLeagueContext, chatProvider);
+        console.log(`✅ [Temporal Guard] Regenerated response (${chatProvider}): ${aiResponse.substring(0, 100)}...`);
         
         // Re-validate regenerated response
         const secondCheck = validateTemporalPrecision(message, aiResponse);
