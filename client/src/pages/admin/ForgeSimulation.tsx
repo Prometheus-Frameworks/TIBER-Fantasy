@@ -401,7 +401,7 @@ export default function ForgeSimulation() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Season</Label>
+                        <Label className="text-gray-200">Season</Label>
                         <Select value={season.toString()} onValueChange={(v) => setSeason(parseInt(v))}>
                           <SelectTrigger data-testid="season-select">
                             <SelectValue />
@@ -460,7 +460,7 @@ export default function ForgeSimulation() {
                     )}
                     
                     <div className="flex items-center justify-between">
-                      <Label>Clear Previous Run</Label>
+                      <Label className="text-gray-200">Clear Previous Run</Label>
                       <Switch checked={clearPrevious} onCheckedChange={setClearPrevious} data-testid="clear-previous-switch" />
                     </div>
                     
@@ -523,7 +523,7 @@ export default function ForgeSimulation() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>Decay Ratio (prior weight)</Label>
+                        <Label className="text-gray-200">Decay Ratio (prior weight)</Label>
                         <span className="text-gray-400">{parameters.decayRatio.toFixed(2)}</span>
                       </div>
                       <Slider
@@ -538,7 +538,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>Volatility High Threshold</Label>
+                        <Label className="text-gray-200">Volatility High Threshold</Label>
                         <span className="text-gray-400">{parameters.volatilityHighThreshold}</span>
                       </div>
                       <Slider
@@ -552,7 +552,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>Volatility Low Threshold</Label>
+                        <Label className="text-gray-200">Volatility Low Threshold</Label>
                         <span className="text-gray-400">{parameters.volatilityLowThreshold}</span>
                       </div>
                       <Slider
@@ -566,7 +566,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>Momentum Multiplier</Label>
+                        <Label className="text-gray-200">Momentum Multiplier</Label>
                         <span className="text-gray-400">{parameters.momentumMultiplier.toFixed(2)}</span>
                       </div>
                       <Slider
@@ -580,7 +580,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>Adjustment Cap (±)</Label>
+                        <Label className="text-gray-200">Adjustment Cap (±)</Label>
                         <span className="text-gray-400">{parameters.adjustmentCap}</span>
                       </div>
                       <Slider
@@ -594,7 +594,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>History Window (Volatility)</Label>
+                        <Label className="text-gray-200">History Window (Volatility)</Label>
                         <span className="text-gray-400">{parameters.historyWindowVolatility} weeks</span>
                       </div>
                       <Slider
@@ -608,7 +608,7 @@ export default function ForgeSimulation() {
                     
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <Label>History Window (Momentum)</Label>
+                        <Label className="text-gray-200">History Window (Momentum)</Label>
                         <span className="text-gray-400">{parameters.historyWindowMomentum} weeks</span>
                       </div>
                       <Slider
@@ -641,7 +641,7 @@ export default function ForgeSimulation() {
                           </DialogHeader>
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
-                              <Label>Name</Label>
+                              <Label className="text-gray-200">Name</Label>
                               <Input 
                                 value={newPresetName} 
                                 onChange={(e) => setNewPresetName(e.target.value)}
@@ -650,7 +650,7 @@ export default function ForgeSimulation() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Description (optional)</Label>
+                              <Label className="text-gray-200">Description (optional)</Label>
                               <Input 
                                 value={newPresetDescription} 
                                 onChange={(e) => setNewPresetDescription(e.target.value)}
