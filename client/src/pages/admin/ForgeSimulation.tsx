@@ -22,7 +22,9 @@ import {
   BarChart3,
   Eye,
   Flag,
-  Check
+  Check,
+  X,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -163,6 +165,8 @@ export default function ForgeSimulation() {
   const [season, setSeason] = useState(2025);
   const [weekStart, setWeekStart] = useState(1);
   const [weekEnd, setWeekEnd] = useState(17);
+  const [singleWeekMode, setSingleWeekMode] = useState(false);
+  const [singleWeek, setSingleWeek] = useState(1);
   const [clearPrevious, setClearPrevious] = useState(false);
   const [parameters, setParameters] = useState<SimulationParameters>(DEFAULT_PARAMETERS);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -247,10 +251,12 @@ export default function ForgeSimulation() {
   
   const runSimulation = useMutation({
     mutationFn: async () => {
+      const effectiveWeekStart = singleWeekMode ? singleWeek : weekStart;
+      const effectiveWeekEnd = singleWeekMode ? singleWeek : weekEnd;
       const res = await apiRequest('POST', '/api/forge/simulation/run', {
         season,
-        weekStart,
-        weekEnd,
+        weekStart: effectiveWeekStart,
+        weekEnd: effectiveWeekEnd,
         parameters,
         clearPrevious,
       });
@@ -408,20 +414,50 @@ export default function ForgeSimulation() {
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label>Week Range: {weekStart} - {weekEnd}</Label>
-                      <div className="flex gap-4 items-center">
-                        <Slider
-                          value={[weekStart, weekEnd]}
-                          onValueChange={([s, e]) => { setWeekStart(s); setWeekEnd(e); }}
-                          min={1}
-                          max={17}
-                          step={1}
-                          className="flex-1"
-                          data-testid="week-range-slider"
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-white">Single Week Mode</Label>
+                      <div className="flex items-center gap-2">
+                        <Switch 
+                          checked={singleWeekMode} 
+                          onCheckedChange={setSingleWeekMode} 
+                          data-testid="single-week-mode-switch"
                         />
+                        <Zap className={`w-4 h-4 ${singleWeekMode ? 'text-amber-400' : 'text-gray-500'}`} />
                       </div>
                     </div>
+                    
+                    {singleWeekMode ? (
+                      <div className="space-y-2">
+                        <Label className="text-white">Week: {singleWeek}</Label>
+                        <div className="flex gap-4 items-center">
+                          <Slider
+                            value={[singleWeek]}
+                            onValueChange={([w]) => setSingleWeek(w)}
+                            min={1}
+                            max={17}
+                            step={1}
+                            className="flex-1"
+                            data-testid="single-week-slider"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400">Run simulation for a single week to see week-to-week changes</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label className="text-white">Week Range: {weekStart} - {weekEnd}</Label>
+                        <div className="flex gap-4 items-center">
+                          <Slider
+                            value={[weekStart, weekEnd]}
+                            onValueChange={([s, e]) => { setWeekStart(s); setWeekEnd(e); }}
+                            min={1}
+                            max={17}
+                            step={1}
+                            className="flex-1"
+                            data-testid="week-range-slider"
+                          />
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="flex items-center justify-between">
                       <Label>Clear Previous Run</Label>
@@ -683,15 +719,37 @@ export default function ForgeSimulation() {
                           data-testid={`run-${run.id}`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{run.presetName || 'Custom'}</span>
-                            {getStatusBadge(run.status)}
+                            <span className="text-sm font-medium text-white">{run.presetName || 'Custom'}</span>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(run.status)}
+                              {(run.status === 'failed' || run.status === 'cancelled') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 hover:bg-red-500/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteRun.mutate(run.id);
+                                  }}
+                                  disabled={deleteRun.isPending}
+                                  data-testid={`delete-run-${run.id}`}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-400 mt-1">
                             Season {run.season}, Weeks {run.weekStart}-{run.weekEnd}
                           </div>
                           {run.status === 'completed' && (
-                            <div className="text-xs text-gray-400 mt-1">
+                            <div className="text-xs text-gray-300 mt-1">
                               {run.outlierCount} outliers • Avg adj: {run.avgAdjustmentMagnitude?.toFixed(2) ?? '—'}
+                            </div>
+                          )}
+                          {run.status === 'failed' && run.error && (
+                            <div className="text-xs text-red-400 mt-1 truncate">
+                              {run.error}
                             </div>
                           )}
                         </div>
