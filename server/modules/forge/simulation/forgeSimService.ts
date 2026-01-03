@@ -214,7 +214,7 @@ async function runSimulationAsync(runId: string, config: SimulationRunConfig): P
       
       for (const player of playersThisWeek) {
         if (!player.playerId || !player.position) continue;
-        
+
         try {
           const result = await scorePlayerWeek(
             runId,
@@ -227,19 +227,30 @@ async function runSimulationAsync(runId: string, config: SimulationRunConfig): P
             parameters,
             playerStateCache
           );
-          
+
           if (result.outlierFlags.length > 0) {
             outlierCount++;
           }
-          
+
           totalProcessed++;
+
+          // Update progress every 10 players for real-time feedback
+          if (totalProcessed % 10 === 0) {
+            await db.update(forgeSimRuns)
+              .set({
+                processedPlayers: totalProcessed,
+                outlierCount,
+              })
+              .where(eq(forgeSimRuns.id, runId));
+          }
         } catch (err) {
           console.error(`[ForgeSim] Error scoring ${player.playerName}:`, err);
         }
       }
-      
+
+      // Final update for this week
       await db.update(forgeSimRuns)
-        .set({ 
+        .set({
           processedPlayers: totalProcessed,
           outlierCount,
         })
