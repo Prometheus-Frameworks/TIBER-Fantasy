@@ -21,7 +21,7 @@ import {
   type InsertForgePlayerStateSim,
   type InsertForgeSimRun,
 } from '@shared/schema';
-import { eq, and, sql, desc, inArray } from 'drizzle-orm';
+import { eq, and, sql, desc, inArray, gte, or, isNotNull } from 'drizzle-orm';
 import { fetchContext } from '../context/contextFetcher';
 import { buildWRFeatures } from '../features/wrFeatures';
 import { buildRBFeatures } from '../features/rbFeatures';
@@ -183,8 +183,10 @@ async function runSimulationAsync(runId: string, config: SimulationRunConfig): P
         .set({ currentWeek: week })
         .where(eq(forgeSimRuns.id, runId));
       
+      // Filter out practice squad/inactive players by requiring minimum activity
+      // Players must have at least 5 snaps OR some meaningful usage (targets/rush attempts)
       const playersThisWeek = await db
-        .selectDistinct({ 
+        .selectDistinct({
           playerId: weeklyStats.playerId,
           playerName: weeklyStats.playerName,
           position: weeklyStats.position,
@@ -195,7 +197,12 @@ async function runSimulationAsync(runId: string, config: SimulationRunConfig): P
           and(
             eq(weeklyStats.season, season),
             eq(weeklyStats.week, week),
-            inArray(weeklyStats.position, skillPositions)
+            inArray(weeklyStats.position, skillPositions),
+            or(
+              gte(weeklyStats.snaps, 5),
+              gte(weeklyStats.targets, 1),
+              gte(weeklyStats.rushAtt, 1)
+            )
           )
         );
       

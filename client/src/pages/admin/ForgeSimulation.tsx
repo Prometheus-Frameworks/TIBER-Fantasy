@@ -468,18 +468,44 @@ export default function ForgeSimulation() {
                     
                     {activeRunId && progress ? (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Week {progress.currentWeek} of {progress.totalWeeks + progress.currentWeek - 1}</span>
-                          <span>{progress.processedPlayers} players</span>
-                        </div>
-                        <Progress 
-                          value={(progress.currentWeek - weekStart) / (weekEnd - weekStart + 1) * 100} 
-                          className="h-2"
-                        />
+                        {/* Progress percentage calculation */}
+                        {(() => {
+                          const totalWeeks = progress.totalWeeks || 1;
+                          const weekProgress = Math.max(0, progress.currentWeek - weekStart);
+                          const playerProgress = progress.totalPlayers > 0
+                            ? progress.processedPlayers / progress.totalPlayers
+                            : 0;
+                          // Combine week progress with player progress within current week
+                          const overallProgress = ((weekProgress + playerProgress) / totalWeeks) * 100;
+                          const displayPercent = Math.min(99, Math.round(overallProgress)) || 0;
+
+                          return (
+                            <>
+                              <div className="flex items-center justify-between text-sm text-gray-300">
+                                <span>Week {progress.currentWeek} of {weekStart + totalWeeks - 1}</span>
+                                <span className="font-mono text-lg text-white">{displayPercent}%</span>
+                              </div>
+                              <Progress
+                                value={overallProgress}
+                                className="h-3"
+                              />
+                              <div className="text-xs text-gray-400">
+                                {progress.processedPlayers > 0 ? (
+                                  <span>{progress.processedPlayers} of {progress.totalPlayers} players processed</span>
+                                ) : (
+                                  <span className="text-amber-400 animate-pulse">Initializing week {progress.currentWeek}...</span>
+                                )}
+                                {progress.outlierCount > 0 && (
+                                  <span className="ml-2 text-amber-400">• {progress.outlierCount} outliers</span>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                         <div className="flex items-center justify-between">
                           {getStatusBadge(progress.status)}
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             size="sm"
                             onClick={() => cancelSimulation.mutate()}
                             disabled={cancelSimulation.isPending}
@@ -490,15 +516,22 @@ export default function ForgeSimulation() {
                           </Button>
                         </div>
                       </div>
+                    ) : runSimulation.isPending ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-center gap-2 text-gray-300">
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Starting simulation...</span>
+                        </div>
+                        <Progress value={0} className="h-3 animate-pulse" />
+                      </div>
                     ) : (
-                      <Button 
+                      <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         onClick={() => runSimulation.mutate()}
-                        disabled={runSimulation.isPending}
                         data-testid="run-simulation-button"
                       >
                         <Play className="w-4 h-4 mr-2" />
-                        {runSimulation.isPending ? 'Starting...' : 'Run Simulation'}
+                        Run Simulation
                       </Button>
                     )}
                   </CardContent>
@@ -623,13 +656,13 @@ export default function ForgeSimulation() {
                     <Separator />
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={resetToDefaults} className="flex-1" data-testid="reset-defaults-button">
+                      <Button variant="outline" size="sm" onClick={resetToDefaults} className="flex-1 text-gray-300 border-gray-600 hover:bg-gray-700" data-testid="reset-defaults-button">
                         <RotateCcw className="w-3 h-3 mr-1" />
                         Reset
                       </Button>
                       <Dialog open={savePresetOpen} onOpenChange={setSavePresetOpen}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="flex-1" data-testid="save-preset-button">
+                          <Button variant="outline" size="sm" className="flex-1 text-gray-300 border-gray-600 hover:bg-gray-700" data-testid="save-preset-button">
                             <Save className="w-3 h-3 mr-1" />
                             Save Preset
                           </Button>
@@ -642,24 +675,26 @@ export default function ForgeSimulation() {
                           <div className="space-y-4 py-4">
                             <div className="space-y-2">
                               <Label className="text-gray-200">Name</Label>
-                              <Input 
-                                value={newPresetName} 
+                              <Input
+                                value={newPresetName}
                                 onChange={(e) => setNewPresetName(e.target.value)}
                                 placeholder="e.g., Conservative Tuning"
+                                className="text-white bg-gray-800 border-gray-700"
                                 data-testid="preset-name-input"
                               />
                             </div>
                             <div className="space-y-2">
                               <Label className="text-gray-200">Description (optional)</Label>
-                              <Input 
-                                value={newPresetDescription} 
+                              <Input
+                                value={newPresetDescription}
                                 onChange={(e) => setNewPresetDescription(e.target.value)}
                                 placeholder="e.g., Lower momentum influence"
+                                className="text-white bg-gray-800 border-gray-700"
                               />
                             </div>
                           </div>
                           <DialogFooter>
-                            <Button variant="outline" onClick={() => setSavePresetOpen(false)}>Cancel</Button>
+                            <Button variant="outline" className="text-gray-300 border-gray-600 hover:bg-gray-700" onClick={() => setSavePresetOpen(false)}>Cancel</Button>
                             <Button 
                               onClick={() => savePreset.mutate()}
                               disabled={!newPresetName || savePreset.isPending}
@@ -822,7 +857,7 @@ export default function ForgeSimulation() {
                             placeholder="Min |Adj|"
                             value={minAdjustment}
                             onChange={(e) => setMinAdjustment(e.target.value)}
-                            className="w-[100px]"
+                            className="w-[100px] text-white bg-gray-800 border-gray-700"
                             type="number"
                             data-testid="min-adjustment-input"
                           />
@@ -832,18 +867,27 @@ export default function ForgeSimulation() {
                               placeholder="Search player..."
                               value={playerSearch}
                               onChange={(e) => setPlayerSearch(e.target.value)}
-                              className="w-full"
+                              className="w-full text-white bg-gray-800 border-gray-700"
                               data-testid="player-search-input"
                             />
                           </div>
                           
                           <div className="flex items-center gap-2">
                             <Switch checked={outlierOnly} onCheckedChange={setOutlierOnly} data-testid="outlier-only-switch" />
-                            <Label className="text-sm">Outliers only</Label>
+                            <Label className="text-sm text-gray-300">Outliers only</Label>
                           </div>
                         </div>
-                        
-                        <ScrollArea className="h-[500px]">
+
+                        {results.length > 0 && (
+                          <div className="text-sm text-gray-400">
+                            Showing {results.length} of {resultsTotal} results
+                            {results.length < resultsTotal && (
+                              <span className="text-amber-400 ml-2">(use filters to narrow down)</span>
+                            )}
+                          </div>
+                        )}
+
+                        <ScrollArea className="h-[500px] pr-4">
                           {resultsLoading ? (
                             <div className="space-y-2">
                               {Array.from({ length: 10 }).map((_, i) => (
@@ -989,18 +1033,25 @@ export default function ForgeSimulation() {
                     
                     <TabsContent value="outliers">
                       <div className="space-y-4">
-                        <p className="text-sm text-gray-400">
-                          Auto-flagged player-weeks that may need manual review
-                        </p>
-                        
-                        <ScrollArea className="h-[500px]">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-gray-400">
+                            Auto-flagged player-weeks that may need manual review
+                          </p>
+                          {outliers.length > 0 && (
+                            <Badge variant="outline" className="text-gray-400">
+                              Showing {outliers.length} outliers
+                            </Badge>
+                          )}
+                        </div>
+
+                        <ScrollArea className="h-[500px] pr-4">
                           {outliers.length === 0 ? (
                             <div className="text-center text-gray-500 py-12">
                               <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-500/50" />
                               <p>No outliers detected in this run</p>
                             </div>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-2 pb-4">
                               {outliers.map(o => (
                                 <div
                                   key={`${o.playerId}-${o.week}`}
