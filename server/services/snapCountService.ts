@@ -133,87 +133,65 @@ except Exception as e:
    */
   async importSnapCounts(records: SnapCountRecord[]): Promise<void> {
     console.log(`📥 Importing ${records.length} snap count records...`);
-    
-    // Import in batches of 500 for better performance
-    const BATCH_SIZE = 500;
+
+    // Deduplicate by gameId+player (keep last occurrence)
+    const deduped = new Map<string, SnapCountRecord>();
+    for (const record of records) {
+      const key = `${record.gameId}:${record.player}`;
+      deduped.set(key, record);
+    }
+    const uniqueRecords = Array.from(deduped.values());
+    console.log(`  Deduplicated: ${records.length} → ${uniqueRecords.length} unique records`);
+
+    // Import individually with upsert
     let imported = 0;
-    
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const batch = records.slice(i, i + BATCH_SIZE);
-      
+    let failed = 0;
+
+    for (const record of uniqueRecords) {
       try {
-        const values = batch.map(record => ({
-          gameId: record.gameId,
-          pfrGameId: record.pfrGameId,
-          season: record.season,
-          gameType: record.gameType,
-          week: record.week,
-          player: record.player,
-          pfrPlayerId: record.pfrPlayerId,
-          position: record.position,
-          team: record.team,
-          opponent: record.opponent,
-          offenseSnaps: record.offenseSnaps,
-          offensePct: record.offensePct,
-          defenseSnaps: record.defenseSnaps,
-          defensePct: record.defensePct,
-          stSnaps: record.stSnaps,
-          stPct: record.stPct,
-        }));
-        
         await db
           .insert(bronzeNflfastrSnapCounts)
-          .values(values)
+          .values({
+            gameId: record.gameId,
+            pfrGameId: record.pfrGameId,
+            season: record.season,
+            gameType: record.gameType,
+            week: record.week,
+            player: record.player,
+            pfrPlayerId: record.pfrPlayerId,
+            position: record.position,
+            team: record.team,
+            opponent: record.opponent,
+            offenseSnaps: record.offenseSnaps,
+            offensePct: record.offensePct,
+            defenseSnaps: record.defenseSnaps,
+            defensePct: record.defensePct,
+            stSnaps: record.stSnaps,
+            stPct: record.stPct,
+          })
           .onConflictDoUpdate({
             target: [bronzeNflfastrSnapCounts.gameId, bronzeNflfastrSnapCounts.player],
             set: {
-              offenseSnaps: values[0].offenseSnaps, // Placeholder, actual values handled by conflict
-              offensePct: values[0].offensePct,
-              defenseSnaps: values[0].defenseSnaps,
-              defensePct: values[0].defensePct,
-              stSnaps: values[0].stSnaps,
-              stPct: values[0].stPct,
+              offenseSnaps: record.offenseSnaps,
+              offensePct: record.offensePct,
+              defenseSnaps: record.defenseSnaps,
+              defensePct: record.defensePct,
+              stSnaps: record.stSnaps,
+              stPct: record.stPct,
               importedAt: new Date(),
             },
           });
-        
-        imported += batch.length;
-        console.log(`  Progress: ${imported}/${records.length} (${Math.round(imported/records.length*100)}%)`);
-        
-      } catch (error) {
-        console.error(`❌ Failed to import batch ${i}-${i+batch.length}:`, error);
-        // Try individual inserts for this batch as fallback
-        for (const record of batch) {
-          try {
-            await db
-              .insert(bronzeNflfastrSnapCounts)
-              .values({
-                gameId: record.gameId,
-                pfrGameId: record.pfrGameId,
-                season: record.season,
-                gameType: record.gameType,
-                week: record.week,
-                player: record.player,
-                pfrPlayerId: record.pfrPlayerId,
-                position: record.position,
-                team: record.team,
-                opponent: record.opponent,
-                offenseSnaps: record.offenseSnaps,
-                offensePct: record.offensePct,
-                defenseSnaps: record.defenseSnaps,
-                defensePct: record.defensePct,
-                stSnaps: record.stSnaps,
-                stPct: record.stPct,
-              })
-              .onConflictDoNothing();
-          } catch (e) {
-            // Skip individual failures silently
-          }
+        imported++;
+
+        if (imported % 1000 === 0) {
+          console.log(`  Progress: ${imported}/${uniqueRecords.length} (${Math.round(imported/uniqueRecords.length*100)}%)`);
         }
+      } catch (e) {
+        failed++;
       }
     }
-    
-    console.log(`✅ Import complete: ${imported} records`);
+
+    console.log(`✅ Import complete: ${imported} records (${failed} failed)`);
   }
 
   /**
