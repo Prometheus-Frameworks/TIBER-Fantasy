@@ -389,7 +389,7 @@ export class BronzeLayerService {
           successfulPayloads: sql<number>`COUNT(CASE WHEN ${ingestPayloads.status} = 'SUCCESS' THEN 1 END)`,
           failedPayloads: sql<number>`COUNT(CASE WHEN ${ingestPayloads.status} = 'FAILED' THEN 1 END)`,
           lastIngestDate: sql<Date>`MAX(${ingestPayloads.ingestedAt})`,
-          avgPayloadSize: sql<number>`AVG(jsonb_array_length(COALESCE(${ingestPayloads.payload}, '[]'::jsonb)))`,
+          avgPayloadSize: sql<number>`AVG(COALESCE(${ingestPayloads.recordCount}, 0))`,
           totalRecords: sql<number>`SUM(COALESCE(${ingestPayloads.recordCount}, 0))`
         })
         .from(ingestPayloads)

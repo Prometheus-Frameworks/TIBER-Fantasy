@@ -6,7 +6,9 @@
       "Bash(grep:*)",
       "Bash(npx tsx _diagnostic.ts)",
       "Bash(npx tsx:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(git add:*)"
     ]
   }
 }

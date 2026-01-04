@@ -659,13 +659,13 @@ router.post('/bronze-ingest', async (req: Request, res: Response) => {
  */
 router.post('/bronze-to-silver', async (req: Request, res: Response) => {
   const startTime = Date.now();
-  
+
   try {
     console.log(`🔄 [ETL-Bronze] Bronze to Silver processing triggered by admin from ${req.ip}`);
-    
-    const { 
+
+    const {
       source,
-      status = 'PROCESSING',
+      status = 'PENDING',
       season,
       week,
       limit = 100,
@@ -702,71 +702,41 @@ router.post('/bronze-to-silver', async (req: Request, res: Response) => {
       });
     }
 
-    let processed = 0;
-    let errors = 0;
-    const processingResults: Array<{ payloadId: number; source: string; status: string; error?: string }> = [];
+    // Use SilverLayerService to process payloads
+    const payloadIds = payloads.map(p => p.id);
+    const silverResult = await silverLayerService.processBronzeToSilver(payloadIds);
 
-    // Process each payload
-    for (const payload of payloads) {
-      try {
-        console.log(`🔄 Processing payload ${payload.id} from ${payload.source}...`);
-        
-        // Mark as processing
-        await bronzeLayerService.updatePayloadStatus(payload.id, 'PROCESSING');
-        
-        // Process based on source type
-        if (payload.source === 'sleeper') {
-          // Process Sleeper data - placeholder for Silver Layer processing
-          console.log(`📊 Processing Sleeper payload ${payload.id} with ${payload.recordCount} records`);
-          // TODO: Implement Silver Layer processing for Sleeper data
-          
-        } else if (payload.source === 'fantasypros') {
-          // Process ECR data - placeholder for Silver Layer processing
-          console.log(`📊 Processing FantasyPros payload ${payload.id} with ${payload.recordCount} records`);
-          // TODO: Implement Silver Layer processing for ECR data
-        }
-        
-        // Mark as successful for now (placeholder)
-        await bronzeLayerService.updatePayloadStatus(payload.id, 'SUCCESS');
-        
-        processingResults.push({
-          payloadId: payload.id,
-          source: payload.source,
-          status: 'SUCCESS'
-        });
-        
-        processed++;
-        
-      } catch (error) {
-        console.error(`❌ Error processing payload ${payload.id}:`, error);
-        
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        await bronzeLayerService.updatePayloadStatus(payload.id, 'FAILED', errorMessage);
-        
-        processingResults.push({
-          payloadId: payload.id,
-          source: payload.source,
-          status: 'FAILED',
-          error: errorMessage
-        });
-        
-        errors++;
+    // Update payload statuses based on processing results
+    if (silverResult.success > 0) {
+      // Mark successfully processed payloads as SUCCESS
+      const successfulPayloadIds = payloadIds.filter(id =>
+        !silverResult.errorDetails.some(err => err.payloadId === id)
+      );
+      if (successfulPayloadIds.length > 0) {
+        await bronzeLayerService.updateBatchPayloadStatus(successfulPayloadIds, 'SUCCESS');
+        console.log(`📝 [ETL-Bronze] Marked ${successfulPayloadIds.length} payloads as SUCCESS`);
       }
+    }
+
+    // Mark failed payloads
+    if (silverResult.errorDetails.length > 0) {
+      for (const error of silverResult.errorDetails) {
+        await bronzeLayerService.updatePayloadStatus(error.payloadId, 'FAILED', error.error);
+      }
+      console.log(`📝 [ETL-Bronze] Marked ${silverResult.errorDetails.length} payloads as FAILED`);
     }
 
     const duration = Date.now() - startTime;
 
     console.log(`✅ [ETL-Bronze] Bronze to Silver processing completed in ${duration}ms`);
-    console.log(`   📊 Processed: ${processed} | Errors: ${errors} | Total: ${payloads.length}`);
+    console.log(`   📊 Processed: ${silverResult.processed} | Success: ${silverResult.success} | Errors: ${silverResult.errors} | Skipped: ${silverResult.skipped}`);
+    console.log(`   📈 Table Results:`, silverResult.tableResults);
 
     res.status(200).json({
-      success: true,
-      message: `Bronze to Silver processing completed: ${processed} successful, ${errors} failed`,
+      success: silverResult.success > 0,
+      message: `Bronze to Silver processing completed: ${silverResult.success} successful, ${silverResult.errors} failed, ${silverResult.skipped} skipped`,
       data: {
-        processed,
-        errors,
-        totalPayloads: payloads.length,
-        processingResults,
+        ...silverResult,
         source: source || 'all',
         season: targetSeason,
         week: targetWeek,
