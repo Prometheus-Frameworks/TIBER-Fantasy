@@ -8,7 +8,10 @@
       "Bash(npx tsx:*)",
       "Bash(psql:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(npm run db:push:*)"
     ]
   }
 }

@@ -2440,7 +2440,11 @@ export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
   receivingEpa: real("receiving_epa"),
   airYards: integer("air_yards").default(0),
   yac: integer("yac").default(0),
-  
+
+  // Usage/Opportunity metrics
+  snaps: integer("snaps").default(0),
+  routes: integer("routes").default(0),
+
   rushAttempts: integer("rush_attempts").default(0),
   rushingYards: integer("rushing_yards").default(0),
   rushingTds: integer("rushing_tds").default(0),

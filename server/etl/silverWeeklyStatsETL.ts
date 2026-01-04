@@ -43,6 +43,10 @@ interface PlayerWeekStats {
   airYards: number;
   yac: number;
 
+  // Usage/Opportunity
+  snaps: number;
+  routes: number;
+
   // Rushing
   rushAttempts: number;
   rushingYards: number;
@@ -123,6 +127,44 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
     GROUP BY rusher_player_id, rusher_player_name, posteam
   `);
 
+  // Aggregate snap counts from bronze_nflfastr_snap_counts
+  // Note: Snap counts use PFR IDs, but we aggregate by player name for now
+  // This data will be joined with play-by-play data later via player_id matching
+  const snapsByNameAndTeam = new Map<string, number>();
+  const snapResult = await db.execute(sql`
+    SELECT
+      player as player_name,
+      team,
+      SUM(offense_snaps) as snaps
+    FROM bronze_nflfastr_snap_counts
+    WHERE season = ${season}
+      AND week = ${week}
+    GROUP BY player, team
+  `);
+
+  for (const row of snapResult.rows as any[]) {
+    const key = `${row.player_name}|${row.team}`;
+    snapsByNameAndTeam.set(key, Number(row.snaps) || 0);
+  }
+
+  // Calculate team pass attempts by team for routes estimation
+  const teamPassPlaysResult = await db.execute(sql`
+    SELECT
+      posteam as team,
+      COUNT(*) FILTER (WHERE play_type = 'pass') as pass_plays,
+      COUNT(DISTINCT game_id) as games
+    FROM bronze_nflfastr_plays
+    WHERE season = ${season}
+      AND week = ${week}
+      AND posteam IS NOT NULL
+    GROUP BY posteam
+  `);
+
+  const teamPassPlaysMap = new Map<string, number>();
+  for (const row of teamPassPlaysResult.rows as any[]) {
+    teamPassPlaysMap.set(row.team, Number(row.pass_plays) || 0);
+  }
+
   // Merge all stats by player
   const playerMap = new Map<string, PlayerWeekStats>();
 
@@ -146,6 +188,8 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
     receivingEpa: 0,
     airYards: 0,
     yac: 0,
+    snaps: 0,
+    routes: 0,
     rushAttempts: 0,
     rushingYards: 0,
     rushingTds: 0,
@@ -189,6 +233,17 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
     playerMap.set(row.player_id, player);
   }
 
+  // Add snap counts via name/team matching
+  for (const player of playerMap.values()) {
+    if (player.playerName && player.team) {
+      const key = `${player.playerName}|${player.team}`;
+      const snaps = snapsByNameAndTeam.get(key);
+      if (snaps) {
+        player.snaps = snaps;
+      }
+    }
+  }
+
   // Enrich with positions from identity map
   const playerIds = Array.from(playerMap.keys());
   if (playerIds.length > 0) {
@@ -202,6 +257,26 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
       const player = playerMap.get(row.gsis_id);
       if (player) {
         player.position = row.position;
+      }
+    }
+  }
+
+  // Calculate routes for skill position players (WR, TE, RB)
+  // Routes ≈ 85% of snaps for WR/TE (they run routes on most pass plays)
+  // Routes ≈ 50% of snaps for RB (split between routes and pass protection)
+  for (const player of playerMap.values()) {
+    if (player.snaps > 0 && player.team) {
+      const teamPassPlays = teamPassPlaysMap.get(player.team) || 0;
+
+      if (player.position === 'WR' || player.position === 'TE') {
+        // WR/TE run routes on ~85% of their snaps
+        player.routes = Math.round(player.snaps * 0.85);
+      } else if (player.position === 'RB') {
+        // RB run routes on ~50% of their snaps (other half is pass blocking)
+        player.routes = Math.round(player.snaps * 0.50);
+      } else if (player.position === 'QB') {
+        // QBs don't run routes
+        player.routes = 0;
       }
     }
   }
@@ -241,6 +316,8 @@ async function upsertWeekStats(stats: PlayerWeekStats[]): Promise<number> {
           receivingEpa: stat.receivingEpa,
           airYards: stat.airYards,
           yac: stat.yac,
+          snaps: stat.snaps,
+          routes: stat.routes,
           rushAttempts: stat.rushAttempts,
           rushingYards: stat.rushingYards,
           rushingTds: stat.rushingTds,
@@ -269,6 +346,8 @@ async function upsertWeekStats(stats: PlayerWeekStats[]): Promise<number> {
             receivingEpa: stat.receivingEpa,
             airYards: stat.airYards,
             yac: stat.yac,
+            snaps: stat.snaps,
+            routes: stat.routes,
             rushAttempts: stat.rushAttempts,
             rushingYards: stat.rushingYards,
             rushingTds: stat.rushingTds,
