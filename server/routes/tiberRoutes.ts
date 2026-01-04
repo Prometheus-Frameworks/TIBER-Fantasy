@@ -952,10 +952,10 @@ router.post('/chat', async (req, res) => {
       forgePosition,
       forgeTeamId,
       chatMode = 'insight', // 'insight' (default) or 'analyst'
-      model = 'gemini', // 'gemini' (default) or 'grok'
+      model = 'grok', // 'grok' (default) - uses xAI Grok via OpenRouter
     } = req.body;
     
-    const chatProvider: 'gemini' | 'grok' = model === 'grok' ? 'grok' : 'gemini';
+    const chatProvider: 'gemini' | 'grok' = model === 'gemini' ? 'gemini' : 'grok';
     console.log(`🤖 [Tiber/Chat] Using ${chatProvider.toUpperCase()} for generation`);
     
     const userId = (req as any).user?.id ?? "anon";

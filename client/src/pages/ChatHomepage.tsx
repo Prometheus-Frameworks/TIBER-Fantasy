@@ -82,7 +82,6 @@ export default function ChatHomepage() {
   const [inputMessage, setInputMessage] = useState('');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [chatMode, setChatMode] = useState<'insight' | 'analyst'>('insight');
-  const [aiModel, setAiModel] = useState<'gemini' | 'grok'>('gemini');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string | null>(null);
   const [createLeagueOpen, setCreateLeagueOpen] = useState(false);
   const [leaguesExpanded, setLeaguesExpanded] = useState(true);
@@ -151,7 +150,7 @@ export default function ChatHomepage() {
       const response = await apiRequest('POST', '/api/tiber/chat', {
         message,
         chatMode,
-        model: aiModel,
+        model: 'grok', // Hardcoded to use Grok via OpenRouter
         session_id: sessionId,
         league_id: selectedLeagueId,
       });
@@ -588,39 +587,6 @@ export default function ChatHomepage() {
                 </SelectItem>
               </SelectContent>
             </Select>
-            
-            {/* AI Model Toggle */}
-            <Select value={aiModel} onValueChange={(val: 'gemini' | 'grok') => setAiModel(val)}>
-              <SelectTrigger 
-                className="w-[100px] h-10 text-xs bg-[#0a0e1a] border-gray-700 text-white"
-                data-testid="select-ai-model"
-              >
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    {aiModel === 'gemini' ? (
-                      <><span className="text-blue-400">✦</span> Gemini</>
-                    ) : (
-                      <><span className="text-green-400">𝕏</span> Grok</>
-                    )}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-[#141824] border-gray-700">
-                <SelectItem value="gemini" data-testid="option-model-gemini" className="text-white hover:bg-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span className="text-blue-400">✦</span>
-                    <span>Gemini Flash</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="grok" data-testid="option-model-grok" className="text-white hover:bg-gray-700">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-400">𝕏</span>
-                    <span>Grok 4 Fast</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            
             <Input
               data-testid="input-chat"
               type="text"
