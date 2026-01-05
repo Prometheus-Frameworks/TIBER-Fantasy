@@ -4845,6 +4845,11 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   epaPerTarget: real("epa_per_target"),
   successRate: real("success_rate"),
 
+  // Expected YAC metrics (WR/TE/RB receiving)
+  xYac: real("x_yac"),                                  // Expected yards after catch per reception
+  yacOverExpected: real("yac_over_expected"),          // Actual YAC - expected YAC (per reception)
+  xYacSuccessRate: real("x_yac_success_rate"),         // % of receptions exceeding expected YAC
+
   // Rushing metrics
   rushAttempts: integer("rush_attempts").default(0),
   rushYards: integer("rush_yards").default(0),
@@ -4872,6 +4877,8 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   wopr: real("wopr"),                               // Weighted Opportunity Rating
   slotRate: real("slot_rate"),                      // % routes from slot (from player_usage)
   inlineRate: real("inline_rate"),                  // % routes from inline (TE-specific)
+  avgAirEpa: real("avg_air_epa"),                   // Avg EPA of targets before catch (target quality)
+  avgCompAirEpa: real("avg_comp_air_epa"),          // Avg air EPA on completions only
 
   // QB Efficiency (from play-by-play)
   cpoe: real("cpoe"),                               // Completion % over expected
@@ -4885,6 +4892,10 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   deepPassAttempts: integer("deep_pass_attempts").default(0), // passes with air_yards > 20
   deepPassRate: real("deep_pass_rate"),             // deep_pass_attempts / pass_attempts
   passAdot: real("pass_adot"),                      // avg depth of target (passer)
+  shotgunRate: real("shotgun_rate"),                // % of plays from shotgun
+  noHuddleRate: real("no_huddle_rate"),             // % of plays in no-huddle
+  shotgunSuccessRate: real("shotgun_success_rate"), // Success rate from shotgun
+  underCenterSuccessRate: real("under_center_success_rate"), // Success rate under center
 
   // Fantasy points
   fptsStd: real("fpts_std"),

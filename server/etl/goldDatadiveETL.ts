@@ -74,6 +74,8 @@ interface GoldPlayerWeek {
   wopr: number | null;
   slotRate: number | null;
   inlineRate: number | null;
+  avgAirEpa: number | null;          // Avg EPA of targets before catch (target quality)
+  avgCompAirEpa: number | null;      // Avg air EPA on completions only
 
   // QB Efficiency (from play-by-play)
   cpoe: number | null;
@@ -87,10 +89,19 @@ interface GoldPlayerWeek {
   deepPassAttempts: number;
   deepPassRate: number | null;
   passAdot: number | null;
+  shotgunRate: number | null;           // % of plays from shotgun
+  noHuddleRate: number | null;          // % of plays in no-huddle
+  shotgunSuccessRate: number | null;    // Success rate from shotgun
+  underCenterSuccessRate: number | null; // Success rate from under center
 
   // Combined
   epaPerPlay: number | null;
   successRate: number | null;
+
+  // Expected YAC metrics (WR/TE/RB receiving)
+  xYac: number | null;
+  yacOverExpected: number | null;
+  xYacSuccessRate: number | null;
 
   // Fantasy
   fptsStd: number;
@@ -207,6 +218,8 @@ interface PlayByPlayStats {
   rushFirstDowns: number;
   rzRushAttempts: number;
   recFirstDowns: number;
+  successfulPlays: number;
+  totalPlays: number;
 }
 
 /**
@@ -214,20 +227,22 @@ interface PlayByPlayStats {
  * Aggregates per rusher_player_id and receiver_player_id for the week
  */
 async function getPlayByPlayStats(season: number, week: number): Promise<{
-  rushStats: Map<string, { stuffed: number; firstDowns: number; rzAttempts: number }>;
-  recStats: Map<string, { firstDowns: number }>;
+  rushStats: Map<string, { stuffed: number; firstDowns: number; rzAttempts: number; successfulPlays: number; totalPlays: number }>;
+  recStats: Map<string, { firstDowns: number; xYac: number; yacOverExpected: number; xYacSuccesses: number; totalReceptions: number; totalAirEpa: number; totalCompAirEpa: number; totalTargets: number; totalCompletions: number }>;
 }> {
-  const rushStats = new Map<string, { stuffed: number; firstDowns: number; rzAttempts: number }>();
-  const recStats = new Map<string, { firstDowns: number }>();
+  const rushStats = new Map<string, { stuffed: number; firstDowns: number; rzAttempts: number; successfulPlays: number; totalPlays: number }>();
+  const recStats = new Map<string, { firstDowns: number; xYac: number; yacOverExpected: number; xYacSuccesses: number; totalReceptions: number; totalAirEpa: number; totalCompAirEpa: number; totalTargets: number; totalCompletions: number }>();
 
   try {
-    // Get rushing stats from play-by-play
+    // Get rushing stats from play-by-play (including success rate)
     const rushResult = await db.execute(sql`
       SELECT
         rusher_player_id,
         SUM(CASE WHEN (raw_data->>'tackled_for_loss')::float > 0 THEN 1 ELSE 0 END) as stuffed,
         SUM(CASE WHEN first_down_rush THEN 1 ELSE 0 END) as first_downs,
-        SUM(CASE WHEN (raw_data->>'yardline_100')::float <= 20 THEN 1 ELSE 0 END) as rz_attempts
+        SUM(CASE WHEN (raw_data->>'yardline_100')::float <= 20 THEN 1 ELSE 0 END) as rz_attempts,
+        SUM(CASE WHEN (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as successful_plays,
+        COUNT(*) as total_plays
       FROM bronze_nflfastr_plays
       WHERE season = ${season}
         AND week = ${week}
@@ -241,14 +256,24 @@ async function getPlayByPlayStats(season: number, week: number): Promise<{
         stuffed: Number(row.stuffed) || 0,
         firstDowns: Number(row.first_downs) || 0,
         rzAttempts: Number(row.rz_attempts) || 0,
+        successfulPlays: Number(row.successful_plays) || 0,
+        totalPlays: Number(row.total_plays) || 0,
       });
     }
 
-    // Get receiving first downs from play-by-play
+    // Get receiving metrics including xYAC and air EPA from play-by-play
     const recResult = await db.execute(sql`
       SELECT
         receiver_player_id,
-        SUM(CASE WHEN first_down_pass AND complete_pass THEN 1 ELSE 0 END) as first_downs
+        SUM(CASE WHEN first_down_pass AND complete_pass THEN 1 ELSE 0 END) as first_downs,
+        SUM(CASE WHEN complete_pass THEN COALESCE((raw_data->>'xyac_mean_yardage')::float, 0) ELSE 0 END) as total_xyac,
+        SUM(CASE WHEN complete_pass THEN yards_after_catch - COALESCE((raw_data->>'xyac_mean_yardage')::float, 0) ELSE 0 END) as total_yac_over_expected,
+        SUM(CASE WHEN complete_pass AND (raw_data->>'xyac_success')::float > 0.5 THEN 1 ELSE 0 END) as xyac_successes,
+        SUM(CASE WHEN complete_pass THEN 1 ELSE 0 END) as total_receptions,
+        SUM(COALESCE((raw_data->>'air_epa')::float, 0)) as total_air_epa,
+        SUM(CASE WHEN complete_pass THEN COALESCE((raw_data->>'comp_air_epa')::float, 0) ELSE 0 END) as total_comp_air_epa,
+        COUNT(*) as total_targets,
+        SUM(CASE WHEN complete_pass THEN 1 ELSE 0 END) as total_completions
       FROM bronze_nflfastr_plays
       WHERE season = ${season}
         AND week = ${week}
@@ -260,6 +285,14 @@ async function getPlayByPlayStats(season: number, week: number): Promise<{
     for (const row of recResult.rows as any[]) {
       recStats.set(row.receiver_player_id, {
         firstDowns: Number(row.first_downs) || 0,
+        xYac: Number(row.total_xyac) || 0,
+        yacOverExpected: Number(row.total_yac_over_expected) || 0,
+        xYacSuccesses: Number(row.xyac_successes) || 0,
+        totalReceptions: Number(row.total_receptions) || 0,
+        totalAirEpa: Number(row.total_air_epa) || 0,
+        totalCompAirEpa: Number(row.total_comp_air_epa) || 0,
+        totalTargets: Number(row.total_targets) || 0,
+        totalCompletions: Number(row.total_completions) || 0,
       });
     }
   } catch (e) {
@@ -278,6 +311,13 @@ interface QbPlayByPlayStats {
   passFirstDowns: number;
   deepPassAttempts: number;
   totalAirYards: number;
+  successfulPlays: number;
+  totalPlays: number;
+  shotgunPlays: number;
+  noHuddlePlays: number;
+  shotgunSuccessful: number;
+  underCenterPlays: number;
+  underCenterSuccessful: number;
 }
 
 /**
@@ -297,7 +337,14 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN 1 ELSE 0 END) as scrambles,
         SUM(CASE WHEN first_down_pass THEN 1 ELSE 0 END) as pass_first_downs,
         SUM(CASE WHEN air_yards > 20 THEN 1 ELSE 0 END) as deep_pass_attempts,
-        SUM(COALESCE(air_yards, 0)) as total_air_yards
+        SUM(COALESCE(air_yards, 0)) as total_air_yards,
+        SUM(CASE WHEN (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as successful_plays,
+        COUNT(*) as total_plays,
+        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 1 THEN 1 ELSE 0 END) as shotgun_plays,
+        SUM(CASE WHEN (raw_data->>'no_huddle')::numeric = 1 THEN 1 ELSE 0 END) as no_huddle_plays,
+        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 1 AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as shotgun_successful,
+        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 0 THEN 1 ELSE 0 END) as under_center_plays,
+        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 0 AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as under_center_successful
       FROM bronze_nflfastr_plays
       WHERE season = ${season}
         AND week = ${week}
@@ -316,6 +363,13 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         passFirstDowns: Number(row.pass_first_downs) || 0,
         deepPassAttempts: Number(row.deep_pass_attempts) || 0,
         totalAirYards: Number(row.total_air_yards) || 0,
+        successfulPlays: Number(row.successful_plays) || 0,
+        totalPlays: Number(row.total_plays) || 0,
+        shotgunPlays: Number(row.shotgun_plays) || 0,
+        noHuddlePlays: Number(row.no_huddle_plays) || 0,
+        shotgunSuccessful: Number(row.shotgun_successful) || 0,
+        underCenterPlays: Number(row.under_center_plays) || 0,
+        underCenterSuccessful: Number(row.under_center_successful) || 0,
       });
     }
   } catch (e) {
@@ -504,6 +558,18 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       ? playerQbStats.totalAirYards / passAttempts
       : null;
 
+    // QB Shotgun/No-Huddle metrics
+    const shotgunPlays = playerQbStats?.shotgunPlays || 0;
+    const noHuddlePlays = playerQbStats?.noHuddlePlays || 0;
+    const shotgunSuccessful = playerQbStats?.shotgunSuccessful || 0;
+    const underCenterPlays = playerQbStats?.underCenterPlays || 0;
+    const underCenterSuccessful = playerQbStats?.underCenterSuccessful || 0;
+    const totalQbPlays = shotgunPlays + underCenterPlays;
+    const shotgunRate = totalQbPlays > 0 ? shotgunPlays / totalQbPlays : null;
+    const noHuddleRate = totalQbPlays > 0 ? noHuddlePlays / totalQbPlays : null;
+    const shotgunSuccessRate = shotgunPlays > 0 ? shotgunSuccessful / shotgunPlays : null;
+    const underCenterSuccessRate = underCenterPlays > 0 ? underCenterSuccessful / underCenterPlays : null;
+
     // WR/TE Efficiency
     const catchRate = targets > 0 ? receptions / targets : null;
     const yardsPerTarget = targets > 0 ? recYards / targets : null;
@@ -520,6 +586,32 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const usageData = playerUsageStats.get(row.player_id);
     const slotRate = usageData?.slotRate ?? null;
     const inlineRate = usageData?.inlineRate ?? null;
+
+    // Target Quality (air EPA metrics for WR/TE/RB)
+    const totalAirEpa = playerRecStats?.totalAirEpa || 0;
+    const totalCompAirEpa = playerRecStats?.totalCompAirEpa || 0;
+    const recTargets = playerRecStats?.totalTargets || targets; // Fallback to Silver layer targets
+    const recCompletions = playerRecStats?.totalCompletions || receptions; // Fallback to Silver layer receptions
+    const avgAirEpa = recTargets > 0 ? totalAirEpa / recTargets : null;
+    const avgCompAirEpa = recCompletions > 0 ? totalCompAirEpa / recCompletions : null;
+
+    // Success rate (combining pass and rush plays)
+    const rushSuccessful = playerRushStats?.successfulPlays || 0;
+    const rushTotalPlays = playerRushStats?.totalPlays || 0;
+    const passSuccessful = playerQbStats?.successfulPlays || 0;
+    const passTotalPlays = playerQbStats?.totalPlays || 0;
+    const totalSuccessfulPlays = rushSuccessful + passSuccessful;
+    const totalCombinedPlays = rushTotalPlays + passTotalPlays;
+    const successRate = totalCombinedPlays > 0 ? totalSuccessfulPlays / totalCombinedPlays : null;
+
+    // Expected YAC metrics (WR/TE/RB receiving)
+    const totalXYac = playerRecStats?.xYac || 0;
+    const totalYacOverExpected = playerRecStats?.yacOverExpected || 0;
+    const xYacSuccesses = playerRecStats?.xYacSuccesses || 0;
+    const totalReceptions = playerRecStats?.totalReceptions || 0;
+    const xYac = totalReceptions > 0 ? totalXYac / totalReceptions : null;
+    const yacOverExpected = totalReceptions > 0 ? totalYacOverExpected / totalReceptions : null;
+    const xYacSuccessRate = totalReceptions > 0 ? xYacSuccesses / totalReceptions : null;
 
     goldRecords.push({
       season,
@@ -566,6 +658,8 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       wopr,
       slotRate,
       inlineRate,
+      avgAirEpa,
+      avgCompAirEpa,
       // QB Efficiency
       cpoe,
       sacks,
@@ -578,9 +672,18 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       deepPassAttempts,
       deepPassRate,
       passAdot,
+      shotgunRate,
+      noHuddleRate,
+      shotgunSuccessRate,
+      underCenterSuccessRate,
       // Combined
       epaPerPlay,
-      successRate: null, // Would need play-level data
+      successRate,
+      // Expected YAC metrics
+      xYac,
+      yacOverExpected,
+      xYacSuccessRate,
+      // Fantasy
       fptsStd: Math.round(fpts.std * 10) / 10,
       fptsHalf: Math.round(fpts.half * 10) / 10,
       fptsPpr: Math.round(fpts.ppr * 10) / 10,
@@ -620,9 +723,12 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         stuffed, stuff_rate, rush_first_downs, rush_first_down_rate, rz_rush_attempts,
         yac_per_rec, rec_first_downs, first_downs_per_route, fpts_per_route,
         catch_rate, yards_per_target, racr, wopr, slot_rate, inline_rate,
+        avg_air_epa, avg_comp_air_epa,
         cpoe, sacks, sack_rate, qb_hits, qb_hit_rate, scrambles,
         pass_first_downs, pass_first_down_rate, deep_pass_attempts, deep_pass_rate, pass_adot,
-        epa_per_play, success_rate, fpts_std, fpts_half, fpts_ppr
+        shotgun_rate, no_huddle_rate, shotgun_success_rate, under_center_success_rate,
+        epa_per_play, success_rate, x_yac, yac_over_expected, x_yac_success_rate,
+        fpts_std, fpts_half, fpts_ppr
       ) VALUES (
         ${snapshotId}, ${rec.season}, ${rec.week}, ${rec.playerId}, ${rec.playerName}, ${rec.teamId}, ${rec.position},
         ${rec.snaps}, ${rec.snapShare}, ${rec.routes}, ${rec.routeRate},
@@ -632,9 +738,12 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.stuffed}, ${rec.stuffRate}, ${rec.rushFirstDowns}, ${rec.rushFirstDownRate}, ${rec.rzRushAttempts},
         ${rec.yacPerRec}, ${rec.recFirstDowns}, ${rec.firstDownsPerRoute}, ${rec.fptsPerRoute},
         ${rec.catchRate}, ${rec.yardsPerTarget}, ${rec.racr}, ${rec.wopr}, ${rec.slotRate}, ${rec.inlineRate},
+        ${rec.avgAirEpa}, ${rec.avgCompAirEpa},
         ${rec.cpoe}, ${rec.sacks}, ${rec.sackRate}, ${rec.qbHits}, ${rec.qbHitRate}, ${rec.scrambles},
         ${rec.passFirstDowns}, ${rec.passFirstDownRate}, ${rec.deepPassAttempts}, ${rec.deepPassRate}, ${rec.passAdot},
-        ${rec.epaPerPlay}, ${rec.successRate}, ${rec.fptsStd}, ${rec.fptsHalf}, ${rec.fptsPpr}
+        ${rec.shotgunRate}, ${rec.noHuddleRate}, ${rec.shotgunSuccessRate}, ${rec.underCenterSuccessRate},
+        ${rec.epaPerPlay}, ${rec.successRate}, ${rec.xYac}, ${rec.yacOverExpected}, ${rec.xYacSuccessRate},
+        ${rec.fptsStd}, ${rec.fptsHalf}, ${rec.fptsPpr}
       )
     `);
     inserted++;
