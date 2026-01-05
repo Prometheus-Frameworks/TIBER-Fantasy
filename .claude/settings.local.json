@@ -11,7 +11,19 @@
       "Bash(git add:*)",
       "Bash(curl:*)",
       "Bash(python3:*)",
-      "Bash(npm run db:push:*)"
+      "Bash(npm run db:push:*)",
+      "Bash(git commit:*)",
+      "Bash(lsof:*)",
+      "Bash(pkill:*)",
+      "Bash(xargs kill:*)",
+      "Bash(for week in 7 13 14 17)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(__NEW_LINE__ echo \"=== Week 13 ===\")",
+      "Bash(__NEW_LINE__ echo \"=== Week 14 ===\")",
+      "Bash(__NEW_LINE__ echo \"=== Week 17 ===\")",
+      "Bash(for week in 14 15 16 17)"
     ]
   }
 }

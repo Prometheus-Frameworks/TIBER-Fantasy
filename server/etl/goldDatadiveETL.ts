@@ -8,6 +8,8 @@
  * - Efficiency: ADOT, TPRR, YPRR, EPA per play/target, success rate
  * - Volume: snap share, target share, route rate
  * - Fantasy: PPR, Half-PPR, Standard scoring
+ * - RB Rushing: stuff rate, first down rate, red zone attempts
+ * - RB Receiving: YAC/rec, first downs/route, FP/route
  *
  * Usage:
  *   npx tsx server/etl/goldDatadiveETL.ts [season] [startWeek] [endWeek]
@@ -51,6 +53,40 @@ interface GoldPlayerWeek {
   rushTds: number;
   yardsPerCarry: number | null;
   rushEpaPerPlay: number | null;
+
+  // RB Rushing efficiency (from play-by-play)
+  stuffed: number;
+  stuffRate: number | null;
+  rushFirstDowns: number;
+  rushFirstDownRate: number | null;
+  rzRushAttempts: number;
+
+  // RB Receiving efficiency
+  yacPerRec: number | null;
+  recFirstDowns: number;
+  firstDownsPerRoute: number | null;
+  fptsPerRoute: number | null;
+
+  // WR/TE Efficiency
+  catchRate: number | null;
+  yardsPerTarget: number | null;
+  racr: number | null;
+  wopr: number | null;
+  slotRate: number | null;
+  inlineRate: number | null;
+
+  // QB Efficiency (from play-by-play)
+  cpoe: number | null;
+  sacks: number;
+  sackRate: number | null;
+  qbHits: number;
+  qbHitRate: number | null;
+  scrambles: number;
+  passFirstDowns: number;
+  passFirstDownRate: number | null;
+  deepPassAttempts: number;
+  deepPassRate: number | null;
+  passAdot: number | null;
 
   // Combined
   epaPerPlay: number | null;
@@ -137,6 +173,214 @@ async function getSnapCounts(season: number, week: number): Promise<Map<string, 
   return snapMap;
 }
 
+/**
+ * Get snaps and routes from weekly_stats table (has accurate snap count data from ingestion)
+ * Uses GSIS ID for reliable matching
+ */
+async function getWeeklyStatsSnapRoutes(season: number, week: number): Promise<Map<string, { snaps: number; routes: number }>> {
+  const snapRouteMap = new Map<string, { snaps: number; routes: number }>();
+
+  try {
+    const result = await db.execute(sql`
+      SELECT gsis_id, snaps, routes
+      FROM weekly_stats
+      WHERE season = ${season} AND week = ${week}
+        AND gsis_id IS NOT NULL
+        AND snaps > 0
+    `);
+
+    for (const row of result.rows as any[]) {
+      snapRouteMap.set(row.gsis_id, {
+        snaps: Number(row.snaps) || 0,
+        routes: Number(row.routes) || 0,
+      });
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch weekly_stats snap/routes for week ${week}`);
+  }
+
+  return snapRouteMap;
+}
+
+interface PlayByPlayStats {
+  stuffed: number;
+  rushFirstDowns: number;
+  rzRushAttempts: number;
+  recFirstDowns: number;
+}
+
+/**
+ * Get advanced rushing/receiving metrics from play-by-play data
+ * Aggregates per rusher_player_id and receiver_player_id for the week
+ */
+async function getPlayByPlayStats(season: number, week: number): Promise<{
+  rushStats: Map<string, { stuffed: number; firstDowns: number; rzAttempts: number }>;
+  recStats: Map<string, { firstDowns: number }>;
+}> {
+  const rushStats = new Map<string, { stuffed: number; firstDowns: number; rzAttempts: number }>();
+  const recStats = new Map<string, { firstDowns: number }>();
+
+  try {
+    // Get rushing stats from play-by-play
+    const rushResult = await db.execute(sql`
+      SELECT
+        rusher_player_id,
+        SUM(CASE WHEN (raw_data->>'tackled_for_loss')::float > 0 THEN 1 ELSE 0 END) as stuffed,
+        SUM(CASE WHEN first_down_rush THEN 1 ELSE 0 END) as first_downs,
+        SUM(CASE WHEN (raw_data->>'yardline_100')::float <= 20 THEN 1 ELSE 0 END) as rz_attempts
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season}
+        AND week = ${week}
+        AND play_type = 'run'
+        AND rusher_player_id IS NOT NULL
+      GROUP BY rusher_player_id
+    `);
+
+    for (const row of rushResult.rows as any[]) {
+      rushStats.set(row.rusher_player_id, {
+        stuffed: Number(row.stuffed) || 0,
+        firstDowns: Number(row.first_downs) || 0,
+        rzAttempts: Number(row.rz_attempts) || 0,
+      });
+    }
+
+    // Get receiving first downs from play-by-play
+    const recResult = await db.execute(sql`
+      SELECT
+        receiver_player_id,
+        SUM(CASE WHEN first_down_pass AND complete_pass THEN 1 ELSE 0 END) as first_downs
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season}
+        AND week = ${week}
+        AND play_type = 'pass'
+        AND receiver_player_id IS NOT NULL
+      GROUP BY receiver_player_id
+    `);
+
+    for (const row of recResult.rows as any[]) {
+      recStats.set(row.receiver_player_id, {
+        firstDowns: Number(row.first_downs) || 0,
+      });
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch play-by-play stats for week ${week}:`, e);
+  }
+
+  return { rushStats, recStats };
+}
+
+interface QbPlayByPlayStats {
+  dropbacks: number;
+  cpoe: number | null;
+  sacks: number;
+  qbHits: number;
+  scrambles: number;
+  passFirstDowns: number;
+  deepPassAttempts: number;
+  totalAirYards: number;
+}
+
+/**
+ * Get QB-specific metrics from play-by-play data
+ */
+async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<string, QbPlayByPlayStats>> {
+  const qbStats = new Map<string, QbPlayByPlayStats>();
+
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        passer_player_id,
+        COUNT(*) as dropbacks,
+        AVG(CASE WHEN raw_data->>'cpoe' != '' THEN (raw_data->>'cpoe')::numeric ELSE NULL END) as avg_cpoe,
+        SUM(CASE WHEN (raw_data->>'sack')::numeric > 0 THEN 1 ELSE 0 END) as sacks,
+        SUM(CASE WHEN (raw_data->>'qb_hit')::numeric > 0 THEN 1 ELSE 0 END) as qb_hits,
+        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN 1 ELSE 0 END) as scrambles,
+        SUM(CASE WHEN first_down_pass THEN 1 ELSE 0 END) as pass_first_downs,
+        SUM(CASE WHEN air_yards > 20 THEN 1 ELSE 0 END) as deep_pass_attempts,
+        SUM(COALESCE(air_yards, 0)) as total_air_yards
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season}
+        AND week = ${week}
+        AND play_type = 'pass'
+        AND passer_player_id IS NOT NULL
+      GROUP BY passer_player_id
+    `);
+
+    for (const row of result.rows as any[]) {
+      qbStats.set(row.passer_player_id, {
+        dropbacks: Number(row.dropbacks) || 0,
+        cpoe: row.avg_cpoe !== null ? Number(row.avg_cpoe) : null,
+        sacks: Number(row.sacks) || 0,
+        qbHits: Number(row.qb_hits) || 0,
+        scrambles: Number(row.scrambles) || 0,
+        passFirstDowns: Number(row.pass_first_downs) || 0,
+        deepPassAttempts: Number(row.deep_pass_attempts) || 0,
+        totalAirYards: Number(row.total_air_yards) || 0,
+      });
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch QB play-by-play stats for week ${week}:`, e);
+  }
+
+  return qbStats;
+}
+
+/**
+ * Get route alignment data from player_usage table
+ */
+async function getPlayerUsageStats(season: number, week: number): Promise<Map<string, { slotRate: number | null; inlineRate: number | null }>> {
+  const usageStats = new Map<string, { slotRate: number | null; inlineRate: number | null }>();
+
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        player_id,
+        alignment_slot_pct as slot_rate,
+        CASE
+          WHEN routes_total > 0 THEN (routes_inline::float / routes_total) * 100
+          ELSE NULL
+        END as inline_rate
+      FROM player_usage
+      WHERE season = ${season} AND week = ${week}
+    `);
+
+    for (const row of result.rows as any[]) {
+      usageStats.set(row.player_id, {
+        slotRate: row.slot_rate !== null ? Number(row.slot_rate) : null,
+        inlineRate: row.inline_rate !== null ? Number(row.inline_rate) : null,
+      });
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch player_usage stats for week ${week}`);
+  }
+
+  return usageStats;
+}
+
+/**
+ * Get team air yards totals for WOPR calculation
+ */
+async function getTeamAirYards(season: number, week: number): Promise<Map<string, number>> {
+  const teamAirYards = new Map<string, number>();
+
+  try {
+    const result = await db.execute(sql`
+      SELECT team, SUM(air_yards) as total_air_yards
+      FROM silver_player_weekly_stats
+      WHERE season = ${season} AND week = ${week} AND team IS NOT NULL
+      GROUP BY team
+    `);
+
+    for (const row of result.rows as any[]) {
+      teamAirYards.set(row.team, Number(row.total_air_yards) || 0);
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch team air yards for week ${week}`);
+  }
+
+  return teamAirYards;
+}
+
 async function transformWeek(season: number, week: number): Promise<GoldPlayerWeek[]> {
   console.log(`  Transforming week ${week}...`);
 
@@ -149,6 +393,11 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
 
   const teamTotals = await getTeamTotals(season, week);
   const snapCounts = await getSnapCounts(season, week);
+  const weeklySnapRoutes = await getWeeklyStatsSnapRoutes(season, week);
+  const { rushStats, recStats } = await getPlayByPlayStats(season, week);
+  const qbStats = await getQbPlayByPlayStats(season, week);
+  const playerUsageStats = await getPlayerUsageStats(season, week);
+  const teamAirYards = await getTeamAirYards(season, week);
 
   // Calculate team snap totals
   const teamSnapTotals = new Map<string, number>();
@@ -177,9 +426,10 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const passingTds = Number(row.passing_tds) || 0;
     const interceptions = Number(row.interceptions) || 0;
 
-    // Get snap data if available (match by player name since snap counts use name not ID)
-    const snapData = snapCounts.get(row.player_name);
-    const snaps = snapData?.snaps ?? null;
+    // Get snap/route data - prefer weekly_stats (has accurate data) over Silver layer
+    const weeklyData = weeklySnapRoutes.get(row.player_id);
+    const snaps = weeklyData?.snaps ?? (row.snaps !== null ? Number(row.snaps) : null);
+    const silverRoutes = weeklyData?.routes ?? (row.routes !== null ? Number(row.routes) : null);
 
     // Calculate derived metrics
     const teamTargets = teamTotals.get(row.team)?.targets || 0;
@@ -191,8 +441,8 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     // ADOT (Average Depth of Target)
     const adot = targets > 0 ? airYards / targets : null;
 
-    // Route estimation (use targets as proxy if no route data)
-    const routes = snaps !== null ? Math.round(snaps * 0.7) : null; // Estimate 70% route rate
+    // Use routes from Silver layer (precomputed with position-specific rates)
+    const routes = silverRoutes;
     const routeRate = snaps !== null && snaps > 0 && routes !== null ? routes / snaps : null;
 
     // TPRR & YPRR
@@ -221,6 +471,56 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       recTds,
     });
 
+    // RB Rushing efficiency from play-by-play
+    const playerRushStats = rushStats.get(row.player_id);
+    const stuffed = playerRushStats?.stuffed || 0;
+    const rushFirstDowns = playerRushStats?.firstDowns || 0;
+    const rzRushAttempts = playerRushStats?.rzAttempts || 0;
+    const stuffRate = rushAttempts > 0 ? stuffed / rushAttempts : null;
+    const rushFirstDownRate = rushAttempts > 0 ? rushFirstDowns / rushAttempts : null;
+
+    // RB Receiving efficiency
+    const playerRecStats = recStats.get(row.player_id);
+    const recFirstDowns = playerRecStats?.firstDowns || 0;
+    const yacPerRec = receptions > 0 ? yac / receptions : null;
+    const firstDownsPerRoute = routes !== null && routes > 0 ? recFirstDowns / routes : null;
+    const fptsPerRoute = routes !== null && routes > 0 ? fpts.ppr / routes : null;
+
+    // QB Efficiency from play-by-play
+    const playerQbStats = qbStats.get(row.player_id);
+    const passAttempts = Number(row.pass_attempts) || 0;
+    const dropbacks = playerQbStats?.dropbacks || passAttempts;
+    const cpoe = playerQbStats?.cpoe ?? null;
+    const sacks = playerQbStats?.sacks || 0;
+    const sackRate = dropbacks > 0 ? sacks / dropbacks : null;
+    const qbHits = playerQbStats?.qbHits || 0;
+    const qbHitRate = dropbacks > 0 ? qbHits / dropbacks : null;
+    const scrambles = playerQbStats?.scrambles || 0;
+    const passFirstDowns = playerQbStats?.passFirstDowns || 0;
+    const passFirstDownRate = passAttempts > 0 ? passFirstDowns / passAttempts : null;
+    const deepPassAttempts = playerQbStats?.deepPassAttempts || 0;
+    const deepPassRate = passAttempts > 0 ? deepPassAttempts / passAttempts : null;
+    const passAdot = passAttempts > 0 && playerQbStats?.totalAirYards
+      ? playerQbStats.totalAirYards / passAttempts
+      : null;
+
+    // WR/TE Efficiency
+    const catchRate = targets > 0 ? receptions / targets : null;
+    const yardsPerTarget = targets > 0 ? recYards / targets : null;
+    const racr = airYards > 0 ? recYards / airYards : null; // Receiver Air Conversion Ratio
+
+    // WOPR = (target share × 1.5) + (air yards share × 0.7)
+    const teamTotalAirYards = row.team ? teamAirYards.get(row.team) : null;
+    const airYardsShare = teamTotalAirYards && teamTotalAirYards > 0 ? airYards / teamTotalAirYards : null;
+    const wopr = targetShare !== null && airYardsShare !== null
+      ? (targetShare * 1.5) + (airYardsShare * 0.7)
+      : null;
+
+    // Route alignment from player_usage
+    const usageData = playerUsageStats.get(row.player_id);
+    const slotRate = usageData?.slotRate ?? null;
+    const inlineRate = usageData?.inlineRate ?? null;
+
     goldRecords.push({
       season,
       week,
@@ -248,6 +548,37 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       rushTds,
       yardsPerCarry,
       rushEpaPerPlay,
+      // RB Rushing efficiency
+      stuffed,
+      stuffRate,
+      rushFirstDowns,
+      rushFirstDownRate,
+      rzRushAttempts,
+      // RB Receiving efficiency
+      yacPerRec,
+      recFirstDowns,
+      firstDownsPerRoute,
+      fptsPerRoute,
+      // WR/TE Efficiency
+      catchRate,
+      yardsPerTarget,
+      racr,
+      wopr,
+      slotRate,
+      inlineRate,
+      // QB Efficiency
+      cpoe,
+      sacks,
+      sackRate,
+      qbHits,
+      qbHitRate,
+      scrambles,
+      passFirstDowns,
+      passFirstDownRate,
+      deepPassAttempts,
+      deepPassRate,
+      passAdot,
+      // Combined
       epaPerPlay,
       successRate: null, // Would need play-level data
       fptsStd: Math.round(fpts.std * 10) / 10,
@@ -286,6 +617,11 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         targets, target_share, receptions, rec_yards, rec_tds,
         adot, air_yards, yac, tprr, yprr, epa_per_target,
         rush_attempts, rush_yards, rush_tds, yards_per_carry, rush_epa_per_play,
+        stuffed, stuff_rate, rush_first_downs, rush_first_down_rate, rz_rush_attempts,
+        yac_per_rec, rec_first_downs, first_downs_per_route, fpts_per_route,
+        catch_rate, yards_per_target, racr, wopr, slot_rate, inline_rate,
+        cpoe, sacks, sack_rate, qb_hits, qb_hit_rate, scrambles,
+        pass_first_downs, pass_first_down_rate, deep_pass_attempts, deep_pass_rate, pass_adot,
         epa_per_play, success_rate, fpts_std, fpts_half, fpts_ppr
       ) VALUES (
         ${snapshotId}, ${rec.season}, ${rec.week}, ${rec.playerId}, ${rec.playerName}, ${rec.teamId}, ${rec.position},
@@ -293,6 +629,11 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.targets}, ${rec.targetShare}, ${rec.receptions}, ${rec.recYards}, ${rec.recTds},
         ${rec.adot}, ${rec.airYards}, ${rec.yac}, ${rec.tprr}, ${rec.yprr}, ${rec.epaPerTarget},
         ${rec.rushAttempts}, ${rec.rushYards}, ${rec.rushTds}, ${rec.yardsPerCarry}, ${rec.rushEpaPerPlay},
+        ${rec.stuffed}, ${rec.stuffRate}, ${rec.rushFirstDowns}, ${rec.rushFirstDownRate}, ${rec.rzRushAttempts},
+        ${rec.yacPerRec}, ${rec.recFirstDowns}, ${rec.firstDownsPerRoute}, ${rec.fptsPerRoute},
+        ${rec.catchRate}, ${rec.yardsPerTarget}, ${rec.racr}, ${rec.wopr}, ${rec.slotRate}, ${rec.inlineRate},
+        ${rec.cpoe}, ${rec.sacks}, ${rec.sackRate}, ${rec.qbHits}, ${rec.qbHitRate}, ${rec.scrambles},
+        ${rec.passFirstDowns}, ${rec.passFirstDownRate}, ${rec.deepPassAttempts}, ${rec.deepPassRate}, ${rec.passAdot},
         ${rec.epaPerPlay}, ${rec.successRate}, ${rec.fptsStd}, ${rec.fptsHalf}, ${rec.fptsPpr}
       )
     `);

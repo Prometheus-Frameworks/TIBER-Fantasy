@@ -2449,7 +2449,16 @@ export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
   rushingYards: integer("rushing_yards").default(0),
   rushingTds: integer("rushing_tds").default(0),
   rushingEpa: real("rushing_epa"),
-  
+
+  // Efficiency metrics
+  stuffed: integer("stuffed").default(0),           // TFL count
+  firstDownsRush: integer("first_downs_rush").default(0),
+  firstDownsRec: integer("first_downs_rec").default(0),
+
+  // Red zone metrics
+  rzRushAtt: integer("rz_rush_att").default(0),
+  rzTargets: integer("rz_targets").default(0),
+
   updatedAt: timestamp("updated_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
@@ -4835,14 +4844,48 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   epaPerPlay: real("epa_per_play"),
   epaPerTarget: real("epa_per_target"),
   successRate: real("success_rate"),
-  
+
   // Rushing metrics
   rushAttempts: integer("rush_attempts").default(0),
   rushYards: integer("rush_yards").default(0),
   rushTds: integer("rush_tds").default(0),
   yardsPerCarry: real("yards_per_carry"),
   rushEpaPerPlay: real("rush_epa_per_play"),
-  
+
+  // RB Rushing efficiency (from play-by-play)
+  stuffed: integer("stuffed").default(0),           // TFL count
+  stuffRate: real("stuff_rate"),                    // TFL / rush_attempts
+  rushFirstDowns: integer("rush_first_downs").default(0),
+  rushFirstDownRate: real("rush_first_down_rate"),  // rush_first_downs / rush_attempts
+  rzRushAttempts: integer("rz_rush_attempts").default(0), // Red zone rushes
+
+  // RB Receiving efficiency
+  yacPerRec: real("yac_per_rec"),                   // yac / receptions
+  recFirstDowns: integer("rec_first_downs").default(0),
+  firstDownsPerRoute: real("first_downs_per_route"), // rec_first_downs / routes
+  fptsPerRoute: real("fpts_per_route"),             // fpts_ppr / routes
+
+  // WR/TE Efficiency
+  catchRate: real("catch_rate"),                    // receptions / targets
+  yardsPerTarget: real("yards_per_target"),         // rec_yards / targets
+  racr: real("racr"),                               // Receiver Air Conversion Ratio (rec_yards / air_yards)
+  wopr: real("wopr"),                               // Weighted Opportunity Rating
+  slotRate: real("slot_rate"),                      // % routes from slot (from player_usage)
+  inlineRate: real("inline_rate"),                  // % routes from inline (TE-specific)
+
+  // QB Efficiency (from play-by-play)
+  cpoe: real("cpoe"),                               // Completion % over expected
+  sacks: integer("sacks").default(0),
+  sackRate: real("sack_rate"),                      // sacks / dropbacks
+  qbHits: integer("qb_hits").default(0),
+  qbHitRate: real("qb_hit_rate"),                   // qb_hits / dropbacks (pressure proxy)
+  scrambles: integer("scrambles").default(0),
+  passFirstDowns: integer("pass_first_downs").default(0),
+  passFirstDownRate: real("pass_first_down_rate"),  // pass_first_downs / pass_attempts
+  deepPassAttempts: integer("deep_pass_attempts").default(0), // passes with air_yards > 20
+  deepPassRate: real("deep_pass_rate"),             // deep_pass_attempts / pass_attempts
+  passAdot: real("pass_adot"),                      // avg depth of target (passer)
+
   // Fantasy points
   fptsStd: real("fpts_std"),
   fptsHalf: real("fpts_half"),

@@ -52,6 +52,15 @@ interface PlayerWeekStats {
   rushingYards: number;
   rushingTds: number;
   rushingEpa: number;
+
+  // Efficiency metrics
+  stuffed: number;        // TFL count
+  firstDownsRush: number;
+  firstDownsRec: number;
+
+  // Red zone metrics
+  rzRushAtt: number;
+  rzTargets: number;
 }
 
 async function getAvailableWeeks(season: number): Promise<number[]> {
@@ -99,7 +108,9 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
       COUNT(*) FILTER (WHERE touchdown = true AND complete_pass = true) as receiving_tds,
       COALESCE(SUM(epa), 0) as receiving_epa,
       COALESCE(SUM(air_yards), 0) as air_yards,
-      COALESCE(SUM(yards_after_catch), 0) as yac
+      COALESCE(SUM(yards_after_catch), 0) as yac,
+      COUNT(*) FILTER (WHERE first_down_pass = true) as first_downs_rec,
+      COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 20) as rz_targets
     FROM bronze_nflfastr_plays
     WHERE season = ${season}
       AND week = ${week}
@@ -117,7 +128,10 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
       COUNT(*) as rush_attempts,
       COALESCE(SUM(yards_gained), 0) as rushing_yards,
       COUNT(*) FILTER (WHERE touchdown = true) as rushing_tds,
-      COALESCE(SUM(epa), 0) as rushing_epa
+      COALESCE(SUM(epa), 0) as rushing_epa,
+      COUNT(*) FILTER (WHERE (raw_data->>'tackled_for_loss')::numeric = 1) as stuffed,
+      COUNT(*) FILTER (WHERE first_down_rush = true) as first_downs_rush,
+      COUNT(*) FILTER (WHERE (raw_data->>'yardline_100')::numeric <= 20) as rz_rush_att
     FROM bronze_nflfastr_plays
     WHERE season = ${season}
       AND week = ${week}
