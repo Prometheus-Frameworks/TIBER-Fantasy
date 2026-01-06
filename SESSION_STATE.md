@@ -85,7 +85,7 @@
 ## 📋 Next Steps
 
 **Immediate**:
-1. ⏳ Run full Gold ETL backfill (Weeks 1-17) to populate Phase 2A data for all weeks
+1. ✅ Run full Gold ETL backfill (Weeks 1-17) to populate Phase 2A data for all weeks - DONE
 2. ⏳ Update QA script to validate Phase 2A metrics
 3. ⏳ Consider UI updates to display RZ/3rd down metrics in Data Lab
 
