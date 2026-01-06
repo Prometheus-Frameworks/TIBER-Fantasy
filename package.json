@@ -16,7 +16,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "seed:metric-matrix": "tsx server/scripts/seedMetricMatrix.ts",
-    "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts"
+    "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts",
+    "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

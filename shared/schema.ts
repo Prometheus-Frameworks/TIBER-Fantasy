@@ -4864,6 +4864,17 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   rushFirstDownRate: real("rush_first_down_rate"),  // rush_first_downs / rush_attempts
   rzRushAttempts: integer("rz_rush_attempts").default(0), // Red zone rushes
 
+  // RB Run Gap Distribution
+  insideRunRate: real("inside_run_rate"),           // % runs through guard/tackle (not end)
+  outsideRunRate: real("outside_run_rate"),         // % runs to the end/outside
+  insideSuccessRate: real("inside_success_rate"),   // Success rate on inside runs
+  outsideSuccessRate: real("outside_success_rate"), // Success rate on outside runs
+
+  // RB Run Location Distribution
+  leftRunRate: real("left_run_rate"),               // % runs to the left
+  middleRunRate: real("middle_run_rate"),           // % runs up the middle
+  rightRunRate: real("right_run_rate"),             // % runs to the right
+
   // RB Receiving efficiency
   yacPerRec: real("yac_per_rec"),                   // yac / receptions
   recFirstDowns: integer("rec_first_downs").default(0),
@@ -4879,6 +4890,16 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   inlineRate: real("inline_rate"),                  // % routes from inline (TE-specific)
   avgAirEpa: real("avg_air_epa"),                   // Avg EPA of targets before catch (target quality)
   avgCompAirEpa: real("avg_comp_air_epa"),          // Avg air EPA on completions only
+
+  // WR/TE Target Depth Distribution
+  deepTargetRate: real("deep_target_rate"),         // % targets with air_yards >= 20
+  intermediateTargetRate: real("intermediate_target_rate"), // % targets with air_yards 10-19
+  shortTargetRate: real("short_target_rate"),       // % targets with air_yards < 10
+
+  // WR/TE Target Location Distribution
+  leftTargetRate: real("left_target_rate"),         // % targets to the left
+  middleTargetRate: real("middle_target_rate"),     // % targets to the middle
+  rightTargetRate: real("right_target_rate"),       // % targets to the right
 
   // QB Efficiency (from play-by-play)
   cpoe: real("cpoe"),                               // Completion % over expected
@@ -4896,6 +4917,47 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   noHuddleRate: real("no_huddle_rate"),             // % of plays in no-huddle
   shotgunSuccessRate: real("shotgun_success_rate"), // Success rate from shotgun
   underCenterSuccessRate: real("under_center_success_rate"), // Success rate under center
+
+  // ===== PHASE 2A: RED ZONE EFFICIENCY =====
+  // All Skill Positions
+  rzSnaps: integer("rz_snaps").default(0),          // Snaps inside opponent 20-yard line
+  rzSnapRate: real("rz_snap_rate"),                 // % of team's RZ snaps player was on field
+  rzSuccessRate: real("rz_success_rate"),           // Success rate on RZ plays
+
+  // QB Red Zone
+  rzPassAttempts: integer("rz_pass_attempts").default(0), // Pass attempts in RZ
+  rzPassTds: integer("rz_pass_tds").default(0),     // Passing TDs in RZ
+  rzTdRate: real("rz_td_rate"),                     // TD rate in RZ (TDs / attempts)
+  rzInterceptions: integer("rz_interceptions").default(0), // INTs in RZ (costly mistakes)
+
+  // RB Red Zone
+  rzRushTds: integer("rz_rush_tds").default(0),     // Rush TDs in RZ
+  rzRushTdRate: real("rz_rush_td_rate"),            // TD rate on RZ rushes
+  rzTargets: integer("rz_targets").default(0),      // Targets in RZ (RB/WR/TE)
+  rzReceptions: integer("rz_receptions").default(0), // Receptions in RZ (RB/WR/TE)
+  rzRecTds: integer("rz_rec_tds").default(0),       // Receiving TDs in RZ (RB/WR/TE)
+
+  // WR/TE Red Zone
+  rzTargetShare: real("rz_target_share"),           // % of team's RZ targets
+  rzCatchRate: real("rz_catch_rate"),               // Catch rate in RZ (high pressure)
+
+  // ===== PHASE 2A: DOWN & DISTANCE CONTEXT =====
+  // All Skill Positions
+  thirdDownSnaps: integer("third_down_snaps").default(0), // Snaps on 3rd down
+  thirdDownConversions: integer("third_down_conversions").default(0), // 3rd downs converted (first down or TD)
+  thirdDownConversionRate: real("third_down_conversion_rate"), // Conversion rate on 3rd down
+  earlyDownSuccessRate: real("early_down_success_rate"), // Success rate on 1st/2nd down
+  lateDownSuccessRate: real("late_down_success_rate"),   // Success rate on 3rd/4th down
+
+  // RB Short Yardage
+  shortYardageAttempts: integer("short_yardage_attempts").default(0), // Rush attempts on 3rd/4th & <= 2 yards to go
+  shortYardageConversions: integer("short_yardage_conversions").default(0), // Conversions on short yardage
+  shortYardageRate: real("short_yardage_rate"),     // Conversion rate in short yardage
+
+  // WR/TE Third Down
+  thirdDownTargets: integer("third_down_targets").default(0), // Targets on 3rd down
+  thirdDownReceptions: integer("third_down_receptions").default(0), // Receptions on 3rd down
+  thirdDownRecConversions: integer("third_down_rec_conversions").default(0), // 3rd down targets that resulted in conversions
 
   // Fantasy points
   fptsStd: real("fpts_std"),

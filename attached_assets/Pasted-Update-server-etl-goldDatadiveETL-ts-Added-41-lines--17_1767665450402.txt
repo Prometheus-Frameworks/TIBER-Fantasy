@@ -1,0 +1,49 @@
+Update(server/etl/goldDatadiveETL.ts)
+  ⎿  Added 41 lines                                                                                                                                  
+      124    yacOverExpected: number | null;                                                                                                         
+      125    xYacSuccessRate: number | null;                                                                                                         
+      126                                                                                                                                            
+      127 +  // ===== PHASE 2A: RED ZONE EFFICIENCY =====                                                                                            
+      128 +  // All Skill Positions                                                                                                                  
+      129 +  rzSnaps: number;                                                                                                                        
+      130 +  rzSnapRate: number | null;                                                                                                              
+      131 +  rzSuccessRate: number | null;                                                                                                           
+      132 +                                                                                                                                          
+      133 +  // QB Red Zone                                                                                                                          
+      134 +  rzPassAttempts: number;                                                                                                                 
+      135 +  rzPassTds: number;                                                                                                                      
+      136 +  rzTdRate: number | null;                                                                                                                
+      137 +  rzInterceptions: number;                                                                                                                
+      138 +                                                                                                                                          
+      139 +  // RB Red Zone                                                                                                                          
+      140 +  rzRushTds: number;                                                                                                                      
+      141 +  rzRushTdRate: number | null;                                                                                                            
+      142 +  rzTargets: number;                                                                                                                      
+      143 +  rzReceptions: number;                                                                                                                   
+      144 +  rzRecTds: number;                                                                                                                       
+      145 +                                                                                                                                          
+      146 +  // WR/TE Red Zone                                                                                                                       
+      147 +  rzTargetShare: number | null;                                                                                                           
+      148 +  rzCatchRate: number | null;                                                                                                             
+      149 +                                                                                                                                          
+      150 +  // ===== PHASE 2A: DOWN & DISTANCE CONTEXT =====                                                                                        
+      151 +  // All Skill Positions                                                                                                                  
+      152 +  thirdDownSnaps: number;                                                                                                                 
+      153 +  thirdDownConversions: number;                                                                                                           
+      154 +  thirdDownConversionRate: number | null;                                                                                                 
+      155 +  earlyDownSuccessRate: number | null;                                                                                                    
+      156 +  lateDownSuccessRate: number | null;                                                                                                     
+      157 +                                                                                                                                          
+      158 +  // RB Short Yardage                                                                                                                     
+      159 +  shortYardageAttempts: number;                                                                                                           
+      160 +  shortYardageConversions: number;                                                                                                        
+      161 +  shortYardageRate: number | null;                                                                                                        
+      162 +                                                                                                                                          
+      163 +  // WR/TE Third Down                                                                                                                     
+      164 +  thirdDownTargets: number;                                                                                                               
+      165 +  thirdDownReceptions: number;                                                                                                            
+      166 +  thirdDownRecConversions: number;                                                                                                        
+      167 +                                                                                                                                          
+      168    // Fantasy                                                                                                                              
+      169    fptsStd: number;                                                                                                                        
+      170    fptsHalf: number;                                        

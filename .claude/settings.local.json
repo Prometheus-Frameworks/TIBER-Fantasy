@@ -23,7 +23,10 @@
       "Bash(__NEW_LINE__ echo \"=== Week 13 ===\")",
       "Bash(__NEW_LINE__ echo \"=== Week 14 ===\")",
       "Bash(__NEW_LINE__ echo \"=== Week 17 ===\")",
-      "Bash(for week in 14 15 16 17)"
+      "Bash(for week in 14 15 16 17)",
+      "Bash(npm run qa:gold:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 30 npm run:*)"
     ]
   }
 }
