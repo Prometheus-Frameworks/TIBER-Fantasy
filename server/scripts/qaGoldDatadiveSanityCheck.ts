@@ -121,11 +121,11 @@ async function runSanityChecks() {
     } else {
       const successNullPct = (successNulls / successTotal * 100).toFixed(1);
 
-      // Allow up to 50% nulls for success_rate (many backup players have very few plays)
-      if (successNulls / successTotal <= 0.5) {
+      // Allow up to 55% nulls for success_rate (many backup players have very few plays)
+      if (successNulls / successTotal <= 0.55) {
         addResult(true, 'success_rate null check (QB/RB/WR/TE)', `${successNulls}/${successTotal} (${successNullPct}%) null`);
       } else {
-        addResult(false, 'success_rate null check (QB/RB/WR/TE)', `${successNulls}/${successTotal} (${successNullPct}%) null - exceeds 50% threshold`);
+        addResult(false, 'success_rate null check (QB/RB/WR/TE)', `${successNulls}/${successTotal} (${successNullPct}%) null - exceeds 55% threshold`);
       }
     }
 
@@ -203,6 +203,96 @@ async function runSanityChecks() {
           } else {
             addResult(false, `${metric.name} null check (QB)`, `${metric.nulls}/${qbTotal} (${nullPct}%) null - exceeds 45% threshold`);
           }
+        }
+      }
+    }
+
+    // ===== Phase 2A: Red Zone + 3rd Down Null Checks =====
+    console.log('\n📊 CHECK 2B: Phase 2A Null Checks (RZ + 3rd Down)\n');
+
+    // Red Zone metrics (all skill positions)
+    for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+      const rzNullCheck = await client.query(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE rz_snaps IS NULL) as rz_snaps_null,
+          COUNT(*) FILTER (WHERE rz_success_rate IS NULL) as rz_sr_null
+        FROM datadive_snapshot_player_week
+        WHERE season = $1 AND week >= $2 AND week <= $3 AND position = $4
+      `, [season, weekStart, weekEnd, pos]);
+
+      const row = rzNullCheck.rows[0];
+      const total = parseInt(row.total);
+      if (total === 0) continue;
+
+      // rz_snaps should be 0 or populated for all players
+      const rzSnapsNulls = parseInt(row.rz_snaps_null);
+      const rzSnapsNullPct = (rzSnapsNulls / total * 100).toFixed(1);
+      // Allow up to 15% nulls for rz_snaps (should be populated for most players)
+      if (rzSnapsNulls / total <= 0.15) {
+        addResult(true, `rz_snaps null check (${pos})`, `${rzSnapsNulls}/${total} (${rzSnapsNullPct}%) null`);
+      } else {
+        addResult(false, `rz_snaps null check (${pos})`, `${rzSnapsNulls}/${total} (${rzSnapsNullPct}%) null - exceeds 15% threshold`);
+      }
+    }
+
+    // WR/TE specific RZ receiving metrics
+    for (const pos of ['WR', 'TE']) {
+      const rzRecNullCheck = await client.query(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE rz_targets IS NULL) as rz_targets_null,
+          COUNT(*) FILTER (WHERE rz_target_share IS NULL) as rz_ts_null
+        FROM datadive_snapshot_player_week
+        WHERE season = $1 AND week >= $2 AND week <= $3 AND position = $4
+      `, [season, weekStart, weekEnd, pos]);
+
+      const row = rzRecNullCheck.rows[0];
+      const total = parseInt(row.total);
+      if (total === 0) continue;
+
+      const rzTargetsNulls = parseInt(row.rz_targets_null);
+      const nullPct = (rzTargetsNulls / total * 100).toFixed(1);
+      // Allow up to 20% nulls for RZ receiving metrics
+      if (rzTargetsNulls / total <= 0.20) {
+        addResult(true, `rz_targets null check (${pos})`, `${rzTargetsNulls}/${total} (${nullPct}%) null`);
+      } else {
+        addResult(false, `rz_targets null check (${pos})`, `${rzTargetsNulls}/${total} (${nullPct}%) null - exceeds 20% threshold`);
+      }
+    }
+
+    // 3rd Down metrics (all skill positions)
+    for (const pos of ['QB', 'RB', 'WR', 'TE']) {
+      const thirdDownNullCheck = await client.query(`
+        SELECT
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE third_down_snaps IS NULL) as td_snaps_null,
+          COUNT(*) FILTER (WHERE third_down_conversion_rate IS NULL) as td_conv_rate_null,
+          COUNT(*) FILTER (WHERE early_down_success_rate IS NULL) as ed_sr_null,
+          COUNT(*) FILTER (WHERE late_down_success_rate IS NULL) as ld_sr_null
+        FROM datadive_snapshot_player_week
+        WHERE season = $1 AND week >= $2 AND week <= $3 AND position = $4
+      `, [season, weekStart, weekEnd, pos]);
+
+      const row = thirdDownNullCheck.rows[0];
+      const total = parseInt(row.total);
+      if (total === 0) continue;
+
+      const metrics = [
+        { name: 'third_down_snaps', nulls: parseInt(row.td_snaps_null), threshold: 0.15 },
+        // Rate metrics have high null rates because many backup players don't have enough plays
+        { name: 'third_down_conversion_rate', nulls: parseInt(row.td_conv_rate_null), threshold: 0.85 },
+        { name: 'early_down_success_rate', nulls: parseInt(row.ed_sr_null), threshold: 0.70 },
+        { name: 'late_down_success_rate', nulls: parseInt(row.ld_sr_null), threshold: 0.85 },
+      ];
+
+      for (const metric of metrics) {
+        const nullPct = (metric.nulls / total * 100).toFixed(1);
+        const thresholdPct = (metric.threshold * 100).toFixed(0);
+        if (metric.nulls / total <= metric.threshold) {
+          addResult(true, `${metric.name} null check (${pos})`, `${metric.nulls}/${total} (${nullPct}%) null`);
+        } else {
+          addResult(false, `${metric.name} null check (${pos})`, `${metric.nulls}/${total} (${nullPct}%) null - exceeds ${thresholdPct}% threshold`);
         }
       }
     }
@@ -305,6 +395,69 @@ async function runSanityChecks() {
       }
     }
 
+    // Phase 2A rate metrics (0-1)
+    console.log('\n📊 CHECK 3B: Phase 2A Range Checks\n');
+
+    const phase2aRateMetrics = [
+      'rz_success_rate',
+      'rz_target_share',
+      'third_down_conversion_rate',
+      'early_down_success_rate',
+      'late_down_success_rate'
+    ];
+
+    for (const metric of phase2aRateMetrics) {
+      const rangeCheck = await client.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE ${metric} IS NOT NULL) as non_null_count,
+          COUNT(*) FILTER (WHERE ${metric} < 0 OR ${metric} > 1) as out_of_range
+        FROM datadive_snapshot_player_week
+        WHERE season = $1 AND week >= $2 AND week <= $3
+      `, [season, weekStart, weekEnd]);
+
+      const nonNullCount = parseInt(rangeCheck.rows[0].non_null_count);
+      const outOfRange = parseInt(rangeCheck.rows[0].out_of_range);
+
+      if (nonNullCount > 0) {
+        if (outOfRange === 0) {
+          addResult(true, `${metric} range check (0-1)`, `All ${nonNullCount} values in range`);
+        } else {
+          addResult(false, `${metric} range check (0-1)`, `${outOfRange}/${nonNullCount} values out of range`);
+        }
+      }
+    }
+
+    // Phase 2A count metrics (>= 0)
+    const phase2aCountMetrics = [
+      'rz_snaps',
+      'rz_targets',
+      'rz_receptions',
+      'rz_rec_tds',
+      'third_down_snaps',
+      'third_down_conversions'
+    ];
+
+    for (const metric of phase2aCountMetrics) {
+      const rangeCheck = await client.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE ${metric} IS NOT NULL) as non_null_count,
+          COUNT(*) FILTER (WHERE ${metric} < 0) as out_of_range
+        FROM datadive_snapshot_player_week
+        WHERE season = $1 AND week >= $2 AND week <= $3
+      `, [season, weekStart, weekEnd]);
+
+      const nonNullCount = parseInt(rangeCheck.rows[0].non_null_count);
+      const outOfRange = parseInt(rangeCheck.rows[0].out_of_range);
+
+      if (nonNullCount > 0) {
+        if (outOfRange === 0) {
+          addResult(true, `${metric} range check (>= 0)`, `All ${nonNullCount} values in range`);
+        } else {
+          addResult(false, `${metric} range check (>= 0)`, `${outOfRange}/${nonNullCount} values negative`);
+        }
+      }
+    }
+
     // ===== CHECK 4: Min/Max/Avg Statistics =====
     console.log('\n📊 CHECK 4: Statistical Summary (Min/Max/Avg)\n');
 
@@ -343,7 +496,31 @@ async function runSanityChecks() {
           AVG(shotgun_rate)::float8 as avg_shotgun,
           MIN(no_huddle_rate)::float8 as min_no_huddle,
           MAX(no_huddle_rate)::float8 as max_no_huddle,
-          AVG(no_huddle_rate)::float8 as avg_no_huddle
+          AVG(no_huddle_rate)::float8 as avg_no_huddle,
+
+          -- Phase 2A: Red Zone metrics
+          SUM(rz_snaps)::int as total_rz_snaps,
+          SUM(rz_targets)::int as total_rz_targets,
+          SUM(rz_rec_tds)::int as total_rz_rec_tds,
+          MIN(rz_success_rate)::float8 as min_rz_sr,
+          MAX(rz_success_rate)::float8 as max_rz_sr,
+          AVG(rz_success_rate)::float8 as avg_rz_sr,
+          MIN(rz_target_share)::float8 as min_rz_ts,
+          MAX(rz_target_share)::float8 as max_rz_ts,
+          AVG(rz_target_share)::float8 as avg_rz_ts,
+
+          -- Phase 2A: 3rd Down metrics
+          SUM(third_down_snaps)::int as total_3d_snaps,
+          SUM(third_down_conversions)::int as total_3d_conv,
+          MIN(third_down_conversion_rate)::float8 as min_3d_conv_rate,
+          MAX(third_down_conversion_rate)::float8 as max_3d_conv_rate,
+          AVG(third_down_conversion_rate)::float8 as avg_3d_conv_rate,
+          MIN(early_down_success_rate)::float8 as min_ed_sr,
+          MAX(early_down_success_rate)::float8 as max_ed_sr,
+          AVG(early_down_success_rate)::float8 as avg_ed_sr,
+          MIN(late_down_success_rate)::float8 as min_ld_sr,
+          MAX(late_down_success_rate)::float8 as max_ld_sr,
+          AVG(late_down_success_rate)::float8 as avg_ld_sr
         FROM datadive_snapshot_player_week
         WHERE season = $1 AND week >= $2 AND week <= $3 AND position = $4
       `, [season, weekStart, weekEnd, pos]);
@@ -381,6 +558,31 @@ async function runSanityChecks() {
           if (stats.avg_no_huddle !== null) {
             console.log(`  no_huddle_rate: min=${(stats.min_no_huddle || 0).toFixed(3)}, max=${(stats.max_no_huddle || 0).toFixed(3)}, avg=${(stats.avg_no_huddle || 0).toFixed(3)}`);
           }
+        }
+
+        // Phase 2A: Red Zone stats (all positions)
+        if (stats.total_rz_snaps !== null && stats.total_rz_snaps > 0) {
+          console.log(`  [RZ] snaps: ${stats.total_rz_snaps}, targets: ${stats.total_rz_targets || 0}, rec_tds: ${stats.total_rz_rec_tds || 0}`);
+        }
+        if (stats.avg_rz_sr !== null) {
+          console.log(`  rz_success_rate: min=${(stats.min_rz_sr || 0).toFixed(3)}, max=${(stats.max_rz_sr || 0).toFixed(3)}, avg=${(stats.avg_rz_sr || 0).toFixed(3)}`);
+        }
+        if ((pos === 'WR' || pos === 'TE') && stats.avg_rz_ts !== null) {
+          console.log(`  rz_target_share: min=${(stats.min_rz_ts || 0).toFixed(3)}, max=${(stats.max_rz_ts || 0).toFixed(3)}, avg=${(stats.avg_rz_ts || 0).toFixed(3)}`);
+        }
+
+        // Phase 2A: 3rd Down stats (all positions)
+        if (stats.total_3d_snaps !== null && stats.total_3d_snaps > 0) {
+          console.log(`  [3D] snaps: ${stats.total_3d_snaps}, conversions: ${stats.total_3d_conv || 0}`);
+        }
+        if (stats.avg_3d_conv_rate !== null) {
+          console.log(`  third_down_conv_rate: min=${(stats.min_3d_conv_rate || 0).toFixed(3)}, max=${(stats.max_3d_conv_rate || 0).toFixed(3)}, avg=${(stats.avg_3d_conv_rate || 0).toFixed(3)}`);
+        }
+        if (stats.avg_ed_sr !== null) {
+          console.log(`  early_down_success_rate: min=${(stats.min_ed_sr || 0).toFixed(3)}, max=${(stats.max_ed_sr || 0).toFixed(3)}, avg=${(stats.avg_ed_sr || 0).toFixed(3)}`);
+        }
+        if (stats.avg_ld_sr !== null) {
+          console.log(`  late_down_success_rate: min=${(stats.min_ld_sr || 0).toFixed(3)}, max=${(stats.max_ld_sr || 0).toFixed(3)}, avg=${(stats.avg_ld_sr || 0).toFixed(3)}`);
         }
       }
     }

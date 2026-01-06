@@ -7,6 +7,58 @@
 
 ## ✅ Just Completed (This Session)
 
+### ✅ Data Lab UI - FULL Gold Layer Integration
+
+**What was done**:
+1. ✅ Updated `PlayerWeekData` interface with ALL Gold layer fields (~70 fields total)
+   - Phase 1: xYAC, Run Gap/Location, Target Depth/Location, QB Formation
+   - Phase 2A: All RZ and 3rd Down metrics
+
+2. ✅ Added columns to Data Lab table (single week view):
+   - **RZ TD** (red) - Combined receiving + rushing TDs in red zone
+   - **3D%** (orange) - 3rd down conversion rate
+
+3. ✅ Added comprehensive PlayerDrawer sections:
+
+   **All Positions:**
+   - **xYAC Section** (teal): xYAC, YAC vs Expected, xYAC Beat%
+   - **Red Zone** (red): RZ Snaps, RZ Tgt, RZ Rec, RZ TDs, RZ Succ%, RZ Tgt Share
+   - **3rd Down / Situational** (orange): 3D Snaps, 3D Conv, 3D Conv%, Early Down%, Late Down%
+
+   **WR/TE Specific:**
+   - **Target Profile** (indigo): Deep%, Intermediate%, Short%, Catch%, RACR, WOPR, Slot%, Target EPA
+
+   **RB Specific:**
+   - **Rush Efficiency**: Stuffed, Stuff%, 1st Downs, 1D Rate
+   - **Run Profile** (lime): Inside%, Outside%, Inside Succ%, Outside Succ%, Left/Middle/Right%
+   - **Short Yardage** (amber): Attempts, Conversions, Conv%
+
+   **QB Specific:**
+   - **QB Profile** (violet): CPOE, Pass aDOT, Deep%, 1D Rate, Shotgun%, No Huddle%, Sack%, Scrambles
+
+4. ✅ Fixed pre-existing bug: removed undefined `fantasyMode` variable
+
+**Files Modified**:
+- `client/src/pages/TiberDataLab.tsx`
+
+---
+
+### ✅ QA Script Updated for Phase 2A Validation
+
+**What was done**:
+1. ✅ Added Phase 2A null rate checks (RZ + 3rd Down metrics)
+2. ✅ Added Phase 2A range checks (rate metrics 0-1, count metrics >= 0)
+3. ✅ Added Phase 2A statistical summary (min/max/avg for all positions)
+4. ✅ Adjusted null rate thresholds for rate metrics (backup players have sparse data)
+
+**QA Results** (Week 17, 2025):
+- 64 total checks, 100% passing
+- RZ metrics: 0% null rate on count columns (rz_snaps, rz_targets)
+- 3rd Down metrics: 0% null rate on count columns (third_down_snaps)
+- Rate metrics have expected null rates (60-82%) for backup players
+
+---
+
 ### ✅ VERIFIED: Phase 2A Complete - RZ + 3rd Down Metrics! 🎉
 
 **What was done**:
@@ -86,13 +138,13 @@
 
 **Immediate**:
 1. ✅ Run full Gold ETL backfill (Weeks 1-17) to populate Phase 2A data for all weeks - DONE
-2. ⏳ Update QA script to validate Phase 2A metrics
-3. ⏳ Consider UI updates to display RZ/3rd down metrics in Data Lab
+2. ✅ Update QA script to validate Phase 2A metrics - DONE
+3. ✅ UI updates to display RZ/3rd down metrics in Data Lab - DONE
 
 **Future**:
-4. Phase 2B: Game Script Context metrics
-5. Phase 2C: Two-Minute Drill metrics
-6. FORGE engine updates to incorporate situational metrics
+4. Phase 2B: Game Script Context metrics (score differential, leading/trailing, garbage time)
+5. Phase 2C: Two-Minute Drill metrics (hurry-up offense)
+6. FORGE engine updates to incorporate situational metrics into Alpha scores
 
 ---
 

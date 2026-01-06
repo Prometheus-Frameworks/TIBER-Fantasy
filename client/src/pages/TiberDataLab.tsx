@@ -49,10 +49,12 @@ interface PlayerWeekData {
   playerName: string;
   teamId: string | null;
   position: string | null;
+  // Usage
   snaps: number | null;
   snapShare: number | null;
   routes: number | null;
   routeRate: number | null;
+  // Receiving
   targets: number | null;
   targetShare: number | null;
   receptions: number | null;
@@ -61,19 +63,106 @@ interface PlayerWeekData {
   aDot: number | null;
   airYards: number | null;
   yac: number | null;
+  // Advanced efficiency
   tprr: number | null;
   yprr: number | null;
   epaPerPlay: number | null;
   epaPerTarget: number | null;
   successRate: number | null;
+  // xYAC metrics
+  xYac: number | null;
+  yacOverExpected: number | null;
+  xYacSuccessRate: number | null;
+  // Rushing
   rushAttempts: number | null;
   rushYards: number | null;
   rushTds: number | null;
   yardsPerCarry: number | null;
   rushEpaPerPlay: number | null;
+  // RB Rushing efficiency
+  stuffed: number | null;
+  stuffRate: number | null;
+  rushFirstDowns: number | null;
+  rushFirstDownRate: number | null;
+  // RB Run Gap Distribution
+  insideRunRate: number | null;
+  outsideRunRate: number | null;
+  insideSuccessRate: number | null;
+  outsideSuccessRate: number | null;
+  // RB Run Location Distribution
+  leftRunRate: number | null;
+  middleRunRate: number | null;
+  rightRunRate: number | null;
+  // RB Receiving efficiency
+  yacPerRec: number | null;
+  recFirstDowns: number | null;
+  firstDownsPerRoute: number | null;
+  fptsPerRoute: number | null;
+  // WR/TE Efficiency
+  catchRate: number | null;
+  yardsPerTarget: number | null;
+  racr: number | null;
+  wopr: number | null;
+  slotRate: number | null;
+  inlineRate: number | null;
+  avgAirEpa: number | null;
+  avgCompAirEpa: number | null;
+  // WR/TE Target Depth Distribution
+  deepTargetRate: number | null;
+  intermediateTargetRate: number | null;
+  shortTargetRate: number | null;
+  // WR/TE Target Location Distribution
+  leftTargetRate: number | null;
+  middleTargetRate: number | null;
+  rightTargetRate: number | null;
+  // QB Efficiency
+  cpoe: number | null;
+  sacks: number | null;
+  sackRate: number | null;
+  qbHits: number | null;
+  qbHitRate: number | null;
+  scrambles: number | null;
+  passFirstDowns: number | null;
+  passFirstDownRate: number | null;
+  deepPassAttempts: number | null;
+  deepPassRate: number | null;
+  passAdot: number | null;
+  shotgunRate: number | null;
+  noHuddleRate: number | null;
+  shotgunSuccessRate: number | null;
+  underCenterSuccessRate: number | null;
+  // Fantasy points
   fptsStd: number | null;
   fptsHalf: number | null;
   fptsPpr: number | null;
+  // Phase 2A: Red Zone metrics
+  rzSnaps: number | null;
+  rzSnapRate: number | null;
+  rzTargets: number | null;
+  rzReceptions: number | null;
+  rzRecTds: number | null;
+  rzSuccessRate: number | null;
+  rzTargetShare: number | null;
+  rzCatchRate: number | null;
+  rzRushAttempts: number | null;
+  rzRushTds: number | null;
+  rzRushTdRate: number | null;
+  rzPassAttempts: number | null;
+  rzPassTds: number | null;
+  rzTdRate: number | null;
+  rzInterceptions: number | null;
+  // Phase 2A: 3rd Down metrics
+  thirdDownSnaps: number | null;
+  thirdDownConversions: number | null;
+  thirdDownConversionRate: number | null;
+  earlyDownSuccessRate: number | null;
+  lateDownSuccessRate: number | null;
+  shortYardageAttempts: number | null;
+  shortYardageConversions: number | null;
+  shortYardageRate: number | null;
+  thirdDownTargets: number | null;
+  thirdDownReceptions: number | null;
+  thirdDownRecConversions: number | null;
 }
 
 interface SearchResponse {
@@ -284,6 +373,79 @@ function PlayerDrawer({
             </div>
           </div>
 
+          {/* xYAC Section - WR/TE/RB with receptions */}
+          {player.xYac !== null && (player.receptions || 0) > 0 && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-teal-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">Expected YAC</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="xYAC" value={player.xYac} format="decimal" />
+                  <StatCard label="YAC vs Exp" value={player.yacOverExpected} format="decimal" />
+                  <StatCard label="xYAC Beat%" value={player.xYacSuccessRate} format="pct" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* WR/TE Target Profile */}
+          {(player.position === 'WR' || player.position === 'TE') && (player.targets || 0) > 0 && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="h-4 w-4 text-indigo-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">Target Profile</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Deep%" value={player.deepTargetRate} format="pct" />
+                  <StatCard label="Interm%" value={player.intermediateTargetRate} format="pct" />
+                  <StatCard label="Short%" value={player.shortTargetRate} format="pct" />
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  <StatCard label="Catch%" value={player.catchRate} format="pct" />
+                  <StatCard label="RACR" value={player.racr} format="decimal" />
+                  <StatCard label="WOPR" value={player.wopr} format="decimal" />
+                  <StatCard label="Slot%" value={player.slotRate} format="pct" />
+                </div>
+                {player.avgAirEpa !== null && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <StatCard label="Tgt EPA" value={player.avgAirEpa} format="decimal" />
+                    <StatCard label="Comp Tgt EPA" value={player.avgCompAirEpa} format="decimal" />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* QB Formation & Passing */}
+          {player.position === 'QB' && (player.snaps || 0) > 0 && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="h-4 w-4 text-violet-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">QB Profile</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <StatCard label="CPOE" value={player.cpoe} format="decimal" />
+                  <StatCard label="Pass aDOT" value={player.passAdot} format="decimal" />
+                  <StatCard label="Deep%" value={player.deepPassRate} format="pct" />
+                  <StatCard label="1D Rate" value={player.passFirstDownRate} format="pct" />
+                </div>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  <StatCard label="Shotgun%" value={player.shotgunRate} format="pct" />
+                  <StatCard label="No Huddle%" value={player.noHuddleRate} format="pct" />
+                  <StatCard label="Sack%" value={player.sackRate} format="pct" />
+                  <StatCard label="Scrambles" value={player.scrambles} />
+                </div>
+              </div>
+            </>
+          )}
+
           {(player.rushAttempts || 0) > 0 && (
             <>
               <Separator className="bg-gray-700" />
@@ -297,6 +459,102 @@ function PlayerDrawer({
                   <StatCard label="Yards" value={player.rushYards} />
                   <StatCard label="TDs" value={player.rushTds} />
                   <StatCard label="YPC" value={player.yardsPerCarry} format="decimal" />
+                </div>
+                {/* RB-specific rush efficiency */}
+                {player.position === 'RB' && (
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    <StatCard label="Stuffed" value={player.stuffed} />
+                    <StatCard label="Stuff%" value={player.stuffRate} format="pct" />
+                    <StatCard label="1D" value={player.rushFirstDowns} />
+                    <StatCard label="1D Rate" value={player.rushFirstDownRate} format="pct" />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* RB Run Profile (Gap + Location) */}
+          {player.position === 'RB' && (player.rushAttempts || 0) >= 5 && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Activity className="h-4 w-4 text-lime-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">Run Profile</span>
+                </div>
+                <div className="text-xs text-gray-500 mb-2">Gap Distribution</div>
+                <div className="grid grid-cols-4 gap-2">
+                  <StatCard label="Inside%" value={player.insideRunRate} format="pct" />
+                  <StatCard label="Outside%" value={player.outsideRunRate} format="pct" />
+                  <StatCard label="In Succ%" value={player.insideSuccessRate} format="pct" />
+                  <StatCard label="Out Succ%" value={player.outsideSuccessRate} format="pct" />
+                </div>
+                <div className="text-xs text-gray-500 mb-2 mt-3">Location Distribution</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Left%" value={player.leftRunRate} format="pct" />
+                  <StatCard label="Middle%" value={player.middleRunRate} format="pct" />
+                  <StatCard label="Right%" value={player.rightRunRate} format="pct" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* RB Short Yardage */}
+          {player.position === 'RB' && (player.shortYardageAttempts || 0) > 0 && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">Short Yardage</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="Attempts" value={player.shortYardageAttempts} />
+                  <StatCard label="Conversions" value={player.shortYardageConversions} />
+                  <StatCard label="Conv%" value={player.shortYardageRate} format="pct" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {((player.rzSnaps || 0) > 0 || (player.rzTargets || 0) > 0) && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="h-4 w-4 text-red-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">Red Zone</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <StatCard label="RZ Snaps" value={player.rzSnaps} />
+                  <StatCard label="RZ Tgt" value={player.rzTargets} />
+                  <StatCard label="RZ Rec" value={player.rzReceptions} />
+                  <StatCard label="RZ TDs" value={player.rzRecTds} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <StatCard label="RZ Succ%" value={player.rzSuccessRate} format="pct" />
+                  <StatCard label="RZ Tgt Share" value={player.rzTargetShare} format="pct" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {((player.thirdDownSnaps || 0) > 0) && (
+            <>
+              <Separator className="bg-gray-700" />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-orange-400" />
+                  <span className="text-sm text-gray-400 uppercase tracking-wide">3rd Down / Situational</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <StatCard label="3D Snaps" value={player.thirdDownSnaps} />
+                  <StatCard label="3D Conv" value={player.thirdDownConversions} />
+                  <StatCard label="3D Conv%" value={player.thirdDownConversionRate} format="pct" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <StatCard label="Early Down%" value={player.earlyDownSuccessRate} format="pct" />
+                  <StatCard label="Late Down%" value={player.lateDownSuccessRate} format="pct" />
                 </div>
               </div>
             </>
@@ -697,7 +955,7 @@ export default function TiberDataLab() {
                 </>
               )}
 
-              {!fantasyMode && viewMode === 'week' && (
+              {viewMode === 'week' && (
                 <div className="w-28">
                   <Label className="text-gray-400 text-sm">Min Routes</Label>
                   <Input
@@ -839,8 +1097,8 @@ export default function TiberDataLab() {
                       <th className="px-4 py-3 text-center">aDOT</th>
                       <th className="px-4 py-3 text-center">EPA/P</th>
                       <th className="px-4 py-3 text-center">Succ%</th>
-                      <th className="px-4 py-3 text-center">Snaps</th>
-                      <th className="px-4 py-3 text-center">Snap%</th>
+                      <th className="px-4 py-3 text-center text-red-400" title="Red Zone TDs">RZ TD</th>
+                      <th className="px-4 py-3 text-center text-orange-400" title="3rd Down Conversion Rate">3D%</th>
                       <th className="px-4 py-3 text-center"></th>
                     </tr>
                   </thead>
@@ -888,11 +1146,13 @@ export default function TiberDataLab() {
                         <td className="px-4 py-3 text-center font-mono text-gray-300">
                           {formatPct(player.successRate)}
                         </td>
-                        <td className="px-4 py-3 text-center font-mono text-gray-300">
-                          {player.snaps ?? '-'}
+                        <td className="px-4 py-3 text-center font-mono text-red-400 font-semibold">
+                          {(player.rzRecTds ?? 0) + (player.rzRushTds ?? 0) > 0
+                            ? (player.rzRecTds ?? 0) + (player.rzRushTds ?? 0)
+                            : '-'}
                         </td>
-                        <td className="px-4 py-3 text-center font-mono text-gray-300">
-                          {formatPct(player.snapShare)}
+                        <td className="px-4 py-3 text-center font-mono text-orange-400">
+                          {formatPct(player.thirdDownConversionRate)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <ChevronRight className="h-4 w-4 text-gray-500" />
