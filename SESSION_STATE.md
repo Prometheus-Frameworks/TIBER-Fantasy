@@ -3,6 +3,8 @@
 
 **Last Updated**: 2026-01-06
 
+> **IMPORTANT**: Read `AGENT_README.md` first for constraints, safe scope, and hard rules.
+
 ---
 
 ## ⚠️ DATA STATUS NOTE
