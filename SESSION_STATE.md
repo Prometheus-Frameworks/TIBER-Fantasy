@@ -5,6 +5,15 @@
 
 ---
 
+## ⚠️ DATA STATUS NOTE
+
+- Phase 2A metrics VERIFIED for Week 17
+- Full Weeks 1–17 backfill for Phase 2A:
+  - ☐ Completed
+  - ☑ Pending / In Progress
+
+---
+
 ## ✅ Just Completed (This Session)
 
 ### ✅ Data Lab UI - FULL Gold Layer Integration
@@ -144,7 +153,9 @@
 **Future**:
 4. Phase 2B: Game Script Context metrics (score differential, leading/trailing, garbage time)
 5. Phase 2C: Two-Minute Drill metrics (hurry-up offense)
-6. FORGE engine updates to incorporate situational metrics into Alpha scores
+6. FORGE engine restructure - correlate Alpha scores with actual fantasy outcomes (backtesting)
+7. Tech debt cleanup pass (fix pre-existing type errors across codebase)
+8. Tiber Chat enhancements - intelligent teaching systems for natural language data surfacing
 
 ---
 
