@@ -746,6 +746,10 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
   const qbStats = await getQbPlayByPlayStats(season, week);
   const playerUsageStats = await getPlayerUsageStats(season, week);
   const teamAirYards = await getTeamAirYards(season, week);
+  
+  // Phase 2A: Red Zone and Down/Distance stats
+  const { playerRzStats, teamRzTargets } = await getRedZoneStats(season, week);
+  const downDistanceStats = await getDownDistanceStats(season, week);
 
   // Calculate team snap totals
   const teamSnapTotals = new Map<string, number>();
@@ -945,6 +949,61 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const yacOverExpected = totalReceptions > 0 ? totalYacOverExpected / totalReceptions : null;
     const xYacSuccessRate = totalReceptions > 0 ? xYacSuccesses / totalReceptions : null;
 
+    // ===== PHASE 2A: RED ZONE EFFICIENCY =====
+    const playerRz = playerRzStats.get(row.player_id);
+    const rzSnaps = playerRz?.rzSnaps || 0;
+    const rzSuccessful = playerRz?.rzSuccessful || 0;
+    const rzTotalPlays = playerRz?.rzTotalPlays || 0;
+    const teamRzTargetTotal = row.team ? teamRzTargets.get(row.team) || 0 : 0;
+    
+    // All positions
+    const rzSnapRate = teamSnaps && teamSnaps > 0 ? rzSnaps / teamSnaps : null;
+    const rzSuccessRate = rzTotalPlays > 0 ? rzSuccessful / rzTotalPlays : null;
+    
+    // QB Red Zone
+    const rzPassAttempts = playerRz?.rzPassAttempts || 0;
+    const rzPassTds = playerRz?.rzPassTds || 0;
+    const rzTdRate = rzPassAttempts > 0 ? rzPassTds / rzPassAttempts : null;
+    const rzInterceptions = playerRz?.rzInterceptions || 0;
+    
+    // RB Red Zone
+    const rzRushTds = playerRz?.rzRushTds || 0;
+    const rzRushTdRate = rzRushAttempts > 0 ? rzRushTds / rzRushAttempts : null;
+    const rzTargets = playerRz?.rzTargets || 0;
+    const rzReceptions = playerRz?.rzReceptions || 0;
+    const rzRecTds = playerRz?.rzRecTds || 0;
+    
+    // WR/TE Red Zone
+    const rzTargetShare = teamRzTargetTotal > 0 ? rzTargets / teamRzTargetTotal : null;
+    const rzCatchRate = rzTargets > 0 ? rzReceptions / rzTargets : null;
+
+    // ===== PHASE 2A: DOWN & DISTANCE CONTEXT =====
+    const playerDD = downDistanceStats.get(row.player_id);
+    
+    // All positions - Third down
+    const thirdDownSnaps = playerDD?.thirdDownSnaps || 0;
+    const thirdDownConversions = playerDD?.thirdDownConversions || 0;
+    const thirdDownPlays = playerDD?.thirdDownPlays || 0;
+    const thirdDownConversionRate = thirdDownPlays > 0 ? thirdDownConversions / thirdDownPlays : null;
+    
+    // Early/late down success
+    const earlyDownSuccessful = playerDD?.earlyDownSuccessful || 0;
+    const earlyDownPlays = playerDD?.earlyDownPlays || 0;
+    const lateDownSuccessful = playerDD?.lateDownSuccessful || 0;
+    const lateDownPlays = playerDD?.lateDownPlays || 0;
+    const earlyDownSuccessRate = earlyDownPlays > 0 ? earlyDownSuccessful / earlyDownPlays : null;
+    const lateDownSuccessRate = lateDownPlays > 0 ? lateDownSuccessful / lateDownPlays : null;
+    
+    // RB Short Yardage
+    const shortYardageAttempts = playerDD?.shortYardageAttempts || 0;
+    const shortYardageConversions = playerDD?.shortYardageConversions || 0;
+    const shortYardageRate = shortYardageAttempts > 0 ? shortYardageConversions / shortYardageAttempts : null;
+    
+    // WR/TE Third Down
+    const thirdDownTargets = playerDD?.thirdDownTargets || 0;
+    const thirdDownReceptions = playerDD?.thirdDownReceptions || 0;
+    const thirdDownRecConversions = playerDD?.thirdDownRecConversions || 0;
+
     goldRecords.push({
       season,
       week,
@@ -1032,6 +1091,33 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       xYac,
       yacOverExpected,
       xYacSuccessRate,
+      // ===== PHASE 2A: RED ZONE EFFICIENCY =====
+      rzSnaps,
+      rzSnapRate,
+      rzSuccessRate,
+      rzPassAttempts,
+      rzPassTds,
+      rzTdRate,
+      rzInterceptions,
+      rzRushTds,
+      rzRushTdRate,
+      rzTargets,
+      rzReceptions,
+      rzRecTds,
+      rzTargetShare,
+      rzCatchRate,
+      // ===== PHASE 2A: DOWN & DISTANCE CONTEXT =====
+      thirdDownSnaps,
+      thirdDownConversions,
+      thirdDownConversionRate,
+      earlyDownSuccessRate,
+      lateDownSuccessRate,
+      shortYardageAttempts,
+      shortYardageConversions,
+      shortYardageRate,
+      thirdDownTargets,
+      thirdDownReceptions,
+      thirdDownRecConversions,
       // Fantasy
       fptsStd: Math.round(fpts.std * 10) / 10,
       fptsHalf: Math.round(fpts.half * 10) / 10,
@@ -1081,6 +1167,14 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         pass_first_downs, pass_first_down_rate, deep_pass_attempts, deep_pass_rate, pass_adot,
         shotgun_rate, no_huddle_rate, shotgun_success_rate, under_center_success_rate,
         epa_per_play, success_rate, x_yac, yac_over_expected, x_yac_success_rate,
+        rz_snaps, rz_snap_rate, rz_success_rate,
+        rz_pass_attempts, rz_pass_tds, rz_td_rate, rz_interceptions,
+        rz_rush_tds, rz_rush_td_rate, rz_targets, rz_receptions, rz_rec_tds,
+        rz_target_share, rz_catch_rate,
+        third_down_snaps, third_down_conversions, third_down_conversion_rate,
+        early_down_success_rate, late_down_success_rate,
+        short_yardage_attempts, short_yardage_conversions, short_yardage_rate,
+        third_down_targets, third_down_receptions, third_down_rec_conversions,
         fpts_std, fpts_half, fpts_ppr
       ) VALUES (
         ${snapshotId}, ${rec.season}, ${rec.week}, ${rec.playerId}, ${rec.playerName}, ${rec.teamId}, ${rec.position},
@@ -1100,6 +1194,14 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.passFirstDowns}, ${rec.passFirstDownRate}, ${rec.deepPassAttempts}, ${rec.deepPassRate}, ${rec.passAdot},
         ${rec.shotgunRate}, ${rec.noHuddleRate}, ${rec.shotgunSuccessRate}, ${rec.underCenterSuccessRate},
         ${rec.epaPerPlay}, ${rec.successRate}, ${rec.xYac}, ${rec.yacOverExpected}, ${rec.xYacSuccessRate},
+        ${rec.rzSnaps}, ${rec.rzSnapRate}, ${rec.rzSuccessRate},
+        ${rec.rzPassAttempts}, ${rec.rzPassTds}, ${rec.rzTdRate}, ${rec.rzInterceptions},
+        ${rec.rzRushTds}, ${rec.rzRushTdRate}, ${rec.rzTargets}, ${rec.rzReceptions}, ${rec.rzRecTds},
+        ${rec.rzTargetShare}, ${rec.rzCatchRate},
+        ${rec.thirdDownSnaps}, ${rec.thirdDownConversions}, ${rec.thirdDownConversionRate},
+        ${rec.earlyDownSuccessRate}, ${rec.lateDownSuccessRate},
+        ${rec.shortYardageAttempts}, ${rec.shortYardageConversions}, ${rec.shortYardageRate},
+        ${rec.thirdDownTargets}, ${rec.thirdDownReceptions}, ${rec.thirdDownRecConversions},
         ${rec.fptsStd}, ${rec.fptsHalf}, ${rec.fptsPpr}
       )
     `);
