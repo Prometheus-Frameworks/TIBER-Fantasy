@@ -12,11 +12,38 @@
 - Phase 1 metrics: ✅ Complete (all weeks)
 - Phase 2A metrics: ✅ Complete (all weeks 1-17)
 - Phase 2B (Game Script): ⛔ Not started
-- Phase 2C (Two-Minute Drill): ⛔ Not started
+- Phase 2C (Two-Minute Drill): ✅ Complete (all weeks 1-17 backfilled)
 
 ---
 
 ## ✅ Just Completed (This Session)
+
+### ✅ Phase 2C: Two-Minute Drill & Hurry-Up Metrics
+
+**What was done**:
+1. ✅ Added Phase 2C columns to database via SQL ALTER TABLE
+   - `two_minute_snaps`, `two_minute_successful`, `two_minute_success_rate`
+   - `hurry_up_snaps`, `hurry_up_successful`, `hurry_up_success_rate`
+   - `two_minute_targets`, `two_minute_receptions` (WR/TE)
+
+2. ✅ Updated GoldPlayerWeek interface with Phase 2C fields
+
+3. ✅ Added getTwoMinuteStats query to Gold ETL
+   - Two-minute drill: final 2 minutes of half, close game (≤8 points)
+   - Hurry-up: no_huddle plays from NFLfastR
+   - Success rate calculated from EPA
+
+**Phase 2C Testing Results** (Week 17, 2025):
+- ✅ C.Williams (QB): 16 two-minute snaps, 31.25% success rate
+- ✅ A.Rodgers (QB): 16 two-minute snaps, 62.5% success rate, 9 hurry-up snaps
+- ✅ C.Ward (QB): 12 two-minute snaps, 41.7% success rate
+- ✅ Backfill Weeks 1-17 complete (all 17 weeks have 2-min data)
+
+**Files Modified**:
+- `server/etl/goldDatadiveETL.ts` - Added Phase 2C interface, query, and INSERT wiring
+- Database: `datadive_snapshot_player_week` table (8 new columns)
+
+---
 
 ### ✅ Data Lab UI - FULL Gold Layer Integration
 
@@ -138,10 +165,11 @@
 - Garbage time identification
 - **Status**: Not started
 
-### Phase 2C: PENDING (Two-Minute Drill)
-- Two-minute warning stats
-- Hurry-up offense metrics
-- **Status**: Not started (LOW priority)
+### Phase 2C: COMPLETE (Two-Minute Drill) ✅
+- Two-minute snaps, successful plays, success rate
+- Hurry-up (no-huddle) snaps and success rate
+- WR/TE two-minute targets and receptions
+- **Status**: Complete (8 new metrics)
 
 ---
 
