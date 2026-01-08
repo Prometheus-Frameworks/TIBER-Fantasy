@@ -165,6 +165,19 @@ interface GoldPlayerWeek {
   thirdDownReceptions: number;
   thirdDownRecConversions: number;
 
+  // ===== PHASE 2C: TWO-MINUTE DRILL & HURRY-UP =====
+  // All Skill Positions
+  twoMinuteSnaps: number;
+  twoMinuteSuccessful: number;
+  twoMinuteSuccessRate: number | null;
+  hurryUpSnaps: number;
+  hurryUpSuccessful: number;
+  hurryUpSuccessRate: number | null;
+
+  // WR/TE Two-Minute
+  twoMinuteTargets: number;
+  twoMinuteReceptions: number;
+
   // Fantasy
   fptsStd: number;
   fptsHalf: number;
@@ -667,6 +680,66 @@ async function getDownDistanceStats(season: number, week: number): Promise<Map<s
 }
 
 /**
+ * Get two-minute drill and hurry-up stats from play-by-play data
+ */
+interface TwoMinuteStats {
+  twoMinuteSnaps: number;
+  twoMinuteSuccessful: number;
+  hurryUpSnaps: number;
+  hurryUpSuccessful: number;
+  twoMinuteTargets: number;
+  twoMinuteReceptions: number;
+}
+
+async function getTwoMinuteStats(season: number, week: number): Promise<Map<string, TwoMinuteStats>> {
+  const stats = new Map<string, TwoMinuteStats>();
+
+  try {
+    const result = await db.execute(sql`
+      SELECT
+        player_id,
+
+        -- Two-minute drill (final 2 minutes of each half)
+        SUM(CASE WHEN (raw_data->>'half_seconds_remaining')::float <= 120 THEN 1 ELSE 0 END) as two_minute_snaps,
+        SUM(CASE WHEN (raw_data->>'half_seconds_remaining')::float <= 120
+          AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as two_minute_successful,
+
+        -- Hurry-up / no-huddle offense
+        SUM(CASE WHEN (raw_data->>'no_huddle')::float = 1 THEN 1 ELSE 0 END) as hurry_up_snaps,
+        SUM(CASE WHEN (raw_data->>'no_huddle')::float = 1
+          AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as hurry_up_successful,
+
+        -- WR/TE two-minute targets/receptions
+        SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
+          AND (raw_data->>'half_seconds_remaining')::float <= 120 THEN 1 ELSE 0 END) as two_minute_targets,
+        SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
+          AND (raw_data->>'half_seconds_remaining')::float <= 120
+          AND complete_pass = true THEN 1 ELSE 0 END) as two_minute_receptions
+
+      FROM bronze_nflfastr_plays, unnest(ARRAY[passer_player_id, rusher_player_id, receiver_player_id]) AS player_id
+      WHERE season = ${season} AND week = ${week}
+        AND player_id IS NOT NULL
+      GROUP BY player_id
+    `);
+
+    for (const row of result.rows as any[]) {
+      stats.set(row.player_id, {
+        twoMinuteSnaps: Number(row.two_minute_snaps) || 0,
+        twoMinuteSuccessful: Number(row.two_minute_successful) || 0,
+        hurryUpSnaps: Number(row.hurry_up_snaps) || 0,
+        hurryUpSuccessful: Number(row.hurry_up_successful) || 0,
+        twoMinuteTargets: Number(row.two_minute_targets) || 0,
+        twoMinuteReceptions: Number(row.two_minute_receptions) || 0,
+      });
+    }
+  } catch (e) {
+    console.warn(`  Warning: Could not fetch two-minute stats for week ${week}:`, e);
+  }
+
+  return stats;
+}
+
+/**
  * Get route alignment data from player_usage table
  */
 async function getPlayerUsageStats(season: number, week: number): Promise<Map<string, { slotRate: number | null; inlineRate: number | null }>> {
@@ -743,6 +816,9 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
   // Phase 2A: Red Zone and Down/Distance stats
   const { playerRzStats, teamRzTargets } = await getRedZoneStats(season, week);
   const downDistanceStats = await getDownDistanceStats(season, week);
+  
+  // Phase 2C: Two-minute drill and hurry-up stats
+  const twoMinuteStats = await getTwoMinuteStats(season, week);
 
   // Calculate team snap totals
   const teamSnapTotals = new Map<string, number>();
@@ -997,6 +1073,17 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const thirdDownReceptions = playerDD?.thirdDownReceptions || 0;
     const thirdDownRecConversions = playerDD?.thirdDownRecConversions || 0;
 
+    // ===== PHASE 2C: TWO-MINUTE DRILL & HURRY-UP =====
+    const player2M = twoMinuteStats.get(row.player_id);
+    const twoMinuteSnaps = player2M?.twoMinuteSnaps || 0;
+    const twoMinuteSuccessful = player2M?.twoMinuteSuccessful || 0;
+    const twoMinuteSuccessRate = twoMinuteSnaps > 0 ? twoMinuteSuccessful / twoMinuteSnaps : null;
+    const hurryUpSnaps = player2M?.hurryUpSnaps || 0;
+    const hurryUpSuccessful = player2M?.hurryUpSuccessful || 0;
+    const hurryUpSuccessRate = hurryUpSnaps > 0 ? hurryUpSuccessful / hurryUpSnaps : null;
+    const twoMinuteTargets = player2M?.twoMinuteTargets || 0;
+    const twoMinuteReceptions = player2M?.twoMinuteReceptions || 0;
+
     goldRecords.push({
       season,
       week,
@@ -1111,6 +1198,15 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       thirdDownTargets,
       thirdDownReceptions,
       thirdDownRecConversions,
+      // ===== PHASE 2C: TWO-MINUTE DRILL & HURRY-UP =====
+      twoMinuteSnaps,
+      twoMinuteSuccessful,
+      twoMinuteSuccessRate,
+      hurryUpSnaps,
+      hurryUpSuccessful,
+      hurryUpSuccessRate,
+      twoMinuteTargets,
+      twoMinuteReceptions,
       // Fantasy
       fptsStd: Math.round(fpts.std * 10) / 10,
       fptsHalf: Math.round(fpts.half * 10) / 10,
@@ -1168,6 +1264,9 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         early_down_success_rate, late_down_success_rate,
         short_yardage_attempts, short_yardage_conversions, short_yardage_rate,
         third_down_targets, third_down_receptions, third_down_rec_conversions,
+        two_minute_snaps, two_minute_successful, two_minute_success_rate,
+        hurry_up_snaps, hurry_up_successful, hurry_up_success_rate,
+        two_minute_targets, two_minute_receptions,
         fpts_std, fpts_half, fpts_ppr
       ) VALUES (
         ${snapshotId}, ${rec.season}, ${rec.week}, ${rec.playerId}, ${rec.playerName}, ${rec.teamId}, ${rec.position},
@@ -1195,6 +1294,9 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.earlyDownSuccessRate}, ${rec.lateDownSuccessRate},
         ${rec.shortYardageAttempts}, ${rec.shortYardageConversions}, ${rec.shortYardageRate},
         ${rec.thirdDownTargets}, ${rec.thirdDownReceptions}, ${rec.thirdDownRecConversions},
+        ${rec.twoMinuteSnaps}, ${rec.twoMinuteSuccessful}, ${rec.twoMinuteSuccessRate},
+        ${rec.hurryUpSnaps}, ${rec.hurryUpSuccessful}, ${rec.hurryUpSuccessRate},
+        ${rec.twoMinuteTargets}, ${rec.twoMinuteReceptions},
         ${rec.fptsStd}, ${rec.fptsHalf}, ${rec.fptsPpr}
       )
     `);
