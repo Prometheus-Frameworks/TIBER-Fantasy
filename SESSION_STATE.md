@@ -18,6 +18,27 @@
 
 ## ✅ Just Completed (This Session)
 
+### ✅ FORGE Backtest Framework
+
+**What was done**:
+1. ✅ Created `scripts/forge_backtest.py` - validates FORGE vs baselines
+2. ✅ Tests: Monotonicity, Calibration, Baseline Comparison
+
+**Key Findings (2025 Season)**:
+| Position | Monotonic? | Spearman | Win vs Naive | Win vs Rolling3 |
+|----------|------------|----------|--------------|-----------------|
+| RB       | ✅ YES     | 0.421    | 51.4%        | 44.5%           |
+| WR       | ❌ NO      | 0.297    | 53.3%        | 46.5%           |
+| TE       | ❌ NO      | 0.247    | 53.5%        | 49.2%           |
+| QB       | ❌ NO      | 0.157    | 48.2%        | 40.1%           |
+
+**Conclusion**: FORGE is currently a **quality score** (identifies good players) but not a **projection edge** (doesn't beat 3-week rolling average for weekly predictions). RB shows best monotonicity.
+
+**Files Created**:
+- `scripts/forge_backtest.py` - Backtest framework
+
+---
+
 ### ✅ Phase 2C: Two-Minute Drill & Hurry-Up Metrics
 
 **What was done**:
