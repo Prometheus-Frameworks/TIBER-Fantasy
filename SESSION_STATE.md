@@ -7,12 +7,12 @@
 
 ---
 
-## ⚠️ DATA STATUS NOTE
+## ✅ DATA STATUS NOTE
 
-- Phase 2A metrics VERIFIED for Week 17
-- Full Weeks 1–17 backfill for Phase 2A:
-  - ☐ Completed
-  - ☑ Pending / In Progress
+- Phase 1 metrics: ✅ Complete (all weeks)
+- Phase 2A metrics: ✅ Complete (all weeks 1-17)
+- Phase 2B (Game Script): ⛔ Not started
+- Phase 2C (Two-Minute Drill): ⛔ Not started
 
 ---
 

@@ -17,13 +17,12 @@
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Phase 1 metrics | ✅ Complete | All weeks |
-| Phase 2A metrics | ✅ Verified | Week 17, 2025 only |
-| Phase 2A Weeks 1-16 | ⛔ PENDING | Backfill not complete |
+| Phase 1 metrics | ✅ Complete | All weeks 1-17 |
+| Phase 2A metrics | ✅ Complete | All weeks 1-17 (RZ + 3rd Down) |
 | Phase 2B (Game Script) | ⛔ Not started | |
 | Phase 2C (Two-Minute Drill) | ⛔ Not started | |
 
-**Do not reference unavailable metrics.**
+**Do not reference unavailable metrics (Phase 2B/2C).**
 
 ---
 
