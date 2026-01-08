@@ -4959,6 +4959,19 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   thirdDownReceptions: integer("third_down_receptions").default(0), // Receptions on 3rd down
   thirdDownRecConversions: integer("third_down_rec_conversions").default(0), // 3rd down targets that resulted in conversions
 
+  // ===== PHASE 2C: TWO-MINUTE DRILL & HURRY-UP =====
+  // All Skill Positions
+  twoMinuteSnaps: integer("two_minute_snaps").default(0),     // Snaps in final 2 minutes of half
+  twoMinuteSuccessful: integer("two_minute_successful").default(0), // Successful plays in 2-minute drill
+  twoMinuteSuccessRate: real("two_minute_success_rate"),      // Success rate in 2-minute drill
+  hurryUpSnaps: integer("hurry_up_snaps").default(0),         // Snaps in no-huddle/hurry-up offense
+  hurryUpSuccessful: integer("hurry_up_successful").default(0), // Successful plays in hurry-up
+  hurryUpSuccessRate: real("hurry_up_success_rate"),          // Success rate in hurry-up
+
+  // WR/TE Two-Minute
+  twoMinuteTargets: integer("two_minute_targets").default(0), // Targets in 2-minute drill
+  twoMinuteReceptions: integer("two_minute_receptions").default(0), // Receptions in 2-minute drill
+
   // Fantasy points
   fptsStd: real("fpts_std"),
   fptsHalf: real("fpts_half"),
