@@ -113,7 +113,7 @@ def compute_forge_style_score(row: pd.Series, position: str) -> float:
         return volume_score * 0.55 + efficiency_score * 0.15
         
     elif position == 'RB':
-        # RB: V=0.55, E=0.15 (volume dominates based on correlation analysis)
+        # RB: V=0.50, E=0.25 (volume dominates, but efficiency helps separate bellcows from backups)
         snap_share = row.get('snap_share', 0) or 0
         rush_attempts = row.get('rush_attempts', 0) or 0
         targets = row.get('targets', 0) or 0
@@ -122,12 +122,12 @@ def compute_forge_style_score(row: pd.Series, position: str) -> float:
         touches = rush_attempts + targets
         volume_score = min(100, snap_share * 100 * 0.4 + touches * 2.5)
         
-        # Efficiency - near-zero correlation (r=0.019), so reduce weight
+        # Efficiency - keep some weight to separate quality from garbage time
         ypc = row.get('yards_per_carry', 0) or 0
         success_rate = row.get('success_rate', 0) or 0
         efficiency_score = min(100, max(0, ypc * 12 + success_rate * 80))
         
-        return volume_score * 0.55 + efficiency_score * 0.15
+        return volume_score * 0.50 + efficiency_score * 0.25
         
     elif position == 'QB':
         # QB: V=0.25, E=0.45 (efficiency matters for QBs - yprr r=0.685)

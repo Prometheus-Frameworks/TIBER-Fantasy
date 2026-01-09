@@ -46,7 +46,7 @@ export type GradeForgeOptions = {
 // - QB: efficiency matters (yac_per_rec r=0.729, yprr r=0.685)
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
   WR: { volume: 0.55, efficiency: 0.15, teamContext: 0.18, stability: 0.12 },
-  RB: { volume: 0.55, efficiency: 0.15, teamContext: 0.15, stability: 0.15 },
+  RB: { volume: 0.50, efficiency: 0.25, teamContext: 0.10, stability: 0.15 },  // Keep some efficiency - helps separate bellcows from backups
   TE: { volume: 0.55, efficiency: 0.15, teamContext: 0.15, stability: 0.15 },
   QB: { volume: 0.25, efficiency: 0.45, teamContext: 0.18, stability: 0.12 },
 };
