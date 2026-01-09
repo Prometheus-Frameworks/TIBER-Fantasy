@@ -39,18 +39,24 @@ export type GradeForgeOptions = {
 };
 
 // Base weights used for REDRAFT mode
+// Updated 2025-01-09 based on feature correlation analysis:
+// - RB: volume dominates (rush_attempts r=0.515), efficiency near-zero (r=0.019)
+// - WR: target_share (r=0.417) > wopr (r=0.407), efficiency NEGATIVE (r=-0.042)
+// - TE: same pattern as WR - volume wins, efficiency hurts
+// - QB: efficiency matters (yac_per_rec r=0.729, yprr r=0.685)
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.45, efficiency: 0.30, teamContext: 0.15, stability: 0.10 },
-  RB: { volume: 0.475, efficiency: 0.31, teamContext: 0.065, stability: 0.15 },
-  TE: { volume: 0.40, efficiency: 0.37, teamContext: 0.10, stability: 0.13 },
-  QB: { volume: 0.29, efficiency: 0.41, teamContext: 0.18, stability: 0.12 },
+  WR: { volume: 0.55, efficiency: 0.15, teamContext: 0.18, stability: 0.12 },
+  RB: { volume: 0.55, efficiency: 0.15, teamContext: 0.15, stability: 0.15 },
+  TE: { volume: 0.55, efficiency: 0.15, teamContext: 0.15, stability: 0.15 },
+  QB: { volume: 0.25, efficiency: 0.45, teamContext: 0.18, stability: 0.12 },
 };
 
-// Dynasty mode weights - different weighting philosophy
+// Dynasty mode weights - stability matters more for long-term value
+// Still respects correlation analysis but emphasizes stability for dynasty formats
 const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
-  RB: { volume: 0.25, efficiency: 0.30, teamContext: 0.15, stability: 0.30 },
-  TE: { volume: 0.25, efficiency: 0.35, teamContext: 0.15, stability: 0.25 },
+  WR: { volume: 0.35, efficiency: 0.15, teamContext: 0.20, stability: 0.30 },
+  RB: { volume: 0.35, efficiency: 0.10, teamContext: 0.15, stability: 0.40 },
+  TE: { volume: 0.35, efficiency: 0.15, teamContext: 0.15, stability: 0.35 },
   QB: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
 };
 

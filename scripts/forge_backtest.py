@@ -96,49 +96,51 @@ def compute_forge_style_score(row: pd.Series, position: str) -> float:
     efficiency_score = 0
     
     if position == 'WR' or position == 'TE':
-        # WR/TE: V=0.43, E=0.37, T=0.05, S=0.15
+        # WR/TE: V=0.55, E=0.15, T=0.18, S=0.12 (updated based on correlation analysis)
         target_share = row.get('target_share', 0) or 0
         route_rate = row.get('route_rate', 0) or 0
         snap_share = row.get('snap_share', 0) or 0
         
-        # Volume (normalize to 0-100 scale)
+        # Volume (normalize to 0-100 scale) - heavily weighted now
         volume_score = (target_share * 100 * 0.5 + route_rate * 100 * 0.3 + snap_share * 100 * 0.2)
         
-        # Efficiency
+        # Efficiency - reduced weight since correlations show it hurts prediction
         yprr = row.get('yprr', 0) or 0
         catch_rate = row.get('catch_rate', 0) or 0
         epa_per_target = row.get('epa_per_target', 0) or 0
         efficiency_score = min(100, max(0, yprr * 30 + catch_rate * 50 + (epa_per_target + 0.5) * 40))
         
-        return volume_score * 0.43 + efficiency_score * 0.37
+        return volume_score * 0.55 + efficiency_score * 0.15
         
     elif position == 'RB':
-        # RB: More balanced volume/efficiency
+        # RB: V=0.55, E=0.15 (volume dominates based on correlation analysis)
         snap_share = row.get('snap_share', 0) or 0
         rush_attempts = row.get('rush_attempts', 0) or 0
         targets = row.get('targets', 0) or 0
         
-        # Volume - touches based
+        # Volume - touches based (rush_attempts r=0.515 is strongest predictor)
         touches = rush_attempts + targets
         volume_score = min(100, snap_share * 100 * 0.4 + touches * 2.5)
         
-        # Efficiency
+        # Efficiency - near-zero correlation (r=0.019), so reduce weight
         ypc = row.get('yards_per_carry', 0) or 0
         success_rate = row.get('success_rate', 0) or 0
         efficiency_score = min(100, max(0, ypc * 12 + success_rate * 80))
         
-        return volume_score * 0.45 + efficiency_score * 0.35
+        return volume_score * 0.55 + efficiency_score * 0.15
         
     elif position == 'QB':
-        # QB: EPA-heavy
+        # QB: V=0.25, E=0.45 (efficiency matters for QBs - yprr r=0.685)
         snap_share = row.get('snap_share', 0) or 0
         epa_per_play = row.get('epa_per_play', 0) or 0
         success_rate = row.get('success_rate', 0) or 0
+        yprr = row.get('yprr', 0) or 0
         
         volume_score = snap_share * 100
-        efficiency_score = min(100, max(0, (epa_per_play + 0.3) * 100 + success_rate * 50))
+        # Enhanced efficiency using yprr which had strong correlation
+        efficiency_score = min(100, max(0, (epa_per_play + 0.3) * 80 + success_rate * 40 + yprr * 20))
         
-        return volume_score * 0.30 + efficiency_score * 0.50
+        return volume_score * 0.25 + efficiency_score * 0.45
     
     return 50  # Default
 
