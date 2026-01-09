@@ -602,7 +602,7 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
       player_agg AS (
         SELECT 
           spw.player_id,
-          spw.player_name,
+          MAX(spw.player_name) as player_name,
           MAX(spw.team_id) as team_id,
           MAX(spw.position) as position,
           COUNT(DISTINCT sw.week) FILTER (WHERE COALESCE(spw.snaps, 0) > 0 OR COALESCE(spw.routes, 0) > 0) as games_played,
@@ -631,7 +631,7 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
         FROM snapshot_weeks sw
         JOIN datadive_snapshot_player_week spw ON spw.snapshot_id = sw.snapshot_id AND spw.week = sw.week
         WHERE 1=1 ${positionFilter}
-        GROUP BY spw.player_id, spw.player_name
+        GROUP BY spw.player_id
       )
       SELECT 
         player_id,
