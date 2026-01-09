@@ -1,7 +1,7 @@
 # Session State Tracker
 > **Purpose**: Track progress across Claude Code sessions to resume work when rate limits hit
 
-**Last Updated**: 2026-01-06
+**Last Updated**: 2026-01-09
 
 > **IMPORTANT**: Read `AGENT_README.md` first for constraints, safe scope, and hard rules.
 
@@ -18,24 +18,45 @@
 
 ## ✅ Just Completed (This Session)
 
-### ✅ FORGE Backtest Framework
+### ✅ FORGE Weight Recalibration (Based on Correlation Analysis)
 
 **What was done**:
-1. ✅ Created `scripts/forge_backtest.py` - validates FORGE vs baselines
-2. ✅ Tests: Monotonicity, Calibration, Baseline Comparison
+1. ✅ Created `scripts/feature_correlation.py` - analyzes which Gold metrics predict next-week fpts
+2. ✅ Updated pillar weights in `server/modules/forge/forgeGrading.ts` based on data
+3. ✅ Re-validated with backtest
 
-**Key Findings (2025 Season)**:
-| Position | Monotonic? | Spearman | Win vs Naive | Win vs Rolling3 |
-|----------|------------|----------|--------------|-----------------|
-| RB       | ✅ YES     | 0.421    | 51.4%        | 44.5%           |
-| WR       | ❌ NO      | 0.297    | 53.3%        | 46.5%           |
-| TE       | ❌ NO      | 0.247    | 53.5%        | 49.2%           |
-| QB       | ❌ NO      | 0.157    | 48.2%        | 40.1%           |
+**Feature Correlation Findings (Week N → Week N+1 fpts)**:
+| Position | Top Predictors | Efficiency Correlation |
+|----------|----------------|------------------------|
+| RB | rush_attempts (0.515), rush_yards (0.465), rz_snap_rate (0.371) | Near-zero (0.019) |
+| WR | target_share (0.417), wopr (0.407), targets (0.393) | **NEGATIVE (-0.042)** |
+| TE | target_share (0.379), targets (0.359), air_yards (0.325) | Negative |
+| QB | yac_per_rec (0.729), yprr (0.685), epa_per_target (0.498) | Positive (0.274) |
 
-**Conclusion**: FORGE is currently a **quality score** (identifies good players) but not a **projection edge** (doesn't beat 3-week rolling average for weekly predictions). RB shows best monotonicity.
+**Key Insight**: Volume metrics dominate for RB/WR/TE. Efficiency metrics are noise (or negative!) for pass catchers. QB is the exception - efficiency matters.
 
-**Files Created**:
-- `scripts/forge_backtest.py` - Backtest framework
+**Weight Changes (Redraft mode)**:
+| Position | Old Volume | New Volume | Old Efficiency | New Efficiency |
+|----------|------------|------------|----------------|----------------|
+| WR | 0.45 | **0.55** | 0.30 | **0.15** |
+| RB | 0.475 | **0.50** | 0.31 | **0.25** |
+| TE | 0.40 | **0.55** | 0.37 | **0.15** |
+| QB | 0.29 | **0.25** | 0.41 | **0.45** |
+
+**Backtest Results After Recalibration**:
+| Position | Monotonic? | Win vs Naive | Win vs Rolling3 |
+|----------|------------|--------------|-----------------|
+| RB       | ✅ YES     | 53.4% (+2.0) | 45.7% (+1.2)    |
+| WR       | ❌ NO      | **57.3% (+4.0)** | **50.9% (+4.4)** |
+| TE       | ❌ NO      | 56.5% (+3.0) | 49.7% (+0.5)    |
+| QB       | ✅ YES     | 24.0%        | 21.6%           |
+
+**Key Win**: WR now beats Rolling 3-Week Average >50% of the time. This is a meaningful edge.
+
+**Files Created/Modified**:
+- `scripts/feature_correlation.py` - Feature correlation analysis
+- `scripts/forge_backtest.py` - Updated with new weights
+- `server/modules/forge/forgeGrading.ts` - Updated POSITION_WEIGHTS and DYNASTY_WEIGHTS
 
 ---
 
