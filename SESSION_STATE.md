@@ -18,7 +18,60 @@
 
 ## ✅ Just Completed (This Session)
 
-### ✅ Data Lab GP (Games Played) Display Fix
+### ✅ FORGE Transparency Page (`/forge`)
+
+**What was built**:
+A new public-facing page that exposes exactly how FORGE scores a player - complete transparency with no black box.
+
+**Backend API** (`server/modules/forge/routes.ts`):
+- Added `GET /api/forge/transparency/:playerId` endpoint
+- Returns comprehensive scoring breakdown:
+  - Player info (id, name, position, team)
+  - Alpha scores (raw pass 0, final pass 1, tier)
+  - Pillar breakdown with contributing metrics and weights
+  - Recursion data (volatility, momentum, stability adjustment, expected alpha)
+  - Weekly alpha history for trend charts
+  - Football lens issues/flags
+  - Auto-generated plain English summary
+
+**Frontend Page** (`client/src/pages/ForgeTransparency.tsx`):
+- **Header**: "FORGE Transparency" with tagline "See exactly how every score is calculated"
+- **Player Search**: Autocomplete using `/api/forge/search-players` endpoint
+- **Week Selector**: Dropdown for weeks 1-17
+- **Alpha Score Hero**: Large score display with progress bar, tier badge, position badge
+- **Pillar Breakdown**: 4 expandable cards (Volume, Efficiency, Team Context, Stability)
+  - Each shows score, weight%, visual bar, and contributing metrics
+- **Recursive Adjustments Panel**:
+  - Shows volatility, momentum, stability adjustment
+  - Math breakdown: Raw + Adjustment = Final
+- **Weekly Trend Chart**: Recharts line chart showing alpha over weeks
+- **Football Lens Flags**: Visual display of detected issues
+- **Plain English Summary**: Human-readable explanation of the score
+
+**Route Registration** (`client/src/App.tsx`):
+- Added `/forge` route pointing to ForgeTransparency component
+
+**Helper Functions Added**:
+- `buildPillarBreakdown()` - Constructs pillar data with metric details
+- `formatMetricName()` - Converts metric keys to human-readable names
+- `generatePlainEnglishSummary()` - Template-based score explanation
+
+**UI/UX**:
+- Dark theme consistent with TIBER brand (`bg-[#0a0e1a]`, `bg-[#141824]`)
+- Purple/teal gradient accents for score visualization
+- Position badges with color coding (QB=red, RB=green, WR=blue, TE=yellow)
+- Mobile responsive design with stacking layout
+
+**Files Created/Modified**:
+- `client/src/pages/ForgeTransparency.tsx` - **NEW** (614 lines)
+- `server/modules/forge/routes.ts` - Added transparency endpoint (+327 lines)
+- `client/src/App.tsx` - Added route (+4 lines)
+
+**Commit**: `f1c3ed50` - "Add a page to display detailed player scoring calculations"
+
+---
+
+### ✅ Data Lab GP (Games Played) Display Fix (Previous)
 
 **Issues Identified**:
 1. **GP was capped at 10** - The search query grouped by both `player_id` AND `player_name`, causing players with name variations (e.g., "C.McCaffrey" vs "Christian McCaffrey") to be split into separate aggregations.
