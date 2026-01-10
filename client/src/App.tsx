@@ -18,6 +18,7 @@ import HomepageRedesign from "@/pages/admin/HomepageRedesign";
 import RagStatus from "@/pages/RagStatus";
 import ForgeLab from "@/pages/ForgeLab";
 import TiberDataLab from "@/pages/TiberDataLab";
+import ForgeTransparency from "@/pages/ForgeTransparency";
 import ForgeSimulation from "@/pages/admin/ForgeSimulation";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
@@ -48,6 +49,9 @@ function Router() {
       
       {/* Schedule / SoS */}
       <Route path="/schedule" component={SchedulePage} />
+
+      {/* FORGE Transparency - Public scoring explainer */}
+      <Route path="/forge" component={ForgeTransparency} />
       
       {/* Admin: FORGE Hub - Central control room */}
       <Route path="/admin/forge-hub" component={ForgeHub} />

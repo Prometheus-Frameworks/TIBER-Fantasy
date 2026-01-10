@@ -2209,9 +2209,334 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/forge/transparency/:playerId
+ *
+ * Full FORGE transparency endpoint - exposes exactly how a player's score is calculated.
+ * Returns pillar breakdown with contributing metrics, recursion adjustments, weekly history.
+ *
+ * Path params:
+ * - playerId (required): canonical player ID or sleeper ID
+ *
+ * Query params:
+ * - season (optional): number, defaults to 2025
+ * - week (optional): number, defaults to latest available
+ * - mode (optional): 'redraft' | 'dynasty' | 'bestball', defaults to 'redraft'
+ */
+router.get('/transparency/:playerId', async (req: Request, res: Response) => {
+  try {
+    const { runForgeEngine, getPositionPillarConfig } = await import('./forgeEngine');
+    const { gradeForgeWithMeta } = await import('./forgeGrading');
+    const { getPlayerStateHistory, POSITION_BASELINES } = await import('./forgeStateService');
+
+    const { playerId } = req.params;
+    const season = parseInt(req.query.season as string) || 2025;
+    const week = parseInt(req.query.week as string) || 17;
+    const modeParam = (req.query.mode as string)?.toLowerCase();
+    const mode: 'redraft' | 'dynasty' | 'bestball' =
+      modeParam && ['redraft', 'dynasty', 'bestball'].includes(modeParam)
+        ? (modeParam as 'redraft' | 'dynasty' | 'bestball')
+        : 'redraft';
+
+    if (!playerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing playerId parameter',
+      });
+    }
+
+    console.log(`[FORGE/Transparency] Request: playerId=${playerId}, season=${season}, week=${week}, mode=${mode}`);
+
+    // Resolve player identity
+    const identity = await PlayerIdentityService.getInstance().getByAnyId(playerId);
+    if (!identity) {
+      return res.status(404).json({
+        success: false,
+        error: `Player not found: ${playerId}`,
+      });
+    }
+
+    const position = identity.position as 'QB' | 'RB' | 'WR' | 'TE';
+    if (!['QB', 'RB', 'WR', 'TE'].includes(position)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid position: ${position}. Must be QB, RB, WR, or TE.`,
+      });
+    }
+
+    // Run FORGE engine
+    const engineOutput = await runForgeEngine(
+      identity.canonicalId,
+      position,
+      season,
+      week
+    );
+
+    // Apply grading
+    const gradedResult = gradeForgeWithMeta(engineOutput, { mode });
+
+    // Get player state history for recursion data
+    const stateHistory = await getPlayerStateHistory(identity.canonicalId, season);
+    const currentState = stateHistory.find(s => s.week === week);
+    const latestState = stateHistory[stateHistory.length - 1];
+
+    // Build pillar breakdown with contributing metrics
+    const pillarConfig = getPositionPillarConfig(position);
+    const pillarBreakdown = buildPillarBreakdown(pillarConfig, engineOutput, position);
+
+    // Get weekly alpha history for trend chart
+    const weeklyHistory = stateHistory.map(state => ({
+      week: state.week,
+      alpha: state.alphaFinal ?? state.alphaRaw ?? 0,
+      alphaRaw: state.alphaRaw ?? 0,
+    }));
+
+    // Build recursion details from current state or latest available
+    const stateForRecursion = currentState || latestState;
+    const recursion = stateForRecursion ? {
+      pass0Alpha: stateForRecursion.alphaRaw ?? gradedResult.alpha,
+      pass1Alpha: stateForRecursion.alphaFinal ?? gradedResult.alpha,
+      alphaPrev: stateForRecursion.alphaPrev,
+      expectedAlpha: stateForRecursion.expectedAlpha,
+      surprise: stateForRecursion.surprise,
+      volatility: stateForRecursion.volatilityUpdated ?? stateForRecursion.volatilityPrev,
+      momentum: stateForRecursion.momentumUpdated ?? stateForRecursion.momentum,
+      stabilityAdjustment: stateForRecursion.stabilityAdjustment,
+      isFirstWeek: stateHistory.length <= 1,
+    } : {
+      pass0Alpha: gradedResult.alpha,
+      pass1Alpha: gradedResult.alpha,
+      alphaPrev: null,
+      expectedAlpha: POSITION_BASELINES[position] ?? 55,
+      surprise: null,
+      volatility: null,
+      momentum: null,
+      stabilityAdjustment: null,
+      isFirstWeek: true,
+    };
+
+    // Generate plain English summary
+    const summary = generatePlainEnglishSummary(
+      gradedResult.playerName,
+      position,
+      gradedResult.alpha,
+      gradedResult.pillars,
+      recursion,
+      gradedResult.issues || []
+    );
+
+    return res.json({
+      success: true,
+      player: {
+        id: identity.canonicalId,
+        name: gradedResult.playerName,
+        position: gradedResult.position,
+        team: gradedResult.nflTeam || identity.nflTeam,
+      },
+      season,
+      week,
+      mode,
+      gamesPlayed: gradedResult.gamesPlayed,
+
+      // Alpha scores
+      alphaFinal: gradedResult.alpha,
+      alphaRaw: recursion.pass0Alpha,
+      tier: gradedResult.tier,
+
+      // Pillar breakdown with contributing metrics
+      pillars: pillarBreakdown,
+
+      // Recursive adjustments
+      recursion,
+
+      // Weekly alpha history for trend chart
+      weeklyHistory,
+
+      // Football lens issues
+      issues: gradedResult.issues || [],
+
+      // Plain English summary
+      summary,
+
+      // Debug info (optional, for development)
+      debug: {
+        version: 'transparency/v1',
+        qbContext: engineOutput.qbContext,
+        rawMetrics: engineOutput.rawMetrics,
+      },
+    });
+  } catch (error) {
+    console.error('[FORGE/Transparency] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'FORGE_TRANSPARENCY_FAILED',
+    });
+  }
+});
+
+/**
+ * Build pillar breakdown with contributing metrics
+ */
+function buildPillarBreakdown(
+  pillarConfig: any,
+  engineOutput: any,
+  position: string
+): Record<string, any> {
+  const PILLAR_WEIGHTS: Record<string, Record<string, number>> = {
+    QB: { volume: 0.25, efficiency: 0.50, teamContext: 0.10, stability: 0.15 },
+    RB: { volume: 0.40, efficiency: 0.35, teamContext: 0.10, stability: 0.15 },
+    WR: { volume: 0.35, efficiency: 0.40, teamContext: 0.10, stability: 0.15 },
+    TE: { volume: 0.35, efficiency: 0.40, teamContext: 0.10, stability: 0.15 },
+  };
+
+  const weights = PILLAR_WEIGHTS[position] || PILLAR_WEIGHTS['WR'];
+
+  const buildMetricsArray = (pillarKey: string): any[] => {
+    const config = pillarConfig[pillarKey];
+    if (!config?.metrics) return [];
+
+    return config.metrics.map((m: any) => {
+      const rawValue = engineOutput.rawMetrics?.[m.metricKey];
+      return {
+        name: formatMetricName(m.metricKey),
+        key: m.metricKey,
+        rawValue: rawValue ?? null,
+        weight: Math.round(m.weight * 100),
+        source: m.source,
+        inverted: m.invert || false,
+      };
+    });
+  };
+
+  return {
+    volume: {
+      score: Math.round(engineOutput.pillars.volume * 10) / 10,
+      weight: Math.round(weights.volume * 100),
+      metrics: buildMetricsArray('volume'),
+    },
+    efficiency: {
+      score: Math.round(engineOutput.pillars.efficiency * 10) / 10,
+      weight: Math.round(weights.efficiency * 100),
+      metrics: buildMetricsArray('efficiency'),
+    },
+    teamContext: {
+      score: Math.round(engineOutput.pillars.teamContext * 10) / 10,
+      weight: Math.round(weights.teamContext * 100),
+      metrics: buildMetricsArray('teamContext'),
+    },
+    stability: {
+      score: Math.round(engineOutput.pillars.stability * 10) / 10,
+      weight: Math.round(weights.stability * 100),
+      metrics: buildMetricsArray('stability'),
+    },
+  };
+}
+
+/**
+ * Format metric key to human-readable name
+ */
+function formatMetricName(key: string): string {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase())
+    .replace(/Ppr/g, 'PPR')
+    .replace(/Epa/g, 'EPA')
+    .replace(/Yprr/g, 'YPRR')
+    .replace(/Yac/g, 'YAC')
+    .replace(/Cpoe/g, 'CPOE')
+    .replace(/Sos/g, 'SoS')
+    .replace(/Rz/g, 'Red Zone')
+    .replace(/Std Dev/g, 'Std. Dev.');
+}
+
+/**
+ * Generate plain English summary explaining the score
+ */
+function generatePlainEnglishSummary(
+  playerName: string,
+  position: string,
+  alpha: number,
+  pillars: any,
+  recursion: any,
+  issues: any[]
+): string {
+  const parts: string[] = [];
+  const firstName = playerName.split(' ')[0];
+
+  // Overall tier description
+  if (alpha >= 85) {
+    parts.push(`${firstName} scores elite`);
+  } else if (alpha >= 70) {
+    parts.push(`${firstName} scores as a strong starter`);
+  } else if (alpha >= 55) {
+    parts.push(`${firstName} grades out as a solid flex option`);
+  } else if (alpha >= 40) {
+    parts.push(`${firstName} projects as a boom-bust play`);
+  } else {
+    parts.push(`${firstName} has limited fantasy value`);
+  }
+
+  // Volume description
+  if (pillars.volume >= 85) {
+    parts.push('due to massive volume');
+  } else if (pillars.volume >= 70) {
+    parts.push('with strong usage');
+  } else if (pillars.volume <= 40) {
+    parts.push('despite limited opportunities');
+  }
+
+  // Efficiency description
+  if (pillars.efficiency >= 85) {
+    parts.push('combined with top-tier efficiency');
+  } else if (pillars.efficiency >= 70) {
+    parts.push('and solid production per opportunity');
+  } else if (pillars.efficiency <= 40) {
+    parts.push('but struggles with efficiency');
+  }
+
+  // Build the main sentence
+  let summary = parts.join(' ') + '.';
+
+  // Add recursion context
+  if (recursion && !recursion.isFirstWeek) {
+    if (recursion.volatility !== null && recursion.volatility < 5) {
+      summary += ` Low volatility (${recursion.volatility.toFixed(1)}) over recent weeks earned a stability bonus.`;
+    } else if (recursion.volatility !== null && recursion.volatility > 10) {
+      summary += ` High volatility (${recursion.volatility.toFixed(1)}) introduces some scoring variance.`;
+    }
+
+    if (recursion.momentum !== null && recursion.momentum > 5) {
+      summary += ` Momentum is positive (+${recursion.momentum.toFixed(1)}), indicating an upward trend.`;
+    } else if (recursion.momentum !== null && recursion.momentum < -5) {
+      summary += ` Momentum is negative (${recursion.momentum.toFixed(1)}), suggesting a downward trend.`;
+    }
+  }
+
+  // Add context pillar insight
+  if (pillars.teamContext >= 75) {
+    summary += ` Favorable team environment boosts ceiling.`;
+  } else if (pillars.teamContext <= 35) {
+    summary += ` Difficult team context may cap upside.`;
+  }
+
+  // Add stability insight for WRs
+  if (position === 'WR' && pillars.stability >= 80) {
+    summary += ` Role security is excellent with minimal competition for targets.`;
+  }
+
+  // Add issue warnings
+  const blockingIssues = issues.filter(i => i.severity === 'block' || i.severity === 'warn');
+  if (blockingIssues.length > 0) {
+    const issueMessages = blockingIssues.map(i => i.message).join('; ');
+    summary += ` Note: ${issueMessages}.`;
+  }
+
+  return summary;
+}
+
 export function registerForgeRoutes(app: any): void {
   app.use('/api/forge', router);
-  console.log('🔥 FORGE v0.2 routes mounted at /api/forge/* (E+G architecture enabled)');
+  console.log('🔥 FORGE v0.2 routes mounted at /api/forge/* (E+G architecture enabled, Transparency endpoint added)');
 }
 
 export default router;
