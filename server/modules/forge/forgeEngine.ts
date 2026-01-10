@@ -467,14 +467,31 @@ async function fetchRoleBankData(
   const tableName = `${position.toLowerCase()}_role_bank`;
   
   try {
+    // Role bank uses GSIS IDs (nfl_data_py_id), not canonical IDs
+    // First, look up the GSIS ID from player_identity_map
+    const idLookup = await db.execute(sql`
+      SELECT nfl_data_py_id, gsis_id 
+      FROM player_identity_map 
+      WHERE canonical_id = ${playerId}
+      LIMIT 1
+    `);
+    
+    // Determine which ID to use for role bank lookup
+    let roleBankId = playerId; // Default to canonical ID
+    if (idLookup.rows.length > 0) {
+      const lookupRow = idLookup.rows[0] as Record<string, any>;
+      // Prefer nfl_data_py_id, fall back to gsis_id, then canonical_id
+      roleBankId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
+    }
+    
     const result = await db.execute(sql`
       SELECT * FROM ${sql.identifier(tableName)}
-      WHERE player_id = ${playerId} AND season = ${season}
+      WHERE player_id = ${roleBankId} AND season = ${season}
       LIMIT 1
     `);
 
     if (result.rows.length === 0) {
-      console.log(`[ForgeEngine] No role bank data for ${playerId} in ${tableName}`);
+      console.log(`[ForgeEngine] No role bank data for ${playerId} (roleBankId=${roleBankId}) in ${tableName}`);
       return {};
     }
 
@@ -845,22 +862,40 @@ export async function fetchForgeContext(
   let gamesPlayed = 0;
   
   try {
+    // Weekly stats uses GSIS IDs, not canonical IDs
+    // First look up the GSIS ID from player_identity_map
+    const idLookup = await db.execute(sql`
+      SELECT nfl_data_py_id, gsis_id, full_name, nfl_team 
+      FROM player_identity_map 
+      WHERE canonical_id = ${playerId}
+      LIMIT 1
+    `);
+    
+    let statsId = playerId;
+    if (idLookup.rows.length > 0) {
+      const lookupRow = idLookup.rows[0] as Record<string, any>;
+      statsId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
+      // Use identity map data as fallback
+      playerName = lookupRow.full_name || 'Unknown';
+      nflTeam = lookupRow.nfl_team;
+    }
+    
     const playerResult = await db.execute(sql`
       SELECT DISTINCT player_name, team 
       FROM weekly_stats 
-      WHERE player_id = ${playerId} AND season = ${season}
+      WHERE player_id = ${statsId} AND season = ${season}
       LIMIT 1
     `);
     if (playerResult.rows.length > 0) {
       const row = playerResult.rows[0] as Record<string, any>;
-      playerName = row.player_name || 'Unknown';
-      nflTeam = row.team;
+      playerName = row.player_name || playerName;
+      nflTeam = row.team || nflTeam;
     }
     
     const gpResult = await db.execute(sql`
       SELECT COUNT(DISTINCT week) as gp 
       FROM weekly_stats 
-      WHERE player_id = ${playerId} AND season = ${season}
+      WHERE player_id = ${statsId} AND season = ${season}
     `);
     if (gpResult.rows.length > 0) {
       gamesPlayed = Number((gpResult.rows[0] as any).gp) || 0;
