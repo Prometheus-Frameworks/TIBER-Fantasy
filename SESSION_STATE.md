@@ -18,6 +18,43 @@
 
 ## ✅ Just Completed (This Session)
 
+### ✅ FORGE Transparency ID Resolution Fix
+
+**Issue**: The FORGE transparency page (`/forge`) was showing "NA" and blank values for all metrics - player name was "Unknown", games played was 0, alpha scores were incorrect, and all pillar metrics showed null values.
+
+**Root Cause**: 
+- Role bank tables (`wr_role_bank`, `rb_role_bank`, etc.) and `weekly_stats` use **GSIS IDs** (format: `00-0036900`)
+- The FORGE engine was querying using **canonical IDs** (format: `jamarr-chase`)
+- No ID translation was happening, so all queries returned empty results
+
+**Fix Applied** (in `server/modules/forge/forgeEngine.ts`):
+1. Updated `fetchRoleBankData()` to first lookup GSIS ID from `player_identity_map`
+2. Updated `fetchForgeContext()` to translate canonical ID → GSIS ID before querying `weekly_stats`
+3. Both functions now use `nfl_data_py_id` (or `gsis_id` fallback) for data table queries
+4. Graceful fallback to canonical ID if no mapping exists
+
+**Before Fix**:
+```
+Ja'Marr Chase: Name="Unknown", GP=0, Alpha=48.5, Tier=T4
+Volume/Efficiency: All metrics = null
+```
+
+**After Fix**:
+```
+Ja'Marr Chase: Name="Ja'Marr Chase", GP=15, Alpha=77, Tier=T2
+Volume: score=81.8, Volume Score=85, Targets/Game=11.7
+Efficiency: score=55.3, Efficiency Score=60
+```
+
+**Files Modified**:
+- `server/modules/forge/forgeEngine.ts` - Added ID translation layer in `fetchRoleBankData()` and `fetchForgeContext()`
+
+**Commit**: `6a78e5c2` - "Update player data retrieval to use GSIS IDs for accurate statistics"
+
+**Future Optimization**: Consider hoisting the `player_identity_map` lookup to a single call per request to avoid duplicate queries (currently fetches GSIS ID separately in both functions).
+
+---
+
 ### ✅ FORGE Transparency Page (`/forge`)
 
 **What was built**:
@@ -375,6 +412,12 @@ npm run dev
 ---
 
 ## 🚨 Important Context
+
+**Player ID Resolution Pattern**:
+- **Canonical IDs**: Human-readable slugs (e.g., `jamarr-chase`) used in URLs and frontend
+- **GSIS IDs**: NFL's official IDs (e.g., `00-0036900`) used in role_bank tables and weekly_stats
+- **Translation**: `player_identity_map.canonical_id` → `player_identity_map.nfl_data_py_id` (GSIS)
+- **Critical**: Any FORGE/analytics query against role_bank or weekly_stats MUST translate canonical→GSIS first
 
 **Bronze→Silver→Gold Architecture**:
 - **Bronze**: Raw NFLfastR data in `bronze_nflfastr_plays.raw_data` (JSONB)
