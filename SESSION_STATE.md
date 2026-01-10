@@ -1,7 +1,7 @@
 # Session State Tracker
 > **Purpose**: Track progress across Claude Code sessions to resume work when rate limits hit
 
-**Last Updated**: 2026-01-09
+**Last Updated**: 2026-01-10
 
 > **IMPORTANT**: Read `AGENT_README.md` first for constraints, safe scope, and hard rules.
 
@@ -17,6 +17,71 @@
 ---
 
 ## ✅ Just Completed (This Session)
+
+### ✅ Data Lab GP (Games Played) Display Fix
+
+**Issues Identified**:
+1. **GP was capped at 10** - The search query grouped by both `player_id` AND `player_name`, causing players with name variations (e.g., "C.McCaffrey" vs "Christian McCaffrey") to be split into separate aggregations.
+2. **Single week filter showed inflated values** - Multiple official snapshots existed per week (14 snapshots for week 17 alone), and the query was summing data across ALL snapshots instead of using just one per week.
+3. **Empty data for single week mode** - When selecting the "latest" snapshot per week, it picked broken/incomplete snapshots that had 0 routes data.
+
+**Root Causes**:
+- `GROUP BY spw.player_id, spw.player_name` → split data for players with name variations
+- `SELECT DISTINCT sm.id` without DISTINCT ON(week) → selected ALL snapshots per week
+- Some snapshots (especially newer ones) have broken/empty data (routes = 0 for all players)
+
+**Fixes Applied** (in `server/routes/dataLabRoutes.ts`):
+1. Changed `GROUP BY spw.player_id, spw.player_name` → `GROUP BY spw.player_id` with `MAX(spw.player_name)`
+2. Added CTE to select ONE snapshot per week (the one with highest player_count with routes > 0)
+3. Query now uses `valid_snapshots` CTE that counts players_with_routes per snapshot, then picks best snapshot per week
+
+**Before**:
+```sql
+WITH snapshot_weeks AS (
+  SELECT DISTINCT sm.id as snapshot_id, sm.week
+  FROM datadive_snapshot_meta sm
+  WHERE ...
+)
+...
+GROUP BY spw.player_id, spw.player_name
+```
+
+**After**:
+```sql
+WITH valid_snapshots AS (
+  SELECT sm.id, sm.week, sm.snapshot_at,
+         (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+          WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
+  FROM datadive_snapshot_meta sm
+  WHERE ...
+),
+snapshot_weeks AS (
+  SELECT DISTINCT ON (week) id as snapshot_id, week
+  FROM valid_snapshots
+  WHERE player_count > 0
+  ORDER BY week, player_count DESC, snapshot_at DESC
+)
+...
+GROUP BY spw.player_id
+```
+
+**Results**:
+- Season mode: McCaffrey shows GP=13 (correct - he missed weeks 11-14 with injury)
+- Single week mode: Chris Olave shows 11 targets, 25.9 FPTS for Week 17 (realistic single-game numbers)
+
+---
+
+## 🔧 Known Data Quality Issues
+
+### Multiple Official Snapshots Per Week
+- Week 17 has 14 official snapshots, most with broken data (routes = 0)
+- Only snapshot ID 73 (oldest) has real routes data for week 17
+- **Impact**: Queries must select the "best" snapshot per week, not just any official one
+- **Future Fix**: Clean up broken snapshots or add data quality validation to snapshot creation
+
+---
+
+## ✅ Previously Completed
 
 ### ✅ FORGE Weight Recalibration (Based on Correlation Analysis)
 

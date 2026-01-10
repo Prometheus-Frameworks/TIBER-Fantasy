@@ -592,12 +592,20 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
       : sql.raw('');
 
     const result = await db.execute(sql`
-      WITH snapshot_weeks AS (
-        SELECT DISTINCT sm.id as snapshot_id, sm.week
+      WITH valid_snapshots AS (
+        SELECT sm.id, sm.week, sm.snapshot_at,
+               (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+                WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
         FROM datadive_snapshot_meta sm
         WHERE sm.season = ${seasonNum}
           AND sm.week BETWEEN ${startWeek} AND ${endWeek}
           AND sm.is_official = true
+      ),
+      snapshot_weeks AS (
+        SELECT DISTINCT ON (week) id as snapshot_id, week
+        FROM valid_snapshots
+        WHERE player_count > 0
+        ORDER BY week, player_count DESC, snapshot_at DESC
       ),
       player_agg AS (
         SELECT 
