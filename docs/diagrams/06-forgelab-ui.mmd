@@ -1,0 +1,51 @@
+stateDiagram-v2
+    [*] --> Idle
+
+    Idle --> Loading: fetch triggered
+
+    state Loading {
+        [*] --> FetchingScores
+        FetchingScores --> ScoresReceived: success
+        FetchingScores --> FetchError: error
+    }
+
+    Loading --> Loaded: success
+    Loading --> Error: failed
+
+    state Loaded {
+        [*] --> DisplayScores
+        DisplayScores --> FilterChange: position or week changed
+        FilterChange --> Loading
+    }
+
+    state Error {
+        [*] --> ShowError
+        ShowError --> Loading: retry
+    }
+
+    Loaded --> Inspecting: inspect player
+
+    state Inspecting {
+        [*] --> FetchingPlayerData
+        FetchingPlayerData --> PlayerLoaded: success
+        FetchingPlayerData --> InspectError: error
+        PlayerLoaded --> DisplayInspection
+        InspectError --> DisplayInspection
+        DisplayInspection --> CloseInspection: close
+        CloseInspection --> [*]
+    }
+
+    Inspecting --> Loaded: close
+
+    Loaded --> Exporting: export clicked
+
+    state Exporting {
+        [*] --> GeneratingSnapshot
+        GeneratingSnapshot --> SnapshotReady: success
+        GeneratingSnapshot --> ExportError: error
+        SnapshotReady --> DisplayInfo
+        ExportError --> DisplayInfo
+        DisplayInfo --> [*]
+    }
+
+    Exporting --> Loaded: done

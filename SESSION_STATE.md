@@ -1,7 +1,7 @@
 # Session State Tracker
 > **Purpose**: Track progress across Claude Code sessions to resume work when rate limits hit
 
-**Last Updated**: 2026-01-10
+**Last Updated**: 2026-01-10 (State Machine Diagrams added)
 
 > **IMPORTANT**: Read `AGENT_README.md` first for constraints, safe scope, and hard rules.
 
@@ -17,6 +17,43 @@
 ---
 
 ## ✅ Just Completed (This Session)
+
+### ✅ State Machine Diagrams for System Architecture
+
+**What was built**:
+Comprehensive state machine diagrams documenting all major stateful components in the codebase, rendered as PNG images for easy visualization.
+
+**Diagrams Created** (`docs/diagrams/`):
+
+| # | Diagram | Description | Source File |
+|---|---------|-------------|-------------|
+| 0 | **System Overview** | Master architecture diagram showing how all components connect | All modules |
+| 1 | **Recursive Alpha Engine** | Two-pass scoring with week-over-week state persistence | `recursiveAlphaEngine.ts` |
+| 2 | **FORGE ELT Pipeline** | Bronze→Silver→Gold data flow: FetchContext → BuildMetrics → ComputePillars → FootballLens | `forgeEngine.ts` |
+| 3 | **Dynasty Context** | Injury-aware QB evaluation with 3 branching paths (HealthyStarter, PartialSeason, PotentialInjury) | `forgeEngine.ts:641-850` |
+| 4 | **Start/Sit Decision** | Multi-factor recommendation: BuildProfile → ScoreFactors → Verdict (START/FLEX/SIT) | `startSitAgent.ts` |
+| 5 | **Football Lens** | Position-specific rule engine (WR/RB/TE/QB branches → GlobalChecks) | `forgeFootballLens.ts` |
+| 6 | **ForgeLab UI** | React component states: Idle → Loading → Loaded with Inspecting/Exporting sub-flows | `ForgeLab.tsx` |
+
+**Files Created**:
+- `docs/diagrams/00-system-overview.mmd` + `.png` - Master architecture
+- `docs/diagrams/01-recursive-alpha.mmd` + `.png` - FORGE recursive scoring
+- `docs/diagrams/02-forge-pipeline.mmd` + `.png` - ELT pipeline
+- `docs/diagrams/03-dynasty-context.mmd` + `.png` - Dynasty WR context
+- `docs/diagrams/04-start-sit.mmd` + `.png` - Start/sit engine
+- `docs/diagrams/05-football-lens.mmd` + `.png` - Position rules
+- `docs/diagrams/06-forgelab-ui.mmd` + `.png` - UI state machine
+- `docs/state-machine-diagrams.md` - Full documentation with all diagrams in Mermaid format
+
+**Key Architectural Insights Documented**:
+- FORGE uses **week-over-week state persistence** (alphaPrev, momentum, volatility stored in `forge_player_state`)
+- Dynasty context has **injury-aware branching** - detects when franchise QB is injured and adjusts weights
+- Football Lens applies **position-specific rules** before global checks
+- Frontend components follow **Idle → Loading → Loaded** pattern with sub-states for inspection/export
+
+**Rendering Method**: Kroki.io API with zlib compression for PNG generation
+
+---
 
 ### ✅ FORGE Transparency ID Resolution Fix
 
@@ -389,6 +426,13 @@ GROUP BY spw.player_id
 ## 🔧 Key Commands
 
 ```bash
+# Regenerate state machine diagrams (if mermaid files updated)
+cd docs/diagrams && for f in *.mmd; do
+  base="${f%.mmd}"
+  encoded=$(cat "$f" | python3 -c "import sys, base64, zlib; print(base64.urlsafe_b64encode(zlib.compress(sys.stdin.read().encode(), 9)).decode())")
+  curl -sL "https://kroki.io/mermaid/png/${encoded}" -o "${base}.png"
+done
+
 # Run Gold ETL for single week
 npx tsx server/etl/goldDatadiveETL.ts 2025 17 17
 

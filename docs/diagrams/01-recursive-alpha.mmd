@@ -1,0 +1,39 @@
+stateDiagram-v2
+    [*] --> CheckWeek
+
+    CheckWeek --> FirstWeek: week == 1
+    CheckWeek --> RecursiveWeek: week > 1
+
+    state FirstWeek {
+        [*] --> CalculateRawAlpha
+        CalculateRawAlpha --> SetBaseline
+        SetBaseline --> InitializeState
+        InitializeState --> [*]
+    }
+
+    state RecursiveWeek {
+        [*] --> FetchPreviousState
+        FetchPreviousState --> CalculateExpected: state found
+        FetchPreviousState --> FallbackToBaseline: no state
+
+        CalculateExpected --> CalculateRawAlpha2
+        FallbackToBaseline --> CalculateRawAlpha2
+
+        CalculateRawAlpha2 --> CalculateSurprise
+        CalculateSurprise --> CheckVolatility
+
+        CheckVolatility --> ReducePositiveSurprise: volatility > 10
+        CheckVolatility --> AmplifySurprise: volatility < 5
+        CheckVolatility --> NormalAdjustment: else
+
+        ReducePositiveSurprise --> ApplyMomentum
+        AmplifySurprise --> ApplyMomentum
+        NormalAdjustment --> ApplyMomentum
+
+        ApplyMomentum --> ClampFinal
+        ClampFinal --> [*]
+    }
+
+    FirstWeek --> PersistState
+    RecursiveWeek --> PersistState
+    PersistState --> [*]

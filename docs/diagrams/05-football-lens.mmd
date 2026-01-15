@@ -1,0 +1,77 @@
+stateDiagram-v2
+    [*] --> CheckPosition
+
+    CheckPosition --> WRRules: position == WR
+    CheckPosition --> RBRules: position == RB
+    CheckPosition --> TERules: position == TE
+    CheckPosition --> QBRules: position == QB
+
+    state WRRules {
+        [*] --> CheckWRVolume
+        CheckWRVolume --> LowVolHighEff: lowVol and highEff
+        CheckWRVolume --> HighVolLowEff: highVol and lowEff
+        CheckWRVolume --> WRNormal: else
+        LowVolHighEff --> ScaleEff90
+        HighVolLowEff --> FlagForceFed
+        WRNormal --> WRDone
+        ScaleEff90 --> WRDone
+        FlagForceFed --> WRDone
+        WRDone --> [*]
+    }
+
+    state RBRules {
+        [*] --> CheckRBMetrics
+        CheckRBMetrics --> HighVolLowEffRB: highVol and lowEff
+        CheckRBMetrics --> WorkhorseBadOff: workhorse and badOff
+        CheckRBMetrics --> LowVolHighEffRB: lowVol and highEff
+        CheckRBMetrics --> RBNormal: else
+        HighVolLowEffRB --> FlagPerfRisk
+        WorkhorseBadOff --> ScaleTeamCtx
+        LowVolHighEffRB --> ScaleEff92
+        RBNormal --> RBDone
+        FlagPerfRisk --> RBDone
+        ScaleTeamCtx --> RBDone
+        ScaleEff92 --> RBDone
+        RBDone --> [*]
+    }
+
+    state TERules {
+        [*] --> CheckTEVolume
+        CheckTEVolume --> LowVolHighEffTE: lowVol and highEff
+        CheckTEVolume --> TENormal: else
+        LowVolHighEffTE --> ScaleEff88
+        TENormal --> TEDone
+        ScaleEff88 --> TEDone
+        TEDone --> [*]
+    }
+
+    state QBRules {
+        [*] --> CheckQBMetrics
+        CheckQBMetrics --> HighEffLowStab: highEff and lowStab
+        CheckQBMetrics --> HighVolLowEffQB: highVol and lowEff
+        CheckQBMetrics --> QBNormal: else
+        HighEffLowStab --> FlagBoomBust
+        HighVolLowEffQB --> FlagGarbageTime
+        QBNormal --> QBDone
+        FlagBoomBust --> QBDone
+        FlagGarbageTime --> QBDone
+        QBDone --> [*]
+    }
+
+    WRRules --> GlobalChecks
+    RBRules --> GlobalChecks
+    TERules --> GlobalChecks
+    QBRules --> GlobalChecks
+
+    state GlobalChecks {
+        [*] --> CheckPolarization
+        CheckPolarization --> FlagContextSensitive: polarized
+        CheckPolarization --> CheckSampleSize: not polarized
+        FlagContextSensitive --> CheckSampleSize
+        CheckSampleSize --> FlagVolatility: games < 3
+        CheckSampleSize --> NoFlags: games >= 3
+        FlagVolatility --> [*]
+        NoFlags --> [*]
+    }
+
+    GlobalChecks --> [*]

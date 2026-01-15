@@ -1,0 +1,77 @@
+flowchart TB
+    subgraph Frontend["Frontend (React)"]
+        ForgeLab["ForgeLab Page<br/>Filter/Inspect/Export States"]
+        PlayerPage["PlayerPage<br/>Multi-Query Coordination"]
+        Dashboard["TiberDashboard<br/>Tab Navigation"]
+        RankingsTab["RankingsTab<br/>Filter + Drawer States"]
+    end
+
+    subgraph FORGE["FORGE Engine (Core Scoring)"]
+        direction TB
+        ForgeEngine["forgeEngine.ts<br/>ELT Pipeline"]
+        AlphaEngine["alphaEngine.ts<br/>Calibration Pipeline"]
+        RecursiveAlpha["recursiveAlphaEngine.ts<br/>Week-over-Week State"]
+        FootballLens["forgeFootballLens.ts<br/>Position Rules"]
+        DynastyCtx["Dynasty Context<br/>QB Injury Detection"]
+        ForgeState["forgeStateService.ts<br/>State Persistence"]
+    end
+
+    subgraph Decision["Decision Engines"]
+        StartSit["startSitAgent.ts<br/>START/FLEX/SIT"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        Scheduler["IntelligentScheduler<br/>SLA-Aware Jobs"]
+        DB[(PostgreSQL<br/>forge_player_state)]
+    end
+
+    subgraph DataSources["External Data"]
+        Sleeper["Sleeper API"]
+        MSF["MySportsFeeds"]
+        NFLData["NFL-Data-Py"]
+    end
+
+    %% Frontend to Backend
+    ForgeLab -->|"GET /api/forge/scores"| ForgeEngine
+    ForgeLab -->|"GET /api/forge/inspect/:id"| ForgeEngine
+    PlayerPage -->|"GET /api/player/:id"| ForgeEngine
+    RankingsTab -->|"GET /api/rankings"| ForgeEngine
+    Dashboard --> RankingsTab
+
+    %% FORGE Internal Flow
+    ForgeEngine -->|"1. Fetch Context"| DataSources
+    ForgeEngine -->|"2. Build Metrics"| AlphaEngine
+    AlphaEngine -->|"3. Calculate Pillars"| FootballLens
+    FootballLens -->|"4. Apply Rules"| RecursiveAlpha
+    RecursiveAlpha -->|"5. Blend Prior"| ForgeState
+    ForgeState <-->|"Read/Write State"| DB
+
+    %% Dynasty Context
+    AlphaEngine -->|"WR Only"| DynastyCtx
+    DynastyCtx -->|"QB Metrics"| DataSources
+
+    %% Decision Engine
+    ForgeEngine -->|"Player Scores"| StartSit
+    StartSit -->|"Matchup Data"| DataSources
+
+    %% Scheduler
+    Scheduler -->|"Trigger Recompute"| ForgeEngine
+    Scheduler -->|"Check Freshness"| DB
+
+    %% Data Sources
+    DataSources --> Sleeper
+    DataSources --> MSF
+    DataSources --> NFLData
+
+    %% Styling
+    classDef frontend fill:#4a5568,stroke:#2d3748,color:#fff
+    classDef forge fill:#5a67d8,stroke:#434190,color:#fff
+    classDef decision fill:#38a169,stroke:#276749,color:#fff
+    classDef infra fill:#d69e2e,stroke:#b7791f,color:#fff
+    classDef external fill:#718096,stroke:#4a5568,color:#fff
+
+    class ForgeLab,PlayerPage,Dashboard,RankingsTab frontend
+    class ForgeEngine,AlphaEngine,RecursiveAlpha,FootballLens,DynastyCtx,ForgeState forge
+    class StartSit decision
+    class Scheduler,DB infra
+    class Sleeper,MSF,NFLData external

@@ -1,0 +1,74 @@
+stateDiagram-v2
+    [*] --> BuildProfile
+
+    state BuildProfile {
+        [*] --> FetchUsage
+        FetchUsage --> FetchMatchup
+        FetchMatchup --> FetchInjury
+        FetchInjury --> ProfileReady
+        ProfileReady --> [*]
+    }
+
+    BuildProfile --> ScoreFactors
+
+    state ScoreFactors {
+        [*] --> ScoreUsage
+        ScoreUsage --> ScoreMatchup
+        ScoreMatchup --> ScoreVolatility
+
+        state ScoreUsage {
+            [*] --> CalculateUsageScore
+            CalculateUsageScore --> UsageBoost: score > 70
+            CalculateUsageScore --> UsageNeutral: 40 to 70
+            CalculateUsageScore --> UsageDowngrade: score < 40
+            UsageBoost --> [*]
+            UsageNeutral --> [*]
+            UsageDowngrade --> [*]
+        }
+
+        state ScoreMatchup {
+            [*] --> CalculateSoSScore
+            CalculateSoSScore --> MatchupBoost: score > 70
+            CalculateSoSScore --> MatchupNeutral: 40 to 70
+            CalculateSoSScore --> MatchupDowngrade: score < 40
+            MatchupBoost --> [*]
+            MatchupNeutral --> [*]
+            MatchupDowngrade --> [*]
+        }
+
+        state ScoreVolatility {
+            [*] --> CheckInjury
+            CheckInjury --> InjuryDowngrade: health < 80
+            CheckInjury --> NoInjuryImpact: health >= 80
+            InjuryDowngrade --> [*]
+            NoInjuryImpact --> [*]
+        }
+
+        ScoreVolatility --> [*]
+    }
+
+    ScoreFactors --> GenerateVerdict
+
+    state GenerateVerdict {
+        [*] --> WeightFactors
+        WeightFactors --> SumScores
+        SumScores --> ApplyRules
+        ApplyRules --> DetermineVerdict
+
+        DetermineVerdict --> START: total > 70
+        DetermineVerdict --> FLEX: 40 to 70
+        DetermineVerdict --> SIT: total < 40
+        START --> [*]
+        FLEX --> [*]
+        SIT --> [*]
+    }
+
+    GenerateVerdict --> FlagSignals
+
+    state FlagSignals {
+        [*] --> IdentifyTopSignals
+        IdentifyTopSignals --> IdentifyRiskFlags
+        IdentifyRiskFlags --> [*]
+    }
+
+    FlagSignals --> [*]

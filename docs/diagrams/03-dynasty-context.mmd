@@ -1,0 +1,71 @@
+stateDiagram-v2
+    [*] --> CheckPosition
+
+    CheckPosition --> Skip: position != WR
+    CheckPosition --> StartComputation: position == WR
+    Skip --> [*]
+
+    StartComputation --> FetchQBData
+
+    state FetchQBData {
+        [*] --> GetCurrentSeasonQB
+        GetCurrentSeasonQB --> CheckGamesPlayed
+
+        CheckGamesPlayed --> HealthyStarter: games >= 8
+        CheckGamesPlayed --> PartialSeason: 5 <= games < 8
+        CheckGamesPlayed --> PotentialInjury: games < 5
+    }
+
+    state HealthyStarter {
+        [*] --> FetchCurrentMetrics
+        FetchCurrentMetrics --> FetchHistorical
+        FetchHistorical --> BlendHealthy
+        BlendHealthy --> [*]
+    }
+
+    state PartialSeason {
+        [*] --> FetchPartialCurrent
+        FetchPartialCurrent --> FetchHistoricalHeavy
+        FetchHistoricalHeavy --> BlendPartial
+        BlendPartial --> [*]
+    }
+
+    state PotentialInjury {
+        [*] --> SearchFranchiseQB
+        SearchFranchiseQB --> FoundFranchise: QB found
+        SearchFranchiseQB --> NoFranchise: not found
+
+        FoundFranchise --> CheckInjured
+        CheckInjured --> InjuredFranchise: games < 5
+        CheckInjured --> NotInjured: games >= 5
+
+        InjuredFranchise --> BlendInjured
+        NotInjured --> UseBestAvailable
+        NoFranchise --> UseDefault
+
+        BlendInjured --> [*]
+        UseBestAvailable --> [*]
+        UseDefault --> [*]
+    }
+
+    HealthyStarter --> CalculateContinuity
+    PartialSeason --> CalculateContinuity
+    PotentialInjury --> CalculateContinuity
+
+    state CalculateContinuity {
+        [*] --> TeamPassVolume
+        TeamPassVolume --> TeamPace
+        TeamPace --> BlendContinuity
+        BlendContinuity --> [*]
+    }
+
+    CalculateContinuity --> CareerEfficiency
+    CareerEfficiency --> FinalBlend
+
+    state FinalBlend {
+        [*] --> Combine
+        Combine --> Clamp
+        Clamp --> [*]
+    }
+
+    FinalBlend --> [*]

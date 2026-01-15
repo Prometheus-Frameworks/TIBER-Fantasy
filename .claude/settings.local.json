@@ -26,7 +26,9 @@
       "Bash(for week in 14 15 16 17)",
       "Bash(npm run qa:gold:*)",
       "Bash(npx tsc:*)",
-      "Bash(timeout 30 npm run:*)"
+      "Bash(timeout 30 npm run:*)",
+      "Bash(npx -y @mermaid-js/mermaid-cli mmdc:*)",
+      "Bash(npx:*)"
     ]
   }
 }

@@ -1,0 +1,45 @@
+stateDiagram-v2
+    [*] --> FetchContext
+
+    state FetchContext {
+        [*] --> LoadRoleBank
+        LoadRoleBank --> LoadTeamContext
+        LoadTeamContext --> LoadSoSData
+        LoadSoSData --> LoadQBContext
+        LoadQBContext --> [*]
+    }
+
+    FetchContext --> BuildMetrics: context ready
+
+    state BuildMetrics {
+        [*] --> CreateMetricLookup
+        CreateMetricLookup --> NormalizeMetrics
+        NormalizeMetrics --> ComputeDerivedMetrics
+        ComputeDerivedMetrics --> [*]
+    }
+
+    BuildMetrics --> ComputePillars: metrics ready
+
+    state ComputePillars {
+        [*] --> VolumeScore
+        VolumeScore --> EfficiencyScore
+        EfficiencyScore --> TeamContextScore
+        TeamContextScore --> StabilityScore
+        StabilityScore --> DynastyContext: position == WR
+        StabilityScore --> SkipDynasty: position != WR
+        DynastyContext --> [*]
+        SkipDynasty --> [*]
+    }
+
+    ComputePillars --> ApplyFootballLens
+
+    state ApplyFootballLens {
+        [*] --> CheckTDSpike
+        CheckTDSpike --> CheckVolumeMismatch
+        CheckVolumeMismatch --> CheckPolarization
+        CheckPolarization --> FlagIssues
+        FlagIssues --> [*]
+    }
+
+    ApplyFootballLens --> OutputScore
+    OutputScore --> [*]
