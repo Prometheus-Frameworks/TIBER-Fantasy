@@ -18,6 +18,53 @@
 
 ## ✅ Just Completed (This Session)
 
+### ✅ Data Lab Fixes (January 2026)
+
+**Issues Fixed**:
+1. **Single-week mode returning 0 routes** - The query was selecting broken snapshots (routes=0 for all players)
+2. **Black text in dropdowns** - shadcn components using light mode CSS variables on dark background
+3. **Snapshot debug header cluttering UI** - Removed unnecessary "Snapshot #X, 2025 Week Y" card
+
+**Root Causes & Solutions**:
+
+1. **Valid Snapshot Selection** (dataLabRoutes.ts):
+   - Week 17 had 14 official snapshots, most broken with routes=0
+   - Added CTE to count players with routes > 0 per snapshot
+   - Now selects snapshot with highest player_count, falling back to most recent
+   ```sql
+   WITH valid_snapshots AS (
+     SELECT sm.id, sm.week, sm.snapshot_at,
+            (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+             WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
+     FROM datadive_snapshot_meta sm
+   ),
+   best_snapshot AS (
+     SELECT id FROM valid_snapshots
+     WHERE player_count > 0
+     ORDER BY player_count DESC, snapshot_at DESC
+     LIMIT 1
+   )
+   ```
+
+2. **Dark Mode Fix** (main.tsx):
+   - Added `document.documentElement.classList.add("dark")` on app load
+   - All shadcn components now use `.dark` CSS variables (white text, dark backgrounds)
+
+3. **UI Cleanup** (TiberDataLab.tsx):
+   - Removed snapshot meta debug card for cleaner user experience
+
+**Data Quality Note**:
+- Weeks 11 and 13 have broken snapshots (routes=0 for all players)
+- This limits max GP (Games Played) to 15 instead of 17 for season totals
+- Would require Gold ETL rerun for those weeks to fix
+
+**Files Modified**:
+- `server/routes/dataLabRoutes.ts` - Valid snapshot selection CTE
+- `client/src/main.tsx` - Global dark mode class
+- `client/src/pages/TiberDataLab.tsx` - Removed debug header
+
+---
+
 ### ✅ State Machine Diagrams for System Architecture
 
 **What was built**:
