@@ -757,51 +757,12 @@ export default function TiberDataLab() {
           </div>
         </div>
 
-        {metaLoading ? (
-          <Card className="bg-[#141824] border-gray-700 mb-6">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-5 w-32 bg-gray-700" />
-                <Skeleton className="h-5 w-24 bg-gray-700" />
-                <Skeleton className="h-5 w-20 bg-gray-700" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : metaData ? (
-          <Card className="bg-[#141824] border-gray-700 mb-6" data-testid="card-snapshot-meta">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Badge variant="outline" className="border-green-600 text-green-400">
-                    Snapshot #{metaData.snapshotId}
-                  </Badge>
-                  <span className="text-gray-400">
-                    {metaData.season} Week {metaData.week}
-                  </span>
-                  <span className="text-gray-500 text-sm">
-                    {metaData.rowCount} players • {metaData.teamCount} teams
-                  </span>
-                </div>
-                <span className="text-gray-500 text-sm">
-                  {new Date(metaData.snapshotAt).toLocaleString()}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ) : metaError ? (
+        {metaError && (
           <Card className="bg-[#141824] border-red-700 mb-6" data-testid="card-snapshot-error">
             <CardContent className="p-4">
               <div className="text-red-400 text-center flex items-center justify-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Failed to load snapshot data. Search is disabled until snapshot is available.
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="bg-[#141824] border-gray-700 mb-6">
-            <CardContent className="p-4">
-              <div className="text-yellow-400 text-center">
-                No snapshot available. Run a snapshot first using the admin endpoint.
               </div>
             </CardContent>
           </Card>

@@ -120,26 +120,31 @@ router.get("/player-week", async (req: Request, res: Response) => {
       });
     }
 
-    const latestSnapshot = await db
-      .select()
-      .from(datadiveSnapshotMeta)
-      .where(
-        and(
-          eq(datadiveSnapshotMeta.season, Number(season)),
-          eq(datadiveSnapshotMeta.week, Number(week)),
-          eq(datadiveSnapshotMeta.isOfficial, true)
-        )
+    // Use valid snapshot selection - pick snapshot with most players having routes > 0
+    const validSnapshotResult = await db.execute(sql`
+      WITH snapshot_quality AS (
+        SELECT sm.id, sm.snapshot_at,
+               (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+                WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${Number(season)}
+          AND sm.week = ${Number(week)}
+          AND sm.is_official = true
       )
-      .orderBy(desc(datadiveSnapshotMeta.snapshotAt))
-      .limit(1);
+      SELECT id FROM snapshot_quality
+      WHERE player_count > 0
+      ORDER BY player_count DESC, snapshot_at DESC
+      LIMIT 1
+    `);
 
-    if (!latestSnapshot.length) {
+    const snapshotRows = validSnapshotResult.rows as any[];
+    if (!snapshotRows.length) {
       return res.status(404).json({
-        error: `No snapshot found for ${season} Week ${week}`,
+        error: `No valid snapshot found for ${season} Week ${week}`,
       });
     }
 
-    const snapshotId = latestSnapshot[0].id;
+    const snapshotId = snapshotRows[0].id;
 
     const results = await datadiveSnapshotService.getSnapshotPlayerWeek(
       snapshotId,
@@ -206,26 +211,31 @@ router.get("/team-week", async (req: Request, res: Response) => {
       });
     }
 
-    const latestSnapshot = await db
-      .select()
-      .from(datadiveSnapshotMeta)
-      .where(
-        and(
-          eq(datadiveSnapshotMeta.season, Number(season)),
-          eq(datadiveSnapshotMeta.week, Number(week)),
-          eq(datadiveSnapshotMeta.isOfficial, true)
-        )
+    // Use valid snapshot selection - pick snapshot with most players having routes > 0
+    const validSnapshotResult = await db.execute(sql`
+      WITH snapshot_quality AS (
+        SELECT sm.id, sm.snapshot_at,
+               (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+                WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${Number(season)}
+          AND sm.week = ${Number(week)}
+          AND sm.is_official = true
       )
-      .orderBy(desc(datadiveSnapshotMeta.snapshotAt))
-      .limit(1);
+      SELECT id FROM snapshot_quality
+      WHERE player_count > 0
+      ORDER BY player_count DESC, snapshot_at DESC
+      LIMIT 1
+    `);
 
-    if (!latestSnapshot.length) {
+    const snapshotRows = validSnapshotResult.rows as any[];
+    if (!snapshotRows.length) {
       return res.status(404).json({
-        error: `No snapshot found for ${season} Week ${week}`,
+        error: `No valid snapshot found for ${season} Week ${week}`,
       });
     }
 
-    const snapshotId = latestSnapshot[0].id;
+    const snapshotId = snapshotRows[0].id;
 
     let query = db
       .select()
@@ -313,26 +323,31 @@ router.get("/search", async (req: Request, res: Response) => {
       });
     }
 
-    const latestSnapshot = await db
-      .select()
-      .from(datadiveSnapshotMeta)
-      .where(
-        and(
-          eq(datadiveSnapshotMeta.season, Number(season)),
-          eq(datadiveSnapshotMeta.week, Number(week)),
-          eq(datadiveSnapshotMeta.isOfficial, true)
-        )
+    // Use valid snapshot selection - pick snapshot with most players having routes > 0
+    const validSnapshotResult = await db.execute(sql`
+      WITH snapshot_quality AS (
+        SELECT sm.id, sm.snapshot_at,
+               (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+                WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.routes > 0) as player_count
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${Number(season)}
+          AND sm.week = ${Number(week)}
+          AND sm.is_official = true
       )
-      .orderBy(desc(datadiveSnapshotMeta.snapshotAt))
-      .limit(1);
+      SELECT id FROM snapshot_quality
+      WHERE player_count > 0
+      ORDER BY player_count DESC, snapshot_at DESC
+      LIMIT 1
+    `);
 
-    if (!latestSnapshot.length) {
+    const snapshotRows = validSnapshotResult.rows as any[];
+    if (!snapshotRows.length) {
       return res.status(404).json({
-        error: `No snapshot found for ${season} Week ${week}`,
+        error: `No valid snapshot found for ${season} Week ${week}`,
       });
     }
 
-    const snapshotId = latestSnapshot[0].id;
+    const snapshotId = snapshotRows[0].id;
 
     let results = await db
       .select()
