@@ -447,7 +447,7 @@ function PlayerDrawer({
                   <StatCard label="Shotgun%" value={player.shotgunRate} format="pct" />
                   <StatCard label="No Huddle%" value={player.noHuddleRate} format="pct" />
                   <StatCard label="Sack%" value={player.sackRate} format="pct" />
-                  <StatCard label="Scrambles" value={player.scrambles} />
+                  <StatCard label="QB Hits" value={player.qbHits} />
                 </div>
               </div>
             </>
@@ -1062,9 +1062,6 @@ export default function TiberDataLab() {
                       <th className="px-4 py-3 text-center" title="Rush Attempts">R ATT</th>
                       <th className="px-4 py-3 text-center" title="Rush Yards">R YDS</th>
                       <th className="px-4 py-3 text-center" title="Rush TDs">R TD</th>
-                      <th className="px-4 py-3 text-center" title="Scrambles">SCRM</th>
-                      <th className="px-4 py-3 text-center" title="Scramble Yards">SC YDS</th>
-                      <th className="px-4 py-3 text-center" title="Scramble TDs">SC TD</th>
                       <th className="px-4 py-3 text-center text-purple-400" title="Fantasy Points Per Dropback">FP/DB</th>
                       <th className="px-4 py-3 text-center text-purple-400" title="Total Fantasy Points (PPR)">FPTS</th>
                       <th className="px-4 py-3 text-center"></th>
@@ -1101,15 +1098,6 @@ export default function TiberDataLab() {
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-green-400">
                           {player.rushTds ?? '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center font-mono text-blue-400">
-                          {player.scrambles ?? '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center font-mono text-blue-400">
-                          {player.scrambleYards ?? '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center font-mono text-green-400">
-                          {player.scrambleTds ?? '-'}
                         </td>
                         <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">
                           {formatStat(player.fpPerDropback, 2)}
