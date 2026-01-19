@@ -4918,6 +4918,14 @@ export const datadiveSnapshotPlayerWeek = pgTable("datadive_snapshot_player_week
   shotgunSuccessRate: real("shotgun_success_rate"), // Success rate from shotgun
   underCenterSuccessRate: real("under_center_success_rate"), // Success rate under center
 
+  // ===== QB ADVANCED METRICS (Data Lab v2) =====
+  dropbacks: integer("dropbacks").default(0),       // Total dropbacks (pass attempts + sacks)
+  sackYards: integer("sack_yards").default(0),      // Yards lost due to sacks (negative value)
+  scrambleYards: integer("scramble_yards").default(0), // Yards gained on scrambles
+  scrambleTds: integer("scramble_tds").default(0),  // TDs on scrambles
+  anyA: real("any_a"),                              // Adjusted Net Yards/Attempt: (pass_yds + 20*TDs - 45*INTs - sack_yds) / (attempts + sacks)
+  fpPerDropback: real("fp_per_dropback"),           // Fantasy points per dropback
+
   // ===== PHASE 2A: RED ZONE EFFICIENCY =====
   // All Skill Positions
   rzSnaps: integer("rz_snaps").default(0),          // Snaps inside opponent 20-yard line

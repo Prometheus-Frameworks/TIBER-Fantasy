@@ -102,9 +102,12 @@ interface GoldPlayerWeek {
   cpoe: number | null;
   sacks: number;
   sackRate: number | null;
+  sackYards: number;                    // Yards lost due to sacks (negative)
   qbHits: number;
   qbHitRate: number | null;
   scrambles: number;
+  scrambleYards: number;                // Yards gained on scrambles
+  scrambleTds: number;                  // TDs on scrambles
   passFirstDowns: number;
   passFirstDownRate: number | null;
   deepPassAttempts: number;
@@ -114,6 +117,11 @@ interface GoldPlayerWeek {
   noHuddleRate: number | null;          // % of plays in no-huddle
   shotgunSuccessRate: number | null;    // Success rate from shotgun
   underCenterSuccessRate: number | null; // Success rate from under center
+  
+  // QB Advanced Metrics (Data Lab v2)
+  dropbacks: number;                    // Total dropbacks (pass attempts + sacks)
+  anyA: number | null;                  // Adjusted Net Yards/Attempt
+  fpPerDropback: number | null;         // Fantasy points per dropback
 
   // Combined
   epaPerPlay: number | null;
@@ -407,8 +415,11 @@ interface QbPlayByPlayStats {
   dropbacks: number;
   cpoe: number | null;
   sacks: number;
+  sackYards: number;           // Yards lost due to sacks (negative)
   qbHits: number;
   scrambles: number;
+  scrambleYards: number;       // Yards gained on scrambles
+  scrambleTds: number;         // TDs on scrambles
   passFirstDowns: number;
   deepPassAttempts: number;
   totalAirYards: number;
@@ -434,8 +445,13 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         COUNT(*) as dropbacks,
         AVG(CASE WHEN raw_data->>'cpoe' != '' THEN (raw_data->>'cpoe')::numeric ELSE NULL END) as avg_cpoe,
         SUM(CASE WHEN (raw_data->>'sack')::numeric > 0 THEN 1 ELSE 0 END) as sacks,
+        -- Sack yards: yards_gained on sack plays (typically negative)
+        SUM(CASE WHEN (raw_data->>'sack')::numeric > 0 THEN COALESCE((raw_data->>'yards_gained')::numeric, 0) ELSE 0 END) as sack_yards,
         SUM(CASE WHEN (raw_data->>'qb_hit')::numeric > 0 THEN 1 ELSE 0 END) as qb_hits,
         SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN 1 ELSE 0 END) as scrambles,
+        -- Scramble yards and TDs
+        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN COALESCE((raw_data->>'yards_gained')::numeric, 0) ELSE 0 END) as scramble_yards,
+        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 AND touchdown = true THEN 1 ELSE 0 END) as scramble_tds,
         SUM(CASE WHEN first_down_pass THEN 1 ELSE 0 END) as pass_first_downs,
         SUM(CASE WHEN air_yards > 20 THEN 1 ELSE 0 END) as deep_pass_attempts,
         SUM(COALESCE(air_yards, 0)) as total_air_yards,
@@ -459,8 +475,11 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         dropbacks: Number(row.dropbacks) || 0,
         cpoe: row.avg_cpoe !== null ? Number(row.avg_cpoe) : null,
         sacks: Number(row.sacks) || 0,
+        sackYards: Number(row.sack_yards) || 0,
         qbHits: Number(row.qb_hits) || 0,
         scrambles: Number(row.scrambles) || 0,
+        scrambleYards: Number(row.scramble_yards) || 0,
+        scrambleTds: Number(row.scramble_tds) || 0,
         passFirstDowns: Number(row.pass_first_downs) || 0,
         deepPassAttempts: Number(row.deep_pass_attempts) || 0,
         totalAirYards: Number(row.total_air_yards) || 0,
@@ -930,13 +949,19 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     // QB Efficiency from play-by-play
     const playerQbStats = qbStats.get(row.player_id);
     const passAttempts = Number(row.pass_attempts) || 0;
+    const passYards = Number(row.pass_yards) || 0;
+    const passTds = Number(row.pass_tds) || 0;
+    const passInterceptions = Number(row.interceptions) || 0;
     const dropbacks = playerQbStats?.dropbacks || passAttempts;
     const cpoe = playerQbStats?.cpoe ?? null;
     const sacks = playerQbStats?.sacks || 0;
+    const sackYards = playerQbStats?.sackYards || 0;  // Yards lost from sacks (negative)
     const sackRate = dropbacks > 0 ? sacks / dropbacks : null;
     const qbHits = playerQbStats?.qbHits || 0;
     const qbHitRate = dropbacks > 0 ? qbHits / dropbacks : null;
     const scrambles = playerQbStats?.scrambles || 0;
+    const scrambleYards = playerQbStats?.scrambleYards || 0;  // Yards gained on scrambles
+    const scrambleTds = playerQbStats?.scrambleTds || 0;      // TDs on scrambles
     const passFirstDowns = playerQbStats?.passFirstDowns || 0;
     const passFirstDownRate = passAttempts > 0 ? passFirstDowns / passAttempts : null;
     const deepPassAttempts = playerQbStats?.deepPassAttempts || 0;
@@ -944,6 +969,16 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const passAdot = passAttempts > 0 && playerQbStats?.totalAirYards
       ? playerQbStats.totalAirYards / passAttempts
       : null;
+    
+    // QB Advanced Metrics (Data Lab v2)
+    // ANY/A = (pass_yards + 20*TDs - 45*INTs - sack_yards) / (attempts + sacks)
+    // sackYards is typically negative, so we add it (which subtracts)
+    const anyADenom = passAttempts + sacks;
+    const anyA = anyADenom > 0 
+      ? (passYards + (20 * passTds) - (45 * passInterceptions) + sackYards) / anyADenom 
+      : null;
+    // Fantasy points per dropback
+    const fpPerDropback = dropbacks > 0 ? fpts.ppr / dropbacks : null;
 
     // QB Shotgun/No-Huddle metrics
     const shotgunPlays = playerQbStats?.shotgunPlays || 0;
@@ -1152,9 +1187,12 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       cpoe,
       sacks,
       sackRate,
+      sackYards,
       qbHits,
       qbHitRate,
       scrambles,
+      scrambleYards,
+      scrambleTds,
       passFirstDowns,
       passFirstDownRate,
       deepPassAttempts,
@@ -1164,6 +1202,10 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       noHuddleRate,
       shotgunSuccessRate,
       underCenterSuccessRate,
+      // QB Advanced Metrics (Data Lab v2)
+      dropbacks,
+      anyA,
+      fpPerDropback,
       // Combined
       epaPerPlay,
       successRate,
@@ -1252,9 +1294,10 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         avg_air_epa, avg_comp_air_epa,
         deep_target_rate, intermediate_target_rate, short_target_rate,
         left_target_rate, middle_target_rate, right_target_rate,
-        cpoe, sacks, sack_rate, qb_hits, qb_hit_rate, scrambles,
+        cpoe, sacks, sack_rate, sack_yards, qb_hits, qb_hit_rate, scrambles, scramble_yards, scramble_tds,
         pass_first_downs, pass_first_down_rate, deep_pass_attempts, deep_pass_rate, pass_adot,
         shotgun_rate, no_huddle_rate, shotgun_success_rate, under_center_success_rate,
+        dropbacks, any_a, fp_per_dropback,
         epa_per_play, success_rate, x_yac, yac_over_expected, x_yac_success_rate,
         rz_snaps, rz_snap_rate, rz_success_rate,
         rz_pass_attempts, rz_pass_tds, rz_td_rate, rz_interceptions,
@@ -1282,9 +1325,10 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.avgAirEpa}, ${rec.avgCompAirEpa},
         ${rec.deepTargetRate}, ${rec.intermediateTargetRate}, ${rec.shortTargetRate},
         ${rec.leftTargetRate}, ${rec.middleTargetRate}, ${rec.rightTargetRate},
-        ${rec.cpoe}, ${rec.sacks}, ${rec.sackRate}, ${rec.qbHits}, ${rec.qbHitRate}, ${rec.scrambles},
+        ${rec.cpoe}, ${rec.sacks}, ${rec.sackRate}, ${rec.sackYards}, ${rec.qbHits}, ${rec.qbHitRate}, ${rec.scrambles}, ${rec.scrambleYards}, ${rec.scrambleTds},
         ${rec.passFirstDowns}, ${rec.passFirstDownRate}, ${rec.deepPassAttempts}, ${rec.deepPassRate}, ${rec.passAdot},
         ${rec.shotgunRate}, ${rec.noHuddleRate}, ${rec.shotgunSuccessRate}, ${rec.underCenterSuccessRate},
+        ${rec.dropbacks}, ${rec.anyA}, ${rec.fpPerDropback},
         ${rec.epaPerPlay}, ${rec.successRate}, ${rec.xYac}, ${rec.yacOverExpected}, ${rec.xYacSuccessRate},
         ${rec.rzSnaps}, ${rec.rzSnapRate}, ${rec.rzSuccessRate},
         ${rec.rzPassAttempts}, ${rec.rzPassTds}, ${rec.rzTdRate}, ${rec.rzInterceptions},
