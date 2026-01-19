@@ -119,9 +119,12 @@ interface PlayerWeekData {
   cpoe: number | null;
   sacks: number | null;
   sackRate: number | null;
+  sackYards: number | null;
   qbHits: number | null;
   qbHitRate: number | null;
   scrambles: number | null;
+  scrambleYards: number | null;
+  scrambleTds: number | null;
   passFirstDowns: number | null;
   passFirstDownRate: number | null;
   deepPassAttempts: number | null;
@@ -131,6 +134,10 @@ interface PlayerWeekData {
   noHuddleRate: number | null;
   shotgunSuccessRate: number | null;
   underCenterSuccessRate: number | null;
+  // QB Advanced Metrics (Data Lab v2)
+  dropbacks: number | null;
+  anyA: number | null;
+  fpPerDropback: number | null;
   // Fantasy points
   fptsStd: number | null;
   fptsHalf: number | null;
@@ -1041,7 +1048,85 @@ export default function TiberDataLab() {
               <div className="p-8 text-center text-gray-500">
                 No players found matching your criteria
               </div>
+            ) : position === 'QB' ? (
+              /* QB-Specific Table */
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="table-results-qb">
+                  <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Player</th>
+                      <th className="px-4 py-3 text-center">Team</th>
+                      <th className="px-4 py-3 text-center" title="Sack Percentage">Sack%</th>
+                      <th className="px-4 py-3 text-center" title="Yards Lost to Sacks">Sack Yds</th>
+                      <th className="px-4 py-3 text-center" title="Adjusted Net Yards per Attempt">ANY/A</th>
+                      <th className="px-4 py-3 text-center" title="Rush Attempts">R ATT</th>
+                      <th className="px-4 py-3 text-center" title="Rush Yards">R YDS</th>
+                      <th className="px-4 py-3 text-center" title="Rush TDs">R TD</th>
+                      <th className="px-4 py-3 text-center" title="Scrambles">SCRM</th>
+                      <th className="px-4 py-3 text-center" title="Scramble Yards">SC YDS</th>
+                      <th className="px-4 py-3 text-center" title="Scramble TDs">SC TD</th>
+                      <th className="px-4 py-3 text-center text-purple-400" title="Fantasy Points Per Dropback">FP/DB</th>
+                      <th className="px-4 py-3 text-center text-purple-400" title="Total Fantasy Points (PPR)">FPTS</th>
+                      <th className="px-4 py-3 text-center"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {searchData?.data.map((player) => (
+                      <tr 
+                        key={player.id} 
+                        className="hover:bg-[#1a1f2e] cursor-pointer transition-colors"
+                        onClick={() => handlePlayerClick(player)}
+                        data-testid={`row-player-${player.playerId}`}
+                      >
+                        <td className="px-4 py-3 font-medium text-white" data-testid={`text-name-${player.playerId}`}>
+                          {player.playerName}
+                        </td>
+                        <td className="px-4 py-3 text-center text-gray-400">
+                          {player.teamId || '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-red-400">
+                          {formatPct(player.sackRate)}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-red-400">
+                          {player.sackYards ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-green-400 font-semibold">
+                          {formatStat(player.anyA, 2)}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-gray-300">
+                          {player.rushAttempts ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-gray-300">
+                          {player.rushYards ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-green-400">
+                          {player.rushTds ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-blue-400">
+                          {player.scrambles ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-blue-400">
+                          {player.scrambleYards ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-green-400">
+                          {player.scrambleTds ?? '-'}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">
+                          {formatStat(player.fpPerDropback, 2)}
+                        </td>
+                        <td className="px-4 py-3 text-center font-mono text-purple-400 font-semibold">
+                          {formatStat(player.fptsPpr, 1)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
+              /* WR/RB/TE Table */
               <div className="overflow-x-auto">
                 <table className="w-full text-sm" data-testid="table-results">
                   <thead className="bg-[#0a0e1a] text-gray-400 uppercase text-xs">
