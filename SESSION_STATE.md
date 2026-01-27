@@ -1,7 +1,7 @@
 # Session State Tracker
 > **Purpose**: Track progress across Claude Code sessions to resume work when rate limits hit
 
-**Last Updated**: 2026-01-10 (State Machine Diagrams added)
+**Last Updated**: 2026-01-27 (Snap Count Name Matching Fix)
 
 > **IMPORTANT**: Read `AGENT_README.md` first for constraints, safe scope, and hard rules.
 
@@ -13,10 +13,161 @@
 - Phase 2A metrics: ✅ Complete (all weeks 1-17)
 - Phase 2B (Game Script): ⛔ Not started
 - Phase 2C (Two-Minute Drill): ✅ Complete (all weeks 1-17 backfilled)
+- **Data Lab Weeks 1-17**: ✅ All have snapshots with routes/RZ/3D data
+- **Snap Count Matching**: ✅ Fixed - 85-88% coverage across all weeks
 
 ---
 
-## ✅ Just Completed (This Session)
+## ✅ Just Completed (This Session - January 27, 2026)
+
+### ✅ Snap Count Name Matching Fix
+
+**Goal**: Fix source data gaps where 3 players had NULL snap/route data (Luther Burden III, Chris Godwin Jr., Audric Estimé)
+
+**Root Cause Found**:
+- Silver ETL used exact string matching on `player_name|team` to join snap counts
+- Play-by-play uses abbreviated names: `L.Burden`, `C.Godwin`, `A.Estime`
+- Snap counts uses full names: `Luther Burden`, `Chris Godwin`, `Audric Estime`
+- These keys don't match, so snap counts weren't joined
+
+**Fix Applied** (`server/etl/silverWeeklyStatsETL.ts` lines 250-320):
+1. Query `player_identity_map` to get GSIS ID → full_name mapping
+2. Use full_name (instead of abbreviated play-by-play name) to lookup snap counts
+3. Added fallback matching that:
+   - Removes suffixes (III, Jr., Sr., II, IV, V)
+   - Normalizes accented characters (é → e)
+   - Combines both transformations
+
+**Identity Map Fixes Applied**:
+| Player | Issue | Fix |
+|--------|-------|-----|
+| Chig Okonkwo | Nickname vs full name | Changed to `Chigoziem Okonkwo` |
+| Michael Pittman | Missing Jr. suffix | Changed to `Michael Pittman Jr.` |
+| David Sills | Missing V suffix + wrong team | Changed to `David Sills V` (ATL) |
+| DJ Moore | Missing dots in initials | Changed to `D.J. Moore` |
+| Gabriel Davis | Nickname + wrong team | Changed to `Gabriel Davis` (BUF) |
+| DeMario Douglas | Capitalization | Changed to `DeMario Douglas` |
+| Brian Robinson | Missing Jr. + team trade | Changed to `Brian Robinson Jr.` (SF) |
+
+**Results**:
+- Before: 313 matched, 11 missed (week 17)
+- After: 320 matched, 4 missed (week 17)
+- Remaining misses are non-skill position players (O-linemen, DBs with incidental targets)
+- All weeks 1-17 now have 85-88% route coverage
+
+**Verification** (Three Original Players):
+| Player | Weeks with Data | Snap Range | Route Range |
+|--------|-----------------|------------|-------------|
+| Luther Burden III | 16 weeks | 11-50 | 9-43 |
+| Chris Godwin Jr. | 8 weeks | 25-66 | 21-56 |
+| Audric Estimé | 4 weeks | 10-45 | 5-23 |
+
+**Commands Run**:
+```bash
+# Re-run Silver ETL for all weeks
+npx tsx server/etl/silverWeeklyStatsETL.ts 2025 1 17
+
+# Re-run Gold ETL for all weeks
+npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
+```
+
+**Files Modified**:
+- `server/etl/silverWeeklyStatsETL.ts` - Enhanced snap count matching with identity map lookup
+
+---
+
+## ✅ Previously Completed (January 26, 2026)
+
+### ✅ Data Lab Production Readiness Cleanup
+
+**Goal**: Get Tiber Data Lab production-ready with complete data for weeks 1-17
+
+**Issues Found & Fixed**:
+
+1. **Missing Week Snapshots (Weeks 11 & 13)**
+   - Weeks 11 and 13 had no snapshot data, capping players at ~13 games played
+   - **Fix**: Ran manual snapshots via `POST /api/data-lab/admin/run` for both weeks
+   - **Result**: All 17 weeks now have data (265-325 players each)
+
+2. **Gold ETL Bug - Wrong Column for Player ID**
+   - `getWeeklyStatsSnapRoutes()` in `goldDatadiveETL.ts` queried `gsis_id` column
+   - But `weekly_stats.gsis_id` is NULL - the GSIS IDs are in `player_id` column
+   - **Fix**: Changed query from `SELECT gsis_id` to `SELECT player_id`
+   - **File**: `server/etl/goldDatadiveETL.ts` (lines 278-284)
+
+3. **RZ TD & 3D% Showing Blank**
+   - Gold ETL snapshots weren't populating routes/RZ/3D metrics (all 0)
+   - Root cause was the gsis_id bug above - no snap/route data was being joined
+   - **Fix**: After fixing the column bug, re-ran Gold ETL for all weeks 1-17
+   - **Result**: RZ TD, 3D%, routes now populated correctly
+
+4. **UI Cleanup for Production**
+   - Removed debug `console.log` statement from `handleAskTiber`
+   - Added week availability indicator showing which weeks have data (green/gray grid)
+   - Added warning banners when selecting weeks without data
+   - Improved empty state messages with helpful context
+   - Fixed back button to navigate to `/` instead of `/admin/forge-hub`
+   - Added loading skeleton for data status card
+   - **File**: `client/src/pages/TiberDataLab.tsx`
+
+5. **Backend Enhancement - Available Weeks API**
+   - Extended `/api/data-lab/meta/current` to return `availableWeeks` array
+   - Shows which weeks have official validated snapshots
+   - **File**: `server/routes/dataLabRoutes.ts`
+
+**Remaining Source Data Gaps**:
+- 3 players have NULL snap/route data in `weekly_stats` for week 17:
+  - Luther Burden III (CHI) - routes=NULL, snaps=NULL, targets=9
+  - Chris Godwin Jr. (TB) - routes=NULL, snaps=NULL, targets=8
+  - Audric Estimé (NO) - routes=NULL, snaps=NULL, targets=1
+- This is a **source data ingestion issue** - nflfastr snap counts don't have these players
+- Would require fixing the data ingestion pipeline to handle name variations
+
+**Commands Run**:
+```bash
+# Run snapshots for missing weeks
+curl -X POST "http://localhost:5000/api/data-lab/admin/run" -H "Content-Type: application/json" -d '{"season": 2025, "week": 11}'
+curl -X POST "http://localhost:5000/api/data-lab/admin/run" -H "Content-Type: application/json" -d '{"season": 2025, "week": 13}'
+
+# Re-run Gold ETL with fix
+npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
+```
+
+**Files Modified**:
+- `server/etl/goldDatadiveETL.ts` - Fixed `gsis_id` → `player_id` bug
+- `server/routes/dataLabRoutes.ts` - Added `availableWeeks` to meta endpoint
+- `client/src/pages/TiberDataLab.tsx` - UI cleanup and week availability indicator
+
+**Data Status After Fix**:
+| Metric | Status |
+|--------|--------|
+| Weeks 1-17 | ✅ All have snapshots |
+| Routes | ~98% populated (3 players have NULL in source) |
+| RZ TD | ✅ Populated from play-by-play |
+| 3D% | ✅ Populated from play-by-play |
+
+---
+
+## 🔧 Where We Left Off
+
+**Completed**:
+- ✅ Fixed source data gaps for Luther Burden III, Chris Godwin Jr., Audric Estimé
+- ✅ Enhanced snap count matching in Silver ETL with identity map lookup
+- ✅ Fixed 7 identity map entries with name/team issues
+- ✅ Backfilled all weeks 1-17 with improved snap count matching
+
+**Next Steps to Continue**:
+1. **Week 18 data** - Week 18 has no source data yet (regular season not complete). Will need to run snapshot once data is available.
+
+2. **Consider automating** - The `datadiveSnapshot.ts` service doesn't compute RZ/3D metrics. Either:
+   - Always run Gold ETL after running manual snapshots
+   - Or integrate Gold ETL logic into the snapshot service
+
+3. **Identity map maintenance** - Monitor for new players with name mismatches. The current fix handles suffixes and accents, but nicknames (Chig vs Chigoziem) and initial formatting (DJ vs D.J.) still require manual identity map updates.
+
+---
+
+## ✅ Previously Completed (This Session)
 
 ### ✅ Data Lab Fixes (January 2026)
 

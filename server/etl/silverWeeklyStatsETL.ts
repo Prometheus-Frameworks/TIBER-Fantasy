@@ -247,33 +247,94 @@ async function aggregateWeek(season: number, week: number): Promise<PlayerWeekSt
     playerMap.set(row.player_id, player);
   }
 
-  // Add snap counts via name/team matching
-  for (const player of playerMap.values()) {
-    if (player.playerName && player.team) {
-      const key = `${player.playerName}|${player.team}`;
-      const snaps = snapsByNameAndTeam.get(key);
-      if (snaps) {
-        player.snaps = snaps;
-      }
-    }
-  }
-
-  // Enrich with positions from identity map
+  // Enrich with positions AND full names from identity map (needed for snap count matching)
   const playerIds = Array.from(playerMap.keys());
+  const gsisToFullName = new Map<string, string>();
+
   if (playerIds.length > 0) {
     // Build IN clause with escaped strings
     const escaped = playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(', ');
-    const positions = await db.execute(
-      sql.raw(`SELECT gsis_id, position FROM player_identity_map WHERE gsis_id IN (${escaped})`)
+    const identityData = await db.execute(
+      sql.raw(`SELECT gsis_id, full_name, position FROM player_identity_map WHERE gsis_id IN (${escaped})`)
     );
 
-    for (const row of positions.rows as any[]) {
+    for (const row of identityData.rows as any[]) {
       const player = playerMap.get(row.gsis_id);
       if (player) {
         player.position = row.position;
       }
+      // Build GSIS ID → full name mapping for snap count lookup
+      if (row.full_name) {
+        gsisToFullName.set(row.gsis_id, row.full_name);
+      }
     }
   }
+
+  // Add snap counts via GSIS ID → full_name → snap counts lookup
+  // This handles cases where play-by-play uses abbreviated names (L.Burden)
+  // but snap counts uses full names (Luther Burden)
+  let snapMatchCount = 0;
+  let snapMissCount = 0;
+  for (const player of playerMap.values()) {
+    if (player.team) {
+      // Try 1: Use full name from identity map (most reliable)
+      const fullName = gsisToFullName.get(player.playerId);
+      if (fullName) {
+        // Try exact full name match first
+        let key = `${fullName}|${player.team}`;
+        let snaps = snapsByNameAndTeam.get(key);
+
+        // Try without suffix (III, Jr., Sr., II, IV, V)
+        if (!snaps) {
+          const nameWithoutSuffix = fullName.replace(/\s+(III|II|IV|V|Jr\.?|Sr\.?|Junior|Senior)$/i, '').trim();
+          if (nameWithoutSuffix !== fullName) {
+            key = `${nameWithoutSuffix}|${player.team}`;
+            snaps = snapsByNameAndTeam.get(key);
+          }
+        }
+
+        // Try normalizing accented characters (é → e, etc.)
+        if (!snaps) {
+          const normalizedName = fullName.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          if (normalizedName !== fullName) {
+            key = `${normalizedName}|${player.team}`;
+            snaps = snapsByNameAndTeam.get(key);
+          }
+        }
+
+        // Try both: remove suffix AND normalize accents
+        if (!snaps) {
+          const normalizedNoSuffix = fullName
+            .replace(/\s+(III|II|IV|V|Jr\.?|Sr\.?|Junior|Senior)$/i, '')
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+          if (normalizedNoSuffix !== fullName) {
+            key = `${normalizedNoSuffix}|${player.team}`;
+            snaps = snapsByNameAndTeam.get(key);
+          }
+        }
+
+        if (snaps) {
+          player.snaps = snaps;
+          snapMatchCount++;
+        } else {
+          snapMissCount++;
+        }
+      } else {
+        // Try 2: Fallback to abbreviated name (original behavior)
+        const key = `${player.playerName}|${player.team}`;
+        const snaps = snapsByNameAndTeam.get(key);
+        if (snaps) {
+          player.snaps = snaps;
+          snapMatchCount++;
+        } else {
+          snapMissCount++;
+        }
+      }
+    }
+  }
+  console.log(`    Snap count matching: ${snapMatchCount} matched, ${snapMissCount} missed`);
 
   // Calculate routes for skill position players (WR, TE, RB)
   // Routes ≈ 85% of snaps for WR/TE (they run routes on most pass plays)
