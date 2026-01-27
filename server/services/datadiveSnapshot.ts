@@ -24,6 +24,13 @@ interface SnapshotValidation {
   errors: string[];
 }
 
+interface RouteValidation {
+  totalSkillPlayers: number;
+  playersWithRoutes: number;
+  coveragePercent: number;
+  passed: boolean;
+}
+
 interface SnapshotResult {
   snapshotId: number;
   season: number;
@@ -36,6 +43,7 @@ interface SnapshotResult {
 export class DatadiveSnapshotService {
   private readonly MIN_ROWS = 200;
   private readonly MIN_TEAMS = 24; // Lowered from 28 to account for bye weeks (up to 6 teams on bye)
+  private readonly MIN_ROUTE_COVERAGE = 0.80; // 80% of skill position players must have routes > 0
 
   async runWeeklySnapshot(
     season: number,
@@ -66,9 +74,32 @@ export class DatadiveSnapshotService {
       );
 
       await this.copyToSnapshotPlayerWeek(snapshotId, season, week);
-      
+
       // Validate core metrics aren't NULL after snapshot copy
       await this.validateSnapshotCoreMetrics(snapshotId, season, week);
+
+      // Validate route coverage - this is the critical quality gate
+      const routeValidation = await this.validateRouteCoverage(snapshotId, season, week);
+      if (!routeValidation.passed) {
+        const reason = `Route coverage ${(routeValidation.coveragePercent * 100).toFixed(1)}% ` +
+          `is below minimum ${this.MIN_ROUTE_COVERAGE * 100}% ` +
+          `(${routeValidation.playersWithRoutes}/${routeValidation.totalSkillPlayers} skill players)`;
+        await this.demoteSnapshot(snapshotId, reason);
+
+        // Still build season aggregates but mark as non-official
+        await this.buildSeasonAggregates(snapshotId, season, week);
+
+        console.log(`⚠️ [DataDive] Snapshot ${snapshotId} completed but marked non-official due to low route coverage`);
+
+        return {
+          snapshotId,
+          season,
+          week,
+          rowCount: validation.rowCount,
+          teamCount: validation.teamCount,
+          validationPassed: false,
+        };
+      }
 
       await this.buildSeasonAggregates(snapshotId, season, week);
 
@@ -558,10 +589,10 @@ export class DatadiveSnapshotService {
     week: number
   ): Promise<void> {
     console.log(`🔍 [DataDive] Validating core metrics for snapshot ${snapshotId}...`);
-    
+
     // Check staging data for NULLs before coercion (more accurate check)
     const stagingValidation = await db.execute(sql`
-      SELECT 
+      SELECT
         COUNT(*) AS total_rows,
         COUNT(*) FILTER (WHERE fpts_ppr IS NULL) AS null_fpts_ppr,
         COUNT(*) FILTER (WHERE routes IS NULL) AS null_routes,
@@ -571,7 +602,7 @@ export class DatadiveSnapshotService {
       FROM datadive_player_week_staging
       WHERE season = ${season} AND week = ${week};
     `);
-    
+
     const row = (stagingValidation as any).rows[0];
     const totalRows = Number(row?.total_rows) || 0;
     const nullFptsPpr = Number(row?.null_fpts_ppr) || 0;
@@ -579,21 +610,96 @@ export class DatadiveSnapshotService {
     const nullTargets = Number(row?.null_targets) || 0;
     const nullSnaps = Number(row?.null_snaps) || 0;
     const nullReceptions = Number(row?.null_receptions) || 0;
-    
+
     console.log(`📊 [DataDive] Core metric staging validation: ${totalRows} rows, nulls: fptsPpr=${nullFptsPpr}, routes=${nullRoutes}, targets=${nullTargets}, snaps=${nullSnaps}, receptions=${nullReceptions}`);
-    
+
     const errors: string[] = [];
     if (nullFptsPpr > 0) errors.push(`${nullFptsPpr} rows with NULL fpts_ppr`);
     if (nullRoutes > 0) errors.push(`${nullRoutes} rows with NULL routes`);
     if (nullTargets > 0) errors.push(`${nullTargets} rows with NULL targets`);
     if (nullSnaps > 0) errors.push(`${nullSnaps} rows with NULL snaps`);
     if (nullReceptions > 0) errors.push(`${nullReceptions} rows with NULL receptions`);
-    
+
     if (errors.length > 0) {
       console.warn(`⚠️ [DataDive] Core metric nulls detected in staging (continuing): ${errors.join(', ')}`);
     } else {
       console.log(`✅ [DataDive] All core metrics validated in staging - no NULLs`);
     }
+  }
+
+  /**
+   * Validates route coverage for skill position players.
+   * Returns validation result including whether it passed the minimum threshold.
+   *
+   * A snapshot should have >= 80% of skill position players (WR, RB, TE) with routes > 0.
+   * This catches broken snapshots where snap count matching failed.
+   */
+  private async validateRouteCoverage(
+    snapshotId: number,
+    season: number,
+    week: number
+  ): Promise<RouteValidation> {
+    console.log(`🔍 [DataDive] Validating route coverage for snapshot ${snapshotId}...`);
+
+    // Count skill position players with activity (snaps > 0 OR targets > 0 OR rush_attempts > 0)
+    // and how many of them have routes > 0
+    const result = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (
+          WHERE position IN ('WR', 'RB', 'TE')
+          AND (snaps > 0 OR targets > 0 OR rush_attempts > 0)
+        ) AS total_skill_players,
+        COUNT(*) FILTER (
+          WHERE position IN ('WR', 'RB', 'TE')
+          AND (snaps > 0 OR targets > 0 OR rush_attempts > 0)
+          AND routes > 0
+        ) AS players_with_routes
+      FROM datadive_snapshot_player_week
+      WHERE snapshot_id = ${snapshotId}
+        AND season = ${season}
+        AND week = ${week}
+    `);
+
+    const row = (result as any).rows[0];
+    const totalSkillPlayers = Number(row?.total_skill_players) || 0;
+    const playersWithRoutes = Number(row?.players_with_routes) || 0;
+    const coveragePercent = totalSkillPlayers > 0
+      ? playersWithRoutes / totalSkillPlayers
+      : 0;
+    const passed = coveragePercent >= this.MIN_ROUTE_COVERAGE;
+
+    console.log(
+      `📊 [DataDive] Route coverage: ${playersWithRoutes}/${totalSkillPlayers} skill players with routes ` +
+      `(${(coveragePercent * 100).toFixed(1)}%) - ${passed ? '✅ PASSED' : '❌ FAILED'} ` +
+      `(threshold: ${this.MIN_ROUTE_COVERAGE * 100}%)`
+    );
+
+    return {
+      totalSkillPlayers,
+      playersWithRoutes,
+      coveragePercent,
+      passed,
+    };
+  }
+
+  /**
+   * Demotes a snapshot from official status due to failed validation.
+   * Updates isOfficial to false and records the validation failure reason.
+   */
+  private async demoteSnapshot(
+    snapshotId: number,
+    reason: string
+  ): Promise<void> {
+    console.log(`⚠️ [DataDive] Demoting snapshot ${snapshotId} from official status: ${reason}`);
+
+    await db
+      .update(datadiveSnapshotMeta)
+      .set({
+        isOfficial: false,
+        validationPassed: false,
+        validationErrors: reason,
+      })
+      .where(eq(datadiveSnapshotMeta.id, snapshotId));
   }
 
   private async buildSeasonAggregates(

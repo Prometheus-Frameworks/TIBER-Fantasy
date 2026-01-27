@@ -156,14 +156,129 @@ npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
 - ✅ Fixed 7 identity map entries with name/team issues
 - ✅ Backfilled all weeks 1-17 with improved snap count matching
 
-**Next Steps to Continue**:
-1. **Week 18 data** - Week 18 has no source data yet (regular season not complete). Will need to run snapshot once data is available.
+**Currently Working On**:
+- ✅ Data Lab Hardening - Snapshot Validation (Priority 1) - COMPLETE
+- ⏳ Next: Priority 2 - Clean Up Duplicate Records
 
-2. **Consider automating** - The `datadiveSnapshot.ts` service doesn't compute RZ/3D metrics. Either:
-   - Always run Gold ETL after running manual snapshots
-   - Or integrate Gold ETL logic into the snapshot service
+---
 
-3. **Identity map maintenance** - Monitor for new players with name mismatches. The current fix handles suffixes and accents, but nicknames (Chig vs Chigoziem) and initial formatting (DJ vs D.J.) still require manual identity map updates.
+## 🛡️ Data Lab Hardening Roadmap
+
+**Goal**: Make the Data Lab production-grade with reliable data quality and minimal manual intervention.
+
+### Priority 1: Snapshot Validation Gate ✅ COMPLETE
+**Status**: ✅ Done
+
+**Problem**: Week 17 had 14+ snapshots marked as `is_official = true`, most with broken data (routes=0 for all players). The system currently allows bad snapshots to be marked official.
+
+**Solution Implemented** (`server/services/datadiveSnapshot.ts`):
+- Added `RouteValidation` interface to track coverage metrics
+- Added `MIN_ROUTE_COVERAGE = 0.80` threshold (80%)
+- Added `validateRouteCoverage()` method that:
+  - Counts skill position players (WR/RB/TE) with activity (snaps > 0 OR targets > 0 OR rush_attempts > 0)
+  - Counts how many have routes > 0
+  - Returns coverage percentage and pass/fail status
+- Added `demoteSnapshot()` method to mark snapshots as non-official
+- Integrated into `runWeeklySnapshot()` flow after copying data
+- If coverage < 80%, snapshot is demoted: `isOfficial = false`, `validationPassed = false`
+- Detailed logging shows coverage stats and pass/fail
+
+**Acceptance Criteria**:
+- [x] Snapshots with <80% route coverage are NOT marked official
+- [x] Failed validations are logged with details
+- [x] Existing "pick best snapshot" logic remains as fallback
+
+---
+
+### Priority 2: Clean Up Duplicate Records
+**Status**: ⏳ Pending
+
+**Problem**: Gold layer has duplicate player rows - one with GSIS ID (`00-0040735`, `L.Burden`) and one with PFR ID (`BurdLu00`, `Luther Burden`). The PFR ID rows have 0 routes/targets.
+
+**Root Cause**: Unknown - need to trace where PFR ID rows are being inserted.
+
+**Solution**:
+1. Find the source of PFR ID inserts (likely snap count import or old ETL path)
+2. Stop new duplicates at the source
+3. Purge orphan PFR ID rows from `datadive_snapshot_player_week`
+
+**Acceptance Criteria**:
+- [ ] No new duplicate rows created
+- [ ] Existing duplicates cleaned up
+- [ ] Single row per player per week per snapshot
+
+---
+
+### Priority 3: Automate Gold ETL After Snapshots
+**Status**: ⏳ Pending
+
+**Problem**: `datadiveSnapshot.ts` creates snapshots but doesn't compute RZ/3D metrics. Gold ETL must be run manually, which is error-prone.
+
+**Solution**: Either:
+- Option A: Call Gold ETL automatically after snapshot creation
+- Option B: Merge Gold ETL logic into the snapshot service
+
+**Files to Modify**:
+- `server/services/datadiveSnapshot.ts`
+- Possibly `server/etl/goldDatadiveETL.ts` (extract reusable functions)
+
+**Acceptance Criteria**:
+- [ ] RZ/3D metrics populated automatically when snapshot is created
+- [ ] No manual Gold ETL runs required
+
+---
+
+### Priority 4: Robust Identity Resolution
+**Status**: ⏳ Pending
+
+**Problem**: Name matching breaks on:
+- Nicknames (Chig vs Chigoziem)
+- Initial formatting (DJ vs D.J.)
+- Trades (team changes mid-season)
+- New players not in identity map
+
+**Solution**:
+1. Add `aliases` text[] column to `player_identity_map`
+2. Implement fuzzy matching fallback (Levenshtein distance)
+3. Log unmatched players for manual review
+4. Consider automated alias detection from snap count mismatches
+
+**Files to Modify**:
+- `shared/schema.ts` - Add aliases column
+- `server/etl/silverWeeklyStatsETL.ts` - Use aliases in matching
+- New: `server/scripts/detectNameMismatches.ts` - Report unmatched players
+
+**Acceptance Criteria**:
+- [ ] Known aliases resolve automatically
+- [ ] Fuzzy matching catches minor variations
+- [ ] Unmatched players are logged (not silent failures)
+
+---
+
+### Priority 5: Data Quality Monitoring (Future)
+**Status**: ⏳ Pending
+
+**Problem**: Data quality regressions happen silently. We only notice when users report issues.
+
+**Solution**:
+- Track key metrics per snapshot (route coverage %, player count, etc.)
+- Alert when metrics drop below thresholds
+- Dashboard showing data quality over time
+
+**Acceptance Criteria**:
+- [ ] Data quality metrics tracked per snapshot
+- [ ] Alerts when coverage drops
+- [ ] Historical trend visibility
+
+---
+
+### Deprioritized Items
+
+| Item | Reason |
+|------|--------|
+| Phase 2B (Game Script) | Data quality > new features |
+| Week 18 data | Season not complete yet |
+| New metrics | Fix reliability first |
 
 ---
 
