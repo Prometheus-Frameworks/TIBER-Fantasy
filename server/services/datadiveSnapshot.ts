@@ -15,6 +15,7 @@ import {
   type DatadiveSnapshotPlayerWeek,
   type DatadiveSnapshotPlayerSeason,
 } from "@shared/schema";
+import { runGoldETLForWeek } from "../etl/goldDatadiveETL";
 
 interface SnapshotValidation {
   rowCount: number;
@@ -102,6 +103,19 @@ export class DatadiveSnapshotService {
       }
 
       await this.buildSeasonAggregates(snapshotId, season, week);
+
+      // Run Gold ETL to create an enriched snapshot with RZ/3D/advanced metrics
+      // This creates a separate, more complete snapshot from silver layer + play-by-play
+      console.log(`🔶 [DataDive] Running Gold ETL for enriched snapshot...`);
+      try {
+        const goldResult = await runGoldETLForWeek(season, week);
+        if (goldResult.snapshotId > 0) {
+          console.log(`✅ [DataDive] Gold ETL created enriched snapshot ${goldResult.snapshotId} with ${goldResult.recordCount} records`);
+        }
+      } catch (goldError) {
+        // Log but don't fail - the basic snapshot is still valid
+        console.warn(`⚠️ [DataDive] Gold ETL failed (basic snapshot still valid):`, goldError);
+      }
 
       console.log(`✅ [DataDive] Snapshot ${snapshotId} completed successfully`);
 

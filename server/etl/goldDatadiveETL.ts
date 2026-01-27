@@ -1351,6 +1351,37 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
   return inserted;
 }
 
+/**
+ * Run Gold ETL for a single week.
+ * Can be called programmatically from other services.
+ *
+ * @returns The snapshot ID and record count for the created snapshot
+ */
+export async function runGoldETLForWeek(
+  season: number,
+  week: number
+): Promise<{ snapshotId: number; recordCount: number }> {
+  console.log(`🔶 [Gold ETL] Processing ${season} Week ${week}...`);
+
+  const records = await transformWeek(season, week);
+
+  if (records.length === 0) {
+    console.warn(`⚠️ [Gold ETL] No records for ${season} Week ${week}`);
+    return { snapshotId: 0, recordCount: 0 };
+  }
+
+  // Count unique teams
+  const teams = new Set(records.map(r => r.teamId).filter(Boolean));
+
+  // Create snapshot meta first (FK requirement)
+  const snapshotId = await createSnapshotMeta(season, week, records.length, teams.size);
+
+  const inserted = await insertGoldRecords(records, snapshotId);
+  console.log(`✅ [Gold ETL] Week ${week}: ${inserted} records (snapshot_id: ${snapshotId})`);
+
+  return { snapshotId, recordCount: inserted };
+}
+
 async function runGoldETL(season: number, startWeek?: number, endWeek?: number): Promise<void> {
   console.log(`\n${'='.repeat(60)}`);
   console.log(`GOLD LAYER ETL: silver_player_weekly_stats → datadive_snapshot_player_week`);
@@ -1407,15 +1438,21 @@ async function runGoldETL(season: number, startWeek?: number, endWeek?: number):
   console.log(`  Week range: ${row.min_week} - ${row.max_week}`);
 }
 
-// CLI entry point
-const args = process.argv.slice(2);
-const season = parseInt(args[0]) || 2025;
-const startWeek = args[1] ? parseInt(args[1]) : undefined;
-const endWeek = args[2] ? parseInt(args[2]) : undefined;
+// CLI entry point - only run when executed directly (not when imported)
+import { fileURLToPath } from 'url';
 
-runGoldETL(season, startWeek, endWeek)
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('Gold ETL failed:', err);
-    process.exit(1);
-  });
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  const args = process.argv.slice(2);
+  const season = parseInt(args[0]) || 2025;
+  const startWeek = args[1] ? parseInt(args[1]) : undefined;
+  const endWeek = args[2] ? parseInt(args[2]) : undefined;
+
+  runGoldETL(season, startWeek, endWeek)
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('Gold ETL failed:', err);
+      process.exit(1);
+    });
+}

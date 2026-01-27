@@ -159,7 +159,7 @@ npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
 **Currently Working On**:
 - ✅ Data Lab Hardening - Snapshot Validation (Priority 1) - COMPLETE
 - ✅ Data Lab Hardening - Clean Up Duplicate Records (Priority 2) - COMPLETE
-- ⏳ Next: Priority 3 - Automate Gold ETL After Snapshots
+- 🔄 Data Lab Hardening - Automate Gold ETL (Priority 3) - IN PROGRESS (90% done)
 
 ---
 
@@ -227,20 +227,32 @@ WHERE season = 2025
 
 ---
 
-### Priority 3: Automate Gold ETL After Snapshots
-**Status**: ⏳ Pending
+### Priority 3: Automate Gold ETL After Snapshots 🔄 IN PROGRESS
+**Status**: 🔄 90% Complete - needs commit and testing
 
 **Problem**: `datadiveSnapshot.ts` creates snapshots but doesn't compute RZ/3D metrics. Gold ETL must be run manually, which is error-prone.
 
-**Solution**: Either:
-- Option A: Call Gold ETL automatically after snapshot creation
-- Option B: Merge Gold ETL logic into the snapshot service
+**Solution Implemented** (Option A - Call Gold ETL after snapshot):
 
-**Files to Modify**:
-- `server/services/datadiveSnapshot.ts`
-- Possibly `server/etl/goldDatadiveETL.ts` (extract reusable functions)
+**Changes Made**:
+1. `server/etl/goldDatadiveETL.ts`:
+   - Added `export async function runGoldETLForWeek(season, week)` - callable from other services
+   - Added CLI guard using `import.meta.url` check so ETL doesn't run on import
+   - Added `import { fileURLToPath } from 'url'`
+
+2. `server/services/datadiveSnapshot.ts`:
+   - Added `import { runGoldETLForWeek } from "../etl/goldDatadiveETL"`
+   - Added Gold ETL call after successful snapshot validation (in `runWeeklySnapshot`)
+   - Wrapped in try/catch so Gold ETL failure doesn't fail the basic snapshot
+
+**What's Left**:
+- [ ] Commit the changes
+- [ ] Test by running a manual snapshot: `curl -X POST "http://localhost:5000/api/data-lab/admin/run" -H "Content-Type: application/json" -d '{"season": 2025, "week": 17}'`
+- [ ] Verify Gold ETL snapshot is created with RZ/3D metrics
 
 **Acceptance Criteria**:
+- [x] Gold ETL callable from snapshot service
+- [x] CLI guard prevents auto-run on import
 - [ ] RZ/3D metrics populated automatically when snapshot is created
 - [ ] No manual Gold ETL runs required
 
