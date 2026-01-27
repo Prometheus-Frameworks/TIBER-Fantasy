@@ -158,7 +158,8 @@ npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
 
 **Currently Working On**:
 - ✅ Data Lab Hardening - Snapshot Validation (Priority 1) - COMPLETE
-- ⏳ Next: Priority 2 - Clean Up Duplicate Records
+- ✅ Data Lab Hardening - Clean Up Duplicate Records (Priority 2) - COMPLETE
+- ⏳ Next: Priority 3 - Automate Gold ETL After Snapshots
 
 ---
 
@@ -190,22 +191,39 @@ npx tsx server/etl/goldDatadiveETL.ts 2025 1 17
 
 ---
 
-### Priority 2: Clean Up Duplicate Records
-**Status**: ⏳ Pending
+### Priority 2: Clean Up Duplicate Records ✅ COMPLETE
+**Status**: ✅ Done
 
-**Problem**: Gold layer has duplicate player rows - one with GSIS ID (`00-0040735`, `L.Burden`) and one with PFR ID (`BurdLu00`, `Luther Burden`). The PFR ID rows have 0 routes/targets.
+**Problem**: Gold layer had duplicate player rows - one with GSIS ID (`00-0040735`, `L.Burden`) with real data, and one with PFR ID (`BurdLu00`, `Luther Burden`) with 0 routes/targets.
 
-**Root Cause**: Unknown - need to trace where PFR ID rows are being inserted.
+**Root Cause Found**: Historical import from Jan 4, 2026 created PFR ID rows. The source table (`weekly_stats`) now only contains GSIS IDs, so this was a one-time issue.
 
-**Solution**:
-1. Find the source of PFR ID inserts (likely snap count import or old ETL path)
-2. Stop new duplicates at the source
-3. Purge orphan PFR ID rows from `datadive_snapshot_player_week`
+**Investigation**:
+- Silver layer: 1,492 PFR ID rows (all with routes=0, targets=0)
+- Gold layer: 22,143 PFR ID rows (all with routes=0)
+- Source (`weekly_stats`): 5,148 rows, ALL with GSIS IDs ✓
+
+**Cleanup Performed**:
+```sql
+-- Deleted 1,492 PFR ID rows from silver_player_weekly_stats
+DELETE FROM silver_player_weekly_stats
+WHERE season = 2025
+  AND player_id !~ '^[0-9]{2}-[0-9]{7}$'
+  AND routes = 0 AND targets = 0;
+
+-- Deleted 22,143 PFR ID rows from datadive_snapshot_player_week
+DELETE FROM datadive_snapshot_player_week
+WHERE season = 2025
+  AND player_id !~ '^[0-9]{2}-[0-9]{7}$'
+  AND routes = 0;
+```
+
+**Prevention**: The source table (`weekly_stats`) only has GSIS IDs, so future snapshots will not contain PFR ID duplicates.
 
 **Acceptance Criteria**:
-- [ ] No new duplicate rows created
-- [ ] Existing duplicates cleaned up
-- [ ] Single row per player per week per snapshot
+- [x] No new duplicate rows created (source only has GSIS IDs)
+- [x] Existing duplicates cleaned up (23,635 rows deleted)
+- [x] Single row per player per week per snapshot
 
 ---
 
