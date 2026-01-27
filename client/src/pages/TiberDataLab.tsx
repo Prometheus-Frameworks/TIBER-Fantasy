@@ -38,6 +38,7 @@ interface SnapshotMeta {
   rowCount: number;
   teamCount: number;
   validationPassed: boolean;
+  availableWeeks: number[];
 }
 
 interface PlayerWeekData {
@@ -304,18 +305,7 @@ function PlayerDrawer({
   if (!player) return null;
 
   const handleAskTiber = () => {
-    console.log('[DataLab] Ask Tiber to explain profile:', {
-      playerId: player.playerId,
-      playerName: player.playerName,
-      position: player.position,
-      metrics: {
-        routes: player.routes,
-        targets: player.targets,
-        tprr: player.tprr,
-        yprr: player.yprr,
-        epaPerPlay: player.epaPerPlay,
-      }
-    });
+    // TODO: Integrate with Tiber AI chat when available
   };
 
   return (
@@ -648,10 +638,20 @@ export default function TiberDataLab() {
   }, [metaData]);
   
   const searchReady = !metaError && season != null && season > 0 && (
-    viewMode === 'season' || 
+    viewMode === 'season' ||
     (viewMode === 'week' && week != null && week > 0) ||
     (viewMode === 'range' && weekFrom != null && weekTo != null && weekFrom > 0 && weekTo > 0)
   );
+
+  // Check if selected week has data available
+  const selectedWeekHasData = viewMode === 'week' && week != null
+    ? metaData?.availableWeeks?.includes(week) ?? true
+    : true;
+
+  // Check if range includes any available weeks
+  const rangeHasData = viewMode === 'range' && weekFrom != null && weekTo != null
+    ? metaData?.availableWeeks?.some(w => w >= weekFrom && w <= weekTo) ?? true
+    : true;
 
   const buildSearchParams = () => {
     const params = new URLSearchParams({
@@ -750,7 +750,7 @@ export default function TiberDataLab() {
     <div className="min-h-screen bg-[#0a0e1a] text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/admin/forge-hub">
+          <Link href="/">
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -760,7 +760,7 @@ export default function TiberDataLab() {
               <Database className="h-6 w-6 text-blue-400" />
               Tiber Data Lab
             </h1>
-            <p className="text-gray-400 text-sm">Snapshot-based NFL data spine for analytics</p>
+            <p className="text-gray-400 text-sm">NFL player analytics with usage, efficiency, and expected fantasy metrics</p>
           </div>
         </div>
 
@@ -770,6 +770,64 @@ export default function TiberDataLab() {
               <div className="text-red-400 text-center flex items-center justify-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Failed to load snapshot data. Search is disabled until snapshot is available.
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {metaLoading && (
+          <Card className="bg-[#141824] border-gray-700 mb-6" data-testid="card-data-status-loading">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-32 bg-gray-700" />
+                  <div className="h-4 w-px bg-gray-600" />
+                  <div className="flex gap-1">
+                    {Array.from({ length: 18 }, (_, i) => (
+                      <Skeleton key={i} className="w-5 h-5 rounded bg-gray-700" />
+                    ))}
+                  </div>
+                </div>
+                <Skeleton className="h-5 w-20 bg-gray-700" />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {metaData && !metaError && !metaLoading && (
+          <Card className="bg-[#141824] border-gray-700 mb-6" data-testid="card-data-status">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Database className="h-4 w-4 text-green-400" />
+                    <span className="text-sm">
+                      {metaData.season} Season Data
+                    </span>
+                  </div>
+                  <div className="h-4 w-px bg-gray-600" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-gray-500">Available:</span>
+                    <div className="flex gap-1">
+                      {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
+                        <div
+                          key={w}
+                          className={`w-5 h-5 rounded text-[10px] font-medium flex items-center justify-center ${
+                            metaData.availableWeeks?.includes(w)
+                              ? 'bg-green-600/30 text-green-400 border border-green-600/50'
+                              : 'bg-gray-700/30 text-gray-600 border border-gray-700/50'
+                          }`}
+                          title={`Week ${w}: ${metaData.availableWeeks?.includes(w) ? 'Data available' : 'No data'}`}
+                        >
+                          {w}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <Badge variant="outline" className="border-green-600 text-green-400 text-xs">
+                  {metaData.availableWeeks?.length || 0} / 18 weeks
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -937,9 +995,9 @@ export default function TiberDataLab() {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed" 
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading || !searchReady}
                 data-testid="button-search"
               >
@@ -947,6 +1005,25 @@ export default function TiberDataLab() {
                 {isLoading ? 'Loading...' : 'Search'}
               </Button>
             </form>
+
+            {/* Week availability warning */}
+            {viewMode === 'week' && week && !selectedWeekHasData && metaData && (
+              <div className="mt-3 p-3 bg-yellow-600/10 border border-yellow-600/30 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                <span className="text-yellow-400 text-sm">
+                  Week {week} does not have data available. Available weeks: {metaData.availableWeeks?.join(', ') || 'None'}
+                </span>
+              </div>
+            )}
+
+            {viewMode === 'range' && weekFrom && weekTo && !rangeHasData && metaData && (
+              <div className="mt-3 p-3 bg-yellow-600/10 border border-yellow-600/30 rounded-lg flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
+                <span className="text-yellow-400 text-sm">
+                  No data available for weeks {weekFrom}-{weekTo}. Available weeks: {metaData.availableWeeks?.join(', ') || 'None'}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -980,8 +1057,19 @@ export default function TiberDataLab() {
               </div>
             ) : viewMode !== 'week' ? (
               aggData?.data.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  No aggregated data found
+                <div className="p-8 text-center">
+                  <Database className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400 font-medium">No data found</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {viewMode === 'season'
+                      ? `No player data available for the ${season} season yet.`
+                      : `No player data available for weeks ${weekFrom}-${weekTo}.`}
+                  </p>
+                  {metaData?.availableWeeks && metaData.availableWeeks.length > 0 && (
+                    <p className="text-gray-600 text-xs mt-2">
+                      Data is available for weeks: {metaData.availableWeeks.join(', ')}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -1045,8 +1133,19 @@ export default function TiberDataLab() {
                 </div>
               )
             ) : searchData?.data.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                No players found matching your criteria
+              <div className="p-8 text-center">
+                <Search className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 font-medium">No players found</p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {searchQuery
+                    ? `No players matching "${searchQuery}" for Week ${week}.`
+                    : `No player data available for Week ${week}.`}
+                </p>
+                {!selectedWeekHasData && metaData?.availableWeeks && (
+                  <p className="text-yellow-500 text-xs mt-2">
+                    Week {week} may not have data. Try weeks: {metaData.availableWeeks.join(', ')}
+                  </p>
+                )}
               </div>
             ) : position === 'QB' ? (
               /* QB-Specific Table */

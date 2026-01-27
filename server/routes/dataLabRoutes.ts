@@ -84,6 +84,17 @@ router.get("/meta/current", async (req: Request, res: Response) => {
       });
     }
 
+    // Get available weeks for the current season
+    const availableWeeksResult = await db.execute(sql`
+      SELECT DISTINCT week
+      FROM datadive_snapshot_meta
+      WHERE season = ${latestSnapshot.season}
+        AND is_official = true
+        AND validation_passed = true
+      ORDER BY week
+    `);
+    const availableWeeks = (availableWeeksResult.rows as any[]).map(r => r.week);
+
     res.json({
       snapshotId: latestSnapshot.id,
       season: latestSnapshot.season,
@@ -93,6 +104,7 @@ router.get("/meta/current", async (req: Request, res: Response) => {
       rowCount: latestSnapshot.rowCount,
       teamCount: latestSnapshot.teamCount,
       validationPassed: latestSnapshot.validationPassed,
+      availableWeeks,
     });
   } catch (error: any) {
     console.error("[DataLab] Error fetching current meta:", error);

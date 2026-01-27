@@ -275,16 +275,17 @@ async function getWeeklyStatsSnapRoutes(season: number, week: number): Promise<M
   const snapRouteMap = new Map<string, { snaps: number; routes: number }>();
 
   try {
+    // Use player_id (contains GSIS ID) since gsis_id column is often NULL
     const result = await db.execute(sql`
-      SELECT gsis_id, snaps, routes
+      SELECT player_id, snaps, routes
       FROM weekly_stats
       WHERE season = ${season} AND week = ${week}
-        AND gsis_id IS NOT NULL
+        AND player_id IS NOT NULL
         AND snaps > 0
     `);
 
     for (const row of result.rows as any[]) {
-      snapRouteMap.set(row.gsis_id, {
+      snapRouteMap.set(row.player_id, {
         snaps: Number(row.snaps) || 0,
         routes: Number(row.routes) || 0,
       });
