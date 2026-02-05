@@ -28,7 +28,26 @@
       "Bash(npx tsc:*)",
       "Bash(timeout 30 npm run:*)",
       "Bash(npx -y @mermaid-js/mermaid-cli mmdc:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(node -e:*)",
+      "Bash(# Query through the admin auto-status endpoint curl -s \"\"http://localhost:5000/api/data-lab/admin/auto-status?season=2025\"\")",
+      "Bash(# Check if weekly_stats has data for weeks 11 and 13 curl -s \"\"http://localhost:5000/api/data-lab/admin/auto-status?season=2025\"\" | jq . || \\\\ curl -s -X POST \"\"http://localhost:5000/api/data-lab/admin/run\"\" \\\\ -H \"\"Content-Type: application/json\"\" \\\\ -d ''{\"\"season\"\": 2025, \"\"week\"\": 11}'')",
+      "Bash(# Run snapshot for week 11 echo \"\"=== Running Week 11 Snapshot ===\"\" curl -s -X POST \"\"http://localhost:5000/api/data-lab/admin/run\"\" \\\\ -H \"\"Content-Type: application/json\"\" \\\\ -d ''{\"\"season\"\": 2025, \"\"week\"\": 11}'')",
+      "Bash(# Check if there''s a server issue curl -s \"\"http://localhost:5000/api/data-lab/health\"\")",
+      "Bash(jq . echo \"\" echo \"Trying week 11 snapshot with longer timeout...\" curl -s --max-time 180 -X POST \"http://localhost:5000/api/data-lab/admin/run\"  -H \"Content-Type: application/json\"  -d '{\"\"season\"\": 2025, \"\"week\"\": 11}')",
+      "Bash(# Check updated games played distribution curl -s \"\"http://localhost:5000/api/data-lab/usage-agg?season=2025&weekMode=season&position=ALL&limit=20\"\")",
+      "Bash(sleep 2 curl -s \"http://localhost:5000/api/data-lab/usage-agg?season=2025&weekMode=season&position=WR&limit=15\")",
+      "Bash(# Check a specific player with Routes = 0 \\(Luther Burden III\\) curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&q=Luther%20Burden&limit=1\"\")",
+      "Bash(# Check if snap count data exists for week 17 curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&position=WR&limit=20\"\")",
+      "Bash(# Check source snap count data for week 17 curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=16&q=Luther&limit=1\"\")",
+      "Bash(# Check overall snap data quality for week 17 curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&limit=100\"\")",
+      "Bash(# Check if gold ETL data exists by looking at the snapshot columns curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=10&q=Ja%27Marr&limit=1\"\")",
+      "Bash(# Check by querying a different week with potentially more data curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=5&position=WR&limit=5\"\")",
+      "Bash(# Verify RZ and 3D metrics are now populated curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&position=WR&limit=10\"\")",
+      "Bash(# Check which snapshot ID is being used curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&position=WR&limit=1\"\")",
+      "Bash(# Check snapshot meta for week 17 curl -s \"\"http://localhost:5000/api/data-lab/health\"\")",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ]
   }
 }
