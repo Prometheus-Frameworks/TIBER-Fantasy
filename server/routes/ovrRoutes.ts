@@ -130,12 +130,48 @@ router.get('/', async (req, res) => {
 });
 
 /**
+ * GET /api/ovr/health
+ * Health check endpoint for rankings system
+ */
+router.get('/health', async (req, res) => {
+  try {
+    const stats = await db
+      .select({
+        total: sql<number>`COUNT(*)`,
+        active: sql<number>`SUM(CASE WHEN ${players.active} = true THEN 1 ELSE 0 END)`,
+        qb: sql<number>`SUM(CASE WHEN ${players.position} = 'QB' AND ${players.active} = true THEN 1 ELSE 0 END)`,
+        rb: sql<number>`SUM(CASE WHEN ${players.position} = 'RB' AND ${players.active} = true THEN 1 ELSE 0 END)`,
+        wr: sql<number>`SUM(CASE WHEN ${players.position} = 'WR' AND ${players.active} = true THEN 1 ELSE 0 END)`,
+        te: sql<number>`SUM(CASE WHEN ${players.position} = 'TE' AND ${players.active} = true THEN 1 ELSE 0 END)`,
+      })
+      .from(players);
+
+    res.json({
+      status: 'healthy',
+      database: 'connected',
+      players: stats[0],
+      timestamp: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * GET /api/ovr/:playerId
  * Get OVR rating for a specific player
  */
 router.get('/:playerId', async (req, res) => {
   try {
     const playerId = parseInt(req.params.playerId);
+
+    if (isNaN(playerId)) {
+      return res.status(400).json({ error: 'Invalid player ID — must be a number', param: req.params.playerId });
+    }
 
     const player = await db
       .select()
@@ -190,37 +226,5 @@ function calculateSimpleOVR(player: any): number {
   const ovr = baseline + ageModifier;
   return Math.max(40, Math.min(99, ovr));
 }
-
-/**
- * GET /api/ovr/health
- * Health check endpoint for rankings system
- */
-router.get('/health', async (req, res) => {
-  try {
-    const stats = await db
-      .select({
-        total: sql<number>`COUNT(*)`,
-        active: sql<number>`SUM(CASE WHEN ${players.active} = true THEN 1 ELSE 0 END)`,
-        qb: sql<number>`SUM(CASE WHEN ${players.position} = 'QB' AND ${players.active} = true THEN 1 ELSE 0 END)`,
-        rb: sql<number>`SUM(CASE WHEN ${players.position} = 'RB' AND ${players.active} = true THEN 1 ELSE 0 END)`,
-        wr: sql<number>`SUM(CASE WHEN ${players.position} = 'WR' AND ${players.active} = true THEN 1 ELSE 0 END)`,
-        te: sql<number>`SUM(CASE WHEN ${players.position} = 'TE' AND ${players.active} = true THEN 1 ELSE 0 END)`,
-      })
-      .from(players);
-
-    res.json({
-      status: 'healthy',
-      database: 'connected',
-      players: stats[0],
-      timestamp: new Date().toISOString(),
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
 
 export default router;
