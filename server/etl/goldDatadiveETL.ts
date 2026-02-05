@@ -1373,6 +1373,16 @@ export async function runGoldETLForWeek(
   // Count unique teams
   const teams = new Set(records.map(r => r.teamId).filter(Boolean));
 
+  // Upsert guard: remove existing rows for this season/week to prevent duplicates
+  const deleteResult = await db.execute(sql`
+    DELETE FROM datadive_snapshot_player_week
+    WHERE season = ${season} AND week = ${week}
+  `);
+  const deletedCount = (deleteResult as any).rowCount ?? 0;
+  if (deletedCount > 0) {
+    console.log(`🧹 [Gold ETL] Upsert guard: deleted ${deletedCount} existing rows for ${season} Week ${week}`);
+  }
+
   // Create snapshot meta first (FK requirement)
   const snapshotId = await createSnapshotMeta(season, week, records.length, teams.size);
 
@@ -1409,6 +1419,16 @@ async function runGoldETL(season: number, startWeek?: number, endWeek?: number):
 
     // Count unique teams
     const teams = new Set(records.map(r => r.teamId).filter(Boolean));
+
+    // Upsert guard: remove existing rows for this season/week to prevent duplicates
+    const deleteResult = await db.execute(sql`
+      DELETE FROM datadive_snapshot_player_week
+      WHERE season = ${season} AND week = ${week}
+    `);
+    const deletedCount = (deleteResult as any).rowCount ?? 0;
+    if (deletedCount > 0) {
+      console.log(`🧹 [Gold ETL] Upsert guard: deleted ${deletedCount} existing rows for ${season} Week ${week}`);
+    }
 
     // Create snapshot meta first (FK requirement)
     const snapshotId = await createSnapshotMeta(season, week, records.length, teams.size);
