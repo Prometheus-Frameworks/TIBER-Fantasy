@@ -1,0 +1,49 @@
+You are CODEX (ETL FORENSIC INVESTIGATOR). Do not modify code in this phase. Only read files, run commands, query DB, and produce evidence. No refactors, no “quick fixes.”
+
+Goal: Identify the concrete root cause of Weeks 11–17 routes=0 in datadive_snapshot_player_week for 2025, and produce a minimal, high-confidence fix plan with exact files/queries to change and how to validate.
+
+Deliverable: /reports/tiber_phase2_routes_forensics.md
+
+You must include:
+1) Symptoms recap with data proof
+- For season=2025, compare weeks 7–10 vs 11–17:
+  - % players with routes=0 by position (WR/RB/TE)
+  - confirm whether snap_share / route_participation columns also degrade
+  - include SQL queries and outputs
+
+2) Where routes are sourced from
+- Trace, with file paths:
+  - which ETL stage populates routes (bronze -> silver -> gold)
+  - which tables/inputs are joined to produce routes
+  - which column(s) are used (routes, route_participation, etc.)
+- Provide the exact code locations responsible (functions + lines if possible)
+
+3) Find the break point
+- Determine if the problem originates in:
+  A) Bronze inputs missing/changed for weeks 11–17
+  B) Silver transformation/join failing for weeks 11–17
+  C) Gold aggregation logic dropping routes after week 10
+- Use SQL to check upstream tables for those weeks:
+  - bronze_nflfastr_snap_counts (or whichever snap/route table is used)
+  - silver_player_weekly_stats (or related)
+  - any “routes” source table if it exists
+- Include evidence: row counts, null rates, join-key mismatch (player_id/team/week)
+
+4) Hypotheses ranked by likelihood with evidence
+Examples to consider (do not assume):
+- schema change in nflfastR snap counts/participation
+- join key mismatch after week 10 (team abbreviations change, player id format, week indexing)
+- filter logic excluding weeks > 10 (hardcoded max week)
+- incorrect season/week mapping in pipeline
+
+5) Minimal fix plan (NO code changes yet)
+- Provide 1–2 minimal fix approaches with:
+  - specific file(s) to change
+  - what change (in plain English)
+  - how to validate after fix (SQL checks + expected output)
+  - estimated blast radius (what could break)
+
+Stop condition:
+When you can point to a specific failure mechanism with evidence and a minimal fix plan, STOP. Do not implement.
+
+IMPORTANT: This phase must be run against the real DB (requires DATABASE_URL). If DB is not available, write exactly what env var is missing and stop.

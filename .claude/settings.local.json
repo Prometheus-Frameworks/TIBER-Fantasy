@@ -47,7 +47,11 @@
       "Bash(# Check which snapshot ID is being used curl -s \"\"http://localhost:5000/api/data-lab/search?season=2025&week=17&position=WR&limit=1\"\")",
       "Bash(# Check snapshot meta for week 17 curl -s \"\"http://localhost:5000/api/data-lab/health\"\")",
       "Bash(timeout 10 npm run dev:*)",
-      "Bash(timeout 15 npm run dev:*)"
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(git checkout:*)",
+      "Bash(git log:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)"
     ]
   }
 }
