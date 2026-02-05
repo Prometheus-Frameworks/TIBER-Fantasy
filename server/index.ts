@@ -52,14 +52,19 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
   // 1) Mount your API routes
   const maybeServer = await registerRoutes(app);
 
-  // 2) Error handler (after routes)
+  // 2) Catch-all for unmatched /api/* routes — return JSON 404 instead of SPA HTML
+  app.all("/api/*", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found", path: _req.originalUrl });
+  });
+
+  // 3) Error handler (after routes)
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err?.status ?? err?.statusCode ?? 500;
     res.status(status).json({ message: err?.message ?? "Internal Server Error" });
     console.error("Unhandled error:", err);
   });
 
-  // 3) Dev vs Prod assets
+  // 4) Dev vs Prod assets
   const isDev = process.env.NODE_ENV === "development";
 
   if (isDev) {
@@ -82,7 +87,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
     }
   }
 
-  // 4) Auto-migrate database (non-fatal, runs in background)
+  // 5) Auto-migrate database (non-fatal, runs in background)
   async function autoMigrate() {
     try {
       log("🔄 Running database migrations...");
@@ -104,7 +109,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
     }
   }
 
-  // 5) Verify database connection (non-fatal)
+  // 6) Verify database connection (non-fatal)
   async function checkDatabase() {
     try {
       const { pingDb } = await import("./infra/db");
@@ -122,7 +127,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
   await autoMigrate();
   await checkDatabase();
 
-  // 6) Listen on Render port (or 5000 for local)
+  // 7) Listen on Render port (or 5000 for local)
   const PORT = Number(process.env.PORT ?? 5000);
   const HOST = "0.0.0.0";
 
