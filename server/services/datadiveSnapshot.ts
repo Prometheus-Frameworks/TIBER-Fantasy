@@ -586,6 +586,16 @@ export class DatadiveSnapshotService {
       fptsPpr: row.fptsPpr,
     }));
 
+    // Upsert guard: remove existing rows for this season/week to prevent snapshot accumulation
+    const deleteResult = await db.execute(sql`
+      DELETE FROM datadive_snapshot_player_week
+      WHERE season = ${season} AND week = ${week}
+    `);
+    const deletedCount = (deleteResult as any).rowCount ?? 0;
+    if (deletedCount > 0) {
+      console.log(`🧹 [DataDive Snapshot] Upsert guard: cleared ${deletedCount} existing rows for ${season} Week ${week}`);
+    }
+
     if (snapshotRows.length > 0) {
       const chunkSize = 100;
       for (let i = 0; i < snapshotRows.length; i += chunkSize) {
