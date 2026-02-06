@@ -113,8 +113,11 @@ export class DatadiveSnapshotService {
           console.log(`✅ [DataDive] Gold ETL created enriched snapshot ${goldResult.snapshotId} with ${goldResult.recordCount} records`);
         }
       } catch (goldError) {
-        // Log but don't fail - the basic snapshot is still valid
-        console.warn(`⚠️ [DataDive] Gold ETL failed (basic snapshot still valid):`, goldError);
+        // Log clearly but don't fail - the basic snapshot is still valid
+        const errMsg = goldError instanceof Error ? goldError.message : String(goldError);
+        const errStack = goldError instanceof Error ? goldError.stack : undefined;
+        console.error(`❌ [DataDive] Gold ETL FAILED for ${season} Week ${week}: ${errMsg}`);
+        if (errStack) console.error(`❌ [DataDive] Gold ETL stack trace:\n${errStack}`);
       }
 
       console.log(`✅ [DataDive] Snapshot ${snapshotId} completed successfully`);
