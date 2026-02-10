@@ -35,10 +35,12 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
   - **Roster Bridge vs Global Identity**: Roster bridge coverage (Sleeper roster players mapped to canonical IDs) is primary for Ownership features. Global identity coverage is informational only - many practice squad/reserve players have no Sleeper presence.
 - **Data Quality**: Multi-dimensional validation, data lineage, and confidence scoring.
 
-**UI/UX Decisions**:
-- Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`), blue-purple gradient accents, and white/light typography.
-- Interactive GlowCard components, pulsing GlowCTA buttons, skeleton loading, and a top loading bar.
-- **Homepage**: Horizontal feature navigation (Dashboard, Rankings, Schedule, Data Lab), condensed chat panel with live Tiber Chat, dashboard widgets (Quick Insights, FORGE Movers, Start/Sit), and league selector. Mobile-first PWA design with responsive breakpoints and touch-friendly elements.
+**UI/UX Decisions (v2 Light Mode Redesign - Feb 2026)**:
+- Light mode: White background (`#ffffff`), `#fafafa` secondary, `#f4f4f4` tertiary. Ember accent (`#e2640d`).
+- Three-font system: Instrument Sans (UI), JetBrains Mono (data/code), Newsreader (editorial).
+- Fixed 220px sidebar (`TiberLayout.tsx`) with nav sections (Core, Intelligence, System), Promethean Charter box, breathing ember dot logo.
+- CSS custom properties for all colors/spacing. Legacy dark→light CSS overrides in `index.css` transform existing dark-themed pages.
+- **Homepage** (`Dashboard.tsx`): Hero section, sticky position-filter toolbar (WR/RB/QB/TE), status cards row, FORGE-powered player data table with tier badges and trend bars, two-column insights + chat preview, connected services footer.
 - **Universal Current Week System**: `/api/system/current-week` endpoint for real-time NFL week detection, used by frontend components.
 
 **Technical Implementations & Feature Specifications:**
