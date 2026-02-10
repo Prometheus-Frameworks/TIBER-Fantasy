@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIBER</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #fafafa;
+    --bg-tertiary: #f4f4f4;
+    --border: #e5e5e5;
+    --border-hover: #d0d0d0;
+    --text-primary: #0a0a0a;
+    --text-secondary: #555555;
+    --text-tertiary: #999999;
+
+```
+--ember: #e2640d;
+--ember-bright: #f59e0b;
+--ember-dim: rgba(226, 100, 13, 0.07);
+--ember-warm: rgba(245, 158, 11, 0.05);
+
+--green: #16a34a;
+--green-dim: rgba(22, 163, 74, 0.08);
+--red: #dc2626;
+--red-dim: rgba(220, 38, 38, 0.08);
+--yellow: #ca8a04;
+
+--radius: 10px;
+--radius-sm: 7px;
+--radius-xs: 5px;
+--font-sans: 'Instrument Sans', -apple-system, sans-serif;
+--font-mono: 'JetBrains Mono', monospace;
+--font-serif: 'Newsreader', Georgia, serif;
+```
+
+}
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+background: var(–bg-primary);
+color: var(–text-primary);
+font-family: var(–font-sans);
+-webkit-font-smoothing: antialiased;
+overflow-x: hidden;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+position: fixed;
+left: 0; top: 0; bottom: 0;
+width: 220px;
+background: var(–bg-primary);
+border-right: 1px solid var(–border);
+display: flex;
+flex-direction: column;
+z-index: 100;
+}
+
+.sidebar-header {
+padding: 28px 20px 20px;
+display: flex;
+align-items: baseline;
+gap: 8px;
+}
+
+.logo-text {
+font-size: 13px;
+font-weight: 700;
+letter-spacing: 3px;
+text-transform: uppercase;
+}
+
+.logo-dot {
+width: 5px;
+height: 5px;
+border-radius: 50%;
+background: var(–ember);
+display: inline-block;
+animation: dot-breathe 3s ease-in-out infinite;
+}
+
+@keyframes dot-breathe {
+0%, 100% { opacity: 0.6; }
+50% { opacity: 1; }
+}
+
+.sidebar-nav {
+flex: 1;
+padding: 4px 10px;
+display: flex;
+flex-direction: column;
+gap: 1px;
+}
+
+.nav-section-label {
+font-size: 10px;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 1.2px;
+color: var(–text-tertiary);
+padding: 20px 8px 6px;
+}
+
+.nav-item {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 8px 10px;
+border-radius: var(–radius-xs);
+cursor: pointer;
+transition: all 0.15s ease;
+font-size: 13px;
+color: var(–text-secondary);
+font-weight: 450;
+}
+
+.nav-item:hover {
+background: var(–bg-tertiary);
+color: var(–text-primary);
+}
+
+.nav-item.active {
+background: var(–ember-dim);
+color: var(–ember);
+font-weight: 550;
+}
+
+.nav-badge {
+font-size: 10px;
+font-family: var(–font-mono);
+color: var(–text-tertiary);
+}
+
+.nav-item.active .nav-badge { color: var(–ember); }
+
+.sidebar-charter {
+padding: 12px 16px;
+margin: 8px 10px;
+border-radius: var(–radius-xs);
+background: var(–ember-warm);
+border-left: 2px solid var(–ember);
+}
+
+.charter-label {
+font-size: 9px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 1.5px;
+color: var(–ember);
+margin-bottom: 4px;
+}
+
+.charter-text {
+font-size: 11.5px;
+font-family: var(–font-serif);
+font-style: italic;
+color: var(–text-secondary);
+line-height: 1.45;
+}
+
+.sidebar-footer {
+padding: 16px;
+border-top: 1px solid var(–border);
+}
+
+.user-pill {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 6px;
+border-radius: var(–radius-xs);
+cursor: pointer;
+transition: background 0.15s;
+}
+
+.user-pill:hover { background: var(–bg-tertiary); }
+.user-name { font-size: 13px; font-weight: 500; }
+.user-league { font-size: 11px; color: var(–text-tertiary); }
+
+/* ===== MAIN ===== */
+.main { margin-left: 220px; min-height: 100vh; }
+
+/* ===== HERO ===== */
+.hero {
+padding: 64px 32px 44px;
+text-align: center;
+border-bottom: 1px solid var(–border);
+position: relative;
+overflow: hidden;
+}
+
+.hero::before {
+content: ‘’;
+position: absolute;
+top: -60%;
+left: 50%;
+transform: translateX(-50%);
+width: 600px;
+height: 600px;
+background: radial-gradient(circle, rgba(226, 100, 13, 0.03) 0%, transparent 70%);
+pointer-events: none;
+}
+
+.hero-title {
+font-size: 42px;
+font-weight: 700;
+letter-spacing: 14px;
+text-transform: uppercase;
+margin-bottom: 10px;
+color: var(–text-primary);
+position: relative;
+}
+
+.hero-sub {
+font-size: 14px;
+font-family: var(–font-serif);
+font-style: italic;
+color: var(–text-tertiary);
+letter-spacing: 0.3px;
+position: relative;
+margin-bottom: 16px;
+}
+
+.hero-value-prop {
+font-size: 13px;
+color: var(–text-secondary);
+position: relative;
+max-width: 520px;
+margin: 0 auto;
+line-height: 1.5;
+}
+
+.hero-value-prop strong {
+color: var(–text-primary);
+font-weight: 600;
+}
+
+/* ===== TOOLBAR ===== */
+.toolbar {
+padding: 12px 32px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+border-bottom: 1px solid var(–border);
+background: var(–bg-primary);
+position: sticky;
+top: 0;
+z-index: 50;
+}
+
+.toolbar-left, .toolbar-right {
+display: flex;
+align-items: center;
+gap: 6px;
+}
+
+.tool-btn {
+padding: 6px 14px;
+border-radius: 100px;
+border: 1px solid var(–border);
+background: transparent;
+color: var(–text-secondary);
+font-size: 12px;
+font-family: var(–font-sans);
+font-weight: 450;
+cursor: pointer;
+transition: all 0.15s;
+}
+
+.tool-btn:hover {
+border-color: var(–border-hover);
+color: var(–text-primary);
+}
+
+.tool-btn.active {
+background: var(–text-primary);
+color: var(–bg-primary);
+border-color: var(–text-primary);
+}
+
+.search-wrapper { position: relative; }
+
+.toolbar-search {
+width: 200px;
+padding: 6px 12px 6px 28px;
+border-radius: 100px;
+border: 1px solid var(–border);
+background: var(–bg-primary);
+color: var(–text-primary);
+font-size: 12px;
+font-family: var(–font-sans);
+outline: none;
+transition: border-color 0.15s;
+}
+
+.toolbar-search::placeholder { color: var(–text-tertiary); }
+.toolbar-search:focus { border-color: var(–ember); }
+
+.search-wrapper::before {
+content: “⌕”;
+position: absolute;
+left: 10px;
+top: 50%;
+transform: translateY(-50%);
+color: var(–text-tertiary);
+font-size: 13px;
+}
+
+/* ===== CONTENT ===== */
+.content {
+padding: 28px 32px;
+max-width: 1100px;
+}
+
+/* ===== STATUS ROW ===== */
+.status-row {
+display: flex;
+gap: 1px;
+margin-bottom: 32px;
+background: var(–border);
+border: 1px solid var(–border);
+border-radius: var(–radius);
+overflow: hidden;
+}
+
+.status-card {
+flex: 1;
+background: var(–bg-primary);
+padding: 20px;
+}
+
+.status-label {
+font-size: 11px;
+font-weight: 500;
+text-transform: uppercase;
+letter-spacing: 0.8px;
+color: var(–text-tertiary);
+margin-bottom: 6px;
+}
+
+.status-value {
+font-size: 24px;
+font-weight: 700;
+letter-spacing: -0.5px;
+display: flex;
+align-items: baseline;
+gap: 8px;
+}
+
+.status-delta {
+font-size: 11px;
+font-weight: 500;
+font-family: var(–font-mono);
+padding: 2px 5px;
+border-radius: 3px;
+}
+
+.delta-up { color: var(–green); background: var(–green-dim); }
+.delta-down { color: var(–red); background: var(–red-dim); }
+
+.status-sub {
+font-size: 11px;
+color: var(–text-tertiary);
+margin-top: 3px;
+}
+
+/* ===== SECTION HEADERS ===== */
+.section-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 12px;
+}
+
+.section-title {
+font-size: 12px;
+font-weight: 600;
+letter-spacing: 1px;
+text-transform: uppercase;
+color: var(–text-tertiary);
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.section-dot {
+width: 4px;
+height: 4px;
+border-radius: 50%;
+background: var(–ember);
+}
+
+/* ===== DATA TABLE ===== */
+.table-container {
+border: 1px solid var(–border);
+border-radius: var(–radius);
+overflow: hidden;
+margin-bottom: 32px;
+}
+
+.data-table {
+width: 100%;
+border-collapse: collapse;
+}
+
+.data-table th {
+font-size: 10px;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 0.7px;
+color: var(–text-tertiary);
+padding: 10px 16px;
+text-align: left;
+border-bottom: 1px solid var(–border);
+background: var(–bg-secondary);
+white-space: nowrap;
+cursor: pointer;
+user-select: none;
+}
+
+.data-table th:hover { color: var(–text-secondary); }
+.data-table th.ar, .data-table td.ar { text-align: right; }
+
+.data-table td {
+font-size: 13px;
+padding: 11px 16px;
+border-bottom: 1px solid var(–border);
+white-space: nowrap;
+}
+
+.data-table tbody tr {
+cursor: pointer;
+transition: background 0.1s;
+}
+
+.data-table tbody tr:hover td { background: var(–bg-secondary); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table tbody tr.flagged td {
+background: var(–ember-warm);
+}
+
+.data-table tbody tr.flagged:hover td {
+background: var(–ember-dim);
+}
+
+.player-cell {
+display: flex;
+flex-direction: column;
+gap: 1px;
+}
+
+.player-name {
+font-weight: 550;
+letter-spacing: -0.15px;
+font-size: 13px;
+display: flex;
+align-items: center;
+gap: 6px;
+}
+
+.flag-label {
+font-size: 9px;
+font-family: var(–font-mono);
+font-weight: 600;
+color: var(–ember);
+background: var(–ember-dim);
+padding: 1px 5px;
+border-radius: 2px;
+letter-spacing: 0.5px;
+text-transform: uppercase;
+}
+
+.player-meta {
+font-size: 11px;
+color: var(–text-tertiary);
+}
+
+.tier-badge {
+font-size: 10px;
+font-family: var(–font-mono);
+font-weight: 500;
+padding: 2px 7px;
+border-radius: 3px;
+letter-spacing: 0.2px;
+}
+
+.tier-1 { color: var(–ember); background: var(–ember-dim); font-weight: 600; }
+.tier-2 { color: var(–text-primary); background: rgba(10,10,10,0.05); }
+.tier-3 { color: var(–text-secondary); background: var(–bg-tertiary); }
+.tier-4 { color: var(–text-tertiary); background: var(–bg-tertiary); }
+
+.mono { font-family: var(–font-mono); font-size: 12px; }
+.dim { color: var(–text-tertiary); }
+
+/* Trend bars — neutral visual, no fire language */
+.trend-bar {
+display: inline-flex;
+align-items: flex-end;
+gap: 2px;
+height: 18px;
+}
+
+.trend-bar span {
+width: 3px;
+border-radius: 1px 1px 0 0;
+}
+
+.t-rising { background: var(–green); }
+.t-steady { background: #ccc; }
+.t-falling { background: var(–red); opacity: 0.5; }
+
+/* ===== TWO COL ===== */
+.two-col {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 16px;
+margin-bottom: 32px;
+}
+
+/* ===== INSIGHT CARD ===== */
+.insight-card {
+border: 1px solid var(–border);
+border-radius: var(–radius);
+padding: 20px;
+transition: border-color 0.2s;
+}
+
+.insight-card:hover { border-color: var(–border-hover); }
+
+.insight-card.accent-left {
+border-left: 2px solid var(–ember);
+}
+
+.insight-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 14px;
+}
+
+.insight-tag {
+font-size: 10px;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 1px;
+padding: 3px 8px;
+border-radius: 3px;
+}
+
+.insight-tag.regression { color: var(–red); background: var(–red-dim); }
+.insight-tag.breakout { color: var(–ember); background: var(–ember-dim); }
+.insight-tag.trade { color: var(–text-primary); background: rgba(10,10,10,0.05); }
+
+.insight-time {
+font-size: 11px;
+color: var(–text-tertiary);
+font-family: var(–font-mono);
+}
+
+.insight-title {
+font-size: 15px;
+font-weight: 550;
+margin-bottom: 8px;
+line-height: 1.4;
+letter-spacing: -0.2px;
+}
+
+.insight-body {
+font-size: 13.5px;
+color: var(–text-secondary);
+line-height: 1.6;
+font-family: var(–font-serif);
+}
+
+.insight-source {
+font-size: 11px;
+color: var(–text-tertiary);
+font-family: var(–font-mono);
+margin-top: 10px;
+}
+
+.insight-metrics {
+display: flex;
+gap: 24px;
+margin-top: 16px;
+padding-top: 16px;
+border-top: 1px solid var(–border);
+}
+
+.insight-metric-label {
+font-size: 10px;
+text-transform: uppercase;
+letter-spacing: 0.6px;
+color: var(–text-tertiary);
+margin-bottom: 2px;
+}
+
+.insight-metric-value {
+font-size: 15px;
+font-weight: 600;
+font-family: var(–font-mono);
+}
+
+/* ===== CHAT PREVIEW ===== */
+.chat-preview {
+border: 1px solid var(–border);
+border-radius: var(–radius);
+overflow: hidden;
+}
+
+.chat-header {
+padding: 12px 20px;
+border-bottom: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: space-between;
+}
+
+.chat-header-left {
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.chat-indicator {
+width: 6px;
+height: 6px;
+border-radius: 50%;
+background: var(–green);
+}
+
+.chat-label { font-size: 12px; font-weight: 550; }
+.chat-model { font-size: 10px; color: var(–text-tertiary); font-family: var(–font-mono); }
+
+.chat-messages {
+padding: 16px 20px;
+display: flex;
+flex-direction: column;
+gap: 14px;
+}
+
+.chat-msg {
+display: flex;
+flex-direction: column;
+gap: 3px;
+}
+
+.chat-msg-sender {
+font-size: 11px;
+font-weight: 600;
+color: var(–text-tertiary);
+letter-spacing: 0.3px;
+}
+
+.chat-msg-sender.ai { color: var(–ember); }
+
+.chat-msg-text {
+font-size: 13px;
+color: var(–text-secondary);
+line-height: 1.55;
+}
+
+.chat-msg-text strong {
+color: var(–text-primary);
+font-weight: 550;
+}
+
+.chat-input-area {
+padding: 12px 20px;
+border-top: 1px solid var(–border);
+}
+
+.chat-input {
+width: 100%;
+padding: 9px 14px;
+border-radius: 100px;
+border: 1px solid var(–border);
+background: var(–bg-secondary);
+color: var(–text-primary);
+font-size: 12.5px;
+font-family: var(–font-sans);
+outline: none;
+transition: border-color 0.15s;
+}
+
+.chat-input::placeholder { color: var(–text-tertiary); }
+.chat-input:focus { border-color: var(–ember); }
+
+/* ===== SERVICES ===== */
+.service-row {
+display: flex;
+align-items: center;
+gap: 12px;
+padding: 10px 0;
+border-bottom: 1px solid var(–border);
+font-size: 13px;
+}
+
+.service-row:last-child { border-bottom: none; }
+
+.service-dot { width: 5px; height: 5px; border-radius: 50%; }
+.service-dot.on { background: var(–green); }
+.service-dot.pending { background: var(–yellow); }
+.service-name { font-weight: 450; flex: 1; }
+
+.service-status {
+font-size: 11px;
+font-family: var(–font-mono);
+color: var(–text-tertiary);
+}
+
+/* ===== FOOTER ===== */
+.app-footer {
+padding: 24px 32px;
+border-top: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-top: 48px;
+}
+
+.footer-left {
+font-size: 11px;
+color: var(–text-tertiary);
+font-family: var(–font-mono);
+display: flex;
+align-items: center;
+gap: 12px;
+}
+
+.footer-right {
+display: flex;
+gap: 16px;
+}
+
+.footer-link {
+font-size: 11px;
+color: var(–text-tertiary);
+text-decoration: none;
+transition: color 0.15s;
+cursor: pointer;
+}
+
+.footer-link:hover { color: var(–ember); }
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeUp {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+.hero { animation: fadeUp 0.5s ease forwards; }
+
+.content > * {
+animation: fadeUp 0.4s ease forwards;
+opacity: 0;
+}
+
+.content > *:nth-child(1) { animation-delay: 0.08s; }
+.content > *:nth-child(2) { animation-delay: 0.13s; }
+.content > *:nth-child(3) { animation-delay: 0.18s; }
+.content > *:nth-child(4) { animation-delay: 0.23s; }
+.content > *:nth-child(5) { animation-delay: 0.28s; }
+.content > *:nth-child(6) { animation-delay: 0.33s; }
+.content > *:nth-child(7) { animation-delay: 0.38s; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(–border-hover); }
+</style>
+
+</head>
+<body>
+
+<!-- SIDEBAR -->
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <span class="logo-text">TIBER</span>
+    <span class="logo-dot"></span>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Core</div>
+    <div class="nav-item active">Dashboard</div>
+    <div class="nav-item">Data Lab <span class="nav-badge">4.2k</span></div>
+    <div class="nav-item">FORGE Tiers</div>
+    <div class="nav-item">Playbook</div>
+    <div class="nav-item">Sleeper Sync <span class="nav-badge">Live</span></div>
+
+```
+<div class="nav-section-label">Intelligence</div>
+<div class="nav-item">Tiber Chat <span class="nav-badge">β</span></div>
+<div class="nav-item">Trade Analyzer</div>
+<div class="nav-item">Waiver Wire</div>
+
+<div class="nav-section-label">System</div>
+<div class="nav-item">Settings</div>
+<div class="nav-item">API Status</div>
+```
+
+  </div>
+
+  <div class="sidebar-charter">
+    <div class="charter-label">Promethean Charter</div>
+    <div class="charter-text">Serve, not take. Light carried forward.</div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-pill">
+      <div class="user-info">
+        <div class="user-name">Joe F.</div>
+        <div class="user-league">Dynasty · 12-team · Sleeper</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+
+<main class="main">
+
+  <!-- HERO -->
+
+  <div class="hero">
+    <div class="hero-title">TIBER</div>
+    <div class="hero-sub">Tactical Index for Breakout Efficiency and Regression</div>
+    <div class="hero-value-prop">
+      NFL data meets dynasty intelligence. TIBER tracks <strong>breakout signals</strong> and <strong>regression indicators</strong> across every skill position — so you can trade on what's coming, not what already happened.
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="tool-btn active">My Roster</button>
+      <button class="tool-btn">League</button>
+      <button class="tool-btn">All Players</button>
+    </div>
+    <div class="toolbar-right">
+      <div class="search-wrapper">
+        <input type="text" class="toolbar-search" placeholder="Search players...">
+      </div>
+      <button class="tool-btn">Sync</button>
+      <button class="tool-btn">+ New Query</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+```
+<!-- STATUS ROW -->
+<div class="status-row">
+  <div class="status-card">
+    <div class="status-label">Team Value</div>
+    <div class="status-value">
+      8,421
+      <span class="status-delta delta-up">+3.2%</span>
+    </div>
+    <div class="status-sub">FORGE composite score</div>
+  </div>
+  <div class="status-card">
+    <div class="status-label">Roster Grade</div>
+    <div class="status-value">
+      A−
+      <span class="status-delta delta-up">↑ 2</span>
+    </div>
+    <div class="status-sub">#3 of 12 teams</div>
+  </div>
+  <div class="status-card">
+    <div class="status-label">Trade Window</div>
+    <div class="status-value" style="color: var(--green);">Open</div>
+    <div class="status-sub">7 pending offers</div>
+  </div>
+  <div class="status-card">
+    <div class="status-label">Data Pipeline</div>
+    <div class="status-value" style="font-size: 16px; font-family: var(--font-mono);">All Systems</div>
+    <div class="status-sub">Last sync 4m ago</div>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="section-header">
+  <div class="section-title">
+    <span class="section-dot"></span>
+    Dynasty Asset Board
+  </div>
+  <div class="section-actions">
+    <button class="tool-btn" style="font-size: 11px; padding: 4px 10px;">Breakouts Only</button>
+    <button class="tool-btn" style="font-size: 11px; padding: 4px 10px;">Export</button>
+  </div>
+</div>
+
+<div class="table-container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 36px;">#</th>
+        <th>Player</th>
+        <th>Tier</th>
+        <th class="ar">Dynasty Val</th>
+        <th class="ar">PPG (PPR)</th>
+        <th class="ar">6wk Trend</th>
+        <th class="ar">Age</th>
+        <th class="ar">Contract</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono dim">1</td>
+        <td>
+          <div class="player-cell">
+            <div class="player-name">Ja'Marr Chase</div>
+            <div class="player-meta">WR · CIN · 4th season</div>
+          </div>
+        </td>
+        <td><span class="tier-badge tier-1">T1 Elite</span></td>
+        <td class="ar mono">9,850</td>
+        <td class="ar mono">22.4</td>
+        <td class="ar">
+          <div class="trend-bar">
+            <span class="t-steady" style="height: 8px;"></span>
+            <span class="t-rising" style="height: 10px;"></span>
+            <span class="t-rising" style="height: 12px;"></span>
+            <span class="t-rising" style="height: 14px;"></span>
+            <span class="t-rising" style="height: 16px;"></span>
+            <span class="t-rising" style="height: 18px;"></span>
+          </div>
+        </td>
+        <td class="ar mono dim">25</td>
+        <td class="ar mono dim">2028</td>
+      </tr>
+      <tr class="flagged">
+        <td class="mono dim">2</td>
+        <td>
+          <div class="player-cell">
+            <div class="player-name">
+              Drake London
+              <span class="flag-label">Breakout</span>
+            </div>
+            <div class="player-meta">WR · ATL · 3rd season · FORGE flagged</div>
+          </div>
+        </td>
+        <td><span class="tier-badge tier-2">T2 Core</span></td>
+        <td class="ar mono">5,400</td>
+        <td class="ar mono">15.6</td>
+        <td class="ar">
+          <div class="trend-bar">
+            <span class="t-steady" style="height: 6px;"></span>
+            <span class="t-steady" style="height: 8px;"></span>
+            <span class="t-rising" style="height: 11px;"></span>
+            <span class="t-rising" style="height: 14px;"></span>
+            <span class="t-rising" style="height: 16px;"></span>
+            <span class="t-rising" style="height: 18px;"></span>
+          </div>
+        </td>
+        <td class="ar mono dim">24</td>
+        <td class="ar mono dim">2027</td>
+      </tr>
+      <tr>
+        <td class="mono dim">3</td>
+        <td>
+          <div class="player-cell">
+            <div class="player-name">Breece Hall</div>
+            <div class="player-meta">RB · NYJ · 3rd season</div>
+          </div>
+        </td>
+        <td><span class="tier-badge tier-2">T2 Core</span></td>
+        <td class="ar mono">7,200</td>
+        <td class="ar mono">17.8</td>
+        <td class="ar">
+          <div class="trend-bar">
+            <span class="t-rising" style="height: 14px;"></span>
+            <span class="t-steady" style="height: 12px;"></span>
+            <span class="t-steady" style="height: 10px;"></span>
+            <span class="t-falling" style="height: 8px;"></span>
+            <span class="t-falling" style="height: 7px;"></span>
+            <span class="t-falling" style="height: 6px;"></span>
+          </div>
+        </td>
+        <td class="ar mono dim">24</td>
+        <td class="ar mono dim">2026</td>
+      </tr>
+      <tr>
+        <td class="mono dim">4</td>
+        <td>
+          <div class="player-cell">
+            <div class="player-name">Trevor Lawrence</div>
+            <div class="player-meta">QB · JAX · 4th season</div>
+          </div>
+        </td>
+        <td><span class="tier-badge tier-2">T2 Core</span></td>
+        <td class="ar mono">6,900</td>
+        <td class="ar mono">18.1</td>
+        <td class="ar">
+          <div class="trend-bar">
+            <span class="t-steady" style="height: 10px;"></span>
+            <span class="t-steady" style="height: 9px;"></span>
+            <span class="t-steady" style="height: 9px;"></span>
+            <span class="t-steady" style="height: 8px;"></span>
+            <span class="t-steady" style="height: 9px;"></span>
+            <span class="t-steady" style="height: 9px;"></span>
+          </div>
+        </td>
+        <td class="ar mono dim">25</td>
+        <td class="ar mono dim">2029</td>
+      </tr>
+      <tr>
+        <td class="mono dim">5</td>
+        <td>
+          <div class="player-cell">
+            <div class="player-name">
+              Kyle Pitts
+              <span class="flag-label" style="color: var(--red); background: var(--red-dim);">Regression</span>
+            </div>
+            <div class="player-meta">TE · ATL · 4th season · FORGE flagged</div>
+          </div>
+        </td>
+        <td><span class="tier-badge tier-4">T4 Hold</span></td>
+        <td class="ar mono">3,100</td>
+        <td class="ar mono">10.2</td>
+        <td class="ar">
+          <div class="trend-bar">
+            <span class="t-steady" style="height: 10px;"></span>
+            <span class="t-falling" style="height: 8px;"></span>
+            <span class="t-falling" style="height: 7px;"></span>
+            <span class="t-falling" style="height: 5px;"></span>
+            <span class="t-falling" style="height: 4px;"></span>
+            <span class="t-falling" style="height: 4px;"></span>
+          </div>
+        </td>
+        <td class="ar mono dim">25</td>
+        <td class="ar mono dim">2026</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TWO COL -->
+<div class="two-col">
+  <div>
+    <div class="section-header">
+      <div class="section-title">
+        <span class="section-dot"></span>
+        Insights
+      </div>
+    </div>
+    <div class="insight-card accent-left">
+      <div class="insight-header">
+        <span class="insight-tag regression">Regression</span>
+        <span class="insight-time">2h ago</span>
+      </div>
+      <div class="insight-title">Breece Hall trending toward sell window</div>
+      <div class="insight-body">
+        Rushing efficiency has declined across three consecutive evaluation periods. Jets O-line investments haven't translated to improved blocking metrics. The market still prices Hall near peak — creating an opportunity to move him before the value corrects.
+      </div>
+      <div class="insight-source">Source: FORGE regression model · Sleeper ADP data</div>
+      <div class="insight-metrics">
+        <div>
+          <div class="insight-metric-label">Confidence</div>
+          <div class="insight-metric-value" style="color: var(--ember);">74%</div>
+        </div>
+        <div>
+          <div class="insight-metric-label">Proj. Value Δ</div>
+          <div class="insight-metric-value" style="color: var(--red);">−860</div>
+        </div>
+        <div>
+          <div class="insight-metric-label">Recommendation</div>
+          <div class="insight-metric-value" style="font-size: 12px;">Sell High</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-header">
+      <div class="section-title">
+        <span class="section-dot"></span>
+        Tiber Chat
+      </div>
+      <div class="section-actions">
+        <button class="tool-btn" style="font-size: 11px; padding: 4px 10px;">Open Full</button>
+      </div>
+    </div>
+    <div class="chat-preview">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <div class="chat-indicator"></div>
+          <span class="chat-label">Active Session</span>
+        </div>
+        <span class="chat-model">tiber-core-v2</span>
+      </div>
+      <div class="chat-messages">
+        <div class="chat-msg">
+          <div class="chat-msg-sender">You</div>
+          <div class="chat-msg-text">Who should I target with my 1.03 pick in the rookie draft?</div>
+        </div>
+        <div class="chat-msg">
+          <div class="chat-msg-sender ai">Tiber</div>
+          <div class="chat-msg-text">
+            Looking at your roster, you're <strong>strongest at WR and weakest at RB depth</strong>. At 1.03, the top RB available projects as a T2 Core ceiling based on combine metrics and college production. I'd target the positional need unless a T1 prospect falls — want me to run the draft simulation with your league's tendencies?
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" placeholder="Ask about your roster, trades, or matchups...">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<div class="section-header">
+  <div class="section-title">
+    <span class="section-dot"></span>
+    Connected Services
+  </div>
+</div>
+<div class="insight-card" style="margin-bottom: 32px;">
+  <div class="service-row">
+    <span class="service-dot on"></span>
+    <span class="service-name">Sleeper League Sync</span>
+    <span class="service-status">Connected · Last pull 4m ago</span>
+  </div>
+  <div class="service-row">
+    <span class="service-dot on"></span>
+    <span class="service-name">NFL Data Pipeline</span>
+    <span class="service-status">Active · 4,218 player records</span>
+  </div>
+  <div class="service-row">
+    <span class="service-dot on"></span>
+    <span class="service-name">FORGE Tier Engine</span>
+    <span class="service-status">v2.1 · Processing</span>
+  </div>
+  <div class="service-row">
+    <span class="service-dot pending"></span>
+    <span class="service-name">Tiber Chat</span>
+    <span class="service-status">Beta · Initializing</span>
+  </div>
+  <div class="service-row">
+    <span class="service-dot on"></span>
+    <span class="service-name">Playbook Module</span>
+    <span class="service-status">Operational</span>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="app-footer">
+  <div class="footer-left">
+    <span>TIBER v2.1</span>
+    <span>·</span>
+    <span>Dynasty intelligence, automated</span>
+  </div>
+  <div class="footer-right">
+    <a class="footer-link">Docs</a>
+    <a class="footer-link">API</a>
+    <a class="footer-link">Status</a>
+    <a class="footer-link">Charter</a>
+  </div>
+</footer>
+```
+
+  </div>
+</main>
+
+</body>
+</html>
