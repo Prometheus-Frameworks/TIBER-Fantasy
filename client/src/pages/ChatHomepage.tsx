@@ -303,21 +303,17 @@ export default function ChatHomepage() {
   });
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-purple-900/20 via-[#0a0e1a] to-black text-white overflow-hidden">
-      {/* Sidebar */}
+    <div className="flex bg-[#0a0e1a] text-white overflow-hidden" style={{ height: 'calc(100vh - 0px)' }}>
+      {/* Chat Sessions Panel */}
       <aside
         className={`${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 h-screen bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
+        } md:translate-x-0 fixed md:relative z-40 w-64 md:w-1/5 h-full bg-[#141824] border-r border-gray-800 transition-transform duration-300 flex flex-col`}
       >
-        {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold">
-              T
-            </div>
-            <span className="font-bold text-sm">TIBER</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-sm">Chat Sessions</span>
+          </div>
           <button
             data-testid="button-close-sidebar"
             onClick={() => setSidebarOpen(false)}

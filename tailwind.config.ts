@@ -5,32 +5,23 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["'Instrument Sans'", "-apple-system", "sans-serif"],
+        mono: ["'JetBrains Mono'", "monospace"],
+        serif: ["'Newsreader'", "Georgia", "serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "var(--radius-sm)",
+        sm: "var(--radius-xs)",
       },
       colors: {
-        ink: '#0F1220',
-        body: '#2B2F45',
-        gold: '#F5C84B',
-        plum: '#6E56CF',
-        haze: '#F6F7FB',
-        line: '#E9ECF2',
-      },
-      spacing: {
-        '3.5': '0.875rem',
-      },
-      maxWidth: {
-        'screen-3xl': '1600px',
-      },
-      boxShadow: {
-        card: '0 1px 3px rgba(0,0,0,0.06)',
-      },
-      borderRadius: {
-        card: '14px',
-      },
-      colors: {
+        ember: {
+          DEFAULT: "var(--ember)",
+          bright: "var(--ember-bright)",
+          dim: "var(--ember-dim)",
+          warm: "var(--ember-warm)",
+        },
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: {
@@ -84,35 +75,27 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
-        fadeIn: {
+        fadeUp: {
           "0%": { opacity: "0", transform: "translateY(10px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        "pulse-slow": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+        "dot-breathe": {
+          "0%, 100%": { opacity: "0.6" },
+          "50%": { opacity: "1" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        fadeIn: "fadeIn 0.6s ease-out forwards",
-        "pulse-slow": "pulse-slow 8s ease-in-out infinite",
+        fadeUp: "fadeUp 0.5s ease forwards",
+        "dot-breathe": "dot-breathe 3s ease-in-out infinite",
       },
     },
   },
