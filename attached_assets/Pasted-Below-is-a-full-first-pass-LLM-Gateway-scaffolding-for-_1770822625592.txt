@@ -1,0 +1,772 @@
+Below is a full first-pass LLM Gateway scaffolding for server/llm/ in Node.js + TypeScript. It’s designed to be dropped in without rewriting your whole codebase. You’ll route ONE call site through it first, then expand.
+
+What this gives you (immediately)
+	•	One function: callLLM({ taskType, messages, priority })
+	•	Provider-agnostic routing + fallback
+	•	Gemini is “nice-to-have,” not required
+	•	Structured logs for every LLM call
+	•	Easy to add OpenAI + Anthropic providers later (stubs included)
+
+⸻
+
+1) File tree
+
+server/
+  llm/
+    index.ts
+    types.ts
+    config.ts
+    logger.ts
+    fallback.ts
+    providers/
+      openrouter.ts
+      gemini.ts
+      openai.ts
+      anthropic.ts
+
+
+⸻
+
+2) Code
+
+server/llm/types.ts
+
+export type LLMProvider = "openrouter" | "openai" | "anthropic" | "gemini";
+
+export type LLMTaskType =
+  | "router_intent"
+  | "code_patch"
+  | "code_review"
+  | "research"
+  | "data_qa"
+  | "player_analysis"
+  | "summarize"
+  | "general";
+
+export type LLMPriority = "speed" | "balanced" | "accuracy";
+
+export type LLMRole =
+  | "router_qb"
+  | "api_surgeon"
+  | "research_scout"
+  | "data_steward"
+  | "memory_keeper"
+  | "generalist";
+
+export type LLMMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+export type LLMRequest = {
+  taskType: LLMTaskType;
+  role?: LLMRole;
+  priority?: LLMPriority;
+
+  // Chat-style messages (preferred)
+  messages: LLMMessage[];
+
+  // Optional overrides
+  provider?: LLMProvider;
+  model?: string;
+
+  // Generation controls
+  maxTokens?: number;
+  temperature?: number;
+
+  // Budget / guardrails
+  timeoutMs?: number;
+  maxRetries?: number;
+
+  // Logging / tracing
+  purpose?: string;
+  requestId?: string;
+};
+
+export type LLMResponse = {
+  content: string;
+  provider: LLMProvider;
+  model: string;
+
+  latencyMs: number;
+  requestId: string;
+
+  inputTokens?: number;
+  outputTokens?: number;
+
+  // Set when fallback was used
+  fallbackPath?: Array<{ provider: LLMProvider; model: string; reason: string }>;
+};
+
+export type LLMErrorType =
+  | "timeout"
+  | "provider_unavailable"
+  | "rate_limited"
+  | "bad_request"
+  | "unknown";
+
+export class LLMError extends Error {
+  public readonly provider?: LLMProvider;
+  public readonly model?: string;
+  public readonly type: LLMErrorType;
+
+  constructor(message: string, type: LLMErrorType, provider?: LLMProvider, model?: string) {
+    super(message);
+    this.name = "LLMError";
+    this.type = type;
+    this.provider = provider;
+    this.model = model;
+  }
+}
+
+server/llm/logger.ts
+
+type LogLevel = "info" | "warn" | "error";
+
+export function llmLog(level: LogLevel, event: string, data: Record<string, any>) {
+  const payload = {
+    ts: new Date().toISOString(),
+    level,
+    event,
+    ...data,
+  };
+  // JSON logs so you can ingest later (db/file/etc.)
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(payload));
+}
+
+server/llm/config.ts
+
+import { LLMProvider, LLMTaskType, LLMPriority } from "./types";
+
+export type ProviderModel = { provider: LLMProvider; model: string };
+
+export type TaskRoutingProfile = {
+  // Ordered list; fallback.ts will attempt in sequence
+  tiers: Record<LLMPriority, ProviderModel[]>;
+};
+
+function env(name: string): string | undefined {
+  const v = process.env[name];
+  return v && v.trim().length ? v.trim() : undefined;
+}
+
+export function providerAvailability(): Record<LLMProvider, boolean> {
+  const openrouter = Boolean(env("AI_INTEGRATIONS_OPENROUTER_API_KEY") && env("AI_INTEGRATIONS_OPENROUTER_BASE_URL"));
+  const openai = Boolean(env("AI_INTEGRATIONS_OPENAI_API_KEY") && env("AI_INTEGRATIONS_OPENAI_BASE_URL"));
+  const anthropic = Boolean(env("AI_INTEGRATIONS_ANTHROPIC_API_KEY")); // base URL may not be needed for Anthropic SDK
+  const gemini = Boolean(env("GEMINI_API_KEY")); // optional (your own key)
+
+  return { openrouter, openai, anthropic, gemini };
+}
+
+/**
+ * IMPORTANT:
+ * - Defaults assume OpenRouter is available (it is for you now).
+ * - Gemini is optional. If it's flaky/unpaid, availability() will flip it off.
+ * - OpenAI/Anthropic models here are placeholders until you install integrations.
+ */
+export function routingTable(): Record<LLMTaskType, TaskRoutingProfile> {
+  return {
+    router_intent: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+          { provider: "openai", model: "gpt-5-mini" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.2" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+      },
+    },
+
+    code_patch: {
+      tiers: {
+        speed: [
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+          { provider: "openai", model: "gpt-5.1" },
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "anthropic", model: "claude-opus-4-5" },
+          { provider: "openai", model: "gpt-5.2" },
+        ],
+        accuracy: [
+          { provider: "anthropic", model: "claude-opus-4-5" },
+          { provider: "openai", model: "gpt-5.2" },
+        ],
+      },
+    },
+
+    code_review: {
+      tiers: {
+        speed: [
+          { provider: "openai", model: "gpt-5-mini" },
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+        ],
+        balanced: [
+          { provider: "openai", model: "gpt-5.1" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+        accuracy: [
+          { provider: "anthropic", model: "claude-opus-4-5" },
+          { provider: "openai", model: "gpt-5.2" },
+        ],
+      },
+    },
+
+    research: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+          { provider: "gemini", model: "gemini-2.0-flash" },
+        ],
+        balanced: [
+          { provider: "openai", model: "gpt-5.1" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.2" },
+          { provider: "anthropic", model: "claude-opus-4-5" },
+        ],
+      },
+    },
+
+    data_qa: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+          { provider: "openai", model: "gpt-5-mini" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.1" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+      },
+    },
+
+    player_analysis: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+        ],
+        balanced: [
+          { provider: "openai", model: "gpt-5-mini" },
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.2" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+      },
+    },
+
+    summarize: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "openai", model: "gpt-5-mini" },
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.1" },
+          { provider: "anthropic", model: "claude-sonnet-4-5" },
+        ],
+      },
+    },
+
+    general: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct" },
+          { provider: "openai", model: "gpt-5-mini" },
+        ],
+        accuracy: [
+          { provider: "openai", model: "gpt-5.2" },
+          { provider: "anthropic", model: "claude-opus-4-5" },
+        ],
+      },
+    },
+  };
+}
+
+server/llm/providers/openrouter.ts
+
+import OpenAI from "openai";
+import { LLMMessage, LLMResponse, LLMError } from "../types";
+
+function getClient(): OpenAI {
+  const apiKey = process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY;
+  const baseURL = process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL;
+
+  if (!apiKey || !baseURL) {
+    throw new LLMError("OpenRouter integration env vars missing", "provider_unavailable", "openrouter");
+  }
+
+  return new OpenAI({ apiKey, baseURL });
+}
+
+export async function callOpenRouter(opts: {
+  requestId: string;
+  model: string;
+  messages: LLMMessage[];
+  maxTokens: number;
+  temperature: number;
+  timeoutMs: number;
+}): Promise<LLMResponse> {
+  const client = getClient();
+  const start = Date.now();
+
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+    const res = await client.chat.completions.create(
+      {
+        model: opts.model,
+        messages: opts.messages,
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+      },
+      { signal: controller.signal }
+    );
+
+    clearTimeout(t);
+
+    const content = res.choices?.[0]?.message?.content ?? "";
+    return {
+      content,
+      provider: "openrouter",
+      model: opts.model,
+      latencyMs: Date.now() - start,
+      requestId: opts.requestId,
+      // OpenAI-compatible responses sometimes include usage
+      inputTokens: (res as any).usage?.prompt_tokens,
+      outputTokens: (res as any).usage?.completion_tokens,
+    };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new LLMError("OpenRouter request timed out", "timeout", "openrouter", opts.model);
+    }
+    throw new LLMError(err?.message ?? "OpenRouter unknown error", "unknown", "openrouter", opts.model);
+  }
+}
+
+server/llm/providers/gemini.ts  (optional, safe)
+
+import { GoogleGenAI } from "@google/genai";
+import { LLMMessage, LLMResponse, LLMError } from "../types";
+
+function geminiAvailable(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length);
+}
+
+function toGeminiPrompt(messages: LLMMessage[]): string {
+  // Simple, robust conversion to a single prompt. You can upgrade later.
+  return messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n");
+}
+
+export async function callGemini(opts: {
+  requestId: string;
+  model: string;
+  messages: LLMMessage[];
+  maxTokens: number;
+  temperature: number;
+  timeoutMs: number;
+}): Promise<LLMResponse> {
+  if (!geminiAvailable()) {
+    throw new LLMError("Gemini not available (missing GEMINI_API_KEY)", "provider_unavailable", "gemini");
+  }
+
+  const start = Date.now();
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+    const prompt = toGeminiPrompt(opts.messages);
+
+    const res = await ai.models.generateContent({
+      model: opts.model,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      // generationConfig is accepted by SDK; keep minimal
+      generationConfig: {
+        maxOutputTokens: opts.maxTokens,
+        temperature: opts.temperature,
+      },
+    }, { signal: controller.signal } as any);
+
+    clearTimeout(t);
+
+    const content =
+      (res as any)?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ??
+      (res as any)?.text ??
+      "";
+
+    return {
+      content,
+      provider: "gemini",
+      model: opts.model,
+      latencyMs: Date.now() - start,
+      requestId: opts.requestId,
+    };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new LLMError("Gemini request timed out", "timeout", "gemini", opts.model);
+    }
+    throw new LLMError(err?.message ?? "Gemini unknown error", "unknown", "gemini", opts.model);
+  }
+}
+
+server/llm/providers/openai.ts (stub until you install integration)
+
+import OpenAI from "openai";
+import { LLMMessage, LLMResponse, LLMError } from "../types";
+
+function getClient(): OpenAI {
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+  if (!apiKey || !baseURL) {
+    throw new LLMError("OpenAI integration env vars missing (install Replit OpenAI integration)", "provider_unavailable", "openai");
+  }
+
+  return new OpenAI({ apiKey, baseURL });
+}
+
+export async function callOpenAI(opts: {
+  requestId: string;
+  model: string;
+  messages: LLMMessage[];
+  maxTokens: number;
+  temperature: number;
+  timeoutMs: number;
+}): Promise<LLMResponse> {
+  const client = getClient();
+  const start = Date.now();
+
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+    const res = await client.chat.completions.create(
+      {
+        model: opts.model,
+        messages: opts.messages,
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+      },
+      { signal: controller.signal }
+    );
+
+    clearTimeout(t);
+
+    const content = res.choices?.[0]?.message?.content ?? "";
+    return {
+      content,
+      provider: "openai",
+      model: opts.model,
+      latencyMs: Date.now() - start,
+      requestId: opts.requestId,
+      inputTokens: (res as any).usage?.prompt_tokens,
+      outputTokens: (res as any).usage?.completion_tokens,
+    };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new LLMError("OpenAI request timed out", "timeout", "openai", opts.model);
+    }
+    throw new LLMError(err?.message ?? "OpenAI unknown error", "unknown", "openai", opts.model);
+  }
+}
+
+server/llm/providers/anthropic.ts (stub until you install integration)
+
+import Anthropic from "@anthropic-ai/sdk";
+import { LLMMessage, LLMResponse, LLMError } from "../types";
+
+function getClient(): Anthropic {
+  const apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new LLMError("Anthropic integration env vars missing (install Replit Anthropic integration)", "provider_unavailable", "anthropic");
+  }
+  return new Anthropic({ apiKey });
+}
+
+function splitSystem(messages: LLMMessage[]) {
+  const system = messages.filter(m => m.role === "system").map(m => m.content).join("\n\n");
+  const rest = messages.filter(m => m.role !== "system");
+  return { system, rest };
+}
+
+export async function callAnthropic(opts: {
+  requestId: string;
+  model: string;
+  messages: LLMMessage[];
+  maxTokens: number;
+  temperature: number;
+  timeoutMs: number;
+}): Promise<LLMResponse> {
+  const client = getClient();
+  const start = Date.now();
+
+  try {
+    const { system, rest } = splitSystem(opts.messages);
+
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), opts.timeoutMs);
+
+    const res = await client.messages.create(
+      {
+        model: opts.model,
+        system: system || undefined,
+        max_tokens: opts.maxTokens,
+        temperature: opts.temperature,
+        messages: rest.map(m => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: m.content,
+        })),
+      },
+      { signal: controller.signal } as any
+    );
+
+    clearTimeout(t);
+
+    const content =
+      (res.content || [])
+        .map((c: any) => (c.type === "text" ? c.text : ""))
+        .join("") || "";
+
+    return {
+      content,
+      provider: "anthropic",
+      model: opts.model,
+      latencyMs: Date.now() - start,
+      requestId: opts.requestId,
+      inputTokens: (res as any).usage?.input_tokens,
+      outputTokens: (res as any).usage?.output_tokens,
+    };
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new LLMError("Anthropic request timed out", "timeout", "anthropic", opts.model);
+    }
+    throw new LLMError(err?.message ?? "Anthropic unknown error", "unknown", "anthropic", opts.model);
+  }
+}
+
+server/llm/fallback.ts
+
+import { LLMRequest, LLMResponse, LLMError } from "./types";
+import { providerAvailability, routingTable } from "./config";
+import { llmLog } from "./logger";
+import { callOpenRouter } from "./providers/openrouter";
+import { callGemini } from "./providers/gemini";
+import { callOpenAI } from "./providers/openai";
+import { callAnthropic } from "./providers/anthropic";
+
+function nowId(): string {
+  // simple trace id
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export async function callWithFallback(req: LLMRequest): Promise<LLMResponse> {
+  const requestId = req.requestId ?? nowId();
+  const priority = req.priority ?? "balanced";
+
+  const availability = providerAvailability();
+  const routes = routingTable();
+
+  // Hard override: user specified provider/model
+  if (req.provider && req.model) {
+    return callProvider({
+      ...req,
+      requestId,
+      provider: req.provider,
+      model: req.model,
+    });
+  }
+
+  const plan = routes[req.taskType]?.tiers?.[priority] ?? routes.general.tiers[priority];
+
+  const maxRetries = req.maxRetries ?? 0;
+  const timeoutMs = req.timeoutMs ?? 30_000;
+  const temperature = req.temperature ?? 0.7;
+  const maxTokens = req.maxTokens ?? 1024;
+
+  const fallbackPath: Array<{ provider: any; model: string; reason: string }> = [];
+
+  // Try each candidate in order, skipping unavailable providers.
+  for (const candidate of plan) {
+    if (!availability[candidate.provider]) {
+      fallbackPath.push({ provider: candidate.provider, model: candidate.model, reason: "provider_unavailable" });
+      continue;
+    }
+
+    let attempts = 0;
+    while (attempts <= maxRetries) {
+      attempts += 1;
+
+      try {
+        llmLog("info", "llm_attempt", {
+          requestId,
+          taskType: req.taskType,
+          priority,
+          purpose: req.purpose,
+          provider: candidate.provider,
+          model: candidate.model,
+          attempt: attempts,
+        });
+
+        const res = await callProvider({
+          ...req,
+          requestId,
+          provider: candidate.provider,
+          model: candidate.model,
+          timeoutMs,
+          temperature,
+          maxTokens,
+        });
+
+        // attach fallback trace if any
+        if (fallbackPath.length) {
+          res.fallbackPath = [...fallbackPath];
+        }
+
+        llmLog("info", "llm_success", {
+          requestId,
+          provider: res.provider,
+          model: res.model,
+          latencyMs: res.latencyMs,
+          inputTokens: res.inputTokens,
+          outputTokens: res.outputTokens,
+        });
+
+        return res;
+      } catch (err: any) {
+        const e = err instanceof LLMError ? err : new LLMError(err?.message ?? "unknown", "unknown", candidate.provider, candidate.model);
+
+        llmLog("warn", "llm_failure", {
+          requestId,
+          provider: candidate.provider,
+          model: candidate.model,
+          type: e.type,
+          msg: e.message,
+          attempt: attempts,
+        });
+
+        // If it was retryable and we have retries, continue.
+        if (attempts <= maxRetries && (e.type === "timeout" || e.type === "rate_limited")) {
+          continue;
+        }
+
+        // escalate to next candidate
+        fallbackPath.push({ provider: candidate.provider, model: candidate.model, reason: e.type });
+        break;
+      }
+    }
+  }
+
+  throw new LLMError("All providers failed in fallback chain", "unknown");
+}
+
+async function callProvider(req: LLMRequest & Required<Pick<LLMRequest, "provider" | "model" | "requestId">> & {
+  timeoutMs: number;
+  temperature: number;
+  maxTokens: number;
+}): Promise<LLMResponse> {
+  switch (req.provider) {
+    case "openrouter":
+      return callOpenRouter({
+        requestId: req.requestId,
+        model: req.model,
+        messages: req.messages,
+        maxTokens: req.maxTokens,
+        temperature: req.temperature,
+        timeoutMs: req.timeoutMs,
+      });
+    case "gemini":
+      return callGemini({
+        requestId: req.requestId,
+        model: req.model,
+        messages: req.messages,
+        maxTokens: req.maxTokens,
+        temperature: req.temperature,
+        timeoutMs: req.timeoutMs,
+      });
+    case "openai":
+      return callOpenAI({
+        requestId: req.requestId,
+        model: req.model,
+        messages: req.messages,
+        maxTokens: req.maxTokens,
+        temperature: req.temperature,
+        timeoutMs: req.timeoutMs,
+      });
+    case "anthropic":
+      return callAnthropic({
+        requestId: req.requestId,
+        model: req.model,
+        messages: req.messages,
+        maxTokens: req.maxTokens,
+        temperature: req.temperature,
+        timeoutMs: req.timeoutMs,
+      });
+    default:
+      throw new LLMError(`Unsupported provider: ${req.provider}`, "bad_request", req.provider);
+  }
+}
+
+server/llm/index.ts
+
+import { callWithFallback } from "./fallback";
+import { LLMRequest, LLMResponse } from "./types";
+
+/**
+ * Single entry point for all text generation in Tiber.
+ * Everything else should call this (not provider SDKs directly).
+ */
+export async function callLLM(req: LLMRequest): Promise<LLMResponse> {
+  return callWithFallback(req);
+}
+
+export * from "./types";
+
+
+⸻
+
+3) Minimal usage example (route ONE call site)
+
+Somewhere in your server code (whatever currently calls Grok or Gemini):
+
+import { callLLM } from "./llm";
+
+const res = await callLLM({
+  taskType: "summarize",
+  priority: "speed",
+  purpose: "session_state_summary",
+  messages: [
+    { role: "system", content: "You are Tiber's Memory Keeper. Summarize clearly and tersely." },
+    { role: "user", content: "Summarize what we did today and what comes next:\n\n" + bigText },
+  ],
+  maxTokens: 400,
+  temperature: 0.2,
+  timeoutMs: 20_000,
+});
+
+console.log(res.content);
+
+
+⸻
