@@ -16,6 +16,7 @@ const coreNav: NavItem[] = [
 
 const intelligenceNav: NavItem[] = [
   { label: "Tiber Chat", path: "/legacy-chat", badge: "\u03B2" },
+  { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
   { label: "FORGE Engine", path: "/forge" },
   { label: "Trade Analyzer", path: "#", comingSoon: true },
   { label: "Waiver Wire", path: "#", comingSoon: true },
