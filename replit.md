@@ -101,7 +101,11 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **LLM Gateway (`server/llm/`)**:
 - Provider-agnostic `callLLM()` entry point with automatic fallback across 4 providers.
 - **Active Providers**: OpenRouter (Replit AI Integration), OpenAI (Replit AI Integration), Anthropic (Replit AI Integration), Google Gemini (own API key).
-- **Task-Based Routing**: 8 task types (router_intent, code_patch, code_review, research, data_qa, player_analysis, summarize, general) with 3 priority tiers (speed/balanced/accuracy).
+- **Task-Based Routing**: 9 task types (router_intent, code_patch, code_review, research, data_qa, player_analysis, summarize, general, x_intelligence) with 3 priority tiers (speed/balanced/accuracy).
+- **X Intelligence Scanner** (`server/services/xIntelligenceScanner.ts`): Grok-powered X/Twitter scanning for fantasy football trends, injuries, breakouts, and consensus analysis. Uses `x_intelligence` task type routed to Grok models (grok-4.1-fast, grok-4-fast, grok-4, grok-3) via OpenRouter.
+  - **Scan Types**: `trending`, `injuries`, `breakouts`, `consensus`, `full` (comprehensive).
+  - **Endpoints**: `POST /api/intel/x-scan` (trigger scan), `GET /api/intel/x-feed` (read filtered intel), `DELETE /api/intel/x-feed` (clear Grok intel).
+  - **Output**: Structured entries with player, position, team, category, signal strength, headline, detail, fantasy impact, and dynasty relevance.
 - **Fallback Chain**: Tries models in tier order, skips unavailable providers, retries on timeout/rate-limit.
 - **Structured Logging**: JSON logs with requestId, provider, model, latency, token counts.
 - **Files**: `types.ts` (interfaces), `config.ts` (routing table + availability), `logger.ts`, `fallback.ts` (chain logic), `providers/` (openrouter, gemini, openai, anthropic wrappers), `index.ts` (entry point).

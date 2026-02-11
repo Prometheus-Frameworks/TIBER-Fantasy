@@ -169,5 +169,23 @@ export function routingTable(): Record<LLMTaskType, TaskRoutingProfile> {
         ],
       },
     },
+
+    x_intelligence: {
+      tiers: {
+        speed: [
+          { provider: "openrouter", model: "x-ai/grok-4.1-fast" },
+          { provider: "openrouter", model: "x-ai/grok-3-mini" },
+          { provider: "openrouter", model: "deepseek/deepseek-chat" },
+        ],
+        balanced: [
+          { provider: "openrouter", model: "x-ai/grok-4-fast" },
+          { provider: "openrouter", model: "x-ai/grok-3" },
+        ],
+        accuracy: [
+          { provider: "openrouter", model: "x-ai/grok-4" },
+          { provider: "openrouter", model: "x-ai/grok-3" },
+        ],
+      },
+    },
   };
 }

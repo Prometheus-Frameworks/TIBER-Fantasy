@@ -4225,6 +4225,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== X INTELLIGENCE SCANNER (Grok via OpenRouter) =====
+  const { scanXIntelligence, saveIntelEntries, getIntelEntries, clearGrokIntel } = await import('./services/xIntelligenceScanner');
+
+  app.post('/api/intel/x-scan', async (req, res) => {
+    try {
+      const { scanType = 'full', focusPlayers, positions, priority = 'balanced' } = req.body;
+      console.log(`🔍 [X-Intel] Starting ${scanType} scan via Grok...`);
+
+      const result = await scanXIntelligence({ scanType, focusPlayers, positions, priority });
+
+      if (!result.success) {
+        return res.status(502).json({
+          success: false,
+          error: result.error,
+          message: 'X Intelligence scan failed'
+        });
+      }
+
+      const { saved, total } = saveIntelEntries(result.entries);
+      console.log(`✅ [X-Intel] Scan complete: ${saved} entries saved (${total} total), model=${result.model}, ${result.latencyMs}ms`);
+
+      res.json({
+        success: true,
+        scan: {
+          type: result.scanType,
+          model: result.model,
+          provider: result.provider,
+          latencyMs: result.latencyMs,
+          entriesFound: result.entries.length,
+        },
+        storage: { saved, total },
+        entries: result.entries
+      });
+    } catch (error) {
+      console.error('❌ [X-Intel] Scan error:', error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/intel/x-feed', async (req, res) => {
+    try {
+      const { player, position, category, signal, limit } = req.query;
+      const entries = getIntelEntries({
+        player: player as string,
+        position: position as string,
+        category: category as string,
+        signal: signal as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+
+      res.json({
+        success: true,
+        data: entries,
+        meta: {
+          total: entries.length,
+          source: 'grok-x-scanner',
+          filters: { player, position, category, signal, limit }
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.delete('/api/intel/x-feed', async (req, res) => {
+    try {
+      const result = clearGrokIntel();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  console.log('🔍 X Intelligence Scanner routes mounted at /api/intel/x-scan, /api/intel/x-feed');
+
   // Mount Tiber Voice routes (new data-driven system)
   const voiceRoutes = await import('./routes/voice');
   app.use('/api/voice', voiceRoutes.default);

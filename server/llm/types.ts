@@ -8,7 +8,8 @@ export type LLMTaskType =
   | "data_qa"
   | "player_analysis"
   | "summarize"
-  | "general";
+  | "general"
+  | "x_intelligence";
 
 export type LLMPriority = "speed" | "balanced" | "accuracy";
 
