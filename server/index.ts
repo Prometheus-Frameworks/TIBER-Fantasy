@@ -49,6 +49,14 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 (async () => {
   log("🚀 Starting Tiber Fantasy – quick boot");
 
+  // Log LLM provider availability at startup
+  try {
+    const { logProviderStatus } = await import("./llm");
+    logProviderStatus();
+  } catch (e) {
+    console.warn("LLM gateway status check skipped:", e);
+  }
+
   // 1) Mount your API routes
   const maybeServer = await registerRoutes(app);
 

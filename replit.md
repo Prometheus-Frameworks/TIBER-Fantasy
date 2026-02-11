@@ -98,6 +98,14 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Admin API Lexicon**: Developer tool for browsing and testing Forge/Tiber API endpoints.
 - **TIBER Philosophy**: The tactical interface translating FORGE insights into actionable intelligence, identifying breakouts, measuring efficiency, and using recursion for evolving narratives.
 
+**LLM Gateway (`server/llm/`)**:
+- Provider-agnostic `callLLM()` entry point with automatic fallback across 4 providers.
+- **Active Providers**: OpenRouter (Replit AI Integration), OpenAI (Replit AI Integration), Anthropic (Replit AI Integration), Google Gemini (own API key).
+- **Task-Based Routing**: 8 task types (router_intent, code_patch, code_review, research, data_qa, player_analysis, summarize, general) with 3 priority tiers (speed/balanced/accuracy).
+- **Fallback Chain**: Tries models in tier order, skips unavailable providers, retries on timeout/rate-limit.
+- **Structured Logging**: JSON logs with requestId, provider, model, latency, token counts.
+- **Files**: `types.ts` (interfaces), `config.ts` (routing table + availability), `logger.ts`, `fallback.ts` (chain logic), `providers/` (openrouter, gemini, openai, anthropic wrappers), `index.ts` (entry point).
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league sync, and current roster data.
