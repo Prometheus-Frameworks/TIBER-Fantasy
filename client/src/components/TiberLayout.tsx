@@ -23,6 +23,7 @@ const intelligenceNav: NavItem[] = [
 ];
 
 const systemNav: NavItem[] = [
+  { label: "Architecture", path: "/architecture" },
   { label: "FORGE Hub", path: "/admin/forge-hub" },
   { label: "API Lexicon", path: "/admin/api-lexicon" },
 ];

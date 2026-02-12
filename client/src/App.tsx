@@ -23,6 +23,7 @@ import RagStatus from "@/pages/RagStatus";
 import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import XIntelligence from "@/pages/XIntelligence";
+import Architecture from "@/pages/Architecture";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
           {() => <Redirect to="/tiers" />}
         </Route>
         <Route path="/x-intel" component={XIntelligence} />
+        <Route path="/architecture" component={Architecture} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />
         <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
