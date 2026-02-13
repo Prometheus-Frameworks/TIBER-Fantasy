@@ -24,6 +24,7 @@ import WRRankingsSandbox from "@/pages/WRRankingsSandbox";
 import QBRankingsSandbox from "@/pages/QBRankingsSandbox";
 import XIntelligence from "@/pages/XIntelligence";
 import Architecture from "@/pages/Architecture";
+import MetricsDictionary from "@/pages/MetricsDictionary";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +43,7 @@ function Router() {
         </Route>
         <Route path="/x-intel" component={XIntelligence} />
         <Route path="/architecture" component={Architecture} />
+        <Route path="/metrics-dictionary" component={MetricsDictionary} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />
         <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
