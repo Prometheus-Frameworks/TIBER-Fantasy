@@ -55,6 +55,10 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE E+G Architecture (v2)**: Modular architecture separating Engine (data/metrics) from Grading (scoring/tiers).
         - **Endpoints**: `/api/forge/eg/batch?position=WR&mode=dynasty` and `/api/forge/eg/player/:playerId?position=WR&mode=bestball`
         - **Response includes**: alpha, tier, pillars, issues (from Football Lens), debug info
+    - **FORGE Workbench** (`/forge-workbench`): Interactive player query tool for exploring FORGE engine internals.
+        - **Endpoints**: `GET /api/forge/workbench/search?q=<name>` (player search), `GET /api/forge/workbench/player/:playerId?position=WR` (full engine query)
+        - **Features**: Player search with autocomplete, full pillar breakdown (Volume, Efficiency, Team Context, Stability), adjustable weight sliders with live Alpha recalculation, mode toggle (Redraft/Dynasty/BestBall), expandable pillar metric details, QB Context card, Football Lens issues, raw metrics inspector
+        - **Client-side**: Weight adjustments recalculate Alpha instantly without re-querying the API
     - **FORGE Data Pipeline**: Ingests data from Role Banks, Datadive (enriched metrics), and Legacy Tables. Uses a Context Fetcher, position-specific Feature Builders, and a Grading Engine (`alphaEngine.ts`) to calculate Alpha scores, sub-scores (Volume, Efficiency, Stability, Context), trajectory, and confidence. A Recursive Engine (`recursiveAlphaEngine.ts`) applies stability adjustments based on previous Alpha, surprise, volatility, and momentum.
     - **FORGE Output Contract**: Every FORGE evaluation provides `player_id`, `position`, `alpha`, `tiber_tier`, `trajectory`, `confidence`, `role_tag`, `last_updated_week`, `season`.
     - **Recursion v1**: Stateful two-pass scoring with formulas for `expected_alpha` and `surprise`.

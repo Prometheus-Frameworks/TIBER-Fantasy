@@ -2401,6 +2401,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use('/api/forge/simulation', forgeSimRoutes);
   console.log('🔧 FORGE Simulation routes mounted at /api/forge/simulation/*');
+
+  // FORGE Workbench API - player search + engine query with full pillar breakdown
+  app.get('/api/forge/workbench/search', async (req: Request, res: Response) => {
+    try {
+      const q = (req.query.q as string) || '';
+      if (q.length < 2) {
+        return res.json({ success: true, data: [] });
+      }
+      const { searchForgePlayersSimple } = await import('./modules/forge/forgePlayerContext');
+      const results = await searchForgePlayersSimple(q, 15);
+      res.json({ success: true, data: results });
+    } catch (err) {
+      console.error('[Workbench/Search] Error:', err);
+      res.status(500).json({ success: false, error: 'Search failed' });
+    }
+  });
+
+  app.get('/api/forge/workbench/player/:playerId', async (req: Request, res: Response) => {
+    try {
+      const { playerId } = req.params;
+      const position = ((req.query.position as string) || 'WR').toUpperCase() as 'QB' | 'RB' | 'WR' | 'TE';
+      const season = parseInt(req.query.season as string) || 2025;
+
+      const { runForgeEngine, getPositionPillarConfig } = await import('./modules/forge/forgeEngine');
+      const { gradeForge, getPositionForgeWeights } = await import('./modules/forge/forgeGrading');
+
+      const engineOutput = await runForgeEngine(playerId, position, season, 'season');
+
+      const redraftGrade = gradeForge(engineOutput, { mode: 'redraft' });
+      const dynastyGrade = gradeForge(engineOutput, { mode: 'dynasty' });
+      const bestballGrade = gradeForge(engineOutput, { mode: 'bestball' });
+
+      const pillarConfig = getPositionPillarConfig(position);
+      const redraftWeights = getPositionForgeWeights(position, 'redraft');
+      const dynastyWeights = getPositionForgeWeights(position, 'dynasty');
+      const bestballWeights = getPositionForgeWeights(position, 'bestball');
+
+      res.json({
+        success: true,
+        data: {
+          player: {
+            id: engineOutput.playerId,
+            name: engineOutput.playerName,
+            position: engineOutput.position,
+            team: engineOutput.nflTeam,
+            gamesPlayed: engineOutput.gamesPlayed,
+            season: engineOutput.season,
+          },
+          pillars: engineOutput.pillars,
+          pillarConfig: {
+            volume: pillarConfig.volume.metrics.map(m => ({ key: m.metricKey, source: m.source, weight: m.weight, invert: m.invert })),
+            efficiency: pillarConfig.efficiency.metrics.map(m => ({ key: m.metricKey, source: m.source, weight: m.weight, invert: m.invert })),
+            teamContext: pillarConfig.teamContext.metrics.map(m => ({ key: m.metricKey, source: m.source, weight: m.weight, invert: m.invert })),
+            stability: pillarConfig.stability.metrics.map(m => ({ key: m.metricKey, source: m.source, weight: m.weight, invert: m.invert })),
+          },
+          grades: {
+            redraft: { ...redraftGrade, weights: redraftWeights },
+            dynasty: { ...dynastyGrade, weights: dynastyWeights },
+            bestball: { ...bestballGrade, weights: bestballWeights },
+          },
+          recursion: {
+            priorAlpha: engineOutput.priorAlpha,
+            alphaMomentum: engineOutput.alphaMomentum,
+          },
+          qbContext: engineOutput.qbContext || null,
+          rawMetrics: engineOutput.rawMetrics,
+        },
+      });
+    } catch (err) {
+      console.error('[Workbench/Player] Error:', err);
+      res.status(500).json({ success: false, error: 'Failed to run FORGE engine' });
+    }
+  });
+  console.log('🔧 FORGE Workbench routes mounted at /api/forge/workbench/*');
   
   // TIBER Consensus Engine v1.1 API Routes
   app.get('/api/profile/:username', getProfile);
