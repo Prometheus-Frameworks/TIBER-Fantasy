@@ -88,11 +88,11 @@
 | 1 | **FORGE** | `server/modules/forge/` | Core player evaluation engine. Alpha scores (0-100) via 4 pillars: Volume, Efficiency, Team Context, Stability. E+G architecture, Football Lens, Recursive Alpha, QB Context. ~30 files. API: `/api/forge/*` | `server/modules/forge/MODULE.md` |
 | 2 | **LLM Gateway** | `server/llm/` | Provider-agnostic AI routing. 4 providers (OpenRouter, OpenAI, Anthropic, Gemini), 9 task types, 3 priority tiers, automatic fallback chain. | `server/llm/MODULE.md` |
 | 3 | **X Intelligence** | `server/services/xIntelligenceScanner.ts` | Grok-powered X/Twitter scanning for fantasy trends. File-based storage at `data/current_intel.json`. API: `POST /api/intel/x-scan`, `GET /api/intel/x-feed`, `DELETE /api/intel/x-feed` | `server/services/MODULE_XINTEL.md` |
-| 4 | **Data Lab (DataDive)** | `server/services/datadive*.ts`, `server/routes/dataLabRoutes.ts` | Snapshot-based NFL data spine for reproducible analytics. Frontend: `TiberDataLab.tsx`. API: `/api/data-lab/*` | _no manifest yet_ |
-| 5 | **OVR System** | `server/modules/ovr/`, `server/services/ovrService.ts`, `server/services/ovrEngine.ts` | Madden-style 1-99 player ratings. Uses FORGE adapter. API: `/api/ovr/*` | _no manifest yet_ |
+| 4 | **Data Lab (DataDive)** | `server/services/datadive*.ts`, `server/routes/dataLabRoutes.ts` | Snapshot-based NFL data spine for reproducible analytics. Frontend: `TiberDataLab.tsx`. API: `/api/data-lab/*` | `server/services/MODULE_DATALAB.md` |
+| 5 | **OVR System** | `server/modules/ovr/`, `server/services/ovrService.ts`, `server/services/ovrEngine.ts` | Madden-style 1-99 player ratings. Uses FORGE adapter. API: `/api/ovr/*` | `server/modules/ovr/MODULE.md` |
 | 6 | **SoS** | `server/modules/sos/` | Position-specific Strength of Schedule analysis. Controller/Service/Router pattern. Integrated into FORGE. | `server/modules/sos/MODULE.md` |
 | 7 | **Consensus** | `server/consensus/` | Community-driven rankings engine. Curves, dynasty softener, injury profiles, in-memory store. | `server/consensus/MODULE.md` |
-| 8 | **Player Identity** | `server/services/PlayerIdentityService.ts`, `server/services/identity/` | Unified player resolution across fantasy platforms. Identity bridge, GSIS IDs, cross-platform mapping. | _no manifest yet_ |
+| 8 | **Player Identity** | `server/services/PlayerIdentityService.ts`, `server/services/identity/` | Unified player resolution across fantasy platforms. Identity bridge, GSIS IDs, cross-platform mapping. | `server/services/MODULE_IDENTITY.md` |
 | 9 | **ETL Pipeline** | `server/etl/` | Bronze→Silver→Gold data layers. CoreWeekIngest, silverWeeklyStatsETL, goldDatadiveETL, nightlyBuysSellsUpdate. | `server/etl/MODULE.md` |
 | 10 | **Enrichment** | `server/enrichment/` | Position-specific stat enrichment boxes (WR, RB, QB, TE, IDP, Fantasy). | `server/enrichment/MODULE.md` |
 | 11 | **Voice** | `server/voice/` | Tiber Voice system. Intent parsing, reasoning, comparison engine, data adapters. | `server/voice/MODULE.md` |
@@ -100,11 +100,11 @@
 | 13 | **Metric Matrix** | `server/modules/metricMatrix/` | Player vectors, similar players, tier neighbors, league ownership context. | `server/modules/metricMatrix/MODULE.md` |
 | 14 | **OLC** | `server/olc/` | Opponent-level context scoring system. | `server/olc/MODULE.md` |
 | 15 | **Platform Sync** | `server/platformSync/` | External platform adapters (Sleeper, etc.). Subdirectory: `adapters/`. | `server/platformSync/MODULE.md` |
-| 16 | **Guardian** | `server/guardian/noiseShield.ts` | Data quality noise filtering. | _no manifest yet_ |
-| 17 | **Prediction Engine** | `server/services/predictionEngine.ts` | Weekly prediction generation. | _no manifest yet_ |
-| 18 | **RAG Chat** | `server/services/geminiEmbeddings.ts`, `server/routes/ragRoutes.ts` | AI chat with Gemini embeddings. Knowledge base in `knowledge/`. | _no manifest yet_ |
-| 19 | **ECR** | `server/services/ecrLoader.ts`, `server/services/ecrService.ts`, `server/services/enhancedEcrProvider.ts` | Expert Consensus Rankings loader and provider. | _no manifest yet_ |
-| 20 | **Tiber Memory** | `server/routes/tiberMemoryRoutes.ts` | Dual memory pools (FANTASY vs GENERAL) for AI context. | _no manifest yet_ |
+| 16 | **Guardian** | `server/guardian/noiseShield.ts` | Data quality noise filtering. | _inline_ |
+| 17 | **Prediction Engine** | `server/services/predictionEngine.ts` | Weekly prediction generation. | `server/services/MODULE_PREDICTIONS.md` |
+| 18 | **RAG Chat** | `server/services/geminiEmbeddings.ts`, `server/routes/ragRoutes.ts` | AI chat with Gemini embeddings. Knowledge base in `knowledge/`. | `server/services/MODULE_RAG.md` |
+| 19 | **ECR** | `server/services/ecrLoader.ts`, `server/services/ecrService.ts`, `server/services/enhancedEcrProvider.ts` | Expert Consensus Rankings loader and provider. | `server/services/MODULE_ECR.md` |
+| 20 | **Tiber Memory** | `server/routes/tiberMemoryRoutes.ts` | Dual memory pools (FANTASY vs GENERAL) for AI context. | `server/services/MODULE_MEMORY.md` |
 
 ---
 
@@ -124,6 +124,18 @@
 | `replit.md` | — | Project documentation, user preferences, feature specs. |
 | `drizzle.config.ts` | — | Drizzle ORM config. **Do not edit.** |
 | `package.json` | — | Dependencies. **Do not edit directly** — use packager tool. |
+
+---
+
+## 4b. Agent Documentation
+
+| Doc | Path | Purpose |
+|-----|------|---------|
+| FORGE Integration Contract | `docs/contracts/FORGE_DATA_SOURCE_CONTRACT.md` | How to build a data module that FORGE consumes. Required function signatures, registration steps, worked example. |
+| Agent Task Template | `docs/tasks/AGENT_TASK_TEMPLATE.md` | Reusable template for writing Codex/agent task prompts. Standard sections: Goal, Non-goals, Read First, Deliverables, Done Criteria. |
+| Personnel Grouping Task | `docs/tasks/PERSONNEL_GROUPING_PHASE1.md` | Example task prompt: ingest nflfastR personnel fields, build aggregation service, classify role dependency. |
+| Routes Decomposition | `docs/tasks/ROUTES_DECOMPOSITION.md` | Strategy for breaking `server/routes.ts` (10K lines) into modular route files across 3 phases. |
+| Codebase Map | `CODEBASE_MAP.md` | 739 files indexed by feature ownership. Use for "which file does X?" lookups. |
 
 ---
 
