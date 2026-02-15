@@ -54,6 +54,9 @@ def import_nflfastr_2025_bulk():
             str(row.get('posteam')) if pd.notna(row.get('posteam')) else None,
             str(row.get('defteam')) if pd.notna(row.get('defteam')) else None,
             str(row.get('play_type')) if pd.notna(row.get('play_type')) else None,
+            str(row.get('offense_personnel')) if pd.notna(row.get('offense_personnel')) else None,
+            str(row.get('defense_personnel')) if pd.notna(row.get('defense_personnel')) else None,
+            str(row.get('offense_formation')) if pd.notna(row.get('offense_formation')) else None,
             str(row.get('passer_player_id')) if pd.notna(row.get('passer_player_id')) else None,
             str(row.get('passer_player_name')) if pd.notna(row.get('passer_player_name')) else None,
             str(row.get('receiver_player_id')) if pd.notna(row.get('receiver_player_id')) else None,
@@ -87,6 +90,7 @@ def import_nflfastr_2025_bulk():
     execute_batch(cur, """
         INSERT INTO bronze_nflfastr_plays (
             play_id, game_id, season, week, posteam, defteam, play_type,
+            offense_personnel, defense_personnel, offense_formation,
             passer_player_id, passer_player_name,
             receiver_player_id, receiver_player_name,
             rusher_player_id, rusher_player_name,
@@ -96,6 +100,7 @@ def import_nflfastr_2025_bulk():
             raw_data
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s,
+            %s, %s, %s,
             %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s,
             %s, %s, %s, %s,
