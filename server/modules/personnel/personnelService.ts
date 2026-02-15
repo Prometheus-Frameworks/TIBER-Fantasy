@@ -1,6 +1,5 @@
-import { and, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { db } from '../../infra/db';
-import { bronzeNflfastrPlays, playerIdentityMap } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import {
   classifyPersonnelDependency,
   type PersonnelEveryDownGrade,
@@ -37,22 +36,7 @@ export interface PersonnelProfileQuery {
   limit?: number;
 }
 
-interface UsageAccumulator {
-  total: number;
-  buckets: Record<PersonnelBucketCode, number>;
-  team: string | null;
-}
-
-interface BronzeUsagePlayRow {
-  offensePersonnel: string;
-  posteam: string | null;
-  passerPlayerId: string | null;
-  rusherPlayerId: string | null;
-  receiverPlayerId: string | null;
-}
-
 const DEFAULT_LIMIT = 200;
-const OFFENSIVE_PLAY_TYPES = ['pass', 'run'] as const;
 
 export function parsePersonnelCode(personnel: string | null): PersonnelBucketCode {
   if (!personnel) return 'other';
@@ -76,18 +60,6 @@ export function parsePersonnelCode(personnel: string | null): PersonnelBucketCod
   return valid.includes(code) ? code : 'other';
 }
 
-function createEmptyBuckets(): Record<PersonnelBucketCode, number> {
-  return {
-    '10': 0,
-    '11': 0,
-    '12': 0,
-    '13': 0,
-    '21': 0,
-    '22': 0,
-    other: 0,
-  };
-}
-
 function withPct(count: number, total: number): BucketSummary {
   return {
     count,
@@ -95,130 +67,146 @@ function withPct(count: number, total: number): BucketSummary {
   };
 }
 
+interface AggRow {
+  player_id: string;
+  team: string | null;
+  total_plays: string;
+  p10: string;
+  p11: string;
+  p12: string;
+  p13: string;
+  p21: string;
+  p22: string;
+  p_other: string;
+}
+
 export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promise<PlayerPersonnelProfile[]> {
-  const filters = [
-    eq(bronzeNflfastrPlays.season, query.season),
-    inArray(bronzeNflfastrPlays.playType, [...OFFENSIVE_PLAY_TYPES]),
-    sql`${bronzeNflfastrPlays.offensePersonnel} IS NOT NULL`,
+  const limit = query.limit ?? DEFAULT_LIMIT;
+
+  const conditions: string[] = [
+    `p.season = ${Number(query.season)}`,
+    `p.play_type IN ('pass', 'run')`,
+    `p.offense_personnel IS NOT NULL`,
   ];
 
   if (query.weekStart !== undefined) {
-    filters.push(gte(bronzeNflfastrPlays.week, query.weekStart));
+    conditions.push(`p.week >= ${Number(query.weekStart)}`);
   }
   if (query.weekEnd !== undefined) {
-    filters.push(lte(bronzeNflfastrPlays.week, query.weekEnd));
+    conditions.push(`p.week <= ${Number(query.weekEnd)}`);
   }
   if (query.team) {
-    filters.push(eq(bronzeNflfastrPlays.posteam, query.team));
-  }
-  if (query.playerIds?.length) {
-    filters.push(
-      or(
-        inArray(bronzeNflfastrPlays.receiverPlayerId, query.playerIds),
-        inArray(bronzeNflfastrPlays.rusherPlayerId, query.playerIds),
-        inArray(bronzeNflfastrPlays.passerPlayerId, query.playerIds),
-      )!,
-    );
+    conditions.push(`p.posteam = '${query.team.replace(/'/g, "''")}'`);
   }
 
-  const plays = await db
-    .select({
-      offensePersonnel: bronzeNflfastrPlays.offensePersonnel,
-      posteam: bronzeNflfastrPlays.posteam,
-      passerPlayerId: bronzeNflfastrPlays.passerPlayerId,
-      rusherPlayerId: bronzeNflfastrPlays.rusherPlayerId,
-      receiverPlayerId: bronzeNflfastrPlays.receiverPlayerId,
-    })
-    .from(bronzeNflfastrPlays)
-    .where(and(...filters)) as BronzeUsagePlayRow[];
+  const whereClause = conditions.join(' AND ');
 
-  const usageByPlayer = new Map<string, UsageAccumulator>();
+  const personnelBucketCase = `
+    CASE
+      WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )0 TE' THEN '10'
+      WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )1 TE' THEN '11'
+      WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )2 TE' THEN '12'
+      WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )3 TE' THEN '13'
+      WHEN offense_personnel ~ '(^|, )2 RB' AND offense_personnel ~ '(^|, )1 TE' THEN '21'
+      WHEN offense_personnel ~ '(^|, )2 RB' AND offense_personnel ~ '(^|, )2 TE' THEN '22'
+      WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel NOT LIKE '%TE%' THEN '10'
+      ELSE 'other'
+    END
+  `;
 
-  for (const play of plays) {
-    const bucket = parsePersonnelCode(play.offensePersonnel);
-    const playerIds = new Set([play.passerPlayerId, play.rusherPlayerId, play.receiverPlayerId].filter(Boolean) as string[]);
+  const positionFilter = query.position
+    ? `AND pim.position = '${query.position.replace(/'/g, "''")}'`
+    : '';
 
-    for (const playerId of playerIds) {
-      const current = usageByPlayer.get(playerId) ?? {
-        total: 0,
-        buckets: createEmptyBuckets(),
-        team: play.posteam,
-      };
+  const playerIdFilter = query.playerIds?.length
+    ? `AND u.player_id IN (${query.playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')})`
+    : '';
 
-      current.total += 1;
-      current.buckets[bucket] += 1;
-      if (!current.team && play.posteam) {
-        current.team = play.posteam;
-      }
+  const aggQuery = `
+    WITH unpivoted AS (
+      SELECT 
+        unnest(ARRAY[passer_player_id, rusher_player_id, receiver_player_id]) AS player_id,
+        posteam,
+        ${personnelBucketCase} AS bucket
+      FROM bronze_nflfastr_plays p
+      WHERE ${whereClause}
+    ),
+    agg AS (
+      SELECT 
+        u.player_id,
+        MAX(u.posteam) AS team,
+        COUNT(*) AS total_plays,
+        COUNT(*) FILTER (WHERE u.bucket = '10') AS p10,
+        COUNT(*) FILTER (WHERE u.bucket = '11') AS p11,
+        COUNT(*) FILTER (WHERE u.bucket = '12') AS p12,
+        COUNT(*) FILTER (WHERE u.bucket = '13') AS p13,
+        COUNT(*) FILTER (WHERE u.bucket = '21') AS p21,
+        COUNT(*) FILTER (WHERE u.bucket = '22') AS p22,
+        COUNT(*) FILTER (WHERE u.bucket = 'other') AS p_other
+      FROM unpivoted u
+      WHERE u.player_id IS NOT NULL
+      ${playerIdFilter}
+      GROUP BY u.player_id
+    )
+    SELECT 
+      a.player_id,
+      a.team,
+      a.total_plays,
+      a.p10, a.p11, a.p12, a.p13, a.p21, a.p22, a.p_other,
+      pim.full_name,
+      pim.position,
+      pim.nfl_team
+    FROM agg a
+    JOIN player_identity_map pim ON pim.gsis_id = a.player_id
+    WHERE 1=1 ${positionFilter}
+    ORDER BY a.total_plays DESC
+    LIMIT ${limit}
+  `;
 
-      usageByPlayer.set(playerId, current);
-    }
-  }
+  const result = await db.execute(sql.raw(aggQuery));
+  const rows = result.rows as any[];
 
-  const playerIds = [...usageByPlayer.keys()];
-  if (!playerIds.length) {
-    return [];
-  }
-
-  const identityWhere = [inArray(playerIdentityMap.gsisId, playerIds)];
-  if (query.position) {
-    identityWhere.push(eq(playerIdentityMap.position, query.position));
-  }
-
-  const identityRows = await db
-    .select({
-      gsisId: playerIdentityMap.gsisId,
-      fullName: playerIdentityMap.fullName,
-      position: playerIdentityMap.position,
-      nflTeam: playerIdentityMap.nflTeam,
-    })
-    .from(playerIdentityMap)
-    .where(and(...identityWhere));
-
-  const identityByGsis = new Map(identityRows.filter(r => r.gsisId).map(r => [r.gsisId as string, r]));
-
-  const profiles: PlayerPersonnelProfile[] = [];
-  for (const [playerId, usage] of usageByPlayer.entries()) {
-    const identity = identityByGsis.get(playerId);
-
-    if (query.position && !identity) {
-      continue;
-    }
-
-    const breakdown: PlayerPersonnelProfile['breakdown'] = {
-      '10': withPct(usage.buckets['10'], usage.total),
-      '11': withPct(usage.buckets['11'], usage.total),
-      '12': withPct(usage.buckets['12'], usage.total),
-      '13': withPct(usage.buckets['13'], usage.total),
-      '21': withPct(usage.buckets['21'], usage.total),
-      '22': withPct(usage.buckets['22'], usage.total),
-      other: withPct(usage.buckets.other, usage.total),
+  return rows.map((row) => {
+    const total = Number(row.total_plays);
+    const buckets = {
+      '10': Number(row.p10),
+      '11': Number(row.p11),
+      '12': Number(row.p12),
+      '13': Number(row.p13),
+      '21': Number(row.p21),
+      '22': Number(row.p22),
+      'other': Number(row.p_other),
     };
 
-    profiles.push({
-      playerId,
-      playerName: identity?.fullName ?? null,
-      position: identity?.position ?? null,
-      team: identity?.nflTeam ?? usage.team,
+    const breakdown: PlayerPersonnelProfile['breakdown'] = {
+      '10': withPct(buckets['10'], total),
+      '11': withPct(buckets['11'], total),
+      '12': withPct(buckets['12'], total),
+      '13': withPct(buckets['13'], total),
+      '21': withPct(buckets['21'], total),
+      '22': withPct(buckets['22'], total),
+      other: withPct(buckets['other'], total),
+    };
+
+    return {
+      playerId: row.player_id,
+      playerName: row.full_name ?? null,
+      position: row.position ?? null,
+      team: row.nfl_team ?? row.team ?? null,
       season: query.season,
       weekStart: query.weekStart ?? null,
       weekEnd: query.weekEnd ?? null,
-      totalPlaysCounted: usage.total,
+      totalPlaysCounted: total,
       breakdown,
       everyDownGrade: classifyPersonnelDependency({
-        totalPlaysCounted: usage.total,
+        totalPlaysCounted: total,
         elevenPct: breakdown['11'].pct,
         twelvePct: breakdown['12'].pct,
         thirteenPct: breakdown['13'].pct,
       }),
       notes: ['usage-based v1; not snap participation'],
-    });
-  }
-
-  const limit = query.limit ?? DEFAULT_LIMIT;
-  return profiles
-    .sort((a, b) => b.totalPlaysCounted - a.totalPlaysCounted)
-    .slice(0, limit);
+    };
+  });
 }
 
 export async function getPersonnelProfile(query: PersonnelProfileQuery & { playerIds: string[] }): Promise<PlayerPersonnelProfile | null> {

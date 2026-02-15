@@ -26,6 +26,7 @@ import XIntelligence from "@/pages/XIntelligence";
 import Architecture from "@/pages/Architecture";
 import MetricsDictionary from "@/pages/MetricsDictionary";
 import ForgeWorkbench from "@/pages/ForgeWorkbench";
+import PersonnelUsage from "@/pages/PersonnelUsage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -46,6 +47,7 @@ function Router() {
         <Route path="/architecture" component={Architecture} />
         <Route path="/metrics-dictionary" component={MetricsDictionary} />
         <Route path="/forge-workbench" component={ForgeWorkbench} />
+        <Route path="/personnel" component={PersonnelUsage} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />
         <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
