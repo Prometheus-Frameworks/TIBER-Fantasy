@@ -69,6 +69,7 @@ import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
 import gameLogRoutes from './routes/gameLogRoutes';
+import personnelRoutes from './routes/personnelRoutes';
 import { registerRoleBankRoutes } from './routes/roleBankRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
@@ -2684,6 +2685,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Game Logs - Player game statistics aggregated from NFLfastR
   app.use('/api/game-logs', gameLogRoutes);
+
+  app.use('/api/personnel', personnelRoutes);
   console.log('📋 Game Logs system mounted at /api/game-logs/*');
 
   // Consensus Benchmark Service - Unified ECR/ADP/Dynasty consensus with fallback policy

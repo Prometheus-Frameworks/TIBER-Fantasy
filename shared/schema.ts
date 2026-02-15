@@ -2349,6 +2349,9 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   posteam: varchar("posteam", { length: 10 }),
   defteam: varchar("defteam", { length: 10 }),
   playType: varchar("play_type", { length: 50 }),
+  offensePersonnel: text("offense_personnel"),
+  defensePersonnel: text("defense_personnel"),
+  offenseFormation: text("offense_formation"),
   
   passerPlayerId: varchar("passer_player_id", { length: 50 }),
   passerPlayerName: varchar("passer_player_name", { length: 100 }),
