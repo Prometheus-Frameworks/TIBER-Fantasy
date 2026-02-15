@@ -1,0 +1,108 @@
+# CODEX TASK — Personnel Grouping Intelligence (Phase 1 + Phase 2 backend MVP)
+
+## Goal
+Add NFL personnel grouping visibility to Tiber by ingesting nflfastR personnel fields into bronze and building a backend aggregation service that produces per-player personnel usage profiles (v1: usage-based, not true snap share).
+
+We need to answer: “What % of a player’s *usage* occurs in 11 vs 12 vs 13 personnel?” and classify role dependency (FULL-TIME / 11-ONLY / HEAVY-ONLY / ROTATIONAL).
+
+## Non-goals (important)
+- Do NOT claim “snap share” unless we have a participation dataset. For v1, label everything as "plays" or "usage plays".
+- Do NOT refactor unrelated ETL/Forge systems.
+- Do NOT break existing ingestion/backfill jobs.
+
+## Read first
+- server/modules/forge/MODULE.md
+- server/etl/MODULE.md
+
+## Current state
+- Bronze table: `bronze_nflfastr_plays` contains pbp plays + raw_data JSON (~200 fields), but personnel fields were not captured in our ingestion.
+- Ingestion file: `server/ingest/nflfastr.ts`
+- Weekly pipeline: `server/etl/CoreWeekIngest.ts`
+- Schema: `shared/schema.ts` (bronze plays definition)
+
+## Deliverables
+### D1 — Bronze schema + ingestion
+1) Add the following columns to `bronze_nflfastr_plays` (preferred) OR ensure they are reliably available in `raw_data` and indexed:
+   - offense_personnel (text)
+   - defense_personnel (text)
+   - offense_formation (text)
+2) Update `server/ingest/nflfastr.ts` so these fields are pulled from the nflfastR parquet/source and written into bronze for new ingests.
+3) Create a backfill script for season=2024 (and optionally 2023 if easy) that re-ingests and populates these new fields for existing rows.
+   - Put script in `server/scripts/` and document usage in a short README block at the top.
+
+### D2 — Personnel aggregation service (backend)
+Create `server/modules/personnel/` with:
+- `personnelService.ts`:
+  - Input: season, optional week range, optional team, optional player_id(s)
+  - Output: per-player summary:
+    - total_plays_counted
+    - counts by personnel code (11,12,13,10,21,22,other)
+    - percentages by personnel code
+  - Notes:
+    - Parse personnel strings safely (e.g., "1 RB, 1 TE, 3 WR" or similar formatting).
+    - Normalize to two-digit code RB/TE (e.g., 11, 12, 21, 10, 13, 22). Unknown → "other".
+    - Use ONLY offensive personnel for now.
+
+- Role classification helper:
+  - FULL-TIME: meaningful usage in both 11 and 12 (and/or 13) above thresholds (see below)
+  - 11-ONLY: >= 80% in 11 and < 10% in 12+13 combined
+  - HEAVY-ONLY: >= 50% in 12+13 combined and < 30% in 11
+  - ROTATIONAL: everything else
+
+Suggested thresholds (tunable constants):
+- min_total_plays = 50 (below this => classify "LOW_SAMPLE")
+- meaningful_bucket_pct = 10%
+
+### D3 — API route
+Add endpoint:
+- GET `/api/personnel/profile`
+Query params:
+- season (required)
+- weekStart (optional)
+- weekEnd (optional)
+- playerId (optional, gsis/canonical id we use)
+- team (optional)
+
+Response:
+- If playerId provided: single profile object
+- Else: list of profiles (cap to top N, default 200) with optional filters
+
+### D4 — Tests / sanity checks
+Add a small script or test harness:
+- Run aggregation for a known team/week range and print top 10 players by total_plays_counted with their 11/12/13 split.
+- Ensure no crashes on null personnel values.
+
+## Implementation guidance
+- Prefer storing the personnel fields as explicit columns in bronze for performance and simplicity.
+- If you add a migration, place it in the existing migrations folder and ensure it runs cleanly.
+- Don’t rename existing columns or change existing interfaces unless necessary.
+
+## Definition of “player usage” in v1
+A “usage play” is a play where the player appears as:
+- receiver_player_id OR rusher_player_id OR passer_player_id (if needed later)
+This is not true on-field snaps. Name fields accordingly.
+
+## Output shape (example)
+{
+  "playerId": "00-0031234",
+  "playerName": "Ja'Marr Chase",
+  "position": "WR",
+  "season": 2024,
+  "weekStart": 1,
+  "weekEnd": 18,
+  "totalPlaysCounted": 420,
+  "breakdown": {
+    "11": {"count": 340, "pct": 0.81},
+    "12": {"count": 60, "pct": 0.14},
+    "10": {"count": 20, "pct": 0.05},
+    "13": {"count": 0, "pct": 0.0},
+    "other": {"count": 0, "pct": 0.0}
+  },
+  "everyDownGrade": "FULL-TIME",
+  "notes": ["usage-based v1; not snap participation"]
+}
+
+## Done criteria
+- 2024 bronze rows have personnel fields populated (spot-check query).
+- API returns stable results, handles nulls, and doesn’t mislabel snaps.
+- Service is modular and ready for FORGE consumption later.
