@@ -179,7 +179,29 @@ export async function getGradesFromCache(
   limit: number,
   version: string = CACHE_VERSION
 ) {
-  const resolvedAsOfWeek = asOfWeek ?? (await getLatestAsOfWeek(season, version));
+  let resolvedAsOfWeek = asOfWeek ?? (await getLatestAsOfWeek(season, version));
+
+  if (resolvedAsOfWeek) {
+    const hasData = await db
+      .select({ cnt: sql<number>`count(*)` })
+      .from(forgeGradeCache)
+      .where(
+        and(
+          eq(forgeGradeCache.season, season),
+          eq(forgeGradeCache.asOfWeek, resolvedAsOfWeek),
+          eq(forgeGradeCache.version, version),
+          ...(position !== 'ALL' ? [eq(forgeGradeCache.position, position)] : [])
+        )
+      );
+    if (Number(hasData[0]?.cnt ?? 0) === 0) {
+      const fallbackWeek = await getLatestAsOfWeek(season, version);
+      if (fallbackWeek && fallbackWeek !== resolvedAsOfWeek) {
+        console.log(`[ForgeGradeCache] No data for week ${resolvedAsOfWeek}, falling back to latest week ${fallbackWeek}`);
+        resolvedAsOfWeek = fallbackWeek;
+      }
+    }
+  }
+
   if (!resolvedAsOfWeek) {
     return {
       season,
