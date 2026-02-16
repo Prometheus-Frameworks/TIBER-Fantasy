@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ArrowLeft, 
-  Search, 
-  Database, 
-  RefreshCw, 
+import {
+  ArrowLeft,
+  Search,
+  Database,
+  RefreshCw,
   ChevronRight,
   Target,
   Zap,
@@ -750,15 +750,20 @@ export default function TiberDataLab() {
     <div className="min-h-screen bg-[#0a0e1a] text-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">
-          <Link href="/">
+          <Link href="/tiber-data-lab">
             <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white" data-testid="button-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
           <div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-1">
+              <Link href="/tiber-data-lab" className="hover:text-blue-400 transition-colors">Data Lab</Link>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-gray-300">Snapshots</span>
+            </div>
             <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="page-title">
               <Database className="h-6 w-6 text-blue-400" />
-              Tiber Data Lab
+              Snapshots
             </h1>
             <p className="text-gray-400 text-sm">NFL player analytics with usage, efficiency, and expected fantasy metrics</p>
           </div>

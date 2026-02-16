@@ -8,6 +8,7 @@ import TiberLayout from "@/components/TiberLayout";
 import Dashboard from "@/pages/Dashboard";
 import TiberTiers from "@/pages/TiberTiers";
 import SchedulePage from "@/pages/SchedulePage";
+import DataLabHub from "@/pages/DataLabHub";
 import TiberDataLab from "@/pages/TiberDataLab";
 import ChatHomepage from "@/pages/ChatHomepage";
 import PlayerPage from "@/pages/PlayerPage";
@@ -27,6 +28,7 @@ import Architecture from "@/pages/Architecture";
 import MetricsDictionary from "@/pages/MetricsDictionary";
 import ForgeWorkbench from "@/pages/ForgeWorkbench";
 import PersonnelUsage from "@/pages/PersonnelUsage";
+import RoleContextRankings from "@/pages/RoleContextRankings";
 import SentinelDashboard from "@/pages/SentinelDashboard";
 import NotFound from "@/pages/not-found";
 
@@ -36,7 +38,13 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/tiers" component={TiberTiers} />
-        <Route path="/tiber-data-lab" component={TiberDataLab} />
+        <Route path="/tiber-data-lab" component={DataLabHub} />
+        <Route path="/tiber-data-lab/snapshots" component={TiberDataLab} />
+        <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
+        <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />
+        <Route path="/personnel">
+          {() => <Redirect to="/tiber-data-lab/personnel" />}
+        </Route>
         <Route path="/schedule" component={SchedulePage} />
         <Route path="/legacy-chat" component={ChatHomepage} />
         <Route path="/player/:playerId" component={PlayerPage} />
@@ -48,7 +56,6 @@ function Router() {
         <Route path="/architecture" component={Architecture} />
         <Route path="/metrics-dictionary" component={MetricsDictionary} />
         <Route path="/forge-workbench" component={ForgeWorkbench} />
-        <Route path="/personnel" component={PersonnelUsage} />
         <Route path="/sentinel" component={SentinelDashboard} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />

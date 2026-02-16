@@ -1,4 +1,4 @@
-import { db } from '../../infra/db';
+import { db } from '../../../infra/db';
 import { sql } from 'drizzle-orm';
 import {
   classifyPersonnelDependency,

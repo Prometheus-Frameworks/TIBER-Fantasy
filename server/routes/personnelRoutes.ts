@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { getPersonnelProfile, getPersonnelProfiles } from '../modules/personnel/personnelService';
+import { getPersonnelProfile, getPersonnelProfiles } from '../modules/datalab/personnel/personnelService';
 import { evaluate, recordEvents } from '../modules/sentinel/sentinelEngine';
 
 const router = Router();

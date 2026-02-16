@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import { getPersonnelProfiles } from '../modules/personnel/personnelService';
+import { getPersonnelProfiles } from '../modules/datalab/personnel/personnelService';
 
 async function main() {
   const profiles = await getPersonnelProfiles({

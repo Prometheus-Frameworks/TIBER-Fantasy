@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users, Filter, ChevronDown, TrendingUp } from "lucide-react";
+import { Search, Users, Filter, ChevronDown, ChevronRight, TrendingUp } from "lucide-react";
 
 type Position = "WR" | "RB" | "TE" | "QB";
 
@@ -210,7 +211,12 @@ export default function PersonnelUsage() {
     <div className="pu-page">
       <div className="pu-header">
         <div>
-          <h1 className="pu-title">Personnel Usage</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#9ca3af", marginBottom: 6 }}>
+            <Link href="/tiber-data-lab" style={{ color: "#9ca3af", textDecoration: "none" }} className="hover:!text-[#e2640d]">Data Lab</Link>
+            <ChevronRight size={12} />
+            <span style={{ color: "#374151", fontWeight: 500 }}>Personnel</span>
+          </div>
+          <h1 className="pu-title">Personnel Groupings</h1>
           <p className="pu-subtitle">
             Player usage across NFL personnel groupings — understand who plays in 11 (3WR), 12 (2TE), and heavy sets
           </p>
