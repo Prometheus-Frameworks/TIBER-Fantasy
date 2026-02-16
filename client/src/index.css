@@ -516,6 +516,14 @@ html, body {
 .tier-4 { color: var(--text-tertiary); background: var(--bg-tertiary); }
 .tier-5 { color: var(--text-tertiary); background: var(--bg-tertiary); opacity: 0.7; }
 
+.data-table tbody tr.tier-divider-row td {
+  border-bottom: none;
+  background: transparent;
+}
+.data-table tbody tr.tier-divider-row:hover td {
+  background: transparent;
+}
+
 .mono { font-family: var(--font-mono); font-size: 12px; }
 .dim { color: var(--text-tertiary); }
 
