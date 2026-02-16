@@ -29,6 +29,7 @@ import { ForgeScore } from './types';
 import { batchCalculateAlphaV2, AlphaV2Result } from './alphaV2';
 import { sleeperLiveStatusSync } from '../../services/sleeperLiveStatusSync';
 import { evaluate, recordEvents } from '../sentinel/sentinelEngine';
+import { computeAllGrades, computeAndCacheGrades, getGradesFromCache, CACHE_VERSION } from './forgeGradeCache';
 
 const router = Router();
 
@@ -2585,6 +2586,139 @@ function generatePlainEnglishSummary(
 
   return summary;
 }
+
+
+
+router.get('/tiers', async (req: Request, res: Response) => {
+  try {
+    const season = parseInt(req.query.season as string) || 2025;
+    const asOfWeekParam = req.query.asOfWeek as string | undefined;
+    const asOfWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : undefined;
+    const position = ((req.query.position as string) || 'ALL').toUpperCase() as 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 300);
+
+    if (!['QB', 'RB', 'WR', 'TE', 'ALL'].includes(position)) {
+      return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
+    }
+
+    const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
+
+    if (cache.players.length === 0) {
+      return res.json({
+        season,
+        asOfWeek: cache.asOfWeek ?? asOfWeek ?? null,
+        position,
+        fallback: true,
+        message: 'FORGE grades not yet computed for this week. Run POST /api/forge/compute-grades to generate.',
+        count: 0,
+        players: [],
+      });
+    }
+
+    const players = cache.players.map((row, idx) => ({
+      playerId: row.playerId,
+      playerName: row.playerName,
+      position: row.position,
+      nflTeam: row.nflTeam,
+      rank: idx + 1,
+      alpha: row.alpha,
+      rawAlpha: row.rawAlpha,
+      tier: row.tier,
+      tierNumeric: row.tierNumeric,
+      subscores: {
+        volume: row.volumeScore,
+        efficiency: row.efficiencyScore,
+        teamContext: row.teamContextScore,
+        stability: row.stabilityScore,
+        dynastyContext: row.dynastyContext,
+      },
+      trajectory: row.trajectory,
+      confidence: row.confidence,
+      gamesPlayed: row.gamesPlayed,
+      footballLensIssues: row.footballLensIssues ?? [],
+      lensAdjustment: row.lensAdjustment ?? 0,
+      fantasyStats: {
+        ppgPpr: row.ppgPpr,
+        seasonFptsPpr: row.seasonFptsPpr,
+        targets: row.targets,
+        touches: row.touches,
+      },
+    }));
+
+    return res.json({
+      season,
+      asOfWeek: cache.asOfWeek,
+      position,
+      computedAt: cache.computedAt?.toISOString(),
+      version: cache.version,
+      count: players.length,
+      fallback: false,
+      players,
+    });
+  } catch (error) {
+    console.error('[FORGE/Routes] tiers endpoint error:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.post('/compute-grades', async (req: Request, res: Response) => {
+  try {
+    const adminKey = (req.headers['x-admin-key'] || req.headers['authorization']) as string | undefined;
+    if (!adminKey || adminKey !== process.env.FORGE_ADMIN_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const season = Number(req.body?.season) || 2025;
+    const asOfWeek = Number(req.body?.asOfWeek) || 17;
+    const position = String(req.body?.position || 'ALL').toUpperCase() as 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
+    const limit = Math.min(Number(req.body?.limit) || 200, 300);
+
+    if (!['QB', 'RB', 'WR', 'TE', 'ALL'].includes(position)) {
+      return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
+    }
+
+    const jobStart = Date.now();
+
+    let results: Record<string, { computed: number; errors: number; durationMs: number }>;
+    if (position === 'ALL') {
+      results = await computeAllGrades(season, asOfWeek, { limit, version: CACHE_VERSION });
+    } else {
+      const single = await computeAndCacheGrades(position, season, asOfWeek, { limit, version: CACHE_VERSION });
+      results = { [position]: single };
+    }
+
+    const totalDurationMs = Date.now() - jobStart;
+    const totalComputed = Object.values(results).reduce((acc, item) => acc + item.computed, 0);
+    const totalErrors = Object.values(results).reduce((acc, item) => acc + item.errors, 0);
+
+    if (totalComputed === 0 && totalErrors > 0) {
+      return res.status(500).json({
+        status: 'failed',
+        season,
+        asOfWeek,
+        results,
+        totalDurationMs,
+        version: CACHE_VERSION,
+      });
+    }
+
+    return res.json({
+      status: 'completed',
+      season,
+      asOfWeek,
+      results,
+      totalDurationMs,
+      version: CACHE_VERSION,
+    });
+  } catch (error) {
+    console.error('[FORGE/Routes] compute-grades endpoint error:', error);
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
 
 export function registerForgeRoutes(app: any): void {
   app.use('/api/forge', router);

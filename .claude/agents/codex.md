@@ -65,3 +65,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - PRs are reviewed and merged by Architect J.
 - Codex has been strong at audits, data pipeline work, refactoring, and documentation.
 - Personnel module was originally built by Codex (PR #11), then the frontend was added by Replit Agent, then the undercounting fix was done by Claude Code.
+
+### Unreleased — 2026-02-16: FORGE tiers cache migration
+- **Branch:** current working branch
+- **Summary:** Migrated Tiers page from live batch/PPG-derived behavior to cached canonical FORGE Alpha grades. Added `forge_grade_cache` DB table, a compute-and-cache service, and new FORGE endpoints for cache reads and admin-triggered recomputation.
+- **Key Files:**
+  - `shared/schema.ts` — `forge_grade_cache` table + indexes + types
+  - `server/modules/forge/forgeGradeCache.ts` — compute pipeline, fantasy stat enrichment, upsert, cache reads
+  - `server/modules/forge/routes.ts` — GET `/api/forge/tiers`, POST `/api/forge/compute-grades`
+  - `client/src/pages/TiberTiers.tsx` — switched data source to `/api/forge/tiers`, fallback UX, FORGE-native table fields
+- **Validation:** `npm run build` succeeds; db/test/dev commands blocked by missing DB env in this container.

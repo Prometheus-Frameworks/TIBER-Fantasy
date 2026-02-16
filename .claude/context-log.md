@@ -93,3 +93,9 @@ Every agent should append an entry here after completing work.
 - **PR #3** (2025-12-10): Remove legacy Oasis/OTC naming
 - **PR #2** (2025-12-10): Replace OTC/Oasis/Hardening with Tiber/TrackStar
 - **PR #1** (2025-12-09): Internal documentation for FORGE scoring system
+
+### 2026-02-16 — Codex: FORGE tiers cache migration
+- **What changed:** Added precomputed `forge_grade_cache` schema, implemented `forgeGradeCache` service for compute+upsert+read, added `/api/forge/tiers` and `/api/forge/compute-grades` endpoints, and migrated `/tiers` UI to consume cached FORGE Alpha/tier data with fallback messaging.
+- **Files modified:** `shared/schema.ts`, `server/modules/forge/forgeGradeCache.ts`, `server/modules/forge/routes.ts`, `client/src/pages/TiberTiers.tsx`
+- **Validation:** Ran build, attempted db push + tests + dev server (blocked by missing `DATABASE_URL`), verified route and schema wiring via source inspection.
+- **Notes:** Admin endpoint expects `FORGE_ADMIN_KEY`; cache version defaults to `v1`; frontend now treats cache-empty responses as compute-in-progress.
