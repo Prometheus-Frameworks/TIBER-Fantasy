@@ -51,7 +51,11 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE SoS**: Position-specific strength of schedule analysis.
     - **QB Context v1**: A team-to-QB mapping system providing QB-aware context for skill positions, blending short-term and dynasty context with QB scores.
 - **Tiber Tiers Page (`/tiers`)**: User-facing rankings powered by FORGE, featuring position filters, adjustable weight sliders, preset systems, season/weekly toggles, and week range filtering. It integrates FORGE E+G v2, mode toggles, and Football Lens Issue Badges.
-- **Tiber Data Lab (Operation DataDive)**: Snapshot-based NFL data spine for reproducible analytics, focusing on raw football metrics.
+- **Tiber Data Lab (Department)**: A research department (`server/modules/datalab/`) containing three sub-modules:
+    - **Snapshots** (`/tiber-data-lab/snapshots`): Snapshot-based NFL data spine for reproducible analytics, focusing on raw football metrics. Backend at `server/modules/datalab/snapshots/snapshotRoutes.ts`.
+    - **Personnel Groupings** (`/tiber-data-lab/personnel`): Formation intelligence with every-down grades and personnel breakdown percentages. Backend at `server/modules/datalab/personnel/personnelService.ts`.
+    - **Role Banks** (`/tiber-data-lab/role-banks`): Season-level positional archetype classifications. Backend routes at `server/modules/datalab/rolebank/roleBankRoutes.ts`.
+    - **Hub Page** (`/tiber-data-lab`): Department landing page (`DataLabHub.tsx`) with module cards, health stats, and navigation to sub-modules.
 - **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system.
 - **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics.
 - **EPA Analytics**: Advanced efficiency metrics.
