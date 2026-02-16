@@ -182,7 +182,8 @@ export default function PersonnelUsage() {
     queryFn: async () => {
       const res = await fetch(`/api/personnel/profile?season=2025&position=${position}&limit=200`);
       if (!res.ok) throw new Error("Failed to fetch");
-      return res.json();
+      const json = await res.json();
+      return json.profiles ?? json;
     },
   });
 
