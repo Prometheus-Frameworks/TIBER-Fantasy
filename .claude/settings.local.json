@@ -51,7 +51,12 @@
       "Bash(git checkout:*)",
       "Bash(git log:*)",
       "Bash(git merge:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git -C /home/runner/workspace status)",
+      "Bash(git -C /home/runner/workspace diff)",
+      "Bash(git -C /home/runner/workspace log --oneline -5)",
+      "Bash(git -C /home/runner/workspace add client/src/pages/PersonnelUsage.tsx server/modules/personnel/MODULE.md server/modules/personnel/personnelService.ts server/scripts/import_pbp_participation.py shared/schema.ts)",
+      "Bash(git -C:*)"
     ]
   }
 }

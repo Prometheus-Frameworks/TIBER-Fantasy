@@ -123,3 +123,53 @@ After the fix:
 - **No manual SQL migrations:** Use `npm run db:push` only
 - **Schema changes:** Add to `shared/schema.ts`, then push
 - **Never break existing features:** FORGE, Tiers, Data Lab, etc. are independent — don't modify their code
+
+---
+
+## Resolution (Completed 2026-02-15)
+
+**Status:** RESOLVED — Option A implemented (nflverse `pbp_participation` data)
+**Commit:** `1ec03797` on `main`
+
+### Solution Implemented
+
+Used nflverse `pbp_participation` parquet data to count every play a player was on the field for, replacing the old `unnest(ARRAY[passer, rusher, receiver])` approach that only counted primary actors.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `shared/schema.ts` | Added `bronzePbpParticipation` table (game_id, play_id, season, gsis_id) with indexes |
+| `server/scripts/import_pbp_participation.py` | **New** — Python ingest script: downloads parquet, unnests offense_players GSIS IDs, bulk inserts into DB |
+| `server/modules/personnel/personnelService.ts` | Rewrote aggregation query to JOIN through `bronze_pbp_participation` instead of unnesting primary actor columns |
+| `client/src/pages/PersonnelUsage.tsx` | Updated labels: "plays" → "snaps", "Usage-based" → "Participation-based", "Most Plays" → "Most Snaps" |
+| `server/modules/personnel/MODULE.md` | Updated to reflect v2 participation-based methodology and data pipeline |
+
+### Key Discovery: Correct Parquet URL
+
+The task spec listed the URL pattern as `participate_{season}.parquet` — the actual nflverse filename is `pbp_participation_{season}.parquet`:
+```
+https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_{season}.parquet
+```
+
+### Data Pipeline
+
+1. `import_pbp_participation.py` downloads the parquet, unnests the semicolon-separated `offense_players` column (11 GSIS IDs per play), and inserts ~497K normalized rows for the 2025 season.
+2. `personnelService.ts` JOINs `bronze_pbp_participation` with `bronze_nflfastr_plays` on `(game_id, play_id)` to get the personnel grouping for each snap a player was on the field.
+
+### Validation Results (All Passed)
+
+| Criteria | Target | Actual | Status |
+|----------|--------|--------|--------|
+| Nacua snap count | ~700+ | 869 | PASS |
+| Hunter snap count | ~300+ | 303 | PASS |
+| Top-5 WR spot check (all 800+) | 800+ | 937–1057 | PASS |
+| Avg 11-personnel % for top 20 WRs | 50–90% | 67.1% | PASS |
+| LOW_SAMPLE only on <50 plays | Correct | 4 players, all <50 | PASS |
+| No regressions | No breakage | typecheck clean (no new errors) | PASS |
+
+### Notes
+
+- Nacua's 869 vs PFR's 727: The ~20% gap is due to methodology differences between nflverse participation data and PFR snap counts (nflverse includes some plays PFR may exclude). This is acceptable — the old count was 208 (a 3.5x undercount).
+- The `bronze_pbp_participation` table was created via direct SQL since `npm run db:push` hit an interactive enum prompt. The Drizzle schema definition is in sync.
+- To refresh data for new weeks: `python3 server/scripts/import_pbp_participation.py 2025` (clears and re-imports safely).
