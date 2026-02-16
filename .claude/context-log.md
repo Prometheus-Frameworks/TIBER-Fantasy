@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-02-16 — Replit Agent: Quality Sentinel Task Spec for Codex
+- **What changed:** Created comprehensive Codex task spec for the Quality Sentinel validation layer. Covers rule engine architecture, 16 initial rules across FORGE/Personnel/DataLab/System modules, sentinel_events DB schema, 5 API endpoints, inline integration pattern, and detailed validation criteria with curl commands.
+- **Files modified:** `.claude/tasks/build-quality-sentinel.md` (new)
+- **Validation:** Spec reviewed for consistency with existing FORGE types, personnel service patterns, and route registration conventions.
+- **Notes:** Backend-only scope — frontend admin dashboard and UI badges deferred to Replit Agent as follow-up. Based on deep research report analyzing Great Expectations, Monte Carlo, Datadog, and Sentry patterns. Designed for Codex's PR-based workflow on branch `codex/build-quality-sentinel`.
+
 ### 2026-02-16 — Claude Code: Fix Personnel Usage Under-Counting
 - **What changed:** Rewrote personnel module to use nflverse `pbp_participation` data instead of only counting primary actors (passer/rusher/receiver). Added `bronze_pbp_participation` table and Python ingest script. Updated frontend labels from "plays" to "snaps".
 - **Files modified:** `shared/schema.ts`, `server/modules/personnel/personnelService.ts`, `server/scripts/import_pbp_participation.py` (new), `client/src/pages/PersonnelUsage.tsx`, `server/modules/personnel/MODULE.md`

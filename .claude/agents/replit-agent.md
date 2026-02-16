@@ -8,6 +8,12 @@ Workflow: Direct commits to `main`, interactive development with user, end-to-en
 
 ## Completed Tasks
 
+### 2026-02-16 — Quality Sentinel Task Spec
+- **Summary:** Created Codex-ready task spec for the Quality Sentinel — a lightweight validation layer that runs rule-based checks on FORGE, Personnel, and Data Lab API outputs. Spec includes rule DSL design (16 rules), sentinel_events DB schema, 5 API endpoints, inline integration pattern with fire-and-forget persistence, and validation criteria.
+- **Key Files:** `.claude/tasks/build-quality-sentinel.md`
+- **Validation:** Cross-referenced with FORGE types, personnel service, and existing route patterns.
+- **Notes:** Backend-only scope for Codex. Frontend (admin dashboard + inline badges) deferred to Replit Agent.
+
 ### 2026-02-16 — Multi-Agent Context Sync System
 - **Summary:** Created `.claude/` folder structure for multi-agent coordination — AGENTS.md onboarding, conventions.md, context-log.md, and per-agent work logs.
 - **Key Files:** `.claude/AGENTS.md`, `.claude/conventions.md`, `.claude/context-log.md`, `.claude/agents/` (3 agent logs)
