@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity, Download } from 'lucide-react';
+import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -102,6 +103,50 @@ export default function QBLab() {
     };
   }, [response?.data]);
 
+  const csvColumns: CsvColumn[] = [
+    { key: 'playerName', label: 'Player' },
+    { key: 'teamId', label: 'Team' },
+    { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalDropbacks', label: 'Dropbacks', format: 'int' },
+    { key: 'avgCpoe', label: 'CPOE', format: 'dec', decimals: 1 },
+    { key: 'avgAnyA', label: 'ANY/A', format: 'dec', decimals: 1 },
+    { key: 'avgFpPerDropback', label: 'FP/Dropback', format: 'dec' },
+    { key: 'avgEpaPerPlay', label: 'EPA/Play', format: 'dec' },
+    { key: 'avgSuccessRate', label: 'Success Rate %', format: 'pct' },
+    { key: 'totalSacks', label: 'Sacks', format: 'int' },
+    { key: 'avgSackRate', label: 'Sack Rate %', format: 'pct' },
+    { key: 'totalSackYards', label: 'Sack Yards', format: 'int' },
+    { key: 'totalQbHits', label: 'QB Hits', format: 'int' },
+    { key: 'avgQbHitRate', label: 'QB Hit Rate %', format: 'pct' },
+    { key: 'totalDeepPassAttempts', label: 'Deep Pass Attempts', format: 'int' },
+    { key: 'avgDeepPassRate', label: 'Deep Pass %', format: 'pct' },
+    { key: 'avgPassAdot', label: 'aDOT', format: 'dec', decimals: 1 },
+    { key: 'avgShotgunRate', label: 'Shotgun %', format: 'pct' },
+    { key: 'avgNoHuddleRate', label: 'No Huddle %', format: 'pct' },
+    { key: 'avgShotgunSuccessRate', label: 'Shotgun Success %', format: 'pct' },
+    { key: 'avgUnderCenterSuccessRate', label: 'Under Center Success %', format: 'pct' },
+    { key: 'totalPassFirstDowns', label: 'Pass First Downs', format: 'int' },
+    { key: 'avgPassFirstDownRate', label: 'Pass 1st Down Rate %', format: 'pct' },
+    { key: 'totalScrambles', label: 'Scrambles', format: 'int' },
+    { key: 'totalScrambleYards', label: 'Scramble Yards', format: 'int' },
+    { key: 'totalScrambleTds', label: 'Scramble TDs', format: 'int' },
+    { key: 'totalRushAttempts', label: 'Rush Attempts', format: 'int' },
+    { key: 'totalRushYards', label: 'Rush Yards', format: 'int' },
+    { key: 'totalRushTds', label: 'Rush TDs', format: 'int' },
+    { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
+  ];
+
+  const handleExport = () => {
+    if (!sortedData.length) return;
+    exportLabCsv(sortedData, csvColumns, {
+      module: 'qb',
+      position: 'QB',
+      season,
+      weekRange: response?.weekRange ? `${response.weekRange.from}-${response.weekRange.to}` : undefined,
+      count: response?.count,
+    });
+  };
+
   const handleSort = (col: string) => {
     if (sortColumn === col) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -157,6 +202,15 @@ export default function QBLab() {
           <span className="text-xs text-gray-400 font-mono">
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
+        )}
+        {sortedData.length > 0 && (
+          <button
+            onClick={handleExport}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#9333ea] bg-[#9333ea]/10 hover:bg-[#9333ea]/20 rounded-md transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
         )}
       </div>
 

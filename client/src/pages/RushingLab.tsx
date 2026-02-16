@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity, Download } from 'lucide-react';
+import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,6 +103,46 @@ export default function RushingLab() {
     };
   }, [response?.data]);
 
+  const csvColumns: CsvColumn[] = [
+    { key: 'playerName', label: 'Player' },
+    { key: 'teamId', label: 'Team' },
+    { key: 'position', label: 'Position' },
+    { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalSnaps', label: 'Snaps', format: 'int' },
+    { key: 'totalRushAttempts', label: 'Rush Attempts', format: 'int' },
+    { key: 'totalRushYards', label: 'Rush Yards', format: 'int' },
+    { key: 'totalRushTds', label: 'Rush TDs', format: 'int' },
+    { key: 'avgYpc', label: 'YPC', format: 'dec' },
+    { key: 'avgRushEpa', label: 'Rush EPA', format: 'dec' },
+    { key: 'avgStuffRate', label: 'Stuff Rate %', format: 'pct' },
+    { key: 'totalRushFirstDowns', label: 'Rush First Downs', format: 'int' },
+    { key: 'avgRushFirstDownRate', label: 'Rush 1st Down Rate %', format: 'pct' },
+    { key: 'avgInsideRunRate', label: 'Inside Run %', format: 'pct' },
+    { key: 'avgOutsideRunRate', label: 'Outside Run %', format: 'pct' },
+    { key: 'avgInsideSuccessRate', label: 'Inside Success %', format: 'pct' },
+    { key: 'avgOutsideSuccessRate', label: 'Outside Success %', format: 'pct' },
+    { key: 'avgLeftRunRate', label: 'Left Run %', format: 'pct' },
+    { key: 'avgMiddleRunRate', label: 'Middle Run %', format: 'pct' },
+    { key: 'avgRightRunRate', label: 'Right Run %', format: 'pct' },
+    { key: 'totalTargets', label: 'Targets', format: 'int' },
+    { key: 'totalReceptions', label: 'Receptions', format: 'int' },
+    { key: 'totalRecYards', label: 'Rec Yards', format: 'int' },
+    { key: 'avgYacPerRec', label: 'YAC/Rec', format: 'dec' },
+    { key: 'avgSuccessRate', label: 'Success Rate %', format: 'pct' },
+    { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
+  ];
+
+  const handleExport = () => {
+    if (!sortedData.length) return;
+    exportLabCsv(sortedData, csvColumns, {
+      module: 'rushing',
+      position,
+      season,
+      weekRange: response?.weekRange ? `${response.weekRange.from}-${response.weekRange.to}` : undefined,
+      count: response?.count,
+    });
+  };
+
   const handleSort = (col: string) => {
     if (sortColumn === col) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -165,6 +206,15 @@ export default function RushingLab() {
           <span className="text-xs text-gray-400 font-mono">
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
+        )}
+        {sortedData.length > 0 && (
+          <button
+            onClick={handleExport}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#16a34a] bg-[#16a34a]/10 hover:bg-[#16a34a]/20 rounded-md transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
         )}
       </div>
 

@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Clock, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Clock, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
+import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -117,6 +118,45 @@ export default function SituationalLab() {
     };
   }, [response?.data]);
 
+  const csvColumns: CsvColumn[] = [
+    { key: 'playerName', label: 'Player' },
+    { key: 'teamId', label: 'Team' },
+    { key: 'position', label: 'Position' },
+    { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalThirdDownSnaps', label: '3rd Down Snaps', format: 'int' },
+    { key: 'totalThirdDownConversions', label: '3rd Down Conversions', format: 'int' },
+    { key: 'avgThirdDownConversionRate', label: '3rd Down Conv %', format: 'pct' },
+    { key: 'avgEarlyDownSuccessRate', label: 'Early Down Success %', format: 'pct' },
+    { key: 'avgLateDownSuccessRate', label: 'Late Down Success %', format: 'pct' },
+    { key: 'totalShortYardageAttempts', label: 'Short Yardage Attempts', format: 'int' },
+    { key: 'totalShortYardageConversions', label: 'Short Yardage Conversions', format: 'int' },
+    { key: 'avgShortYardageRate', label: 'Short Yardage Rate %', format: 'pct' },
+    { key: 'totalThirdDownTargets', label: '3rd Down Targets', format: 'int' },
+    { key: 'totalThirdDownReceptions', label: '3rd Down Receptions', format: 'int' },
+    { key: 'totalThirdDownRecConversions', label: '3rd Down Rec Conversions', format: 'int' },
+    { key: 'totalTwoMinuteSnaps', label: '2-Min Snaps', format: 'int' },
+    { key: 'totalTwoMinuteSuccessful', label: '2-Min Successful', format: 'int' },
+    { key: 'avgTwoMinuteSuccessRate', label: '2-Min Success %', format: 'pct' },
+    { key: 'totalHurryUpSnaps', label: 'Hurry-Up Snaps', format: 'int' },
+    { key: 'totalHurryUpSuccessful', label: 'Hurry-Up Successful', format: 'int' },
+    { key: 'avgHurryUpSuccessRate', label: 'Hurry-Up Success %', format: 'pct' },
+    { key: 'totalTwoMinuteTargets', label: '2-Min Targets', format: 'int' },
+    { key: 'totalTwoMinuteReceptions', label: '2-Min Receptions', format: 'int' },
+    { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
+  ];
+
+  const handleExport = () => {
+    const activeData = activeTab === 'down-distance' ? ddData : activeTab === 'two-minute' ? tmData : huData;
+    if (!activeData.length) return;
+    exportLabCsv(activeData, csvColumns, {
+      module: `situational-${activeTab}`,
+      position,
+      season,
+      weekRange: response?.weekRange ? `${response.weekRange.from}-${response.weekRange.to}` : undefined,
+      count: response?.count,
+    });
+  };
+
   const handleSort = (
     tab: 'dd' | 'tm' | 'hu',
     col: string
@@ -214,6 +254,15 @@ export default function SituationalLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
+        {response?.data?.length ? (
+          <button
+            onClick={handleExport}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#ca8a04] bg-[#ca8a04]/10 hover:bg-[#ca8a04]/20 rounded-md transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
+        ) : null}
       </div>
 
       {isLoading && !summaryStats ? (

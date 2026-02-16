@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
+import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -97,6 +98,40 @@ export default function RedZoneLab() {
     };
   }, [response?.data]);
 
+  const csvColumns: CsvColumn[] = [
+    { key: 'playerName', label: 'Player' },
+    { key: 'teamId', label: 'Team' },
+    { key: 'position', label: 'Position' },
+    { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalRzSnaps', label: 'RZ Snaps', format: 'int' },
+    { key: 'avgRzSnapRate', label: 'RZ Snap Rate %', format: 'pct' },
+    { key: 'avgRzSuccessRate', label: 'RZ Success Rate %', format: 'pct' },
+    { key: 'totalRzTargets', label: 'RZ Targets', format: 'int' },
+    { key: 'totalRzReceptions', label: 'RZ Receptions', format: 'int' },
+    { key: 'totalRzRecTds', label: 'RZ Receiving TDs', format: 'int' },
+    { key: 'avgRzTargetShare', label: 'RZ Target Share %', format: 'pct' },
+    { key: 'avgRzCatchRate', label: 'RZ Catch Rate %', format: 'pct' },
+    { key: 'totalRzRushAttempts', label: 'RZ Rush Attempts', format: 'int' },
+    { key: 'totalRzRushTds', label: 'RZ Rush TDs', format: 'int' },
+    { key: 'avgRzRushTdRate', label: 'RZ Rush TD Rate %', format: 'pct' },
+    { key: 'totalRzPassAttempts', label: 'RZ Pass Attempts', format: 'int' },
+    { key: 'totalRzPassTds', label: 'RZ Pass TDs', format: 'int' },
+    { key: 'avgRzTdRate', label: 'RZ TD Rate %', format: 'pct' },
+    { key: 'totalRzInterceptions', label: 'RZ Interceptions', format: 'int' },
+    { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
+  ];
+
+  const handleExport = () => {
+    if (!sortedData.length) return;
+    exportLabCsv(sortedData, csvColumns, {
+      module: 'red-zone',
+      position,
+      season,
+      weekRange: response?.weekRange ? `${response.weekRange.from}-${response.weekRange.to}` : undefined,
+      count: response?.count,
+    });
+  };
+
   const handleSort = (col: string) => {
     if (sortColumn === col) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -168,6 +203,15 @@ export default function RedZoneLab() {
           <span className="text-xs text-gray-400 font-mono">
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
+        )}
+        {sortedData.length > 0 && (
+          <button
+            onClick={handleExport}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#dc2626] bg-[#dc2626]/10 hover:bg-[#dc2626]/20 rounded-md transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
         )}
       </div>
 

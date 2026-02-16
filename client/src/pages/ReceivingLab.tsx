@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
+import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -127,6 +128,47 @@ export default function ReceivingLab() {
     }
   };
 
+  const csvColumns: CsvColumn[] = [
+    { key: 'playerName', label: 'Player' },
+    { key: 'teamId', label: 'Team' },
+    { key: 'position', label: 'Position' },
+    { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalTargets', label: 'Targets', format: 'int' },
+    { key: 'totalReceptions', label: 'Receptions', format: 'int' },
+    { key: 'totalRecYards', label: 'Rec Yards', format: 'int' },
+    { key: 'totalRecTds', label: 'Rec TDs', format: 'int' },
+    { key: 'avgAdot', label: 'aDOT', format: 'dec', decimals: 1 },
+    { key: 'avgEpaPerTarget', label: 'EPA/Target', format: 'dec' },
+    { key: 'avgCatchRate', label: 'Catch Rate %', format: 'pct' },
+    { key: 'yprr', label: 'YPRR', format: 'dec' },
+    { key: 'tprr', label: 'TPRR', format: 'dec', decimals: 3 },
+    { key: 'avgWopr', label: 'WOPR', format: 'dec' },
+    { key: 'avgRacr', label: 'RACR', format: 'dec' },
+    { key: 'avgXYac', label: 'xYAC', format: 'dec', decimals: 1 },
+    { key: 'avgYacOverExpected', label: 'YAC over Expected', format: 'dec', decimals: 1 },
+    { key: 'avgDeepTargetRate', label: 'Deep Target %', format: 'pct' },
+    { key: 'avgIntermediateTargetRate', label: 'Intermediate Target %', format: 'pct' },
+    { key: 'avgShortTargetRate', label: 'Short Target %', format: 'pct' },
+    { key: 'avgSlotRate', label: 'Slot Rate %', format: 'pct' },
+    { key: 'totalRoutes', label: 'Routes Run', format: 'int' },
+    { key: 'totalAirYards', label: 'Air Yards', format: 'int' },
+    { key: 'totalYac', label: 'YAC', format: 'int' },
+    { key: 'avgAirEpa', label: 'Air EPA', format: 'dec' },
+    { key: 'avgSuccessRate', label: 'Success Rate %', format: 'pct' },
+    { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
+  ];
+
+  const handleExport = () => {
+    if (!sortedData.length) return;
+    exportLabCsv(sortedData, csvColumns, {
+      module: 'receiving',
+      position,
+      season,
+      weekRange: response?.weekRange ? `${response.weekRange.from}-${response.weekRange.to}` : undefined,
+      count: response?.count,
+    });
+  };
+
   const th = (label: string, col: string, className = '') => (
     <th
       className={`px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-[#7c3aed] transition-colors ${className}`}
@@ -180,6 +222,15 @@ export default function ReceivingLab() {
           <span className="text-xs text-gray-400 font-mono">
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
+        )}
+        {sortedData.length > 0 && (
+          <button
+            onClick={handleExport}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#7c3aed] bg-[#7c3aed]/10 hover:bg-[#7c3aed]/20 rounded-md transition-colors"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </button>
         )}
       </div>
 
