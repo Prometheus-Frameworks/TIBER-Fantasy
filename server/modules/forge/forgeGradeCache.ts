@@ -3,7 +3,7 @@ import { db } from '../../infra/db';
 import { datadiveSnapshotPlayerWeek, forgeGradeCache } from '@shared/schema';
 import { runForgeEngine } from './forgeEngine';
 import { gradeForge } from './forgeGrading';
-import type { Position } from './types';
+import type { Position } from './forgeEngine';
 
 const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
 const CACHE_VERSION = 'v1';

@@ -2587,8 +2587,6 @@ function generatePlainEnglishSummary(
   return summary;
 }
 
-
-
 router.get('/tiers', async (req: Request, res: Response) => {
   try {
     const season = parseInt(req.query.season as string) || 2025;
