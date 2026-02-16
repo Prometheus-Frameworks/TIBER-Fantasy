@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
+import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -207,15 +208,28 @@ export default function RushingLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
-        {sortedData.length > 0 && (
-          <button
-            onClick={handleExport}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#16a34a] bg-[#16a34a]/10 hover:bg-[#16a34a]/20 rounded-md transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {sortedData.length > 0 && (
+            <>
+              <AiPromptHints
+                accentColor="#16a34a"
+                prompts={[
+                  "Build a rushing efficiency model using YPC, rush EPA, and stuff rate — identify which backs create yards after contact",
+                  "Analyze gap distribution (left/middle/right) vs success rate to find scheme-dependent vs versatile rushers",
+                  "Create a workload sustainability score using rush attempts, snap count, and receiving involvement",
+                  "Flag RBs whose inside success rate diverges from outside — which runners need specific game scripts to produce?",
+                ]}
+              />
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#16a34a] bg-[#16a34a]/10 hover:bg-[#16a34a]/20 rounded-md transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {isLoading && !summaryStats ? (

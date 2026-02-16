@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
+import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -223,15 +224,28 @@ export default function ReceivingLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
-        {sortedData.length > 0 && (
-          <button
-            onClick={handleExport}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#7c3aed] bg-[#7c3aed]/10 hover:bg-[#7c3aed]/20 rounded-md transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {sortedData.length > 0 && (
+            <>
+              <AiPromptHints
+                accentColor="#7c3aed"
+                prompts={[
+                  "Build a target quality model using aDOT, EPA/target, and YPRR — rank the top 10 most efficient receivers",
+                  "Cluster these WRs by route profile (deep/intermediate/short splits) and identify which archetype has the highest ceiling",
+                  "Create a breakout candidate score using WOPR, YAC over expected, and catch rate vs league average",
+                  "Compare RACR vs YPRR to find receivers who are volume-dependent vs truly efficient",
+                ]}
+              />
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#7c3aed] bg-[#7c3aed]/10 hover:bg-[#7c3aed]/20 rounded-md transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {isLoading && !summaryStats ? (

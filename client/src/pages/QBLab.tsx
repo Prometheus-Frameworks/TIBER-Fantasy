@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
+import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -203,15 +204,29 @@ export default function QBLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
-        {sortedData.length > 0 && (
-          <button
-            onClick={handleExport}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#9333ea] bg-[#9333ea]/10 hover:bg-[#9333ea]/20 rounded-md transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {sortedData.length > 0 && (
+            <>
+              <AiPromptHints
+                accentColor="#9333ea"
+                prompts={[
+                  "Build a QB process score using CPOE, EPA/play, and success rate — separate true talent from box score production",
+                  "Correlate shotgun rate and no-huddle rate with efficiency to find QBs whose play style unlocks fantasy upside",
+                  "Create a pressure-adjusted model using sack rate, QB hit rate, and scramble production to identify mobile value",
+                  "Rank QBs by deep pass rate vs aDOT to find aggressive downfield passers vs checkdown-heavy game managers",
+                  "Identify QB-WR stack opportunities by cross-referencing this data with Receiving Lab exports",
+                ]}
+              />
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#9333ea] bg-[#9333ea]/10 hover:bg-[#9333ea]/20 rounded-md transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {isLoading && !summaryStats ? (

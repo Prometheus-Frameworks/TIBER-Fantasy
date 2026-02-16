@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
+import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -204,15 +205,28 @@ export default function RedZoneLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
-        {sortedData.length > 0 && (
-          <button
-            onClick={handleExport}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#dc2626] bg-[#dc2626]/10 hover:bg-[#dc2626]/20 rounded-md transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {sortedData.length > 0 && (
+            <>
+              <AiPromptHints
+                accentColor="#dc2626"
+                prompts={[
+                  "Build a TD equity model using RZ snap rate, RZ target share, and RZ success rate — who owns the scoring opportunities?",
+                  "Identify TD regression candidates by comparing RZ opportunities vs actual TDs scored against league averages",
+                  "Cross-reference RZ rush attempts with RZ receiving TDs to find true goal-line vultures vs pass-catching threats",
+                  "Create a scoring upside tier list by weighting RZ snap rate and TD conversion efficiency",
+                ]}
+              />
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#dc2626] bg-[#dc2626]/10 hover:bg-[#dc2626]/20 rounded-md transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {isLoading && !summaryStats ? (

@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Clock, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
+import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -254,15 +255,28 @@ export default function SituationalLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
-        {response?.data?.length ? (
-          <button
-            onClick={handleExport}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#ca8a04] bg-[#ca8a04]/10 hover:bg-[#ca8a04]/20 rounded-md transition-colors"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export CSV
-          </button>
-        ) : null}
+        <div className="ml-auto flex items-center gap-2">
+          {response?.data?.length ? (
+            <>
+              <AiPromptHints
+                accentColor="#ca8a04"
+                prompts={[
+                  "Build a clutch performer index using 3rd down conversion rate, 2-minute success rate, and hurry-up production",
+                  "Identify game-script-proof players whose early-down and late-down success rates are both above average",
+                  "Create a closer score for WR/TEs using 2-minute targets and receptions — who gets the ball when it matters?",
+                  "Compare short yardage conversion rate vs overall success rate to find RBs with elite power profiles",
+                ]}
+              />
+              <button
+                onClick={handleExport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#ca8a04] bg-[#ca8a04]/10 hover:bg-[#ca8a04]/20 rounded-md transition-colors"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export CSV
+              </button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {isLoading && !summaryStats ? (
