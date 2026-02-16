@@ -1,0 +1,79 @@
+Audit Task: Investigate Discrepancies in 2025 WR Receiving Stats vs. Official NFL Sources
+Goal
+Pinpoint why our exported 2025 WR receiving CSV (e.g., Puka Nacua shows 114 rec / 1575 yds / 8 TD in 14 GP) differs significantly from official 2025 stats (NFL.com, Pro-Football-Reference, ESPN):
+
+Puka Nacua: 129 rec, 1715 yds, 10 TD, 166 targets, 16 GP
+Jaxon Smith-Njigba: ~119 rec, 1793 yds, 10 TD, 163 targets, 17 GP
+Ja'Marr Chase: ~125 rec, 1412 yds, 8 TD
+(and similar undercounts on several other top WRs)
+
+The output CSV appears simulated/projected rather than actual final stats, but we source from nflfastR → find the breakage.
+Steps to Run (in order of priority)
+
+Verify Raw Data Load & Season Coverage
+Run: load_pbp(seasons = 2025) or build_nflfastR_pbp(seasons = 2025) (whichever your pipeline uses).
+Check: nrow(pbp) roughly ~35k–40k plays? Confirm season_type == "REG" dominates (exclude playoffs if not intended).
+Confirm: max(week) == 18? (2025 had standard 18-week regular season).
+Flag if data is partial (e.g., loaded only through week 14/15) or if API scrape failed mid-season.
+
+Player ID / Name Mapping Check
+nflfastR uses GSIS IDs primarily, but name matching can fail on juniors/suffixes/trades.
+Pull sample: filter(pbp, receiver_player_name == "P. Nacua" | receiver_player_id == "00-0039151") → count receptions, sum receiving_yards where pass == TRUE & complete == TRUE.
+Compare raw sums to official: should be close to 129/1715 for Nacua.
+Do the same for JSN ("J. Smith-Njigba"), Chase, etc.
+Bug candidate: incomplete name decoding or duplicate IDs post-trade (e.g., Davante Adams to LAR).
+
+Aggregation Logic Audit (calculate_player_stats or custom group_by)
+If using calculate_player_stats(pbp, weekly = FALSE) → inspect output for top WRs.
+Or if custom:Rwr_stats <- pbp %>%
+  filter(pass == TRUE, !is.na(receiver_player_id)) %>%
+  group_by(receiver_player_id, receiver_player_name, posteam) %>%
+  summarise(
+    targets = n(),
+    receptions = sum(complete_pass, na.rm = TRUE),
+    rec_yards = sum(yards_gained[complete_pass == 1], na.rm = TRUE),
+    rec_tds = sum(touchdown[complete_pass == 1 & td_team == posteam], na.rm = TRUE),  # careful with td_team
+    games = n_distinct(game_id),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(receptions))
+Compare head(wr_stats) to your CSV top rows.
+Common pitfalls:
+Using yards_gained instead of receiving_yards (or not filtering !sack / !interception properly).
+Double-counting TDs (air + YAC).
+Not excluding spikes / throwaways.
+Wrong filter for targets (should be pass attempts intended for receiver).
+
+
+Advanced / Derived Stats Audit
+Columns like aDOT, EPA/Target, YPRR, WOPR, RACR, xYAC are nflfastR model outputs (xyac_mean_yardage, epa, etc.).
+Run: mean(pbp$epa[pbp$pass & !is.na(receiver_player_id)]) ~0.
+Check if you're using built-in add_qb_epa(), add_xyac(), or custom models that might be outdated/misapplied for 2025.
+Fantasy points (PPR) formula: verify 1 PPR + 0.1yds + 6TD + bonuses.
+
+Games Played & Filter Issues
+Many players show 14–15 GP in CSV but real stats have 16–17.
+Check: Are you filtering out bye weeks incorrectly? Or only including games with targets?
+Run: n_distinct(game_id) per player → compare to official GP.
+
+Export / Post-Processing Check
+Where are fantasy points calculated? Is there rounding/truncation?
+Slot Rate %, Deep/Intermediate/Short % — verify binning of air_yards (deep usually >20, intermediate 10-19, short <10).
+Routes run: if derived from play-level, ensure pass_play filter.
+
+
+Expected Outcome
+
+Output a short report:
+"Discrepancy root cause: [e.g., incomplete season load / wrong TD count logic / name mismatch on Nacua]"
+Diff table for top 5 WRs: our CSV vs. nflfastR raw agg vs. official NFL.com
+
+If nflfastR raw already mismatches official → possible nflfastR bug or late-season data lag (but unlikely by Feb 2026 export).
+
+Quick Sanity Tests to Run Now
+Rlibrary(nflfastR)
+pbp_2025 <- load_pbp(2025)
+pbp_2025 %>%
+  filter(receiver_player_name == "P. Nacua", complete_pass == 1) %>%
+  summarise(rec = n(), yds = sum(yards_gained), td = sum(touchdown))
+(Should be ~129 / ~1715 / 10 — if not, loading issue.)
