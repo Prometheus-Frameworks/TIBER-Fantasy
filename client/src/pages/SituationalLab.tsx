@@ -264,13 +264,7 @@ export default function SituationalLab() {
             <>
               <AiPromptHints
                 accentColor="#ca8a04"
-                prompts={[
-                  "Build a clutch performer index using 3rd down conversion rate, 2-minute success rate, and hurry-up production",
-                  "Identify game-script-proof players whose early-down and late-down success rates are both above average",
-                  "Create a closer score for WR/TEs using 2-minute targets and receptions — who gets the ball when it matters?",
-                  "Compare short yardage conversion rate vs overall success rate to find RBs with elite power profiles",
-                  "Spot hidden gems: find players with top-10 3rd down conversion rate + above-average 2-minute success — who thrives in clutch situations but flies under the radar?",
-                ]}
+                module="sit_situational"
               />
               <button
                 onClick={handleExport}

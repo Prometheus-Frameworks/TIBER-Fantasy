@@ -220,13 +220,7 @@ export default function RushingLab() {
             <>
               <AiPromptHints
                 accentColor="#16a34a"
-                prompts={[
-                  "Build a rushing efficiency model using YPC, rush EPA, and stuff rate — identify which backs create yards after contact",
-                  "Analyze gap distribution (left/middle/right) vs success rate to find scheme-dependent vs versatile rushers",
-                  "Create a workload sustainability score using rush attempts, snap count, and receiving involvement",
-                  "Flag RBs whose inside success rate diverges from outside — which runners need specific game scripts to produce?",
-                  "Spot hidden gems: filter for RBs with <150 carries but top-15 rush EPA + above-average first down rate — breakout candidates hiding in committees",
-                ]}
+                module="rb_rushing"
               />
               <button
                 onClick={handleExport}

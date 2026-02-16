@@ -215,13 +215,7 @@ export default function RedZoneLab() {
             <>
               <AiPromptHints
                 accentColor="#dc2626"
-                prompts={[
-                  "Build a TD equity model using RZ snap rate, RZ target share, and RZ success rate — who owns the scoring opportunities?",
-                  "Identify TD regression candidates by comparing RZ opportunities vs actual TDs scored against league averages",
-                  "Cross-reference RZ rush attempts with RZ receiving TDs to find true goal-line vultures vs pass-catching threats",
-                  "Create a scoring upside tier list by weighting RZ snap rate and TD conversion efficiency",
-                  "Spot hidden gems: filter for players with top-10 RZ snap rate but below-average TDs — who's due for positive TD regression?",
-                ]}
+                module="rz_redzone"
               />
               <button
                 onClick={handleExport}

@@ -212,14 +212,7 @@ export default function QBLab() {
             <>
               <AiPromptHints
                 accentColor="#9333ea"
-                prompts={[
-                  "Build a QB process score using CPOE, EPA/play, and success rate — separate true talent from box score production",
-                  "Correlate shotgun rate and no-huddle rate with efficiency to find QBs whose play style unlocks fantasy upside",
-                  "Create a pressure-adjusted model using sack rate, QB hit rate, and scramble production to identify mobile value",
-                  "Rank QBs by deep pass rate vs aDOT to find aggressive downfield passers vs checkdown-heavy game managers",
-                  "Identify QB-WR stack opportunities by cross-referencing this data with Receiving Lab exports",
-                  "Spot hidden gems: find QBs outside the top 10 in fantasy points but with top-8 CPOE + above-average scramble yards — which streamers have elite process?",
-                ]}
+                module="qb_lab"
               />
               <button
                 onClick={handleExport}

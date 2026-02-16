@@ -247,13 +247,7 @@ export default function ReceivingLab() {
             <>
               <AiPromptHints
                 accentColor="#7c3aed"
-                prompts={[
-                  "Build a target quality model using aDOT, EPA/target, and YPRR — rank the top 10 most efficient receivers",
-                  "Cluster these WRs by route profile (deep/intermediate/short splits) and identify which archetype has the highest ceiling",
-                  "Create a breakout candidate score using WOPR, YAC over expected, and catch rate vs league average",
-                  "Compare RACR vs YPRR to find receivers who are volume-dependent vs truly efficient",
-                  "Spot hidden gems: filter for low-volume WRs (<80 targets) with top-20 EPA/target + positive YAC over Expected — who's elite but overlooked?",
-                ]}
+                module="wr_receiving"
               />
               <button
                 onClick={handleExport}
