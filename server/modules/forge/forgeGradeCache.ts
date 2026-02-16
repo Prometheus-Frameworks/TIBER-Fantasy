@@ -38,11 +38,16 @@ export async function computeAndCacheGrades(
   const tableName = `${position.toLowerCase()}_role_bank`;
 
   const playerRows = await db.execute(sql`
-    SELECT DISTINCT player_id
-    FROM ${sql.identifier(tableName)}
-    WHERE season = ${season}
-      AND player_id IS NOT NULL
-    ORDER BY player_id
+    SELECT DISTINCT rb.player_id
+    FROM ${sql.identifier(tableName)} rb
+    INNER JOIN (
+      SELECT DISTINCT player_id 
+      FROM datadive_snapshot_player_week 
+      WHERE season = ${season} AND position = ${position}
+    ) dd ON rb.player_id = dd.player_id
+    WHERE rb.season = ${season}
+      AND rb.player_id IS NOT NULL
+    ORDER BY rb.player_id
     LIMIT ${limit}
   `);
 
@@ -82,7 +87,7 @@ export async function computeAndCacheGrades(
           season,
           asOfWeek,
           alpha: gradingResult.alpha,
-          rawAlpha: gradingResult.debug?.baseAlpha,
+          rawAlpha: gradingResult.debug?.rawAlpha ?? gradingResult.debug?.baseAlpha,
           volumeScore: gradingResult.pillars.volume,
           efficiencyScore: gradingResult.pillars.efficiency,
           teamContextScore: gradingResult.pillars.teamContext,
@@ -109,7 +114,7 @@ export async function computeAndCacheGrades(
             position,
             nflTeam: engineOutput.nflTeam,
             alpha: gradingResult.alpha,
-            rawAlpha: gradingResult.debug?.baseAlpha,
+            rawAlpha: gradingResult.debug?.rawAlpha ?? gradingResult.debug?.baseAlpha,
             volumeScore: gradingResult.pillars.volume,
             efficiencyScore: gradingResult.pillars.efficiency,
             teamContextScore: gradingResult.pillars.teamContext,

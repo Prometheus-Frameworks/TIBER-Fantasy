@@ -10,6 +10,7 @@
 
 import { ForgeEngineOutput, ForgePillarScores, Position, QbContextData } from './forgeEngine';
 import { applyFootballLens, FootballLensIssue } from './forgeFootballLens';
+import { ALPHA_CALIBRATION, CalibrationParams } from './types';
 
 export type ViewMode = 'redraft' | 'dynasty' | 'bestball';
 
@@ -28,6 +29,7 @@ export type ForgeGradeResult = {
   issues?: FootballLensIssue[];
   debug?: {
     baseAlpha: number;
+    rawAlpha: number;
     recursionAdjustment: number;
     footballLensAdjusted: boolean;
   };
@@ -104,6 +106,18 @@ export function getPositionForgeWeights(
       // Redraft uses base weights directly
       return POSITION_WEIGHTS[position];
   }
+}
+
+function calibrateAlpha(rawAlpha: number, position: Position): number {
+  const cal = ALPHA_CALIBRATION[position] as CalibrationParams | undefined;
+  if (!cal) return rawAlpha;
+
+  const { p10, p90, outMin, outMax } = cal;
+  const range = p90 - p10;
+  if (range <= 0) return rawAlpha;
+
+  const calibrated = ((rawAlpha - p10) / range) * (outMax - outMin) + outMin;
+  return Math.max(outMin, Math.min(outMax, calibrated));
 }
 
 function computeBaseAlpha(
@@ -219,18 +233,21 @@ export function gradeForge(
     alphaMomentum: engineOutput.alphaMomentum,
   });
 
-  const { tier, tierPosition } = mapAlphaToTier(alphaWithRecursion, engineOutput.position);
+  const calibratedAlpha = calibrateAlpha(alphaWithRecursion, engineOutput.position);
 
-  console.log(`[ForgeGrading] ${engineOutput.playerName}: mode=${mode} base=${baseAlpha.toFixed(1)} → final=${alphaWithRecursion.toFixed(1)} (${tier})${issues.length ? ` [${issues.length} issues]` : ''}`);
+  const { tier, tierPosition } = mapAlphaToTier(calibratedAlpha, engineOutput.position);
+
+  console.log(`[ForgeGrading] ${engineOutput.playerName}: mode=${mode} base=${baseAlpha.toFixed(1)} raw=${alphaWithRecursion.toFixed(1)} → calibrated=${calibratedAlpha.toFixed(1)} (${tier})${issues.length ? ` [${issues.length} issues]` : ''}`);
 
   return {
-    alpha: Math.round(alphaWithRecursion * 10) / 10,
+    alpha: Math.round(calibratedAlpha * 10) / 10,
     tier,
     tierPosition,
     pillars,
     issues: issues.length > 0 ? issues : undefined,
     debug: {
       baseAlpha: Math.round(baseAlpha * 10) / 10,
+      rawAlpha: Math.round(alphaWithRecursion * 10) / 10,
       recursionAdjustment: Math.round(adjustment * 10) / 10,
       footballLensAdjusted: lensApplied,
     },

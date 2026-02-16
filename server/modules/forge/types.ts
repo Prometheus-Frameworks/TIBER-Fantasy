@@ -527,28 +527,28 @@ export interface CalibrationParams {
  */
 export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
-    p10: 35,      // WR 2025 cumulative p10 rawAlpha
-    p90: 65,      // WR 2025 cumulative max rawAlpha (expanded for multi-week data)
-    outMin: 25,   // Calibrated floor for low-tier WRs
-    outMax: 95,   // Calibrated ceiling for elite WRs (increased for better spread)
+    p10: 28,
+    p90: 78,
+    outMin: 25,
+    outMax: 95,
   },
   RB: {
-    p10: 32,      // RB 2025 cumulative p10 rawAlpha
-    p90: 62,      // RB 2025 cumulative max rawAlpha (expanded for multi-week data)
-    outMin: 25,   // Calibrated floor for depth/committee backs
-    outMax: 95,   // Calibrated ceiling for elite RBs (increased for better spread)
+    p10: 28,
+    p90: 64,
+    outMin: 25,
+    outMax: 95,
   },
   TE: {
-    p10: 33,      // TE 2025 cumulative p10 rawAlpha
-    p90: 58,      // TE 2025 cumulative max rawAlpha (expanded for multi-week data)
-    outMin: 25,   // Calibrated floor for depth TEs
-    outMax: 95,   // Calibrated ceiling for elite TEs (increased for better spread)
+    p10: 31,
+    p90: 68,
+    outMin: 25,
+    outMax: 95,
   },
   QB: {
-    p10: 35,      // QB 2025 cumulative p10 rawAlpha
-    p90: 48,      // QB 2025 cumulative max rawAlpha (observed max ~44, use 48 for ceiling room)
-    outMin: 25,   // Calibrated floor for backup QBs
-    outMax: 95,   // Calibrated ceiling for elite fantasy QBs (increased for better spread)
+    p10: 30,
+    p90: 73,
+    outMin: 25,
+    outMax: 95,
   },
 };
 
