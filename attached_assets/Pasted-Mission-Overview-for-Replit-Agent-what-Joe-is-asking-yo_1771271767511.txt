@@ -1,0 +1,127 @@
+Mission Overview for Replit Agent (what Joe is asking you to do)
+Joe’s problem: the current Tiers page is a PPG leaderboard with fake “tiers,” while FORGE is supposed to be the only truth. The reason FORGE is bypassed is performance: /api/forge/eg/batch timing out around ~38 seconds. Deep Research says the fix is operational, not philosophical: stop trying to compute the universe inside a request, and ship precomputed canonical grades.
+
+Primary goal: Replace the Tiers page data source with precomputed FORGE grades (Alpha, tier, pillars, issues, confidence), while keeping a PPG fallback toggle during migration.
+
+Hard constraints:
+
+No synchronous “grade all players” compute on the request path for the Tiers page. That’s what caused the timeout and will keep causing it.
+
+FORGE outputs must be versioned (grade_version + computed_at) and have confidence, so the UI can avoid “confidently wrong.”
+
+The plan must include instrumentation so Joe can prove where time is going (DB vs compute vs serialization).
+
+Chosen architecture (default unless proven otherwise):
+
+Precompute canonical weekly grades into player_grade_week (partitionable, indexed).
+
+Thin API reads from player_grade_week for the Tiers page.
+
+Hybrid/scenario work is delta-only off baseline vectors, cached; heavy scenario requests go to a queue (BullMQ/Redis) and return async progress.
+
+Deliverables the Replit Agent must produce (not implement):
+
+A Codex-ready runbook with ordered steps and acceptance criteria.
+
+A file map of all relevant backend/frontend files Codex will touch.
+
+A DB schema/migration plan for grades + grade_version metadata + (optional) module registry outputs.
+
+A read-fast endpoint spec for the Tiers page.
+
+An instrumentation plan (OpenTelemetry spans + Postgres slow query plan + Redis hit rate).
+
+Acceptance criteria (definition of “done” for the handoff package):
+
+Codex can implement without guessing where things live.
+
+The plan makes FORGE canonical for tiers without requiring a live batch compute per request.
+
+There’s an explicit fallback behavior when grades are missing or low confidence.
+
+Performance targets are stated (p95) and instrumented.
+
+Now the exact Replit Agent task prompt (this tells it to build the final Codex handoff package)
+Copy/paste this into the Replit Agent:
+
+“Build the FINAL BUILD HANDOFF PACKAGE for Codex to migrate the Tiers page from PPG-bucket tiers to canonical FORGE tiers using the recommended architecture: precomputed weekly grades + thin read API + scenario deltas/caching + async queue escape hatch. You are NOT implementing features. You are packaging everything Codex needs to implement safely.
+
+Output a folder (or a clearly separated set of documents) containing:
+
+A) CODEx_Runbook.md
+
+Start with a one-paragraph summary: ‘Current tiers are PPG buckets; FORGE must become canonical.’
+
+Then a numbered implementation sequence Codex will follow:
+
+Add DB tables/migrations (grades + grade_version + optional module registry)
+
+Add/adjust grade compute job (scheduled/manual trigger)
+
+Create read-fast tiers endpoint that reads grades
+
+Update Tiers UI to read FORGE grades with a toggle fallback to PPG
+
+Add instrumentation + performance validation steps
+
+Include explicit guardrails: what NOT to refactor, what endpoints must remain stable, how to avoid breaking Data Lab.
+
+Include acceptance tests and latency targets (p95) for the Tiers endpoint.
+
+B) FILES_INCLUDED.md
+
+Enumerate every repo file Codex must touch, by exact path, grouped as:
+Backend FORGE engine files (E/F/O/G/R)
+Current /api/forge/eg/batch route
+Current tiers API (if any)
+Current Data Lab aggregation API used by tiers today
+DB schema/migrations folder
+Frontend Tiers page component + query hooks
+
+For each file: one sentence explaining why it’s relevant and what Codex will change.
+
+C) DB_SPEC.md
+
+Proposed schema for:
+player_grade_week (season, week, player_id, position, mode, grade_version, alpha, tier, pillars, issues, confidence, computed_at)
+forge_grade_version (grade_version, description, weights json)
+Optional: forge_module_output_week if useful for lineage
+
+Index recommendations and partitioning notes.
+
+Example queries for “get tiers for WR in season/week/mode/version.”
+
+Notes on UPSERT strategy for recompute runs.
+
+D) API_SPEC.md
+
+Define the new/updated endpoint for the Tiers page, including:
+route, params, response shape, sorting, filtering
+
+Define fallback behavior when grade rows are missing:
+last-known grade with timestamp OR PPG tiers (explicitly labeled) OR ‘data unavailable’ state.
+
+E) INSTRUMENTATION.md
+
+Add stage timing plan:
+db_ms, compute_ms, serialize_ms, total_ms
+
+DB tooling plan:
+pg_stat_statements / slow query logs / EXPLAIN ANALYZE targets
+
+Cache metrics:
+Redis hit rate (keyspace_hits/misses), eviction monitoring
+
+Include exactly where to add timers/spans in the codebase (paths + function names if available).
+
+F) SANITY_SAMPLE.md
+
+Pick ~10 players per position as validation anchors (known elites + borderline guys).
+
+Define sanity expectations (not exact numbers): elites should be Tier 1, etc.
+
+Include ‘WTF detection’ rules (pillars out of range, alpha outside 0–100, missing modules spikes).
+
+Important: Your package must be self-contained so Codex can implement without asking follow-ups. If you can’t find a file, you must say ‘NOT FOUND’ and list the closest candidate paths.
+
+Do NOT implement changes. Only produce the package.
