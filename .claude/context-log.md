@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-02-16 — Replit Agent: Quality Sentinel Dashboard UI
+- **What changed:** Built the Quality Sentinel Dashboard frontend at `/sentinel` with health overview cards, module breakdown, interactive Test Lab (12 pre-built scenarios across forge/personnel/datalab/system modules), issues panel with filtering and muting, and event feed with expandable details. Added sentinel to sidebar under System section with NEW badge. Also completed backend integration: added sentinel schema tables to `shared/schema.ts`, integrated sentinel checks into FORGE score and batch endpoints, mounted sentinel routes.
+- **Files modified:** `client/src/pages/SentinelDashboard.tsx` (new), `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `shared/schema.ts`, `server/modules/forge/routes.ts`
+- **Validation:** All sentinel API endpoints tested via curl - health, issues, events, run/forge, run/datalab, run/system all return correct responses. Rules correctly flag out-of-bounds alpha, NaN values, tier mismatches, empty batches, zero snaps, invalid classifications, missing snapshots, and missing response keys.
+- **Notes:** Test Lab lets you inject manipulated data and see sentinel flags in real time. Uses project conventions: ember accent (#e2640d), JetBrains Mono for data, default query fetcher pattern.
+
 ### 2026-02-16 — Replit Agent: Quality Sentinel Task Spec for Codex
 - **What changed:** Created comprehensive Codex task spec for the Quality Sentinel validation layer. Covers rule engine architecture, 16 initial rules across FORGE/Personnel/DataLab/System modules, sentinel_events DB schema, 5 API endpoints, inline integration pattern, and detailed validation criteria with curl commands.
 - **Files modified:** `.claude/tasks/build-quality-sentinel.md` (new)

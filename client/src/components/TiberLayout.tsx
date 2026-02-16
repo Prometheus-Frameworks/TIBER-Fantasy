@@ -25,6 +25,7 @@ const intelligenceNav: NavItem[] = [
 ];
 
 const systemNav: NavItem[] = [
+  { label: "Quality Sentinel", path: "/sentinel", badge: "NEW" },
   { label: "Metrics Dictionary", path: "/metrics-dictionary" },
   { label: "Architecture", path: "/architecture" },
   { label: "FORGE Hub", path: "/admin/forge-hub" },
