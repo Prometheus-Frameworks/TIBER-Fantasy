@@ -20,6 +20,16 @@ function escapeCell(val: string): string {
   return val;
 }
 
+const MODULE_SAMPLE_PROMPTS: Record<string, string> = {
+  receiving: 'Using this 2025 WR receiving data, rank the top 10 most efficient receivers by a custom score: 0.4*EPA/Target + 0.3*(Catch Rate %/62) + 0.3*YPRR. Then cluster by route profile (deep/intermediate/short %) and highlight which archetype has the highest average ceiling (fantasy points).',
+  rushing: 'Using this 2025 RB rushing data, create a composite efficiency score: 0.4*Rush EPA + 0.3*(1 - Stuff Rate %) + 0.3*Rush 1st Down Rate %. Then compare inside vs outside success rates to classify each back as a power runner, zone runner, or versatile back.',
+  qb: 'Using this 2025 QB data, build a process-over-results score: 0.4*CPOE + 0.3*EPA/Play + 0.3*Success Rate %. Identify which QBs rank top 5 in process but outside top 10 in fantasy points — these are prime buy-low targets in dynasty.',
+  'red-zone': 'Using this 2025 red zone data, calculate a TD Equity score: 0.5*RZ Snap Rate % + 0.3*RZ Target Share % + 0.2*RZ Success Rate %. Flag players in the top 10 by TD Equity but bottom half in actual TDs — these are your positive TD regression candidates.',
+  'situational-down-distance': 'Using this 2025 situational data, create a Clutch Index: 0.4*3rd Down Conv % + 0.3*2-Min Success % + 0.3*Hurry-Up Success %. Identify game-script-proof players whose early-down and late-down success rates are both above the position average.',
+  'situational-two-minute': 'Using this 2025 two-minute drill data, rank players by closer potential: weight 2-Min Targets, 2-Min Receptions, and 2-Min Success Rate to find who dominates in crunch time.',
+  'situational-hurry-up': 'Using this 2025 hurry-up data, identify tempo-proof players by comparing hurry-up success rate to overall success rate — who thrives when the pace accelerates?',
+};
+
 export function buildCsvString(
   rows: Record<string, any>[],
   columns: CsvColumn[],
@@ -33,6 +43,12 @@ export function buildCsvString(
     lines.push(`# Position: ${meta.position} | Season: ${meta.season}${meta.weekRange ? ` | Weeks: ${meta.weekRange}` : ''}`);
     lines.push(`# Players: ${meta.count ?? rows.length} | Exported: ${new Date().toISOString()}`);
     lines.push(`# Percentage columns are expressed as whole numbers (e.g. 45.2 = 45.2%)`);
+    lines.push('#');
+    const samplePrompt = MODULE_SAMPLE_PROMPTS[meta.module];
+    if (samplePrompt) {
+      lines.push(`# Sample AI prompt (copy-paste this along with the data into your AI):`);
+      lines.push(`# "${samplePrompt}"`);
+    }
     lines.push('');
   }
 

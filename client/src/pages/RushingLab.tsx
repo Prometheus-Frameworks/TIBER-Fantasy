@@ -110,12 +110,14 @@ export default function RushingLab() {
     { key: 'position', label: 'Position' },
     { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
     { key: 'totalSnaps', label: 'Snaps', format: 'int' },
+    { key: 'avgSnapShare', label: 'Snap Share %', format: 'pct' },
     { key: 'totalRushAttempts', label: 'Rush Attempts', format: 'int' },
     { key: 'totalRushYards', label: 'Rush Yards', format: 'int' },
     { key: 'totalRushTds', label: 'Rush TDs', format: 'int' },
     { key: 'avgYpc', label: 'YPC', format: 'dec' },
     { key: 'avgRushEpa', label: 'Rush EPA', format: 'dec' },
     { key: 'avgStuffRate', label: 'Stuff Rate %', format: 'pct' },
+    { key: 'totalStuffed', label: 'Stuffed', format: 'int' },
     { key: 'totalRushFirstDowns', label: 'Rush First Downs', format: 'int' },
     { key: 'avgRushFirstDownRate', label: 'Rush 1st Down Rate %', format: 'pct' },
     { key: 'avgInsideRunRate', label: 'Inside Run %', format: 'pct' },
@@ -128,8 +130,13 @@ export default function RushingLab() {
     { key: 'totalTargets', label: 'Targets', format: 'int' },
     { key: 'totalReceptions', label: 'Receptions', format: 'int' },
     { key: 'totalRecYards', label: 'Rec Yards', format: 'int' },
+    { key: 'totalRecTds', label: 'Rec TDs', format: 'int' },
+    { key: 'avgCatchRate', label: 'Catch Rate %', format: 'pct' },
     { key: 'avgYacPerRec', label: 'YAC/Rec', format: 'dec' },
     { key: 'avgSuccessRate', label: 'Success Rate %', format: 'pct' },
+    { key: 'avgEpaPerPlay', label: 'EPA/Play', format: 'dec' },
+    { key: 'totalFptsStd', label: 'Fantasy Points (Std)', format: 'dec', decimals: 1 },
+    { key: 'totalFptsHalf', label: 'Fantasy Points (Half)', format: 'dec', decimals: 1 },
     { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
   ];
 
@@ -218,6 +225,7 @@ export default function RushingLab() {
                   "Analyze gap distribution (left/middle/right) vs success rate to find scheme-dependent vs versatile rushers",
                   "Create a workload sustainability score using rush attempts, snap count, and receiving involvement",
                   "Flag RBs whose inside success rate diverges from outside — which runners need specific game scripts to produce?",
+                  "Spot hidden gems: filter for RBs with <150 carries but top-15 rush EPA + above-average first down rate — breakout candidates hiding in committees",
                 ]}
               />
               <button

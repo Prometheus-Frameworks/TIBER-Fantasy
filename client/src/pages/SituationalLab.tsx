@@ -124,6 +124,7 @@ export default function SituationalLab() {
     { key: 'teamId', label: 'Team' },
     { key: 'position', label: 'Position' },
     { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalSnaps', label: 'Total Snaps', format: 'int' },
     { key: 'totalThirdDownSnaps', label: '3rd Down Snaps', format: 'int' },
     { key: 'totalThirdDownConversions', label: '3rd Down Conversions', format: 'int' },
     { key: 'avgThirdDownConversionRate', label: '3rd Down Conv %', format: 'pct' },
@@ -138,11 +139,14 @@ export default function SituationalLab() {
     { key: 'totalTwoMinuteSnaps', label: '2-Min Snaps', format: 'int' },
     { key: 'totalTwoMinuteSuccessful', label: '2-Min Successful', format: 'int' },
     { key: 'avgTwoMinuteSuccessRate', label: '2-Min Success %', format: 'pct' },
+    { key: 'totalTwoMinuteTargets', label: '2-Min Targets', format: 'int' },
+    { key: 'totalTwoMinuteReceptions', label: '2-Min Receptions', format: 'int' },
     { key: 'totalHurryUpSnaps', label: 'Hurry-Up Snaps', format: 'int' },
     { key: 'totalHurryUpSuccessful', label: 'Hurry-Up Successful', format: 'int' },
     { key: 'avgHurryUpSuccessRate', label: 'Hurry-Up Success %', format: 'pct' },
-    { key: 'totalTwoMinuteTargets', label: '2-Min Targets', format: 'int' },
-    { key: 'totalTwoMinuteReceptions', label: '2-Min Receptions', format: 'int' },
+    { key: 'avgSuccessRate', label: 'Overall Success %', format: 'pct' },
+    { key: 'totalFptsStd', label: 'Fantasy Points (Std)', format: 'dec', decimals: 1 },
+    { key: 'totalFptsHalf', label: 'Fantasy Points (Half)', format: 'dec', decimals: 1 },
     { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
   ];
 
@@ -265,6 +269,7 @@ export default function SituationalLab() {
                   "Identify game-script-proof players whose early-down and late-down success rates are both above average",
                   "Create a closer score for WR/TEs using 2-minute targets and receptions — who gets the ball when it matters?",
                   "Compare short yardage conversion rate vs overall success rate to find RBs with elite power profiles",
+                  "Spot hidden gems: find players with top-10 3rd down conversion rate + above-average 2-minute success — who thrives in clutch situations but flies under the radar?",
                 ]}
               />
               <button

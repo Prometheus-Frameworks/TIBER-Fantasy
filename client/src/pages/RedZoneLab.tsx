@@ -104,6 +104,7 @@ export default function RedZoneLab() {
     { key: 'teamId', label: 'Team' },
     { key: 'position', label: 'Position' },
     { key: 'gamesPlayed', label: 'Games Played', format: 'int' },
+    { key: 'totalSnaps', label: 'Total Snaps', format: 'int' },
     { key: 'totalRzSnaps', label: 'RZ Snaps', format: 'int' },
     { key: 'avgRzSnapRate', label: 'RZ Snap Rate %', format: 'pct' },
     { key: 'avgRzSuccessRate', label: 'RZ Success Rate %', format: 'pct' },
@@ -119,6 +120,10 @@ export default function RedZoneLab() {
     { key: 'totalRzPassTds', label: 'RZ Pass TDs', format: 'int' },
     { key: 'avgRzTdRate', label: 'RZ TD Rate %', format: 'pct' },
     { key: 'totalRzInterceptions', label: 'RZ Interceptions', format: 'int' },
+    { key: 'totalRecTds', label: 'Total Rec TDs', format: 'int' },
+    { key: 'totalRushTds', label: 'Total Rush TDs', format: 'int' },
+    { key: 'totalFptsStd', label: 'Fantasy Points (Std)', format: 'dec', decimals: 1 },
+    { key: 'totalFptsHalf', label: 'Fantasy Points (Half)', format: 'dec', decimals: 1 },
     { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
   ];
 
@@ -215,6 +220,7 @@ export default function RedZoneLab() {
                   "Identify TD regression candidates by comparing RZ opportunities vs actual TDs scored against league averages",
                   "Cross-reference RZ rush attempts with RZ receiving TDs to find true goal-line vultures vs pass-catching threats",
                   "Create a scoring upside tier list by weighting RZ snap rate and TD conversion efficiency",
+                  "Spot hidden gems: filter for players with top-10 RZ snap rate but below-average TDs — who's due for positive TD regression?",
                 ]}
               />
               <button

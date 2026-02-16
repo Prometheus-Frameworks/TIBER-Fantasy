@@ -134,6 +134,9 @@ export default function QBLab() {
     { key: 'totalRushAttempts', label: 'Rush Attempts', format: 'int' },
     { key: 'totalRushYards', label: 'Rush Yards', format: 'int' },
     { key: 'totalRushTds', label: 'Rush TDs', format: 'int' },
+    { key: 'avgRushEpa', label: 'Rush EPA', format: 'dec' },
+    { key: 'totalFptsStd', label: 'Fantasy Points (Std)', format: 'dec', decimals: 1 },
+    { key: 'totalFptsHalf', label: 'Fantasy Points (Half)', format: 'dec', decimals: 1 },
     { key: 'totalFptsPpr', label: 'Fantasy Points (PPR)', format: 'dec', decimals: 1 },
   ];
 
@@ -215,6 +218,7 @@ export default function QBLab() {
                   "Create a pressure-adjusted model using sack rate, QB hit rate, and scramble production to identify mobile value",
                   "Rank QBs by deep pass rate vs aDOT to find aggressive downfield passers vs checkdown-heavy game managers",
                   "Identify QB-WR stack opportunities by cross-referencing this data with Receiving Lab exports",
+                  "Spot hidden gems: find QBs outside the top 10 in fantasy points but with top-8 CPOE + above-average scramble yards — which streamers have elite process?",
                 ]}
               />
               <button
