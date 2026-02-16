@@ -7,11 +7,11 @@ export default function Footer() {
         <div className="flex items-center gap-6">
           <div className="text-sm text-body">© {new Date().getFullYear()} On The Clock</div>
           <div className="text-xs opacity-70 space-x-4">
-            <a href="/signal-flare" className="underline hover:opacity-100 transition-opacity">
-              Signal Flare
+            <a href="/architecture" className="underline hover:opacity-100 transition-opacity">
+              Architecture
             </a>
-            <a href="/promethean-vision" className="underline hover:opacity-100 transition-opacity">
-              Promethean Vision
+            <a href="/metrics-dictionary" className="underline hover:opacity-100 transition-opacity">
+              Metrics
             </a>
           </div>
         </div>

@@ -1,22 +1,61 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Search } from "lucide-react";
 
-interface ForgePlayer {
-  player_id: string;
-  player_name: string;
+interface LabPlayer {
+  playerName: string;
+  teamId: string;
   position: string;
-  team: string;
-  alpha: number;
-  tier: string;
-  pillars?: {
-    volume?: number;
-    efficiency?: number;
-    stability?: number;
-    teamContext?: number;
+  gamesPlayed: number;
+  totalFptsPpr: number;
+  totalFptsHalf: number;
+  totalFptsStd: number;
+  avgEpaPerTarget?: number;
+  avgEpaPerCarry?: number;
+  avgEpaPerDropback?: number;
+  yprr?: number;
+  avgCatchRate?: number;
+  avgSnapShare: number;
+  avgTargetShare?: number;
+  avgAdot?: number;
+  avgWopr?: number;
+  totalTargets?: number;
+  totalReceptions?: number;
+  totalRecYards?: number;
+  totalRecTds?: number;
+  totalRushAttempts?: number;
+  totalRushYards?: number;
+  totalRushTds?: number;
+  totalDropbacks?: number;
+  totalPassYards?: number;
+  totalPassTds?: number;
+  avgEpaPerPlay?: number;
+}
+
+function getPpgTier(ppg: number, pos: string): { label: string; cls: string } {
+  const thresholds: Record<string, number[]> = {
+    WR: [18, 14, 10, 6],
+    RB: [17, 13, 9, 5],
+    QB: [22, 18, 14, 10],
+    TE: [14, 10, 7, 4],
   };
-  issues?: Array<{ type: string; severity: string; message: string }>;
+  const t = thresholds[pos] || thresholds.WR;
+  if (ppg >= t[0]) return { label: "T1 Elite", cls: "tier-1" };
+  if (ppg >= t[1]) return { label: "T2 Core", cls: "tier-2" };
+  if (ppg >= t[2]) return { label: "T3 Flex", cls: "tier-3" };
+  if (ppg >= t[3]) return { label: "T4 Hold", cls: "tier-4" };
+  return { label: "T5 Depth", cls: "tier-5" };
+}
+
+function getTrend(ppg: number, pos: string): "rising" | "steady" | "falling" {
+  const thresholds: Record<string, number[]> = {
+    WR: [16, 10], RB: [15, 9], QB: [20, 14], TE: [12, 7],
+  };
+  const t = thresholds[pos] || thresholds.WR;
+  if (ppg >= t[0]) return "rising";
+  if (ppg >= t[1]) return "steady";
+  return "falling";
 }
 
 function TrendBar({ trend }: { trend: "rising" | "steady" | "falling" }) {
@@ -47,36 +86,28 @@ function TrendBar({ trend }: { trend: "rising" | "steady" | "falling" }) {
   );
 }
 
-function getTierClass(tier: string): string {
-  if (tier.includes("1") || tier.toLowerCase().includes("elite")) return "tier-1";
-  if (tier.includes("2") || tier.toLowerCase().includes("core")) return "tier-2";
-  if (tier.includes("3")) return "tier-3";
-  if (tier.includes("4")) return "tier-4";
-  return "tier-5";
+function getEfficiencyLabel(pos: string): string {
+  if (pos === "WR" || pos === "TE") return "EPA/Tgt";
+  if (pos === "RB") return "EPA/Play";
+  return "EPA/Drop";
 }
 
-function getTierLabel(tier: string): string {
-  if (tier.includes("1")) return "T1 Elite";
-  if (tier.includes("2")) return "T2 Core";
-  if (tier.includes("3")) return "T3 Flex";
-  if (tier.includes("4")) return "T4 Hold";
-  if (tier.includes("5")) return "T5 Cut";
-  return tier;
+function getEfficiency(p: LabPlayer): number | null {
+  if (p.position === "WR" || p.position === "TE") return p.avgEpaPerTarget ?? null;
+  if (p.position === "RB") return p.avgEpaPerPlay ?? null;
+  return p.avgEpaPerDropback ?? p.avgEpaPerPlay ?? null;
 }
 
-function getTrend(alpha: number): "rising" | "steady" | "falling" {
-  if (alpha >= 75) return "rising";
-  if (alpha >= 45) return "steady";
-  return "falling";
+function getVolumeLabel(pos: string): string {
+  if (pos === "WR" || pos === "TE") return "Targets";
+  if (pos === "RB") return "Carries";
+  return "Att";
 }
 
-function getFlag(issues?: ForgePlayer["issues"]): { label: string; type: string } | null {
-  if (!issues || issues.length === 0) return null;
-  const hasBlock = issues.some(i => i.severity === "block");
-  const hasWarn = issues.some(i => i.severity === "warn");
-  if (hasBlock) return { label: "Regression", type: "regression" };
-  if (hasWarn) return { label: "Watch", type: "breakout" };
-  return { label: "Breakout", type: "breakout" };
+function getVolume(p: LabPlayer): number | null {
+  if (p.position === "WR" || p.position === "TE") return p.totalTargets ?? null;
+  if (p.position === "RB") return p.totalRushAttempts ?? null;
+  return p.totalDropbacks ?? null;
 }
 
 export default function Dashboard() {
@@ -84,24 +115,42 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
 
-  const { data: forgeData, isLoading } = useQuery<{ players: ForgePlayer[] }>({
-    queryKey: [`/api/forge/eg/batch?position=${activeFilter}&mode=dynasty`],
+  const { data: labData, isLoading } = useQuery<{ data: LabPlayer[]; count: number }>({
+    queryKey: ["/api/data-lab/lab-agg", activeFilter],
+    queryFn: () =>
+      fetch(`/api/data-lab/lab-agg?season=2025&position=${activeFilter}&limit=100`)
+        .then(r => r.json()),
   });
 
-  const { data: healthData } = useQuery<{ pipeline?: { lastSync?: string }; playerCount?: number }>({
-    queryKey: ["/api/datalab/health"],
+  const { data: healthData } = useQuery<{
+    status: string;
+    latestSnapshot?: { season: number; week: number; rowCount: number };
+    tableCounts?: { snapshotPlayerSeason: number; snapshotPlayerWeek: number };
+  }>({
+    queryKey: ["/api/data-lab/health"],
   });
 
-  const players = forgeData?.players || [];
+  const players = useMemo(() => {
+    const raw = labData?.data || [];
+    return raw
+      .filter(p => p.gamesPlayed >= 4)
+      .sort((a, b) => b.totalFptsPpr - a.totalFptsPpr);
+  }, [labData]);
+
   const filtered = searchQuery
-    ? players.filter(p => p.player_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? players.filter(p => p.playerName?.toLowerCase().includes(searchQuery.toLowerCase()))
     : players;
   const topPlayers = filtered.slice(0, 20);
 
-  const t1Count = players.filter(p => p.tier?.includes("1")).length;
-  const avgAlpha = players.length > 0
-    ? Math.round(players.reduce((s, p) => s + (p.alpha || 0), 0) / players.length)
+  const ppgValues = players.map(p => p.totalFptsPpr / Math.max(p.gamesPlayed, 1));
+  const avgPpg = ppgValues.length > 0
+    ? Math.round(ppgValues.reduce((s, v) => s + v, 0) / ppgValues.length * 10) / 10
     : 0;
+  const t1Count = players.filter(p => {
+    const ppg = p.totalFptsPpr / Math.max(p.gamesPlayed, 1);
+    return getPpgTier(ppg, activeFilter).cls === "tier-1";
+  }).length;
+  const topScorer = players[0];
 
   return (
     <>
@@ -148,30 +197,32 @@ export default function Dashboard() {
             <div className="status-value">
               {players.length || "—"}
             </div>
-            <div className="status-sub">{activeFilter} position pool</div>
+            <div className="status-sub">{activeFilter} pool · 4+ games played</div>
           </div>
           <div className="status-card">
             <div className="status-label">T1 Elite</div>
             <div className="status-value">
               {t1Count}
-              <span className="status-delta delta-up">Top tier</span>
+              {t1Count > 0 && <span className="status-delta delta-up">Top tier</span>}
             </div>
-            <div className="status-sub">FORGE-graded elite players</div>
+            <div className="status-sub">PPG-tiered elite players</div>
           </div>
           <div className="status-card">
-            <div className="status-label">Avg Alpha</div>
+            <div className="status-label">Avg PPG</div>
             <div className="status-value">
-              {avgAlpha || "—"}
+              {avgPpg || "—"}
             </div>
-            <div className="status-sub">Position average score</div>
+            <div className="status-sub">PPR points per game</div>
           </div>
           <div className="status-card">
             <div className="status-label">Data Pipeline</div>
             <div className="status-value" style={{ fontSize: 16, fontFamily: "var(--font-mono)" }}>
-              {healthData?.pipeline ? "All Systems" : "Active"}
+              {healthData?.status === "healthy" ? "Healthy" : "Active"}
             </div>
             <div className="status-sub">
-              {healthData?.playerCount ? `${healthData.playerCount.toLocaleString()} records` : "Processing"}
+              {healthData?.tableCounts
+                ? `${healthData.tableCounts.snapshotPlayerSeason.toLocaleString()} season records`
+                : "Processing"}
             </div>
           </div>
         </div>
@@ -195,9 +246,10 @@ export default function Dashboard() {
                 <th style={{ width: 36 }}>#</th>
                 <th>Player</th>
                 <th>Tier</th>
-                <th className="ar">Alpha</th>
-                <th className="ar">Volume</th>
-                <th className="ar">Efficiency</th>
+                <th className="ar">FPTS</th>
+                <th className="ar">PPG</th>
+                <th className="ar">{getVolumeLabel(activeFilter)}</th>
+                <th className="ar">{getEfficiencyLabel(activeFilter)}</th>
                 <th className="ar">Trend</th>
               </tr>
             </thead>
@@ -213,48 +265,44 @@ export default function Dashboard() {
                     <td className="ar"><div style={{ height: 14, width: 30, background: "var(--bg-tertiary)", borderRadius: 3, marginLeft: "auto" }} /></td>
                     <td className="ar"><div style={{ height: 14, width: 30, background: "var(--bg-tertiary)", borderRadius: 3, marginLeft: "auto" }} /></td>
                     <td className="ar"><div style={{ height: 14, width: 30, background: "var(--bg-tertiary)", borderRadius: 3, marginLeft: "auto" }} /></td>
+                    <td className="ar"><div style={{ height: 14, width: 30, background: "var(--bg-tertiary)", borderRadius: 3, marginLeft: "auto" }} /></td>
                     <td className="ar"><div style={{ height: 18, width: 24, background: "var(--bg-tertiary)", borderRadius: 3, marginLeft: "auto" }} /></td>
                   </tr>
                 ))
               ) : topPlayers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--text-tertiary)" }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 40, color: "var(--text-tertiary)" }}>
                     No players found
                   </td>
                 </tr>
               ) : (
                 topPlayers.map((p, i) => {
-                  const flag = getFlag(p.issues);
+                  const ppg = p.totalFptsPpr / Math.max(p.gamesPlayed, 1);
+                  const tier = getPpgTier(ppg, activeFilter);
+                  const eff = getEfficiency(p);
+                  const vol = getVolume(p);
                   return (
-                    <tr
-                      key={p.player_id}
-                      className={flag ? "flagged" : ""}
-                      onClick={() => navigate(`/player/${p.player_id}`)}
-                    >
+                    <tr key={p.playerName + p.teamId}>
                       <td className="mono dim">{i + 1}</td>
                       <td>
                         <div className="player-cell">
                           <div className="player-name-cell">
-                            {p.player_name}
-                            {flag && (
-                              <span className={`flag-label ${flag.type === "regression" ? "regression" : ""}`}>
-                                {flag.label}
-                              </span>
-                            )}
+                            {p.playerName}
                           </div>
-                          <div className="player-meta">{p.position} · {p.team || "—"}</div>
+                          <div className="player-meta">{p.position} · {p.teamId || "—"} · {p.gamesPlayed}G</div>
                         </div>
                       </td>
                       <td>
-                        <span className={`tier-badge ${getTierClass(p.tier)}`}>
-                          {getTierLabel(p.tier)}
+                        <span className={`tier-badge ${tier.cls}`}>
+                          {tier.label}
                         </span>
                       </td>
-                      <td className="ar mono">{p.alpha?.toFixed(1) ?? "—"}</td>
-                      <td className="ar mono dim">{p.pillars?.volume?.toFixed(1) ?? "—"}</td>
-                      <td className="ar mono dim">{p.pillars?.efficiency?.toFixed(1) ?? "—"}</td>
+                      <td className="ar mono">{Math.round(p.totalFptsPpr)}</td>
+                      <td className="ar mono" style={{ color: "var(--ember)" }}>{ppg.toFixed(1)}</td>
+                      <td className="ar mono dim">{vol ?? "—"}</td>
+                      <td className="ar mono dim">{eff != null ? eff.toFixed(2) : "—"}</td>
                       <td className="ar">
-                        <TrendBar trend={getTrend(p.alpha)} />
+                        <TrendBar trend={getTrend(ppg, activeFilter)} />
                       </td>
                     </tr>
                   );
@@ -274,32 +322,32 @@ export default function Dashboard() {
             </div>
             <div className="insight-card accent-left">
               <div className="insight-header">
-                <span className="insight-tag breakout">FORGE Powered</span>
+                <span className="insight-tag breakout">Data Lab</span>
                 <span className="insight-time">Live</span>
               </div>
               <div className="insight-title">
                 {t1Count > 0
-                  ? `${t1Count} elite ${activeFilter}s identified by FORGE engine`
-                  : `FORGE engine evaluating ${activeFilter} position group`}
+                  ? `${t1Count} elite ${activeFilter}s identified across ${players.length} qualifying players`
+                  : `Evaluating ${players.length} ${activeFilter}s with 4+ games played`}
               </div>
               <div className="insight-body">
-                The FORGE grading engine analyzes volume, efficiency, stability, and team context
-                to produce Alpha scores. Players are ranked across tiers using position-specific
-                thresholds calibrated for cumulative season data.
+                {topScorer
+                  ? `${topScorer.playerName} leads all ${activeFilter}s with ${Math.round(topScorer.totalFptsPpr)} PPR points (${(topScorer.totalFptsPpr / Math.max(topScorer.gamesPlayed, 1)).toFixed(1)} PPG). The position group averages ${avgPpg} PPG across ${players.length} qualifiers.`
+                  : `The Data Lab aggregation pipeline processes snap-level metrics across all ${activeFilter} players to surface fantasy-relevant efficiency and volume signals.`}
               </div>
-              <div className="insight-source">Source: FORGE E+G v2 pipeline</div>
+              <div className="insight-source">Source: Data Lab Aggregation Pipeline</div>
               <div className="insight-metrics">
                 <div>
                   <div className="insight-metric-label">Pool Size</div>
                   <div className="insight-metric-value">{players.length}</div>
                 </div>
                 <div>
-                  <div className="insight-metric-label">Avg Alpha</div>
-                  <div className="insight-metric-value" style={{ color: "var(--ember)" }}>{avgAlpha}</div>
+                  <div className="insight-metric-label">Avg PPG</div>
+                  <div className="insight-metric-value" style={{ color: "var(--ember)" }}>{avgPpg}</div>
                 </div>
                 <div>
-                  <div className="insight-metric-label">Mode</div>
-                  <div className="insight-metric-value" style={{ fontSize: 12 }}>Dynasty</div>
+                  <div className="insight-metric-label">Scoring</div>
+                  <div className="insight-metric-value" style={{ fontSize: 12 }}>PPR</div>
                 </div>
               </div>
             </div>
@@ -372,7 +420,11 @@ export default function Dashboard() {
           <div className="service-row">
             <span className="service-dot on" />
             <span className="service-name">Data Lab (DataDive)</span>
-            <span className="service-status">Active · Snapshots available</span>
+            <span className="service-status">
+              {healthData?.latestSnapshot
+                ? `Active · Week ${healthData.latestSnapshot.week} loaded`
+                : "Active · Snapshots available"}
+            </span>
           </div>
           <div className="service-row">
             <span className="service-dot pending" />

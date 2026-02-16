@@ -79,11 +79,6 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
           <NavSection label="System" items={systemNav} />
         </div>
 
-        <div className="sidebar-charter">
-          <div className="charter-label">Promethean Charter</div>
-          <div className="charter-text">Serve, not take. Light carried forward.</div>
-        </div>
-
         <div className="sidebar-footer">
           <div className="user-pill">
             <div>
