@@ -63,7 +63,7 @@ function PersonnelBar({ breakdown }: { breakdown: Record<string, PersonnelBreakd
       {entries.map(([key, val]) => (
         <div
           key={key}
-          title={`${PERSONNEL_LABELS[key] || key}: ${(val.pct * 100).toFixed(1)}% (${val.count} plays)`}
+          title={`${PERSONNEL_LABELS[key] || key}: ${(val.pct * 100).toFixed(1)}% (${val.count} snaps)`}
           style={{
             width: `${val.pct * 100}%`,
             backgroundColor: PERSONNEL_COLORS[key] || "#9ca3af",
@@ -113,7 +113,7 @@ function PlayerCard({ profile, isExpanded, onToggle }: { profile: PersonnelProfi
         </div>
         <div className="pu-card-stats">
           <GradeBadge grade={profile.everyDownGrade} />
-          <span className="pu-card-plays">{profile.totalPlaysCounted} plays</span>
+          <span className="pu-card-plays">{profile.totalPlaysCounted} snaps</span>
           <ChevronDown size={14} style={{ transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.2s", opacity: 0.4 }} />
         </div>
       </div>
@@ -145,7 +145,7 @@ function PlayerCard({ profile, isExpanded, onToggle }: { profile: PersonnelProfi
                   </div>
                   <div className="pu-detail-values">
                     <span className="pu-detail-pct">{(val.pct * 100).toFixed(1)}%</span>
-                    <span className="pu-detail-count">{val.count} plays</span>
+                    <span className="pu-detail-count">{val.count} snaps</span>
                   </div>
                   <div className="pu-detail-bar-bg">
                     <div
@@ -160,7 +160,7 @@ function PlayerCard({ profile, isExpanded, onToggle }: { profile: PersonnelProfi
             <div className="pu-detail-insight">
               <TrendingUp size={14} />
               <span>
-                Primary grouping: <strong>{PERSONNEL_LABELS[topGrouping[0]] || topGrouping[0]}</strong> at {(topGrouping[1].pct * 100).toFixed(0)}% of usage plays
+                Primary grouping: <strong>{PERSONNEL_LABELS[topGrouping[0]] || topGrouping[0]}</strong> at {(topGrouping[1].pct * 100).toFixed(0)}% of snaps
               </span>
             </div>
           )}
@@ -217,7 +217,7 @@ export default function PersonnelUsage() {
         </div>
         <div className="pu-header-badge">
           <Users size={16} />
-          <span>2025 Season · Usage-based</span>
+          <span>2025 Season · Participation-based</span>
         </div>
       </div>
 
@@ -252,7 +252,7 @@ export default function PersonnelUsage() {
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="pu-sort-select"
           >
-            <option value="plays">Most Plays</option>
+            <option value="plays">Most Snaps</option>
             <option value="11pct">Highest 11%</option>
             <option value="12pct">Highest 12%</option>
           </select>

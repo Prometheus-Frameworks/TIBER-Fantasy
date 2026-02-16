@@ -2419,6 +2419,22 @@ export const bronzeNflfastrSnapCounts = pgTable("bronze_nflfastr_snap_counts", {
   pfrPlayerIdx: index("bronze_snap_counts_pfr_player_idx").on(table.pfrPlayerId),
 }));
 
+// Bronze Layer: PBP Participation (nflverse per-play player presence)
+// Normalized from pbp_participation parquet: one row per play per offensive player on the field
+export const bronzePbpParticipation = pgTable("bronze_pbp_participation", {
+  id: serial("id").primaryKey(),
+  gameId: varchar("game_id", { length: 50 }).notNull(),
+  playId: varchar("play_id", { length: 100 }).notNull(),
+  season: integer("season").notNull(),
+  gsisId: varchar("gsis_id", { length: 20 }).notNull(),
+  importedAt: timestamp("imported_at").defaultNow(),
+}, (table) => ({
+  gamePlayGsisUniqueIdx: unique("bronze_participation_game_play_gsis_unique").on(table.gameId, table.playId, table.gsisId),
+  seasonIdx: index("bronze_participation_season_idx").on(table.season),
+  gsisIdx: index("bronze_participation_gsis_idx").on(table.gsisId),
+  gamePlayIdx: index("bronze_participation_game_play_idx").on(table.gameId, table.playId),
+}));
+
 // Silver Layer: Aggregated Weekly Player Stats
 export const silverPlayerWeeklyStats = pgTable("silver_player_weekly_stats", {
   id: serial("id").primaryKey(),

@@ -119,36 +119,38 @@ export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promis
     : '';
 
   const playerIdFilter = query.playerIds?.length
-    ? `AND u.player_id IN (${query.playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')})`
+    ? `AND bp.gsis_id IN (${query.playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')})`
     : '';
 
   const aggQuery = `
-    WITH unpivoted AS (
-      SELECT 
-        unnest(ARRAY[passer_player_id, rusher_player_id, receiver_player_id]) AS player_id,
-        posteam,
+    WITH play_buckets AS (
+      SELECT
+        bp.gsis_id AS player_id,
+        p.posteam,
         ${personnelBucketCase} AS bucket
-      FROM bronze_nflfastr_plays p
-      WHERE ${whereClause}
+      FROM bronze_pbp_participation bp
+      JOIN bronze_nflfastr_plays p
+        ON p.game_id = bp.game_id AND p.play_id = bp.play_id
+      WHERE bp.season = ${Number(query.season)}
+        AND ${whereClause}
+        ${playerIdFilter}
     ),
     agg AS (
-      SELECT 
-        u.player_id,
-        MAX(u.posteam) AS team,
+      SELECT
+        pb.player_id,
+        MAX(pb.posteam) AS team,
         COUNT(*) AS total_plays,
-        COUNT(*) FILTER (WHERE u.bucket = '10') AS p10,
-        COUNT(*) FILTER (WHERE u.bucket = '11') AS p11,
-        COUNT(*) FILTER (WHERE u.bucket = '12') AS p12,
-        COUNT(*) FILTER (WHERE u.bucket = '13') AS p13,
-        COUNT(*) FILTER (WHERE u.bucket = '21') AS p21,
-        COUNT(*) FILTER (WHERE u.bucket = '22') AS p22,
-        COUNT(*) FILTER (WHERE u.bucket = 'other') AS p_other
-      FROM unpivoted u
-      WHERE u.player_id IS NOT NULL
-      ${playerIdFilter}
-      GROUP BY u.player_id
+        COUNT(*) FILTER (WHERE pb.bucket = '10') AS p10,
+        COUNT(*) FILTER (WHERE pb.bucket = '11') AS p11,
+        COUNT(*) FILTER (WHERE pb.bucket = '12') AS p12,
+        COUNT(*) FILTER (WHERE pb.bucket = '13') AS p13,
+        COUNT(*) FILTER (WHERE pb.bucket = '21') AS p21,
+        COUNT(*) FILTER (WHERE pb.bucket = '22') AS p22,
+        COUNT(*) FILTER (WHERE pb.bucket = 'other') AS p_other
+      FROM play_buckets pb
+      GROUP BY pb.player_id
     )
-    SELECT 
+    SELECT
       a.player_id,
       a.team,
       a.total_plays,
@@ -204,7 +206,7 @@ export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promis
         twelvePct: breakdown['12'].pct,
         thirteenPct: breakdown['13'].pct,
       }),
-      notes: ['usage-based v1; not snap participation'],
+      notes: ['v2: participation-based via nflverse pbp_participation'],
     };
   });
 }
