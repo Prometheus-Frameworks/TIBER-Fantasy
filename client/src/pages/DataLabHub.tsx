@@ -5,9 +5,12 @@ import {
   Users,
   Layers,
   Camera,
+  Target,
   ArrowRight,
   Activity,
   ChevronRight,
+  Cpu,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +66,61 @@ const modules = [
     path: "/tiber-data-lab/role-banks",
     color: "#059669",
     badge: null,
+  },
+  {
+    id: "receiving",
+    title: "Receiving Lab",
+    subtitle: "Target & Efficiency Analysis",
+    description:
+      "Season-aggregated receiving metrics including EPA/target, catch rate, YPRR, TPRR, WOPR, xYAC, and target depth distribution for WR, TE, and RB.",
+    icon: Target,
+    path: "/tiber-data-lab/receiving",
+    color: "#7c3aed",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "rushing",
+    title: "Rushing Lab",
+    subtitle: "Ground Game Intelligence",
+    description:
+      "Season-aggregated rushing metrics including YPC, rush EPA, stuff rate, first down rate, run gap distribution, and run location splits for RB and QB.",
+    icon: Activity,
+    path: "/tiber-data-lab/rushing",
+    color: "#16a34a",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "qb",
+    title: "QB Lab",
+    subtitle: "Passing Value & Process",
+    description:
+      "CPOE, ANY/A, air EPA, formation tendencies, pressure rates, scramble production, and dropback efficiency for quarterbacks.",
+    icon: Cpu,
+    path: "/tiber-data-lab/qb",
+    color: "#9333ea",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "red-zone",
+    title: "Red Zone Lab",
+    subtitle: "Scoring Opportunity Analysis",
+    description:
+      "Red zone snap rates, target shares, catch rates, rush TD rates, and scoring efficiency across QB, RB, WR, and TE inside the opponent 20-yard line.",
+    icon: Target,
+    path: "/tiber-data-lab/red-zone",
+    color: "#dc2626",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "situational",
+    title: "Situational Lab",
+    subtitle: "Context-Dependent Performance",
+    description:
+      "Third-down conversions, two-minute drill efficiency, hurry-up success rates, short yardage conversions, and situational target data across all positions.",
+    icon: Activity,
+    path: "/tiber-data-lab/situational",
+    color: "#ca8a04",
+    badge: "NEW" as string | null,
   },
 ];
 

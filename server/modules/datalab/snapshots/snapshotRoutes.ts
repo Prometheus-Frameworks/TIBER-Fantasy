@@ -1192,6 +1192,366 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/lab-agg", async (req: Request, res: Response) => {
+  try {
+    const {
+      season,
+      weekMode = "season",
+      week,
+      weekFrom,
+      weekTo,
+      position,
+      module: moduleName,
+      minOpps = "5",
+      limit = "150",
+      sortBy = "fpts_ppr",
+      sortDir = "desc",
+    } = req.query;
+
+    if (!season) {
+      return res.status(400).json({ error: "Missing required parameter: season" });
+    }
+
+    const seasonNum = Number(season);
+    const limitNum = Math.min(Number(limit), 300);
+    const minOppsNum = Number(minOpps);
+
+    let startWeek: number;
+    let endWeek: number;
+
+    if (weekMode === "season") {
+      const latestSnapshot = await datadiveSnapshotService.getLatestOfficialSnapshot();
+      if (!latestSnapshot || latestSnapshot.season !== seasonNum) {
+        return res.status(404).json({ error: `No snapshot found for season ${seasonNum}` });
+      }
+      startWeek = 1;
+      endWeek = latestSnapshot.week;
+    } else if (weekMode === "range") {
+      startWeek = Number(weekFrom);
+      endWeek = Number(weekTo);
+    } else {
+      startWeek = Number(week);
+      endWeek = Number(week);
+    }
+
+    const allowedPositions = ['QB', 'RB', 'WR', 'TE'];
+    const posUpper = position ? (position as string).toUpperCase() : 'ALL';
+    const positionFilter = posUpper !== 'ALL' && allowedPositions.includes(posUpper)
+      ? sql`AND spw.position = ${posUpper}`
+      : sql``;
+
+    const validSortColumns: Record<string, string> = {
+      fpts_ppr: 'total_fpts_ppr',
+      targets: 'total_targets',
+      rush_attempts: 'total_rush_attempts',
+      epa_per_target: 'avg_epa_per_target',
+      rush_epa: 'avg_rush_epa',
+      cpoe: 'avg_cpoe',
+      rz_targets: 'total_rz_targets',
+      rz_snaps: 'total_rz_snaps',
+      third_down_snaps: 'total_third_down_snaps',
+      dropbacks: 'total_dropbacks',
+      snaps: 'total_snaps',
+    };
+    const sortCol = validSortColumns[sortBy as string] || 'total_fpts_ppr';
+    const sortDirection = (sortDir as string) === 'asc' ? 'ASC' : 'DESC';
+
+    const result = await db.execute(sql`
+      WITH valid_snapshots AS (
+        SELECT sm.id, sm.week, sm.snapshot_at,
+               (SELECT COUNT(*) FROM datadive_snapshot_player_week spw 
+                WHERE spw.snapshot_id = sm.id AND spw.week = sm.week AND spw.snaps > 0) as player_count
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${seasonNum}
+          AND sm.week BETWEEN ${startWeek} AND ${endWeek}
+          AND sm.is_official = true
+      ),
+      snapshot_weeks AS (
+        SELECT DISTINCT ON (week) id as snapshot_id, week
+        FROM valid_snapshots
+        WHERE player_count > 0
+        ORDER BY week, player_count DESC, snapshot_at DESC
+      ),
+      player_agg AS (
+        SELECT 
+          spw.player_id,
+          MAX(spw.player_name) as player_name,
+          MAX(spw.team_id) as team_id,
+          MAX(spw.position) as position,
+          COUNT(DISTINCT sw.week) FILTER (WHERE COALESCE(spw.snaps, 0) > 0) as games_played,
+          -- Core usage
+          SUM(COALESCE(spw.snaps, 0)) as total_snaps,
+          AVG(spw.snap_share) as avg_snap_share,
+          SUM(COALESCE(spw.routes, 0)) as total_routes,
+          AVG(spw.route_rate) as avg_route_rate,
+          -- Receiving
+          SUM(COALESCE(spw.targets, 0)) as total_targets,
+          AVG(spw.target_share) as avg_target_share,
+          SUM(COALESCE(spw.receptions, 0)) as total_receptions,
+          SUM(COALESCE(spw.rec_yards, 0)) as total_rec_yards,
+          SUM(COALESCE(spw.rec_tds, 0)) as total_rec_tds,
+          AVG(spw.adot) as avg_adot,
+          SUM(COALESCE(spw.air_yards, 0)) as total_air_yards,
+          SUM(COALESCE(spw.yac, 0)) as total_yac,
+          AVG(spw.epa_per_target) as avg_epa_per_target,
+          AVG(spw.epa_per_play) as avg_epa_per_play,
+          AVG(spw.success_rate) as avg_success_rate,
+          -- xYAC
+          AVG(spw.x_yac) as avg_x_yac,
+          AVG(spw.yac_over_expected) as avg_yac_over_expected,
+          AVG(spw.x_yac_success_rate) as avg_x_yac_success_rate,
+          -- WR/TE efficiency
+          AVG(spw.catch_rate) as avg_catch_rate,
+          AVG(spw.yards_per_target) as avg_yards_per_target,
+          AVG(spw.racr) as avg_racr,
+          AVG(spw.wopr) as avg_wopr,
+          AVG(spw.slot_rate) as avg_slot_rate,
+          AVG(spw.inline_rate) as avg_inline_rate,
+          AVG(spw.avg_air_epa) as avg_air_epa,
+          AVG(spw.avg_comp_air_epa) as avg_comp_air_epa,
+          -- Target depth/location
+          AVG(spw.deep_target_rate) as avg_deep_target_rate,
+          AVG(spw.intermediate_target_rate) as avg_intermediate_target_rate,
+          AVG(spw.short_target_rate) as avg_short_target_rate,
+          AVG(spw.left_target_rate) as avg_left_target_rate,
+          AVG(spw.middle_target_rate) as avg_middle_target_rate,
+          AVG(spw.right_target_rate) as avg_right_target_rate,
+          -- RB receiving
+          AVG(spw.yac_per_rec) as avg_yac_per_rec,
+          SUM(COALESCE(spw.rec_first_downs, 0)) as total_rec_first_downs,
+          AVG(spw.first_downs_per_route) as avg_first_downs_per_route,
+          AVG(spw.fpts_per_route) as avg_fpts_per_route,
+          -- Rushing
+          SUM(COALESCE(spw.rush_attempts, 0)) as total_rush_attempts,
+          SUM(COALESCE(spw.rush_yards, 0)) as total_rush_yards,
+          SUM(COALESCE(spw.rush_tds, 0)) as total_rush_tds,
+          AVG(spw.yards_per_carry) as avg_ypc,
+          AVG(spw.rush_epa_per_play) as avg_rush_epa,
+          SUM(COALESCE(spw.stuffed, 0)) as total_stuffed,
+          AVG(spw.stuff_rate) as avg_stuff_rate,
+          SUM(COALESCE(spw.rush_first_downs, 0)) as total_rush_first_downs,
+          AVG(spw.rush_first_down_rate) as avg_rush_first_down_rate,
+          -- Run gap/location
+          AVG(spw.inside_run_rate) as avg_inside_run_rate,
+          AVG(spw.outside_run_rate) as avg_outside_run_rate,
+          AVG(spw.inside_success_rate) as avg_inside_success_rate,
+          AVG(spw.outside_success_rate) as avg_outside_success_rate,
+          AVG(spw.left_run_rate) as avg_left_run_rate,
+          AVG(spw.middle_run_rate) as avg_middle_run_rate,
+          AVG(spw.right_run_rate) as avg_right_run_rate,
+          -- QB
+          AVG(spw.cpoe) as avg_cpoe,
+          SUM(COALESCE(spw.sacks, 0)) as total_sacks,
+          AVG(spw.sack_rate) as avg_sack_rate,
+          SUM(COALESCE(spw.sack_yards, 0)) as total_sack_yards,
+          SUM(COALESCE(spw.qb_hits, 0)) as total_qb_hits,
+          AVG(spw.qb_hit_rate) as avg_qb_hit_rate,
+          SUM(COALESCE(spw.scrambles, 0)) as total_scrambles,
+          SUM(COALESCE(spw.scramble_yards, 0)) as total_scramble_yards,
+          SUM(COALESCE(spw.scramble_tds, 0)) as total_scramble_tds,
+          SUM(COALESCE(spw.pass_first_downs, 0)) as total_pass_first_downs,
+          AVG(spw.pass_first_down_rate) as avg_pass_first_down_rate,
+          SUM(COALESCE(spw.deep_pass_attempts, 0)) as total_deep_pass_attempts,
+          AVG(spw.deep_pass_rate) as avg_deep_pass_rate,
+          AVG(spw.pass_adot) as avg_pass_adot,
+          AVG(spw.shotgun_rate) as avg_shotgun_rate,
+          AVG(spw.no_huddle_rate) as avg_no_huddle_rate,
+          AVG(spw.shotgun_success_rate) as avg_shotgun_success_rate,
+          AVG(spw.under_center_success_rate) as avg_under_center_success_rate,
+          SUM(COALESCE(spw.dropbacks, 0)) as total_dropbacks,
+          AVG(spw.any_a) as avg_any_a,
+          AVG(spw.fp_per_dropback) as avg_fp_per_dropback,
+          -- Red Zone
+          SUM(COALESCE(spw.rz_snaps, 0)) as total_rz_snaps,
+          AVG(spw.rz_snap_rate) as avg_rz_snap_rate,
+          AVG(spw.rz_success_rate) as avg_rz_success_rate,
+          SUM(COALESCE(spw.rz_pass_attempts, 0)) as total_rz_pass_attempts,
+          SUM(COALESCE(spw.rz_pass_tds, 0)) as total_rz_pass_tds,
+          AVG(spw.rz_td_rate) as avg_rz_td_rate,
+          SUM(COALESCE(spw.rz_interceptions, 0)) as total_rz_interceptions,
+          SUM(COALESCE(spw.rz_rush_attempts, 0)) as total_rz_rush_attempts,
+          SUM(COALESCE(spw.rz_rush_tds, 0)) as total_rz_rush_tds,
+          AVG(spw.rz_rush_td_rate) as avg_rz_rush_td_rate,
+          SUM(COALESCE(spw.rz_targets, 0)) as total_rz_targets,
+          SUM(COALESCE(spw.rz_receptions, 0)) as total_rz_receptions,
+          SUM(COALESCE(spw.rz_rec_tds, 0)) as total_rz_rec_tds,
+          AVG(spw.rz_target_share) as avg_rz_target_share,
+          AVG(spw.rz_catch_rate) as avg_rz_catch_rate,
+          -- Situational
+          SUM(COALESCE(spw.third_down_snaps, 0)) as total_third_down_snaps,
+          SUM(COALESCE(spw.third_down_conversions, 0)) as total_third_down_conversions,
+          AVG(spw.third_down_conversion_rate) as avg_third_down_conversion_rate,
+          AVG(spw.early_down_success_rate) as avg_early_down_success_rate,
+          AVG(spw.late_down_success_rate) as avg_late_down_success_rate,
+          SUM(COALESCE(spw.short_yardage_attempts, 0)) as total_short_yardage_attempts,
+          SUM(COALESCE(spw.short_yardage_conversions, 0)) as total_short_yardage_conversions,
+          AVG(spw.short_yardage_rate) as avg_short_yardage_rate,
+          SUM(COALESCE(spw.third_down_targets, 0)) as total_third_down_targets,
+          SUM(COALESCE(spw.third_down_receptions, 0)) as total_third_down_receptions,
+          SUM(COALESCE(spw.third_down_rec_conversions, 0)) as total_third_down_rec_conversions,
+          -- Two-minute / hurry-up
+          SUM(COALESCE(spw.two_minute_snaps, 0)) as total_two_minute_snaps,
+          SUM(COALESCE(spw.two_minute_successful, 0)) as total_two_minute_successful,
+          AVG(spw.two_minute_success_rate) as avg_two_minute_success_rate,
+          SUM(COALESCE(spw.hurry_up_snaps, 0)) as total_hurry_up_snaps,
+          SUM(COALESCE(spw.hurry_up_successful, 0)) as total_hurry_up_successful,
+          AVG(spw.hurry_up_success_rate) as avg_hurry_up_success_rate,
+          SUM(COALESCE(spw.two_minute_targets, 0)) as total_two_minute_targets,
+          SUM(COALESCE(spw.two_minute_receptions, 0)) as total_two_minute_receptions,
+          -- Fantasy
+          SUM(COALESCE(spw.fpts_std, 0)) as total_fpts_std,
+          SUM(COALESCE(spw.fpts_half, 0)) as total_fpts_half,
+          SUM(COALESCE(spw.fpts_ppr, 0)) as total_fpts_ppr
+        FROM snapshot_weeks sw
+        JOIN datadive_snapshot_player_week spw ON spw.snapshot_id = sw.snapshot_id AND spw.week = sw.week
+        WHERE 1=1 ${positionFilter}
+        GROUP BY spw.player_id
+      )
+      SELECT *
+      FROM player_agg
+      WHERE total_snaps >= ${minOppsNum}
+      ORDER BY ${sql.raw(sortCol)} ${sql.raw(sortDirection)} NULLS LAST
+      LIMIT ${limitNum}
+    `);
+
+    const rows = (result as any).rows || [];
+    const n = (v: any) => v !== null && v !== undefined ? Number(v) : null;
+
+    const mappedData = rows.map((row: any) => ({
+      playerId: row.player_id,
+      playerName: row.player_name,
+      teamId: row.team_id,
+      position: row.position,
+      gamesPlayed: Number(row.games_played) || 0,
+      totalSnaps: Number(row.total_snaps) || 0,
+      avgSnapShare: n(row.avg_snap_share),
+      totalRoutes: Number(row.total_routes) || 0,
+      avgRouteRate: n(row.avg_route_rate),
+      totalTargets: Number(row.total_targets) || 0,
+      avgTargetShare: n(row.avg_target_share),
+      totalReceptions: Number(row.total_receptions) || 0,
+      totalRecYards: Number(row.total_rec_yards) || 0,
+      totalRecTds: Number(row.total_rec_tds) || 0,
+      avgAdot: n(row.avg_adot),
+      totalAirYards: Number(row.total_air_yards) || 0,
+      totalYac: Number(row.total_yac) || 0,
+      avgEpaPerTarget: n(row.avg_epa_per_target),
+      avgEpaPerPlay: n(row.avg_epa_per_play),
+      avgSuccessRate: n(row.avg_success_rate),
+      avgXYac: n(row.avg_x_yac),
+      avgYacOverExpected: n(row.avg_yac_over_expected),
+      avgXYacSuccessRate: n(row.avg_x_yac_success_rate),
+      avgCatchRate: n(row.avg_catch_rate),
+      avgYardsPerTarget: n(row.avg_yards_per_target),
+      avgRacr: n(row.avg_racr),
+      avgWopr: n(row.avg_wopr),
+      avgSlotRate: n(row.avg_slot_rate),
+      avgInlineRate: n(row.avg_inline_rate),
+      avgAirEpa: n(row.avg_air_epa),
+      avgCompAirEpa: n(row.avg_comp_air_epa),
+      avgDeepTargetRate: n(row.avg_deep_target_rate),
+      avgIntermediateTargetRate: n(row.avg_intermediate_target_rate),
+      avgShortTargetRate: n(row.avg_short_target_rate),
+      avgLeftTargetRate: n(row.avg_left_target_rate),
+      avgMiddleTargetRate: n(row.avg_middle_target_rate),
+      avgRightTargetRate: n(row.avg_right_target_rate),
+      avgYacPerRec: n(row.avg_yac_per_rec),
+      totalRecFirstDowns: Number(row.total_rec_first_downs) || 0,
+      avgFirstDownsPerRoute: n(row.avg_first_downs_per_route),
+      avgFptsPerRoute: n(row.avg_fpts_per_route),
+      totalRushAttempts: Number(row.total_rush_attempts) || 0,
+      totalRushYards: Number(row.total_rush_yards) || 0,
+      totalRushTds: Number(row.total_rush_tds) || 0,
+      avgYpc: n(row.avg_ypc),
+      avgRushEpa: n(row.avg_rush_epa),
+      totalStuffed: Number(row.total_stuffed) || 0,
+      avgStuffRate: n(row.avg_stuff_rate),
+      totalRushFirstDowns: Number(row.total_rush_first_downs) || 0,
+      avgRushFirstDownRate: n(row.avg_rush_first_down_rate),
+      avgInsideRunRate: n(row.avg_inside_run_rate),
+      avgOutsideRunRate: n(row.avg_outside_run_rate),
+      avgInsideSuccessRate: n(row.avg_inside_success_rate),
+      avgOutsideSuccessRate: n(row.avg_outside_success_rate),
+      avgLeftRunRate: n(row.avg_left_run_rate),
+      avgMiddleRunRate: n(row.avg_middle_run_rate),
+      avgRightRunRate: n(row.avg_right_run_rate),
+      avgCpoe: n(row.avg_cpoe),
+      totalSacks: Number(row.total_sacks) || 0,
+      avgSackRate: n(row.avg_sack_rate),
+      totalSackYards: Number(row.total_sack_yards) || 0,
+      totalQbHits: Number(row.total_qb_hits) || 0,
+      avgQbHitRate: n(row.avg_qb_hit_rate),
+      totalScrambles: Number(row.total_scrambles) || 0,
+      totalScrambleYards: Number(row.total_scramble_yards) || 0,
+      totalScrambleTds: Number(row.total_scramble_tds) || 0,
+      totalPassFirstDowns: Number(row.total_pass_first_downs) || 0,
+      avgPassFirstDownRate: n(row.avg_pass_first_down_rate),
+      totalDeepPassAttempts: Number(row.total_deep_pass_attempts) || 0,
+      avgDeepPassRate: n(row.avg_deep_pass_rate),
+      avgPassAdot: n(row.avg_pass_adot),
+      avgShotgunRate: n(row.avg_shotgun_rate),
+      avgNoHuddleRate: n(row.avg_no_huddle_rate),
+      avgShotgunSuccessRate: n(row.avg_shotgun_success_rate),
+      avgUnderCenterSuccessRate: n(row.avg_under_center_success_rate),
+      totalDropbacks: Number(row.total_dropbacks) || 0,
+      avgAnyA: n(row.avg_any_a),
+      avgFpPerDropback: n(row.avg_fp_per_dropback),
+      totalRzSnaps: Number(row.total_rz_snaps) || 0,
+      avgRzSnapRate: n(row.avg_rz_snap_rate),
+      avgRzSuccessRate: n(row.avg_rz_success_rate),
+      totalRzPassAttempts: Number(row.total_rz_pass_attempts) || 0,
+      totalRzPassTds: Number(row.total_rz_pass_tds) || 0,
+      avgRzTdRate: n(row.avg_rz_td_rate),
+      totalRzInterceptions: Number(row.total_rz_interceptions) || 0,
+      totalRzRushAttempts: Number(row.total_rz_rush_attempts) || 0,
+      totalRzRushTds: Number(row.total_rz_rush_tds) || 0,
+      avgRzRushTdRate: n(row.avg_rz_rush_td_rate),
+      totalRzTargets: Number(row.total_rz_targets) || 0,
+      totalRzReceptions: Number(row.total_rz_receptions) || 0,
+      totalRzRecTds: Number(row.total_rz_rec_tds) || 0,
+      avgRzTargetShare: n(row.avg_rz_target_share),
+      avgRzCatchRate: n(row.avg_rz_catch_rate),
+      totalThirdDownSnaps: Number(row.total_third_down_snaps) || 0,
+      totalThirdDownConversions: Number(row.total_third_down_conversions) || 0,
+      avgThirdDownConversionRate: n(row.avg_third_down_conversion_rate),
+      avgEarlyDownSuccessRate: n(row.avg_early_down_success_rate),
+      avgLateDownSuccessRate: n(row.avg_late_down_success_rate),
+      totalShortYardageAttempts: Number(row.total_short_yardage_attempts) || 0,
+      totalShortYardageConversions: Number(row.total_short_yardage_conversions) || 0,
+      avgShortYardageRate: n(row.avg_short_yardage_rate),
+      totalThirdDownTargets: Number(row.total_third_down_targets) || 0,
+      totalThirdDownReceptions: Number(row.total_third_down_receptions) || 0,
+      totalThirdDownRecConversions: Number(row.total_third_down_rec_conversions) || 0,
+      totalTwoMinuteSnaps: Number(row.total_two_minute_snaps) || 0,
+      totalTwoMinuteSuccessful: Number(row.total_two_minute_successful) || 0,
+      avgTwoMinuteSuccessRate: n(row.avg_two_minute_success_rate),
+      totalHurryUpSnaps: Number(row.total_hurry_up_snaps) || 0,
+      totalHurryUpSuccessful: Number(row.total_hurry_up_successful) || 0,
+      avgHurryUpSuccessRate: n(row.avg_hurry_up_success_rate),
+      totalTwoMinuteTargets: Number(row.total_two_minute_targets) || 0,
+      totalTwoMinuteReceptions: Number(row.total_two_minute_receptions) || 0,
+      totalFptsStd: Number(row.total_fpts_std) || 0,
+      totalFptsHalf: Number(row.total_fpts_half) || 0,
+      totalFptsPpr: Number(row.total_fpts_ppr) || 0,
+      tprr: Number(row.total_routes) > 0 ? Number(row.total_targets) / Number(row.total_routes) : null,
+      yprr: Number(row.total_routes) > 0 ? Number(row.total_rec_yards) / Number(row.total_routes) : null,
+    }));
+
+    res.json({
+      season: seasonNum,
+      weekMode,
+      weekRange: { from: startWeek, to: endWeek },
+      position: position || 'ALL',
+      module: moduleName || 'all',
+      count: mappedData.length,
+      data: mappedData,
+    });
+  } catch (error: any) {
+    console.error("[DataLab] Error in lab-agg:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/dst-streamer", async (req: Request, res: Response) => {
   try {
     const week = Number(req.query.week) || 14;

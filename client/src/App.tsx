@@ -30,6 +30,11 @@ import ForgeWorkbench from "@/pages/ForgeWorkbench";
 import PersonnelUsage from "@/pages/PersonnelUsage";
 import RoleContextRankings from "@/pages/RoleContextRankings";
 import SentinelDashboard from "@/pages/SentinelDashboard";
+import ReceivingLab from "@/pages/ReceivingLab";
+import RushingLab from "@/pages/RushingLab";
+import QBLab from "@/pages/QBLab";
+import RedZoneLab from "@/pages/RedZoneLab";
+import SituationalLab from "@/pages/SituationalLab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -42,6 +47,11 @@ function Router() {
         <Route path="/tiber-data-lab/snapshots" component={TiberDataLab} />
         <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
         <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />
+        <Route path="/tiber-data-lab/receiving" component={ReceivingLab} />
+        <Route path="/tiber-data-lab/rushing" component={RushingLab} />
+        <Route path="/tiber-data-lab/qb" component={QBLab} />
+        <Route path="/tiber-data-lab/red-zone" component={RedZoneLab} />
+        <Route path="/tiber-data-lab/situational" component={SituationalLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>
