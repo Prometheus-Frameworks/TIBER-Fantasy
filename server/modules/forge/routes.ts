@@ -344,7 +344,8 @@ router.get('/score/:playerId', async (req: Request, res: Response) => {
     
     // Enrich with SoS data
     const enrichedScore = await enrichWithSoS(score, season);
-    
+
+
     const sentinelReport = evaluate('forge', {
       ...enrichedScore,
       mode: 'redraft',
