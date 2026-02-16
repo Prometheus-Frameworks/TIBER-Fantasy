@@ -1,0 +1,362 @@
+import { useState, useRef, useEffect } from "react";
+
+/*
+ * TIBER Data Lab — AI Tips Popover
+ * 
+ * Revised prompt suggestions for the Receiving Lab (WR module).
+ * Each tip includes a short display label + a full copy-paste prompt.
+ * 
+ * Integration notes for Claude Code:
+ *   - This component renders the popover triggered by the "AI Tips" button
+ *   - Props: isOpen, onClose, onCopy (optional callback), module (receiving/rushing/etc)
+ *   - The `prompts` array is the single source of truth for tip content
+ *   - To add TE/RB modules, extend the PROMPTS_BY_MODULE object
+ */
+
+// ─── PROMPT DEFINITIONS ────────────────────────────────────────────────
+// Each prompt has:
+//   label    → short text shown in the popover
+//   prompt   → full copy-paste text the user sends to their AI
+//   tag      → category badge
+// ─────────────────────────────────────────────────────────────────────────
+
+const PROMPTS_BY_MODULE = {
+  wr_receiving: [
+    {
+      label: "Rank the top 10 most efficient receivers using a target quality model",
+      tag: "Efficiency",
+      prompt: `Using the attached TIBER WR receiving CSV, build a target quality model that combines aDOT, EPA/target, and YPRR to rank the top 10 most efficient receivers.
+
+Steps:
+1. Normalize each metric to a 0-1 scale (min-max across the dataset).
+2. Compute a composite Target Quality Score: (normalized EPA/Target × 0.45) + (normalized YPRR × 0.35) + (normalized aDOT × 0.20)
+3. Rank all WRs by this score and show the top 10.
+4. For each, include: Player, Team, GP, Targets, aDOT, EPA/Target, YPRR, Target Quality Score, and Fantasy Points (PPR).
+5. Note any players with fewer than 6 games played — their metrics may be inflated by small samples.
+
+Output as a clean table with a brief 1-sentence note per player on what drives their efficiency.`,
+    },
+    {
+      label: "Cluster WRs by route profile and find which archetype produces the highest EPA",
+      tag: "Route Analysis",
+      prompt: `Using the attached TIBER WR receiving CSV, cluster the wide receivers by their route depth profile and identify which archetype produces the best efficiency.
+
+Steps:
+1. Each WR has Deep Target %, Intermediate Target %, and Short Target % columns. Assign each player to one of these archetypes based on their highest percentage:
+   - Deep Threat: Deep Target % is highest
+   - Intermediate: Intermediate Target % is highest  
+   - Short/Underneath: Short Target % is highest
+2. For each archetype group, compute the group averages for: EPA/Target, YPRR, Catch Rate %, YAC over Expected, Fantasy Points (PPR), and count of players.
+3. Identify which archetype has the highest average EPA/Target (most efficient per target).
+4. Within the top archetype, list the 5 best individual players by EPA/Target.
+5. Show outliers: any player whose archetype assignment seems mismatched with their efficiency (e.g., a Deep Threat with unusually high Catch Rate, or a Short receiver with high aDOT).
+
+Output the group comparison as a summary table, then list the top 5 in the winning archetype with brief notes.`,
+    },
+    {
+      label: "Score breakout candidates using WOPR, YAC over Expected, and Catch Rate",
+      tag: "Breakout",
+      prompt: `Using the attached TIBER WR receiving CSV, create a breakout candidate score to find WRs primed for a bigger role.
+
+Steps:
+1. First, compute the dataset averages for Catch Rate % and YAC over Expected from all 150 players in the CSV.
+2. Only consider WRs with 6+ games played (exclude small samples).
+3. For each qualifying WR, compute:
+   Breakout Score = (WOPR × 30) + ((Catch Rate % - league avg CR%) × 2) + (YAC over Expected × 20) + (TPRR × 15)
+4. Rank by Breakout Score descending. Show the top 12.
+5. For each, include: Player, Team, GP, Targets, WOPR, Catch Rate %, YAC over Expected, TPRR, Fantasy Points (PPR), and Breakout Score.
+6. Flag players with Targets < 70 as "emerging" — low current volume but high efficiency suggests untapped upside.
+
+Output as a table, then write 2-3 sentences on your top 3 picks explaining why their profile suggests a breakout.`,
+    },
+    {
+      label: "Compare RACR vs YPRR to separate volume-dependent from truly efficient WRs",
+      tag: "Efficiency",
+      prompt: `Using the attached TIBER WR receiving CSV, compare RACR (Receiver Air Conversion Ratio) and YPRR (Yards Per Route Run) to classify receivers as volume-dependent or genuinely efficient.
+
+Steps:
+1. Only include WRs with 6+ games played to avoid small-sample distortion.
+2. Compute the dataset median for both RACR and YPRR from the qualifying players.
+3. Classify each WR into one of four quadrants:
+   - Elite Efficient: above median in BOTH RACR and YPRR
+   - Volume-Dependent: below median RACR but above median YPRR (produces yards per route but not vs air yards — needs volume)
+   - Air Yards Efficient: above median RACR but below median YPRR (converts air yards well but doesn't produce per route)
+   - Inefficient: below median in both
+4. List all players in each quadrant, sorted by Fantasy Points (PPR) within each group.
+5. Highlight the top 3 "Elite Efficient" WRs and the top 3 "Volume-Dependent" WRs with a sentence each on what their profile means for fantasy.
+
+Output as four labeled groups with player tables, then a brief summary of what separates truly efficient receivers from volume-dependent ones in this dataset.`,
+    },
+  ],
+};
+
+// ─── COMPONENT ──────────────────────────────────────────────────────────
+
+const COPY_FEEDBACK_MS = 1800;
+
+export default function AiTipsPopover({ module = "wr_receiving" }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedIdx, setExpandedIdx] = useState(null);
+  const [copiedIdx, setCopiedIdx] = useState(null);
+  const popoverRef = useRef(null);
+
+  const prompts = PROMPTS_BY_MODULE[module] || [];
+
+  // close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setExpandedIdx(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  const handleCopy = async (idx) => {
+    try {
+      await navigator.clipboard.writeText(prompts[idx].prompt);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), COPY_FEEDBACK_MS);
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = prompts[idx].prompt;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopiedIdx(idx);
+      setTimeout(() => setCopiedIdx(null), COPY_FEEDBACK_MS);
+    }
+  };
+
+  const toggleExpand = (idx) => {
+    setExpandedIdx(expandedIdx === idx ? null : idx);
+  };
+
+  return (
+    <div style={{ position: "relative", display: "inline-block" }} ref={popoverRef}>
+      {/* Trigger button */}
+      <button onClick={() => setIsOpen(!isOpen)} style={styles.trigger}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <span>AI Tips</span>
+      </button>
+
+      {/* Popover */}
+      {isOpen && (
+        <div style={styles.popover}>
+          <div style={styles.header}>
+            <span style={styles.headerText}>TRY THESE WITH YOUR AI COLLABORATOR</span>
+          </div>
+
+          <div style={styles.promptList}>
+            {prompts.map((p, idx) => (
+              <div key={idx} style={styles.promptItem}>
+                {/* Label row */}
+                <div style={styles.promptLabelRow} onClick={() => toggleExpand(idx)}>
+                  <div style={styles.bulletAndLabel}>
+                    <span style={styles.bullet}>•</span>
+                    <span style={styles.promptLabel}>{p.label}</span>
+                  </div>
+                  <span style={styles.tag}>{p.tag}</span>
+                </div>
+
+                {/* Expanded prompt preview + copy */}
+                {expandedIdx === idx && (
+                  <div style={styles.expandedArea}>
+                    <pre style={styles.promptPreview}>
+                      {p.prompt.length > 280
+                        ? p.prompt.slice(0, 280) + "..."
+                        : p.prompt}
+                    </pre>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopy(idx);
+                      }}
+                      style={{
+                        ...styles.copyBtn,
+                        ...(copiedIdx === idx ? styles.copyBtnCopied : {}),
+                      }}
+                    >
+                      {copiedIdx === idx ? (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                          Copy full prompt
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={styles.footer}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export CSV → paste prompt into your AI agent</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STYLES ─────────────────────────────────────────────────────────────
+
+const styles = {
+  trigger: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 16px",
+    background: "transparent",
+    border: "1px solid #e2e0dc",
+    borderRadius: "8px",
+    color: "#6b46c1",
+    fontSize: "14px",
+    fontWeight: 500,
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  },
+  popover: {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    right: 0,
+    width: "420px",
+    background: "#fff",
+    border: "1px solid #e8e6e3",
+    borderRadius: "12px",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
+    zIndex: 1000,
+    overflow: "hidden",
+  },
+  header: {
+    padding: "16px 20px 12px",
+    borderBottom: "1px solid #f0eeeb",
+  },
+  headerText: {
+    fontSize: "11px",
+    fontWeight: 600,
+    letterSpacing: "0.06em",
+    color: "#9b958d",
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+  },
+  promptList: {
+    padding: "8px 0",
+  },
+  promptItem: {
+    padding: "0 20px",
+  },
+  promptLabelRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: "10px",
+    padding: "10px 0",
+    cursor: "pointer",
+    transition: "opacity 0.15s ease",
+  },
+  bulletAndLabel: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "10px",
+    flex: 1,
+  },
+  bullet: {
+    color: "#6b46c1",
+    fontSize: "18px",
+    lineHeight: "1.4",
+    flexShrink: 0,
+  },
+  promptLabel: {
+    fontSize: "14px",
+    lineHeight: "1.5",
+    color: "#2d2a26",
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+  },
+  tag: {
+    fontSize: "10px",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    color: "#6b46c1",
+    background: "#f3effc",
+    padding: "3px 8px",
+    borderRadius: "4px",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    marginTop: "2px",
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+  },
+  expandedArea: {
+    padding: "0 0 12px 26px",
+    animation: "fadeIn 0.15s ease",
+  },
+  promptPreview: {
+    fontSize: "12px",
+    lineHeight: "1.6",
+    color: "#6b6560",
+    fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
+    background: "#faf9f7",
+    border: "1px solid #eae8e4",
+    borderRadius: "8px",
+    padding: "12px 14px",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    margin: "0 0 8px 0",
+    maxHeight: "160px",
+    overflowY: "auto",
+  },
+  copyBtn: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "6px 14px",
+    fontSize: "12px",
+    fontWeight: 500,
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+    color: "#6b46c1",
+    background: "#f3effc",
+    border: "1px solid #ddd5f3",
+    borderRadius: "6px",
+    cursor: "pointer",
+    transition: "all 0.15s ease",
+  },
+  copyBtnCopied: {
+    color: "#16a34a",
+    background: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+  },
+  footer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 20px",
+    borderTop: "1px solid #f0eeeb",
+    fontSize: "12px",
+    color: "#9b958d",
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+  },
+};
