@@ -4541,6 +4541,74 @@ export type ForgePlayerState = typeof forgePlayerState.$inferSelect;
 export type InsertForgePlayerState = typeof forgePlayerState.$inferInsert;
 
 /**
+ * FORGE Grade Cache
+ * Stores pre-computed FORGE Alpha grades for fast Tiers page reads.
+ */
+export const forgeGradeCache = pgTable("forge_grade_cache", {
+  id: serial("id").primaryKey(),
+
+  // Player identity
+  playerId: text("player_id").notNull(),
+  playerName: text("player_name").notNull(),
+  position: text("position").notNull(),
+  nflTeam: text("nfl_team"),
+
+  // Scope
+  season: integer("season").notNull(),
+  asOfWeek: integer("as_of_week").notNull(),
+
+  // FORGE alpha + pillars
+  alpha: real("alpha").notNull(),
+  rawAlpha: real("raw_alpha"),
+  volumeScore: real("volume_score"),
+  efficiencyScore: real("efficiency_score"),
+  teamContextScore: real("team_context_score"),
+  stabilityScore: real("stability_score"),
+  dynastyContext: real("dynasty_context"),
+
+  // Tiering
+  tier: text("tier").notNull(),
+  tierNumeric: integer("tier_numeric").notNull(),
+
+  // Football Lens
+  footballLensIssues: text("football_lens_issues").array(),
+  lensAdjustment: real("lens_adjustment").default(0),
+
+  // Confidence + metadata
+  confidence: real("confidence"),
+  trajectory: text("trajectory"),
+  gamesPlayed: integer("games_played"),
+
+  // Fantasy context stats
+  ppgPpr: real("ppg_ppr"),
+  seasonFptsPpr: real("season_fpts_ppr"),
+  targets: integer("targets"),
+  touches: integer("touches"),
+
+  // Cache metadata
+  computedAt: timestamp("computed_at").defaultNow(),
+  version: text("version").default("v1"),
+}, (table) => ({
+  uniqueGrade: unique("forge_grade_cache_unique").on(
+    table.playerId,
+    table.season,
+    table.asOfWeek,
+    table.version,
+  ),
+  positionQuery: index("forge_grade_cache_pos_idx").on(table.season, table.asOfWeek, table.position),
+  playerIdx: index("forge_grade_cache_player_idx").on(table.playerId),
+  alphaSort: index("forge_grade_cache_alpha_idx").on(
+    table.season,
+    table.asOfWeek,
+    table.position,
+    table.alpha,
+  ),
+}));
+
+export type ForgeGradeCache = typeof forgeGradeCache.$inferSelect;
+export type InsertForgeGradeCache = typeof forgeGradeCache.$inferInsert;
+
+/**
  * FORGE Player State Simulation Table
  * Isolated table for simulation runs - mirrors forge_player_state structure
  * but keeps simulation data separate from production scoring
