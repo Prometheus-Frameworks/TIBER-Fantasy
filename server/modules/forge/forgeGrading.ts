@@ -66,7 +66,7 @@ export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
   WR: [82, 72, 58, 45],
   RB: [78, 68, 55, 42],
   TE: [82, 70, 55, 42],
-  QB: [70, 55, 42, 32],
+  QB: [82, 68, 52, 38],
 };
 
 function normalizeWeights(weights: ForgeWeights): ForgeWeights {

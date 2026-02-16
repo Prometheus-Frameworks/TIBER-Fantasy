@@ -227,9 +227,10 @@ const QB_PILLARS: PositionPillarConfig = {
   },
   stability: {
     metrics: [
-      { metricKey: 'momentum_score', source: 'role_bank', weight: 0.50 },
-      { metricKey: 'completion_percentage', source: 'role_bank', weight: 0.30 },
-      { metricKey: 'sack_rate', source: 'role_bank', weight: 0.20, invert: true },
+      { metricKey: 'availability_score', source: 'derived', weight: 0.30 },
+      { metricKey: 'momentum_score', source: 'role_bank', weight: 0.35 },
+      { metricKey: 'completion_percentage', source: 'role_bank', weight: 0.20 },
+      { metricKey: 'sack_rate', source: 'role_bank', weight: 0.15, invert: true },
     ],
   },
 };
@@ -925,6 +926,37 @@ export async function fetchForgeContext(
   };
 }
 
+const GAMES_FULL_CREDIT: Record<Position, number> = {
+  QB: 12,
+  RB: 10,
+  WR: 10,
+  TE: 10,
+};
+
+const BASELINE_PILLAR = 40;
+
+function applyGamesPlayedDampening(
+  pillars: ForgePillarScores,
+  gamesPlayed: number,
+  position: Position
+): ForgePillarScores {
+  const minGames = GAMES_FULL_CREDIT[position];
+  if (gamesPlayed >= minGames) return pillars;
+
+  const confidence = Math.sqrt(Math.max(1, gamesPlayed) / minGames);
+
+  const dampen = (score: number) =>
+    BASELINE_PILLAR + (score - BASELINE_PILLAR) * confidence;
+
+  return {
+    volume: dampen(pillars.volume),
+    efficiency: dampen(pillars.efficiency),
+    teamContext: dampen(pillars.teamContext),
+    stability: dampen(pillars.stability),
+    dynastyContext: pillars.dynastyContext != null ? dampen(pillars.dynastyContext) : undefined,
+  };
+}
+
 export async function runForgeEngine(
   playerId: string,
   position: Position,
@@ -979,7 +1011,9 @@ export async function runForgeEngine(
     }
   }
 
-  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${pillars.volume.toFixed(1)} E=${pillars.efficiency.toFixed(1)} T=${pillars.teamContext.toFixed(1)} S=${pillars.stability.toFixed(1)} D=${dynastyContext.toFixed(1)}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
+  const dampenedPillars = applyGamesPlayedDampening(pillars, context.gamesPlayed, position);
+
+  console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${dampenedPillars.volume.toFixed(1)} E=${dampenedPillars.efficiency.toFixed(1)} T=${dampenedPillars.teamContext.toFixed(1)} S=${dampenedPillars.stability.toFixed(1)} D=${(dampenedPillars.dynastyContext ?? dynastyContext).toFixed(1)}${context.gamesPlayed < GAMES_FULL_CREDIT[position] ? ` [GP=${context.gamesPlayed}/${GAMES_FULL_CREDIT[position]} dampened]` : ''}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
 
   return {
     playerId,
@@ -989,7 +1023,7 @@ export async function runForgeEngine(
     season,
     week,
     gamesPlayed: context.gamesPlayed,
-    pillars,
+    pillars: dampenedPillars,
     priorAlpha,
     alphaMomentum,
     rawMetrics: context.roleBank,
