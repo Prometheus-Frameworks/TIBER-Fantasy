@@ -1,0 +1,31 @@
+For context on what the real usage should look like (pulled from Pro-Football-Reference, NFL.com, PFF reports, etc., as of early 2026):
+
+Travis Hunter (JAX, WR/CB hybrid, rookie year cut short): Only played 7 games before the knee injury. Verified offensive snaps: 324 total (about 46 per game average in those contests, with snap % climbing as high as 87% in his last full game). All sources confirm ~324 offensive snaps, not 46 total plays. The dashboard showing 46 at 100% in 11 personnel is likely capturing just a tiny slice—maybe one game, early-season only, specific play types (e.g., routes run or targets), or a filtered view bug.
+Puka Nacua (LAR, WR, full season): Played 16 games (15 starts), monster year: 129 rec, 1,715 yds, 10+ TDs. Offensive snaps: 727 total (64% team snap share, ~45 snaps/game). That's the credible full-season number from PFR and snap trackers. Listing him at #1 overall WR usage but only 224 plays is wildly low—real WR1s in high-volume offenses hit 700–900+ snaps. 224 is more like a part-timer or injury-shortened guy.
+
+Your module is clearly undercounting plays/snaps massively for these high-usage guys, so it's not pulling/displaying full-season data as intended.
+To audit and debug why (assuming this is your own backend pulling from some NFL data feed/API like official NGS, Sportradar, or a third-party aggregator like SumerSports/PFF/FTN):
+
+Check the data ingestion/filter scope first — Most likely culprit: The query pulling "plays" is filtered incorrectly.
+Look for date range filters (e.g., defaulting to preseason/Week 1 only, or a bugged "since/until" timestamp).
+Personnel data often comes from play-by-play or NGS endpoints—verify if it's set to full regular season (Weeks 1–18, no postseason unless you want it).
+Common issue: Some APIs separate "qualifying plays" (e.g., only pass plays, or excluding kneels/spikes). If it's only counting snaps where the player was targeted or ran a route, that could slash numbers (Hunter had targets on ~45 plays, but 324 snaps total).
+
+Validate total plays/snaps baseline — Cross-check your module's raw total for a player against public sources.
+Pull your internal total offensive snaps for Nacua/Hunter.
+Compare directly to PFR snap counts (they're game-by-game and reliable): Hunter 324 off, Nacua 727 off.
+If your number is way lower (like 46/224), trace back: Is the data source capping at X plays? Or aggregating per-game then failing to sum?
+
+Drill into personnel grouping logic — Even if totals are low, the % breakdown might be okay directionally (e.g., Hunter heavy in 11 is believable for a rookie WR), but verify:
+How are groupings defined? (Standard: 11 = 1RB/1TE/3WR, etc.)
+Are you using play-level personnel tags from the feed? Some sources lag or miss tags on run-heavy plays.
+Check for "unknown/other" bucket—your screenshot had 0% other, but if data is incomplete, plays get dropped.
+Test with a known heavy-11 guy like Nacua—his real snaps should be 80%+ in 11/empty/sub-packages.
+
+Quick practical steps to isolate:
+Re-run the module for a single known game (e.g., pick one of Hunter's high-snap games like his 67-snap outing) and see if it matches gamebook/PFR for that week.
+Query total team offensive plays for JAX/RAM in 2025 (~1,100–1,200 range per PFR) and see what % your player totals represent—if it's ~4% for a starter, that's a red flag.
+Log the raw API response or database query for one player—look for play count before/after filters.
+If it's SumerSports-style or similar (they do deep personnel), check API docs for pagination/limits (some cap results at 50–100 plays if not paginated properly).
+
+If it's a third-party feed — Reach out to support (Sumer, PFF, etc.) with examples like "Nacua showing 224 plays vs expected ~727 snaps" and ask about full-season export quirks. Or switch/test against free PFR CSV dumps for validation.

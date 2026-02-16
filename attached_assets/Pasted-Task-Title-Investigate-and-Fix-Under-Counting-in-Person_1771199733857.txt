@@ -1,0 +1,60 @@
+Task Title: Investigate and Fix Under-Counting in Personnel Usage Module (Low Play Counts for Full-Season Players)
+Priority: High (impacts core feature accuracy for user-facing dashboard)
+Description:
+The Personnel Usage module (at /personnel endpoint) is displaying dramatically low play counts for players' full 2025 season usage, even though it should aggregate and show season-long data. Examples:
+
+Travis Hunter (JAX, WR): Shows ~46 plays total, 100% in 11 personnel (tagged "Low Sample").
+Puka Nacua (LAR, WR): Shows ~224 plays total (despite being #1 overall in some ranking view).
+
+These numbers don't match verified public sources:
+
+Hunter: 324 offensive snaps total over 7 games (injured mid-season), avg ~46 snaps/game on offense → total far exceeds 46 plays.
+Nacua: 727 offensive snaps over 16 games (full season), ~45 snaps/game avg.
+
+The % breakdowns (e.g., heavy 11 personnel) might be directionally correct for usage patterns, but the absolute play totals are off by 5–15x, suggesting a filtering, aggregation, or data scope bug.
+Goal:
+Audit the data pipeline/query for this module and fix so it correctly displays full regular-season (Weeks 1–18, 2025) offensive snaps/plays per player, broken down by personnel grouping (10, 11, 12, etc.), with accurate totals and percentages. No preseason/postseason unless explicitly filtered.
+Repro Steps:
+
+Load the /personnel page (or hit the endpoint directly).
+Search for "trav" or "Travis Hunter" (JAX).
+Observe: 46 plays, 100% 11 personnel, "Low Sample" tag.
+Search for Puka Nacua (LAR).
+Observe: ~224 plays total (way below expected 727).
+
+Expected Behavior:
+
+Hunter: ~324 plays/snaps total (offense only for WR usage), with % by grouping (likely heavy 11 as rookie WR in passing sets).
+Nacua: ~727 plays/snaps total, high % in 11/empty/sub-packages.
+Totals should roughly match team offensive play volume (e.g., JAX ~1,100–1,200 plays in 2025; LAR similar).
+No artificial "low sample" unless truly <50 plays or filtered.
+
+Suspected Causes (Debug in this order):
+
+Date/Season Scope Filter Bug — Query might default to partial season (e.g., preseason only, first few weeks, or broken timestamp range like since/until dates). Check any date params in the backend query.
+Play Type Filtering — Module might only count "qualifying" plays (e.g., pass plays, routes run, targets, excluding runs/blocks/pre-snap). Personnel data often from NGS/play-by-play—verify if it's narrowed to pass attempts or something. Compare raw play count vs. snap count.
+Aggregation/Summing Error — Per-game data pulled but not summed correctly across all games (e.g., loop over weeks fails, pagination limit hit at ~50 plays, or cap applied). Test summing for a single player across known games.
+Data Source Limits/Quirks — If pulling from SumerSports, PFF, Sportradar, NGS, or similar:
+Check API docs for pagination (some cap results without page param).
+Verify endpoint is set to full regular season (not "current week" or "recent").
+Personnel tags might be incomplete/missing on run plays → dropped plays.
+
+Player Position/Role Filter — Hunter is hybrid WR/CB—ensure query pulls offensive snaps only (not mixing def/ST). Nacua is pure WR, so less likely.
+Caching/Stale Data — Clear cache/re-fetch fresh; test if data updates post-correction.
+
+Validation Steps After Fix:
+
+Re-run for Hunter → expect ~324 total offensive plays/snaps.
+Re-run for Nacua → expect ~727.
+Spot-check another high-usage WR (e.g., top-5 in snaps league-wide) against PFR snap counts.
+Confirm % groupings make sense (e.g., most WRs 70–90%+ in 11 personnel).
+Ensure "Low Sample" tag only triggers on legitimately small volumes.
+
+Additional Notes:
+
+Cross-reference totals with Pro-Football-Reference snap counts (reliable free source):
+Hunter: https://www.pro-football-reference.com/players/H/HuntTr00.htm (324 off snaps).
+Nacua: https://www.pro-football-reference.com/players/N/NacuPu00.htm (727 off snaps).
+
+If using a paid feed (SumerSports seems likely from UI style), check their personnel endpoint docs for full-season export quirks or contact support with examples.
+Log raw query/response for one player during debug (mask sensitive keys).
