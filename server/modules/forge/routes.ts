@@ -28,6 +28,7 @@ import { applySosMultiplier } from './helpers/sosMultiplier';
 import { ForgeScore } from './types';
 import { batchCalculateAlphaV2, AlphaV2Result } from './alphaV2';
 import { sleeperLiveStatusSync } from '../../services/sleeperLiveStatusSync';
+import { evaluate, recordEvents } from '../sentinel/sentinelEngine';
 
 const router = Router();
 
@@ -344,9 +345,26 @@ router.get('/score/:playerId', async (req: Request, res: Response) => {
     // Enrich with SoS data
     const enrichedScore = await enrichWithSoS(score, season);
     
+    const sentinelReport = evaluate('forge', {
+      ...enrichedScore,
+      mode: 'redraft',
+      _endpoint: '/api/forge/score/:playerId',
+    });
+
+    if (sentinelReport.events.length > 0) {
+      recordEvents(sentinelReport.events).catch((err) => {
+        console.error('[Sentinel] Failed to record FORGE score events:', err);
+      });
+    }
+
     return res.json({
       success: true,
       score: enrichedScore,
+      _sentinel: {
+        checked: true,
+        warnings: sentinelReport.warnings,
+        blocks: sentinelReport.blocks,
+      },
     });
     
   } catch (error) {
@@ -472,6 +490,34 @@ router.get('/batch', async (req: Request, res: Response) => {
       return (a.playerName ?? '').localeCompare(b.playerName ?? '');
     });
 
+    const mode = normalizedLeagueType ?? 'redraft';
+    const perPlayerReports = sortedScores.map((score) =>
+      evaluate('forge', {
+        ...score,
+        mode,
+        _endpoint: '/api/forge/batch',
+      })
+    );
+    const batchReport = evaluate('forge', {
+      scores: sortedScores,
+      count: sortedScores.length,
+      position: normalizedPosition ?? 'ALL',
+      _endpoint: '/api/forge/batch',
+    });
+
+    const sentinelWarnings = perPlayerReports.reduce((sum, report) => sum + report.warnings, 0) + batchReport.warnings;
+    const sentinelBlocks = perPlayerReports.reduce((sum, report) => sum + report.blocks, 0) + batchReport.blocks;
+    const sentinelEvents = [
+      ...perPlayerReports.flatMap((report) => report.events),
+      ...batchReport.events,
+    ];
+
+    if (sentinelEvents.length > 0) {
+      recordEvents(sentinelEvents).catch((err) => {
+        console.error('[Sentinel] Failed to record FORGE batch events:', err);
+      });
+    }
+
     return res.json({
       success: true,
       scores: sortedScores,
@@ -487,6 +533,11 @@ router.get('/batch', async (req: Request, res: Response) => {
         sosIntegrated: true,
         eligibilityRules: 'v0.3: gamesPlayed >= 1, deduped by normalized name, week range filter',
         scoredAt: new Date().toISOString(),
+      },
+      _sentinel: {
+        checked: true,
+        warnings: sentinelWarnings,
+        blocks: sentinelBlocks,
       },
     });
   } catch (error) {

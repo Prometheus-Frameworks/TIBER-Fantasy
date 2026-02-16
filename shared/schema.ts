@@ -5210,6 +5210,47 @@ export const insertQbContext2025Schema = createInsertSchema(qbContext2025).omit(
 export type InsertQbContext2025 = z.infer<typeof insertQbContext2025Schema>;
 export type QbContext2025 = typeof qbContext2025.$inferSelect;
 
+
+
+// ========================================
+// QUALITY SENTINEL TABLES
+// ========================================
+
+export const sentinelEvents = pgTable('sentinel_events', {
+  id: serial('id').primaryKey(),
+  ruleId: varchar('rule_id', { length: 100 }).notNull(),
+  module: varchar('module', { length: 50 }).notNull(),
+  severity: varchar('severity', { length: 10 }).notNull(),
+  passed: boolean('passed').notNull(),
+  confidence: real('confidence').notNull(),
+  message: text('message').notNull(),
+  details: jsonb('details'),
+  fingerprint: varchar('fingerprint', { length: 64 }).notNull(),
+  endpoint: varchar('endpoint', { length: 255 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  fingerprintIdx: index('sentinel_events_fingerprint_idx').on(table.fingerprint),
+  createdAtIdx: index('sentinel_events_created_at_idx').on(table.createdAt),
+  fingerprintCreatedAtIdx: index('sentinel_events_fingerprint_created_at_idx').on(table.fingerprint, table.createdAt),
+}));
+
+export const insertSentinelEventSchema = createInsertSchema(sentinelEvents).omit({ id: true, createdAt: true });
+export type InsertSentinelEvent = z.infer<typeof insertSentinelEventSchema>;
+export type SentinelEvent = typeof sentinelEvents.$inferSelect;
+
+export const sentinelMutes = pgTable('sentinel_mutes', {
+  id: serial('id').primaryKey(),
+  fingerprint: varchar('fingerprint', { length: 64 }).notNull().unique(),
+  reason: text('reason'),
+  mutedAt: timestamp('muted_at').defaultNow().notNull(),
+}, (table) => ({
+  fingerprintIdx: index('sentinel_mutes_fingerprint_idx').on(table.fingerprint),
+}));
+
+export const insertSentinelMuteSchema = createInsertSchema(sentinelMutes).omit({ id: true, mutedAt: true });
+export type InsertSentinelMute = z.infer<typeof insertSentinelMuteSchema>;
+export type SentinelMute = typeof sentinelMutes.$inferSelect;
+
 // ========================================
 // SIMILAR PLAYERS CACHE
 // ========================================

@@ -70,6 +70,7 @@ import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
 import gameLogRoutes from './routes/gameLogRoutes';
 import personnelRoutes from './routes/personnelRoutes';
+import sentinelRoutes from './routes/sentinelRoutes';
 import { registerRoleBankRoutes } from './routes/roleBankRoutes';
 import sosRouter from './modules/sos/sos.router';
 import { ratingsRouter } from './src/modules/ratings';
@@ -2687,7 +2688,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/game-logs', gameLogRoutes);
 
   app.use('/api/personnel', personnelRoutes);
+  app.use('/api/sentinel', sentinelRoutes);
   console.log('📋 Game Logs system mounted at /api/game-logs/*');
+  console.log('🛡️ Sentinel routes mounted at /api/sentinel/*');
 
   // Consensus Benchmark Service - Unified ECR/ADP/Dynasty consensus with fallback policy
   app.use('/api', createConsensusRouter({ 

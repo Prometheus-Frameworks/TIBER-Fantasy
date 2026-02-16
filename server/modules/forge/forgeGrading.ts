@@ -60,7 +60,7 @@ const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
   QB: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
 };
 
-const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
+export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
   WR: [82, 72, 58, 45],
   RB: [78, 68, 55, 42],
   TE: [82, 70, 55, 42],
