@@ -58,7 +58,12 @@
       "Bash(git -C /home/runner/workspace add client/src/pages/PersonnelUsage.tsx server/modules/personnel/MODULE.md server/modules/personnel/personnelService.ts server/scripts/import_pbp_participation.py shared/schema.ts)",
       "Bash(git -C:*)",
       "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(GIT_EDITOR=true git rebase:*)",
+      "Bash(npm run test:forge:*)",
+      "Bash(npm run test:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)"
     ]
   }
 }
