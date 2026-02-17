@@ -197,12 +197,10 @@ const TE_PILLARS: PositionPillarConfig = {
 
 const QB_PILLARS: PositionPillarConfig = {
   volume: {
+    // Use v3 xFP/G from snapshot opportunities to avoid role-bank bucketed QB volume.
+    // Matches RB/WR/TE continuous volume treatment.
     metrics: [
-      { metricKey: 'volume_score', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'dropbacks_per_game', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'passing_attempts', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'rush_attempts_per_game', source: 'role_bank', weight: 0.10 },
-      { metricKey: 'red_zone_dropbacks_per_game', source: 'role_bank', weight: 0.10 },
+      { metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 },
     ],
   },
   efficiency: {

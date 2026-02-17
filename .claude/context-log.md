@@ -117,3 +117,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/forge/__tests__/forgeIntegration.test.ts`
 - **Validation:** Attempted targeted Jest run; blocked in this container because `DATABASE_URL` is not set.
 - **Notes:** Test resolves canonical player IDs from `player_identity_map` dynamically to avoid brittle slug assumptions.
+
+### 2026-02-17 — Codex: FORGE QB volume switched to continuous xFP
+- **What changed:** Replaced QB volume pillar's role-bank blend with derived `xfp_per_game` (weight 1.0) to remove quantized bucket effects, and calibrated QB xFP normalization bounds for better spread with less clipping.
+- **Files modified:** `server/modules/forge/forgeEngine.ts`, `server/services/xFptsConfig.ts`
+- **Validation:** Ran TypeScript/Jest FORGE integration suite command (blocked by missing `DATABASE_URL`), then ran full production build successfully.
+- **Notes:** QB xFP coefficients remain at dropback=0.50 and rushAttempt=0.65; documented sanity outputs (elite ~20.75, average ~16.95).
