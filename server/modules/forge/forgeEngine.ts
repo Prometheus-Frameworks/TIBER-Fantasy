@@ -110,10 +110,9 @@ const WR_PILLARS: PositionPillarConfig = {
   },
   efficiency: {
     metrics: [
-      { metricKey: 'efficiency_score', source: 'role_bank', weight: 0.30 },
-      { metricKey: 'efficiency_index', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'ppr_per_target', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'deep_target_rate', source: 'role_bank', weight: 0.20 },
+      { metricKey: 'fpoe_per_game', source: 'derived', weight: 0.70 },
+      { metricKey: 'deep_target_rate', source: 'role_bank', weight: 0.15 },
+      { metricKey: 'ppr_per_target', source: 'role_bank', weight: 0.15 },
     ],
   },
   teamContext: {
@@ -142,9 +141,9 @@ const RB_PILLARS: PositionPillarConfig = {
   },
   efficiency: {
     metrics: [
-      { metricKey: 'high_value_usage_score', source: 'role_bank', weight: 0.40 },
-      { metricKey: 'ppr_per_opportunity', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'red_zone_touches_per_game', source: 'role_bank', weight: 0.25 },
+      { metricKey: 'fpoe_per_game', source: 'derived', weight: 0.70 },
+      { metricKey: 'red_zone_touches_per_game', source: 'role_bank', weight: 0.15 },
+      { metricKey: 'ppr_per_opportunity', source: 'role_bank', weight: 0.15 },
     ],
   },
   teamContext: {
@@ -173,9 +172,9 @@ const TE_PILLARS: PositionPillarConfig = {
   },
   efficiency: {
     metrics: [
-      { metricKey: 'high_value_usage_score', source: 'role_bank', weight: 0.40 },
-      { metricKey: 'ppr_per_target', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'red_zone_targets_per_game', source: 'role_bank', weight: 0.25 },
+      { metricKey: 'fpoe_per_game', source: 'derived', weight: 0.70 },
+      { metricKey: 'ppr_per_target', source: 'role_bank', weight: 0.15 },
+      { metricKey: 'red_zone_targets_per_game', source: 'role_bank', weight: 0.15 },
     ],
   },
   teamContext: {
@@ -205,11 +204,10 @@ const QB_PILLARS: PositionPillarConfig = {
   },
   efficiency: {
     metrics: [
-      { metricKey: 'efficiency_score', source: 'role_bank', weight: 0.30 },
-      { metricKey: 'epa_per_play', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'cpoe', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'yards_per_attempt', source: 'role_bank', weight: 0.15 },
-      { metricKey: 'sack_rate', source: 'role_bank', weight: 0.10, invert: true },
+      { metricKey: 'fpoe_per_game', source: 'derived', weight: 0.50 },
+      { metricKey: 'epa_per_play', source: 'role_bank', weight: 0.20 },
+      { metricKey: 'cpoe', source: 'role_bank', weight: 0.15 },
+      { metricKey: 'sack_rate', source: 'role_bank', weight: 0.15, invert: true },
     ],
   },
   teamContext: {
@@ -414,7 +412,8 @@ function computeDerivedMetric(metricKey: string, context: ForgeContext): number 
     case 'fpoe_per_game': {
       const xfpData = context.xfpData;
       if (!xfpData || xfpData.weeksUsed === 0) return 50;
-      // Normalize FPOE: -5 to +10 range → 0-100
+      // Normalize FPOE: keep current -5 to +10 range until DB-backed percentile
+      // validation can be run in an environment with DATABASE_URL configured.
       const normalized = ((xfpData.fpoePerGame - (-5)) / (10 - (-5))) * 100;
       return Math.max(0, Math.min(100, normalized));
     }
