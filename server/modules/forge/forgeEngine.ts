@@ -1102,10 +1102,14 @@ export async function runForgeEngineBatch(
   const tableName = `${position.toLowerCase()}_role_bank`;
   
   try {
+    // Order by games_played DESC first to prioritize players with full seasons,
+    // then by volume_score DESC within same games tier. This prevents low-sample
+    // players (4 games, volume_score=100) from crowding out full-season starters
+    // like Josh Allen (11 games, volume_score=44).
     const result = await db.execute(sql`
       SELECT player_id FROM ${sql.identifier(tableName)}
       WHERE season = ${season}
-      ORDER BY volume_score DESC NULLS LAST
+      ORDER BY games_played DESC NULLS LAST, volume_score DESC NULLS LAST
       LIMIT ${limit}
     `);
 
