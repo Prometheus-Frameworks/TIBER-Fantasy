@@ -16,6 +16,7 @@
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 import type { Position } from './forgeEngine';
+import { validateSnapshotRows } from './snapshotDataValidator';
 
 export interface RoleConsistencyResult {
   primaryScore: number;    // 0-100, primary metric consistency
@@ -144,7 +145,7 @@ async function fetchWeeklyRoleData(
       sm.week as week,
       COALESCE(spw.targets, 0) as targets,
       COALESCE(spw.rush_attempts, 0) as rush_attempts,
-      COALESCE(spw.snap_share, 0) as snap_share,
+      spw.snap_share,
       COALESCE(spw.routes, 0) as routes,
       COALESCE(spw.target_share, 0) as target_share,
       COALESCE(spw.dropbacks, 0) as dropbacks
@@ -156,14 +157,20 @@ async function fetchWeeklyRoleData(
     ORDER BY sm.week
   `);
 
-  return (result.rows as Record<string, any>[]).map(row => ({
-    week: parseInt(row.week) || 0,
-    targets: parseInt(row.targets) || 0,
-    rushAttempts: parseInt(row.rush_attempts) || 0,
-    snapShare: parseFloat(row.snap_share) || 0,
-    routes: parseInt(row.routes) || 0,
-    targetShare: parseFloat(row.target_share) || 0,
-    dropbacks: parseInt(row.dropbacks) || 0,
+  const validation = validateSnapshotRows(
+    result.rows as Record<string, any>[],
+    position,
+    statsId
+  );
+
+  return validation.cleanRows.map(row => ({
+    week: parseInt(String(row.week)) || 0,
+    targets: parseInt(String(row.targets)) || 0,
+    rushAttempts: parseInt(String(row.rush_attempts)) || 0,
+    snapShare: parseFloat(String(row.snap_share)) || 0,
+    routes: parseInt(String(row.routes)) || 0,
+    targetShare: parseFloat(String(row.target_share)) || 0,
+    dropbacks: parseInt(String(row.dropbacks)) || 0,
   }));
 }
 

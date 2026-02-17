@@ -15,6 +15,7 @@ import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 import { xfpV3Coefficients, xfpNormalizationRanges } from '../../services/xFptsConfig';
 import type { Position } from './forgeEngine';
+import { validateSnapshotRows } from './snapshotDataValidator';
 
 export interface XfpResult {
   xfpPerGame: number;
@@ -49,8 +50,12 @@ export async function computeXfpPerGame(
     // Fetch weekly snapshot data with opportunity breakdowns
     const result = await db.execute(sql`
       SELECT
+        sm.week,
+        spw.player_id,
         spw.targets,
         spw.rush_attempts,
+        spw.routes,
+        spw.snap_share,
         spw.rz_rush_attempts,
         spw.rz_targets,
         spw.deep_target_rate,
@@ -69,7 +74,13 @@ export async function computeXfpPerGame(
       return computeXfpFromV2Fallback(statsId, season);
     }
 
-    const weeks = result.rows as Record<string, any>[];
+    const validation = validateSnapshotRows(
+      result.rows as Record<string, any>[],
+      position,
+      playerId
+    );
+
+    const weeks = validation.cleanRows;
     let totalXfp = 0;
     let totalActualFpts = 0;
 

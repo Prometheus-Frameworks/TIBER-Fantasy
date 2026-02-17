@@ -75,3 +75,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/forge/routes.ts` — GET `/api/forge/tiers`, POST `/api/forge/compute-grades`
   - `client/src/pages/TiberTiers.tsx` — switched data source to `/api/forge/tiers`, fallback UX, FORGE-native table fields
 - **Validation:** `npm run build` succeeds; db/test/dev commands blocked by missing DB env in this container.
+
+### Unreleased — 2026-02-17: FORGE snapshot data quality guardrails
+- **Branch:** current working branch
+- **Summary:** Implemented `snapshotDataValidator` for FORGE snapshot ingestion and wired it into xFP volume, role consistency, and context path snapshot validation. Added unit coverage for all core rules plus low-sample warning behavior.
+- **Key Files:**
+  - `server/modules/forge/snapshotDataValidator.ts` — Validator rules, warning model, summary logging
+  - `server/modules/forge/xfpVolumePillar.ts` — Validates snapshot rows before xFP aggregation
+  - `server/modules/forge/roleConsistencyPillar.ts` — Validates rows in `fetchWeeklyRoleData`
+  - `server/modules/forge/forgeEngine.ts` — Validates context snapshot rows and aligns games played with clean snapshot weeks
+  - `server/modules/forge/__tests__/snapshotDataValidator.test.ts` — Rule-by-rule validator tests
+- **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run test:forge` blocked by missing `DATABASE_URL` in this environment.
