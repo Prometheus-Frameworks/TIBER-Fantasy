@@ -1,0 +1,246 @@
+File 1: /AGENT_BOOTSTRAP.md
+Purpose: one canonical “start here” instruction that forces reading guardrails every session.
+
+# AGENT_BOOTSTRAP — REQUIRED PRE-FLIGHT
+
+Before performing ANY work in this repository, you MUST:
+
+1) Read and comply with:
+- /manus/MANUS_CONTEXT.md
+- /manus/MANUS_RULES.md
+- /CURRENT_PHASE.md
+- /BACKLOG.md
+
+2) Confirm you understand current constraints by writing a **Preflight Acknowledgement** in:
+- /reports/manus_preflight_latest.md
+
+Preflight Acknowledgement format:
+- Date/time:
+- Branch you will work on:
+- Tasks you intend to do:
+- Files you will not touch:
+- Confirmation: "PRs only, no merges to main"
+
+3) If any required file is missing, STOP and open a GitHub Issue:
+Title: "Bootstrap missing file: <path>"
+Body: What is missing + why you need it.
+
+You are not allowed to proceed until Preflight is complete.
+
+
+File 2: /CURRENT_PHASE.md
+Purpose: the anchor that prevents scope creep.
+
+# CURRENT_PHASE — Stabilization & Governance
+
+Phase Name: Stabilization & Governance
+Last Updated: <<VERIFY: date>>
+
+Primary Objectives (do not exceed 5):
+1) FORGE correctness hardening (bounds, monotonic tiers, no anomalies)
+2) Sentinel/validation improvements
+3) Repo cleanliness + documentation clarity
+4) CI reliability (typecheck/lint/tests)
+5) Performance + batch stability where applicable
+
+Out of Scope (hard no):
+- New modules (IDP, rookie scanner, world vectors, etc.)
+- New ingestion pipelines
+- DB schema changes / migrations
+- Changes to FORGE scoring weights or tier thresholds unless explicitly requested by owner
+- Any automation that posts/sends messages without owner approval
+
+Definition of Done (must be measurable, fill with real checks):
+- Alpha clamped 0–100: <<VERIFY: where enforced / tests>>
+- Pillars clamped 0–100: <<VERIFY>>
+- Tier mapping monotonic: <<VERIFY: test or script>>
+- Batch endpoint stable under load: <<VERIFY: endpoint + benchmark method>>
+- Sentinel checks passing: <<VERIFY: where sentinel runs + output>>
+
+Active Workstreams (max 3):
+- <<FILL_FROM_REPO: e.g., FORGE regression fixes>>
+- <<FILL_FROM_REPO: CI / test harness>>
+- <<FILL_FROM_REPO: docs / README>>
+
+
+File 3: /BACKLOG.md
+Purpose: parking lot for expansion ideas, with phase tags.
+
+# BACKLOG (PARKING LOT)
+
+Rule: If it is not in CURRENT_PHASE, it goes here.
+
+## Phase 2 — Expansion Candidates
+- IDP Lab (Havoc Index + Defensive DNA)
+  - Why: <<FILL>>
+  - Requires: <<FILL>>
+  - Risks: <<FILL>>
+- Offensive DNA (OC coaching shift + EPA/play projection layer)
+  - Why: <<FILL>>
+  - Requires: <<FILL>>
+  - Risks: <<FILL>>
+- World Model (Player trait vectors, embeddings-like representations)
+  - Why: <<FILL>>
+  - Requires: <<FILL>>
+  - Risks: <<FILL>>
+- Rookie Scanner (2026 rookie data ingestion)
+  - Why: <<FILL>>
+  - Requires: <<FILL>>
+  - Risks: <<FILL>>
+
+## Phase 3 — Automation / Community
+- X notification workflow (draft-only; no auto-post)
+- Email draft workflow (draft-only; no auto-send)
+- Contribution guidelines + issue templates + release cadence
+
+
+Folder: /manus/ (create if missing)
+
+File 4: /manus/START_HERE.md
+Purpose: human-readable onboarding plus the strict “read these first.”
+
+# START HERE (Manus Onboarding)
+
+You must begin every session by opening /AGENT_BOOTSTRAP.md.
+
+Quick links:
+- /manus/MANUS_CONTEXT.md
+- /manus/MANUS_RULES.md
+- /CURRENT_PHASE.md
+- /BACKLOG.md
+- /TIBER_CONTEXT.md (informational)
+
+If you are asked to do anything that conflicts with CURRENT_PHASE, you must refuse and instead open an Issue explaining the conflict.
+
+
+File 5: /manus/MANUS_CONTEXT.md
+Purpose: operational constraints + verified commands.
+
+# MANUS_CONTEXT — Operational Rules for Tiber Repo Work
+
+Last Updated: <<VERIFY date>>
+
+## Mission
+Operate as a constrained engineering agent focused on Stabilization & Governance.
+
+## Hard Constraints
+- PRs only; never merge to main
+- Never force-push or rewrite history
+- No DB schema changes or migrations
+- No FORGE scoring weight/tier threshold changes unless explicitly requested
+- No dependency upgrades unless explicitly requested
+- No “cleanup refactors” unless tied to a specific issue/task
+- Max PR scope: <= 8 files changed unless explicitly approved
+
+## Where Things Live (MUST be accurate)
+- Frontend pages: <<VERIFY actual path>>
+- Shared UI components: <<VERIFY actual path>>
+- Backend route registration: <<VERIFY actual path>>
+- FORGE module: <<VERIFY actual path(s)>>
+- Data Lab module: <<VERIFY actual path(s)>>
+- Sentinel module: <<VERIFY actual path(s)>>
+- Drizzle schema: <<VERIFY actual path(s)>>
+
+If any path cannot be verified, write UNKNOWN and open a GitHub Issue.
+
+## How to Run (MUST be accurate)
+- Install deps: <<VERIFY command>>
+- Start dev server: <<VERIFY command>>
+- Run typecheck: <<VERIFY command>>
+- Run lint: <<VERIFY command>>
+- Run tests: <<VERIFY command>>
+- Build: <<VERIFY command>>
+
+## Required Session Output
+Every session must produce:
+- /reports/manus_daily_YYYY-MM-DD.md
+and update:
+- /reports/manus_preflight_latest.md (preflight acknowledgement)
+
+
+File 6: /manus/MANUS_RULES.md
+Purpose: the “do not cross” boundaries.
+
+# MANUS_RULES — Non-Negotiables
+
+## Never do these:
+- Push directly to main
+- Merge PRs
+- Modify secrets, .env files, or credential stores
+- Perform DB migrations
+- Modify production deployment config
+- Change FORGE scoring weights / tier thresholds
+- Add new external dependencies
+- Expand scope beyond CURRENT_PHASE
+
+## Always do these:
+- Work in a feature branch named: manus/<short-task-slug>
+- Open a PR for every change
+- Use the PR template in /manus/PR_TEMPLATE.md
+- Include tests or explain why not
+- Provide a validation note for any output-affecting change
+- Stop and open an Issue if uncertain
+
+
+File 7: /manus/PR_TEMPLATE.md
+Purpose: consistent PR quality.
+
+## Summary
+What changed?
+
+## Why
+Why was this change necessary?
+
+## Scope
+Files touched:
+- <<AUTO-LIST>>
+
+## Behavior Change
+Does this affect outputs (Alpha, tiers, lab metrics)? Yes/No  
+If Yes: provide before/after evidence.
+
+## Testing
+- Commands run: <<VERIFY actual test commands>>
+- New/updated tests: <<LIST>>
+
+## Risk Notes
+Potential side effects.
+
+## Rollback Plan
+How to revert safely.
+
+
+File 8: /manus/DAILY_REPORT_TEMPLATE.md
+Purpose: standardized daily report.
+
+# Manus Daily Report — YYYY-MM-DD
+
+## Preflight
+- Read AGENT_BOOTSTRAP.md: Yes/No
+- Branch: manus/<slug>
+- Constraints acknowledged: Yes/No
+
+## Work Completed
+- Item 1:
+- Item 2:
+
+## PRs Created
+- PR link:
+- PR link:
+
+## Tests / Validation
+- Commands run:
+- Results:
+
+## Open Questions / Blocks
+- Q1:
+- Q2:
+
+## Suggested Next Tasks (must align with CURRENT_PHASE)
+- Task 1:
+
+
+File 9: /reports/.gitkeep
+Purpose: ensure the reports folder exists in git.
+
+(Just create the folder /reports/ and add .gitkeep.)
