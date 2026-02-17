@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-02-17 — Replit Agent: FORGE Pillar Weight Tuning & Calibration Fix
+- **What changed:** Recalibrated FORGE redraft pillar weights based on PPG↔pillar correlation analysis. Updated calibration percentile anchors (p10/p90) to reduce ceiling compression. Key findings: RB stability (-0.668 corr) and TE stability (-0.786 corr) are anti-signals; WR stability (+0.801 corr) is positive. QB team context (0.661 corr) was strongest single QB predictor.
+- **Files modified:** `server/modules/forge/forgeGrading.ts` (weights + dynasty weights), `server/modules/forge/types.ts` (calibration params), `.claude/tasks/pillar-weight-tuning.md` (research doc with resolution), `replit.md`
+- **Validation:** Full recompute of 357 players. RB T1 count: 17→8 (within 5-8 target). Spearman rank correlations: RB 0.943, TE 0.939, WR 0.908, QB 0.623. CMC now tops RB rankings at 91.6 (was tied at 95.0 with Irving/JT).
+- **Notes:** Remaining Bucky Irving inversion (91.2, 13.8 PPG) is a Volume pillar design issue — Volume measures opportunity count, not per-play production. Future work: redesign Volume and Stability pillar formulas.
+
 ### 2026-02-16 — Replit Agent: Quality Sentinel Dashboard UI
 - **What changed:** Built the Quality Sentinel Dashboard frontend at `/sentinel` with health overview cards, module breakdown, interactive Test Lab (12 pre-built scenarios across forge/personnel/datalab/system modules), issues panel with filtering and muting, and event feed with expandable details. Added sentinel to sidebar under System section with NEW badge. Also completed backend integration: added sentinel schema tables to `shared/schema.ts`, integrated sentinel checks into FORGE score and batch endpoints, mounted sentinel routes.
 - **Files modified:** `client/src/pages/SentinelDashboard.tsx` (new), `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `shared/schema.ts`, `server/modules/forge/routes.ts`

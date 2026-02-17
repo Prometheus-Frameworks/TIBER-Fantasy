@@ -1,7 +1,8 @@
 # FORGE Pillar Weight Tuning — Deep Research Brief
 
 **Created:** 2026-02-16
-**Status:** Open — Awaiting Investigation
+**Updated:** 2026-02-17
+**Status:** Resolved — Weights recalibrated, validated
 **Priority:** High — Directly impacts ranking accuracy
 
 ---
@@ -216,3 +217,55 @@ WHERE player_name IN (
 AND season = 2025
 ORDER BY position, alpha DESC;
 ```
+
+---
+
+## Resolution (2026-02-17)
+
+### Changes Applied
+
+**1. Redraft Pillar Weights** (based on PPG↔pillar correlation analysis):
+
+| Position | Volume | Efficiency | Team Context | Stability | Key Change |
+|----------|--------|------------|-------------|-----------|------------|
+| RB | 0.62 | 0.22 | 0.10 | **0.06** | Stability 0.15→0.06 (anti-signal: -0.668 corr) |
+| TE | 0.62 | 0.18 | 0.10 | **0.10** | Stability 0.15→0.10 (anti-signal: -0.786 corr) |
+| WR | 0.48 | 0.15 | 0.15 | **0.22** | Stability 0.12→0.22 (positive: +0.801 corr) |
+| QB | 0.28 | 0.32 | **0.28** | 0.12 | Team Context 0.18→0.28 (strongest: 0.661 corr) |
+
+**2. Calibration Percentile Anchors** (widened p10/p90 to reduce amplification):
+
+| Position | Old p10/p90 | New p10/p90 | Effect |
+|----------|-----------|-----------|--------|
+| RB | 28/64 | 23/68 | Wider range → less ceiling compression |
+| TE | 31/68 | 29/64 | Tighter for narrower TE raw distribution |
+| WR | 28/78 | 31/76 | Slight adjustment |
+| QB | 30/73 | 35/73 | Raised floor for QB distribution |
+
+**3. Tier Thresholds** aligned across `forgeGrading.ts` (POSITION_TIER_THRESHOLDS) and `types.ts` (TIBER_TIERS_2025): RB 78/68/55/42, WR 82/72/58/45, TE 82/70/55/42, QB 82/68/52/38.
+
+### Validation Results
+
+**Tier Distribution (before → after):**
+
+| Position | T1 before | T1 after | Target | Status |
+|----------|-----------|----------|--------|--------|
+| RB | 17 | 8 | 5-8 | Within target |
+| TE | 6 | 4 | 3-6 | Within target |
+| WR | 9 | 9 | 6-10 | Within target |
+| QB | 5 | 5 | 3-6 | Within target |
+
+**Spearman Rank Correlation (Alpha vs PPG):**
+- RB: 0.943 (excellent)
+- TE: 0.939 (excellent)
+- WR: 0.908 (very good)
+- QB: 0.623 (moderate — expected, QB value depends on team context)
+
+**Key Remaining Inversions:**
+- Bucky Irving (91.2, 13.8 PPG) > Bijan Robinson (87.5, 22.1 PPG): Volume pillar design issue, not calibration
+- Carson Wentz (73.8) > Josh Allen (67.6): Team context data issue for BUF
+
+### Future Work
+- Redesign Volume pillar to weight per-play production, not just opportunity count
+- Redesign Stability pillar to measure role consistency instead of scoring variance
+- Investigate QB team context calculation for BUF/Josh Allen anomaly

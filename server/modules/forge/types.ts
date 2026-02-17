@@ -430,7 +430,7 @@ export const EFFICIENCY_CAPS: Record<PlayerPosition, number> = {
  * Thresholds lowered to match the new 25-95 calibration range.
  */
 export const TIBER_TIERS_2025 = {
-  QB: { T1: 70, T2: 55, T3: 42, T4: 32 },  // Lowered to match calibrated QB range (max ~74)
+  QB: { T1: 82, T2: 68, T3: 52, T4: 38 },
   RB: { T1: 78, T2: 68, T3: 55, T4: 42 },
   WR: { T1: 82, T2: 72, T3: 58, T4: 45 },
   TE: { T1: 82, T2: 70, T3: 55, T4: 42 },
@@ -510,42 +510,41 @@ export interface CalibrationParams {
  * - Spread: p10→max = 28 points
  * - Calibration maps p10(35)→25, max(65)→95
  * 
- * RB calibrated based on 2025 season week 13 CUMULATIVE distribution:
- * - Observed: p10=32, p50=42, p90=55, max=60
- * - Spread: p10→max = 28 points
- * - Calibration maps p10(32)→25, max(62)→95
- * 
- * TE calibrated based on 2025 season week 13 CUMULATIVE distribution:
- * - Observed: p10=33, p50=40, p90=52, max=58
- * - Spread: p10→max = 25 points
- * - Calibration maps p10(33)→25, max(58)→95
- * 
- * QB calibrated based on 2025 season week 13 CUMULATIVE distribution:
- * - Observed: p10=35, p50=40, p90=50, max=55
- * - Spread: p10→max = 20 points (QB scores cluster tighter)
- * - Calibration maps p10(35)→25, max(55)→95
+ * Recalibrated 2026-02-17 based on 2025 season week 17 full raw score distributions.
+ * p10/p90 fields represent the raw score range anchors (near-min/near-max of observed
+ * distributions, rounded) that map to outMin/outMax (25-95 Alpha range).
+ * Widened from earlier tight p10/p90 percentiles to reduce amplification.
+ *
+ * Raw score distributions observed:
+ * RB: raw 23.7-63.7 (range 40) → amp 1.56x
+ * WR: raw 31.8-75.8 (range 44) → amp 1.56x
+ * TE: raw 30.2-59.7 (range 30) → amp 2.00x
+ * QB: raw 35.6-72.7 (range 37) → amp 1.84x
+ *
+ * Validated via Spearman rank correlation (Alpha vs PPG):
+ * RB: 0.943, TE: 0.939, WR: 0.908, QB: 0.623
  */
 export const ALPHA_CALIBRATION: Partial<Record<PlayerPosition, CalibrationParams>> = {
   WR: {
-    p10: 28,
-    p90: 78,
+    p10: 31,
+    p90: 76,
     outMin: 25,
     outMax: 95,
   },
   RB: {
-    p10: 28,
-    p90: 64,
-    outMin: 25,
-    outMax: 95,
-  },
-  TE: {
-    p10: 31,
+    p10: 23,
     p90: 68,
     outMin: 25,
     outMax: 95,
   },
+  TE: {
+    p10: 29,
+    p90: 64,
+    outMin: 25,
+    outMax: 95,
+  },
   QB: {
-    p10: 30,
+    p10: 35,
     p90: 73,
     outMin: 25,
     outMax: 95,

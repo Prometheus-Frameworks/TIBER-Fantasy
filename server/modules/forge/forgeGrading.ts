@@ -41,25 +41,29 @@ export type GradeForgeOptions = {
 };
 
 // Base weights used for REDRAFT mode
-// Updated 2025-01-09 based on feature correlation analysis:
-// - RB: volume dominates (rush_attempts r=0.515), efficiency near-zero (r=0.019)
-// - WR: target_share (r=0.417) > wopr (r=0.407), efficiency NEGATIVE (r=-0.042)
-// - TE: same pattern as WR - volume wins, efficiency hurts
-// - QB: efficiency matters (yac_per_rec r=0.729, yprr r=0.685)
+// Updated 2026-02-16 based on deep research: PPG↔pillar correlation analysis + constrained tuning
+// Key findings:
+// - RB stability (-0.668 corr w/ PPG) is anti-signal: rewards boring committee backs, punishes bellcows
+// - TE stability (-0.786 corr) same pattern: spiky TEs are the elite ones
+// - WR stability (+0.801 corr) is legitimately positive: consistent targets = value
+// - QB team context (0.661 corr) strongest single QB predictor, was underweighted
+// See: .claude/tasks/pillar-weight-tuning.md for full analysis
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.55, efficiency: 0.15, teamContext: 0.18, stability: 0.12 },
-  RB: { volume: 0.50, efficiency: 0.25, teamContext: 0.10, stability: 0.15 },  // Keep some efficiency - helps separate bellcows from backups
-  TE: { volume: 0.55, efficiency: 0.15, teamContext: 0.15, stability: 0.15 },
-  QB: { volume: 0.25, efficiency: 0.45, teamContext: 0.18, stability: 0.12 },
+  WR: { volume: 0.48, efficiency: 0.15, teamContext: 0.15, stability: 0.22 },
+  RB: { volume: 0.62, efficiency: 0.22, teamContext: 0.10, stability: 0.06 },
+  TE: { volume: 0.62, efficiency: 0.18, teamContext: 0.10, stability: 0.10 },
+  QB: { volume: 0.28, efficiency: 0.32, teamContext: 0.28, stability: 0.12 },
 };
 
 // Dynasty mode weights - stability matters more for long-term value
-// Still respects correlation analysis but emphasizes stability for dynasty formats
+// Updated 2026-02-16: Reduced RB/TE stability (still anti-signal until redefined as role stability)
+// Dynasty stability kept higher than redraft since durability/role security matters long-term,
+// but capped until stability pillar is redefined to measure opportunity consistency
 const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.35, efficiency: 0.15, teamContext: 0.20, stability: 0.30 },
-  RB: { volume: 0.35, efficiency: 0.10, teamContext: 0.15, stability: 0.40 },
-  TE: { volume: 0.35, efficiency: 0.15, teamContext: 0.15, stability: 0.35 },
-  QB: { volume: 0.20, efficiency: 0.35, teamContext: 0.20, stability: 0.25 },
+  WR: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
+  RB: { volume: 0.42, efficiency: 0.13, teamContext: 0.20, stability: 0.25 },
+  TE: { volume: 0.40, efficiency: 0.13, teamContext: 0.17, stability: 0.30 },
+  QB: { volume: 0.22, efficiency: 0.28, teamContext: 0.28, stability: 0.22 },
 };
 
 export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {

@@ -45,6 +45,8 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
     - **FORGE E+G Architecture (v2)**: Modular system separating Engine (data/metrics) from Grading (scoring/tiers), exposed via `/api/forge/eg/batch` and `/api/forge/eg/player` endpoints.
     - **FORGE Workbench (`/forge-workbench`)**: An interactive tool for exploring FORGE internals with player search, adjustable weights, mode toggles, and detailed pillar breakdowns.
     - **FORGE Data Pipeline**: Ingests data from various sources (Role Banks, Datadive, Legacy Tables) to calculate Alpha scores, sub-scores, trajectory, and confidence.
+    - **FORGE Pillar Weights (v1.1)**: Correlation-tuned redraft weights — RB (V:0.62/E:0.22/T:0.10/S:0.06), WR (0.48/0.15/0.15/0.22), TE (0.62/0.18/0.10/0.10), QB (0.28/0.32/0.28/0.12). Key insight: RB/TE stability is anti-correlated with PPG; WR stability is positive. See `.claude/tasks/pillar-weight-tuning.md`.
+    - **FORGE Calibration**: Position-specific percentile anchors (p10/p90) mapping raw weighted scores to 25-95 Alpha range. Validated via Spearman rank correlation (RB: 0.943, TE: 0.939, WR: 0.908, QB: 0.623).
     - **Tiber Tiers (v1.1)**: Position-specific tier thresholds recalibrated for cumulative season data.
     - **FORGE v1.1 Multi-Week Aggregation**: Aggregates data across all official snapshots for season-grounded Alpha scores.
     - **Next Man Up**: Tracks opportunity shifts for players.
