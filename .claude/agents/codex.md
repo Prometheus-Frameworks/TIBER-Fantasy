@@ -101,3 +101,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/forge/forgeEngine.ts` — QB volume pillar now uses `{ metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 }`
   - `server/services/xFptsConfig.ts` — added QB xFP sanity documentation and adjusted QB normalization range to `{ min: 7.5, max: 24.0 }`
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` blocked by missing `DATABASE_URL`; `npm run build` passed.
+
+### Unreleased — 2026-02-17: FORGE FPOE-first efficiency pillar
+- **Branch:** current working branch
+- **Summary:** Updated FORGE efficiency pillar configs to center on derived `fpoe_per_game` for WR/RB/TE/QB, reducing overlap with the xFP-based volume pillar and preserving QB passing-skill context with EPA/CPOE/sack-rate secondary metrics.
+- **Key Files:**
+  - `server/modules/forge/forgeEngine.ts` — updated per-position efficiency metric weights/sources; retained and annotated FPOE normalization `[-5, +10]`
+- **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run build` passed with existing warning in `server/olc/adjusters.ts`.
+- **Notes:** Requested FPOE percentile SQL validation blocked in this environment because `DATABASE_URL` is unset.
