@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import { getPrimaryQbContext } from './qbContextPopulator';
 import { computeXfpPerGame, normalizeXfpToScore, type XfpResult } from './xfpVolumePillar';
 import { computeRoleConsistency, type RoleConsistencyResult } from './roleConsistencyPillar';
+import { validateSnapshotRows } from './snapshotDataValidator';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -947,6 +948,33 @@ export async function fetchForgeContext(
     `);
     if (gpResult.rows.length > 0) {
       gamesPlayed = Number((gpResult.rows[0] as any).gp) || 0;
+    }
+
+    const snapshotResult = await db.execute(sql`
+      SELECT
+        sm.week,
+        spw.player_id,
+        spw.targets,
+        spw.rush_attempts,
+        spw.routes,
+        spw.dropbacks,
+        spw.snap_share
+      FROM datadive_snapshot_player_week spw
+      JOIN datadive_snapshot_meta sm ON sm.id = spw.snapshot_id
+      WHERE spw.player_id = ${statsId}
+        AND sm.season = ${season}
+        AND sm.is_official = true
+      ORDER BY sm.week
+    `);
+
+    if (snapshotResult.rows.length > 0) {
+      const snapshotValidation = validateSnapshotRows(
+        snapshotResult.rows as Record<string, any>[],
+        position,
+        playerId
+      );
+
+      gamesPlayed = Math.max(gamesPlayed, snapshotValidation.cleanRows.length);
     }
   } catch (error) {
     console.error(`[ForgeEngine] Error fetching player info:`, error);
