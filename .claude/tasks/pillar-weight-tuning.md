@@ -266,6 +266,20 @@ ORDER BY position, alpha DESC;
 - Carson Wentz (73.8) > Josh Allen (67.6): Team context data issue for BUF
 
 ### Future Work
-- Redesign Volume pillar to weight per-play production, not just opportunity count
-- Redesign Stability pillar to measure role consistency instead of scoring variance
-- Investigate QB team context calculation for BUF/Josh Allen anomaly
+
+**1. Volume Pillar Redesign (High Priority)**
+- Current issue: Volume measures raw opportunity count (touches, targets), rewarding high-usage players regardless of per-play production
+- Impact: Bucky Irving (13.8 PPG) ranks 91.2 despite mediocre scoring because he has 71.4 volume — nearly matching CMC (81.4 volume, 24.4 PPG)
+- Proposed fix: Blend opportunity count with per-play production rate (e.g. yards/touch, fantasy points/opportunity) so volume reflects quality-weighted usage, not just quantity
+- Test case: After fix, Irving should drop below players like Bijan Robinson (22.1 PPG) and De'Von Achane (20.2 PPG) who produce far more per touch
+
+**2. Stability Pillar Redesign (Medium Priority)**
+- Current issue: Stability measures week-to-week scoring variance — low variance = high stability. But for RB/TE, low variance actually correlates negatively with PPG (-0.668 RB, -0.786 TE) because boring committee backs score consistently low
+- Impact: We reduced stability weight as a band-aid (RB 0.15→0.06, TE 0.15→0.10), but ideally the pillar itself should be useful, not suppressed
+- Proposed fix: Redefine stability as "role consistency" — measure snap share consistency, target share consistency, and touch share consistency rather than raw scoring variance. A bellcow who dominates touches every week should score high on stability even if his point totals swing
+- Test case: Derrick Henry and Saquon Barkley should have high role-stability scores despite volatile scoring weeks
+
+**3. QB Team Context / Josh Allen Anomaly (Low Priority)**
+- Current issue: Josh Allen (22.4 PPG) scores only 67.6 alpha — below Carson Wentz (73.8, 13.5 PPG)
+- Root cause: BUF team context score appears miscalculated or stale; Allen's QB redraft score (63.0) seems low for a top-3 fantasy QB
+- Proposed fix: Audit the QB context pipeline for BUF specifically; check if roster data, offensive EPA, or QB mapping is outdated
