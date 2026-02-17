@@ -1,6 +1,6 @@
 # Tiber Fantasy — Project Context File
 
-> Last updated: February 16, 2026
+> Last updated: February 17, 2026
 > Purpose: Give any AI agent a complete, accurate understanding of what Tiber Fantasy is, what's built, what's live, and how everything connects.
 
 ---
@@ -46,6 +46,17 @@ The core evaluation system. FORGE stands for Football-Oriented Recursive Grading
 - `/api/forge/eg/batch` — Batch player grades
 - `/api/forge/eg/player` — Single player grade
 - `/api/forge/simulation/*` — FORGE simulation tools
+
+**FORGE Stability Criteria (Definition of Done):**
+A FORGE build is considered stable when all of the following hold:
+- Alpha scores clamped 0–100 (no negative or out-of-range outputs)
+- All four pillar scores clamped 0–100
+- Tier mapping is monotonic (higher Alpha = same or better tier, never worse)
+- Batch endpoint (`/api/forge/eg/batch`) completes under 15 seconds per position
+- No negative outputs anywhere in the scoring pipeline
+- Data validator filtering ghost rows, inactive weeks, and anomalous snap share values
+- Sentinel quality checks passing (no critical rule violations)
+- Position rankings pass sanity checks (known elite players land in T1/T2)
 
 ### Tiber Tiers (`/tiers`)
 User-facing rankings powered by FORGE. Features position filters, adjustable weight sliders, preset scoring systems, season/weekly toggles, week range filtering, mode toggles, and Football Lens issue badges.
