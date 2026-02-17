@@ -75,3 +75,37 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/forge/routes.ts` — GET `/api/forge/tiers`, POST `/api/forge/compute-grades`
   - `client/src/pages/TiberTiers.tsx` — switched data source to `/api/forge/tiers`, fallback UX, FORGE-native table fields
 - **Validation:** `npm run build` succeeds; db/test/dev commands blocked by missing DB env in this container.
+
+### Unreleased — 2026-02-17: FORGE snapshot data quality guardrails
+- **Branch:** current working branch
+- **Summary:** Implemented `snapshotDataValidator` for FORGE snapshot ingestion and wired it into xFP volume, role consistency, and context path snapshot validation. Added unit coverage for all core rules plus low-sample warning behavior.
+- **Key Files:**
+  - `server/modules/forge/snapshotDataValidator.ts` — Validator rules, warning model, summary logging
+  - `server/modules/forge/xfpVolumePillar.ts` — Validates snapshot rows before xFP aggregation
+  - `server/modules/forge/roleConsistencyPillar.ts` — Validates rows in `fetchWeeklyRoleData`
+  - `server/modules/forge/forgeEngine.ts` — Validates context snapshot rows and aligns games played with clean snapshot weeks
+  - `server/modules/forge/__tests__/snapshotDataValidator.test.ts` — Rule-by-rule validator tests
+- **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run test:forge` blocked by missing `DATABASE_URL` in this environment.
+
+### Unreleased — 2026-02-17: FORGE end-to-end integration tests
+- **Branch:** current working branch
+- **Summary:** Created `forgeIntegration.test.ts` for real DB-backed FORGE coverage with five categories: per-position sanity checks, seasonal pinned-player assertions, cross-position consistency rules, mode consistency checks, and explicit stability regression guards.
+- **Key Files:**
+  - `server/modules/forge/__tests__/forgeIntegration.test.ts` — New integration suite using `runForgeEngineBatch`, `gradeForgeWithMeta`, and direct `player_identity_map` canonical-ID lookup via `db`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` failed in this environment because `DATABASE_URL` is unset.
+
+### Unreleased — 2026-02-17: FORGE QB continuous volume via xFP
+- **Branch:** current working branch
+- **Summary:** Migrated QB volume pillar from quantized role-bank metrics to derived `xfp_per_game` (v3 xFP), matching RB/WR/TE continuous volume treatment and reducing bucketed rank ties.
+- **Key Files:**
+  - `server/modules/forge/forgeEngine.ts` — QB volume pillar now uses `{ metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 }`
+  - `server/services/xFptsConfig.ts` — added QB xFP sanity documentation and adjusted QB normalization range to `{ min: 7.5, max: 24.0 }`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` blocked by missing `DATABASE_URL`; `npm run build` passed.
+
+### Unreleased — 2026-02-17: FORGE FPOE-first efficiency pillar
+- **Branch:** current working branch
+- **Summary:** Updated FORGE efficiency pillar configs to center on derived `fpoe_per_game` for WR/RB/TE/QB, reducing overlap with the xFP-based volume pillar and preserving QB passing-skill context with EPA/CPOE/sack-rate secondary metrics.
+- **Key Files:**
+  - `server/modules/forge/forgeEngine.ts` — updated per-position efficiency metric weights/sources; retained and annotated FPOE normalization `[-5, +10]`
+- **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run build` passed with existing warning in `server/olc/adjusters.ts`.
+- **Notes:** Requested FPOE percentile SQL validation blocked in this environment because `DATABASE_URL` is unset.

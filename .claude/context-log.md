@@ -105,3 +105,27 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `shared/schema.ts`, `server/modules/forge/forgeGradeCache.ts`, `server/modules/forge/routes.ts`, `client/src/pages/TiberTiers.tsx`
 - **Validation:** Ran build, attempted db push + tests + dev server (blocked by missing `DATABASE_URL`), verified route and schema wiring via source inspection.
 - **Notes:** Admin endpoint expects `FORGE_ADMIN_KEY`; cache version defaults to `v1`; frontend now treats cache-empty responses as compute-in-progress.
+
+### 2026-02-17 — Codex: FORGE snapshot data quality guardrails
+- **What changed:** Added a new snapshot validator module with row-level guardrails (null/anomalous snap share handling, ghost/inactive row drops, and outlier warnings), and integrated it into FORGE xFP volume, role consistency ingestion, and context snapshot week counting.
+- **Files modified:** `server/modules/forge/snapshotDataValidator.ts`, `server/modules/forge/xfpVolumePillar.ts`, `server/modules/forge/roleConsistencyPillar.ts`, `server/modules/forge/forgeEngine.ts`, `server/modules/forge/__tests__/snapshotDataValidator.test.ts`
+- **Validation:** Ran focused validator unit tests (pass), attempted existing FORGE test suite (blocked by missing `DATABASE_URL`).
+- **Notes:** Validator emits summary logs per player and detailed warnings only when fewer than 5 clean weeks remain.
+
+### 2026-02-17 — Codex: FORGE end-to-end integration test coverage
+- **What changed:** Added full FORGE integration test suite covering batch sanity, pinned player ranking guards, cross-position calibration checks, mode consistency, and stability regression protections using live DB reads and real E+G pipeline functions.
+- **Files modified:** `server/modules/forge/__tests__/forgeIntegration.test.ts`
+- **Validation:** Attempted targeted Jest run; blocked in this container because `DATABASE_URL` is not set.
+- **Notes:** Test resolves canonical player IDs from `player_identity_map` dynamically to avoid brittle slug assumptions.
+
+### 2026-02-17 — Codex: FORGE QB volume switched to continuous xFP
+- **What changed:** Replaced QB volume pillar's role-bank blend with derived `xfp_per_game` (weight 1.0) to remove quantized bucket effects, and calibrated QB xFP normalization bounds for better spread with less clipping.
+- **Files modified:** `server/modules/forge/forgeEngine.ts`, `server/services/xFptsConfig.ts`
+- **Validation:** Ran TypeScript/Jest FORGE integration suite command (blocked by missing `DATABASE_URL`), then ran full production build successfully.
+- **Notes:** QB xFP coefficients remain at dropback=0.50 and rushAttempt=0.65; documented sanity outputs (elite ~20.75, average ~16.95).
+
+### 2026-02-17 — Codex: FORGE FPOE-based efficiency pillar decomposition
+- **What changed:** Replaced volume-correlated role-bank efficiency mixes with FPOE-first efficiency pillar configs across WR/RB/TE/QB so volume (xFP/G) and efficiency (FPOE/G) are complementary. Kept QB EPA/CPOE/sack-rate components as secondary passing-efficiency context and documented that current FPOE normalization remains `[-5, +10]` pending DB-backed percentile validation.
+- **Files modified:** `server/modules/forge/forgeEngine.ts`
+- **Validation:** Ran `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` (pass) and `npm run build` (pass, pre-existing duplicate-class-member warning in `server/olc/adjusters.ts`).
+- **Notes:** Could not run the requested SQL distribution check because this container has no `DATABASE_URL`; normalization range should be revisited once DB access is available.
