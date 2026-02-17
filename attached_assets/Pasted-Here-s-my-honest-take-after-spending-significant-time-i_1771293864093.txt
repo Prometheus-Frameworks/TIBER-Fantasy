@@ -1,0 +1,69 @@
+Here's my honest take after spending significant   
+  time in the guts of this system:                                          
+                                                                            
+  What's genuinely strong                                                   
+                                     
+  The 4-pillar architecture is sound. Volume, efficiency, team context,     
+  stability — that decomposition maps cleanly to how fantasy value actually 
+  works. Most ranking systems are opaque blends; FORGE's pillar structure   
+  makes it debuggable and tunable, which is rare.
+
+  The recursive alpha engine is clever. The prior-blending (80/20) with
+  momentum is a smart way to add temporal smoothness without overreacting to
+   single weeks. It's conceptually similar to what good Bayesian systems do.
+
+  The football lens is a good idea. Having a separate layer that detects
+  football-sense issues (TD spikes, volume/efficiency mismatches) and
+  applies bounded corrections is architecturally clean. It's the right place
+   to encode domain knowledge that doesn't fit into the pillar math.
+
+  Where I'd be concerned
+
+  The pipeline is fragile to data quality. We just saw this — a single
+  zero-dropback week could crater an elite QB's stability. The snapshot data
+   has inconsistencies (snap_share meaning different things in week 17 vs
+  other weeks, null values in week 18). Every derived metric in FORGE is one
+   bad data week away from producing garbage. I'd invest heavily in data
+  validation layers before the data enters the pillar computations.
+
+  The identity resolution is a liability. The batch endpoint passes GSIS IDs
+   to functions that do WHERE canonical_id = ${playerId} lookups. This works
+   by accident — the fallback to using the raw ID happens to match the
+  snapshot table. But it's a latent bug. A single function that
+  canonicalizes IDs at the boundary would prevent a whole class of issues.
+
+  Calibration is doing too much heavy lifting. The raw pillar scores cluster
+   in a narrow range (e.g., RB raw 23-64), and the linear calibration
+  stretches that to 25-95. That's a 1.56-2.0x amplification factor. Small
+  pillar changes get magnified into large alpha differences. The real fix is
+   getting the pillar scores to naturally span a wider range, rather than
+  relying on calibration to spread them out.
+
+  The role bank data looks quantized. Volume scores of 22, 31, 35, 40, 44,
+  55, 69, 83, 93, 100 — those aren't continuous distributions, they're
+  discrete buckets. If the upstream role bank is binning players into tiers
+  before FORGE sees them, you're losing granularity that matters. FORGE
+  can't distinguish between the 15th and 25th ranked QB if they both land in
+   the volume_score=44 bucket.
+
+  What I'd prioritize next
+
+  1. Data quality guardrails upstream — validate snapshot data before it
+  reaches FORGE. Flag weeks with null snap_share, anomalous values
+  (snap_share=1), or zero primary metrics.
+  2. End-to-end integration tests with real data — the guardrail tests I
+  wrote are a start, but you need tests that actually hit the database and
+  verify specific players. "Josh Allen is top-5 QB" should be a test that
+  runs on every deploy.
+  3. Continuous role bank scores — if the role bank is producing quantized
+  scores, consider using the raw underlying metrics (carries_per_game,
+  targets_per_game) directly rather than pre-bucketed scores. The xFP volume
+   pillar already does this correctly by going to the snapshot data.
+  4. FPOE efficiency pillar — right now volume (xFP) and efficiency use
+  different baselines. If efficiency becomes Fantasy Points Over Expected
+  (actual minus xFP), the two pillars become perfectly complementary with
+  zero double-counting. That's a clean decomposition worth pursuing.
+
+  The overall direction is good. The main risk isn't the math — it's the
+  data pipeline reliability and the tight coupling to upstream data formats
+  that can silently change.
