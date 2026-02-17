@@ -28,7 +28,7 @@ Operate as a constrained engineering agent focused on Stabilization & Governance
 - Install deps: `npm install`
 - Start dev server: `npm run dev`
 - Run typecheck: `npm run typecheck` (runs `tsc -p .`)
-- Run lint: UNKNOWN (no lint script in package.json — see GitHub Issue)
+- Run lint: `npm run lint` (runs ESLint v10 with `@typescript-eslint/parser`, config in `eslint.config.js`)
 - Run tests: `npm run test` (runs Jest with `--experimental-vm-modules --runInBand`)
 - Run FORGE tests only: `npm run test:forge`
 - Build: `npm run build` (esbuild server bundle to `dist/index.mjs`)

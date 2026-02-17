@@ -17,7 +17,8 @@
     "db:migrate": "drizzle-kit migrate",
     "seed:metric-matrix": "tsx server/scripts/seedMetricMatrix.ts",
     "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts",
-    "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts"
+    "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts",
+    "lint": "npx eslint ."
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
@@ -61,6 +62,7 @@
     "@types/nprogress": "^0.2.3",
     "@types/papaparse": "^5.3.16",
     "@types/pg": "^8.15.5",
+    "@typescript-eslint/parser": "^8.56.0",
     "@uppy/aws-s3": "^4.3.2",
     "@uppy/core": "^4.5.2",
     "@uppy/dashboard": "^4.4.3",
