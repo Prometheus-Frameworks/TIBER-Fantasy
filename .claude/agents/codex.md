@@ -86,3 +86,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/forge/forgeEngine.ts` — Validates context snapshot rows and aligns games played with clean snapshot weeks
   - `server/modules/forge/__tests__/snapshotDataValidator.test.ts` — Rule-by-rule validator tests
 - **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run test:forge` blocked by missing `DATABASE_URL` in this environment.
+
+### Unreleased — 2026-02-17: FORGE end-to-end integration tests
+- **Branch:** current working branch
+- **Summary:** Created `forgeIntegration.test.ts` for real DB-backed FORGE coverage with five categories: per-position sanity checks, seasonal pinned-player assertions, cross-position consistency rules, mode consistency checks, and explicit stability regression guards.
+- **Key Files:**
+  - `server/modules/forge/__tests__/forgeIntegration.test.ts` — New integration suite using `runForgeEngineBatch`, `gradeForgeWithMeta`, and direct `player_identity_map` canonical-ID lookup via `db`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` failed in this environment because `DATABASE_URL` is unset.

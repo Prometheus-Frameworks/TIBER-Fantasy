@@ -111,3 +111,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/forge/snapshotDataValidator.ts`, `server/modules/forge/xfpVolumePillar.ts`, `server/modules/forge/roleConsistencyPillar.ts`, `server/modules/forge/forgeEngine.ts`, `server/modules/forge/__tests__/snapshotDataValidator.test.ts`
 - **Validation:** Ran focused validator unit tests (pass), attempted existing FORGE test suite (blocked by missing `DATABASE_URL`).
 - **Notes:** Validator emits summary logs per player and detailed warnings only when fewer than 5 clean weeks remain.
+
+### 2026-02-17 — Codex: FORGE end-to-end integration test coverage
+- **What changed:** Added full FORGE integration test suite covering batch sanity, pinned player ranking guards, cross-position calibration checks, mode consistency, and stability regression protections using live DB reads and real E+G pipeline functions.
+- **Files modified:** `server/modules/forge/__tests__/forgeIntegration.test.ts`
+- **Validation:** Attempted targeted Jest run; blocked in this container because `DATABASE_URL` is not set.
+- **Notes:** Test resolves canonical player IDs from `player_identity_map` dynamically to avoid brittle slug assumptions.
