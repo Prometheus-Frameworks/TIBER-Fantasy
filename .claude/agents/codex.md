@@ -93,3 +93,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Key Files:**
   - `server/modules/forge/__tests__/forgeIntegration.test.ts` — New integration suite using `runForgeEngineBatch`, `gradeForgeWithMeta`, and direct `player_identity_map` canonical-ID lookup via `db`
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` failed in this environment because `DATABASE_URL` is unset.
+
+### Unreleased — 2026-02-17: FORGE QB continuous volume via xFP
+- **Branch:** current working branch
+- **Summary:** Migrated QB volume pillar from quantized role-bank metrics to derived `xfp_per_game` (v3 xFP), matching RB/WR/TE continuous volume treatment and reducing bucketed rank ties.
+- **Key Files:**
+  - `server/modules/forge/forgeEngine.ts` — QB volume pillar now uses `{ metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 }`
+  - `server/services/xFptsConfig.ts` — added QB xFP sanity documentation and adjusted QB normalization range to `{ min: 7.5, max: 24.0 }`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/forge/__tests__/forgeIntegration.test.ts` blocked by missing `DATABASE_URL`; `npm run build` passed.

@@ -86,6 +86,7 @@ export const xfpV3Coefficients = {
     targetRZ: 2.50,       // Red zone TE target (high TD value)
   },
   QB: {
+    // Sanity check: 35 DB + 5 rush ≈ 20.75 xFP/G (elite), 30 DB + 3 rush ≈ 16.95 (average)
     dropback: 0.50,       // Per dropback value
     rushAttempt: 0.65,    // QB rush attempt (higher value due to scramble upside)
   },
@@ -99,7 +100,8 @@ export const xfpNormalizationRanges: Record<string, { min: number; max: number }
   RB: { min: 3.0, max: 18.0 },   // ~3 xFP/G for low-usage to ~18 for bellcow
   WR: { min: 4.0, max: 20.0 },   // ~4 xFP/G for depth to ~20 for alpha WR
   TE: { min: 2.0, max: 14.0 },   // ~2 xFP/G for blocking TE to ~14 for elite
-  QB: { min: 8.0, max: 25.0 },   // ~8 xFP/G for game manager to ~25 for elite
+  // Calibrated to keep weekly-starter QBs in a broad mid-band and reduce 0/100 clipping.
+  QB: { min: 7.5, max: 24.0 },   // ~p5 backup usage to ~p95 elite usage
 };
 
 /**
