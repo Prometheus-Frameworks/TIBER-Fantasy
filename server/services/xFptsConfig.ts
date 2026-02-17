@@ -63,6 +63,46 @@ export const contextConfig = {
 };
 
 /**
+ * v3 per-opportunity xFP coefficients for FORGE volume pillar
+ *
+ * These represent league-average expected PPR fantasy points per opportunity type.
+ * Used to price opportunity quality — not all touches are created equal.
+ *
+ * Sources: Derived from league-wide PPR averages (nflverse play-by-play).
+ * A target is worth ~2.5-3x a carry in PPR due to the reception bonus.
+ */
+export const xfpV3Coefficients = {
+  RB: {
+    carryNonRZ: 0.45,     // Standard carry between the 20s
+    carryRZ: 0.85,        // Red zone carry (inside 20)
+    target: 1.50,         // RB target (reception bonus + yards)
+  },
+  WR: {
+    targetNonDeep: 1.60,  // Standard target (short/intermediate)
+    targetDeep: 2.25,     // Deep target (air yards > 15)
+  },
+  TE: {
+    targetNonRZ: 1.45,    // Standard TE target
+    targetRZ: 2.50,       // Red zone TE target (high TD value)
+  },
+  QB: {
+    dropback: 0.50,       // Per dropback value
+    rushAttempt: 0.65,    // QB rush attempt (higher value due to scramble upside)
+  },
+} as const;
+
+/**
+ * Position-specific normalization ranges for xFP per game → 0-100 pillar score
+ * Based on expected distributions: min is ~replacement level, max is ~elite
+ */
+export const xfpNormalizationRanges: Record<string, { min: number; max: number }> = {
+  RB: { min: 3.0, max: 18.0 },   // ~3 xFP/G for low-usage to ~18 for bellcow
+  WR: { min: 4.0, max: 20.0 },   // ~4 xFP/G for depth to ~20 for alpha WR
+  TE: { min: 2.0, max: 14.0 },   // ~2 xFP/G for blocking TE to ~14 for elite
+  QB: { min: 8.0, max: 25.0 },   // ~8 xFP/G for game manager to ~25 for elite
+};
+
+/**
  * Clamp a value between min and max bounds
  * Used to keep v2 multipliers sane and prevent explosions
  */

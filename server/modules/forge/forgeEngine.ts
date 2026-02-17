@@ -10,6 +10,8 @@
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 import { getPrimaryQbContext } from './qbContextPopulator';
+import { computeXfpPerGame, normalizeXfpToScore, type XfpResult } from './xfpVolumePillar';
+import { computeRoleConsistency, type RoleConsistencyResult } from './roleConsistencyPillar';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -94,16 +96,15 @@ export type ForgeContext = {
     priorAlpha?: number;
     alphaMomentum?: number;
   };
+  xfpData?: XfpResult;
+  roleConsistency?: RoleConsistencyResult;
 };
 
 const WR_PILLARS: PositionPillarConfig = {
   volume: {
+    // xFP v3: opportunity-quality-priced expected fantasy points per game
     metrics: [
-      { metricKey: 'volume_score', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'targets_per_game', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'target_share_avg', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'routes_per_game', source: 'role_bank', weight: 0.10 },
-      { metricKey: 'deep_targets_per_game', source: 'role_bank', weight: 0.10 },
+      { metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 },
     ],
   },
   efficiency: {
@@ -122,26 +123,20 @@ const WR_PILLARS: PositionPillarConfig = {
     ],
   },
   stability: {
-    // Rewritten to focus on ROLE SECURITY, not scoring volatility
-    // Boom-bust WRs should NOT be penalized for high fantasy variance
+    // Role consistency: route participation CV (60%) + target share CV (40%)
+    // CV-based approach consistent with RB/TE redesign
     metrics: [
-      { metricKey: 'availability_score', source: 'derived', weight: 0.25 },      // Games played / 17
-      { metricKey: 'route_stability', source: 'derived', weight: 0.25 },         // Route share consistency
-      { metricKey: 'snap_floor', source: 'derived', weight: 0.20 },              // Minimum snap share floor
-      { metricKey: 'depth_chart_insulation', source: 'derived', weight: 0.15 },  // Role security vs backups
-      { metricKey: 'qb_continuity', source: 'derived', weight: 0.15 },           // QB situation stability
+      { metricKey: 'route_participation_consistency', source: 'derived', weight: 0.60 },
+      { metricKey: 'target_share_consistency', source: 'derived', weight: 0.40 },
     ],
   },
 };
 
 const RB_PILLARS: PositionPillarConfig = {
   volume: {
+    // xFP v3: opportunity-quality-priced expected fantasy points per game
     metrics: [
-      { metricKey: 'volume_score', source: 'role_bank', weight: 0.30 },
-      { metricKey: 'opportunities_per_game', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'carries_per_game', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'targets_per_game', source: 'role_bank', weight: 0.15 },
-      { metricKey: 'red_zone_touches_per_game', source: 'role_bank', weight: 0.10 },
+      { metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 },
     ],
   },
   efficiency: {
@@ -159,22 +154,20 @@ const RB_PILLARS: PositionPillarConfig = {
     ],
   },
   stability: {
+    // Role consistency: touch share CV (60%) + snap share CV (40%)
+    // Replaces scoring variance which anti-correlated with PPG (-0.668)
     metrics: [
-      { metricKey: 'consistency_score', source: 'role_bank', weight: 0.40 },
-      { metricKey: 'opp_std_dev', source: 'role_bank', weight: 0.30, invert: true },
-      { metricKey: 'fantasy_std_dev', source: 'role_bank', weight: 0.30, invert: true },
+      { metricKey: 'touch_share_consistency', source: 'derived', weight: 0.60 },
+      { metricKey: 'snap_share_consistency', source: 'derived', weight: 0.40 },
     ],
   },
 };
 
 const TE_PILLARS: PositionPillarConfig = {
   volume: {
+    // xFP v3: opportunity-quality-priced expected fantasy points per game
     metrics: [
-      { metricKey: 'volume_score', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'targets_per_game', source: 'role_bank', weight: 0.25 },
-      { metricKey: 'target_share_avg', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'routes_per_game', source: 'role_bank', weight: 0.10 },
-      { metricKey: 'red_zone_targets_per_game', source: 'role_bank', weight: 0.10 },
+      { metricKey: 'xfp_per_game', source: 'derived', weight: 1.0 },
     ],
   },
   efficiency: {
@@ -192,10 +185,11 @@ const TE_PILLARS: PositionPillarConfig = {
     ],
   },
   stability: {
+    // Role consistency: route participation CV (60%) + target share CV (40%)
+    // Replaces scoring variance which anti-correlated with PPG (-0.786)
     metrics: [
-      { metricKey: 'consistency_score', source: 'role_bank', weight: 0.40 },
-      { metricKey: 'target_std_dev', source: 'role_bank', weight: 0.30, invert: true },
-      { metricKey: 'fantasy_std_dev', source: 'role_bank', weight: 0.30, invert: true },
+      { metricKey: 'route_participation_consistency', source: 'derived', weight: 0.60 },
+      { metricKey: 'target_share_consistency', source: 'derived', weight: 0.40 },
     ],
   },
 };
@@ -220,17 +214,20 @@ const QB_PILLARS: PositionPillarConfig = {
     ],
   },
   teamContext: {
+    // Fixed: was using alpha_context_score (self-referential QB alpha) which caused
+    // elite QBs like Josh Allen to get suppressed context scores.
+    // Now uses team-level environment metrics instead.
     metrics: [
-      { metricKey: 'alpha_context_score', source: 'role_bank', weight: 0.50 },
-      { metricKey: 'pass_defense_sos', source: 'sos_table', weight: 0.50 },
+      { metricKey: 'team_pass_volume', source: 'snapshot_team_context', weight: 0.35 },
+      { metricKey: 'team_pace', source: 'snapshot_team_context', weight: 0.30 },
+      { metricKey: 'pass_defense_sos', source: 'sos_table', weight: 0.35 },
     ],
   },
   stability: {
+    // Role consistency: dropback volume CV (60%) + rush share CV (40%)
     metrics: [
-      { metricKey: 'availability_score', source: 'derived', weight: 0.30 },
-      { metricKey: 'momentum_score', source: 'role_bank', weight: 0.35 },
-      { metricKey: 'completion_percentage', source: 'role_bank', weight: 0.20 },
-      { metricKey: 'sack_rate', source: 'role_bank', weight: 0.15, invert: true },
+      { metricKey: 'dropback_consistency', source: 'derived', weight: 0.60 },
+      { metricKey: 'rush_share_consistency', source: 'derived', weight: 0.40 },
     ],
   },
 };
@@ -389,20 +386,68 @@ function computeDerivedMetric(metricKey: string, context: ForgeContext): number 
       // In dynasty mode, this is critical - stable QB = stable target opportunity
       const teamPassVolume = teamContext['team_pass_volume'] as number;
       const teamPace = teamContext['team_pace'] as number;
-      
+
       if (teamPassVolume != null && teamPace != null) {
         // Blend pass volume (weighted 60%) and pace (weighted 40%)
         // Both are typically 0-100 normalized
         const blended = (teamPassVolume * 0.6) + (teamPace * 0.4);
         return Math.max(30, Math.min(100, blended));
       }
-      
+
       if (teamPassVolume != null) return Math.max(30, Math.min(100, teamPassVolume));
       if (teamPace != null) return Math.max(30, Math.min(100, teamPace));
-      
+
       return 50; // default
     }
-    
+
+    // xFP Volume pillar: opportunity-quality-priced expected fantasy points per game
+    case 'xfp_per_game': {
+      const xfpData = context.xfpData;
+      if (!xfpData || xfpData.weeksUsed === 0) {
+        // Fallback to role_bank volume_score if no xFP data
+        const volumeScore = roleBank['volume_score'] as number;
+        return volumeScore != null ? Math.max(0, Math.min(100, volumeScore)) : 50;
+      }
+      return normalizeXfpToScore(xfpData.xfpPerGame, context.position);
+    }
+
+    // Fantasy Points Over Expected per game (actual - xFP)
+    case 'fpoe_per_game': {
+      const xfpData = context.xfpData;
+      if (!xfpData || xfpData.weeksUsed === 0) return 50;
+      // Normalize FPOE: -5 to +10 range → 0-100
+      const normalized = ((xfpData.fpoePerGame - (-5)) / (10 - (-5))) * 100;
+      return Math.max(0, Math.min(100, normalized));
+    }
+
+    // Role consistency derived metrics (from roleConsistencyPillar)
+    case 'touch_share_consistency':
+    case 'snap_share_consistency':
+    case 'route_participation_consistency':
+    case 'target_share_consistency':
+    case 'dropback_consistency':
+    case 'rush_share_consistency': {
+      const rc = context.roleConsistency;
+      if (!rc) return 50;
+
+      switch (metricKey) {
+        case 'touch_share_consistency':
+          return rc.primaryScore;
+        case 'snap_share_consistency':
+          return rc.secondaryScore;
+        case 'route_participation_consistency':
+          return rc.primaryScore;
+        case 'target_share_consistency':
+          return rc.secondaryScore;
+        case 'dropback_consistency':
+          return rc.primaryScore;
+        case 'rush_share_consistency':
+          return rc.secondaryScore;
+        default:
+          return 50;
+      }
+    }
+
     default:
       return null;
   }
@@ -562,7 +607,9 @@ async function fetchTeamContext(
     }
     
     const row = result.rows[0] as Record<string, any>;
-    return normalizeTeamContext(row);
+    const normalized = normalizeTeamContext(row);
+    console.log(`[ForgeEngine] Context debug for ${nflTeam}: passEpa=${row.pass_epa}, rushEpa=${row.rush_epa}, cpoe=${row.cpoe}, explosive=${row.explosive_20_plus} → pass_vol=${normalized.team_pass_volume?.toFixed(1)}, run_vol=${normalized.team_run_volume?.toFixed(1)}, pace=${normalized.team_pace?.toFixed(1)}, rz_drives=${normalized.team_red_zone_drives?.toFixed(1)}`);
+    return normalized;
   } catch (error) {
     console.error(`[ForgeEngine] Error fetching team context for ${nflTeam}:`, error);
     return defaults;
@@ -908,6 +955,12 @@ export async function fetchForgeContext(
   const teamContext = await fetchTeamContext(nflTeam, season);
   const sosData = await fetchSoSData(nflTeam, position, season);
 
+  // Compute xFP data for volume pillar
+  const xfpData = await computeXfpPerGame(playerId, position, season);
+
+  // Compute role consistency for stability pillar
+  const roleConsistency = await computeRoleConsistency(playerId, position, season);
+
   return {
     playerId,
     playerName,
@@ -923,6 +976,8 @@ export async function fetchForgeContext(
       priorAlpha: roleBank['alpha_score'] ?? undefined,
       alphaMomentum: roleBank['momentum_score'] ? (roleBank['momentum_score'] - 50) / 10 : undefined,
     },
+    xfpData,
+    roleConsistency,
   };
 }
 
@@ -1012,6 +1067,11 @@ export async function runForgeEngine(
   }
 
   const dampenedPillars = applyGamesPlayedDampening(pillars, context.gamesPlayed, position);
+
+  // QB-specific debug logging for context diagnosis
+  if (position === 'QB') {
+    console.log(`[ForgeEngine] QB Context for ${context.playerName}: team_pass_vol=${context.teamContext['team_pass_volume']?.toFixed(1)}, team_pace=${context.teamContext['team_pace']?.toFixed(1)}, pass_def_sos=${context.sosData['pass_defense_sos']?.toFixed(1)} → teamContext=${dampenedPillars.teamContext.toFixed(1)}`);
+  }
 
   console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${dampenedPillars.volume.toFixed(1)} E=${dampenedPillars.efficiency.toFixed(1)} T=${dampenedPillars.teamContext.toFixed(1)} S=${dampenedPillars.stability.toFixed(1)} D=${(dampenedPillars.dynastyContext ?? dynastyContext).toFixed(1)}${context.gamesPlayed < GAMES_FULL_CREDIT[position] ? ` [GP=${context.gamesPlayed}/${GAMES_FULL_CREDIT[position]} dampened]` : ''}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
 

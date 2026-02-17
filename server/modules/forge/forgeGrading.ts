@@ -41,29 +41,25 @@ export type GradeForgeOptions = {
 };
 
 // Base weights used for REDRAFT mode
-// Updated 2026-02-16 based on deep research: PPG↔pillar correlation analysis + constrained tuning
-// Key findings:
-// - RB stability (-0.668 corr w/ PPG) is anti-signal: rewards boring committee backs, punishes bellcows
-// - TE stability (-0.786 corr) same pattern: spiky TEs are the elite ones
-// - WR stability (+0.801 corr) is legitimately positive: consistent targets = value
-// - QB team context (0.661 corr) strongest single QB predictor, was underweighted
-// See: .claude/tasks/pillar-weight-tuning.md for full analysis
+// Updated 2026-02-17: Stability pillar redesigned from scoring variance → role consistency (CV-based).
+// RB/TE stability is now positively correlated with PPG (consistent roles = elite usage).
+// Weights restored from suppressed values (RB 0.06→0.15, TE 0.10→0.15) and rebalanced.
 const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.48, efficiency: 0.15, teamContext: 0.15, stability: 0.22 },
-  RB: { volume: 0.62, efficiency: 0.22, teamContext: 0.10, stability: 0.06 },
-  TE: { volume: 0.62, efficiency: 0.18, teamContext: 0.10, stability: 0.10 },
-  QB: { volume: 0.28, efficiency: 0.32, teamContext: 0.28, stability: 0.12 },
+  WR: { volume: 0.45, efficiency: 0.15, teamContext: 0.15, stability: 0.25 },
+  RB: { volume: 0.50, efficiency: 0.20, teamContext: 0.15, stability: 0.15 },
+  TE: { volume: 0.50, efficiency: 0.20, teamContext: 0.15, stability: 0.15 },
+  QB: { volume: 0.28, efficiency: 0.30, teamContext: 0.28, stability: 0.14 },
 };
 
 // Dynasty mode weights - stability matters more for long-term value
-// Updated 2026-02-16: Reduced RB/TE stability (still anti-signal until redefined as role stability)
-// Dynasty stability kept higher than redraft since durability/role security matters long-term,
-// but capped until stability pillar is redefined to measure opportunity consistency
+// Updated 2026-02-17: Stability pillar now measures role consistency (CV-based).
+// Dynasty stability weights increased since consistent roles are the strongest
+// dynasty signal (bellcow usage, target share consistency).
 const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
-  WR: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
-  RB: { volume: 0.42, efficiency: 0.13, teamContext: 0.20, stability: 0.25 },
-  TE: { volume: 0.40, efficiency: 0.13, teamContext: 0.17, stability: 0.30 },
-  QB: { volume: 0.22, efficiency: 0.28, teamContext: 0.28, stability: 0.22 },
+  WR: { volume: 0.30, efficiency: 0.12, teamContext: 0.20, stability: 0.38 },
+  RB: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
+  TE: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
+  QB: { volume: 0.20, efficiency: 0.25, teamContext: 0.28, stability: 0.27 },
 };
 
 export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
