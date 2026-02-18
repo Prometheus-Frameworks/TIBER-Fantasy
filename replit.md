@@ -102,3 +102,8 @@ This project uses multiple AI agents (Replit Agent, Claude Code, Codex). All sha
 - **connect-pg-simple**: Enables PostgreSQL-based session storage.
 - **@neondatabase/serverless**: For PostgreSQL connections in serverless environments.
 - **Google Gemini API**: Integrated for AI embeddings and chat generation capabilities.
+## Update Notes (Agent)
+- **2026-02-18:** Added Fantasy Lab Phase 1 backend data foundation with a consolidated materialized view `fantasy_metrics_weekly_mv` (weekly opportunity + xFP v2 + latest market context) and API endpoints:
+  - `GET /api/fantasy-lab/weekly`
+  - `GET /api/fantasy-lab/player`
+  - `POST /api/admin/fantasy-lab/refresh`

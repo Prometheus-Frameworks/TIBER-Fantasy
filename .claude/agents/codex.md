@@ -109,3 +109,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/forge/forgeEngine.ts` — updated per-position efficiency metric weights/sources; retained and annotated FPOE normalization `[-5, +10]`
 - **Validation:** `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` passed; `npm run build` passed with existing warning in `server/olc/adjusters.ts`.
 - **Notes:** Requested FPOE percentile SQL validation blocked in this environment because `DATABASE_URL` is unset.
+
+### Unreleased — 2026-02-18: Fantasy Lab Phase 1 weekly data foundation
+- **Branch:** `feature/fantasy-lab-phase1`
+- **Summary:** Implemented backend-only Phase 1 foundation for Fantasy/Market Lab by adding a consolidated weekly materialized view (`fantasy_metrics_weekly_mv`) and new APIs for weekly + player time-series access, plus admin-controlled MV refresh.
+- **Key Files:**
+  - `migrations/0011_fantasy_lab_weekly_mv.sql` — consolidated MV definition + indexes
+  - `server/routes/fantasyLabRoutes.ts` — `/weekly`, `/player`, and `/refresh` handlers
+  - `server/routes.ts` — mounted `/api/fantasy-lab/*` and `/api/admin/fantasy-lab/*`
+  - `server/scripts/qaFantasyLabPhase1.ts` — sanity checks for non-zero rows, xFP not-all-null, uniqueness
+  - `server/modules/fantasyLab/README.md` — source lineage and latest-vs-weekly field docs
+- **Validation:** `npm run build` passed (existing duplicate-member warning in `server/olc/adjusters.ts`), `npm run typecheck` failed due unrelated repo-wide TS issues, `npm run qa:fantasy-lab -- 2025 1` failed in this container due PostgreSQL connection refusal.
