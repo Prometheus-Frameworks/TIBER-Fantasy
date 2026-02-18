@@ -5349,3 +5349,110 @@ export const similarPlayersCache = pgTable("similar_players_cache", {
 
 export type SimilarPlayersCache = typeof similarPlayersCache.$inferSelect;
 export type InsertSimilarPlayersCache = typeof similarPlayersCache.$inferInsert;
+
+// ========================================
+// IDP LAB MODULE — ISOLATED DEFENSIVE ANALYTICS
+// Do NOT mix with FORGE offensive tables.
+// Constants, types, and helpers live in shared/idpSchema.ts
+// ========================================
+
+export const idpPlayerWeek = pgTable("idp_player_week", {
+  id: serial("id").primaryKey(),
+  gsisId: varchar("gsis_id", { length: 20 }).notNull(),
+  playerName: text("player_name").notNull(),
+  team: varchar("team", { length: 5 }),
+  nflPosition: varchar("nfl_position", { length: 10 }),
+  positionGroup: varchar("position_group", { length: 5 }).notNull(),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+
+  defenseSnaps: integer("defense_snaps").notNull().default(0),
+  tacklesSolo: integer("tackles_solo").notNull().default(0),
+  tacklesAssist: integer("tackles_assist").notNull().default(0),
+  tacklesTotal: integer("tackles_total").notNull().default(0),
+  sacks: real("sacks").notNull().default(0),
+  tacklesForLoss: integer("tackles_for_loss").notNull().default(0),
+  interceptions: integer("interceptions").notNull().default(0),
+  passesDefended: integer("passes_defended").notNull().default(0),
+  forcedFumbles: integer("forced_fumbles").notNull().default(0),
+  fumbleRecoveries: integer("fumble_recoveries").notNull().default(0),
+
+  qbHits: integer("qb_hits"),
+  pressures: integer("pressures"),
+
+  havocEvents: integer("havoc_events").notNull().default(0),
+  havocRawRate: real("havoc_raw_rate"),
+
+  ingestedAt: timestamp("ingested_at").defaultNow(),
+}, (table) => [
+  unique("idp_pw_unique").on(table.gsisId, table.season, table.week),
+  index("idp_pw_season_week_idx").on(table.season, table.week),
+  index("idp_pw_position_group_idx").on(table.positionGroup),
+]);
+
+export const idpPlayerSeason = pgTable("idp_player_season", {
+  id: serial("id").primaryKey(),
+  gsisId: varchar("gsis_id", { length: 20 }).notNull(),
+  playerName: text("player_name").notNull(),
+  team: varchar("team", { length: 5 }),
+  nflPosition: varchar("nfl_position", { length: 10 }),
+  positionGroup: varchar("position_group", { length: 5 }).notNull(),
+  season: integer("season").notNull(),
+
+  games: integer("games").notNull().default(0),
+  totalSnaps: integer("total_snaps").notNull().default(0),
+
+  tacklesSolo: integer("tackles_solo").notNull().default(0),
+  tacklesAssist: integer("tackles_assist").notNull().default(0),
+  tacklesTotal: integer("tackles_total").notNull().default(0),
+  sacks: real("sacks").notNull().default(0),
+  tacklesForLoss: integer("tackles_for_loss").notNull().default(0),
+  interceptions: integer("interceptions").notNull().default(0),
+  passesDefended: integer("passes_defended").notNull().default(0),
+  forcedFumbles: integer("forced_fumbles").notNull().default(0),
+  fumbleRecoveries: integer("fumble_recoveries").notNull().default(0),
+
+  qbHits: integer("qb_hits"),
+  pressures: integer("pressures"),
+
+  totalHavocEvents: integer("total_havoc_events").notNull().default(0),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocZScore: real("havoc_z_score"),
+  havocIndex: real("havoc_index"),
+  havocTier: varchar("havoc_tier", { length: 2 }),
+
+  lowConfidence: integer("low_confidence").notNull().default(0),
+
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("idp_ps_unique").on(table.gsisId, table.season),
+  index("idp_ps_position_group_idx").on(table.positionGroup),
+  index("idp_ps_havoc_idx").on(table.havocIndex),
+]);
+
+export const idpPositionBaselines = pgTable("idp_position_baselines", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull(),
+  positionGroup: varchar("position_group", { length: 5 }).notNull(),
+  metricName: varchar("metric_name", { length: 30 }).notNull(),
+  meanValue: real("mean_value").notNull(),
+  stdDev: real("std_dev").notNull(),
+  sampleSize: integer("sample_size").notNull().default(0),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  unique("idp_baseline_unique").on(table.season, table.positionGroup, table.metricName),
+]);
+
+export const idpPositionMap = pgTable("idp_position_map", {
+  id: serial("id").primaryKey(),
+  nflPosition: varchar("nfl_position", { length: 10 }).notNull(),
+  idpGroup: varchar("idp_group", { length: 5 }).notNull(),
+}, (table) => [
+  unique("idp_posmap_unique").on(table.nflPosition),
+]);
+
+export type IdpPlayerWeek = typeof idpPlayerWeek.$inferSelect;
+export type IdpPlayerSeason = typeof idpPlayerSeason.$inferSelect;
+export type IdpPositionBaseline = typeof idpPositionBaselines.$inferSelect;
+export type IdpPositionMap = typeof idpPositionMap.$inferSelect;

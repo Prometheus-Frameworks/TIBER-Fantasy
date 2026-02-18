@@ -35,6 +35,7 @@ import RushingLab from "@/pages/RushingLab";
 import QBLab from "@/pages/QBLab";
 import RedZoneLab from "@/pages/RedZoneLab";
 import SituationalLab from "@/pages/SituationalLab";
+import IdpLab from "@/pages/IdpLab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -52,6 +53,7 @@ function Router() {
         <Route path="/tiber-data-lab/qb" component={QBLab} />
         <Route path="/tiber-data-lab/red-zone" component={RedZoneLab} />
         <Route path="/tiber-data-lab/situational" component={SituationalLab} />
+        <Route path="/idp-lab" component={IdpLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>

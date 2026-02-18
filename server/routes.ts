@@ -2785,6 +2785,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role Bank v1.0 - WR/RB/TE position-specific role classifications
   registerRoleBankRoutes(app);
   console.log('🎭 Role Bank v1.0 routes mounted at /api/role-bank/:position/:season');
+
+  // IDP Lab - Defensive Player Analytics
+  const idpRoutes = (await import('./modules/idp/idpRoutes')).default;
+  app.use('/api/idp', idpRoutes);
+  console.log('🛡️ IDP Lab routes mounted at /api/idp/*');
   
   // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper
   app.use('/api/debug', weekSummaryRouter);

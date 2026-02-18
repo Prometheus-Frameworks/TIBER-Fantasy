@@ -10,6 +10,7 @@ interface NavItem {
 const coreNav: NavItem[] = [
   { label: "Dashboard", path: "/" },
   { label: "Data Lab", path: "/tiber-data-lab", badge: "4.2k" },
+  { label: "IDP Lab", path: "/idp-lab", badge: "NEW" },
   { label: "FORGE Tiers", path: "/tiers" },
   { label: "Schedule", path: "/schedule" },
 ];
