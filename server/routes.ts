@@ -82,6 +82,7 @@ import attributesRoutes from './routes/attributesRoutes';
 import metricMatrixRoutes from './routes/metricMatrixRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
+import fantasyLabRoutes from './routes/fantasyLabRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -2398,6 +2399,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('🧠 Tiber Memory System routes mounted at /api/tiber-memory');
   
   app.use('/api/data-lab', dataLabRoutes);
+  app.use('/api/fantasy-lab', fantasyLabRoutes);
+  app.use('/api/admin/fantasy-lab', fantasyLabRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   
   app.use('/api/forge/simulation', forgeSimRoutes);

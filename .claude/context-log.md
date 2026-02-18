@@ -129,3 +129,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/forge/forgeEngine.ts`
 - **Validation:** Ran `npm test -- server/modules/forge/__tests__/snapshotDataValidator.test.ts` (pass) and `npm run build` (pass, pre-existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** Could not run the requested SQL distribution check because this container has no `DATABASE_URL`; normalization range should be revisited once DB access is available.
+
+### 2026-02-18 — Codex: Fantasy Lab Phase 1 weekly data foundation
+- **What changed:** Added `fantasy_metrics_weekly_mv` materialized view migration consolidating DataDive weekly usage, xFP v2, and latest market context; implemented `/api/fantasy-lab/weekly`, `/api/fantasy-lab/player`, and admin refresh endpoint `/api/admin/fantasy-lab/refresh`; added Fantasy Lab QA sanity script and backend module documentation.
+- **Files modified:** `migrations/0011_fantasy_lab_weekly_mv.sql`, `server/routes/fantasyLabRoutes.ts`, `server/routes.ts`, `server/scripts/qaFantasyLabPhase1.ts`, `server/modules/fantasyLab/README.md`, `package.json`
+- **Validation:** Ran `npm run build` (pass with pre-existing warning), attempted `npm run typecheck` (repo-wide pre-existing errors), attempted `npm run qa:fantasy-lab -- 2025 1` (DB unavailable in container: ECONNREFUSED).
+- **Notes:** Materialized view uses latest snapshot per season/week and latest-known market signals/facts; xFP surfaced as `x_ppr_v2` + `xfpgoe_ppr_v2`; half/std xFP currently null placeholders pending source availability.
