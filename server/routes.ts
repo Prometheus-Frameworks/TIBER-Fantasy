@@ -83,6 +83,7 @@ import metricMatrixRoutes from './routes/metricMatrixRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import fantasyLabRoutes from './routes/fantasyLabRoutes';
+import fireRoutes from './routes/fireRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -2401,6 +2402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabRoutes);
   app.use('/api/fantasy-lab', fantasyLabRoutes);
   app.use('/api/admin/fantasy-lab', fantasyLabRoutes);
+  app.use('/api', fireRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   
   app.use('/api/forge/simulation', forgeSimRoutes);
@@ -2788,11 +2790,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role Bank v1.0 - WR/RB/TE position-specific role classifications
   registerRoleBankRoutes(app);
   console.log('🎭 Role Bank v1.0 routes mounted at /api/role-bank/:position/:season');
-
-  // IDP Lab - Defensive Player Analytics
-  const idpRoutes = (await import('./modules/idp/idpRoutes')).default;
-  app.use('/api/idp', idpRoutes);
-  console.log('🛡️ IDP Lab routes mounted at /api/idp/*');
   
   // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper
   app.use('/api/debug', weekSummaryRouter);

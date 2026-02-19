@@ -35,7 +35,7 @@ import RushingLab from "@/pages/RushingLab";
 import QBLab from "@/pages/QBLab";
 import RedZoneLab from "@/pages/RedZoneLab";
 import SituationalLab from "@/pages/SituationalLab";
-import IdpLab from "@/pages/IdpLab";
+import FantasyLab from "@/pages/FantasyLab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -53,7 +53,6 @@ function Router() {
         <Route path="/tiber-data-lab/qb" component={QBLab} />
         <Route path="/tiber-data-lab/red-zone" component={RedZoneLab} />
         <Route path="/tiber-data-lab/situational" component={SituationalLab} />
-        <Route path="/idp-lab" component={IdpLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>
@@ -68,6 +67,7 @@ function Router() {
         <Route path="/architecture" component={Architecture} />
         <Route path="/metrics-dictionary" component={MetricsDictionary} />
         <Route path="/forge-workbench" component={ForgeWorkbench} />
+        <Route path="/fantasy-lab" component={FantasyLab} />
         <Route path="/sentinel" component={SentinelDashboard} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />
