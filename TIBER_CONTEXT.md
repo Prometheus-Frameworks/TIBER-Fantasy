@@ -1,7 +1,7 @@
 
 # Tiber Fantasy — Project Context File
 
-> Last updated: February 16, 2026
+> Last updated: February 19, 2026
 > Purpose: Give any AI agent a complete, accurate understanding of what Tiber Fantasy is, what's built, what's live, and how everything connects.
 
 ---
@@ -42,6 +42,9 @@ The core evaluation system. FORGE stands for Football-Oriented Recursive Grading
 - Two-pass recursive scoring with momentum and prior blending
 - Multi-week aggregation across all official snapshots for season-grounded scores
 - QB Context system provides QB-aware scoring for skill positions
+- **FPOE-first Efficiency Pillar**: Efficiency centers on derived `fpoe_per_game` (Fantasy Points Over Expected), making Volume and Efficiency complementary by design: `actual_fpts = xfp_volume + fpoe_efficiency`. WR/RB/TE use 70% FPOE; QB uses 50% FPOE plus EPA/CPOE/sack-rate
+- **Correlation-tuned Pillar Weights (v1.1)**: RB (V:0.62/E:0.22/T:0.10/S:0.06), WR (0.48/0.15/0.15/0.22), TE (0.62/0.18/0.10/0.10), QB (0.28/0.32/0.28/0.12). Key insight: RB/TE stability is anti-correlated with PPG; WR stability is positive
+- **Calibration**: Position-specific percentile anchors (p10/p90) mapping raw scores to 25-95 Alpha range. Validated via Spearman correlation (RB: 0.943, TE: 0.939, WR: 0.908, QB: 0.623)
 
 **Key endpoints:**
 - `/api/forge/eg/batch` — Batch player grades
@@ -102,6 +105,64 @@ Full 18-week season data is ingested and validated:
 
 **Note:** The weekly snapshot data lives in `datadive_snapshot_player_week` and season-level aggregation in `datadive_snapshot_player_season`. The `/api/data-lab/snapshots` endpoint provides snapshot metadata. The lab-agg endpoint handles all cross-week aggregation for the research modules.
 
+### Fantasy Lab (`/fantasy-lab`)
+The real-time player evaluation layer, built on top of FORGE. Contains three engines that work together to surface buy-low/sell-high signals and rolling opportunity trends.
+
+**FIRE — Rolling 4-Week Opportunity Engine**
+- Computes a FIRE score (0-100) for each RB/WR/TE using a rolling 4-week window
+- Three pillars: Opportunity (60%), Role (25%), Conversion (15%)
+- Position-specific eligibility thresholds: RB ≥ 50 snaps, WR/TE ≥ 80 snaps
+- Outputs `windowGamesPlayed`, `weeks_present`, and `confidence` (HIGH/MED/LOW) per player
+- Confidence is computed from games played in the window, snap volume relative to threshold, and route data availability
+
+**Delta Engine — FORGE vs FIRE Comparison**
+- Joins season-long FORGE Alpha with rolling FIRE scores per position pool
+- Computes z-score delta (for ranking) and percentile delta (for display)
+- Labels players BUY_LOW, SELL_HIGH, or NEUTRAL
+- Label logic gates percentile-only triggers behind confidence — LOW confidence players can only be labeled via z-score threshold (≥1 or ≤-1), preventing false signals on small samples
+- Each row includes a `why` object: `forge_vs_fire` summary, `window` label (e.g. "W11–W14"), `xfp_r`, `snaps_r`, `window_games_played`, and `top_role_driver` hint (e.g. "targets down", "routes up")
+- Mode-aware: queries `forge_grade_cache` with version filter (future-proofed for dynasty/bestball)
+
+**Player Trend (`/api/delta/eg/player-trend`)**
+- Shows a player's FORGE vs FIRE percentile trajectory across multiple anchor weeks
+- ⚠️ **Performance warning**: Runs full FORGE engine batch per anchor week — a 5-week request = 5 full FORGE computations. Can exhaust DB connection pool. Flagged for pre-season optimization (pre-compute into cache).
+
+**Fantasy Lab UI Features (Phase 3):**
+- FIRE table with confidence badges, games played, star/watchlist toggle
+- Delta table with direction/confidence/sort filters
+- FORGE vs FIRE scatter chart visualization
+- Watchlist tab with per-player trend sparklines
+- Data foundation: `fantasy_metrics_weekly_mv` materialized view (weekly opportunity + xFP v2 + market context)
+
+**Key endpoints:**
+- `GET /api/fire/eg/batch` — Batch FIRE scores by position
+- `GET /api/fire/eg/player` — Single player FIRE score
+- `GET /api/delta/eg/batch` — Delta rankings with buy/sell labels
+- `GET /api/delta/eg/player-trend` — Per-player trend across weeks
+- `GET /api/fantasy-lab/weekly` — Weekly metrics from materialized view
+- `GET /api/fantasy-lab/player` — Single player weekly metrics
+- `POST /api/admin/fantasy-lab/refresh` — Refresh materialized view
+
+### IDP Lab (`/idp-lab`)
+Defensive player analytics using a custom Havoc Index scoring system. Completely separate from the offensive FORGE/FIRE/Delta systems.
+
+- **Havoc Index**: Bayesian-smoothed defensive impact score (0-100) with position-specific baselines
+- Uses z-score normalization across 7 havoc event types (sacks, TFLs, forced fumbles, INTs, PDs, pressures, QB hits)
+- Position-specific baselines for DL, EDGE, LB, CB, S
+- Tier mapping: T1 (elite) through T5 (below average) with healthy distribution
+- Prior snaps = 200, minimum snaps = 150 for eligibility
+
+**Database tables:** `idp_players`, `idp_weekly_stats`, `idp_havoc_scores`, `idp_position_baselines`
+
+**Key endpoints:**
+- `GET /api/idp/rankings` — Havoc Index rankings with position filters
+- `GET /api/idp/player/:id` — Individual player detail with weekly breakdown
+- `GET /api/idp/export/csv` — CSV export of rankings
+
+**UI features:** Rankings table with position filters, player detail modals, CSV export, Havoc formula explanation card
+
+**Validated data:** 118 players, ~1,500 weekly records, 5 position baselines, tier distribution: T1 5.9%, T2 16.1%, T3 66.1%, T4 11.9%
+
 ### Other Live Features
 
 - **Dashboard** (`/`) — Hero section, position-filter toolbar, FORGE-powered player table with tier badges and trend bars
@@ -148,6 +209,8 @@ Full 18-week season data is ingested and validated:
 - **TIBER Consensus** — Community-driven rankings aggregation
 - **TIBER Brain OS** — Advanced AI insights layer
 - **Public X/Twitter presence** — Content strategy based on Data Lab findings and hidden gems
+- **FORGE Snapshot Pre-Computation** — Weekly FORGE scores saved to `forge_grade_cache` after each batch run, enabling sub-second player-trend queries (currently runs live and is expensive)
+- **QB FIRE Support** — QB x_ppr_v2 data is currently NULL (27% of dataset); QB FIRE scoring is unavailable until xFP v2 data is populated for QBs
 
 ---
 
@@ -168,14 +231,19 @@ When creating posts, articles, or analysis based on Tiber data:
 ## File Structure (Key Paths)
 
 ```
-client/src/pages/          — All frontend pages
-client/src/components/     — Shared UI components
-client/src/lib/            — Utilities (csvExport.ts, queryClient, etc.)
-server/routes.ts           — Main API route registration
-server/modules/datalab/    — Data Lab backend modules
-server/services/           — Business logic services
-server/llm/                — LLM gateway and task routing
-shared/schema.ts           — Database schema (Drizzle ORM)
+client/src/pages/              — All frontend pages (FantasyLab.tsx, IdpLab.tsx, etc.)
+client/src/components/         — Shared UI components
+client/src/lib/                — Utilities (csvExport.ts, queryClient, etc.)
+server/routes.ts               — Main API route registration
+server/routes/fireRoutes.ts    — FIRE, Delta, and player-trend endpoints
+server/modules/datalab/        — Data Lab backend modules
+server/modules/idp/            — IDP Lab (havocEngine.ts, idpRoutes.ts)
+server/modules/forge/          — FORGE engine and grading (forgeEngine.ts, forgeGrading.ts)
+server/services/               — Business logic services
+server/llm/                    — LLM gateway and task routing
+server/scripts/                — QA and sanity test scripts
+shared/schema.ts               — Database schema (Drizzle ORM)
+scripts/fire-delta-sanity.ts   — Integration test: FIRE + Delta endpoint validation
 ```
 
 ---
