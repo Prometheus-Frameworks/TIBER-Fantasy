@@ -29,7 +29,6 @@ const TIER_BG: Record<string, string> = {
 
 type RankedPlayer = IdpPlayerSeason & {
   rank: number;
-  lowConfidence: boolean;
   meetsSnapThreshold: boolean;
 };
 
