@@ -1,0 +1,70 @@
+I’d change one thing in your label logic (small but important). Right now it’s:
+
+BUY_LOW if rankZ >= 1 OR displayPct >= 20
+SELL_HIGH if rankZ <= -1 OR displayPct <= -20
+
+That “OR” can mislabel edge cases when the eligible pool is small or skewed (TEs especially). A percentile-only trigger can also fire on weird distributions even if z-score says “meh.”
+
+Better rule:
+	•	Primary: rankZ (because it’s robust)
+	•	Secondary: displayPct only if the player passes “confidence” conditions (games played in window + snaps_R)
+
+So, keep OR, but gate the percentile trigger:
+
+BUY_LOW if rankZ >= 1 OR (displayPct >= 20 AND confidence != LOW)
+SELL_HIGH if rankZ <= -1 OR (displayPct <= -20 AND confidence != LOW)
+
+That keeps the “intuitive” path while preventing goofy false positives.
+
+Second, add two tiny fields that will make the whole product feel honest.
+	1.	window_games_played
+Count of weeks in the rolling window where snaps > 0 (or targets+carries > 0 if snaps missing). This immediately catches “he missed 2 games” inflation.
+	2.	confidence
+HIGH/MED/LOW based on:
+
+	•	games played
+	•	snaps_R thresholds margin
+	•	missingness flags (routes missing, etc.)
+
+Example:
+	•	HIGH: games_played >= 4 and snaps_R >= threshold*1.5
+	•	MED: games_played >= 3 and snaps_R >= threshold
+	•	LOW: games_played <= 2 OR snaps_R barely clears threshold
+
+Then in UI, show a small badge. This is the “don’t bullshit me” layer.
+
+Third, make Delta explain itself in one glance.
+
+Add a small “why” object to each row (no LLM, just computed facts):
+
+why: {
+forge_vs_fire: “High FORGE%, low FIRE% over rolling 4w”,
+window: “W11–W14”,
+xfp_r: 17.5,
+snaps_r: 150,
+top_role_driver: “targets down” or “routes down” (if you can infer)
+}
+
+Even just xfp_R + snaps_R + games_played is enough to make people trust it.
+
+Fourth, lock your cache key the right way.
+
+Since you’re reading precomputed FORGE, ensure the cache is keyed by:
+	•	season
+	•	week anchor
+	•	orientation/mode (redraft/dynasty/bestball)
+	•	position
+	•	scoring preset/weights (if those exist)
+
+Otherwise you’ll get spooky “why did Jacobs change when I toggled dynasty” bugs.
+
+Fifth, one last sanity suite I’d automate (takes like 30 mins, saves you hours later).
+
+Add a tiny integration test script that:
+	•	hits /api/fire/eg/batch for 3 weeks and checks counts > 0
+	•	hits /api/delta/eg/batch and checks sorting is abs(rankZ) desc
+	•	asserts no QBs returned
+	•	asserts displayPct is between -100 and +100
+	•	asserts rankZ is finite (no NaN/Inf)
+
+That’s your “this engine didn’t silently rot” alarm.
