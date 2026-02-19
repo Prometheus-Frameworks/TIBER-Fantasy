@@ -11,6 +11,7 @@ const coreNav: NavItem[] = [
   { label: "Dashboard", path: "/" },
   { label: "Data Lab", path: "/tiber-data-lab", badge: "4.2k" },
   { label: "FORGE Tiers", path: "/tiers" },
+  { label: "Fantasy Lab", path: "/fantasy-lab", badge: "NEW" },
   { label: "Schedule", path: "/schedule" },
 ];
 
