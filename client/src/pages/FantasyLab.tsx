@@ -1,33 +1,91 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
 
 type Position = 'RB' | 'WR' | 'TE';
-type ViewMode = 'FIRE' | 'DELTA';
+type ViewMode = 'FIRE' | 'DELTA' | 'WATCHLIST';
+type DirectionFilter = 'ALL' | 'BUY_LOW' | 'SELL_HIGH' | 'NEUTRAL';
+type ConfidenceFilter = 'ALL' | 'HM' | 'HIGH';
+type SortMode = 'ABSZ' | 'ZDESC' | 'ZASC';
 
 const seasons = [2025, 2024, 2023];
 const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+const WATCHLIST_KEY = 'fantasy-lab-watchlist-v1';
 
 function num(v: unknown, digits = 1): string {
   if (typeof v !== 'number' || Number.isNaN(v)) return '—';
   return v.toFixed(digits);
 }
 
+function parseParams() {
+  const p = new URLSearchParams(window.location.search);
+  return {
+    season: Number(p.get('season')) || 2025,
+    week: Number(p.get('week')) || 14,
+    position: ((p.get('pos') || 'RB').toUpperCase() as Position),
+    view: ((p.get('view') || 'fire').toUpperCase() as ViewMode),
+    direction: ((p.get('dir') || 'ALL').toUpperCase() as DirectionFilter),
+    confidence: (p.get('conf') || 'all').toUpperCase() === 'HM' ? 'HM' as ConfidenceFilter : (p.get('conf') || 'all').toUpperCase() === 'HIGH' ? 'HIGH' as ConfidenceFilter : 'ALL' as ConfidenceFilter,
+    sort: (p.get('sort') || 'absz').toLowerCase() === 'zdesc' ? 'ZDESC' as SortMode : (p.get('sort') || 'absz').toLowerCase() === 'zasc' ? 'ZASC' as SortMode : 'ABSZ' as SortMode,
+  };
+}
+
+function confidenceClass(v?: string) {
+  if (v === 'HIGH') return 'bg-emerald-100 text-emerald-700';
+  if (v === 'MED') return 'bg-amber-100 text-amber-800';
+  return 'bg-gray-100 text-gray-700';
+}
+
 export default function FantasyLab() {
-  const [season, setSeason] = useState(2025);
-  const [week, setWeek] = useState(14);
-  const [position, setPosition] = useState<Position>('RB');
-  const [view, setView] = useState<ViewMode>('FIRE');
+  const initial = parseParams();
+  const [season, setSeason] = useState(initial.season);
+  const [week, setWeek] = useState(initial.week);
+  const [position, setPosition] = useState<Position>(['RB', 'WR', 'TE'].includes(initial.position) ? initial.position : 'RB');
+  const [view, setView] = useState<ViewMode>(['FIRE', 'DELTA', 'WATCHLIST'].includes(initial.view) ? initial.view : 'FIRE');
+  const [direction, setDirection] = useState<DirectionFilter>(initial.direction);
+  const [confidence, setConfidence] = useState<ConfidenceFilter>(initial.confidence);
+  const [sort, setSort] = useState<SortMode>(initial.sort);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [trends, setTrends] = useState<Record<string, any[]>>({});
 
   const weekMetaQuery = useQuery<{ metadata?: { weeksReturned?: { max?: number } } }>({
     queryKey: [`/api/fantasy-lab/weekly?season=${season}&limit=1`],
   });
 
   useEffect(() => {
+    const raw = localStorage.getItem(WATCHLIST_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) setWatchlist(parsed.filter((v) => typeof v === 'string'));
+    } catch {
+      // ignore malformed localStorage
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist));
+  }, [watchlist]);
+
+  useEffect(() => {
     const maxWeek = weekMetaQuery.data?.metadata?.weeksReturned?.max;
     if (typeof maxWeek === 'number' && maxWeek >= 1 && maxWeek <= 18) {
-      setWeek(maxWeek);
+      setWeek((prev) => Math.min(prev, maxWeek));
     }
   }, [weekMetaQuery.data]);
+
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    qs.set('season', String(season));
+    qs.set('week', String(week));
+    qs.set('pos', position);
+    qs.set('view', view.toLowerCase());
+    qs.set('dir', direction.toLowerCase());
+    qs.set('conf', confidence.toLowerCase());
+    qs.set('sort', sort.toLowerCase());
+    window.history.replaceState({}, '', `/fantasy-lab?${qs.toString()}`);
+  }, [season, week, position, view, direction, confidence, sort]);
 
   const fireQuery = useQuery<any>({
     queryKey: [`/api/fire/eg/batch?season=${season}&week=${week}&position=${position}`],
@@ -42,12 +100,51 @@ export default function FantasyLab() {
     return [...rows].sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
   }, [fireQuery.data]);
 
+  const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
+
   const deltaRows = useMemo(() => {
-    const rows = (deltaQuery.data?.data || []) as any[];
-    return [...rows].sort((a, b) => Math.abs(b?.delta?.rankZ ?? 0) - Math.abs(a?.delta?.rankZ ?? 0));
-  }, [deltaQuery.data]);
+    let rows = [...deltaRowsRaw];
+    if (direction !== 'ALL') rows = rows.filter((r) => r.delta?.direction === direction);
+    if (confidence === 'HM') rows = rows.filter((r) => r.confidence === 'HIGH' || r.confidence === 'MED');
+    if (confidence === 'HIGH') rows = rows.filter((r) => r.confidence === 'HIGH');
+
+    if (sort === 'ZDESC') rows.sort((a, b) => (b?.delta?.rankZ ?? 0) - (a?.delta?.rankZ ?? 0));
+    else if (sort === 'ZASC') rows.sort((a, b) => (a?.delta?.rankZ ?? 0) - (b?.delta?.rankZ ?? 0));
+    else rows.sort((a, b) => Math.abs(b?.delta?.rankZ ?? 0) - Math.abs(a?.delta?.rankZ ?? 0));
+    return rows;
+  }, [deltaRowsRaw, direction, confidence, sort]);
+
+  const watchRows = useMemo(() => {
+    const byId = new Map(deltaRowsRaw.map((r) => [r.playerId, r]));
+    return watchlist.map((id) => byId.get(id)).filter(Boolean) as any[];
+  }, [watchlist, deltaRowsRaw]);
+
+  useEffect(() => {
+    const weekFrom = Math.max(1, week - 5);
+    const load = async () => {
+      const entries = await Promise.all(
+        watchlist.map(async (playerId) => {
+          try {
+            const resp = await fetch(`/api/delta/eg/player-trend?season=${season}&playerId=${playerId}&weekFrom=${weekFrom}&weekTo=${week}`);
+            if (!resp.ok) return [playerId, []] as const;
+            const body = await resp.json();
+            return [playerId, body.data || []] as const;
+          } catch {
+            return [playerId, []] as const;
+          }
+        })
+      );
+      setTrends(Object.fromEntries(entries));
+    };
+    if (watchlist.length) load();
+    else setTrends({});
+  }, [watchlist, season, week]);
 
   const isLoading = view === 'FIRE' ? fireQuery.isLoading : deltaQuery.isLoading;
+
+  const toggleStar = (playerId: string) => {
+    setWatchlist((prev) => prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]);
+  };
 
   return (
     <div className="p-6 space-y-5">
@@ -72,11 +169,32 @@ export default function FantasyLab() {
         </div>
 
         <div className="flex border rounded overflow-hidden">
-          {(['FIRE', 'DELTA'] as ViewMode[]).map((v) => (
+          {(['FIRE', 'DELTA', 'WATCHLIST'] as ViewMode[]).map((v) => (
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm ${view === v ? 'bg-slate-900 text-white' : 'bg-white'}`}>{v}</button>
           ))}
         </div>
       </div>
+
+      {view === 'DELTA' && (
+        <div className="flex flex-wrap gap-3 bg-white border rounded-lg p-3">
+          <select value={direction} onChange={(e) => setDirection(e.target.value as DirectionFilter)} className="border rounded px-2 py-1 text-sm">
+            <option value="ALL">Direction: ALL</option>
+            <option value="BUY_LOW">Direction: BUY_LOW</option>
+            <option value="SELL_HIGH">Direction: SELL_HIGH</option>
+            <option value="NEUTRAL">Direction: NEUTRAL</option>
+          </select>
+          <select value={confidence} onChange={(e) => setConfidence(e.target.value as ConfidenceFilter)} className="border rounded px-2 py-1 text-sm">
+            <option value="ALL">Confidence: ALL</option>
+            <option value="HM">Confidence: HIGH+MED</option>
+            <option value="HIGH">Confidence: HIGH only</option>
+          </select>
+          <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)} className="border rounded px-2 py-1 text-sm">
+            <option value="ABSZ">Sort: abs(rankZ) desc</option>
+            <option value="ZDESC">Sort: rankZ desc</option>
+            <option value="ZASC">Sort: rankZ asc</option>
+          </select>
+        </div>
+      )}
 
       {isLoading && <div className="text-sm text-gray-500">Loading...</div>}
 
@@ -88,20 +206,21 @@ export default function FantasyLab() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
-                  <th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">FIRE</th><th className="p-2">Opp</th><th className="p-2">Role</th><th className="p-2">Conv</th><th className="p-2">xfp_R</th><th className="p-2">xfpgoe_R</th><th className="p-2">snaps_R</th>
+                  <th className="p-2">★</th><th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">FIRE</th><th className="p-2">Opp</th><th className="p-2">Role</th><th className="p-2">Conv</th><th className="p-2">Games</th><th className="p-2">Confidence</th><th className="p-2">snaps_R</th>
                 </tr>
               </thead>
               <tbody>
                 {fireRows.map((r) => (
                   <tr key={r.playerId} className="border-t">
+                    <td className="p-2"><button onClick={() => toggleStar(r.playerId)}>{watchlist.includes(r.playerId) ? '★' : '☆'}</button></td>
                     <td className="p-2">{r.playerName || r.playerId}</td>
                     <td className="p-2">{r.team || '—'}</td>
                     <td className="p-2 font-semibold">{num(r.fireScore)}</td>
                     <td className="p-2">{num(r.pillars?.opportunity)}</td>
                     <td className="p-2">{num(r.pillars?.role)}</td>
                     <td className="p-2">{num(r.pillars?.conversion)}</td>
-                    <td className="p-2">{num(r.raw?.xfp_R, 2)}</td>
-                    <td className="p-2">{num(r.raw?.xfpgoe_R, 2)}</td>
+                    <td className="p-2">{r.games_played_window ?? '—'}</td>
+                    <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${confidenceClass(r.confidence)}`}>{r.confidence || 'LOW'}</span></td>
                     <td className="p-2">{num(r.raw?.snaps_R, 0)}</td>
                   </tr>
                 ))}
@@ -112,27 +231,101 @@ export default function FantasyLab() {
       )}
 
       {!isLoading && view === 'DELTA' && (
+        <>
+          <div className="bg-white border rounded-lg p-3">
+            <div className="h-[360px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" dataKey="fire.pct" domain={[0, 100]}>
+                    <Label value="FIRE percentile" offset={-5} position="insideBottom" />
+                  </XAxis>
+                  <YAxis type="number" dataKey="forge.pct" domain={[0, 100]}>
+                    <Label value="FORGE percentile" angle={-90} position="insideLeft" />
+                  </YAxis>
+                  <Tooltip formatter={(value: any) => (typeof value === 'number' ? value.toFixed(2) : value)} content={({ active, payload }) => {
+                    const p = payload?.[0]?.payload;
+                    if (!active || !p) return null;
+                    return (
+                      <div className="bg-white border rounded p-2 text-xs shadow">
+                        <div className="font-semibold">{p.playerName || p.playerId} ({p.team || '—'} {p.position})</div>
+                        <div>forge.pct: {num(p.forge?.pct, 1)} | fire.pct: {num(p.fire?.pct, 1)}</div>
+                        <div>displayPct: {num(p.delta?.displayPct, 1)} | rankZ: {num(p.delta?.rankZ, 2)}</div>
+                        <div>games: {p.games_played_window} | xfp_R: {num(p.why?.xfp_R, 2)} | snaps_R: {num(p.why?.snaps_R, 0)}</div>
+                      </div>
+                    );
+                  }} />
+                  <Scatter data={deltaRows} fill="#64748b" onClick={(p: any) => setSelectedPlayerId(p?.playerId)} shape={(props: any) => {
+                    const payload = props?.payload;
+                    if (!payload) return <circle cx={props.cx} cy={props.cy} r={0} fill="transparent" />;
+                    const color = payload.delta?.direction === 'BUY_LOW' ? '#16a34a' : payload.delta?.direction === 'SELL_HIGH' ? '#dc2626' : '#64748b';
+                    const faded = payload.confidence === 'LOW' ? 0.35 : 0.9;
+                    return <circle cx={props.cx} cy={props.cy} r={selectedPlayerId === payload.playerId ? 6 : 4} fill={color} fillOpacity={faded} stroke={selectedPlayerId === payload.playerId ? '#111827' : 'none'} />;
+                  }} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-600 mt-2">
+              <div>Top-left: Football &gt; Opportunity (Buy-Low)</div>
+              <div>Bottom-right: Opportunity &gt; Football (Sell-High)</div>
+              <div>Top-right: Studs (High/High)</div>
+              <div>Bottom-left: Avoid (Low/Low)</div>
+            </div>
+          </div>
+
+          <div className="bg-white border rounded-lg overflow-auto">
+            {!deltaRows.length ? (
+              <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-left">
+                  <tr>
+                    <th className="p-2">★</th><th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">Confidence</th><th className="p-2">Display Delta</th><th className="p-2">Rank Delta (z)</th><th className="p-2">Games</th><th className="p-2">Badge</th><th className="p-2">Why</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deltaRows.map((r) => (
+                    <tr key={r.playerId} className={`border-t ${selectedPlayerId === r.playerId ? 'bg-blue-50' : ''}`} onClick={() => setSelectedPlayerId(r.playerId)}>
+                      <td className="p-2"><button onClick={(e) => { e.stopPropagation(); toggleStar(r.playerId); }}>{watchlist.includes(r.playerId) ? '★' : '☆'}</button></td>
+                      <td className="p-2">{r.playerName || r.playerId}</td>
+                      <td className="p-2">{r.team || '—'}</td>
+                      <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${confidenceClass(r.confidence)}`}>{r.confidence}</span></td>
+                      <td className="p-2">{num(r.delta?.displayPct)}</td>
+                      <td className="p-2">{num(r.delta?.rankZ, 2)}</td>
+                      <td className="p-2">{r.games_played_window}</td>
+                      <td className="p-2">
+                        <span className={`px-2 py-1 rounded text-xs ${r.delta?.direction === 'BUY_LOW' ? 'bg-green-100 text-green-700' : r.delta?.direction === 'SELL_HIGH' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{r.delta?.direction}</span>
+                      </td>
+                      <td className="p-2 text-xs text-gray-600">{r.why?.note || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+
+      {view === 'WATCHLIST' && (
         <div className="bg-white border rounded-lg overflow-auto">
-          {!deltaRows.length ? (
-            <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
+          {!watchRows.length ? (
+            <div className="p-4 text-sm text-gray-500">No starred players yet. Use ☆ in FIRE/DELTA tables.</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-left">
                 <tr>
-                  <th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">Alpha</th><th className="p-2">FIRE</th><th className="p-2">Display Delta (pct)</th><th className="p-2">Rank Delta (z)</th><th className="p-2">Badge</th>
+                  <th className="p-2">Player</th><th className="p-2">Position</th><th className="p-2">Current rankZ</th><th className="p-2">Current displayPct</th><th className="p-2">Trend (last 6 anchors)</th>
                 </tr>
               </thead>
               <tbody>
-                {deltaRows.map((r) => (
-                  <tr key={r.playerId} className="border-t">
-                    <td className="p-2">{r.playerName || r.playerId}</td>
-                    <td className="p-2">{r.team || '—'}</td>
-                    <td className="p-2">{num(r.forge?.alpha)}</td>
-                    <td className="p-2">{num(r.fire?.score)}</td>
-                    <td className="p-2">{num(r.delta?.displayPct)}</td>
+                {watchRows.map((r) => (
+                  <tr key={r.playerId} className="border-t align-top">
+                    <td className="p-2">{r.playerName || r.playerId} <button className="ml-2" onClick={() => toggleStar(r.playerId)}>★</button></td>
+                    <td className="p-2">{r.position}</td>
                     <td className="p-2">{num(r.delta?.rankZ, 2)}</td>
-                    <td className="p-2">
-                      <span className={`px-2 py-1 rounded text-xs ${r.delta?.direction === 'BUY_LOW' ? 'bg-green-100 text-green-700' : r.delta?.direction === 'SELL_HIGH' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{r.delta?.direction}</span>
+                    <td className="p-2">{num(r.delta?.displayPct, 1)}</td>
+                    <td className="p-2 text-xs">
+                      {(trends[r.playerId] || []).map((t) => `W${t.weekAnchor}: forge ${num(t.forgePct)} / fire ${num(t.firePct)} / z ${num(t.rankZ, 2)} / Δ ${num(t.displayPct)}`).join(' | ') || 'Loading trend...'}
                     </td>
                   </tr>
                 ))}

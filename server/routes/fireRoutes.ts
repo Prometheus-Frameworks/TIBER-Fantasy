@@ -27,6 +27,7 @@ interface RollingRow {
   xfp_r: number | null;
   xfpgoe_r: number | null;
   window_games_played: number;
+  weeks_present: number[] | null;
 }
 
 interface FirePlayer {
@@ -40,6 +41,8 @@ interface FirePlayer {
   eligible: boolean;
   fireScore: number | null;
   windowGamesPlayed: number;
+  games_played_window: number;
+  weeks_present: number[];
   confidence: Confidence;
   pillars: { opportunity: number | null; role: number | null; conversion: number | null };
   raw: {
@@ -114,14 +117,18 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
       AVG(red_zone_touches)::real AS rz_avg,
       SUM(x_ppr_v2)::real AS xfp_r,
       SUM(xfpgoe_ppr_v2)::real AS xfpgoe_r,
-      COUNT(DISTINCT CASE WHEN COALESCE(snaps,0) > 0 OR COALESCE(targets,0) + COALESCE(carries,0) > 0 THEN week END)::int AS window_games_played
+      COUNT(DISTINCT CASE WHEN COALESCE(snaps,0) > 0 OR COALESCE(targets,0) + COALESCE(carries,0) > 0 THEN week END)::int AS window_games_played,
+      ARRAY_AGG(DISTINCT week ORDER BY week) FILTER (
+        WHERE COALESCE(snaps, 0) > 0
+          OR (snaps IS NULL AND (COALESCE(targets, 0) + COALESCE(carries, 0)) > 0)
+      )::int[] AS weeks_present
     FROM fantasy_metrics_weekly_mv
     WHERE ${sql.join(where, sql` AND `)}
     GROUP BY player_id
   `);
 
   return {
-    rows: rowsResult.rows as RollingRow[],
+    rows: rowsResult.rows as unknown as RollingRow[],
     rollingWeeks: (rollingWeeksResult.rows as any[]).map((r) => Number(r.week)).filter(Number.isFinite),
   };
 }
@@ -170,6 +177,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       : (row.snaps_r ?? 0) >= 80;
 
     const gamesPlayed = Number(row.window_games_played) || 0;
+    const weeksPresent = (row.weeks_present ?? []).map((w: any) => Number(w)).filter((w: number) => Number.isFinite(w)).sort((a: number, b: number) => a - b);
     const confidence = computeConfidence(row.position, snapsR ?? 0, gamesPlayed, routeSource);
 
     return {
@@ -183,6 +191,8 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       eligible,
       fireScore: null,
       windowGamesPlayed: gamesPlayed,
+      games_played_window: gamesPlayed,
+      weeks_present: weeksPresent,
       confidence,
       pillars: { opportunity: null, role: null, conversion: null },
       raw: {
@@ -497,6 +507,7 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
           season: row.season,
           weekAnchor: row.weekAnchor,
           windowGamesPlayed: row.windowGamesPlayed,
+          games_played_window: row.windowGamesPlayed,
           confidence: conf,
           forge: { alpha: row.alpha, pct: forgePct, z: forgeZ },
           fire: { score: row.fireScore, pct: firePct, z: fireZ },
@@ -546,6 +557,94 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('[DELTA] batch error', error);
+    return res.status(500).json({ error: error?.message ?? 'Unknown error' });
+  }
+});
+
+router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
+  try {
+    const season = Number(req.query.season);
+    const playerId = String(req.query.playerId || '').trim();
+    const weekFrom = Number(req.query.weekFrom);
+    const weekTo = Number(req.query.weekTo);
+
+    if (!Number.isInteger(season) || !playerId || !Number.isInteger(weekFrom) || !Number.isInteger(weekTo)) {
+      return res.status(400).json({ error: 'season, playerId, weekFrom, and weekTo are required' });
+    }
+
+    const minWeek = Math.max(1, Math.min(weekFrom, weekTo));
+    const maxWeek = Math.min(18, Math.max(weekFrom, weekTo));
+
+    const posResult = await db.execute(sql`
+      SELECT MAX(position)::text AS position
+      FROM fantasy_metrics_weekly_mv
+      WHERE season = ${season} AND player_id = ${playerId} AND position IN ('RB','WR','TE')
+    `);
+
+    const position = posResult.rows[0]?.position as Position | undefined;
+    if (!position || !SUPPORTED_POSITIONS.includes(position)) {
+      return res.json({ season, playerId, weekFrom: minWeek, weekTo: maxWeek, data: [] });
+    }
+
+    const { runForgeEngineBatch } = await import('../modules/forge/forgeEngine');
+    const { gradeForgeWithMeta } = await import('../modules/forge/forgeGrading');
+
+    const trendRows: any[] = [];
+
+    for (let anchorWeek = minWeek; anchorWeek <= maxWeek; anchorWeek += 1) {
+      const { rows, rollingWeeks } = await fetchRollingRows(season, anchorWeek, position, undefined);
+      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks).filter((p) => p.eligible && p.fireScore != null);
+      const fireById = new Map(fireRows.map((r) => [r.playerId, r]));
+      if (!fireById.has(playerId)) continue;
+
+      const forgeRaw = await runForgeEngineBatch(position, season, anchorWeek, 400);
+      const forge = forgeRaw.map((r: any) => gradeForgeWithMeta(r, { mode: 'redraft' }));
+
+      const joined = fireRows
+        .map((fire) => {
+          const f = forge.find((g: any) => g.playerId === fire.playerId);
+          if (!f) return null;
+          return { playerId: fire.playerId, alpha: Number(f.alpha), fireScore: Number(fire.fireScore), confidence: fire.confidence };
+        })
+        .filter(Boolean) as Array<{ playerId: string; alpha: number; fireScore: number; confidence: Confidence }>;
+      if (!joined.length) continue;
+
+      const alphaVals = joined.map((j) => j.alpha);
+      const fireVals = joined.map((j) => j.fireScore);
+      const alphaSorted = [...alphaVals].sort((a, b) => a - b);
+      const fireSorted = [...fireVals].sort((a, b) => a - b);
+      const alphaMean = mean(alphaVals) ?? 0;
+      const fireMean = mean(fireVals) ?? 0;
+      const alphaStd = stdev(alphaVals) || 1;
+      const fireStd = stdev(fireVals) || 1;
+
+      const playerJoined = joined.find((j) => j.playerId === playerId);
+      if (!playerJoined) continue;
+
+      const forgePct = percentileRank(alphaSorted, playerJoined.alpha);
+      const firePct = percentileRank(fireSorted, playerJoined.fireScore);
+      const rankZ = (playerJoined.alpha - alphaMean) / alphaStd - (playerJoined.fireScore - fireMean) / fireStd;
+      const displayPct = forgePct - firePct;
+
+      trendRows.push({
+        weekAnchor: anchorWeek,
+        forgePct,
+        firePct,
+        rankZ,
+        displayPct,
+        confidence: fireById.get(playerId)?.confidence ?? playerJoined.confidence,
+      });
+    }
+
+    return res.json({
+      season,
+      playerId,
+      weekFrom: minWeek,
+      weekTo: maxWeek,
+      data: trendRows.sort((a, b) => a.weekAnchor - b.weekAnchor),
+    });
+  } catch (error: any) {
+    console.error('[DELTA] trend error', error);
     return res.status(500).json({ error: error?.message ?? 'Unknown error' });
   }
 });
