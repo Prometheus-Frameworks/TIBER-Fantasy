@@ -1,0 +1,179 @@
+🧪 Delta Sanity Test (Manual, No FIRE Code Yet)
+
+We’re going to compare:
+	•	FORGE Alpha percentile (same season, same week anchor W=14)
+	•	Rolling 4-week xFP percentile (OpportunityScore from Test 5)
+
+We’ll do this by position.
+
+⸻
+
+Step 1 — Pull FORGE Percentiles
+
+You likely already have Alpha per player for season 2025 at week 14.
+
+If Alpha is stored in a table (example forge_player_week or similar), run:
+
+WITH forge AS (
+  SELECT
+    player_id,
+    position,
+    alpha_score
+  FROM forge_player_week
+  WHERE season = 2025
+    AND week = 14
+),
+forge_pct AS (
+  SELECT
+    *,
+    100.0 * PERCENT_RANK() OVER (PARTITION BY position ORDER BY alpha_score) AS forge_pct
+  FROM forge
+)
+SELECT * FROM forge_pct;
+
+If Alpha is stored season-level instead of weekly, use whatever table your Tiers page uses.
+
+The key: we want percentile-normalized Alpha.
+
+⸻
+
+Step 2 — Pull Rolling xFP Percentiles (OpportunityScore)
+
+Use your previous eligible CTE but keep just the percentile:
+
+WITH roll AS (
+  SELECT
+    player_id,
+    position,
+    SUM(COALESCE(x_ppr_v2,0)) AS xfp_r,
+    SUM(COALESCE(snaps,0)) AS snaps_r
+  FROM fantasy_metrics_weekly_mv
+  WHERE season = 2025 AND week BETWEEN 11 AND 14
+  GROUP BY 1,2
+),
+eligible AS (
+  SELECT *
+  FROM roll
+  WHERE
+    (position IN ('WR','TE') AND snaps_r >= 80)
+    OR (position = 'RB' AND snaps_r >= 50)
+),
+opp_pct AS (
+  SELECT
+    *,
+    100.0 * PERCENT_RANK() OVER (PARTITION BY position ORDER BY xfp_r) AS fire_pct
+  FROM eligible
+)
+SELECT * FROM opp_pct;
+
+Ignore QBs for now.
+
+⸻
+
+Step 3 — Join Them (This Is The Moment)
+
+Now we compute Delta:
+
+WITH forge AS (
+  SELECT
+    player_id,
+    position,
+    alpha_score,
+    100.0 * PERCENT_RANK() OVER (PARTITION BY position ORDER BY alpha_score) AS forge_pct
+  FROM forge_player_week
+  WHERE season = 2025 AND week = 14
+),
+roll AS (
+  SELECT
+    player_id,
+    position,
+    SUM(COALESCE(x_ppr_v2,0)) AS xfp_r,
+    SUM(COALESCE(snaps,0)) AS snaps_r
+  FROM fantasy_metrics_weekly_mv
+  WHERE season = 2025 AND week BETWEEN 11 AND 14
+  GROUP BY 1,2
+),
+eligible AS (
+  SELECT *
+  FROM roll
+  WHERE
+    (position IN ('WR','TE') AND snaps_r >= 80)
+    OR (position = 'RB' AND snaps_r >= 50)
+),
+opp_pct AS (
+  SELECT
+    player_id,
+    position,
+    100.0 * PERCENT_RANK() OVER (PARTITION BY position ORDER BY xfp_r) AS fire_pct
+  FROM eligible
+)
+SELECT
+  f.position,
+  f.player_id,
+  f.forge_pct,
+  o.fire_pct,
+  (f.forge_pct - o.fire_pct) AS delta
+FROM forge f
+JOIN opp_pct o
+  ON f.player_id = o.player_id
+ORDER BY ABS(f.forge_pct - o.fire_pct) DESC
+LIMIT 30;
+
+
+⸻
+
+🔍 What We’re Looking For
+
+High Positive Delta
+
+High FORGE, Low FIRE
+
+These should look like:
+	•	Talented players underutilized recently
+	•	Buy-low candidates
+	•	Players with strong efficiency but suppressed opportunity
+
+If it spits out names you’d defend in a league chat — that’s signal.
+
+⸻
+
+High Negative Delta
+
+Low FORGE, High FIRE
+
+These should look like:
+	•	Volume-driven but shaky efficiency players
+	•	Sell-high candidates
+	•	Temporary role spikes
+
+If that list makes you say “yeah that feels fragile,” Delta works.
+
+⸻
+
+🧠 Interpretation Framework
+
+If results show:
+	•	Clean separation
+	•	Meaningful disagreement
+	•	Not random noise
+
+Then FIRE + FORGE separation is validated.
+
+If instead:
+	•	Top deltas are all garbage players
+	•	Or names make zero intuitive sense
+
+Then either:
+	•	Window too short
+	•	Threshold too low
+	•	OR Alpha smoothing misaligned
+
+⸻
+
+⚠️ One Thing To Watch
+
+If FORGE Alpha is season-aggregated but xFP is rolling 4-week, delta will naturally skew.
+
+That’s fine for now — but note it.
+
+Eventually you may want rolling FORGE as well 
