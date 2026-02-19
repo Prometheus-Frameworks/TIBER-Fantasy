@@ -120,3 +120,25 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/scripts/qaFantasyLabPhase1.ts` — sanity checks for non-zero rows, xFP not-all-null, uniqueness
   - `server/modules/fantasyLab/README.md` — source lineage and latest-vs-weekly field docs
 - **Validation:** `npm run build` passed (existing duplicate-member warning in `server/olc/adjusters.ts`), `npm run typecheck` failed due unrelated repo-wide TS issues, `npm run qa:fantasy-lab -- 2025 1` failed in this container due PostgreSQL connection refusal.
+
+### 2026-02-19 — Fantasy Lab Phase 2 (FIRE + Delta + Minimal UI)
+- Implemented new APIs:
+  - `GET /api/fire/eg/batch`
+  - `GET /api/fire/eg/player`
+  - `GET /api/delta/eg/batch`
+- FIRE details:
+  - RB/WR/TE-only, rolling 4-week window anchored to `week`
+  - Eligibility by rolling snaps (RB >= 50, WR/TE >= 80)
+  - Pillars via position-percentile ranks (opportunity, role, conversion)
+  - Composite formula: `0.60*Opp + 0.25*Role + 0.15*Conv`
+  - RoleIndex includes fallback logic for missing route/target fields with metadata flags
+- Delta details:
+  - Hybrid delta where display uses percentile (`ForgePct - FirePct`) and ranking uses z-score delta (`z(alpha)-z(fire)`)
+  - BUY_LOW / SELL_HIGH labels based on rankZ and displayPct thresholds
+- Frontend:
+  - Added `/fantasy-lab` route and sidebar nav entry
+  - Added controls and tables for FIRE and DELTA tabs
+  - Added explicit QB-FIRE-unavailable notice and empty-state handling
+- Validation:
+  - `npm run build` ✅
+  - `npm run dev` blocked (no `DATABASE_URL` in environment)

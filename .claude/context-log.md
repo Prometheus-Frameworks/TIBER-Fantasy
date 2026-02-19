@@ -135,3 +135,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `migrations/0011_fantasy_lab_weekly_mv.sql`, `server/routes/fantasyLabRoutes.ts`, `server/routes.ts`, `server/scripts/qaFantasyLabPhase1.ts`, `server/modules/fantasyLab/README.md`, `package.json`
 - **Validation:** Ran `npm run build` (pass with pre-existing warning), attempted `npm run typecheck` (repo-wide pre-existing errors), attempted `npm run qa:fantasy-lab -- 2025 1` (DB unavailable in container: ECONNREFUSED).
 - **Notes:** Materialized view uses latest snapshot per season/week and latest-known market signals/facts; xFP surfaced as `x_ppr_v2` + `xfpgoe_ppr_v2`; half/std xFP currently null placeholders pending source availability.
+
+### 2026-02-19 — Codex: Fantasy Lab Phase 2 FIRE + Delta + UI
+- **What changed:** Added compute-on-demand FIRE API for RB/WR/TE (`/api/fire/eg/batch`, `/api/fire/eg/player`) using rolling 4-week windows, position-specific snap eligibility, percentile-normalized pillars, and RoleIndex fallback logic. Added Hybrid Delta API (`/api/delta/eg/batch`) joining FORGE alpha and FIRE with percentile display delta + z-score rank delta and BUY_LOW/SELL_HIGH labeling. Added a minimal `/fantasy-lab` page with season/week/position/view controls, FIRE table, DELTA table, and explicit QB gap notice.
+- **Files modified:** `server/routes/fireRoutes.ts`, `server/routes.ts`, `client/src/pages/FantasyLab.tsx`, `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`
+- **Validation:** `npm run build` passed (existing unrelated duplicate member warning in `server/olc/adjusters.ts`). Attempted `npm run dev` for UI verification/screenshot, blocked due missing `DATABASE_URL`.
+- **Notes:** QB FIRE remains excluded by design; endpoints include metadata notes/thresholds and role fallback metadata.

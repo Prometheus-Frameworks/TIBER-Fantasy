@@ -107,3 +107,6 @@ This project uses multiple AI agents (Replit Agent, Claude Code, Codex). All sha
   - `GET /api/fantasy-lab/weekly`
   - `GET /api/fantasy-lab/player`
   - `POST /api/admin/fantasy-lab/refresh`
+
+## Unreleased Updates
+- **Fantasy Lab Phase 2 (FIRE + Hybrid Delta):** Added RB/WR/TE-only FIRE compute-on-demand APIs (`/api/fire/eg/batch`, `/api/fire/eg/player`) using rolling 4-week windows and percentile-based pillar scoring with RoleIndex fallback behavior. Added Hybrid Delta API (`/api/delta/eg/batch`) that combines percentile display delta and z-score rank delta between FORGE alpha and FIRE. Added a minimal `/fantasy-lab` UI with FIRE and DELTA table views and explicit QB exclusion notice due current QB xFP gap.
