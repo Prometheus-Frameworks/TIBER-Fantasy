@@ -102,7 +102,11 @@ This project uses multiple AI agents (Replit Agent, Claude Code, Codex). All sha
 - **connect-pg-simple**: Enables PostgreSQL-based session storage.
 - **@neondatabase/serverless**: For PostgreSQL connections in serverless environments.
 - **Google Gemini API**: Integrated for AI embeddings and chat generation capabilities.
+## Known Performance Issues (Pre-Season TODO)
+- **`/api/delta/eg/player-trend` endpoint is expensive**: Runs the full FORGE engine batch (all players at a position) once per anchor week in the requested range. A 5-week trend request = 5 full FORGE computations, each doing per-player data validation and pillar scoring. This exhausted the DB connection pool during testing and caused the server to become unreachable. **Fix before season**: Pre-compute weekly FORGE snapshots into `forge_grade_cache` keyed by `(season, as_of_week, position, player_id)`, then have the trend endpoint read from cache instead of running FORGE live. Alternatively, add a request queue / concurrency limiter so one heavy trend request can't starve the pool.
+
 ## Update Notes (Agent)
+- **2026-02-19:** Merged PR #22 (Phase 3): Delta trust layer with confidence gating, scatter visualization, watchlist, and `/api/delta/eg/player-trend` endpoint. Added `windowGamesPlayed`, `games_played_window`, `weeks_present`, and `confidence` fields to FIRE output. Delta labels now gate percentile-only triggers behind confidence (LOW excluded). Added `why` object to Delta rows. Future-proofed forge_grade_cache query with mode/version filter.
 - **2026-02-18:** Added Fantasy Lab Phase 1 backend data foundation with a consolidated materialized view `fantasy_metrics_weekly_mv` (weekly opportunity + xFP v2 + latest market context) and API endpoints:
   - `GET /api/fantasy-lab/weekly`
   - `GET /api/fantasy-lab/player`
