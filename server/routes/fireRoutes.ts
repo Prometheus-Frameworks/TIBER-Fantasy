@@ -7,6 +7,10 @@ const router = Router();
 type Position = "RB" | "WR" | "TE";
 const SUPPORTED_POSITIONS: Position[] = ["RB", "WR", "TE"];
 
+type Confidence = "HIGH" | "MED" | "LOW";
+
+const SNAP_THRESHOLDS: Record<Position, number> = { RB: 50, WR: 80, TE: 80 };
+
 interface RollingRow {
   player_id: string;
   player_name: string | null;
@@ -22,6 +26,7 @@ interface RollingRow {
   rz_avg: number | null;
   xfp_r: number | null;
   xfpgoe_r: number | null;
+  window_games_played: number;
 }
 
 interface FirePlayer {
@@ -34,6 +39,8 @@ interface FirePlayer {
   rollingWeeks: number[];
   eligible: boolean;
   fireScore: number | null;
+  windowGamesPlayed: number;
+  confidence: Confidence;
   pillars: { opportunity: number | null; role: number | null; conversion: number | null };
   raw: {
     xfp_R: number | null;
@@ -106,7 +113,8 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
       SUM(COALESCE(carries, 0))::real AS carries_r,
       AVG(red_zone_touches)::real AS rz_avg,
       SUM(x_ppr_v2)::real AS xfp_r,
-      SUM(xfpgoe_ppr_v2)::real AS xfpgoe_r
+      SUM(xfpgoe_ppr_v2)::real AS xfpgoe_r,
+      COUNT(DISTINCT CASE WHEN COALESCE(snaps,0) > 0 OR COALESCE(targets,0) + COALESCE(carries,0) > 0 THEN week END)::int AS window_games_played
     FROM fantasy_metrics_weekly_mv
     WHERE ${sql.join(where, sql` AND `)}
     GROUP BY player_id
@@ -116,6 +124,14 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
     rows: rowsResult.rows as RollingRow[],
     rollingWeeks: (rollingWeeksResult.rows as any[]).map((r) => Number(r.week)).filter(Number.isFinite),
   };
+}
+
+function computeConfidence(pos: Position, snapsR: number, gamesPlayed: number, routeSource: string): Confidence {
+  const threshold = SNAP_THRESHOLDS[pos];
+  if (gamesPlayed <= 2 || snapsR < threshold * 1.05) return "LOW";
+  if (gamesPlayed >= 4 && snapsR >= threshold * 1.5 && routeSource !== "none") return "HIGH";
+  if (gamesPlayed >= 3 && snapsR >= threshold) return "MED";
+  return "LOW";
 }
 
 function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[]): FirePlayer[] {
@@ -153,6 +169,9 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       ? (row.snaps_r ?? 0) >= 50
       : (row.snaps_r ?? 0) >= 80;
 
+    const gamesPlayed = Number(row.window_games_played) || 0;
+    const confidence = computeConfidence(row.position, snapsR ?? 0, gamesPlayed, routeSource);
+
     return {
       playerId: row.player_id,
       playerName: row.player_name,
@@ -163,6 +182,8 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       rollingWeeks,
       eligible,
       fireScore: null,
+      windowGamesPlayed: gamesPlayed,
+      confidence,
       pillars: { opportunity: null, role: null, conversion: null },
       raw: {
         xfp_R: row.xfp_r,
@@ -350,6 +371,7 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'position must be RB, WR, or TE' });
     }
 
+    const mode = typeof req.query.mode === "string" ? req.query.mode.toLowerCase() : "redraft";
     const positions = position ? [position] : SUPPORTED_POSITIONS;
     const allRows: any[] = [];
 
@@ -358,6 +380,21 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       sql`position IN ('RB','WR','TE')`,
     ];
     if (position) forgeWhere.push(sql`position = ${position}`);
+
+    const hasVersionCol = await db.execute(sql`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'forge_grade_cache' AND column_name = 'version'
+      LIMIT 1
+    `);
+    if (hasVersionCol.rows.length > 0) {
+      const versionValues = await db.execute(sql`SELECT DISTINCT version FROM forge_grade_cache WHERE version IS NOT NULL LIMIT 10`);
+      const versions = (versionValues.rows as any[]).map((r: any) => r.version);
+      if (versions.length === 1 && versions[0] === "v1") {
+        forgeWhere.push(sql`version = 'v1'`);
+      } else if (versions.includes(mode)) {
+        forgeWhere.push(sql`(version IS NULL OR version = ${mode})`);
+      }
+    }
 
     const forgeCacheRows = await db.execute(sql`
       SELECT player_id, position, alpha, player_name, nfl_team
@@ -374,6 +411,12 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       const fireRows = buildFire(rows, season, week, rollingWeeks).filter((p) => p.eligible && p.fireScore != null);
       if (!fireRows.length) continue;
 
+      const fireByPos = fireRows;
+
+      const posMedianTargets = mean(fireByPos.map(p => p.raw.target_avg).filter((v): v is number => v != null));
+      const posMedianRoutes = mean(fireByPos.map(p => p.raw.route_avg).filter((v): v is number => v != null));
+      const posMedianSnaps = mean(fireByPos.map(p => p.raw.snap_avg).filter((v): v is number => v != null));
+
       const joined = fireRows
         .map((fire) => {
           const f = forgeById.get(fire.playerId);
@@ -387,9 +430,23 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
             weekAnchor: week,
             alpha: f.alpha,
             fireScore: Number(fire.fireScore),
+            confidence: fire.confidence,
+            windowGamesPlayed: fire.windowGamesPlayed,
+            xfpR: fire.raw.xfp_R,
+            snapsR: fire.raw.snaps_R,
+            targetAvg: fire.raw.target_avg,
+            routeAvg: fire.raw.route_avg,
+            snapAvg: fire.raw.snap_avg,
+            rollingWeeks,
           };
         })
-        .filter(Boolean) as Array<{ playerId: string; playerName: string | null; team: string | null; position: Position; season: number; weekAnchor: number; alpha: number; fireScore: number }>;
+        .filter(Boolean) as Array<{
+          playerId: string; playerName: string | null; team: string | null; position: Position;
+          season: number; weekAnchor: number; alpha: number; fireScore: number;
+          confidence: Confidence; windowGamesPlayed: number;
+          xfpR: number | null; snapsR: number | null; targetAvg: number | null;
+          routeAvg: number | null; snapAvg: number | null; rollingWeeks: number[];
+        }>;
 
       const alphaVals = joined.map((j) => j.alpha);
       const fireVals = joined.map((j) => j.fireScore);
@@ -408,11 +465,29 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
         const rankZ = forgeZ - fireZ;
         const displayPct = forgePct - firePct;
 
-        const direction = rankZ >= 1 || displayPct >= 20
+        const conf = row.confidence;
+        const direction = rankZ >= 1 || (displayPct >= 20 && conf !== 'LOW')
           ? 'BUY_LOW'
-          : rankZ <= -1 || displayPct <= -20
+          : rankZ <= -1 || (displayPct <= -20 && conf !== 'LOW')
           ? 'SELL_HIGH'
           : 'NEUTRAL';
+
+        let topRoleDriver: string | null = null;
+        if (posMedianTargets != null && row.targetAvg != null && row.targetAvg < posMedianTargets * 0.7) {
+          topRoleDriver = "targets down";
+        } else if (posMedianRoutes != null && row.routeAvg != null && row.routeAvg < posMedianRoutes * 0.7) {
+          topRoleDriver = "routes down";
+        } else if (posMedianSnaps != null && row.snapAvg != null && row.snapAvg < posMedianSnaps * 0.7) {
+          topRoleDriver = "snap share down";
+        } else if (posMedianTargets != null && row.targetAvg != null && row.targetAvg > posMedianTargets * 1.3) {
+          topRoleDriver = "targets up";
+        } else if (posMedianRoutes != null && row.routeAvg != null && row.routeAvg > posMedianRoutes * 1.3) {
+          topRoleDriver = "routes up";
+        }
+
+        const windowLabel = row.rollingWeeks.length > 0
+          ? `W${row.rollingWeeks[0]}\u2013W${row.rollingWeeks[row.rollingWeeks.length - 1]}`
+          : `W${Math.max(1, week - 3)}\u2013W${week}`;
 
         allRows.push({
           playerId: row.playerId,
@@ -421,9 +496,23 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
           position: row.position,
           season: row.season,
           weekAnchor: row.weekAnchor,
+          windowGamesPlayed: row.windowGamesPlayed,
+          confidence: conf,
           forge: { alpha: row.alpha, pct: forgePct, z: forgeZ },
           fire: { score: row.fireScore, pct: firePct, z: fireZ },
           delta: { displayPct, rankZ, direction },
+          why: {
+            forge_vs_fire: displayPct > 0
+              ? "High FORGE%, low FIRE% over rolling 4w"
+              : displayPct < 0
+              ? "Low FORGE%, high FIRE% over rolling 4w"
+              : "FORGE and FIRE aligned",
+            window: windowLabel,
+            xfp_r: row.xfpR,
+            snaps_r: row.snapsR,
+            window_games_played: row.windowGamesPlayed,
+            top_role_driver: topRoleDriver,
+          },
         });
       }
     }
@@ -440,10 +529,15 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       metadata: {
         season,
         weekAnchor: week,
+        mode,
         position: position ?? 'ALL',
         countsByPosition: countsByPos,
-        eligibilityThresholds: { RB: 50, WR: 80, TE: 80 },
-        notes: ['Hybrid delta: display uses percentile delta, ranking uses z-score delta.', 'QB excluded until QB FIRE exists.'],
+        eligibilityThresholds: SNAP_THRESHOLDS,
+        notes: [
+          'Hybrid delta: display uses percentile delta, ranking uses z-score delta.',
+          'Label logic: rankZ primary, percentile gated by confidence (LOW excluded from pct-only triggers).',
+          'QB excluded until QB FIRE exists.',
+        ],
         limit,
         offset,
         total: sorted.length,
