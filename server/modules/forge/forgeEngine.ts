@@ -1100,6 +1100,27 @@ export async function runForgeEngine(
 
   console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${dampenedPillars.volume.toFixed(1)} E=${dampenedPillars.efficiency.toFixed(1)} T=${dampenedPillars.teamContext.toFixed(1)} S=${dampenedPillars.stability.toFixed(1)} D=${(dampenedPillars.dynastyContext ?? dynastyContext).toFixed(1)}${context.gamesPlayed < GAMES_FULL_CREDIT[position] ? ` [GP=${context.gamesPlayed}/${GAMES_FULL_CREDIT[position]} dampened]` : ''}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
 
+  const resolvedMetrics: Record<string, number | null> = { ...context.roleBank };
+  if (context.xfpData && context.xfpData.weeksUsed > 0) {
+    resolvedMetrics['xfp_per_game'] = Math.round(context.xfpData.xfpPerGame * 100) / 100;
+    resolvedMetrics['fpoe_per_game'] = Math.round(context.xfpData.fpoePerGame * 100) / 100;
+  }
+  const allPillars = ['volume', 'efficiency', 'teamContext', 'stability'] as const;
+  for (const pillarKey of allPillars) {
+    const pillarCfg = config[pillarKey];
+    if (pillarCfg?.metrics) {
+      for (const m of pillarCfg.metrics) {
+        if (resolvedMetrics[m.metricKey] === undefined || resolvedMetrics[m.metricKey] === null) {
+          if (m.source === 'snapshot_team_context') {
+            resolvedMetrics[m.metricKey] = context.teamContext[m.metricKey] ?? null;
+          } else if (m.source === 'sos_table') {
+            resolvedMetrics[m.metricKey] = context.sosData[m.metricKey] ?? null;
+          }
+        }
+      }
+    }
+  }
+
   return {
     playerId,
     playerName: context.playerName,
@@ -1111,7 +1132,7 @@ export async function runForgeEngine(
     pillars: dampenedPillars,
     priorAlpha,
     alphaMomentum,
-    rawMetrics: context.roleBank,
+    rawMetrics: resolvedMetrics,
     qbContext,
   };
 }
