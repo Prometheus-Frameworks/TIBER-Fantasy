@@ -25,8 +25,12 @@ const layers: ArchLayer[] = [
     nodes: [
       { id: "dashboard", label: "Dashboard", sub: "Home & Overview", link: "/" },
       { id: "tiers", label: "FORGE Tiers", sub: "Player Rankings", link: "/tiers" },
+      { id: "fantasy-lab", label: "Fantasy Lab", sub: "FIRE · Delta · Watchlist", link: "/fantasy-lab" },
       { id: "datalab", label: "Data Lab", sub: "NFL Metrics Spine", link: "/tiber-data-lab" },
+      { id: "forge-workbench", label: "FORGE Workbench", sub: "Interactive Weight Explorer", link: "/forge-workbench" },
       { id: "xintel", label: "X Intelligence", sub: "Grok Scanner UI", link: "/x-intel" },
+      { id: "idp-lab", label: "IDP Lab", sub: "Havoc Index · Defensive Analysis", link: "/idp-lab" },
+      { id: "sentinel", label: "Sentinel", sub: "System Monitoring", link: "/sentinel" },
       { id: "chat", label: "Tiber Chat", sub: "RAG Chat System", link: "/legacy-chat" },
       { id: "schedule", label: "Schedule", sub: "NFL Calendar", link: "/schedule" },
     ],
@@ -38,6 +42,10 @@ const layers: ArchLayer[] = [
     accent: "#16a34a",
     nodes: [
       { id: "forge-api", label: "FORGE E+G API", sub: "/api/forge/eg/*" },
+      { id: "fire-api", label: "FIRE API", sub: "/api/fire/eg/* · Opportunity Scoring" },
+      { id: "delta-api", label: "Delta API", sub: "/api/delta/eg/* · Buy/Sell Signals" },
+      { id: "fantasy-lab-api", label: "Fantasy Lab API", sub: "/api/fantasy-lab/* · Weekly Metrics" },
+      { id: "idp-api", label: "IDP / Havoc API", sub: "/api/idp/* · Defensive Analytics" },
       { id: "intel-api", label: "Intel API", sub: "/api/intel/*" },
       { id: "datalab-api", label: "Data Lab API", sub: "/api/data-lab/*" },
       { id: "rag-api", label: "RAG Chat API", sub: "/api/tiber/*" },
@@ -53,6 +61,10 @@ const layers: ArchLayer[] = [
     nodes: [
       { id: "forge-engine", label: "FORGE Engine", sub: "Volume · Efficiency · Stability · Context" },
       { id: "forge-grading", label: "FORGE Grading", sub: "Alpha Scores · Tiers · Football Lens" },
+      { id: "fire-engine", label: "FIRE Engine", sub: "Rolling 4-Week · Opportunity · Role · Conversion" },
+      { id: "delta-engine", label: "Delta Engine", sub: "FORGE vs FIRE · Buy-Low / Sell-High" },
+      { id: "havoc-engine", label: "Havoc Engine", sub: "IDP Scoring · Bayesian Smoothing · T1–T5" },
+      { id: "qb-xfp", label: "QB xFP Model", sub: "Expected Fantasy Points · Redraft / Dynasty" },
       { id: "llm-gateway", label: "LLM Gateway", sub: "4 Providers · 9 Task Types · Fallback" },
       { id: "x-scanner", label: "X Intel Scanner", sub: "Grok · Trends · Injuries · Breakouts" },
       { id: "rag-system", label: "RAG System", sub: "Embeddings · BM25 · Gemini Chat" },
@@ -66,6 +78,8 @@ const layers: ArchLayer[] = [
     accent: "#7c3aed",
     nodes: [
       { id: "postgres", label: "PostgreSQL", sub: "Drizzle ORM · pgvector" },
+      { id: "mat-views", label: "Materialized Views", sub: "fantasy_metrics_weekly_mv · Aggregated Spine" },
+      { id: "qb-xfp-table", label: "QB xFP Weekly", sub: "Smoothed Expected Points · ETL Pipeline" },
       { id: "identity", label: "Identity Bridge", sub: "Canonical Player Pool · GSIS IDs" },
       { id: "snapshots", label: "Data Snapshots", sub: "Bronze → Silver → Gold ELT" },
       { id: "file-store", label: "File Storage", sub: "Intel JSON · Parquet Files" },
@@ -173,15 +187,15 @@ export default function Architecture() {
 
       <div className="arch-stats">
         <div className="arch-stat">
-          <span className="arch-stat-value">6</span>
+          <span className="arch-stat-value">10</span>
           <span className="arch-stat-label">Frontend Pages</span>
         </div>
         <div className="arch-stat">
-          <span className="arch-stat-value">6</span>
+          <span className="arch-stat-value">10</span>
           <span className="arch-stat-label">API Groups</span>
         </div>
         <div className="arch-stat">
-          <span className="arch-stat-value">6</span>
+          <span className="arch-stat-value">10</span>
           <span className="arch-stat-label">Core Systems</span>
         </div>
         <div className="arch-stat">
@@ -189,8 +203,8 @@ export default function Architecture() {
           <span className="arch-stat-label">LLM Providers</span>
         </div>
         <div className="arch-stat">
-          <span className="arch-stat-value">9</span>
-          <span className="arch-stat-label">LLM Task Types</span>
+          <span className="arch-stat-value">3</span>
+          <span className="arch-stat-label">Scoring Engines</span>
         </div>
         <div className="arch-stat">
           <span className="arch-stat-value">3</span>
