@@ -20,3 +20,4 @@ modules
 nflreadpy
 schedule
 scikit-learn
+psycopg2-binary

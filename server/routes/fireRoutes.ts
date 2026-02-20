@@ -4,12 +4,11 @@ import { db } from "../infra/db";
 
 const router = Router();
 
-type Position = "RB" | "WR" | "TE";
-const SUPPORTED_POSITIONS: Position[] = ["RB", "WR", "TE"];
-
-type Confidence = "HIGH" | "MED" | "LOW";
-
-const SNAP_THRESHOLDS: Record<Position, number> = { RB: 50, WR: 80, TE: 80 };
+type Position = "QB" | "RB" | "WR" | "TE";
+type SkillPosition = "RB" | "WR" | "TE";
+type ScoringPreset = "redraft" | "dynasty";
+const SUPPORTED_POSITIONS: Position[] = ["QB", "RB", "WR", "TE"];
+const SKILL_POSITIONS: SkillPosition[] = ["RB", "WR", "TE"];
 
 interface RollingRow {
   player_id: string;
@@ -26,9 +25,21 @@ interface RollingRow {
   rz_avg: number | null;
   xfp_r: number | null;
   xfpgoe_r: number | null;
-  window_games_played: number;
+  qb_xfp_redraft_r: number | null;
+  qb_xfp_dynasty_r: number | null;
+  qb_dropbacks_r: number | null;
+  qb_rush_attempts_r: number | null;
+  inside10_dropbacks_r: number | null;
+  qb_exp_pass_yards_r: number | null;
+  qb_exp_pass_td_r: number | null;
+  qb_exp_int_r: number | null;
+  qb_exp_rush_yards_r: number | null;
+  qb_exp_rush_td_r: number | null;
+  games_played_window: number | null;
   weeks_present: number[] | null;
 }
+
+type Confidence = "HIGH" | "MED" | "LOW";
 
 interface FirePlayer {
   playerId: string;
@@ -37,13 +48,13 @@ interface FirePlayer {
   position: Position;
   season: number;
   weekAnchor: number;
+  scoringPreset: ScoringPreset;
   rollingWeeks: number[];
-  eligible: boolean;
-  fireScore: number | null;
-  windowGamesPlayed: number;
   games_played_window: number;
   weeks_present: number[];
   confidence: Confidence;
+  eligible: boolean;
+  fireScore: number | null;
   pillars: { opportunity: number | null; role: number | null; conversion: number | null };
   raw: {
     xfp_R: number | null;
@@ -54,6 +65,16 @@ interface FirePlayer {
     route_avg: number | null;
     carries_R: number | null;
     rz_avg: number | null;
+    qb_dropbacks_R: number | null;
+    qb_rush_attempts_R: number | null;
+    inside10_dropbacks_R: number | null;
+    qb_xfp_redraft_R: number | null;
+    qb_xfp_dynasty_R: number | null;
+    qb_exp_pass_yards_R: number | null;
+    qb_exp_pass_td_R: number | null;
+    qb_exp_int_R: number | null;
+    qb_exp_rush_yards_R: number | null;
+    qb_exp_rush_td_R: number | null;
   };
   roleMeta: {
     targetSource: "target_share" | "targets_per_snap" | "targets_per_route" | "none";
@@ -61,6 +82,21 @@ interface FirePlayer {
     redistributedRouteWeight: boolean;
     usedColumns: string[];
   };
+}
+
+function thresholdForPosition(position: Position): number {
+  if (position === "RB") return 50;
+  if (position === "QB") return 80;
+  return 80;
+}
+
+function classifyConfidence(position: Position, gamesPlayedWindow: number, snapsR: number, qbDropbacksR: number): Confidence {
+  const threshold = thresholdForPosition(position);
+  const workload = position === "QB" ? qbDropbacksR : snapsR;
+  if (gamesPlayedWindow >= 4 && workload >= threshold * 1.5) return "HIGH";
+  if (gamesPlayedWindow <= 2 || workload < threshold) return "LOW";
+  if (gamesPlayedWindow >= 3 && workload >= threshold) return "MED";
+  return "LOW";
 }
 
 function percentileRank(sortedVals: number[], value: number): number {
@@ -90,9 +126,9 @@ function stdev(vals: number[]): number {
 
 async function fetchRollingRows(season: number, week: number, position?: Position, playerIds?: string[]): Promise<{ rows: RollingRow[]; rollingWeeks: number[] }> {
   const weekStart = Math.max(1, week - 3);
-  const where: any[] = [sql`season = ${season}`, sql`week BETWEEN ${weekStart} AND ${week}`, sql`position IN ('RB','WR','TE')`];
+  const where: any[] = [sql`season = ${season}`, sql`week BETWEEN ${weekStart} AND ${week}`, sql`position IN ('QB','RB','WR','TE')`];
   if (position) where.push(sql`position = ${position}`);
-  if (playerIds?.length) where.push(sql`player_id = ANY(${playerIds})`);
+  if (playerIds?.length) where.push(sql`player_id = ANY(${sql.raw(`ARRAY[${playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')}]`)})`);
 
   const rollingWeeksResult = await db.execute(sql`
     SELECT DISTINCT week
@@ -117,9 +153,24 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
       AVG(red_zone_touches)::real AS rz_avg,
       SUM(x_ppr_v2)::real AS xfp_r,
       SUM(xfpgoe_ppr_v2)::real AS xfpgoe_r,
-      COUNT(DISTINCT CASE WHEN COALESCE(snaps,0) > 0 OR COALESCE(targets,0) + COALESCE(carries,0) > 0 THEN week END)::int AS window_games_played,
+      SUM(COALESCE(qb_xfp_redraft, 0))::real AS qb_xfp_redraft_r,
+      SUM(COALESCE(qb_xfp_dynasty, 0))::real AS qb_xfp_dynasty_r,
+      SUM(COALESCE(qb_dropbacks, 0))::real AS qb_dropbacks_r,
+      SUM(COALESCE(qb_rush_attempts, 0))::real AS qb_rush_attempts_r,
+      SUM(COALESCE(inside10_dropbacks, 0))::real AS inside10_dropbacks_r,
+      SUM(COALESCE(exp_pass_yards, 0))::real AS qb_exp_pass_yards_r,
+      SUM(COALESCE(qb_exp_pass_td, 0))::real AS qb_exp_pass_td_r,
+      SUM(COALESCE(qb_exp_int, 0))::real AS qb_exp_int_r,
+      SUM(COALESCE(exp_rush_yards, 0))::real AS qb_exp_rush_yards_r,
+      SUM(COALESCE(qb_exp_rush_td, 0))::real AS qb_exp_rush_td_r,
+      COUNT(*) FILTER (
+        WHERE COALESCE(snaps, 0) > 0
+          OR COALESCE(qb_dropbacks, 0) > 0
+          OR (snaps IS NULL AND (COALESCE(targets, 0) + COALESCE(carries, 0)) > 0)
+      )::int AS games_played_window,
       ARRAY_AGG(DISTINCT week ORDER BY week) FILTER (
         WHERE COALESCE(snaps, 0) > 0
+          OR COALESCE(qb_dropbacks, 0) > 0
           OR (snaps IS NULL AND (COALESCE(targets, 0) + COALESCE(carries, 0)) > 0)
       )::int[] AS weeks_present
     FROM fantasy_metrics_weekly_mv
@@ -133,52 +184,40 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
   };
 }
 
-function computeConfidence(pos: Position, snapsR: number, gamesPlayed: number, routeSource: string): Confidence {
-  const threshold = SNAP_THRESHOLDS[pos];
-  if (gamesPlayed <= 2 || snapsR < threshold * 1.05) return "LOW";
-  if (gamesPlayed >= 4 && snapsR >= threshold * 1.5 && routeSource !== "none") return "HIGH";
-  if (gamesPlayed >= 3 && snapsR >= threshold) return "MED";
-  return "LOW";
-}
-
-function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[]): FirePlayer[] {
+function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[], scoringPreset: ScoringPreset): FirePlayer[] {
   const basePlayers: FirePlayer[] = rows.map((row) => {
     const targetShare = row.target_avg;
     const routesR = row.routes_r;
-    const snapsR = row.snaps_r;
     const targetsR = row.targets_r;
     const routePart = row.route_avg;
+    const snapsR = row.snaps_r;
 
     let targetSource: FirePlayer["roleMeta"]["targetSource"] = "none";
-    let targetComponent: number | null = null;
     if (targetShare != null) {
       targetSource = "target_share";
-      targetComponent = targetShare;
     } else if ((snapsR ?? 0) > 0 && targetsR != null) {
       targetSource = "targets_per_snap";
-      targetComponent = targetsR / Math.max(snapsR as number, 1);
     } else if ((routesR ?? 0) > 0 && targetsR != null) {
       targetSource = "targets_per_route";
-      targetComponent = targetsR / Math.max(routesR as number, 1);
     }
 
     let routeSource: FirePlayer["roleMeta"]["routeSource"] = "none";
-    let routeComponent: number | null = null;
     if (routePart != null) {
       routeSource = "route_participation";
-      routeComponent = routePart;
     } else if (routesR != null) {
       routeSource = "routes";
-      routeComponent = routesR;
     }
 
+    const qbDropbacksR = row.qb_dropbacks_r ?? 0;
     const eligible = row.position === "RB"
       ? (row.snaps_r ?? 0) >= 50
+      : row.position === "QB"
+      ? (qbDropbacksR >= 80 || (row.snaps_r ?? 0) >= 100)
       : (row.snaps_r ?? 0) >= 80;
 
-    const gamesPlayed = Number(row.window_games_played) || 0;
-    const weeksPresent = (row.weeks_present ?? []).map((w: any) => Number(w)).filter((w: number) => Number.isFinite(w)).sort((a: number, b: number) => a - b);
-    const confidence = computeConfidence(row.position, snapsR ?? 0, gamesPlayed, routeSource);
+    const gamesPlayedWindow = row.games_played_window ?? 0;
+    const weeksPresent = (row.weeks_present ?? []).map((w) => Number(w)).filter((w) => Number.isFinite(w)).sort((a, b) => a - b);
+    const confidence = classifyConfidence(row.position, gamesPlayedWindow, row.snaps_r ?? 0, qbDropbacksR);
 
     return {
       playerId: row.player_id,
@@ -187,14 +226,14 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       position: row.position,
       season,
       weekAnchor: week,
+      scoringPreset,
       rollingWeeks,
-      eligible,
-      fireScore: null,
-      windowGamesPlayed: gamesPlayed,
-      games_played_window: gamesPlayed,
+      games_played_window: gamesPlayedWindow,
       weeks_present: weeksPresent,
       confidence,
-      pillars: { opportunity: null, role: null, conversion: null },
+      eligible,
+      fireScore: null,
+      pillars: { opportunity: null, role: null, conversion: row.position === "QB" ? null : null },
       raw: {
         xfp_R: row.xfp_r,
         xfpgoe_R: row.xfpgoe_r,
@@ -204,6 +243,16 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         route_avg: row.route_avg,
         carries_R: row.carries_r,
         rz_avg: row.rz_avg,
+        qb_dropbacks_R: row.qb_dropbacks_r,
+        qb_rush_attempts_R: row.qb_rush_attempts_r,
+        inside10_dropbacks_R: row.inside10_dropbacks_r,
+        qb_xfp_redraft_R: row.qb_xfp_redraft_r,
+        qb_xfp_dynasty_R: row.qb_xfp_dynasty_r,
+        qb_exp_pass_yards_R: row.qb_exp_pass_yards_r,
+        qb_exp_pass_td_R: row.qb_exp_pass_td_r,
+        qb_exp_int_R: row.qb_exp_int_r,
+        qb_exp_rush_yards_R: row.qb_exp_rush_yards_r,
+        qb_exp_rush_td_R: row.qb_exp_rush_td_r,
       },
       roleMeta: {
         targetSource,
@@ -218,13 +267,42 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     const pool = basePlayers.filter((p) => p.position === position && p.eligible);
     if (!pool.length) continue;
 
+    if (position === "QB") {
+      const oppValues = pool.map((p) => scoringPreset === "dynasty" ? (p.raw.qb_xfp_dynasty_R ?? 0) : (p.raw.qb_xfp_redraft_R ?? 0)).sort((a, b) => a - b);
+      const dbValues = pool.map((p) => p.raw.qb_dropbacks_R ?? 0).sort((a, b) => a - b);
+      const rushValues = pool.map((p) => p.raw.qb_rush_attempts_R ?? 0).sort((a, b) => a - b);
+      const i10Values = pool.map((p) => p.raw.inside10_dropbacks_R ?? 0).sort((a, b) => a - b);
+      const roleRawValues: number[] = [];
+      const roleById = new Map<string, number>();
+
+      for (const p of pool) {
+        const roleIdx =
+          0.60 * (percentileRank(dbValues, p.raw.qb_dropbacks_R ?? 0) / 100) +
+          0.25 * (percentileRank(rushValues, p.raw.qb_rush_attempts_R ?? 0) / 100) +
+          0.15 * (percentileRank(i10Values, p.raw.inside10_dropbacks_R ?? 0) / 100);
+        roleById.set(p.playerId, roleIdx);
+        roleRawValues.push(roleIdx);
+      }
+
+      const sortedRoleRaw = [...roleRawValues].sort((a, b) => a - b);
+
+      for (const p of pool) {
+        const opp = percentileRank(oppValues, scoringPreset === "dynasty" ? (p.raw.qb_xfp_dynasty_R ?? 0) : (p.raw.qb_xfp_redraft_R ?? 0));
+        const role = percentileRank(sortedRoleRaw, roleById.get(p.playerId) ?? 0);
+        p.pillars = { opportunity: opp, role, conversion: null };
+        p.fireScore = 0.75 * opp + 0.25 * role;
+        p.roleMeta.usedColumns = ["qb_dropbacks", "qb_rush_attempts", "inside10_dropbacks"];
+      }
+      continue;
+    }
+
     const oppValues = pool.map((p) => p.raw.xfp_R ?? 0).sort((a, b) => a - b);
     const convValues = pool.map((p) => p.raw.xfpgoe_R ?? 0).sort((a, b) => a - b);
-
     const roleIndexRaw: number[] = [];
     const roleMap = new Map<string, number>();
 
     for (const p of pool) {
+      const row = rows.find((r) => r.player_id === p.playerId);
       const isRB = p.position === "RB";
       let wRoute = isRB ? 0 : 0.35;
       let wTarget = isRB ? 0.25 : 0.35;
@@ -242,12 +320,12 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       const targetComp = p.roleMeta.targetSource === "target_share"
         ? p.raw.target_avg
         : p.roleMeta.targetSource === "targets_per_snap"
-        ? ((p.raw.target_avg ?? 0) || ((p.raw.snaps_R ?? 0) > 0 ? (rows.find(r => r.player_id === p.playerId)?.targets_r ?? 0) / Math.max(p.raw.snaps_R ?? 1, 1) : 0))
+        ? ((p.raw.target_avg ?? 0) || ((p.raw.snaps_R ?? 0) > 0 ? (row?.targets_r ?? 0) / Math.max(p.raw.snaps_R ?? 1, 1) : 0))
         : p.roleMeta.targetSource === "targets_per_route"
-        ? ((rows.find(r => r.player_id === p.playerId)?.targets_r ?? 0) / Math.max((rows.find(r => r.player_id === p.playerId)?.routes_r ?? 1), 1))
+        ? ((row?.targets_r ?? 0) / Math.max((row?.routes_r ?? 1), 1))
         : null;
 
-      const routeComp = p.roleMeta.routeSource === "route_participation" ? p.raw.route_avg : rows.find(r => r.player_id === p.playerId)?.routes_r ?? null;
+      const routeComp = p.roleMeta.routeSource === "route_participation" ? p.raw.route_avg : row?.routes_r ?? null;
       const snapComp = p.raw.snap_avg;
       const rzComp = p.raw.rz_avg;
       const carriesComp = p.raw.carries_R;
@@ -298,31 +376,39 @@ function parsePlayerIds(raw: unknown): string[] | undefined {
   return raw.split(",").map((v) => v.trim()).filter(Boolean);
 }
 
+function parseScoringPreset(raw: unknown): ScoringPreset {
+  if (typeof raw !== "string") return "redraft";
+  const normalized = raw.toLowerCase();
+  return normalized === "dynasty" ? "dynasty" : "redraft";
+}
+
 router.get('/fire/eg/batch', async (req: Request, res: Response) => {
   try {
     const season = Number(req.query.season);
     const week = Number(req.query.week);
     const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() as Position : undefined;
     const playerIds = parsePlayerIds(req.query.playerIds);
+    const scoringPreset = parseScoringPreset(req.query.scoringPreset);
 
     if (!Number.isInteger(season) || !Number.isInteger(week)) {
       return res.status(400).json({ error: 'season and week are required integers' });
     }
     if (position && !SUPPORTED_POSITIONS.includes(position)) {
-      return res.status(400).json({ error: 'position must be RB, WR, or TE' });
+      return res.status(400).json({ error: 'position must be QB, RB, WR, or TE' });
     }
 
     const { rows, rollingWeeks } = await fetchRollingRows(season, week, position, playerIds);
-    const data = buildFire(rows, season, week, rollingWeeks);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset);
 
     return res.json({
       metadata: {
         season,
         weekAnchor: week,
         rollingWeeks,
+        scoringPreset,
         positions: position ? [position] : SUPPORTED_POSITIONS,
-        eligibilityThresholds: { RB: 50, WR: 80, TE: 80 },
-        notes: ['QB FIRE not available yet (QB xFP gap).'],
+        eligibilityThresholds: { QB: 80, RB: 50, WR: 80, TE: 80, qbSnapsFallback: 100 },
+        notes: ['QB FIRE v1 uses Opportunity + Role only; Conversion is deferred to v1.1.'],
       },
       data,
     });
@@ -337,6 +423,7 @@ router.get('/fire/eg/player', async (req: Request, res: Response) => {
     const season = Number(req.query.season);
     const week = Number(req.query.week);
     const playerId = String(req.query.playerId || '').trim();
+    const scoringPreset = parseScoringPreset(req.query.scoringPreset);
 
     if (!playerId || !Number.isInteger(season) || !Number.isInteger(week)) {
       return res.status(400).json({ error: 'playerId, season, and week are required' });
@@ -351,12 +438,12 @@ router.get('/fire/eg/player', async (req: Request, res: Response) => {
         weekAnchor: week,
         eligible: false,
         fireScore: null,
-        notes: ['Player not found in RB/WR/TE weekly MV window or QB FIRE unavailable.'],
+        notes: ['Player not found in weekly MV window.'],
       });
     }
 
     const { rows, rollingWeeks } = await fetchRollingRows(season, week, pos, undefined);
-    const data = buildFire(rows, season, week, rollingWeeks);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset);
     const found = data.find((p) => p.playerId === playerId);
 
     return res.json(found ?? { playerId, season, weekAnchor: week, eligible: false, fireScore: null });
@@ -370,62 +457,31 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
   try {
     const season = Number(req.query.season);
     const week = Number(req.query.week);
-    const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() as Position : undefined;
+    const position = typeof req.query.position === "string" ? req.query.position.toUpperCase() as SkillPosition : undefined;
     const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
 
     if (!Number.isInteger(season) || !Number.isInteger(week)) {
       return res.status(400).json({ error: 'season and week are required integers' });
     }
-    if (position && !SUPPORTED_POSITIONS.includes(position)) {
-      return res.status(400).json({ error: 'position must be RB, WR, or TE' });
+    if (position && !SKILL_POSITIONS.includes(position)) {
+      return res.status(400).json({ error: 'Delta requires FORGE + FIRE; only RB, WR, TE supported (QB FORGE not yet available)' });
     }
 
-    const mode = typeof req.query.mode === "string" ? req.query.mode.toLowerCase() : "redraft";
-    const positions = position ? [position] : SUPPORTED_POSITIONS;
+    const { runForgeEngineBatch } = await import('../modules/forge/forgeEngine');
+    const { gradeForgeWithMeta } = await import('../modules/forge/forgeGrading');
+
+    const positions = position ? [position] : SKILL_POSITIONS;
     const allRows: any[] = [];
-
-    const forgeWhere = [
-      sql`season = ${season}`,
-      sql`position IN ('RB','WR','TE')`,
-    ];
-    if (position) forgeWhere.push(sql`position = ${position}`);
-
-    const hasVersionCol = await db.execute(sql`
-      SELECT column_name FROM information_schema.columns
-      WHERE table_name = 'forge_grade_cache' AND column_name = 'version'
-      LIMIT 1
-    `);
-    if (hasVersionCol.rows.length > 0) {
-      const versionValues = await db.execute(sql`SELECT DISTINCT version FROM forge_grade_cache WHERE version IS NOT NULL LIMIT 10`);
-      const versions = (versionValues.rows as any[]).map((r: any) => r.version);
-      if (versions.length === 1 && versions[0] === "v1") {
-        forgeWhere.push(sql`version = 'v1'`);
-      } else if (versions.includes(mode)) {
-        forgeWhere.push(sql`(version IS NULL OR version = ${mode})`);
-      }
-    }
-
-    const forgeCacheRows = await db.execute(sql`
-      SELECT player_id, position, alpha, player_name, nfl_team
-      FROM forge_grade_cache
-      WHERE ${sql.join(forgeWhere, sql` AND `)}
-      ORDER BY alpha DESC
-    `);
-    const forgeById = new Map(
-      (forgeCacheRows.rows as any[]).map((r: any) => [r.player_id, { playerId: r.player_id, alpha: Number(r.alpha) }])
-    );
 
     for (const pos of positions) {
       const { rows, rollingWeeks } = await fetchRollingRows(season, week, pos, undefined);
-      const fireRows = buildFire(rows, season, week, rollingWeeks).filter((p) => p.eligible && p.fireScore != null);
+      const fireRows = buildFire(rows, season, week, rollingWeeks, 'redraft').filter((p) => p.eligible && p.fireScore != null);
       if (!fireRows.length) continue;
 
-      const fireByPos = fireRows;
-
-      const posMedianTargets = mean(fireByPos.map(p => p.raw.target_avg).filter((v): v is number => v != null));
-      const posMedianRoutes = mean(fireByPos.map(p => p.raw.route_avg).filter((v): v is number => v != null));
-      const posMedianSnaps = mean(fireByPos.map(p => p.raw.snap_avg).filter((v): v is number => v != null));
+      const forgeRaw = await runForgeEngineBatch(pos, season, week, 400);
+      const forge = forgeRaw.map((r: any) => gradeForgeWithMeta(r, { mode: 'redraft' }));
+      const forgeById = new Map(forge.map((f: any) => [f.playerId, f]));
 
       const joined = fireRows
         .map((fire) => {
@@ -438,25 +494,11 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
             position: pos,
             season,
             weekAnchor: week,
-            alpha: f.alpha,
+            alpha: Number(f.alpha),
             fireScore: Number(fire.fireScore),
-            confidence: fire.confidence,
-            windowGamesPlayed: fire.windowGamesPlayed,
-            xfpR: fire.raw.xfp_R,
-            snapsR: fire.raw.snaps_R,
-            targetAvg: fire.raw.target_avg,
-            routeAvg: fire.raw.route_avg,
-            snapAvg: fire.raw.snap_avg,
-            rollingWeeks,
           };
         })
-        .filter(Boolean) as Array<{
-          playerId: string; playerName: string | null; team: string | null; position: Position;
-          season: number; weekAnchor: number; alpha: number; fireScore: number;
-          confidence: Confidence; windowGamesPlayed: number;
-          xfpR: number | null; snapsR: number | null; targetAvg: number | null;
-          routeAvg: number | null; snapAvg: number | null; rollingWeeks: number[];
-        }>;
+        .filter(Boolean) as Array<{ playerId: string; playerName: string | null; team: string | null; position: SkillPosition; season: number; weekAnchor: number; alpha: number; fireScore: number }>;
 
       const alphaVals = joined.map((j) => j.alpha);
       const fireVals = joined.map((j) => j.fireScore);
@@ -468,6 +510,8 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       const fireStd = stdev(fireVals) || 1;
 
       for (const row of joined) {
+        const fireData = fireRows.find((f) => f.playerId === row.playerId);
+        if (!fireData) continue;
         const forgePct = percentileRank(alphaSorted, row.alpha);
         const firePct = percentileRank(fireSorted, row.fireScore);
         const forgeZ = (row.alpha - alphaMean) / alphaStd;
@@ -475,29 +519,22 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
         const rankZ = forgeZ - fireZ;
         const displayPct = forgePct - firePct;
 
-        const conf = row.confidence;
-        const direction = rankZ >= 1 || (displayPct >= 20 && conf !== 'LOW')
+        const directionalStrength = Math.max(Math.abs(rankZ), Math.abs(displayPct) / 20);
+        const whyNote = rankZ >= 0.75 || displayPct >= 15
+          ? 'High FORGE%, low FIRE% (recent opportunity dip)'
+          : rankZ <= -0.75 || displayPct <= -15
+          ? 'Low FORGE%, high FIRE% (recent spike)'
+          : directionalStrength < 0.75
+          ? 'Near alignment'
+          : rankZ >= 0
+          ? 'High FORGE%, low FIRE% (recent opportunity dip)'
+          : 'Low FORGE%, high FIRE% (recent spike)';
+
+        const direction = rankZ >= 1 || (displayPct >= 20 && fireData.confidence !== 'LOW')
           ? 'BUY_LOW'
-          : rankZ <= -1 || (displayPct <= -20 && conf !== 'LOW')
+          : rankZ <= -1 || (displayPct <= -20 && fireData.confidence !== 'LOW')
           ? 'SELL_HIGH'
           : 'NEUTRAL';
-
-        let topRoleDriver: string | null = null;
-        if (posMedianTargets != null && row.targetAvg != null && row.targetAvg < posMedianTargets * 0.7) {
-          topRoleDriver = "targets down";
-        } else if (posMedianRoutes != null && row.routeAvg != null && row.routeAvg < posMedianRoutes * 0.7) {
-          topRoleDriver = "routes down";
-        } else if (posMedianSnaps != null && row.snapAvg != null && row.snapAvg < posMedianSnaps * 0.7) {
-          topRoleDriver = "snap share down";
-        } else if (posMedianTargets != null && row.targetAvg != null && row.targetAvg > posMedianTargets * 1.3) {
-          topRoleDriver = "targets up";
-        } else if (posMedianRoutes != null && row.routeAvg != null && row.routeAvg > posMedianRoutes * 1.3) {
-          topRoleDriver = "routes up";
-        }
-
-        const windowLabel = row.rollingWeeks.length > 0
-          ? `W${row.rollingWeeks[0]}\u2013W${row.rollingWeeks[row.rollingWeeks.length - 1]}`
-          : `W${Math.max(1, week - 3)}\u2013W${week}`;
 
         allRows.push({
           playerId: row.playerId,
@@ -506,23 +543,18 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
           position: row.position,
           season: row.season,
           weekAnchor: row.weekAnchor,
-          windowGamesPlayed: row.windowGamesPlayed,
-          games_played_window: row.windowGamesPlayed,
-          confidence: conf,
+          games_played_window: fireData.games_played_window,
+          weeks_present: fireData.weeks_present,
+          confidence: fireData.confidence,
           forge: { alpha: row.alpha, pct: forgePct, z: forgeZ },
           fire: { score: row.fireScore, pct: firePct, z: fireZ },
           delta: { displayPct, rankZ, direction },
           why: {
-            forge_vs_fire: displayPct > 0
-              ? "High FORGE%, low FIRE% over rolling 4w"
-              : displayPct < 0
-              ? "Low FORGE%, high FIRE% over rolling 4w"
-              : "FORGE and FIRE aligned",
-            window: windowLabel,
-            xfp_r: row.xfpR,
-            snaps_r: row.snapsR,
-            window_games_played: row.windowGamesPlayed,
-            top_role_driver: topRoleDriver,
+            window: `W${Math.max(1, row.weekAnchor - 3)}–W${row.weekAnchor}`,
+            gamesPlayed: fireData.games_played_window,
+            xfp_R: fireData.raw.xfp_R,
+            snaps_R: fireData.raw.snaps_R,
+            note: whyNote,
           },
         });
       }
@@ -531,24 +563,19 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
     const sorted = allRows.sort((a, b) => Math.abs(b.delta.rankZ) - Math.abs(a.delta.rankZ));
     const paged = sorted.slice(offset, offset + limit);
 
-    const countsByPos = SUPPORTED_POSITIONS.reduce((acc, p) => {
+    const countsByPos = SKILL_POSITIONS.reduce((acc, p) => {
       acc[p] = sorted.filter((r) => r.position === p).length;
       return acc;
-    }, {} as Record<Position, number>);
+    }, {} as Record<SkillPosition, number>);
 
     return res.json({
       metadata: {
         season,
         weekAnchor: week,
-        mode,
         position: position ?? 'ALL',
         countsByPosition: countsByPos,
-        eligibilityThresholds: SNAP_THRESHOLDS,
-        notes: [
-          'Hybrid delta: display uses percentile delta, ranking uses z-score delta.',
-          'Label logic: rankZ primary, percentile gated by confidence (LOW excluded from pct-only triggers).',
-          'QB excluded until QB FIRE exists.',
-        ],
+        eligibilityThresholds: { RB: 50, WR: 80, TE: 80 },
+        notes: ['Hybrid delta: display uses percentile delta, ranking uses z-score delta.', 'QB excluded from DELTA until QB conversion pillar exists.'],
         limit,
         offset,
         total: sorted.length,
@@ -581,8 +608,8 @@ router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
       WHERE season = ${season} AND player_id = ${playerId} AND position IN ('RB','WR','TE')
     `);
 
-    const position = posResult.rows[0]?.position as Position | undefined;
-    if (!position || !SUPPORTED_POSITIONS.includes(position)) {
+    const position = posResult.rows[0]?.position as SkillPosition | undefined;
+    if (!position || !SKILL_POSITIONS.includes(position)) {
       return res.json({ season, playerId, weekFrom: minWeek, weekTo: maxWeek, data: [] });
     }
 
@@ -593,7 +620,7 @@ router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
 
     for (let anchorWeek = minWeek; anchorWeek <= maxWeek; anchorWeek += 1) {
       const { rows, rollingWeeks } = await fetchRollingRows(season, anchorWeek, position, undefined);
-      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks).filter((p) => p.eligible && p.fireScore != null);
+      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks, 'redraft').filter((p) => p.eligible && p.fireScore != null);
       const fireById = new Map(fireRows.map((r) => [r.playerId, r]));
       if (!fireById.has(playerId)) continue;
 
