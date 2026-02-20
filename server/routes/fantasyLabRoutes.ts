@@ -2,8 +2,16 @@ import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../infra/db";
 import { requireAdminAuth } from "../middleware/adminAuth";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 const router = Router();
+
+const execFileAsync = promisify(execFile);
+
+async function refreshQbXfpWeekly(season: number): Promise<void> {
+  await execFileAsync("python3", ["scripts/etl/qb_xfp_weekly.py", "--season", String(season)]);
+}
 
 const SORT_COLUMN_MAP: Record<string, string> = {
   season: "season",
@@ -146,8 +154,14 @@ router.get("/player", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/refresh", requireAdminAuth, async (_req: Request, res: Response) => {
+router.post("/refresh", requireAdminAuth, async (req: Request, res: Response) => {
   try {
+    const seasonFromBody = Number(req.body?.season);
+    const seasonResult = await db.execute(sql`SELECT MAX(season)::int AS season FROM datadive_snapshot_meta`);
+    const inferredSeason = Number((seasonResult.rows as any[])[0]?.season) || 2025;
+    const season = Number.isInteger(seasonFromBody) ? seasonFromBody : inferredSeason;
+
+    await refreshQbXfpWeekly(season);
     await db.execute(sql`REFRESH MATERIALIZED VIEW fantasy_metrics_weekly_mv`);
 
     const statResult = await db.execute(sql`

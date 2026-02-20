@@ -19,7 +19,8 @@
     "audit:metric-matrix": "tsx server/scripts/metricMatrixAudit.ts",
     "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts",
     "qa:fantasy-lab": "tsx server/scripts/qaFantasyLabPhase1.ts",
-    "qa:fantasy-lab-phase3": "tsx server/scripts/qaFantasyLabPhase3.ts"
+    "qa:fantasy-lab-phase3": "tsx server/scripts/qaFantasyLabPhase3.ts",
+    "etl:qb-xfp-weekly": "python3 scripts/etl/qb_xfp_weekly.py --season 2025"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
