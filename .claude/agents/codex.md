@@ -142,3 +142,22 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `npm run build` ✅
   - `npm run dev` blocked (no `DATABASE_URL` in environment)
+
+### 2026-02-20 — QB FIRE v1 (Opportunity + Role only)
+- Added migration `0012_qb_fire_v1.sql` to create `qb_xfp_weekly` and augment `fantasy_metrics_weekly_mv` with QB xFP + role-support fields.
+- Added ETL entrypoint `scripts/etl/qb_xfp_weekly.py` implementing:
+  - Bucketed pass TD / INT / rush TD probabilities with Beta smoothing (`alpha=1`, `beta=20`)
+  - Conditional pass yardage by air-yards bucket and QB rush yardage by league QB YPC
+  - Upsert into `qb_xfp_weekly` and scoring outputs for redraft/dynasty presets.
+- Updated FIRE route logic to include QBs in `/api/fire/eg/batch` and `/api/fire/eg/player`:
+  - Added `scoringPreset` param (`redraft|dynasty`, default redraft)
+  - QB eligibility: `dropbacks_R >= 80 OR snaps_R >= 100`
+  - QB RoleIndex = `0.60*rank(dropbacks_R)+0.25*rank(qb_rush_attempts_R)+0.15*rank(inside10_dropbacks_R)`
+  - QB composite: `0.75*Opportunity + 0.25*Role` (no conversion pillar yet)
+- Updated fantasy-lab admin refresh endpoint to run the QB xFP ETL before refreshing the MV.
+- Added reports:
+  - `reports/qb_fire_v1_data_audit.md`
+  - `reports/qb_fire_v1_validation.md`
+- Validation:
+  - `npm run build` ✅
+  - DB-dependent checks blocked (`DATABASE_URL` missing in environment).

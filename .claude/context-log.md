@@ -141,3 +141,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/routes/fireRoutes.ts`, `server/routes.ts`, `client/src/pages/FantasyLab.tsx`, `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`
 - **Validation:** `npm run build` passed (existing unrelated duplicate member warning in `server/olc/adjusters.ts`). Attempted `npm run dev` for UI verification/screenshot, blocked due missing `DATABASE_URL`.
 - **Notes:** QB FIRE remains excluded by design; endpoints include metadata notes/thresholds and role fallback metadata.
+
+### 2026-02-20 — Codex: QB FIRE v1 opportunity + role integration
+- **What changed:** Added QB xFP v1 data model and migration (`qb_xfp_weekly`), created bucket-smoothed QB xFP ETL script, expanded Fantasy Lab MV with QB xFP/role fields, enabled QB in FIRE with scoring presets (`redraft|dynasty`) and QB-specific eligibility/role scoring (Opportunity + Role only), and documented data audit + validation runbook reports.
+- **Files modified:** `migrations/0012_qb_fire_v1.sql`, `scripts/etl/qb_xfp_weekly.py`, `server/routes/fireRoutes.ts`, `server/routes/fantasyLabRoutes.ts`, `package.json`, `reports/qb_fire_v1_data_audit.md`, `reports/qb_fire_v1_validation.md`
+- **Validation:** Ran build successfully; DB-backed ETL/API validation commands are documented but blocked because `DATABASE_URL` is not set in this container.
+- **Notes:** DELTA remains RB/WR/TE-only by design until QB conversion/FPOE lands in v1.1.
