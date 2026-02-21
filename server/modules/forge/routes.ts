@@ -2056,9 +2056,10 @@ router.get('/qb-context/:team', async (req: Request, res: Response) => {
 /**
  * POST /api/forge/admin/backfill-recursive
  * 
- * Run the recursive alpha engine for specific players across weeks 1-maxWeek.
+ * Run the recursive alpha engine for players across weeks 1-maxWeek.
+ * Supports either specific playerIds OR a position to backfill all players.
  * Processes weeks sequentially so each week builds on the previous state.
- * Body: { playerIds: string[], season?: number, maxWeek?: number }
+ * Body: { playerIds?: string[], position?: string, season?: number, maxWeek?: number }
  */
 router.post('/admin/backfill-recursive', async (req: Request, res: Response) => {
   try {
@@ -2076,76 +2077,78 @@ router.post('/admin/backfill-recursive', async (req: Request, res: Response) => 
       QB: buildQBFeatures,
     };
 
-    const { playerIds } = req.body;
     const season = parseInt(req.body.season) || 2025;
     const maxWeek = parseInt(req.body.maxWeek) || 17;
+    const position = (req.body.position as string)?.toUpperCase();
 
-    if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0) {
-      return res.status(400).json({ success: false, error: 'playerIds array required' });
+    let playerIds: string[] = req.body.playerIds || [];
+
+    if (position && ['QB', 'RB', 'WR', 'TE'].includes(position) && playerIds.length === 0) {
+      const tableName = `${position.toLowerCase()}_role_bank`;
+      const result = await db.execute(sql`
+        SELECT player_id FROM ${sql.identifier(tableName)}
+        WHERE season = ${season}
+        ORDER BY games_played DESC NULLS LAST
+      `);
+      playerIds = result.rows.map((r: any) => r.player_id).filter(Boolean);
+      console.log(`[FORGE/Admin] Found ${playerIds.length} ${position} players to backfill`);
     }
 
-    if (playerIds.length > 10) {
-      return res.status(400).json({ success: false, error: 'Max 10 players per request for testing' });
+    if (!playerIds || playerIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'playerIds array or position required' });
     }
 
     console.log(`[FORGE/Admin] Recursive backfill: ${playerIds.length} players, season=${season}, weeks 1-${maxWeek}`);
 
-    const results: any[] = [];
+    res.writeHead(200, {
+      'Content-Type': 'application/x-ndjson',
+      'Transfer-Encoding': 'chunked',
+    });
+
+    let scored = 0;
+    let failed = 0;
 
     for (const playerId of playerIds) {
-      const playerResult: any = {
-        playerId,
-        weeks: [],
-        error: null,
-      };
-
       try {
+        let playerName = playerId;
+        let playerPos = position || '?';
+        let lastAlpha = 0;
+
         for (let week = 1; week <= maxWeek; week++) {
           try {
             const context = await fetchContext(playerId, season, week);
             const builder = featureBuilders[context.position];
-            if (!builder) {
-              playerResult.error = `No feature builder for position: ${context.position}`;
-              break;
-            }
+            if (!builder) break;
 
             const features = builder(context);
             const score = await calculateRecursiveAlpha(context, features, { persistState: true });
-
-            playerResult.playerName = context.playerName;
-            playerResult.position = context.position;
-            playerResult.weeks.push({
-              week,
-              alphaRaw: Math.round(score.rawAlpha * 10) / 10,
-              alphaFinal: score.alpha,
-              volatility: score.recursion.volatility !== null ? Math.round(score.recursion.volatility * 10) / 10 : null,
-              momentum: score.recursion.momentum !== null ? Math.round(score.recursion.momentum * 10) / 10 : null,
-              stabilityAdj: score.recursion.stabilityAdjustment !== null ? Math.round(score.recursion.stabilityAdjustment * 10) / 10 : null,
-              isFirstWeek: score.recursion.isFirstWeek,
-            });
-          } catch (weekErr: any) {
-            playerResult.weeks.push({
-              week,
-              error: weekErr.message || 'Unknown error',
-            });
+            playerName = context.playerName;
+            playerPos = context.position;
+            lastAlpha = score.alpha;
+          } catch {
           }
         }
+
+        scored++;
+        res.write(JSON.stringify({ playerId, playerName, position: playerPos, alpha: lastAlpha, status: 'ok' }) + '\n');
       } catch (err: any) {
-        playerResult.error = err.message || 'Unknown error';
+        failed++;
+        res.write(JSON.stringify({ playerId, status: 'error', error: err.message }) + '\n');
       }
 
-      results.push(playerResult);
+      if (scored % 10 === 0) {
+        res.write(JSON.stringify({ progress: `${scored + failed}/${playerIds.length}`, scored, failed }) + '\n');
+      }
     }
 
-    return res.json({
-      success: true,
-      season,
-      maxWeek,
-      results,
-    });
+    res.write(JSON.stringify({ done: true, total: playerIds.length, scored, failed }) + '\n');
+    res.end();
   } catch (err) {
     console.error('[FORGE/Admin] backfill-recursive error:', err);
-    return res.status(500).json({ success: false, error: 'Backfill failed' });
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: 'Backfill failed' });
+    }
+    res.end();
   }
 });
 
