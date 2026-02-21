@@ -16,9 +16,8 @@ interface RoleBankPlayer {
   position?: Position;
   roleScore: number;
   roleTier?: string;
-  tier?: string;  // Fantasy rankings uses "tier" instead of "roleTier"
+  tier?: string;
   gamesPlayed: number;
-  // Position-specific metrics
   targetsPerGame: number | null;
   carriesPerGame: number | null;
   opportunitiesPerGame: number | null;
@@ -28,19 +27,16 @@ interface RoleBankPlayer {
   pprPerOpportunity: number | null;
   redZoneTargetsPerGame: number | null;
   redZoneTouchesPerGame: number | null;
-  // TIBER Alpha Engine (unified ranking scores)
   alphaScore?: number;
   volumeIndex?: number;
   productionIndex?: number;
   efficiencyIndex?: number;
   stabilityIndex?: number;
-  // Legacy fantasy-specific scores (deprecated)
   fantasyWRScore?: number;
   ppgIndex?: number;
   spiceIndex?: number;
   fantasyPointsPprPerGame?: number;
   pureRoleScore?: number | null;
-  // QB-specific metrics
   dropbacksPerGame?: number | null;
   rushAttemptsPerGame?: number | null;
   redZoneDropbacksPerGame?: number | null;
@@ -54,14 +50,12 @@ interface RoleBankPlayer {
   interceptions?: number | null;
   rushingYards?: number | null;
   rushingTouchdowns?: number | null;
-  // Scores
   volumeScore: number;
   consistencyScore: number | null;
   highValueUsageScore: number | null;
   momentumScore: number;
   efficiencyScore?: number | null;
   rushingScore?: number | null;
-  // Flags
   flags: {
     cardioWr?: boolean | null;
     pureRusher?: boolean | null;
@@ -83,50 +77,58 @@ interface RoleBankResponse {
 }
 
 const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  // WR Tiers
-  'CO_ALPHA': { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/50' },
-  'SECONDARY': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  'TERTIARY': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
-  'DEPTH': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
-  'UNKNOWN': { bg: 'bg-gray-600/20', text: 'text-gray-500', border: 'border-gray-600/50' },
-  
-  // RB Tiers
-  'ELITE_WORKHORSE': { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/50' },
-  'HIGH_END_RB1': { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/50' },
-  'MID_RB1': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  'STRONG_RB2': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
-  'ROTATIONAL_RB': { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
-  'LIMITED_USAGE': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
-  
-  // TE Tiers
-  'ELITE_TE1': { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/50' },
-  'STRONG_TE1': { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/50' },
-  'MID_TE1': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  'HIGH_TE2': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
-  'STREAMER': { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
-  'BLOCKING_TE': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
-  
-  // QB Tiers
-  'ELITE_QB1': { bg: 'bg-purple-600/20', text: 'text-purple-400', border: 'border-purple-600/50' },
-  'STRONG_QB1': { bg: 'bg-pink-500/20', text: 'text-pink-400', border: 'border-pink-500/50' },
-  'MID_QB1': { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/50' },
-  'HIGH_QB2': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
-  'STREAMING_QB': { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/50' },
-  'BENCH_QB': { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/50' },
+  'CO_ALPHA': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
+  'SECONDARY': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+  'TERTIARY': { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-300' },
+  'ROTATIONAL': { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+  'DEPTH': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
+  'UNKNOWN': { bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200' },
+  'ELITE_WORKHORSE': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
+  'HIGH_END_RB1': { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-300' },
+  'MID_RB1': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+  'STRONG_RB2': { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-300' },
+  'ROTATIONAL_RB': { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+  'LIMITED_USAGE': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
+  'ELITE_TE1': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
+  'STRONG_TE1': { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-300' },
+  'MID_TE1': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+  'HIGH_TE2': { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-300' },
+  'STREAMER': { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+  'BLOCKING_TE': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
+  'ELITE_QB1': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
+  'STRONG_QB1': { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-300' },
+  'MID_QB1': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+  'HIGH_QB2': { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-300' },
+  'STREAMING_QB': { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
+  'BENCH_QB': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
 };
+
+function scoreColor(score: number): string {
+  if (score >= 85) return 'text-purple-700 font-bold';
+  if (score >= 70) return 'text-blue-700 font-bold';
+  if (score >= 55) return 'text-gray-900 font-semibold';
+  if (score >= 40) return 'text-gray-600 font-medium';
+  return 'text-gray-400';
+}
+
+function pillarBar(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  if (value >= 90) return 'bg-purple-500';
+  if (value >= 75) return 'bg-blue-500';
+  if (value >= 60) return 'bg-emerald-500';
+  if (value >= 45) return 'bg-amber-500';
+  return 'bg-gray-300';
+}
 
 export default function RoleBankRankings() {
   const [position, setPosition] = useState<Position>('WR');
   const [season, setSeason] = useState<Season>(2025);
   const [selectedPlayer, setSelectedPlayer] = useState<RoleBankPlayer | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  // View mode: "fantasy" (default for WR) or "season" (role context)
-  const [viewMode, setViewMode] = useState<'fantasy' | 'season'>(position === 'WR' ? 'fantasy' : 'season');
+  const [viewMode, setViewMode] = useState<'fantasy' | 'season'>('fantasy');
 
-  // Update view mode when position changes (WR defaults to fantasy, others to season)
   const handlePositionChange = (newPosition: Position) => {
     setPosition(newPosition);
-    setViewMode(newPosition === 'WR' ? 'fantasy' : 'season');
   };
 
   const { data, isLoading } = useQuery<RoleBankResponse>({
@@ -138,7 +140,6 @@ export default function RoleBankRankings() {
       const res = await fetch(endpoint);
       if (!res.ok) throw new Error('Failed to fetch data');
       const json = await res.json();
-      // Normalize response structure
       return {
         season: json.season,
         position: position,
@@ -168,242 +169,246 @@ export default function RoleBankRankings() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="border-b border-blue-500/20 pb-4">
-        <h2 className="text-2xl font-bold text-white tracking-wide">ROLE CONTEXT RANKINGS</h2>
-        <p className="text-gray-400 mt-1 text-sm tracking-wide">
-          Season-level analytical classification for {position} role evaluation
+    <div className="p-6 space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Role Banks</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Season-level role classification and scoring for {position} evaluation
         </p>
-        <div className="mt-3 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-xs text-blue-300 tracking-wide">
-            📊 <span className="font-semibold">Scores represent role strength (0–100), not fantasy points.</span> This measures how prominent a player's role is in their offense based on volume, consistency, and usage patterns.
-          </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 bg-white border rounded-lg p-3">
+        <div className="flex border rounded overflow-hidden">
+          {(['WR', 'RB', 'TE', 'QB'] as Position[]).map(pos => (
+            <button
+              key={pos}
+              onClick={() => handlePositionChange(pos)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                position === pos
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+              data-testid={`button-position-${pos.toLowerCase()}`}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex border rounded overflow-hidden">
+          {([2024, 2025] as Season[]).map(yr => (
+            <button
+              key={yr}
+              onClick={() => setSeason(yr)}
+              className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                season === yr
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+              data-testid={`button-season-${yr}`}
+            >
+              {yr}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex border rounded overflow-hidden">
+          <button
+            onClick={() => setViewMode('fantasy')}
+            className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'fantasy'
+                ? 'bg-orange-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            data-testid="button-view-fantasy"
+          >
+            Fantasy Rankings
+          </button>
+          <button
+            onClick={() => setViewMode('season')}
+            className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+              viewMode === 'season'
+                ? 'bg-orange-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            data-testid="button-view-season"
+          >
+            Season Roles
+          </button>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Position Selector */}
-        <div className="space-y-2">
-          <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">Position</label>
-          <div className="flex gap-2">
-            {(['WR', 'RB', 'TE', 'QB'] as Position[]).map(pos => (
-              <button
-                key={pos}
-                onClick={() => handlePositionChange(pos)}
-                className={`px-6 py-2.5 rounded font-medium transition-all tracking-wide ${
-                  position === pos
-                    ? 'bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-white shadow-lg shadow-blue-500/20'
-                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-                }`}
-                data-testid={`button-position-${pos.toLowerCase()}`}
-              >
-                {pos}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Season Selector */}
-        <div className="space-y-2">
-          <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">Season</label>
-          <div className="flex gap-2">
-            {([2024, 2025] as Season[]).map(yr => (
-              <button
-                key={yr}
-                onClick={() => setSeason(yr)}
-                className={`px-6 py-2.5 rounded font-medium transition-all tracking-wide ${
-                  season === yr
-                    ? 'bg-gradient-to-r from-green-600/30 to-emerald-600/30 border border-green-500/50 text-white shadow-lg shadow-green-500/20'
-                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-                }`}
-                data-testid={`button-season-${yr}`}
-              >
-                {formatNumber(yr, 0)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* View Mode Toggle (WR only) */}
-        {position === 'WR' && (
-          <div className="space-y-2">
-            <label className="text-xs text-gray-500 uppercase tracking-wider font-medium">View Mode</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode('fantasy')}
-                className={`px-4 py-2.5 rounded font-medium transition-all tracking-wide text-sm ${
-                  viewMode === 'fantasy'
-                    ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 text-white shadow-lg shadow-amber-500/20'
-                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-                }`}
-                data-testid="button-view-fantasy"
-              >
-                Fantasy Rankings
-              </button>
-              <button
-                onClick={() => setViewMode('season')}
-                className={`px-4 py-2.5 rounded font-medium transition-all tracking-wide text-sm ${
-                  viewMode === 'season'
-                    ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 border border-amber-500/50 text-white shadow-lg shadow-amber-500/20'
-                    : 'bg-[#0d0e11] text-gray-400 hover:text-gray-300 border border-gray-800/50 hover:border-gray-700'
-                }`}
-                data-testid="button-view-season"
-              >
-                Season Roles
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Results Count */}
       {data && (
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <span className="font-medium">{formatNumber(data.count, 0)}</span>
-          <span>{position} candidates with role classifications</span>
-        </div>
+        <p className="text-sm text-gray-500">
+          <span className="font-semibold text-gray-700">{data.count}</span> {position} candidates with role classifications
+        </p>
       )}
 
-      {/* Table */}
-      <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
+      <div className="bg-white border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#0d0e11] border-b border-gray-800/50 sticky top-0">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-left border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">#</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Player</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Team</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Tier</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  {position === 'WR' && viewMode === 'fantasy' ? 'Fantasy' : 'Score'}
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-10">#</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Player</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">Team</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tier</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right w-16">
+                  {viewMode === 'fantasy' ? 'Alpha' : 'Score'}
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">GP</th>
-                
-                {/* Position-specific columns */}
-                {position === 'WR' && viewMode === 'fantasy' && (
+                <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right w-12">GP</th>
+
+                {viewMode === 'fantasy' && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Fantasy PPG</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Vol</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Prod</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Eff</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Stab</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">PPG</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Vol</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Prod</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Eff</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Stab</th>
                   </>
                 )}
-                {position === 'WR' && viewMode === 'season' && (
+
+                {viewMode === 'season' && position === 'WR' && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt Share</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Routes/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Tgt/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Tgt Share</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Routes/G</th>
                   </>
                 )}
-                {position === 'RB' && (
+                {viewMode === 'season' && position === 'RB' && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Opps/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Carries/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">PPR/Opp</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Opps/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Carries/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Tgt/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">PPR/Opp</th>
                   </>
                 )}
-                {position === 'TE' && (
+                {viewMode === 'season' && position === 'TE' && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Tgt Share</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">PPR/Tgt</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Tgt/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Tgt Share</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">PPR/Tgt</th>
                   </>
                 )}
-                {position === 'QB' && (
+                {viewMode === 'season' && position === 'QB' && (
                   <>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">DB/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Rush Att/G</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">EPA/db</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Eff</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">DB/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Rush/G</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">EPA/db</th>
+                    <th className="px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Eff</th>
                   </>
                 )}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                [...Array(10)].map((_, idx) => (
-                  <tr key={idx} className="border-b border-gray-800/30">
-                    <td colSpan={position === 'RB' || position === 'QB' ? 10 : 9} className="px-4 py-4">
-                      <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
+                [...Array(12)].map((_, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td colSpan={11} className="px-3 py-3">
+                      <div className="h-6 bg-gray-100 rounded animate-pulse"></div>
                     </td>
                   </tr>
                 ))
               ) : (
                 data?.results.map((player, idx) => {
                   const tierStyle = getTierStyle(player.roleTier || player.tier || 'UNKNOWN');
-                  const displayScore = viewMode === 'fantasy' && player.alphaScore 
-                    ? player.alphaScore 
+                  const displayScore = viewMode === 'fantasy' && player.alphaScore
+                    ? player.alphaScore
                     : player.roleScore;
                   const displayTier = player.roleTier || player.tier || 'UNKNOWN';
-                  
+
                   return (
                     <tr
                       key={player.playerId}
                       onClick={() => handlePlayerClick(player)}
-                      className="border-b border-gray-800/30 hover:bg-blue-500/5 cursor-pointer transition-colors"
+                      className="border-t hover:bg-orange-50/50 cursor-pointer transition-colors"
                       data-testid={`role-bank-row-${idx}`}
                     >
-                      <td className="px-4 py-3 text-gray-500 font-medium">{formatNumber(idx + 1, 0)}</td>
-                      <td className="px-4 py-3">
-                        <div className="font-semibold text-white">{player.playerName}</div>
+                      <td className="px-3 py-2.5 text-gray-400 font-mono text-xs">{idx + 1}</td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-semibold text-gray-900">{player.playerName}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
                           {player.team || '—'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded text-xs font-bold border ${tierStyle.bg} ${tierStyle.text} ${tierStyle.border}`}>
+                      <td className="px-3 py-2.5">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${tierStyle.bg} ${tierStyle.text} ${tierStyle.border}`}>
                           {displayTier}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="font-bold text-white">{formatNumber(displayScore, 0)}</span>
+                      <td className={`px-3 py-2.5 text-right font-mono ${scoreColor(displayScore)}`}>
+                        {formatNumber(displayScore, 0)}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.gamesPlayed, 0)}</td>
-                      
-                      {/* Position-specific data */}
-                      {position === 'WR' && viewMode === 'fantasy' && (
+                      <td className="px-3 py-2.5 text-right text-gray-500 font-mono">{formatNumber(player.gamesPlayed, 0)}</td>
+
+                      {viewMode === 'fantasy' && (
                         <>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.fantasyPointsPprPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.volumeIndex, 0)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.productionIndex, 0)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.efficiencyIndex, 0)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.stabilityIndex, 0)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-700">{formatNumber(player.fantasyPointsPprPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pillarBar(player.volumeIndex)}`} style={{ width: `${Math.min(player.volumeIndex || 0, 100)}%` }} />
+                              </div>
+                              <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.volumeIndex, 0)}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pillarBar(player.productionIndex)}`} style={{ width: `${Math.min(player.productionIndex || 0, 100)}%` }} />
+                              </div>
+                              <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.productionIndex, 0)}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pillarBar(player.efficiencyIndex)}`} style={{ width: `${Math.min(player.efficiencyIndex || 0, 100)}%` }} />
+                              </div>
+                              <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.efficiencyIndex, 0)}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${pillarBar(player.stabilityIndex)}`} style={{ width: `${Math.min(player.stabilityIndex || 0, 100)}%` }} />
+                              </div>
+                              <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.stabilityIndex, 0)}</span>
+                            </div>
+                          </td>
                         </>
                       )}
-                      {position === 'WR' && viewMode === 'season' && (
+
+                      {viewMode === 'season' && position === 'WR' && (
                         <>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.routesPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.routesPerGame)}</td>
                         </>
                       )}
-                      {position === 'RB' && (
+                      {viewMode === 'season' && position === 'RB' && (
                         <>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.opportunitiesPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.carriesPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.pprPerOpportunity, 2)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.opportunitiesPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.carriesPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.pprPerOpportunity, 2)}</td>
                         </>
                       )}
-                      {position === 'TE' && (
+                      {viewMode === 'season' && position === 'TE' && (
                         <>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatPercent(player.targetShareAvg)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.pprPerTarget, 2)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.pprPerTarget, 2)}</td>
                         </>
                       )}
-                      {position === 'QB' && (
+                      {viewMode === 'season' && position === 'QB' && (
                         <>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.dropbacksPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.rushAttemptsPerGame)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.epaPerPlay, 3)}</td>
-                          <td className="px-4 py-3 text-center text-gray-300">{formatNumber(player.efficiencyScore, 0)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.dropbacksPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.rushAttemptsPerGame)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.epaPerPlay, 3)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.efficiencyScore, 0)}</td>
                         </>
                       )}
                     </tr>
@@ -414,231 +419,174 @@ export default function RoleBankRankings() {
           </table>
 
           {!isLoading && data?.results.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No {position} data available for {formatNumber(season, 0)} season
+            <div className="text-center py-12 text-gray-400 text-sm">
+              No {position} data available for {season} season
             </div>
           )}
         </div>
       </div>
 
-      {/* Player Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="bg-[#141824] border-gray-800 text-white max-w-2xl">
+        <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl">
           {selectedPlayer && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+                <DialogTitle className="text-xl font-bold flex items-center gap-3">
                   {selectedPlayer.playerName}
-                  <Badge variant="outline" className={`${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').bg} ${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').text} border-none`}>
+                  <Badge variant="outline" className={`${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').bg} ${getTierStyle(selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN').text} border-none text-xs`}>
                     {selectedPlayer.roleTier || selectedPlayer.tier || 'UNKNOWN'}
                   </Badge>
                 </DialogTitle>
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span className="px-2 py-1 bg-gray-800 rounded">{selectedPlayer.team || 'FA'}</span>
-                  <span>•</span>
-                  <span>{selectedPlayer.position}</span>
-                  <span>•</span>
-                  <span>{formatNumber(season, 0)} Season</span>
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <span className="px-2 py-0.5 bg-gray-100 rounded text-xs font-medium">{selectedPlayer.team || 'FA'}</span>
+                  <span>·</span>
+                  <span>{selectedPlayer.position || position}</span>
+                  <span>·</span>
+                  <span>{season} Season</span>
                 </div>
               </DialogHeader>
 
-              <div className="space-y-6 mt-4">
-                {/* Role Score Breakdown */}
+              <div className="space-y-5 mt-4">
                 {position === 'QB' ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Award className="w-4 h-4 text-purple-400" />
-                        <div className="text-xs text-gray-500 uppercase">Role Score</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {[
+                      { label: 'Role Score', value: selectedPlayer.roleScore, icon: <Award className="w-4 h-4 text-purple-500" /> },
+                      { label: 'Volume', value: selectedPlayer.volumeScore, icon: <TrendingUp className="w-4 h-4 text-blue-500" /> },
+                      { label: 'Rushing', value: selectedPlayer.rushingScore, icon: <Activity className="w-4 h-4 text-emerald-500" /> },
+                      { label: 'Efficiency', value: selectedPlayer.efficiencyScore, icon: <Target className="w-4 h-4 text-orange-500" /> },
+                      { label: 'Momentum', value: selectedPlayer.momentumScore, icon: <Zap className="w-4 h-4 text-amber-500" /> },
+                    ].map(item => (
+                      <div key={item.label} className="bg-gray-50 border rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          {item.icon}
+                          <span className="text-xs text-gray-500 uppercase font-medium">{item.label}</span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900">{formatNumber(item.value, 0)}</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.roleScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <TrendingUp className="w-4 h-4 text-blue-400" />
-                        <div className="text-xs text-gray-500 uppercase">Volume</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.volumeScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Activity className="w-4 h-4 text-green-400" />
-                        <div className="text-xs text-gray-500 uppercase">Rushing</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.rushingScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Target className="w-4 h-4 text-orange-400" />
-                        <div className="text-xs text-gray-500 uppercase">Efficiency</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.efficiencyScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-yellow-400" />
-                        <div className="text-xs text-gray-500 uppercase">Momentum</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.momentumScore, 0)}</div>
-                    </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Award className="w-4 h-4 text-purple-400" />
-                        <div className="text-xs text-gray-500 uppercase">Role Score</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Role Score', value: selectedPlayer.roleScore, icon: <Award className="w-4 h-4 text-purple-500" /> },
+                      { label: 'Volume', value: selectedPlayer.volumeScore, icon: <TrendingUp className="w-4 h-4 text-blue-500" /> },
+                      { label: 'Consistency', value: selectedPlayer.consistencyScore, icon: <Activity className="w-4 h-4 text-emerald-500" /> },
+                      { label: 'Momentum', value: selectedPlayer.momentumScore, icon: <Zap className="w-4 h-4 text-amber-500" /> },
+                    ].map(item => (
+                      <div key={item.label} className="bg-gray-50 border rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          {item.icon}
+                          <span className="text-xs text-gray-500 uppercase font-medium">{item.label}</span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900">{formatNumber(item.value, 0)}</div>
                       </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.roleScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <TrendingUp className="w-4 h-4 text-blue-400" />
-                        <div className="text-xs text-gray-500 uppercase">Volume</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.volumeScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Activity className="w-4 h-4 text-green-400" />
-                        <div className="text-xs text-gray-500 uppercase">Consistency</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.consistencyScore, 0)}</div>
-                    </div>
-                    <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-2 mb-1">
-                        <Zap className="w-4 h-4 text-yellow-400" />
-                        <div className="text-xs text-gray-500 uppercase">Momentum</div>
-                      </div>
-                      <div className="text-2xl font-bold text-white">{formatNumber(selectedPlayer.momentumScore, 0)}</div>
-                    </div>
+                    ))}
                   </div>
                 )}
 
-                {/* Stats Grid */}
-                <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Season Stats</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-gray-50 border rounded-lg p-4">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Season Stats</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Games Played</span>
-                      <span className="text-white font-medium">{formatNumber(selectedPlayer.gamesPlayed, 0)}</span>
+                      <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.gamesPlayed, 0)}</span>
                     </div>
-                    
-                    {/* QB-specific stats */}
+
                     {position === 'QB' && (
                       <>
-                        {selectedPlayer.dropbacksPerGame !== undefined && selectedPlayer.dropbacksPerGame !== null && (
+                        {selectedPlayer.dropbacksPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Dropbacks/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.dropbacksPerGame, 1)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.dropbacksPerGame, 1)}</span>
                           </div>
                         )}
-                        {selectedPlayer.rushAttemptsPerGame !== undefined && selectedPlayer.rushAttemptsPerGame !== null && (
+                        {selectedPlayer.rushAttemptsPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Rush Att/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushAttemptsPerGame, 1)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.rushAttemptsPerGame, 1)}</span>
                           </div>
                         )}
-                        {selectedPlayer.passingAttempts !== undefined && selectedPlayer.passingAttempts !== null && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Pass Attempts</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingAttempts, 0)}</span>
-                          </div>
-                        )}
-                        {selectedPlayer.passingYards !== undefined && selectedPlayer.passingYards !== null && (
+                        {selectedPlayer.passingYards != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Pass Yards</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingYards, 0)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.passingYards, 0)}</span>
                           </div>
                         )}
-                        {selectedPlayer.passingTouchdowns !== undefined && selectedPlayer.passingTouchdowns !== null && (
+                        {selectedPlayer.passingTouchdowns != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Pass TDs</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.passingTouchdowns, 0)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.passingTouchdowns, 0)}</span>
                           </div>
                         )}
-                        {selectedPlayer.interceptions !== undefined && selectedPlayer.interceptions !== null && (
+                        {selectedPlayer.interceptions != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">INTs</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.interceptions, 0)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.interceptions, 0)}</span>
                           </div>
                         )}
-                        {selectedPlayer.rushingYards !== undefined && selectedPlayer.rushingYards !== null && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Rush Yards</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushingYards, 0)}</span>
-                          </div>
-                        )}
-                        {selectedPlayer.rushingTouchdowns !== undefined && selectedPlayer.rushingTouchdowns !== null && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Rush TDs</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.rushingTouchdowns, 0)}</span>
-                          </div>
-                        )}
-                        {selectedPlayer.epaPerPlay !== undefined && selectedPlayer.epaPerPlay !== null && (
+                        {selectedPlayer.epaPerPlay != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">EPA per Play</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.epaPerPlay, 3)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.epaPerPlay, 3)}</span>
                           </div>
                         )}
-                        {selectedPlayer.cpoe !== undefined && selectedPlayer.cpoe !== null && (
+                        {selectedPlayer.cpoe != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">CPOE</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.cpoe, 1)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.cpoe, 1)}</span>
                           </div>
                         )}
-                        {selectedPlayer.sackRate !== undefined && selectedPlayer.sackRate !== null && (
+                        {selectedPlayer.sackRate != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Sack Rate</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.sackRate, 1)}%</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.sackRate, 1)}%</span>
                           </div>
                         )}
                       </>
                     )}
-                    
-                    {/* WR/RB/TE stats */}
+
                     {position !== 'QB' && (
                       <>
-                        {selectedPlayer.targetsPerGame !== null && (
+                        {selectedPlayer.targetsPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Targets/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.targetsPerGame)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.targetsPerGame)}</span>
                           </div>
                         )}
-                        {selectedPlayer.carriesPerGame !== null && (
+                        {selectedPlayer.carriesPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Carries/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.carriesPerGame)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.carriesPerGame)}</span>
                           </div>
                         )}
-                        {selectedPlayer.opportunitiesPerGame !== null && (
+                        {selectedPlayer.opportunitiesPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Opportunities/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.opportunitiesPerGame)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.opportunitiesPerGame)}</span>
                           </div>
                         )}
-                        {selectedPlayer.targetShareAvg !== null && (
+                        {selectedPlayer.targetShareAvg != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Target Share</span>
-                            <span className="text-white font-medium">{formatPercent(selectedPlayer.targetShareAvg)}</span>
+                            <span className="font-medium text-gray-900">{formatPercent(selectedPlayer.targetShareAvg)}</span>
                           </div>
                         )}
-                        {selectedPlayer.routesPerGame !== null && (
+                        {selectedPlayer.routesPerGame != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">Routes/Game</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.routesPerGame)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.routesPerGame)}</span>
                           </div>
                         )}
-                        {selectedPlayer.pprPerTarget !== null && (
+                        {selectedPlayer.pprPerTarget != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">PPR/Target</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerTarget, 2)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.pprPerTarget, 2)}</span>
                           </div>
                         )}
-                        {selectedPlayer.pprPerOpportunity !== null && (
+                        {selectedPlayer.pprPerOpportunity != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-500">PPR/Opportunity</span>
-                            <span className="text-white font-medium">{formatNumber(selectedPlayer.pprPerOpportunity, 2)}</span>
+                            <span className="font-medium text-gray-900">{formatNumber(selectedPlayer.pprPerOpportunity, 2)}</span>
                           </div>
                         )}
                       </>
@@ -646,55 +594,36 @@ export default function RoleBankRankings() {
                   </div>
                 </div>
 
-                {/* Flags */}
-                {Object.values(selectedPlayer.flags).some(v => v === true) && (
-                  <div className="bg-[#0d0e11] border border-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Player Flags</h3>
+                {selectedPlayer.flags && Object.values(selectedPlayer.flags).some(v => v === true) && (
+                  <div className="bg-gray-50 border rounded-lg p-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Player Flags</h3>
                     <div className="flex flex-wrap gap-2">
                       {selectedPlayer.flags.breakoutWatch && (
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
-                          🎯 Breakout Watch
-                        </Badge>
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300">Breakout Watch</Badge>
                       )}
                       {selectedPlayer.flags.cardioWr && (
-                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                          🏃 Cardio WR
-                        </Badge>
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-300">Cardio WR</Badge>
                       )}
                       {selectedPlayer.flags.pureRusher && (
-                        <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">
-                          🏈 Pure Rusher
-                        </Badge>
+                        <Badge className="bg-orange-100 text-orange-700 border-orange-300">Pure Rusher</Badge>
                       )}
                       {selectedPlayer.flags.passingDownBack && (
-                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">
-                          📡 Passing Down Back
-                        </Badge>
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-300">Passing Down Back</Badge>
                       )}
                       {selectedPlayer.flags.redZoneWeapon && (
-                        <Badge className="bg-red-500/20 text-red-400 border-red-500/50">
-                          🎯 Red Zone Weapon
-                        </Badge>
+                        <Badge className="bg-red-100 text-red-700 border-red-300">Red Zone Weapon</Badge>
                       )}
                       {selectedPlayer.flags.cardioTE && (
-                        <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/50">
-                          🏃 Cardio TE
-                        </Badge>
+                        <Badge className="bg-cyan-100 text-cyan-700 border-cyan-300">Cardio TE</Badge>
                       )}
                       {selectedPlayer.flags.konamiCode && (
-                        <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/50">
-                          🎮 Konami Code
-                        </Badge>
+                        <Badge className="bg-purple-100 text-purple-700 border-purple-300">Konami Code</Badge>
                       )}
                       {selectedPlayer.flags.systemQB && (
-                        <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/50">
-                          ⚙️ System QB
-                        </Badge>
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-300">System QB</Badge>
                       )}
                       {selectedPlayer.flags.garbageTimeKing && (
-                        <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/50">
-                          🗑️ Garbage Time King
-                        </Badge>
+                        <Badge className="bg-gray-100 text-gray-600 border-gray-300">Garbage Time King</Badge>
                       )}
                     </div>
                   </div>
