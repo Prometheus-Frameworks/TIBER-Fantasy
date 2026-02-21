@@ -1,0 +1,58 @@
+Here's a summary of recent activity across the codebase, organized by theme:
+
+---
+
+## Recent Git Activity Summary (Feb 16–20, 2026)
+
+### Fantasy Lab — New Module (3 phased PRs)
+
+The biggest development this week was the introduction of the **Fantasy Lab** module, built across three PRs:
+
+| Phase | Commit | What was added |
+|---|---|---|
+| Phase 1 | `f558763` | Weekly materialized view (`0011_fantasy_lab_weekly_mv.sql`), API routes (`fantasyLabRoutes.ts`), QA script |
+| Phase 2 | `491344c` | **FIRE engine** + **Hybrid Delta engine**, `FantasyLab.tsx` UI page, registered in `server/routes.ts` |
+| Phase 3 | `0e2c224` | Trust indicators, data visualizations, watchlist functionality |
+
+**Attention**: The Fantasy Lab MV migration (`0011`) must be applied before the app works correctly. The validation report (`qb_fire_v1_validation.md`) explicitly notes it couldn't be executed because `DATABASE_URL` wasn't configured — **the DB-level checks were never actually run**.
+
+---
+
+### QB FIRE v1 — Opportunity/Role Pipeline (PR #23, `517938f`)
+
+Added a full QB expected fantasy points (`xFP`) model:
+- New ETL script: `scripts/etl/qb_xfp_weekly.py` (352 lines, Python/pandas)
+- New migration: `migrations/0012_qb_fire_v1.sql` — adds `qb_xfp_weekly` table
+- Extended `fireRoutes.ts` to expose xFP-based QB rankings
+
+**Attention**: Migration `0012` needs to be applied (`npm run db:migrate`). The ETL script needs to be run to populate `qb_xfp_weekly` data. Both validations were documented as SQL-only and not actually executed against a live DB.
+
+---
+
+### FORGE Engine — Scoring Refactors (Feb 16, PRs #14–17)
+
+Several correctness improvements to the core ranking engine:
+
+- **Snapshot data validator** (`2e83dec`): New guardrails module to catch bad input data before scoring
+- **Integration test suite** (`9a649d1`): Regression tests for FORGE scoring (`npm run test:forge`)
+- **xFP-first QB volume pillar** (`c5b4d1a`): QB volume now derived from continuous xFP rather than discrete stats
+- **FPOE-first efficiency pillar** (`f8ae401`): Efficiency scoring across all positions now uses Fantasy Points Over Expectation as the primary signal
+
+---
+
+### Governance / Process Infrastructure (PR #19, `d11f9c7`)
+
+Added a full agent governance pack:
+- `CURRENT_PHASE.md`, `BACKLOG.md`, `AGENT_BOOTSTRAP.md`
+- `manus/` directory with templates, rules, and PR scaffolding
+- ESLint flat config migration (`eslint.config.js`) and `lint` script added to `package.json`
+
+---
+
+### Items Needing Follow-up
+
+1. **Unapplied migrations**: `0011_fantasy_lab_weekly_mv.sql` and `0012_qb_fire_v1.sql` — run `npm run db:migrate` against a live DB.
+2. **QB xFP ETL never ran**: `scripts/etl/qb_xfp_weekly.py` was written and validated on paper only. Needs execution against actual NFL data to populate `qb_xfp_weekly`.
+3. **Validation reports are aspirational**: Both `qb_fire_v1_data_audit.md` and `qb_fire_v1_validation.md` contain SQL queries but explicitly note the DB wasn't available. The FIRE module's accuracy is unverified.
+4. **README was cleared** (`fcfab94`): The README was wiped. If this project is meant to be public/open-source, it needs a replacement.
+5. **CURRENT_PHASE scope drift**: The governance doc says "no new modules / no DB schema changes" are in scope for the current Stabilization phase, but PRs #20–23 added two new modules (Fantasy Lab, FIRE) and two new migrations. Worth reconciling whether the phase definition needs updating or if those were intentional overrides.
