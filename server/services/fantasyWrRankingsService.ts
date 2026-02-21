@@ -4,7 +4,7 @@
 
 import { db } from '../infra/db';
 import { weeklyStats, wrRoleBank, playerIdentityMap } from '../../shared/schema';
-import { sql, eq, and } from 'drizzle-orm';
+import { sql, eq, and, inArray } from 'drizzle-orm';
 
 // ---- Types ----
 
@@ -154,27 +154,25 @@ export async function getFantasyWRRankings(
     .from(wrRoleBank)
     .where(eq(wrRoleBank.season, season));
 
+  const roleBankPlayerIds = roleBank.map(rb => rb.playerId);
+
   // Step 2: Aggregate fantasy points per game from weekly_stats
-  // IMPORTANT: Join with player_identity_map to use authoritative position data
-  // (weekly_stats.position has incorrect data - RBs labeled as "WR")
-  const fantasyStatsRaw = await db
+  // Use the actual player IDs from the role bank (not filtered by position)
+  // since the WR role bank may contain players classified as other positions
+  const fantasyStatsRaw = roleBankPlayerIds.length > 0 ? await db
     .select({
       playerId: weeklyStats.playerId,
       totalFantasyPoints: sql<number>`SUM(COALESCE(${weeklyStats.fantasyPointsPpr}, 0))`,
       gamesWithStats: sql<number>`COUNT(*) FILTER (WHERE ${weeklyStats.fantasyPointsPpr} > 0)`,
     })
     .from(weeklyStats)
-    .innerJoin(
-      playerIdentityMap,
-      eq(weeklyStats.playerId, playerIdentityMap.nflDataPyId)
-    )
     .where(
       and(
         eq(weeklyStats.season, season),
-        eq(playerIdentityMap.position, 'WR')  // Use authoritative position from player_identity_map
+        inArray(weeklyStats.playerId, roleBankPlayerIds)
       )
     )
-    .groupBy(weeklyStats.playerId);
+    .groupBy(weeklyStats.playerId) : [];
 
   // Create a map for fast lookup
   const fantasyStatsMap = new Map(
@@ -187,15 +185,16 @@ export async function getFantasyWRRankings(
     ])
   );
 
-  // Step 3: Get player identity data
-  const playerIdentities = await db
+  // Step 3: Get player identity data for all players in the role bank
+  // Don't filter by position — the WR role bank may include RBs/TEs who run routes
+  const playerIdentities = roleBankPlayerIds.length > 0 ? await db
     .select({
       playerId: playerIdentityMap.nflDataPyId,
       playerName: playerIdentityMap.fullName,
       team: playerIdentityMap.nflTeam,
     })
     .from(playerIdentityMap)
-    .where(eq(playerIdentityMap.position, 'WR'));
+    .where(inArray(playerIdentityMap.nflDataPyId, roleBankPlayerIds)) : [];
 
   const identityMap = new Map(
     playerIdentities.map((row: any) => [
