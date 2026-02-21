@@ -1,9 +1,17 @@
-import { db } from '../server/db';
+import { db } from '../server/infra/db';
 import { sql } from 'drizzle-orm';
 
 const POSITIONS = ['TE', 'RB', 'WR'] as const;
 const SEASON = 2025;
 const MAX_WEEK = 17;
+
+async function getCompletedCount(position: string): Promise<number> {
+  const result = await db.execute(sql`
+    SELECT COUNT(DISTINCT player_id) as cnt FROM forge_player_state
+    WHERE season = ${SEASON} AND position = ${position} AND week = ${MAX_WEEK}
+  `);
+  return parseInt(result.rows[0]?.cnt as string) || 0;
+}
 
 async function backfillPosition(position: string) {
   const { calculateRecursiveAlpha } = await import('../server/modules/forge/recursiveAlphaEngine');
@@ -26,8 +34,18 @@ async function backfillPosition(position: string) {
     WHERE season = ${SEASON}
     ORDER BY games_played DESC NULLS LAST
   `);
-  const playerIds = result.rows.map((r: any) => r.player_id).filter(Boolean);
-  console.log(`[Backfill] Found ${playerIds.length} ${position} players`);
+  const allPlayerIds = result.rows.map((r: any) => r.player_id).filter(Boolean);
+
+  const completedCount = await getCompletedCount(position);
+  const skipCount = Math.max(0, completedCount);
+  const playerIds = allPlayerIds.slice(skipCount);
+
+  console.log(`[Backfill] ${position}: ${allPlayerIds.length} total, ~${completedCount} already done, processing ${playerIds.length} remaining`);
+
+  if (playerIds.length === 0) {
+    console.log(`[Backfill] ${position}: Nothing to do!`);
+    return { scored: 0, failed: 0 };
+  }
 
   let scored = 0;
   let failed = 0;
@@ -50,9 +68,7 @@ async function backfillPosition(position: string) {
       }
 
       scored++;
-      if (scored % 5 === 0) {
-        console.log(`  [${position}] ${scored}/${playerIds.length} done (latest: ${playerName} → ${lastAlpha.toFixed(1)})`);
-      }
+      console.log(`  [${position}] ${completedCount + scored}/${allPlayerIds.length} done: ${playerName} → ${lastAlpha.toFixed(1)}`);
     } catch (err: any) {
       failed++;
       console.error(`  [${position}] FAILED ${playerId}: ${err.message}`);
@@ -70,7 +86,7 @@ async function main() {
     : POSITIONS;
 
   console.log(`[Backfill] Starting recursive backfill for: ${positions.join(', ')}`);
-  console.log(`[Backfill] Season=${SEASON}, Weeks 1-${MAX_WEEK}`);
+  console.log(`[Backfill] Season=${SEASON}, Weeks 1-${MAX_WEEK} (skipping already-completed players)`);
 
   for (const pos of positions) {
     const start = Date.now();
