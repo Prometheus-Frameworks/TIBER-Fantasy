@@ -168,6 +168,10 @@ export default function RoleBankRankings() {
     return `${(num * 100).toFixed(1)}%`;
   };
 
+  const TipCell = ({ tip, children, className = '' }: { tip: string; children: React.ReactNode; className?: string }) => (
+    <td className={`px-3 py-2.5 ${className}`} title={tip}>{children}</td>
+  );
+
   return (
     <div className="p-6 space-y-5">
       <div>
@@ -338,77 +342,77 @@ export default function RoleBankRankings() {
                           {displayTier}
                         </span>
                       </td>
-                      <td className={`px-3 py-2.5 text-right font-mono ${scoreColor(displayScore)}`}>
+                      <TipCell tip={viewMode === 'fantasy' ? 'Alpha Score' : 'Role Score'} className={`text-right font-mono ${scoreColor(displayScore)}`}>
                         {formatNumber(displayScore, 0)}
-                      </td>
-                      <td className="px-3 py-2.5 text-right text-gray-500 font-mono">{formatNumber(player.gamesPlayed, 0)}</td>
+                      </TipCell>
+                      <TipCell tip="Games Played" className="text-right text-gray-500 font-mono">{formatNumber(player.gamesPlayed, 0)}</TipCell>
 
                       {viewMode === 'fantasy' && (
                         <>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-700">{formatNumber(player.fantasyPointsPprPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right">
+                          <TipCell tip="Fantasy Points Per Game (PPR)" className="text-right font-mono text-gray-700">{formatNumber(player.fantasyPointsPprPerGame)}</TipCell>
+                          <TipCell tip="Volume Index" className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${pillarBar(player.volumeIndex)}`} style={{ width: `${Math.min(player.volumeIndex || 0, 100)}%` }} />
                               </div>
                               <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.volumeIndex, 0)}</span>
                             </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-right">
+                          </TipCell>
+                          <TipCell tip="Production Index" className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${pillarBar(player.productionIndex)}`} style={{ width: `${Math.min(player.productionIndex || 0, 100)}%` }} />
                               </div>
                               <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.productionIndex, 0)}</span>
                             </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-right">
+                          </TipCell>
+                          <TipCell tip="Efficiency Index" className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${pillarBar(player.efficiencyIndex)}`} style={{ width: `${Math.min(player.efficiencyIndex || 0, 100)}%` }} />
                               </div>
                               <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.efficiencyIndex, 0)}</span>
                             </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-right">
+                          </TipCell>
+                          <TipCell tip="Stability Index" className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <div className="w-8 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${pillarBar(player.stabilityIndex)}`} style={{ width: `${Math.min(player.stabilityIndex || 0, 100)}%` }} />
                               </div>
                               <span className="font-mono text-gray-600 w-6 text-right">{formatNumber(player.stabilityIndex, 0)}</span>
                             </div>
-                          </td>
+                          </TipCell>
                         </>
                       )}
 
                       {viewMode === 'season' && position === 'WR' && (
                         <>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.routesPerGame)}</td>
+                          <TipCell tip="Targets Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</TipCell>
+                          <TipCell tip="Target Share Average" className="text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</TipCell>
+                          <TipCell tip="Routes Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.routesPerGame)}</TipCell>
                         </>
                       )}
                       {viewMode === 'season' && position === 'RB' && (
                         <>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.opportunitiesPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.carriesPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.pprPerOpportunity, 2)}</td>
+                          <TipCell tip="Opportunities Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.opportunitiesPerGame)}</TipCell>
+                          <TipCell tip="Carries Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.carriesPerGame)}</TipCell>
+                          <TipCell tip="Targets Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</TipCell>
+                          <TipCell tip="PPR Points Per Opportunity" className="text-right font-mono text-gray-600">{formatNumber(player.pprPerOpportunity, 2)}</TipCell>
                         </>
                       )}
                       {viewMode === 'season' && position === 'TE' && (
                         <>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.pprPerTarget, 2)}</td>
+                          <TipCell tip="Targets Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.targetsPerGame)}</TipCell>
+                          <TipCell tip="Target Share Average" className="text-right font-mono text-gray-600">{formatPercent(player.targetShareAvg)}</TipCell>
+                          <TipCell tip="PPR Points Per Target" className="text-right font-mono text-gray-600">{formatNumber(player.pprPerTarget, 2)}</TipCell>
                         </>
                       )}
                       {viewMode === 'season' && position === 'QB' && (
                         <>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.dropbacksPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.rushAttemptsPerGame)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.epaPerPlay, 3)}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-gray-600">{formatNumber(player.efficiencyScore, 0)}</td>
+                          <TipCell tip="Dropbacks Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.dropbacksPerGame)}</TipCell>
+                          <TipCell tip="Rush Attempts Per Game" className="text-right font-mono text-gray-600">{formatNumber(player.rushAttemptsPerGame)}</TipCell>
+                          <TipCell tip="EPA Per Play" className="text-right font-mono text-gray-600">{formatNumber(player.epaPerPlay, 3)}</TipCell>
+                          <TipCell tip="Efficiency Score" className="text-right font-mono text-gray-600">{formatNumber(player.efficiencyScore, 0)}</TipCell>
                         </>
                       )}
                     </tr>

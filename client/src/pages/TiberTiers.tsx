@@ -194,15 +194,15 @@ export default function TiberTiers() {
                           <td className="py-3 px-3 text-center">
                             <Badge className={`${tierClass(player.tier)} border`}>{player.tier}</Badge>
                           </td>
-                          <td className="py-3 px-3 text-center font-mono font-semibold">{player.alpha.toFixed(1)}</td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-300">
+                          <td className="py-3 px-3 text-center font-mono font-semibold" title="Alpha Score">{player.alpha.toFixed(1)}</td>
+                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-300" title="Volume / Efficiency / Team Context / Stability">
                             {(player.subscores.volume ?? 0).toFixed(0)} / {(player.subscores.efficiency ?? 0).toFixed(0)} / {(player.subscores.teamContext ?? 0).toFixed(0)} / {(player.subscores.stability ?? 0).toFixed(0)}
                           </td>
-                          <td className="py-3 px-3 text-center font-mono">{player.fantasyStats?.ppgPpr?.toFixed(1) ?? '-'}</td>
-                          <td className="py-3 px-3 text-center font-mono text-slate-300">{player.fantasyStats?.seasonFptsPpr?.toFixed(1) ?? '-'}</td>
-                          <td className="py-3 px-3 text-center font-mono text-blue-300">{vol ?? '-'}</td>
-                          <td className="py-3 px-3 text-center font-mono">{player.confidence?.toFixed(0) ?? '-'}</td>
-                          <td className="py-3 px-3 text-center">
+                          <td className="py-3 px-3 text-center font-mono" title="Fantasy Points Per Game (PPR)">{player.fantasyStats?.ppgPpr?.toFixed(1) ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300" title="Total Season PPR Points">{player.fantasyStats?.seasonFptsPpr?.toFixed(1) ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-blue-300" title={player.position === 'RB' ? 'Total Touches' : 'Total Targets'}>{vol ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono" title="Confidence Score">{player.confidence?.toFixed(0) ?? '-'}</td>
+                          <td className="py-3 px-3 text-center" title="Football Lens Issues">
                             {player.footballLensIssues?.length ? (
                               <Tooltip>
                                 <TooltipTrigger>
@@ -223,7 +223,7 @@ export default function TiberTiers() {
                               <span className="text-slate-600">-</span>
                             )}
                           </td>
-                          <td className="py-3 px-3 text-center text-slate-400">{player.gamesPlayed ?? '-'}</td>
+                          <td className="py-3 px-3 text-center text-slate-400" title="Games Played">{player.gamesPlayed ?? '-'}</td>
                         </tr>
                       );
                     })}
