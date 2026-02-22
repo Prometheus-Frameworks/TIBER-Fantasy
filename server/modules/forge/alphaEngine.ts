@@ -16,7 +16,7 @@ import {
   Trajectory,
   PlayerPosition,
   FPRData,
-  FantasyStats,
+  ProductionStats,
   TeamEnvironment,
   MatchupContext,
   ForgeScoreOptions,
@@ -62,10 +62,9 @@ export function calculateAlphaScore(
   scoreOptions?: ForgeScoreOptions
 ): ForgeScore {
   const options = scoreOptions ?? DEFAULT_SCORE_OPTIONS;
-  console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position}) [${options.leagueType}/${options.pprType}PPR]`);
+  console.log(`[FORGE/AlphaEngine] Calculating alpha for ${context.playerName} (${context.position}) [${options.leagueType}]`);
   
-  // v1.4: Apply PPR adjustment to efficiency subscore
-  const subScores = calculateSubScoresWithPPR(features, context, options);
+  const subScores = calculateSubScoresWithReceptionRate(features, context);
   const rawAlpha = calculateWeightedAlpha(subScores, context.position);
   
   // Apply environment and matchup modifiers (v0.1)
@@ -109,8 +108,7 @@ export function calculateAlphaScore(
     features.contextFitFeatures.isNeutral ||
     features.gamesPlayed < 3;
   
-  // v1.2: Calculate fantasy stats from context
-  const fantasyStats = calculateFantasyStats(context, features.gamesPlayed);
+  const productionStats = calculateProductionStats(context, features.gamesPlayed);
   
   return {
     playerId: context.playerId,
@@ -136,7 +134,7 @@ export function calculateAlphaScore(
     
     fpr,
     
-    fantasyStats,
+    productionStats,
     
     dataQuality: {
       hasAdvancedStats: features.dataQuality.hasAdvancedStats,
@@ -164,39 +162,29 @@ function calculateSubScores(features: ForgeFeatureBundle): ForgeSubScores {
 }
 
 /**
- * v1.4: Calculate sub-scores with PPR adjustment to efficiency
+ * v2.0: Calculate sub-scores with format-neutral reception rate signal
  * 
- * For full PPR (pprType='1'): Reception-heavy players get a boost to efficiency
- * For half PPR (pprType='0.5'): Smaller boost
+ * Reception rate relative to position average is a valid football metric
+ * that captures a player's involvement in the passing game, independent
+ * of any fantasy scoring format (PPR/half-PPR/standard).
  * 
- * The boost is based on receptions per game relative to position average:
- * - WR average: ~5 rec/game, elite ~8+
- * - RB average: ~3 rec/game, pass-catching ~5+
- * - TE average: ~4 rec/game, elite ~6+
- * 
- * Formula: efficiencyBoost = (recPerGame - posAvg) * pprWeight * 2
- * This gives roughly +5-10 points for rec-heavy players in full PPR
+ * Players with above-average rec/game get a modest efficiency boost;
+ * below-average get a modest penalty. Capped at ±7 points.
  */
-function calculateSubScoresWithPPR(
+function calculateSubScoresWithReceptionRate(
   features: ForgeFeatureBundle, 
-  context: ForgeContext, 
-  options: ForgeScoreOptions
+  context: ForgeContext
 ): ForgeSubScores {
   const baseScores = calculateSubScores(features);
   
-  // Only apply PPR adjustment for WR, RB, TE (not QB)
   if (context.position === 'QB') {
     return baseScores;
   }
   
-  const pprWeight = options.pprType === '1' ? 1.0 : 0.5;
-  
-  // Get receptions per game from context
   const receptions = context.seasonStats?.receptions ?? 0;
   const gamesPlayed = context.seasonStats?.gamesPlayed ?? 1;
   const recPerGame = receptions / Math.max(gamesPlayed, 1);
   
-  // Position-specific reception averages (approximate league averages for starters)
   const posAvgRec: Record<string, number> = {
     WR: 4.5,
     RB: 2.5,
@@ -206,14 +194,11 @@ function calculateSubScoresWithPPR(
   const avgRec = posAvgRec[context.position] ?? 3.5;
   const recDiff = recPerGame - avgRec;
   
-  // Calculate efficiency boost: +2 points per reception above average in full PPR
-  const efficiencyBoost = recDiff * pprWeight * 2;
-  
-  // Clamp the boost to reasonable range (-5 to +10)
-  const clampedBoost = clamp(efficiencyBoost, -5, 10);
+  const receptionBoost = recDiff * 1.5;
+  const clampedBoost = clamp(receptionBoost, -5, 7);
   
   if (Math.abs(clampedBoost) > 0.5) {
-    console.log(`[FORGE/AlphaEngine] PPR adj for ${context.playerName}: rec/g=${recPerGame.toFixed(1)} (avg=${avgRec}), boost=${clampedBoost.toFixed(1)} to efficiency`);
+    console.log(`[FORGE/AlphaEngine] Reception rate adj for ${context.playerName}: rec/g=${recPerGame.toFixed(1)} (avg=${avgRec}), boost=${clampedBoost.toFixed(1)} to efficiency`);
   }
   
   return {
@@ -569,53 +554,20 @@ function calculateFPR(context: ForgeContext): FPRData | undefined {
 }
 
 /**
- * Calculate fantasy stats for Tiber Tiers display
- * v1.2: Extracts fantasy-relevant metrics from context
- * 
- * Computes:
- * - Season totals and PPG (PPR and Half-PPR)
- * - Last 3 games average
- * - Volume metrics (targets, touches, snap%)
- * - Red zone opportunities
+ * Calculate production stats (format-neutral)
+ * Raw volume and opportunity metrics — no fantasy scoring outputs.
+ * Fantasy point calculations (PPR, half-PPR, etc.) live in FIRE module.
  */
-function calculateFantasyStats(context: ForgeContext, gamesPlayed: number): FantasyStats {
+function calculateProductionStats(context: ForgeContext, gamesPlayed: number): ProductionStats {
   const { seasonStats, weeklyStats } = context;
   
-  // Season totals from seasonStats
-  const seasonFptsPpr = seasonStats?.fantasyPointsPpr ?? 0;
-  const receptions = seasonStats?.receptions ?? 0;
-  
-  // Half-PPR = PPR - (0.5 * receptions)
-  const seasonFptsHalf = seasonFptsPpr - (0.5 * receptions);
-  
-  // PPG calculations
-  const games = gamesPlayed > 0 ? gamesPlayed : 1;
-  const ppgPpr = seasonFptsPpr / games;
-  const ppgHalf = seasonFptsHalf / games;
-  
-  // Last 3 games average
-  const sortedWeeks = [...(weeklyStats || [])].sort((a, b) => b.week - a.week);
-  const last3Weeks = sortedWeeks.slice(0, 3);
-  
-  let last3AvgPpr = 0;
-  let last3AvgHalf = 0;
-  
-  if (last3Weeks.length > 0) {
-    const last3SumPpr = last3Weeks.reduce((sum, w) => sum + (w.fantasyPointsPpr || 0), 0);
-    const last3Receptions = last3Weeks.reduce((sum, w) => sum + (w.receptions || 0), 0);
-    last3AvgPpr = last3SumPpr / last3Weeks.length;
-    const last3SumHalf = last3SumPpr - (0.5 * last3Receptions);
-    last3AvgHalf = last3SumHalf / last3Weeks.length;
-  }
-  
-  // Volume metrics
   const targets = seasonStats?.targets ?? undefined;
+  const receptions = seasonStats?.receptions ?? undefined;
   const rushAttempts = seasonStats?.rushAttempts ?? 0;
   const touches = context.position === 'RB' 
     ? rushAttempts + (targets ?? 0) 
     : undefined;
   
-  // Snap percentage (average from weekly data)
   let snapPct: number | undefined;
   if (weeklyStats && weeklyStats.length > 0) {
     const snapsWithData = weeklyStats.filter(w => w.snapShare != null && w.snapShare > 0);
@@ -625,31 +577,14 @@ function calculateFantasyStats(context: ForgeContext, gamesPlayed: number): Fant
     }
   }
   
-  // Red zone opportunities from advanced metrics
   const rzOpps = (seasonStats?.redZoneTargets ?? 0) + (seasonStats?.redZoneCarries ?? 0) || undefined;
   
-  // v1.5: Receiving TDs
-  const recTds = seasonStats?.receivingTds ?? undefined;
-  
-  // v1.5: xFPTS and FPOE from context
-  const xFpts = context.xFptsData?.totalXFpts;
-  const fpoe = context.xFptsData?.totalFpoe;
-  
   return {
-    seasonFptsPpr: roundTo(seasonFptsPpr, 1),
-    seasonFptsHalf: roundTo(seasonFptsHalf, 1),
-    ppgPpr: roundTo(ppgPpr, 1),
-    ppgHalf: roundTo(ppgHalf, 1),
-    last3AvgPpr: roundTo(last3AvgPpr, 1),
-    last3AvgHalf: roundTo(last3AvgHalf, 1),
     targets,
     touches,
     receptions,
-    recTds,
     snapPct,
     rzOpps,
-    xFpts,
-    fpoe,
   };
 }
 

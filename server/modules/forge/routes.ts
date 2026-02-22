@@ -406,15 +406,12 @@ router.get('/health', (req: Request, res: Response) => {
  * - startWeek (optional): number, start of week range filter
  * - endWeek (optional): number, end of week range filter
  * - leagueType (optional): 'redraft' | 'dynasty' (default: redraft)
- * - pprType (optional): '0.5' | '1' (default: 1 = full PPR)
  * 
- * v1.4: PPR/Dynasty adjustments:
- * - PPR: Scales efficiency subscore by reception weight (+2 pts per rec above position avg)
- * - Dynasty: Applies age multiplier (1.1 if <27, 0.95^(age-27) if >27)
+ * v2.0: Format-neutral (no PPR coupling). Dynasty mode applies age multiplier.
  */
 router.get('/batch', async (req: Request, res: Response) => {
   try {
-    const { position, limit, season, week, startWeek, endWeek, leagueType, pprType } = req.query;
+    const { position, limit, season, week, startWeek, endWeek, leagueType } = req.query;
 
     const normalizedPosition =
       typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())
@@ -447,23 +444,15 @@ router.get('/batch', async (req: Request, res: Response) => {
         ? Number(endWeek)
         : undefined;
 
-    // v1.4: PPR/Dynasty scoring options
     const normalizedLeagueType = 
       typeof leagueType === 'string' && ['redraft', 'dynasty'].includes(leagueType)
         ? (leagueType as 'redraft' | 'dynasty')
-        : undefined;
-    
-    const normalizedPprType = 
-      typeof pprType === 'string' && ['0.5', '1'].includes(pprType)
-        ? (pprType as '0.5' | '1')
         : undefined;
 
     const weekRangeStr = normalizedStartWeek && normalizedEndWeek 
       ? `, weeks ${normalizedStartWeek}-${normalizedEndWeek}` 
       : '';
-    const optionsStr = normalizedLeagueType || normalizedPprType 
-      ? ` [${normalizedLeagueType ?? 'redraft'}/${normalizedPprType ?? '1'}PPR]` 
-      : '';
+    const optionsStr = normalizedLeagueType ? ` [${normalizedLeagueType}]` : '';
     console.log(`[FORGE/Routes] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}${weekRangeStr}${optionsStr}`);
 
     const scores = await forgeService.getForgeScoresBatch({
@@ -474,7 +463,6 @@ router.get('/batch', async (req: Request, res: Response) => {
       startWeek: normalizedStartWeek,
       endWeek: normalizedEndWeek,
       leagueType: normalizedLeagueType,
-      pprType: normalizedPprType,
     });
 
     // Enrich scores with SoS data
@@ -2734,9 +2722,7 @@ router.get('/tiers', async (req: Request, res: Response) => {
       gamesPlayed: row.gamesPlayed,
       footballLensIssues: row.footballLensIssues ?? [],
       lensAdjustment: row.lensAdjustment ?? 0,
-      fantasyStats: {
-        ppgPpr: row.ppgPpr,
-        seasonFptsPpr: row.seasonFptsPpr,
+      productionStats: {
         targets: row.targets,
         touches: row.touches,
       },

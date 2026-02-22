@@ -28,7 +28,7 @@ import {
   getCurrentSnapshot 
 } from '../../services/datadiveContext';
 
-import type { LeagueType, PPRType, ForgeScoreOptions } from './types';
+import type { LeagueType, ForgeScoreOptions } from './types';
 import { DEFAULT_SCORE_OPTIONS } from './types';
 
 /**
@@ -42,7 +42,6 @@ export interface ForgeBatchQuery {
   startWeek?: number;
   endWeek?: number;
   leagueType?: LeagueType;
-  pprType?: PPRType;
 }
 
 import { calculateAlphaScore } from './alphaEngine';
@@ -146,18 +145,15 @@ class ForgeService implements IForgeService {
       startWeek,
       endWeek,
       leagueType,
-      pprType
     } = query;
 
-    // Build scoring options with defaults
     const scoreOptions: ForgeScoreOptions = {
       ...DEFAULT_SCORE_OPTIONS,
       ...(leagueType && { leagueType }),
-      ...(pprType && { pprType }),
     };
 
     const weekRangeStr = startWeek && endWeek ? `, weeks ${startWeek}-${endWeek}` : '';
-    const optionsStr = `[${scoreOptions.leagueType}/${scoreOptions.pprType}PPR]`;
+    const optionsStr = `[${scoreOptions.leagueType}]`;
     console.log(`[FORGE] Batch request: position=${position ?? 'ALL'}, limit=${limit}, season=${season}${weekRangeStr} ${optionsStr}`);
 
     // Fetch only eligible players with 2025 activity

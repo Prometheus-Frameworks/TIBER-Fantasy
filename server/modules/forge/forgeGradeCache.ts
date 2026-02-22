@@ -19,9 +19,7 @@ type PositionComputeResult = {
   durationMs: number;
 };
 
-type FantasyStats = {
-  ppgPpr: number | null;
-  seasonFptsPpr: number | null;
+type ProductionStats = {
   targets: number | null;
   touches: number | null;
 };
@@ -69,7 +67,7 @@ export async function computeAndCacheGrades(
       const gradingNoLens = gradeForge(engineOutput, { mode: 'redraft', skipFootballLens: true });
       const t2 = Date.now();
 
-      const stats = await fetchFantasyStats(playerId, season);
+      const stats = await fetchProductionStats(playerId, season);
       const t3 = Date.now();
 
       const trajectory = deriveTrajectory(engineOutput.alphaMomentum);
@@ -100,8 +98,8 @@ export async function computeAndCacheGrades(
           confidence,
           trajectory,
           gamesPlayed: engineOutput.gamesPlayed,
-          ppgPpr: stats.ppgPpr,
-          seasonFptsPpr: stats.seasonFptsPpr,
+          ppgPpr: null,
+          seasonFptsPpr: null,
           targets: stats.targets,
           touches: stats.touches,
           computedAt: new Date(),
@@ -127,8 +125,8 @@ export async function computeAndCacheGrades(
             confidence,
             trajectory,
             gamesPlayed: engineOutput.gamesPlayed,
-            ppgPpr: stats.ppgPpr,
-            seasonFptsPpr: stats.seasonFptsPpr,
+            ppgPpr: null,
+            seasonFptsPpr: null,
             targets: stats.targets,
             touches: stats.touches,
             computedAt: new Date(),
@@ -266,11 +264,9 @@ async function getLatestAsOfWeek(season: number, version: string): Promise<numbe
   return result[0]?.maxWeek ? Number(result[0].maxWeek) : null;
 }
 
-async function fetchFantasyStats(playerId: string, season: number): Promise<FantasyStats> {
+async function fetchProductionStats(playerId: string, season: number): Promise<ProductionStats> {
   const rows = await db
     .select({
-      seasonFptsPpr: sql<number>`sum(${datadiveSnapshotPlayerWeek.fptsPpr})`,
-      ppgPpr: sql<number>`avg(${datadiveSnapshotPlayerWeek.fptsPpr})`,
       targets: sql<number>`sum(${datadiveSnapshotPlayerWeek.targets})`,
       touches: sql<number>`sum(coalesce(${datadiveSnapshotPlayerWeek.rushAttempts}, 0) + coalesce(${datadiveSnapshotPlayerWeek.receptions}, 0))`,
     })
@@ -279,8 +275,6 @@ async function fetchFantasyStats(playerId: string, season: number): Promise<Fant
 
   const agg = rows[0];
   return {
-    seasonFptsPpr: agg?.seasonFptsPpr !== null ? round1(Number(agg.seasonFptsPpr)) : null,
-    ppgPpr: agg?.ppgPpr !== null ? round1(Number(agg.ppgPpr)) : null,
     targets: agg?.targets !== null && agg?.targets !== undefined ? Number(agg.targets) : null,
     touches: agg?.touches !== null && agg?.touches !== undefined ? Number(agg.touches) : null,
   };

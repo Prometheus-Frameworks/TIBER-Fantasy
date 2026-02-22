@@ -20,27 +20,25 @@ export type ForgePosition = PlayerPosition;
 export type ForgeTrajectory = Trajectory;
 
 /**
- * v1.4: Scoring format options for PPR/Dynasty adjustments
+ * v1.5: Scoring mode options (format-neutral — no PPR coupling)
  */
 export type LeagueType = 'redraft' | 'dynasty';
-export type PPRType = '0.5' | '1'; // Half-PPR or Full PPR
 
 /**
  * Scoring options that affect Alpha calculation
- * - PPR: Adjusts efficiency subscore based on receptions (rec-heavy players get boost in full PPR)
  * - Dynasty: Applies age multiplier (young players get boost, old players get penalty)
+ * Note: PPR-specific adjustments were removed in FORGE/FIRE separation.
+ *       Reception value is now captured via format-neutral reception rate signals.
  */
 export interface ForgeScoreOptions {
   leagueType: LeagueType;
-  pprType: PPRType;
 }
 
 /**
- * Default scoring options (Redraft + Full PPR)
+ * Default scoring options (Redraft mode)
  */
 export const DEFAULT_SCORE_OPTIONS: ForgeScoreOptions = {
   leagueType: 'redraft',
-  pprType: '1',
 };
 
 /**
@@ -83,25 +81,16 @@ export interface FPRData {
 }
 
 /**
- * Fantasy stats for Tiber Tiers display
- * v1.2: Added for enhanced fantasy rankings UI
- * v1.5: Added recTds, xFpts, fpoe for advanced columns
+ * Production stats for Tiber Tiers display (format-neutral)
+ * v1.2: Originally FantasyStats, refactored in FORGE/FIRE separation
+ * Fantasy scoring outputs (PPR, half-PPR, etc.) now live in FIRE module.
  */
-export interface FantasyStats {
-  seasonFptsPpr: number;      // Season total fantasy points (PPR)
-  seasonFptsHalf: number;     // Season total fantasy points (Half-PPR)
-  ppgPpr: number;             // Points per game (PPR)
-  ppgHalf: number;            // Points per game (Half-PPR)
-  last3AvgPpr: number;        // Last 3 games average (PPR)
-  last3AvgHalf: number;       // Last 3 games average (Half-PPR)
+export interface ProductionStats {
   targets?: number;           // Season total targets (WR/TE/RB)
   touches?: number;           // Season total touches (rush att + targets for RB)
   receptions?: number;        // Season total receptions
-  recTds?: number;            // v1.5: Season receiving touchdowns
   snapPct?: number;           // Average snap percentage
   rzOpps?: number;            // Red zone opportunities
-  xFpts?: number;             // v1.5: Expected fantasy points (NFLfastR model)
-  fpoe?: number;              // v1.5: Fantasy Points Over Expected (actual - xFpts)
 }
 
 /**
@@ -126,7 +115,7 @@ export interface ForgeScore {
   
   fpr?: FPRData;              // Fibonacci Pattern Resonance data
   
-  fantasyStats?: FantasyStats; // v1.2: Fantasy stats for Tiber Tiers
+  productionStats?: ProductionStats; // v1.2→v2: Production stats (format-neutral)
   
   nextMatchup?: {             // v1.7: Next week's matchup info for DvP column
     opponent: string;
@@ -213,6 +202,7 @@ export interface ForgeContext {
     isActive: boolean;
   };
   
+  /** FORGE/FIRE NOTE: fantasyPointsPpr/HalfPpr retained as DB-sourced production proxies. See weeklyStats note. */
   seasonStats: {
     gamesPlayed: number;
     gamesStarted: number;
@@ -254,6 +244,14 @@ export interface ForgeContext {
     aypa?: number;           // Adjusted yards per attempt (QB)
   };
   
+  /**
+   * FORGE/FIRE SEPARATION NOTE:
+   * `fantasyPointsPpr` is used as a weekly production proxy for stability/trajectory
+   * calculations. It's sourced from DB snapshot data and currently the only available
+   * weekly output metric. A format-neutral replacement (e.g., yards + TD composite)
+   * requires adding weekly rushing/receiving yard columns to the data pipeline.
+   * Tagged for future migration when weekly raw production data is available.
+   */
   weeklyStats: Array<{
     week: number;
     fantasyPointsPpr: number;

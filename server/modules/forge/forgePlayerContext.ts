@@ -1,30 +1,15 @@
 /**
  * FORGE Player Context v1.1
  * 
- * Provides unified player identity + current team + advanced stats + fantasy summary.
+ * Provides unified player identity + current team + advanced stats.
  * Joins:
  * - player_identity_map (identity)
  * - forge_player_current_team (roster-driven team + last_seen_week)
- * - forge_player_fantasy_summary (PPR/half-PPR totals + position ranks)
  * - wr_advanced_stats_2025 / rb_advanced_stats_2025 (advanced stats)
  */
 
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
-
-export interface ForgeFantasySummary {
-  gamesPlayed: number | null;
-  lastWeekPlayed: number | null;
-  dataThroughWeek: number | null;
-  totalPpr: number | null;
-  totalHalfPpr: number | null;
-  totalStd: number | null;
-  lastWeekPpr: number | null;
-  lastWeekHalfPpr: number | null;
-  lastWeekStd: number | null;
-  pprRankPos: number | null;
-  halfPprRankPos: number | null;
-}
 
 export interface ForgePlayerContext {
   meta: { 
@@ -44,7 +29,6 @@ export interface ForgePlayerContext {
   usage: Record<string, any>;
   efficiency: Record<string, any>;
   finishing: Record<string, any>;
-  fantasy: ForgeFantasySummary;
   metaStats: {
     gamesPlayed: number;
     lastUpdated: string;
@@ -91,55 +75,6 @@ export async function getForgePlayerContext(
     const position = identity.position;
     const currentTeam = identity.current_team || identity.nfl_team;
     const lastSeenWeek = identity.last_seen_week ? Number(identity.last_seen_week) : null;
-
-    const fantasyResult = await db.execute(sql`
-      SELECT 
-        games_played,
-        last_week_played,
-        data_through_week,
-        total_ppr,
-        total_half_ppr,
-        total_std,
-        last_week_ppr,
-        last_week_half_ppr,
-        last_week_std,
-        ppr_pos_rank,
-        half_ppr_pos_rank
-      FROM forge_player_fantasy_summary
-      WHERE player_id = ${playerId} AND season = ${season}
-      LIMIT 1
-    `);
-
-    let fantasy: ForgeFantasySummary = {
-      gamesPlayed: null,
-      lastWeekPlayed: null,
-      dataThroughWeek: null,
-      totalPpr: null,
-      totalHalfPpr: null,
-      totalStd: null,
-      lastWeekPpr: null,
-      lastWeekHalfPpr: null,
-      lastWeekStd: null,
-      pprRankPos: null,
-      halfPprRankPos: null,
-    };
-
-    if (fantasyResult.rows.length) {
-      const fs = fantasyResult.rows[0] as any;
-      fantasy = {
-        gamesPlayed: fs.games_played ? Number(fs.games_played) : null,
-        lastWeekPlayed: fs.last_week_played ? Number(fs.last_week_played) : null,
-        dataThroughWeek: fs.data_through_week ? Number(fs.data_through_week) : null,
-        totalPpr: fs.total_ppr ? Number(fs.total_ppr) : null,
-        totalHalfPpr: fs.total_half_ppr ? Number(fs.total_half_ppr) : null,
-        totalStd: fs.total_std ? Number(fs.total_std) : null,
-        lastWeekPpr: fs.last_week_ppr ? Number(fs.last_week_ppr) : null,
-        lastWeekHalfPpr: fs.last_week_half_ppr ? Number(fs.last_week_half_ppr) : null,
-        lastWeekStd: fs.last_week_std ? Number(fs.last_week_std) : null,
-        pprRankPos: fs.ppr_pos_rank ? Number(fs.ppr_pos_rank) : null,
-        halfPprRankPos: fs.half_ppr_pos_rank ? Number(fs.half_ppr_pos_rank) : null,
-      };
-    }
 
     let usage: Record<string, any> = {};
     let efficiency: Record<string, any> = {};
@@ -400,7 +335,6 @@ export async function getForgePlayerContext(
       usage,
       efficiency,
       finishing,
-      fantasy,
       metaStats: {
         gamesPlayed,
         lastUpdated: new Date().toISOString(),

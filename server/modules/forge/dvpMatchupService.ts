@@ -10,6 +10,13 @@
  * - 40-59: Neutral matchup
  * - 20-39: Tough matchup
  * - 0-19: Very tough matchup (avoid)
+ * 
+ * FORGE/FIRE SEPARATION NOTE:
+ * This service uses fantasy-points-allowed (PPR) as its matchup signal,
+ * which is a valid defensive evaluation metric (how much production does
+ * this defense give up?). A future format-neutral approach could use
+ * yards/TDs allowed instead, but the current DvP data source provides
+ * PPR fpts-allowed as its primary metric. Deferred for full rebuild.
  */
 
 import { db } from '../../infra/db';
