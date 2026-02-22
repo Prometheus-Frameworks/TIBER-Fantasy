@@ -37,6 +37,15 @@ interface RollingRow {
   qb_exp_rush_td_r: number | null;
   games_played_window: number | null;
   weeks_present: number[] | null;
+  rushing_yards_r: number | null;
+  receiving_yards_r: number | null;
+  receptions_r: number | null;
+  rushing_tds_r: number | null;
+  receiving_tds_r: number | null;
+  rush_share_avg: number | null;
+  rz_rush_att_r: number | null;
+  rz_targets_r: number | null;
+  team_snaps_avg: number | null;
 }
 
 type Confidence = "HIGH" | "MED" | "LOW";
@@ -55,6 +64,7 @@ interface FirePlayer {
   confidence: Confidence;
   eligible: boolean;
   fireScore: number | null;
+  fireRank: number | null;
   pillars: { opportunity: number | null; role: number | null; conversion: number | null };
   raw: {
     xfp_R: number | null;
@@ -75,6 +85,24 @@ interface FirePlayer {
     qb_exp_int_R: number | null;
     qb_exp_rush_yards_R: number | null;
     qb_exp_rush_td_R: number | null;
+  };
+  stats: {
+    snapPct: number | null;
+    carriesPerGame: number | null;
+    targetsPerGame: number | null;
+    touchesPerGame: number | null;
+    rushSharePct: number | null;
+    targetSharePct: number | null;
+    ypc: number | null;
+    ypr: number | null;
+    rushYdsPerGame: number | null;
+    recYdsPerGame: number | null;
+    totalTds: number | null;
+    fantasyPpg: number | null;
+    fpStdDev: number | null;
+    boomPct: number | null;
+    xfpDiff: number | null;
+    rzTouchSharePct: number | null;
   };
   roleMeta: {
     targetSource: "target_share" | "targets_per_snap" | "targets_per_route" | "none";
@@ -130,67 +158,128 @@ function stdev(vals: number[]): number {
   return Math.sqrt(variance);
 }
 
-async function fetchRollingRows(season: number, week: number, position?: Position, playerIds?: string[]): Promise<{ rows: RollingRow[]; rollingWeeks: number[] }> {
+interface WeeklyFpRow {
+  player_id: string;
+  week: number;
+  fp_ppr: number;
+  fp_hppr: number;
+}
+
+async function fetchRollingRows(season: number, week: number, position?: Position, playerIds?: string[]): Promise<{ rows: RollingRow[]; rollingWeeks: number[]; weeklyFp: WeeklyFpRow[] }> {
   const weekStart = Math.max(1, week - 3);
-  const where: any[] = [sql`season = ${season}`, sql`week BETWEEN ${weekStart} AND ${week}`, sql`position IN ('QB','RB','WR','TE')`];
-  if (position) where.push(sql`position = ${position}`);
-  if (playerIds?.length) where.push(sql`player_id = ANY(${sql.raw(`ARRAY[${playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')}]`)})`);
+  const baseWhere: any[] = [sql`season = ${season}`, sql`week BETWEEN ${weekStart} AND ${week}`, sql`position IN ('QB','RB','WR','TE')`];
+  if (position) baseWhere.push(sql`position = ${position}`);
+  if (playerIds?.length) baseWhere.push(sql`player_id = ANY(${sql.raw(`ARRAY[${playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')}]`)})`);
+
+  const fmWhere: any[] = [sql`fm.season = ${season}`, sql`fm.week BETWEEN ${weekStart} AND ${week}`, sql`fm.position IN ('QB','RB','WR','TE')`];
+  if (position) fmWhere.push(sql`fm.position = ${position}`);
+  if (playerIds?.length) fmWhere.push(sql`fm.player_id = ANY(${sql.raw(`ARRAY[${playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')}]`)})`);
 
   const rollingWeeksResult = await db.execute(sql`
     SELECT DISTINCT week
     FROM fantasy_metrics_weekly_mv
-    WHERE ${sql.join(where, sql` AND `)}
+    WHERE ${sql.join(baseWhere, sql` AND `)}
     ORDER BY week ASC
   `);
 
   const rowsResult = await db.execute(sql`
     SELECT
-      player_id,
-      MAX(player_name) AS player_name,
-      MAX(position)::text AS position,
-      MAX(team) AS team,
-      SUM(COALESCE(snaps, 0))::real AS snaps_r,
-      AVG(snap_share)::real AS snap_avg,
-      SUM(COALESCE(targets, 0))::real AS targets_r,
-      AVG(target_share)::real AS target_avg,
-      SUM(COALESCE(routes, 0))::real AS routes_r,
-      AVG(route_participation)::real AS route_avg,
-      SUM(COALESCE(carries, 0))::real AS carries_r,
-      AVG(red_zone_touches)::real AS rz_avg,
-      SUM(x_ppr_v2)::real AS xfp_r,
-      SUM(xfpgoe_ppr_v2)::real AS xfpgoe_r,
-      SUM(COALESCE(qb_xfp_redraft, 0))::real AS qb_xfp_redraft_r,
-      SUM(COALESCE(qb_xfp_dynasty, 0))::real AS qb_xfp_dynasty_r,
-      SUM(COALESCE(qb_dropbacks, 0))::real AS qb_dropbacks_r,
-      SUM(COALESCE(qb_rush_attempts, 0))::real AS qb_rush_attempts_r,
-      SUM(COALESCE(inside10_dropbacks, 0))::real AS inside10_dropbacks_r,
-      SUM(COALESCE(exp_pass_yards, 0))::real AS qb_exp_pass_yards_r,
-      SUM(COALESCE(qb_exp_pass_td, 0))::real AS qb_exp_pass_td_r,
-      SUM(COALESCE(qb_exp_int, 0))::real AS qb_exp_int_r,
-      SUM(COALESCE(exp_rush_yards, 0))::real AS qb_exp_rush_yards_r,
-      SUM(COALESCE(qb_exp_rush_td, 0))::real AS qb_exp_rush_td_r,
+      fm.player_id,
+      MAX(fm.player_name) AS player_name,
+      MAX(fm.position)::text AS position,
+      MAX(fm.team) AS team,
+      SUM(COALESCE(fm.snaps, 0))::real AS snaps_r,
+      AVG(fm.snap_share)::real AS snap_avg,
+      SUM(COALESCE(fm.targets, 0))::real AS targets_r,
+      AVG(fm.target_share)::real AS target_avg,
+      SUM(COALESCE(fm.routes, 0))::real AS routes_r,
+      AVG(fm.route_participation)::real AS route_avg,
+      SUM(COALESCE(fm.carries, 0))::real AS carries_r,
+      AVG(fm.red_zone_touches)::real AS rz_avg,
+      SUM(fm.x_ppr_v2)::real AS xfp_r,
+      SUM(fm.xfpgoe_ppr_v2)::real AS xfpgoe_r,
+      SUM(COALESCE(fm.qb_xfp_redraft, 0))::real AS qb_xfp_redraft_r,
+      SUM(COALESCE(fm.qb_xfp_dynasty, 0))::real AS qb_xfp_dynasty_r,
+      SUM(COALESCE(fm.qb_dropbacks, 0))::real AS qb_dropbacks_r,
+      SUM(COALESCE(fm.qb_rush_attempts, 0))::real AS qb_rush_attempts_r,
+      SUM(COALESCE(fm.inside10_dropbacks, 0))::real AS inside10_dropbacks_r,
+      SUM(COALESCE(fm.exp_pass_yards, 0))::real AS qb_exp_pass_yards_r,
+      SUM(COALESCE(fm.qb_exp_pass_td, 0))::real AS qb_exp_pass_td_r,
+      SUM(COALESCE(fm.qb_exp_int, 0))::real AS qb_exp_int_r,
+      SUM(COALESCE(fm.exp_rush_yards, 0))::real AS qb_exp_rush_yards_r,
+      SUM(COALESCE(fm.qb_exp_rush_td, 0))::real AS qb_exp_rush_td_r,
       COUNT(*) FILTER (
-        WHERE COALESCE(snaps, 0) > 0
-          OR COALESCE(qb_dropbacks, 0) > 0
-          OR (snaps IS NULL AND (COALESCE(targets, 0) + COALESCE(carries, 0)) > 0)
+        WHERE COALESCE(fm.snaps, 0) > 0
+          OR COALESCE(fm.qb_dropbacks, 0) > 0
+          OR (fm.snaps IS NULL AND (COALESCE(fm.targets, 0) + COALESCE(fm.carries, 0)) > 0)
       )::int AS games_played_window,
-      ARRAY_AGG(DISTINCT week ORDER BY week) FILTER (
-        WHERE COALESCE(snaps, 0) > 0
-          OR COALESCE(qb_dropbacks, 0) > 0
-          OR (snaps IS NULL AND (COALESCE(targets, 0) + COALESCE(carries, 0)) > 0)
-      )::int[] AS weeks_present
-    FROM fantasy_metrics_weekly_mv
-    WHERE ${sql.join(where, sql` AND `)}
-    GROUP BY player_id
+      ARRAY_AGG(DISTINCT fm.week ORDER BY fm.week) FILTER (
+        WHERE COALESCE(fm.snaps, 0) > 0
+          OR COALESCE(fm.qb_dropbacks, 0) > 0
+          OR (fm.snaps IS NULL AND (COALESCE(fm.targets, 0) + COALESCE(fm.carries, 0)) > 0)
+      )::int[] AS weeks_present,
+      SUM(COALESCE(s.rushing_yards, 0))::real AS rushing_yards_r,
+      SUM(COALESCE(s.receiving_yards, 0))::real AS receiving_yards_r,
+      SUM(COALESCE(s.receptions, 0))::real AS receptions_r,
+      SUM(COALESCE(s.rushing_tds, 0))::real AS rushing_tds_r,
+      SUM(COALESCE(s.receiving_tds, 0))::real AS receiving_tds_r,
+      AVG(fm.rush_share)::real AS rush_share_avg,
+      SUM(COALESCE(fm.rz_rushes, 0) + COALESCE(fm.rz_targets, 0))::real AS rz_rush_att_r,
+      SUM(COALESCE(fm.rz_targets, 0))::real AS rz_targets_r,
+      AVG(CASE WHEN fm.snap_share IS NOT NULL AND fm.snap_share > 0
+           THEN fm.snaps / NULLIF(fm.snap_share, 0) ELSE NULL END)::real AS team_snaps_avg
+    FROM fantasy_metrics_weekly_mv fm
+    LEFT JOIN silver_player_weekly_stats s
+      ON s.player_id = fm.player_id AND s.season = fm.season AND s.week = fm.week
+    WHERE ${sql.join(fmWhere, sql` AND `)}
+    GROUP BY fm.player_id
+  `);
+
+  const fpResult = await db.execute(sql`
+    SELECT
+      player_id,
+      week,
+      (COALESCE(rushing_yards, 0) * 0.1
+       + COALESCE(receiving_yards, 0) * 0.1
+       + COALESCE(receptions, 0) * 1.0
+       + COALESCE(rushing_tds, 0) * 6
+       + COALESCE(receiving_tds, 0) * 6
+       + COALESCE(passing_yards, 0) * 0.04
+       + COALESCE(passing_tds, 0) * 4
+       + COALESCE(interceptions, 0) * (-2)
+      )::real AS fp_ppr,
+      (COALESCE(rushing_yards, 0) * 0.1
+       + COALESCE(receiving_yards, 0) * 0.1
+       + COALESCE(receptions, 0) * 0.5
+       + COALESCE(rushing_tds, 0) * 6
+       + COALESCE(receiving_tds, 0) * 6
+       + COALESCE(passing_yards, 0) * 0.04
+       + COALESCE(passing_tds, 0) * 4
+       + COALESCE(interceptions, 0) * (-2)
+      )::real AS fp_hppr
+    FROM silver_player_weekly_stats
+    WHERE season = ${season}
+      AND week BETWEEN ${weekStart} AND ${week}
+      ${position ? sql`AND position = ${position}` : sql``}
   `);
 
   return {
     rows: rowsResult.rows as unknown as RollingRow[],
     rollingWeeks: (rollingWeeksResult.rows as any[]).map((r) => Number(r.week)).filter(Number.isFinite),
+    weeklyFp: fpResult.rows as unknown as WeeklyFpRow[],
   };
 }
 
-function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[], scoringPreset: ScoringPreset): FirePlayer[] {
+function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[], scoringPreset: ScoringPreset, weeklyFp: WeeklyFpRow[]): FirePlayer[] {
+  const fpByPlayer = new Map<string, number[]>();
+  const fpHpprByPlayer = new Map<string, number[]>();
+  for (const wf of weeklyFp) {
+    if (!fpByPlayer.has(wf.player_id)) fpByPlayer.set(wf.player_id, []);
+    if (!fpHpprByPlayer.has(wf.player_id)) fpHpprByPlayer.set(wf.player_id, []);
+    fpByPlayer.get(wf.player_id)!.push(wf.fp_ppr);
+    fpHpprByPlayer.get(wf.player_id)!.push(wf.fp_hppr);
+  }
+
   const basePlayers: FirePlayer[] = rows.map((row) => {
     const targetShare = row.target_avg;
     const routesR = row.routes_r;
@@ -228,6 +317,30 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     const weeksPresent = (row.weeks_present ?? []).map((w) => Number(w)).filter((w) => Number.isFinite(w)).sort((a, b) => a - b);
     const confidence = classifyConfidence(row.position, gamesPlayedWindow, row.snaps_r ?? 0, qbDropbacksR, windowWeeks);
 
+    const g = Math.max(gamesPlayedWindow, 1);
+    const sCarries = row.carries_r ?? 0;
+    const sTargets = row.targets_r ?? 0;
+    const rushYds = row.rushing_yards_r ?? 0;
+    const recYds = row.receiving_yards_r ?? 0;
+    const recs = row.receptions_r ?? 0;
+    const rushTds = row.rushing_tds_r ?? 0;
+    const recTds = row.receiving_tds_r ?? 0;
+    const totalTds = rushTds + recTds;
+    const xfpTotal = row.xfp_r ?? 0;
+
+    const fpWeeklyPpr = fpByPlayer.get(row.player_id) ?? [];
+    const fpWeeklyHppr = fpHpprByPlayer.get(row.player_id) ?? [];
+    const fpArr = fpWeeklyPpr.length ? fpWeeklyPpr : fpWeeklyHppr;
+    const fpPprSum = fpWeeklyPpr.reduce((a, b) => a + b, 0);
+    const fpHpprSum = fpWeeklyHppr.reduce((a, b) => a + b, 0);
+    const fantasyPpg = fpWeeklyPpr.length ? fpPprSum / fpWeeklyPpr.length : null;
+    const fpStdDevVal = fpArr.length > 1 ? stdev(fpArr) : null;
+    const boomThreshold = 18;
+    const boomPctVal = fpWeeklyPpr.length ? (fpWeeklyPpr.filter((v) => v >= boomThreshold).length / fpWeeklyPpr.length) * 100 : null;
+    const xfpDiffVal = fpWeeklyPpr.length && xfpTotal ? fpPprSum - xfpTotal : null;
+
+    const rzTouchSharePct: number | null = null;
+
     return {
       playerId: row.player_id,
       playerName: row.player_name,
@@ -242,6 +355,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       confidence,
       eligible,
       fireScore: null,
+      fireRank: null,
       pillars: { opportunity: null, role: null, conversion: row.position === "QB" ? null : null },
       raw: {
         xfp_R: row.xfp_r,
@@ -262,6 +376,24 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         qb_exp_int_R: row.qb_exp_int_r,
         qb_exp_rush_yards_R: row.qb_exp_rush_yards_r,
         qb_exp_rush_td_R: row.qb_exp_rush_td_r,
+      },
+      stats: {
+        snapPct: row.snap_avg != null ? row.snap_avg * 100 : null,
+        carriesPerGame: sCarries / g,
+        targetsPerGame: sTargets / g,
+        touchesPerGame: (sCarries + sTargets) / g,
+        rushSharePct: row.rush_share_avg != null ? row.rush_share_avg * 100 : null,
+        targetSharePct: row.target_avg != null ? row.target_avg * 100 : null,
+        ypc: sCarries > 0 ? rushYds / sCarries : null,
+        ypr: recs > 0 ? recYds / recs : null,
+        rushYdsPerGame: rushYds / g,
+        recYdsPerGame: recYds / g,
+        totalTds,
+        fantasyPpg,
+        fpStdDev: fpStdDevVal,
+        boomPct: boomPctVal,
+        xfpDiff: xfpDiffVal,
+        rzTouchSharePct,
       },
       roleMeta: {
         targetSource,
@@ -377,6 +509,12 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     }
   }
 
+  for (const pos of SUPPORTED_POSITIONS) {
+    const eligible = basePlayers.filter((p) => p.position === pos && p.eligible && p.fireScore != null);
+    eligible.sort((a, b) => (b.fireScore ?? 0) - (a.fireScore ?? 0));
+    eligible.forEach((p, i) => { p.fireRank = i + 1; });
+  }
+
   return basePlayers;
 }
 
@@ -406,8 +544,8 @@ router.get('/fire/eg/batch', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'position must be QB, RB, WR, or TE' });
     }
 
-    const { rows, rollingWeeks } = await fetchRollingRows(season, week, position, playerIds);
-    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset);
+    const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, position, playerIds);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp);
 
     return res.json({
       metadata: {
@@ -457,8 +595,8 @@ router.get('/fire/eg/player', async (req: Request, res: Response) => {
       });
     }
 
-    const { rows, rollingWeeks } = await fetchRollingRows(season, week, pos, undefined);
-    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset);
+    const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, pos, undefined);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp);
     const found = data.find((p) => p.playerId === playerId);
 
     return res.json(found ?? { playerId, season, weekAnchor: week, eligible: false, fireScore: null });
@@ -490,8 +628,8 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
     const allRows: any[] = [];
 
     for (const pos of positions) {
-      const { rows, rollingWeeks } = await fetchRollingRows(season, week, pos, undefined);
-      const fireRows = buildFire(rows, season, week, rollingWeeks, 'redraft').filter((p) => p.eligible && p.fireScore != null);
+      const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, pos, undefined);
+      const fireRows = buildFire(rows, season, week, rollingWeeks, 'redraft', weeklyFp).filter((p) => p.eligible && p.fireScore != null);
       if (!fireRows.length) continue;
 
       const forgeRaw = await runForgeEngineBatch(pos, season, week, 400);
@@ -634,8 +772,8 @@ router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
     const trendRows: any[] = [];
 
     for (let anchorWeek = minWeek; anchorWeek <= maxWeek; anchorWeek += 1) {
-      const { rows, rollingWeeks } = await fetchRollingRows(season, anchorWeek, position, undefined);
-      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks, 'redraft').filter((p) => p.eligible && p.fireScore != null);
+      const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, anchorWeek, position, undefined);
+      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks, 'redraft', weeklyFp).filter((p) => p.eligible && p.fireScore != null);
       const fireById = new Map(fireRows.map((r) => [r.playerId, r]));
       if (!fireById.has(playerId)) continue;
 

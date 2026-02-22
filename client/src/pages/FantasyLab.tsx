@@ -7,15 +7,72 @@ type ViewMode = 'FIRE' | 'DELTA' | 'WATCHLIST';
 type DirectionFilter = 'ALL' | 'BUY_LOW' | 'SELL_HIGH' | 'NEUTRAL';
 type ConfidenceFilter = 'ALL' | 'HM' | 'HIGH';
 type SortMode = 'ABSZ' | 'ZDESC' | 'ZASC';
+type ColumnPreset = 'BASIC' | 'VOLUME' | 'FULL';
 
 const seasons = [2025, 2024, 2023];
 const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
 const WATCHLIST_KEY = 'fantasy-lab-watchlist-v1';
+const PRESET_KEY = 'fantasy-lab-preset-v1';
 
 function num(v: unknown, digits = 1): string {
   if (typeof v !== 'number' || Number.isNaN(v)) return '—';
   return v.toFixed(digits);
 }
+
+function pct(v: unknown): string {
+  if (typeof v !== 'number' || Number.isNaN(v)) return '—';
+  return v.toFixed(0) + '%';
+}
+
+interface ColDef {
+  key: string;
+  label: string;
+  shortLabel?: string;
+  group: 'identity' | 'fire' | 'games' | 'volume' | 'efficiency' | 'production' | 'consistency';
+  render: (r: any) => string;
+  align?: 'left' | 'right';
+  sortKey?: (r: any) => number;
+  preset: ColumnPreset[];
+}
+
+const FIRE_COLUMNS: ColDef[] = [
+  { key: 'rank', label: 'Rank', group: 'identity', render: (r) => r.fireRank != null ? `#${r.fireRank}` : '—', align: 'right', sortKey: (r) => r.fireRank ?? 999, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'player', label: 'Player', group: 'identity', render: (r) => r.playerName || r.playerId, align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'team', label: 'Team', group: 'identity', render: (r) => r.team || '—', align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'fire', label: 'FIRE', group: 'identity', render: (r) => num(r.fireScore), align: 'right', sortKey: (r) => r.fireScore ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'opp', label: 'Opp', group: 'fire', render: (r) => num(r.pillars?.opportunity), align: 'right', sortKey: (r) => r.pillars?.opportunity ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'role', label: 'Role', group: 'fire', render: (r) => num(r.pillars?.role), align: 'right', sortKey: (r) => r.pillars?.role ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'conv', label: 'Conv', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'conf', label: 'Conf', group: 'fire', render: (r) => r.confidence || 'LOW', align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'games', label: 'Games', group: 'games', render: (r) => String(r.games_played_window ?? '—'), align: 'right', sortKey: (r) => r.games_played_window ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'snaps', label: 'Snaps', group: 'games', render: (r) => num(r.raw?.snaps_R, 0), align: 'right', sortKey: (r) => r.raw?.snaps_R ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'snapPct', label: 'Snap%', group: 'games', render: (r) => pct(r.stats?.snapPct), align: 'right', sortKey: (r) => r.stats?.snapPct ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'carGm', label: 'Car/G', group: 'volume', render: (r) => num(r.stats?.carriesPerGame), align: 'right', sortKey: (r) => r.stats?.carriesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'tgtGm', label: 'Tgt/G', group: 'volume', render: (r) => num(r.stats?.targetsPerGame), align: 'right', sortKey: (r) => r.stats?.targetsPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'tchGm', label: 'Tch/G', group: 'volume', render: (r) => num(r.stats?.touchesPerGame), align: 'right', sortKey: (r) => r.stats?.touchesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'rushSh', label: 'Rush%', shortLabel: 'RSh%', group: 'volume', render: (r) => pct(r.stats?.rushSharePct), align: 'right', sortKey: (r) => r.stats?.rushSharePct ?? 0, preset: [] },
+  { key: 'tgtSh', label: 'Tgt%', shortLabel: 'TSh%', group: 'volume', render: (r) => pct(r.stats?.targetSharePct), align: 'right', sortKey: (r) => r.stats?.targetSharePct ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'ypc', label: 'YPC', group: 'efficiency', render: (r) => num(r.stats?.ypc), align: 'right', sortKey: (r) => r.stats?.ypc ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'ypr', label: 'YPR', group: 'efficiency', render: (r) => num(r.stats?.ypr), align: 'right', sortKey: (r) => r.stats?.ypr ?? 0, preset: ['FULL'] },
+  { key: 'rushYG', label: 'RshY/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['FULL'] },
+  { key: 'recYG', label: 'RecY/G', group: 'production', render: (r) => num(r.stats?.recYdsPerGame), align: 'right', sortKey: (r) => r.stats?.recYdsPerGame ?? 0, preset: ['FULL'] },
+  { key: 'tds', label: 'TDs', group: 'production', render: (r) => String(r.stats?.totalTds ?? '—'), align: 'right', sortKey: (r) => r.stats?.totalTds ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'fpg', label: 'FPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'xfpDiff', label: 'xFP±', group: 'production', render: (r) => num(r.stats?.xfpDiff), align: 'right', sortKey: (r) => r.stats?.xfpDiff ?? 0, preset: ['FULL'] },
+  { key: 'fpSd', label: 'FP SD', group: 'consistency', render: (r) => num(r.stats?.fpStdDev), align: 'right', sortKey: (r) => r.stats?.fpStdDev ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'boom', label: 'Boom%', group: 'consistency', render: (r) => pct(r.stats?.boomPct), align: 'right', sortKey: (r) => r.stats?.boomPct ?? 0, preset: ['VOLUME', 'FULL'] },
+  { key: 'rzSh', label: 'RZ Tch%', group: 'consistency', render: (r) => pct(r.stats?.rzTouchSharePct), align: 'right', sortKey: (r) => r.stats?.rzTouchSharePct ?? 0, preset: [] },
+];
+
+const GROUP_COLORS: Record<string, string> = {
+  identity: '',
+  fire: 'bg-orange-50',
+  games: 'bg-blue-50',
+  volume: 'bg-green-50',
+  efficiency: 'bg-purple-50',
+  production: 'bg-amber-50',
+  consistency: 'bg-rose-50',
+};
 
 function parseParams() {
   const p = new URLSearchParams(window.location.search);
@@ -48,6 +105,22 @@ export default function FantasyLab() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [trends, setTrends] = useState<Record<string, any[]>>({});
+  const [columnPreset, setColumnPreset] = useState<ColumnPreset>(() => {
+    const saved = localStorage.getItem(PRESET_KEY);
+    if (saved === 'BASIC' || saved === 'VOLUME' || saved === 'FULL') return saved;
+    return 'VOLUME';
+  });
+  const [fireSortCol, setFireSortCol] = useState<string>('fire');
+  const [fireSortAsc, setFireSortAsc] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(PRESET_KEY, columnPreset);
+  }, [columnPreset]);
+
+  const visibleCols = useMemo(() =>
+    FIRE_COLUMNS.filter((c) => c.preset.includes(columnPreset)),
+    [columnPreset]
+  );
 
   const weekMetaQuery = useQuery<{ metadata?: { weeksReturned?: { max?: number } } }>({
     queryKey: [`/api/fantasy-lab/weekly?season=${season}&limit=1`],
@@ -59,9 +132,7 @@ export default function FantasyLab() {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) setWatchlist(parsed.filter((v) => typeof v === 'string'));
-    } catch {
-      // ignore malformed localStorage
-    }
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -96,9 +167,16 @@ export default function FantasyLab() {
   });
 
   const fireRows = useMemo(() => {
-    const rows = (fireQuery.data?.data || []) as any[];
-    return [...rows].sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
-  }, [fireQuery.data]);
+    const rows = (fireQuery.data?.data || []).filter((r: any) => r.eligible && r.fireScore != null) as any[];
+    const colDef = FIRE_COLUMNS.find((c) => c.key === fireSortCol);
+    const sortFn = colDef?.sortKey;
+    if (sortFn) {
+      rows.sort((a, b) => fireSortAsc ? sortFn(a) - sortFn(b) : sortFn(b) - sortFn(a));
+    } else {
+      rows.sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
+    }
+    return rows;
+  }, [fireQuery.data, fireSortCol, fireSortAsc]);
 
   const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
 
@@ -146,23 +224,22 @@ export default function FantasyLab() {
     setWatchlist((prev) => prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]);
   };
 
+  const handleFireSort = (colKey: string) => {
+    if (fireSortCol === colKey) {
+      setFireSortAsc(!fireSortAsc);
+    } else {
+      setFireSortCol(colKey);
+      setFireSortAsc(false);
+    }
+  };
+
   const exportCsv = () => {
     let headers: string[] = [];
     let csvRows: string[][] = [];
 
     if (view === 'FIRE') {
-      headers = ['Player', 'Team', 'FIRE', 'Opportunity', 'Role', 'Conversion', 'Games', 'Confidence', 'Snaps'];
-      csvRows = fireRows.map((r) => [
-        r.playerName || r.playerId,
-        r.team || '',
-        num(r.fireScore),
-        num(r.pillars?.opportunity),
-        num(r.pillars?.role),
-        num(r.pillars?.conversion),
-        String(r.games_played_window ?? ''),
-        r.confidence || 'LOW',
-        num(r.raw?.snaps_R, 0),
-      ]);
+      headers = visibleCols.map((c) => c.label);
+      csvRows = fireRows.map((r) => visibleCols.map((c) => c.render(r)));
     } else if (view === 'DELTA') {
       headers = ['Player', 'Team', 'Confidence', 'Display Delta', 'Rank Z', 'Games', 'Direction', 'Why'];
       csvRows = deltaRows.map((r) => [
@@ -224,6 +301,14 @@ export default function FantasyLab() {
           ))}
         </div>
 
+        {view === 'FIRE' && (
+          <div className="flex border rounded overflow-hidden">
+            {([['BASIC', 'Basic'], ['VOLUME', 'Volume'], ['FULL', 'Full']] as [ColumnPreset, string][]).map(([k, label]) => (
+              <button key={k} onClick={() => setColumnPreset(k)} className={`px-3 py-1 text-sm ${columnPreset === k ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-gray-50'}`}>{label}</button>
+            ))}
+          </div>
+        )}
+
         <button
           onClick={exportCsv}
           disabled={isLoading}
@@ -258,28 +343,62 @@ export default function FantasyLab() {
 
       {!isLoading && view === 'FIRE' && (
         <div className="bg-white border rounded-lg overflow-auto">
+          <div className="px-3 py-2 border-b text-xs text-gray-500 flex items-center justify-between">
+            <span>{fireRows.length} eligible players &middot; {visibleCols.length} columns &middot; Click headers to sort</span>
+            <span className="text-gray-400">PPR scoring &middot; Last {fireQuery.data?.metadata?.rollingWeeks?.length ?? 4} weeks</span>
+          </div>
           {!fireRows.length ? (
             <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left">
+              <thead className="bg-gray-50 text-left sticky top-0 z-10">
                 <tr>
-                  <th className="p-2">★</th><th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">FIRE</th><th className="p-2">Opp</th><th className="p-2">Role</th><th className="p-2">Conv</th><th className="p-2">Games</th><th className="p-2">Confidence</th><th className="p-2">snaps_R</th>
+                  <th className="p-2 w-8"></th>
+                  {visibleCols.map((col) => (
+                    <th
+                      key={col.key}
+                      className={`p-2 cursor-pointer select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : 'text-left'} ${GROUP_COLORS[col.group] || ''}`}
+                      onClick={() => col.sortKey && handleFireSort(col.key)}
+                      title={col.label}
+                    >
+                      {col.shortLabel || col.label}
+                      {fireSortCol === col.key && <span className="ml-1 text-orange-600">{fireSortAsc ? '▲' : '▼'}</span>}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {fireRows.map((r) => (
-                  <tr key={r.playerId} className="border-t">
-                    <td className="p-2"><button onClick={() => toggleStar(r.playerId)}>{watchlist.includes(r.playerId) ? '★' : '☆'}</button></td>
-                    <td className="p-2">{r.playerName || r.playerId}</td>
-                    <td className="p-2">{r.team || '—'}</td>
-                    <td className="p-2 font-semibold">{num(r.fireScore)}</td>
-                    <td className="p-2">{num(r.pillars?.opportunity)}</td>
-                    <td className="p-2">{num(r.pillars?.role)}</td>
-                    <td className="p-2">{num(r.pillars?.conversion)}</td>
-                    <td className="p-2">{r.games_played_window ?? '—'}</td>
-                    <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${confidenceClass(r.confidence)}`}>{r.confidence || 'LOW'}</span></td>
-                    <td className="p-2">{num(r.raw?.snaps_R, 0)}</td>
+                  <tr key={r.playerId} className="border-t hover:bg-gray-50">
+                    <td className="p-2">
+                      <button onClick={() => toggleStar(r.playerId)} className="text-lg leading-none">
+                        {watchlist.includes(r.playerId) ? '★' : '☆'}
+                      </button>
+                    </td>
+                    {visibleCols.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''} ${col.key === 'conf' ? '' : ''}`}
+                      >
+                        {col.key === 'conf' ? (
+                          <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
+                            {r.confidence || 'LOW'}
+                          </span>
+                        ) : col.key === 'fire' ? (
+                          <span className={r.fireScore >= 80 ? 'text-emerald-700' : r.fireScore >= 60 ? 'text-blue-700' : r.fireScore >= 40 ? 'text-gray-800' : 'text-red-600'}>
+                            {col.render(r)}
+                          </span>
+                        ) : col.key === 'boom' ? (
+                          <span className={r.stats?.boomPct >= 50 ? 'text-emerald-700 font-medium' : ''}>
+                            {col.render(r)}
+                          </span>
+                        ) : col.key === 'xfpDiff' ? (
+                          <span className={(r.stats?.xfpDiff ?? 0) > 0 ? 'text-emerald-700' : (r.stats?.xfpDiff ?? 0) < -5 ? 'text-red-600' : ''}>
+                            {col.render(r)}
+                          </span>
+                        ) : col.render(r)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
