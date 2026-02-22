@@ -97,7 +97,9 @@ export default function FantasyLab() {
 
   const fireRows = useMemo(() => {
     const rows = (fireQuery.data?.data || []) as any[];
-    return [...rows].sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
+    return [...rows]
+      .filter((r) => r.eligible && r.fireScore != null)
+      .sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
   }, [fireQuery.data]);
 
   const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
