@@ -146,6 +146,56 @@ export default function FantasyLab() {
     setWatchlist((prev) => prev.includes(playerId) ? prev.filter((id) => id !== playerId) : [...prev, playerId]);
   };
 
+  const exportCsv = () => {
+    let headers: string[] = [];
+    let csvRows: string[][] = [];
+
+    if (view === 'FIRE') {
+      headers = ['Player', 'Team', 'FIRE', 'Opportunity', 'Role', 'Conversion', 'Games', 'Confidence', 'Snaps'];
+      csvRows = fireRows.map((r) => [
+        r.playerName || r.playerId,
+        r.team || '',
+        num(r.fireScore),
+        num(r.pillars?.opportunity),
+        num(r.pillars?.role),
+        num(r.pillars?.conversion),
+        String(r.games_played_window ?? ''),
+        r.confidence || 'LOW',
+        num(r.raw?.snaps_R, 0),
+      ]);
+    } else if (view === 'DELTA') {
+      headers = ['Player', 'Team', 'Confidence', 'Display Delta', 'Rank Z', 'Games', 'Direction', 'Why'];
+      csvRows = deltaRows.map((r) => [
+        r.playerName || r.playerId,
+        r.team || '',
+        r.confidence || '',
+        num(r.delta?.displayPct),
+        num(r.delta?.rankZ, 2),
+        String(r.games_played_window ?? ''),
+        r.delta?.direction || '',
+        r.why?.note || '',
+      ]);
+    } else {
+      headers = ['Player', 'Position', 'Rank Z', 'Display Pct'];
+      csvRows = watchRows.map((r) => [
+        r.playerName || r.playerId,
+        r.position || '',
+        num(r.delta?.rankZ, 2),
+        num(r.delta?.displayPct, 1),
+      ]);
+    }
+
+    const escape = (v: string) => v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+    const csv = [headers.join(','), ...csvRows.map((row) => row.map(escape).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fantasy-lab-${view.toLowerCase()}-${position}-wk${week}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6 space-y-5">
       <div>
@@ -173,6 +223,14 @@ export default function FantasyLab() {
             <button key={v} onClick={() => setView(v)} className={`px-3 py-1 text-sm ${view === v ? 'bg-slate-900 text-white' : 'bg-white'}`}>{v}</button>
           ))}
         </div>
+
+        <button
+          onClick={exportCsv}
+          disabled={isLoading}
+          className="ml-auto px-3 py-1 text-sm border rounded bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
+        >
+          Export CSV
+        </button>
       </div>
 
       {view === 'DELTA' && (
