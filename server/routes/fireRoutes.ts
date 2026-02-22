@@ -84,14 +84,20 @@ interface FirePlayer {
   };
 }
 
-function thresholdForPosition(position: Position): number {
+function baseThresholdForPosition(position: Position): number {
   if (position === "RB") return 50;
   if (position === "QB") return 80;
   return 80;
 }
 
-function classifyConfidence(position: Position, gamesPlayedWindow: number, snapsR: number, qbDropbacksR: number): Confidence {
-  const threshold = thresholdForPosition(position);
+function scaledThreshold(position: Position, windowWeeks: number): number {
+  const base = baseThresholdForPosition(position);
+  const scale = Math.min(windowWeeks, 4) / 4;
+  return Math.max(Math.round(base * scale), position === "RB" ? 8 : 12);
+}
+
+function classifyConfidence(position: Position, gamesPlayedWindow: number, snapsR: number, qbDropbacksR: number, windowWeeks: number): Confidence {
+  const threshold = scaledThreshold(position, windowWeeks);
   const workload = position === "QB" ? qbDropbacksR : snapsR;
   if (gamesPlayedWindow >= 4 && workload >= threshold * 1.5) return "HIGH";
   if (gamesPlayedWindow <= 2 || workload < threshold) return "LOW";
@@ -209,15 +215,18 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     }
 
     const qbDropbacksR = row.qb_dropbacks_r ?? 0;
+    const windowWeeks = rollingWeeks.length || 1;
+    const posThreshold = scaledThreshold(row.position, windowWeeks);
+    const qbThreshold = scaledThreshold("QB", windowWeeks);
     const eligible = row.position === "RB"
-      ? (row.snaps_r ?? 0) >= 50
+      ? (row.snaps_r ?? 0) >= posThreshold
       : row.position === "QB"
-      ? (qbDropbacksR >= 80 || (row.snaps_r ?? 0) >= 100)
-      : (row.snaps_r ?? 0) >= 80;
+      ? (qbDropbacksR >= qbThreshold || (row.snaps_r ?? 0) >= Math.round(100 * Math.min(windowWeeks, 4) / 4))
+      : (row.snaps_r ?? 0) >= posThreshold;
 
     const gamesPlayedWindow = row.games_played_window ?? 0;
     const weeksPresent = (row.weeks_present ?? []).map((w) => Number(w)).filter((w) => Number.isFinite(w)).sort((a, b) => a - b);
-    const confidence = classifyConfidence(row.position, gamesPlayedWindow, row.snaps_r ?? 0, qbDropbacksR);
+    const confidence = classifyConfidence(row.position, gamesPlayedWindow, row.snaps_r ?? 0, qbDropbacksR, windowWeeks);
 
     return {
       playerId: row.player_id,
@@ -407,7 +416,13 @@ router.get('/fire/eg/batch', async (req: Request, res: Response) => {
         rollingWeeks,
         scoringPreset,
         positions: position ? [position] : SUPPORTED_POSITIONS,
-        eligibilityThresholds: { QB: 80, RB: 50, WR: 80, TE: 80, qbSnapsFallback: 100 },
+        eligibilityThresholds: {
+          QB: scaledThreshold("QB", rollingWeeks.length || 1),
+          RB: scaledThreshold("RB", rollingWeeks.length || 1),
+          WR: scaledThreshold("WR", rollingWeeks.length || 1),
+          TE: scaledThreshold("TE", rollingWeeks.length || 1),
+          windowWeeks: rollingWeeks.length || 1,
+        },
         notes: ['QB FIRE v1 uses Opportunity + Role only; Conversion is deferred to v1.1.'],
       },
       data,
