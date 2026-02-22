@@ -50,7 +50,7 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'carGm', label: 'Car/G', group: 'volume', render: (r) => num(r.stats?.carriesPerGame), align: 'right', sortKey: (r) => r.stats?.carriesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'tgtGm', label: 'Tgt/G', group: 'volume', render: (r) => num(r.stats?.targetsPerGame), align: 'right', sortKey: (r) => r.stats?.targetsPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'tchGm', label: 'Tch/G', group: 'volume', render: (r) => num(r.stats?.touchesPerGame), align: 'right', sortKey: (r) => r.stats?.touchesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'rushSh', label: 'Rush%', shortLabel: 'RSh%', group: 'volume', render: (r) => pct(r.stats?.rushSharePct), align: 'right', sortKey: (r) => r.stats?.rushSharePct ?? 0, preset: [] },
+  { key: 'rushSh', label: 'Rush%', shortLabel: 'RSh%', group: 'volume', render: (r) => pct(r.stats?.rushSharePct), align: 'right', sortKey: (r) => r.stats?.rushSharePct ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'tgtSh', label: 'Tgt%', shortLabel: 'TSh%', group: 'volume', render: (r) => pct(r.stats?.targetSharePct), align: 'right', sortKey: (r) => r.stats?.targetSharePct ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'ypc', label: 'YPC', group: 'efficiency', render: (r) => num(r.stats?.ypc), align: 'right', sortKey: (r) => r.stats?.ypc ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'ypr', label: 'YPR', group: 'efficiency', render: (r) => num(r.stats?.ypr), align: 'right', sortKey: (r) => r.stats?.ypr ?? 0, preset: ['FULL'] },

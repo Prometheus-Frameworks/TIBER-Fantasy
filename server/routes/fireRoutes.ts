@@ -165,7 +165,28 @@ interface WeeklyFpRow {
   fp_hppr: number;
 }
 
-async function fetchRollingRows(season: number, week: number, position?: Position, playerIds?: string[]): Promise<{ rows: RollingRow[]; rollingWeeks: number[]; weeklyFp: WeeklyFpRow[] }> {
+interface WeeklyPlayerStatRow {
+  player_id: string;
+  team: string;
+  week: number;
+  rush_attempts: number;
+  targets: number;
+  snaps: number;
+  rz_rush_att: number;
+  rz_targets: number;
+}
+
+interface TeamWeeklyTotals {
+  team: string;
+  week: number;
+  team_rush_att: number;
+  team_targets: number;
+  team_snaps: number;
+  team_rz_rush_att: number;
+  team_rz_targets: number;
+}
+
+async function fetchRollingRows(season: number, week: number, position?: Position, playerIds?: string[]): Promise<{ rows: RollingRow[]; rollingWeeks: number[]; weeklyFp: WeeklyFpRow[]; teamTotals: TeamWeeklyTotals[]; playerWeeklyStats: WeeklyPlayerStatRow[] }> {
   const weekStart = Math.max(1, week - 3);
   const baseWhere: any[] = [sql`season = ${season}`, sql`week BETWEEN ${weekStart} AND ${week}`, sql`position IN ('QB','RB','WR','TE')`];
   if (position) baseWhere.push(sql`position = ${position}`);
@@ -263,14 +284,34 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
       ${position ? sql`AND position = ${position}` : sql``}
   `);
 
+  const teamTotalsResult = await db.execute(sql`
+    SELECT team, week, team_rush_att, team_targets, team_snaps, team_rz_rush_att, team_rz_targets
+    FROM team_weekly_totals_mv
+    WHERE season = ${season} AND week BETWEEN ${weekStart} AND ${week}
+  `);
+
+  const playerWeeklyResult = await db.execute(sql`
+    SELECT player_id, team, week,
+      COALESCE(rush_attempts, 0)::int AS rush_attempts,
+      COALESCE(targets, 0)::int AS targets,
+      COALESCE(snaps, 0)::int AS snaps,
+      COALESCE(rz_rush_att, 0)::int AS rz_rush_att,
+      COALESCE(rz_targets, 0)::int AS rz_targets
+    FROM silver_player_weekly_stats
+    WHERE season = ${season} AND week BETWEEN ${weekStart} AND ${week}
+      ${position ? sql`AND position = ${position}` : sql``}
+  `);
+
   return {
     rows: rowsResult.rows as unknown as RollingRow[],
     rollingWeeks: (rollingWeeksResult.rows as any[]).map((r) => Number(r.week)).filter(Number.isFinite),
     weeklyFp: fpResult.rows as unknown as WeeklyFpRow[],
+    teamTotals: teamTotalsResult.rows as unknown as TeamWeeklyTotals[],
+    playerWeeklyStats: playerWeeklyResult.rows as unknown as WeeklyPlayerStatRow[],
   };
 }
 
-function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[], scoringPreset: ScoringPreset, weeklyFp: WeeklyFpRow[]): FirePlayer[] {
+function buildFire(rows: RollingRow[], season: number, week: number, rollingWeeks: number[], scoringPreset: ScoringPreset, weeklyFp: WeeklyFpRow[], teamTotals: TeamWeeklyTotals[], playerWeeklyStats: WeeklyPlayerStatRow[]): FirePlayer[] {
   const fpByPlayer = new Map<string, number[]>();
   const fpHpprByPlayer = new Map<string, number[]>();
   for (const wf of weeklyFp) {
@@ -278,6 +319,53 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     if (!fpHpprByPlayer.has(wf.player_id)) fpHpprByPlayer.set(wf.player_id, []);
     fpByPlayer.get(wf.player_id)!.push(wf.fp_ppr);
     fpHpprByPlayer.get(wf.player_id)!.push(wf.fp_hppr);
+  }
+
+  const teamTotalsByKey = new Map<string, TeamWeeklyTotals>();
+  for (const tt of teamTotals) {
+    teamTotalsByKey.set(`${tt.team}_${tt.week}`, tt);
+  }
+
+  const playerShareData = new Map<string, { rushShare: number | null; targetShare: number | null; rzTouchShare: number | null }>();
+  const statsByPlayer = new Map<string, WeeklyPlayerStatRow[]>();
+  for (const ps of playerWeeklyStats) {
+    if (!statsByPlayer.has(ps.player_id)) statsByPlayer.set(ps.player_id, []);
+    statsByPlayer.get(ps.player_id)!.push(ps);
+  }
+
+  for (const [playerId, weeklyRows] of Array.from(statsByPlayer.entries())) {
+    let playerRushTotal = 0, playerTargetTotal = 0, playerRzTouchTotal = 0;
+    let teamRushTotal = 0, teamTargetTotal = 0, teamRzTouchTotal = 0;
+    let rushWeeks = 0, targetWeeks = 0, rzWeeks = 0;
+
+    for (const pw of weeklyRows) {
+      const tt = teamTotalsByKey.get(`${pw.team}_${pw.week}`);
+      if (!tt) continue;
+
+      if (tt.team_rush_att > 0) {
+        playerRushTotal += pw.rush_attempts;
+        teamRushTotal += tt.team_rush_att;
+        rushWeeks++;
+      }
+      if (tt.team_targets > 0) {
+        playerTargetTotal += pw.targets;
+        teamTargetTotal += tt.team_targets;
+        targetWeeks++;
+      }
+      const teamRzTouch = tt.team_rz_rush_att + tt.team_rz_targets;
+      const playerRzTouch = pw.rz_rush_att + pw.rz_targets;
+      if (teamRzTouch > 0) {
+        playerRzTouchTotal += playerRzTouch;
+        teamRzTouchTotal += teamRzTouch;
+        rzWeeks++;
+      }
+    }
+
+    playerShareData.set(playerId, {
+      rushShare: rushWeeks > 0 && teamRushTotal > 0 ? (playerRushTotal / teamRushTotal) * 100 : null,
+      targetShare: targetWeeks > 0 && teamTargetTotal > 0 ? (playerTargetTotal / teamTargetTotal) * 100 : null,
+      rzTouchShare: rzWeeks > 0 && teamRzTouchTotal > 0 ? (playerRzTouchTotal / teamRzTouchTotal) * 100 : null,
+    });
   }
 
   const basePlayers: FirePlayer[] = rows.map((row) => {
@@ -339,7 +427,10 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     const boomPctVal = fpWeeklyPpr.length ? (fpWeeklyPpr.filter((v) => v >= boomThreshold).length / fpWeeklyPpr.length) * 100 : null;
     const xfpDiffVal = fpWeeklyPpr.length && xfpTotal ? fpPprSum - xfpTotal : null;
 
-    const rzTouchSharePct: number | null = null;
+    const shares = playerShareData.get(row.player_id);
+    const rushSharePct = shares?.rushShare ?? null;
+    const targetSharePct = shares?.targetShare ?? null;
+    const rzTouchSharePct = shares?.rzTouchShare ?? null;
 
     return {
       playerId: row.player_id,
@@ -382,8 +473,8 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         carriesPerGame: sCarries / g,
         targetsPerGame: sTargets / g,
         touchesPerGame: (sCarries + sTargets) / g,
-        rushSharePct: row.rush_share_avg != null ? row.rush_share_avg * 100 : null,
-        targetSharePct: row.target_avg != null ? row.target_avg * 100 : null,
+        rushSharePct,
+        targetSharePct,
         ypc: sCarries > 0 ? rushYds / sCarries : null,
         ypr: recs > 0 ? recYds / recs : null,
         rushYdsPerGame: rushYds / g,
@@ -544,8 +635,8 @@ router.get('/fire/eg/batch', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'position must be QB, RB, WR, or TE' });
     }
 
-    const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, position, playerIds);
-    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp);
+    const { rows, rollingWeeks, weeklyFp, teamTotals, playerWeeklyStats } = await fetchRollingRows(season, week, position, playerIds);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp, teamTotals, playerWeeklyStats);
 
     return res.json({
       metadata: {
@@ -595,8 +686,8 @@ router.get('/fire/eg/player', async (req: Request, res: Response) => {
       });
     }
 
-    const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, pos, undefined);
-    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp);
+    const { rows, rollingWeeks, weeklyFp, teamTotals, playerWeeklyStats } = await fetchRollingRows(season, week, pos, undefined);
+    const data = buildFire(rows, season, week, rollingWeeks, scoringPreset, weeklyFp, teamTotals, playerWeeklyStats);
     const found = data.find((p) => p.playerId === playerId);
 
     return res.json(found ?? { playerId, season, weekAnchor: week, eligible: false, fireScore: null });
@@ -628,8 +719,8 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
     const allRows: any[] = [];
 
     for (const pos of positions) {
-      const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, week, pos, undefined);
-      const fireRows = buildFire(rows, season, week, rollingWeeks, 'redraft', weeklyFp).filter((p) => p.eligible && p.fireScore != null);
+      const { rows, rollingWeeks, weeklyFp, teamTotals, playerWeeklyStats } = await fetchRollingRows(season, week, pos, undefined);
+      const fireRows = buildFire(rows, season, week, rollingWeeks, 'redraft', weeklyFp, teamTotals, playerWeeklyStats).filter((p) => p.eligible && p.fireScore != null);
       if (!fireRows.length) continue;
 
       const forgeRaw = await runForgeEngineBatch(pos, season, week, 400);
@@ -772,8 +863,8 @@ router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
     const trendRows: any[] = [];
 
     for (let anchorWeek = minWeek; anchorWeek <= maxWeek; anchorWeek += 1) {
-      const { rows, rollingWeeks, weeklyFp } = await fetchRollingRows(season, anchorWeek, position, undefined);
-      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks, 'redraft', weeklyFp).filter((p) => p.eligible && p.fireScore != null);
+      const { rows, rollingWeeks, weeklyFp, teamTotals, playerWeeklyStats } = await fetchRollingRows(season, anchorWeek, position, undefined);
+      const fireRows = buildFire(rows, season, anchorWeek, rollingWeeks, 'redraft', weeklyFp, teamTotals, playerWeeklyStats).filter((p) => p.eligible && p.fireScore != null);
       const fireById = new Map(fireRows.map((r) => [r.playerId, r]));
       if (!fireById.has(playerId)) continue;
 

@@ -163,6 +163,7 @@ router.post("/refresh", requireAdminAuth, async (req: Request, res: Response) =>
 
     await refreshQbXfpWeekly(season);
     await db.execute(sql`REFRESH MATERIALIZED VIEW fantasy_metrics_weekly_mv`);
+    await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY team_weekly_totals_mv`);
 
     const statResult = await db.execute(sql`
       SELECT COUNT(*)::int AS row_count,
