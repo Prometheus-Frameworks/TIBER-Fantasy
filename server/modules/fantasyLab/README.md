@@ -32,8 +32,26 @@ Latest-known market fields are intentionally denormalized for Fantasy Lab table 
 
 These market values may come from the latest available market observation and may not match the exact `season/week` of weekly usage rows.
 
+## FIRE Engine (Phase 2)
+
+Rolling 4-week opportunity/role/conversion scoring for all skill positions.
+
+### Supported positions
+- **QB**: 2-pillar scoring (Opportunity via qb_xfp + Role via dropbacks/rush/inside-10). Conversion pillar pending.
+- **RB/WR/TE**: 3-pillar scoring (Opportunity + Role + Conversion).
+
+### QB per-game stats surfaced via `stats` object
+`passAttPerGame`, `compPct`, `passYdsPerGame`, `passTdPerGame`, `intPerGame`, `rushAttPerGame`, `rushYdsPerGame`, `rushTdPerGame`
+
+### Team totals pipeline
+`team_weekly_totals_mv` aggregates team-level rush attempts, targets, snaps, and offensive plays per week from `silver_player_weekly_stats`. Key column: `team_off_plays = MAX(snaps)` provides the correct denominator for Snap%.
+
+### API endpoints
+- `GET /api/fire/eg/batch?season=&week=&position=` — batch FIRE scores
+- `GET /api/fire/eg/player?season=&week=&playerId=` — single player FIRE
+
 ## Refresh strategy
 
 - Admin endpoint: `POST /api/admin/fantasy-lab/refresh`
 - Protection: `requireAdminAuth` middleware (`x-admin-api-key` / bearer)
-- Action: `REFRESH MATERIALIZED VIEW fantasy_metrics_weekly_mv`
+- Action: `REFRESH MATERIALIZED VIEW fantasy_metrics_weekly_mv` + `REFRESH MATERIALIZED VIEW CONCURRENTLY team_weekly_totals_mv`

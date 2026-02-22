@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-02-22 — Replit Agent: QB FIRE Support + Snap% Fix + Column Cleanup
+- **What changed:** Added full QB support to Fantasy Lab FIRE system. Backend: extended FIRE API with QB per-game stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G) computed from silver_player_weekly_stats rolling window. Frontend: added QB to position selector, built position-aware column system (QB-specific columns auto-swap, Conversion column hidden for QB since it's null). Fixed Snap% bug (was dividing by total player-snaps instead of team offensive plays; added `team_off_plays = MAX(snaps)` to `team_weekly_totals_mv`). Cleaned column labels (Opp→Opportunity, Conv→Conversion, FPG→Fantasy PPG, etc).
+- **Files modified:** `server/routes/fireRoutes.ts` (WeeklyPlayerStatRow extended, QB stats aggregation, FirePlayer.stats extended), `client/src/pages/FantasyLab.tsx` (Position type, column defs, position selector), `team_weekly_totals_mv` (added team_off_plays column), `replit.md`, `.claude/context-log.md`, `.claude/agents/replit-agent.md`, `server/modules/fantasyLab/README.md`
+- **Validation:** API returns QB FIRE data with correct per-game stats. Snap% now shows 60-85% for starters (was 3-8%). E2E test passed.
+- **Notes:** QB Conversion pillar still pending — FIRE uses 2-pillar scoring for QB (75% Opportunity + 25% Role). Column system uses `positions?: Position[]` field to control visibility per position.
+
 ### 2026-02-17 — Replit Agent: FORGE Pillar Weight Tuning & Calibration Fix
 - **What changed:** Recalibrated FORGE redraft pillar weights based on PPG↔pillar correlation analysis. Updated calibration percentile anchors (p10/p90) to reduce ceiling compression. Key findings: RB stability (-0.668 corr) and TE stability (-0.786 corr) are anti-signals; WR stability (+0.801 corr) is positive. QB team context (0.661 corr) was strongest single QB predictor.
 - **Files modified:** `server/modules/forge/forgeGrading.ts` (weights + dynasty weights), `server/modules/forge/types.ts` (calibration params), `.claude/tasks/pillar-weight-tuning.md` (research doc with resolution), `replit.md`

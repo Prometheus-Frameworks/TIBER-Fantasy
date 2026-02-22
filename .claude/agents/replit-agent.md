@@ -8,6 +8,12 @@ Workflow: Direct commits to `main`, interactive development with user, end-to-en
 
 ## Completed Tasks
 
+### 2026-02-22 — QB FIRE Support + Snap% Fix + Column Cleanup
+- **Summary:** Added full QB support to Fantasy Lab FIRE. Extended backend with QB per-game passing stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G). Built position-aware column system in frontend — QB-specific columns auto-swap when QB is selected, Conversion column hidden for QB. Fixed Snap% calculation bug (was 3-8% for starters, now correct 60-85%) by adding `team_off_plays = MAX(snaps)` to team_weekly_totals_mv. Cleaned all column labels for readability.
+- **Key Files:** `server/routes/fireRoutes.ts`, `client/src/pages/FantasyLab.tsx`, `team_weekly_totals_mv` (MV definition)
+- **Validation:** API returns correct QB FIRE data with per-game stats. Snap% verified correct for top RBs (Bijan 78%, CMC 82%, Barkley 84%). E2E Playwright test passed. All column labels verified in UI.
+- **Notes:** QB uses 2-pillar FIRE scoring (75% Opportunity + 25% Role). Conversion pillar pending.
+
 ### 2026-02-16 — Quality Sentinel Task Spec
 - **Summary:** Created Codex-ready task spec for the Quality Sentinel — a lightweight validation layer that runs rule-based checks on FORGE, Personnel, and Data Lab API outputs. Spec includes rule DSL design (16 rules), sentinel_events DB schema, 5 API endpoints, inline integration pattern with fire-and-forget persistence, and validation criteria.
 - **Key Files:** `.claude/tasks/build-quality-sentinel.md`

@@ -103,6 +103,13 @@ interface FirePlayer {
     boomPct: number | null;
     xfpDiff: number | null;
     rzTouchSharePct: number | null;
+    passAttPerGame: number | null;
+    compPct: number | null;
+    passYdsPerGame: number | null;
+    passTdPerGame: number | null;
+    intPerGame: number | null;
+    rushAttPerGame: number | null;
+    rushTdPerGame: number | null;
   };
   roleMeta: {
     targetSource: "target_share" | "targets_per_snap" | "targets_per_route" | "none";
@@ -174,6 +181,16 @@ interface WeeklyPlayerStatRow {
   snaps: number;
   rz_rush_att: number;
   rz_targets: number;
+  pass_attempts: number;
+  completions: number;
+  passing_yards: number;
+  passing_tds: number;
+  interceptions: number;
+  rushing_yards: number;
+  rushing_tds: number;
+  receptions: number;
+  receiving_yards: number;
+  receiving_tds: number;
 }
 
 interface TeamWeeklyTotals {
@@ -297,7 +314,17 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
       COALESCE(targets, 0)::int AS targets,
       COALESCE(snaps, 0)::int AS snaps,
       COALESCE(rz_rush_att, 0)::int AS rz_rush_att,
-      COALESCE(rz_targets, 0)::int AS rz_targets
+      COALESCE(rz_targets, 0)::int AS rz_targets,
+      COALESCE(pass_attempts, 0)::int AS pass_attempts,
+      COALESCE(completions, 0)::int AS completions,
+      COALESCE(passing_yards, 0)::int AS passing_yards,
+      COALESCE(passing_tds, 0)::int AS passing_tds,
+      COALESCE(interceptions, 0)::int AS interceptions,
+      COALESCE(rushing_yards, 0)::int AS rushing_yards,
+      COALESCE(rushing_tds, 0)::int AS rushing_tds,
+      COALESCE(receptions, 0)::int AS receptions,
+      COALESCE(receiving_yards, 0)::int AS receiving_yards,
+      COALESCE(receiving_tds, 0)::int AS receiving_tds
     FROM silver_player_weekly_stats
     WHERE season = ${season} AND week BETWEEN ${weekStart} AND ${week}
       ${position ? sql`AND position = ${position}` : sql``}
@@ -327,7 +354,21 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     teamTotalsByKey.set(`${tt.team}_${tt.week}`, tt);
   }
 
-  const playerShareData = new Map<string, { rushShare: number | null; targetShare: number | null; rzTouchShare: number | null; snapPct: number | null }>();
+  interface PlayerAggStats {
+    rushShare: number | null;
+    targetShare: number | null;
+    rzTouchShare: number | null;
+    snapPct: number | null;
+    passAttPerGame: number | null;
+    compPct: number | null;
+    passYdsPerGame: number | null;
+    passTdPerGame: number | null;
+    intPerGame: number | null;
+    rushAttPerGame: number | null;
+    rushYdsPerGame: number | null;
+    rushTdPerGame: number | null;
+  }
+  const playerShareData = new Map<string, PlayerAggStats>();
   const statsByPlayer = new Map<string, WeeklyPlayerStatRow[]>();
   for (const ps of playerWeeklyStats) {
     if (!statsByPlayer.has(ps.player_id)) statsByPlayer.set(ps.player_id, []);
@@ -367,11 +408,33 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       }
     }
 
+    const g = weeklyRows.length || 1;
+    let totalPassAtt = 0, totalComp = 0, totalPassYds = 0, totalPassTd = 0, totalInt = 0;
+    let totalRushAtt = 0, totalRushYds = 0, totalRushTd = 0;
+    for (const pw of weeklyRows) {
+      totalPassAtt += pw.pass_attempts;
+      totalComp += pw.completions;
+      totalPassYds += pw.passing_yards;
+      totalPassTd += pw.passing_tds;
+      totalInt += pw.interceptions;
+      totalRushAtt += pw.rush_attempts;
+      totalRushYds += pw.rushing_yards;
+      totalRushTd += pw.rushing_tds;
+    }
+
     playerShareData.set(playerId, {
       rushShare: rushWeeks > 0 && teamRushTotal > 0 ? (playerRushTotal / teamRushTotal) * 100 : null,
       targetShare: targetWeeks > 0 && teamTargetTotal > 0 ? (playerTargetTotal / teamTargetTotal) * 100 : null,
       rzTouchShare: rzWeeks > 0 && teamRzTouchTotal > 0 ? (playerRzTouchTotal / teamRzTouchTotal) * 100 : null,
       snapPct: snapPcts.length > 0 ? snapPcts.reduce((a, b) => a + b, 0) / snapPcts.length : null,
+      passAttPerGame: totalPassAtt > 0 ? totalPassAtt / g : null,
+      compPct: totalPassAtt > 0 ? (totalComp / totalPassAtt) * 100 : null,
+      passYdsPerGame: totalPassYds > 0 ? totalPassYds / g : null,
+      passTdPerGame: totalPassTd > 0 ? totalPassTd / g : null,
+      intPerGame: totalInt > 0 ? totalInt / g : null,
+      rushAttPerGame: totalRushAtt > 0 ? totalRushAtt / g : null,
+      rushYdsPerGame: totalRushYds > 0 ? totalRushYds / g : null,
+      rushTdPerGame: totalRushTd > 0 ? totalRushTd / g : null,
     });
   }
 
@@ -484,7 +547,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         targetSharePct,
         ypc: sCarries > 0 ? rushYds / sCarries : null,
         ypr: recs > 0 ? recYds / recs : null,
-        rushYdsPerGame: rushYds / g,
+        rushYdsPerGame: shares?.rushYdsPerGame ?? (rushYds / g),
         recYdsPerGame: recYds / g,
         totalTds,
         fantasyPpg,
@@ -492,6 +555,13 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         boomPct: boomPctVal,
         xfpDiff: xfpDiffVal,
         rzTouchSharePct,
+        passAttPerGame: shares?.passAttPerGame ?? null,
+        compPct: shares?.compPct ?? null,
+        passYdsPerGame: shares?.passYdsPerGame ?? null,
+        passTdPerGame: shares?.passTdPerGame ?? null,
+        intPerGame: shares?.intPerGame ?? null,
+        rushAttPerGame: shares?.rushAttPerGame ?? null,
+        rushTdPerGame: shares?.rushTdPerGame ?? null,
       },
       roleMeta: {
         targetSource,

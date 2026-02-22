@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Label } from 'recharts';
 
-type Position = 'RB' | 'WR' | 'TE';
+type Position = 'QB' | 'RB' | 'WR' | 'TE';
 type ViewMode = 'FIRE' | 'DELTA' | 'WATCHLIST';
 type DirectionFilter = 'ALL' | 'BUY_LOW' | 'SELL_HIGH' | 'NEUTRAL';
 type ConfidenceFilter = 'ALL' | 'HM' | 'HIGH';
@@ -33,6 +33,7 @@ interface ColDef {
   align?: 'left' | 'right';
   sortKey?: (r: any) => number;
   preset: ColumnPreset[];
+  positions?: Position[];
 }
 
 const FIRE_COLUMNS: ColDef[] = [
@@ -42,26 +43,36 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'fire', label: 'FIRE', group: 'identity', render: (r) => num(r.fireScore), align: 'right', sortKey: (r) => r.fireScore ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'opp', label: 'Opportunity', group: 'fire', render: (r) => num(r.pillars?.opportunity), align: 'right', sortKey: (r) => r.pillars?.opportunity ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'role', label: 'Role', group: 'fire', render: (r) => num(r.pillars?.role), align: 'right', sortKey: (r) => r.pillars?.role ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
-  { key: 'conv', label: 'Conversion', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'conv', label: 'Conversion', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'conf', label: 'Confidence', group: 'fire', render: (r) => r.confidence || 'LOW', align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'games', label: 'Games', group: 'games', render: (r) => String(r.games_played_window ?? '—'), align: 'right', sortKey: (r) => r.games_played_window ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'snaps', label: 'Snaps', group: 'games', render: (r) => num(r.raw?.snaps_R, 0), align: 'right', sortKey: (r) => r.raw?.snaps_R ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'snapPct', label: 'Snap %', group: 'games', render: (r) => pct(r.stats?.snapPct), align: 'right', sortKey: (r) => r.stats?.snapPct ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
-  { key: 'carGm', label: 'Car/G', group: 'volume', render: (r) => num(r.stats?.carriesPerGame), align: 'right', sortKey: (r) => r.stats?.carriesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'tgtGm', label: 'Tgt/G', group: 'volume', render: (r) => num(r.stats?.targetsPerGame), align: 'right', sortKey: (r) => r.stats?.targetsPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'tchGm', label: 'Tch/G', group: 'volume', render: (r) => num(r.stats?.touchesPerGame), align: 'right', sortKey: (r) => r.stats?.touchesPerGame ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'rushSh', label: 'Rush Share %', shortLabel: 'Rush %', group: 'volume', render: (r) => pct(r.stats?.rushSharePct), align: 'right', sortKey: (r) => r.stats?.rushSharePct ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'tgtSh', label: 'Target Share %', shortLabel: 'Tgt %', group: 'volume', render: (r) => pct(r.stats?.targetSharePct), align: 'right', sortKey: (r) => r.stats?.targetSharePct ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'ypc', label: 'YPC', group: 'efficiency', render: (r) => num(r.stats?.ypc), align: 'right', sortKey: (r) => r.stats?.ypc ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'ypr', label: 'YPR', group: 'efficiency', render: (r) => num(r.stats?.ypr), align: 'right', sortKey: (r) => r.stats?.ypr ?? 0, preset: ['FULL'] },
-  { key: 'rushYG', label: 'Rush Y/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['FULL'] },
-  { key: 'recYG', label: 'Rec Y/G', group: 'production', render: (r) => num(r.stats?.recYdsPerGame), align: 'right', sortKey: (r) => r.stats?.recYdsPerGame ?? 0, preset: ['FULL'] },
+
+  { key: 'passAttGm', label: 'Pass Att/G', shortLabel: 'PA/G', group: 'volume', render: (r) => num(r.stats?.passAttPerGame), align: 'right', sortKey: (r) => r.stats?.passAttPerGame ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'compPct', label: 'Comp %', group: 'efficiency', render: (r) => pct(r.stats?.compPct), align: 'right', sortKey: (r) => r.stats?.compPct ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'passYG', label: 'Pass Y/G', group: 'production', render: (r) => num(r.stats?.passYdsPerGame), align: 'right', sortKey: (r) => r.stats?.passYdsPerGame ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'passTdGm', label: 'Pass TD/G', shortLabel: 'PTD/G', group: 'production', render: (r) => num(r.stats?.passTdPerGame, 2), align: 'right', sortKey: (r) => r.stats?.passTdPerGame ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'intGm', label: 'INT/G', group: 'consistency', render: (r) => num(r.stats?.intPerGame, 2), align: 'right', sortKey: (r) => r.stats?.intPerGame ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'qbRushAttGm', label: 'Rush Att/G', shortLabel: 'RAtt/G', group: 'volume', render: (r) => num(r.stats?.rushAttPerGame), align: 'right', sortKey: (r) => r.stats?.rushAttPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'qbRushYG', label: 'Rush Y/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['QB'] },
+  { key: 'qbRushTdGm', label: 'Rush TD/G', shortLabel: 'RTD/G', group: 'production', render: (r) => num(r.stats?.rushTdPerGame, 2), align: 'right', sortKey: (r) => r.stats?.rushTdPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['QB'] },
+
+  { key: 'carGm', label: 'Car/G', group: 'volume', render: (r) => num(r.stats?.carriesPerGame), align: 'right', sortKey: (r) => r.stats?.carriesPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'tgtGm', label: 'Tgt/G', group: 'volume', render: (r) => num(r.stats?.targetsPerGame), align: 'right', sortKey: (r) => r.stats?.targetsPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'tchGm', label: 'Tch/G', group: 'volume', render: (r) => num(r.stats?.touchesPerGame), align: 'right', sortKey: (r) => r.stats?.touchesPerGame ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'rushSh', label: 'Rush Share %', shortLabel: 'Rush %', group: 'volume', render: (r) => pct(r.stats?.rushSharePct), align: 'right', sortKey: (r) => r.stats?.rushSharePct ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'tgtSh', label: 'Target Share %', shortLabel: 'Tgt %', group: 'volume', render: (r) => pct(r.stats?.targetSharePct), align: 'right', sortKey: (r) => r.stats?.targetSharePct ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'ypc', label: 'YPC', group: 'efficiency', render: (r) => num(r.stats?.ypc), align: 'right', sortKey: (r) => r.stats?.ypc ?? 0, preset: ['VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'ypr', label: 'YPR', group: 'efficiency', render: (r) => num(r.stats?.ypr), align: 'right', sortKey: (r) => r.stats?.ypr ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'rushYG', label: 'Rush Y/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'recYG', label: 'Rec Y/G', group: 'production', render: (r) => num(r.stats?.recYdsPerGame), align: 'right', sortKey: (r) => r.stats?.recYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'tds', label: 'TDs', group: 'production', render: (r) => String(r.stats?.totalTds ?? '—'), align: 'right', sortKey: (r) => r.stats?.totalTds ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'fpg', label: 'Fantasy PPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'xfpDiff', label: 'xFP Diff', group: 'production', render: (r) => num(r.stats?.xfpDiff), align: 'right', sortKey: (r) => r.stats?.xfpDiff ?? 0, preset: ['FULL'] },
   { key: 'fpSd', label: 'FP Std Dev', group: 'consistency', render: (r) => num(r.stats?.fpStdDev), align: 'right', sortKey: (r) => r.stats?.fpStdDev ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'boom', label: 'Boom %', group: 'consistency', render: (r) => pct(r.stats?.boomPct), align: 'right', sortKey: (r) => r.stats?.boomPct ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'rzSh', label: 'RZ Touch %', group: 'consistency', render: (r) => pct(r.stats?.rzTouchSharePct), align: 'right', sortKey: (r) => r.stats?.rzTouchSharePct ?? 0, preset: [] },
+  { key: 'rzSh', label: 'RZ Touch %', group: 'consistency', render: (r) => pct(r.stats?.rzTouchSharePct), align: 'right', sortKey: (r) => r.stats?.rzTouchSharePct ?? 0, preset: [], positions: ['RB', 'WR', 'TE'] },
 ];
 
 const GROUP_COLORS: Record<string, string> = {
@@ -97,7 +108,7 @@ export default function FantasyLab() {
   const initial = parseParams();
   const [season, setSeason] = useState(initial.season);
   const [week, setWeek] = useState(initial.week);
-  const [position, setPosition] = useState<Position>(['RB', 'WR', 'TE'].includes(initial.position) ? initial.position : 'RB');
+  const [position, setPosition] = useState<Position>(['QB', 'RB', 'WR', 'TE'].includes(initial.position) ? initial.position : 'RB');
   const [view, setView] = useState<ViewMode>(['FIRE', 'DELTA', 'WATCHLIST'].includes(initial.view) ? initial.view : 'FIRE');
   const [direction, setDirection] = useState<DirectionFilter>(initial.direction);
   const [confidence, setConfidence] = useState<ConfidenceFilter>(initial.confidence);
@@ -118,8 +129,8 @@ export default function FantasyLab() {
   }, [columnPreset]);
 
   const visibleCols = useMemo(() =>
-    FIRE_COLUMNS.filter((c) => c.preset.includes(columnPreset)),
-    [columnPreset]
+    FIRE_COLUMNS.filter((c) => c.preset.includes(columnPreset) && (!c.positions || c.positions.includes(position))),
+    [columnPreset, position]
   );
 
   const weekMetaQuery = useQuery<{ metadata?: { weeksReturned?: { max?: number } } }>({
@@ -277,8 +288,8 @@ export default function FantasyLab() {
     <div className="p-6 space-y-5">
       <div>
         <h1 className="text-2xl font-semibold">Fantasy Lab</h1>
-        <p className="text-sm text-gray-600">FIRE engine + FORGE/FIRE Hybrid Delta (RB/WR/TE only).</p>
-        <p className="text-xs text-amber-700 mt-1">QB FIRE not available yet (QB xFP gap).</p>
+        <p className="text-sm text-gray-600">FIRE engine + FORGE/FIRE Hybrid Delta for all skill positions.</p>
+        {position === 'QB' && <p className="text-xs text-amber-700 mt-1">QB FIRE uses 2-pillar scoring (Opportunity + Role). Conversion pillar coming soon.</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white border rounded-lg p-3">
@@ -290,7 +301,7 @@ export default function FantasyLab() {
         </select>
 
         <div className="flex border rounded overflow-hidden">
-          {(['RB', 'WR', 'TE'] as Position[]).map((p) => (
+          {(['QB', 'RB', 'WR', 'TE'] as Position[]).map((p) => (
             <button key={p} onClick={() => setPosition(p)} className={`px-3 py-1 text-sm ${position === p ? 'bg-orange-600 text-white' : 'bg-white'}`}>{p}</button>
           ))}
         </div>

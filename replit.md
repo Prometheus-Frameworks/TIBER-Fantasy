@@ -1,7 +1,7 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard. Its purpose is to provide real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics, empowering users with superior decision-making tools without paywalls. Future ambitions include a "Player Compass" for dynamic player evaluation, a "TIBER Consensus" for community-driven rankings, and advanced AI insights via the TIBER Brain OS. The project's vision is to offer sophisticated tools that are typically paywalled, making them accessible to all fantasy football enthusiasts.
+Tiber Fantasy is a free, open-source NFL fantasy football analytics dashboard. Its core purpose is to democratize access to advanced fantasy football tools, providing real-time NFL data, Madden-style OVR player ratings, Defense vs Position matchups, and Strength of Schedule analytics using EPA metrics. The project aims to empower users with superior decision-making capabilities, removing the paywalls typically associated with such sophisticated insights. Future ambitions include a dynamic "Player Compass" for player evaluation, a "TIBER Consensus" for community-driven rankings, and AI-powered insights through the TIBER Brain OS.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -22,96 +22,58 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 **Core Infrastructure:**
 - **Backend**: Node.js/TypeScript (Express.js) and Python (Flask).
 - **Frontend**: React 18, TypeScript, Tailwind CSS, TanStack Query, shadcn/ui.
-- **Database**: PostgreSQL with Drizzle ORM and `pgvector` extension for advanced data capabilities.
-- **Player Identity**: Unified resolution across major fantasy platforms using a dedicated `gsis_id` (NFL's primary player identifier) and an `Identity Bridge`. Player identity is focused on `activeSkillPlayers` (QB, RB, WR, TE) and distinguishes between `Roster Bridge` for ownership features and `Global Identity` for informational purposes.
-- **Data Quality**: Implements multi-dimensional validation, data lineage tracking, and confidence scoring.
+- **Database**: PostgreSQL with Drizzle ORM and `pgvector` extension.
+- **Player Identity**: Unified resolution across major fantasy platforms using `gsis_id` and an `Identity Bridge`, focusing on `activeSkillPlayers`.
+- **Data Quality**: Multi-dimensional validation, data lineage tracking, and confidence scoring.
 
 **UI/UX Decisions (v2 Light Mode Redesign):**
-- **Color Scheme**: Light mode with white, `#fafafa`, and `#f4f4f4` backgrounds, accented by Ember (`#e2640d`).
+- **Color Scheme**: Light mode with white/grey backgrounds, accented by Ember (`#e2640d`).
 - **Typography**: Three-font system: Instrument Sans (UI), JetBrains Mono (data/code), Newsreader (editorial).
-- **Layout**: Fixed 220px sidebar for navigation, featuring Core, Intelligence, and System sections.
-- **Homepage (`Dashboard.tsx`)**: Features a hero section, sticky position-filter toolbar, status cards, a FORGE-powered player data table with tier badges and trend bars, insights, and a chat preview.
-- **Universal Current Week System**: An API endpoint (`/api/system/current-week`) provides real-time NFL week detection for frontend components.
+- **Layout**: Fixed 220px sidebar for navigation.
+- **Homepage (`Dashboard.tsx`)**: Features a hero section, position-filter toolbar, status cards, a FORGE-powered player data table, insights, and chat preview.
+- **Universal Current Week System**: API endpoint (`/api/system/current-week`) for real-time NFL week detection.
 
 **Technical Implementations & Feature Specifications:**
 - **Unified Player Hub (UPH)**: Centralizes player data, "Player Compass" profiles, "TIBER Consensus" rankings, and Madden-style OVR.
-- **AI & Analytics**: Incorporates a "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI, Tiber Memory (FANTASY vs GENERAL pools), and Tiber Voice with a 5-tier Truth Hierarchy.
-- **FORGE (Football-Oriented Recursive Grading Engine)**: The core player evaluation system providing unified Alpha scores (0-100) for skill positions. It consists of:
-    - **F (Football Lens)**: Detects football-sense issues and applies adjustments.
-    - **O (Orientation Modes)**: Supports `redraft`, `dynasty`, `bestball` modes with weighted adjustments.
-    - **R (Recursion)**: Two-pass scoring with prior alpha blending and momentum adjustments.
-    - **G (Grading)**: Position-specific weighting and tier mapping (T1-T5).
-    - **E (Engine)**: Fetches context, builds metrics, and computes four pillar scores (volume, efficiency, team context, stability).
-    - **FORGE E+G Architecture (v2)**: Modular system separating Engine (data/metrics) from Grading (scoring/tiers), exposed via `/api/forge/eg/batch` and `/api/forge/eg/player` endpoints.
-    - **FORGE Workbench (`/forge-workbench`)**: An interactive tool for exploring FORGE internals with player search, adjustable weights, mode toggles, and detailed pillar breakdowns.
-    - **FORGE Data Pipeline**: Ingests data from various sources (Role Banks, Datadive, Legacy Tables) to calculate Alpha scores, sub-scores, trajectory, and confidence.
-    - **FORGE Pillar Weights (v1.1)**: Correlation-tuned redraft weights — RB (V:0.62/E:0.22/T:0.10/S:0.06), WR (0.48/0.15/0.15/0.22), TE (0.62/0.18/0.10/0.10), QB (0.28/0.32/0.28/0.12). Key insight: RB/TE stability is anti-correlated with PPG; WR stability is positive. See `.claude/tasks/pillar-weight-tuning.md`.
-    - **FORGE Efficiency Pillar (FPOE-first)**: Efficiency now centers on derived `fpoe_per_game` (Fantasy Points Over Expected), making pillars complementary by design: `actual_fpts = xfp_volume + fpoe_efficiency`. WR/RB/TE use 70% FPOE in efficiency; QB uses 50% FPOE plus EPA/CPOE/sack-rate for passing-skill context.
-    - **FORGE Calibration**: Position-specific percentile anchors (p10/p90) mapping raw weighted scores to 25-95 Alpha range. Validated via Spearman rank correlation (RB: 0.943, TE: 0.939, WR: 0.908, QB: 0.623).
-    - **Tiber Tiers (v1.1)**: Position-specific tier thresholds recalibrated for cumulative season data.
-    - **FORGE v1.1 Multi-Week Aggregation**: Aggregates data across all official snapshots for season-grounded Alpha scores.
-    - **Next Man Up**: Tracks opportunity shifts for players.
-    - **FORGE SoS**: Position-specific strength of schedule analysis.
-    - **QB Context v1**: A team-to-QB mapping system providing QB-aware context for skill positions, blending short-term and dynasty context with QB scores.
-- **Tiber Tiers Page (`/tiers`)**: User-facing rankings powered by FORGE, featuring position filters, adjustable weight sliders, preset systems, season/weekly toggles, and week range filtering. It integrates FORGE E+G v2, mode toggles, and Football Lens Issue Badges.
-- **Tiber Data Lab (Department)**: A research department (`server/modules/datalab/`) containing three sub-modules:
-    - **Snapshots** (`/tiber-data-lab/snapshots`): Snapshot-based NFL data spine for reproducible analytics, focusing on raw football metrics. Backend at `server/modules/datalab/snapshots/snapshotRoutes.ts`.
-    - **Personnel Groupings** (`/tiber-data-lab/personnel`): Formation intelligence with every-down grades and personnel breakdown percentages. Backend at `server/modules/datalab/personnel/personnelService.ts`.
-    - **Role Banks** (`/tiber-data-lab/role-banks`): Season-level positional archetype classifications. Backend routes at `server/modules/datalab/rolebank/roleBankRoutes.ts`.
-    - **Hub Page** (`/tiber-data-lab`): Department landing page (`DataLabHub.tsx`) with module cards, health stats, and navigation to sub-modules.
+- **AI & Analytics**: Incorporates "Competence Mode" AI, Adaptive Consensus Engine, DeepSeek + Compass Fusion System, RAG Chat System using Google Gemini AI, Tiber Memory (FANTASY vs GENERAL pools), and Tiber Voice with a 5-tier Truth Hierarchy.
+- **FORGE (Football-Oriented Recursive Grading Engine)**: Core player evaluation system providing unified Alpha scores (0-100) for skill positions. It includes:
+    - **Modular Design**: Separates Engine (data/metrics) from Grading (scoring/tiers) via `/api/forge/eg/batch` and `/api/forge/eg/player` endpoints.
+    - **Evaluation Modes**: Supports `redraft`, `dynasty`, `bestball` with weighted adjustments.
+    - **Pillar-Based Scoring**: Computes four pillar scores (volume, efficiency, team context, stability) with correlation-tuned weights. Efficiency now centers on derived `fpoe_per_game`.
+    - **Calibration**: Position-specific percentile anchors mapping raw scores to 25-95 Alpha range.
+    - **Tiber Tiers**: Position-specific tier thresholds.
+    - **Multi-Week Aggregation**: Aggregates data across official snapshots for season-grounded Alpha scores.
+    - **Tools**: FORGE Workbench for exploration, Next Man Up for opportunity shifts, and FORGE SoS for strength of schedule.
+    - **QB Context**: Team-to-QB mapping system providing QB-aware context for skill positions.
+- **Tiber Tiers Page (`/tiers`)**: User-facing rankings powered by FORGE, with filters, adjustable weights, and mode toggles.
+- **Tiber Data Lab (Department)**: Research department containing:
+    - **Snapshots**: Snapshot-based NFL data spine.
+    - **Personnel Groupings**: Formation intelligence.
+    - **Role Banks**: Season-level positional archetype classifications.
 - **xFPTS v2 (Expected Fantasy Points v2)**: Context-aware expected fantasy points system.
-- **Position-Aware Enrichment**: Full position-specific enrichment layer with 2025 NFL metrics.
+- **Position-Aware Enrichment**: Full position-specific enrichment layer.
 - **EPA Analytics**: Advanced efficiency metrics.
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses.
-- **Data Integration & Sync**: Includes Sleeper Sync, Canonical Player Pool, Roster Shift Listener, Roster Sync, and NFL Schedule Sync.
-- **Live Data Processing**: Live Data Integration Pipeline with multi-source data capture and a Hot List Player Extraction System.
-- **Strategy Tab**: Provides Start/Sit recommendations, Waiver Wire Targets, and SOS Rankings.
-- **Weekly Takes System**: Quick matchup insights.
-- **Role Banks**: Season-level analytical classification systems for WR, RB, TE, QB.
-- **DST Streamer**: Weekly defense/special teams streaming recommendations with transparent calculation.
-- **Admin API Lexicon**: Developer tool for testing Forge/Tiber API endpoints.
-- **TIBER Philosophy**: The tactical interface translating FORGE insights into actionable intelligence.
-
-**LLM Gateway (`server/llm/`)**:
-- Provider-agnostic `callLLM()` entry point with automatic fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini.
-- **Task-Based Routing**: Supports 9 task types (e.g., `router_intent`, `code_patch`, `player_analysis`, `x_intelligence`) with priority tiers.
-- **X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`)**: Grok-powered X/Twitter scanning for fantasy football trends, injuries, breakouts, and consensus analysis, utilizing `x_intelligence` task type routed to Grok models via OpenRouter. Endpoints exist for triggering scans, reading filtered intel, and clearing intel.
-- **Fallback Chain**: Prioritizes models, skips unavailable providers, and retries on errors.
-- **Structured Logging**: Provides detailed JSON logs.
-
-## Multi-Agent Coordination
-
-This project uses multiple AI agents (Replit Agent, Claude Code, Codex). All shared context lives in `.claude/`:
-
-- **`.claude/AGENTS.md`** — Read this first. Master onboarding doc with workflow, file references, and post-task checklist.
-- **`.claude/conventions.md`** — Coding patterns, naming rules, guardrails. Extracted from this file for quick reference.
-- **`.claude/context-log.md`** — Running changelog (most recent at top). Every agent appends here after completing work.
-- **`.claude/agents/`** — Per-agent work logs (`replit-agent.md`, `claude-code.md`, `codex.md`) tracking each platform's contributions.
-- **`.claude/tasks/`** — Detailed task specifications with problem, solution, validation criteria, and resolution sections.
-
-**Agent workflow:** Read `AGENTS.md` → check `context-log.md` → check your agent log → run `git log --oneline -15` → do the work → append to `context-log.md` + your agent log → update `replit.md` if architecture changed.
+- **Data Integration & Sync**: Includes Sleeper Sync, Canonical Player Pool, and NFL Schedule Sync.
+- **LLM Gateway (`server/llm/`)**: Provider-agnostic `callLLM()` entry point with fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini. Supports 9 task types with priority tiers, including an X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`) for Grok-powered X/Twitter scanning.
 
 ## External Dependencies
 - **MySportsFeeds API**: For injury reports and NFL roster automation.
 - **Sleeper API**: Provides player projections, game logs, ADP data, and league/roster sync.
 - **NFLfastR (nflverse)**: Used for play-by-play data and NFL schedule data.
 - **NFL-Data-Py**: Fetches weekly statistics, depth charts, and snap count data.
-- **Axios**: HTTP client for making API requests.
+- **Axios**: HTTP client.
 - **Zod**: For runtime type validation.
-- **Recharts**: Utilized for charting and data visualization components.
-- **connect-pg-simple**: Enables PostgreSQL-based session storage.
+- **Recharts**: For charting and data visualization.
+- **connect-pg-simple**: For PostgreSQL-based session storage.
 - **@neondatabase/serverless**: For PostgreSQL connections in serverless environments.
 - **Google Gemini API**: Integrated for AI embeddings and chat generation capabilities.
-    - **Fantasy Lab FIRE QB v1**: FIRE now supports QB opportunity + role scoring (no conversion pillar yet). QB opportunity comes from `qb_xfp_weekly` with scoring presets (`redraft`: 4-pt pass TD, `dynasty`: 6-pt pass TD); role index uses rolling dropbacks, QB rush attempts, and inside-10 dropbacks.
+- **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring for all skill positions (QB/RB/WR/TE). QB uses 2-pillar scoring (Opportunity via qb_xfp + Role via dropbacks/rush/inside-10); RB/WR/TE use 3-pillar scoring (Opportunity + Role + Conversion). Surfaced via `/api/fire/eg/batch` and `/api/fire/eg/player`.
+- **Fantasy Lab (`/fantasy-lab`)**: Full analytics dashboard with FIRE table, Hybrid Delta view, and Watchlist. Features position-aware column system (QB-specific passing stats swap in when QB selected), column presets (Basic/Volume/Full), sortable headers, CSV export, and conditional formatting.
 
 ## Update Notes (Agent)
-- **2026-02-22:** Built team-level weekly aggregation pipeline (`team_weekly_totals_mv`). Rush Share% and Target Share% now use proper team-total denominators. Re-enabled Rush% column in Fantasy Lab FIRE table. Added MV refresh to admin endpoint.
-- **2026-02-22:** Expanded Fantasy Lab FIRE table from 8 to 24 columns with column preset system (Basic/Volume/Full), sortable headers, color-coded column groups, conditional formatting, and CSV export. Added 16 new stats fields (snapPct, carriesPerGame, targetsPerGame, touchesPerGame, ypc, ypr, rushYdsPerGame, recYdsPerGame, totalTds, fantasyPpg, fpStdDev, boomPct, xfpDiff), fireRank.
-- **2026-02-19:** Merged PR #22 (Phase 3): Delta trust layer with confidence gating, scatter visualization, watchlist, and `/api/delta/eg/player-trend` endpoint. Added `windowGamesPlayed`, `games_played_window`, `weeks_present`, and `confidence` fields to FIRE output. Delta labels now gate percentile-only triggers behind confidence (LOW excluded). Added `why` object to Delta rows. Future-proofed forge_grade_cache query with mode/version filter.
-- **2026-02-18:** Added Fantasy Lab Phase 1 backend data foundation with a consolidated materialized view `fantasy_metrics_weekly_mv` (weekly opportunity + xFP v2 + latest market context) and API endpoints:
-  - `GET /api/fantasy-lab/weekly`
-  - `GET /api/fantasy-lab/player`
-  - `POST /api/admin/fantasy-lab/refresh`
-
-## Unreleased Updates
-- **Fantasy Lab Phase 2 (FIRE + Hybrid Delta):** Added RB/WR/TE-only FIRE compute-on-demand APIs (`/api/fire/eg/batch`, `/api/fire/eg/player`) using rolling 4-week windows and percentile-based pillar scoring with RoleIndex fallback behavior. Added Hybrid Delta API (`/api/delta/eg/batch`) that combines percentile display delta and z-score rank delta between FORGE alpha and FIRE. Added a minimal `/fantasy-lab` UI with FIRE and DELTA table views and explicit QB exclusion notice due current QB xFP gap.
+- **2026-02-22:** Added QB support to Fantasy Lab FIRE. Backend: QB per-game stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G). Frontend: QB position selector, position-aware columns, Conversion column hidden for QB. Fixed Snap% bug (now uses team_off_plays = MAX(snaps) per team/week). Cleaned column labels.
+- **2026-02-22:** Built team-level weekly aggregation pipeline (`team_weekly_totals_mv`). Rush Share% and Target Share% now use proper team-total denominators.
+- **2026-02-22:** Expanded Fantasy Lab FIRE table from 8 to 24 columns with column preset system (Basic/Volume/Full), sortable headers, color-coded column groups, conditional formatting, and CSV export.
+- **2026-02-19:** Merged PR #22 (Phase 3): Delta trust layer with confidence gating, scatter visualization, watchlist, and `/api/delta/eg/player-trend` endpoint.
+- **2026-02-18:** Added Fantasy Lab Phase 1 backend data foundation with consolidated materialized view `fantasy_metrics_weekly_mv`.
