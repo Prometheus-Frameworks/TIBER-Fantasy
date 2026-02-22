@@ -182,6 +182,7 @@ interface TeamWeeklyTotals {
   team_rush_att: number;
   team_targets: number;
   team_snaps: number;
+  team_off_plays: number;
   team_rz_rush_att: number;
   team_rz_targets: number;
 }
@@ -285,7 +286,7 @@ async function fetchRollingRows(season: number, week: number, position?: Positio
   `);
 
   const teamTotalsResult = await db.execute(sql`
-    SELECT team, week, team_rush_att, team_targets, team_snaps, team_rz_rush_att, team_rz_targets
+    SELECT team, week, team_rush_att, team_targets, team_snaps, team_off_plays, team_rz_rush_att, team_rz_targets
     FROM team_weekly_totals_mv
     WHERE season = ${season} AND week BETWEEN ${weekStart} AND ${week}
   `);
@@ -326,7 +327,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     teamTotalsByKey.set(`${tt.team}_${tt.week}`, tt);
   }
 
-  const playerShareData = new Map<string, { rushShare: number | null; targetShare: number | null; rzTouchShare: number | null }>();
+  const playerShareData = new Map<string, { rushShare: number | null; targetShare: number | null; rzTouchShare: number | null; snapPct: number | null }>();
   const statsByPlayer = new Map<string, WeeklyPlayerStatRow[]>();
   for (const ps of playerWeeklyStats) {
     if (!statsByPlayer.has(ps.player_id)) statsByPlayer.set(ps.player_id, []);
@@ -337,10 +338,15 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
     let playerRushTotal = 0, playerTargetTotal = 0, playerRzTouchTotal = 0;
     let teamRushTotal = 0, teamTargetTotal = 0, teamRzTouchTotal = 0;
     let rushWeeks = 0, targetWeeks = 0, rzWeeks = 0;
+    const snapPcts: number[] = [];
 
     for (const pw of weeklyRows) {
       const tt = teamTotalsByKey.get(`${pw.team}_${pw.week}`);
       if (!tt) continue;
+
+      if (tt.team_off_plays > 0 && pw.snaps > 0) {
+        snapPcts.push((pw.snaps / tt.team_off_plays) * 100);
+      }
 
       if (tt.team_rush_att > 0) {
         playerRushTotal += pw.rush_attempts;
@@ -365,6 +371,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
       rushShare: rushWeeks > 0 && teamRushTotal > 0 ? (playerRushTotal / teamRushTotal) * 100 : null,
       targetShare: targetWeeks > 0 && teamTargetTotal > 0 ? (playerTargetTotal / teamTargetTotal) * 100 : null,
       rzTouchShare: rzWeeks > 0 && teamRzTouchTotal > 0 ? (playerRzTouchTotal / teamRzTouchTotal) * 100 : null,
+      snapPct: snapPcts.length > 0 ? snapPcts.reduce((a, b) => a + b, 0) / snapPcts.length : null,
     });
   }
 
@@ -469,7 +476,7 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
         qb_exp_rush_td_R: row.qb_exp_rush_td_r,
       },
       stats: {
-        snapPct: row.snap_avg != null ? row.snap_avg * 100 : null,
+        snapPct: shares?.snapPct ?? (row.snap_avg != null ? row.snap_avg * 100 : null),
         carriesPerGame: sCarries / g,
         targetsPerGame: sTargets / g,
         touchesPerGame: (sCarries + sTargets) / g,

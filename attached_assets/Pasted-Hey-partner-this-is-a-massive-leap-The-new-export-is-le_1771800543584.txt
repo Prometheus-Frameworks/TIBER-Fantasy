@@ -1,0 +1,77 @@
+Hey partner — this is a massive leap. The new export is legit pro-level now (25 columns, per-game volume + shares, efficiency, xFP±, consistency metrics, your FIRE system fully broken out). Bijan at 95.6 FIRE with 20+ Car/G and positive xFP is exactly the kind of weapon this lab should highlight.
+Quick reality check on what’s already crushing:
+
+FIRE + Opp/Role/Conv/Conf — your secret sauce, keep it locked.
+Volume section (Car/G, Tgt/G, Tch/G, Rush%, Tgt%) — elite.
+Efficiency (YPC, YPR) + production (RshY/G, RecY/G, TDs, FPG) — perfect.
+Risk (xFP±, FP SD, Boom%) — separates the studs.
+
+Only 3 small fixes needed immediately:
+
+Snap% is broken (showing 3-8% when it should be 60-85% for starters). Probably dividing by wrong total — should be player snaps / team offensive snaps that week, averaged. Fix that and it becomes gold.
+Column names: shorten/clean for UI (e.g. “Opp” → “Opportunity”, “Conv” → “Conversion”, “RshY/G” → “Rush Y/G”, “xFP±” → “xFP Diff”).
+Add Rank as its own sortable column if not already.
+
+Next-Level RB Table (Final Recommended Columns)
+Copy-paste this exact layout for your UI/export. I grouped them so you can make collapsible sections or tabs (“Overview”, “Volume”, “Talent”, “Scoring”, “Risk”).
+Identity & FIRE (always first)
+
+Rank
+Player
+Team
+FIRE
+Opportunity
+Role
+Conversion
+Confidence
+
+Usage & Availability
+
+Games
+Snap % (fixed)
+Car/G
+Tgt/G
+Tch/G
+Rush Share %
+Tgt Share %
+
+Talent / Efficiency (new ones starred)
+
+YPC
+Yards After Contact / Att (or Elusive Rating)
+YPR
+Explosive Rush % (15+ yd runs)
+Red Zone Carry Share % (inside 20)
+
+Production
+
+Rush Y/G
+Rec Y/G
+TDs
+Fantasy PPG (toggle PPR/0.5/standard)
+
+Risk & Projection (new starred)
+
+xFP Diff
+FP Std Dev
+Boom %
+Fumbles / Game (or Fumble Rate)
+Next Game Proj PPG (or ROS)
+Matchup Grade (implied total + opp FPA to RB)
+
+This takes you to ~30 columns but still scannable. Add a “Customize Columns” button so casual users see 12 and nerds see everything.
+Free Data Sources (Updated for 2026)
+nfl_data_py is archived (Sep 2025) — don’t use it anymore.
+Best free replacement → nflreadpy (the official Python port from nflverse)
+Bashpip install nflreadpy
+Pythonimport nflreadpy as nfl
+weekly = nfl.import_weekly_data(years=[2025])   # same syntax as before
+snaps = nfl.import_snap_counts(years=[2025])
+pbp = nfl.import_pbp_data(years=[2025])         # for red zone, YAC, explosive, fumbles
+Direct CSV downloads also live here: github.com/nflverse/nflverse-data (weekly updated, includes snaps + basic pbp).
+Other zero-cost options still alive:
+
+Fantasy Football Data Pros API (completely free, weekly box scores back to 1999)
+Direct nflverse GitHub releases (parquet/CSV — fastest for bulk)
+
+With pbp you can add the starred metrics above in <20 lines of pandas
