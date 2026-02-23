@@ -8,7 +8,8 @@
  * - Tier mapping (T1-T5)
  */
 
-import { ForgeEngineOutput, ForgePillarScores, Position, QbContextData } from './forgeEngine';
+import { ForgeEngineOutput, ForgePillarScores, Position, QbContextData, isDefensivePosition } from './forgeEngine';
+import { IDP_TIER_THRESHOLDS } from '@shared/idpSchema';
 import { applyFootballLens, FootballLensIssue } from './forgeFootballLens';
 import { ALPHA_CALIBRATION, CalibrationParams } from './types';
 
@@ -49,6 +50,11 @@ const POSITION_WEIGHTS: Record<Position, ForgeWeights> = {
   RB: { volume: 0.50, efficiency: 0.20, teamContext: 0.15, stability: 0.15 },
   TE: { volume: 0.50, efficiency: 0.20, teamContext: 0.15, stability: 0.15 },
   QB: { volume: 0.28, efficiency: 0.30, teamContext: 0.28, stability: 0.14 },
+  EDGE: { volume: 0.25, efficiency: 0.40, teamContext: 0.15, stability: 0.20 },
+  DI: { volume: 0.25, efficiency: 0.40, teamContext: 0.15, stability: 0.20 },
+  LB: { volume: 0.30, efficiency: 0.35, teamContext: 0.15, stability: 0.20 },
+  CB: { volume: 0.25, efficiency: 0.40, teamContext: 0.20, stability: 0.15 },
+  S: { volume: 0.25, efficiency: 0.40, teamContext: 0.20, stability: 0.15 },
 };
 
 // Dynasty mode weights - stability matters more for long-term value
@@ -60,6 +66,11 @@ const DYNASTY_WEIGHTS: Record<Position, ForgeWeights> = {
   RB: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
   TE: { volume: 0.32, efficiency: 0.13, teamContext: 0.20, stability: 0.35 },
   QB: { volume: 0.20, efficiency: 0.25, teamContext: 0.28, stability: 0.27 },
+  EDGE: { volume: 0.25, efficiency: 0.40, teamContext: 0.15, stability: 0.20 },
+  DI: { volume: 0.25, efficiency: 0.40, teamContext: 0.15, stability: 0.20 },
+  LB: { volume: 0.30, efficiency: 0.35, teamContext: 0.15, stability: 0.20 },
+  CB: { volume: 0.25, efficiency: 0.40, teamContext: 0.20, stability: 0.15 },
+  S: { volume: 0.25, efficiency: 0.40, teamContext: 0.20, stability: 0.15 },
 };
 
 export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
@@ -67,6 +78,11 @@ export const POSITION_TIER_THRESHOLDS: Record<Position, number[]> = {
   RB: [78, 68, 55, 42],
   TE: [82, 70, 55, 42],
   QB: [82, 68, 52, 38],
+  EDGE: IDP_TIER_THRESHOLDS.EDGE,
+  DI: IDP_TIER_THRESHOLDS.DI,
+  LB: IDP_TIER_THRESHOLDS.LB,
+  CB: IDP_TIER_THRESHOLDS.CB,
+  S: IDP_TIER_THRESHOLDS.S,
 };
 
 function normalizeWeights(weights: ForgeWeights): ForgeWeights {
@@ -201,13 +217,13 @@ export function gradeForge(
   // Apply QB Context blending from qb_context_2025 table
   const qbContext = engineOutput.qbContext;
   const shortTermContext = pillars.teamContext;
-  
-  if (mode === 'redraft' && qbContext) {
+
+  if (mode === 'redraft' && qbContext && !isDefensivePosition(engineOutput.position)) {
     // Redraft: 60% shortTermTeamContext + 40% qbRedraftScore
     const blendedContext = (0.60 * shortTermContext) + (0.40 * qbContext.qbRedraftScore);
     pillars.teamContext = blendedContext;
     console.log(`[ForgeGrading] Redraft QB blend for ${engineOutput.playerName}: short=${shortTermContext.toFixed(1)} + qbRedraft=${qbContext.qbRedraftScore.toFixed(1)} → blended=${blendedContext.toFixed(1)} (QB: ${qbContext.qbName})`);
-  } else if (mode === 'dynasty') {
+  } else if (mode === 'dynasty' && !isDefensivePosition(engineOutput.position)) {
     // Dynasty: Use dynastyContext with QB dynasty score blended in
     const dynastyCtx = pillars.dynastyContext ?? shortTermContext;
     

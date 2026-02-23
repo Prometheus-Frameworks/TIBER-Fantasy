@@ -13,12 +13,24 @@ import { getPrimaryQbContext } from './qbContextPopulator';
 import { computeXfpPerGame, normalizeXfpToScore, type XfpResult } from './xfpVolumePillar';
 import { computeRoleConsistency, type RoleConsistencyResult } from './roleConsistencyPillar';
 import { validateSnapshotRows } from './snapshotDataValidator';
-import { resolvePlayerId } from './utils/playerIdResolver';
+import type { DefensivePosition } from '@shared/idpSchema';
+import { runIdpForgeEngine } from './idp/idpForgeEngine';
 
-export type Position = 'QB' | 'RB' | 'WR' | 'TE';
+export type OffensivePosition = 'QB' | 'RB' | 'WR' | 'TE';
+export type Position = OffensivePosition | DefensivePosition;
 
 // Runtime position whitelist — validates before constructing table names via sql.identifier()
-export const VALID_FORGE_POSITIONS: readonly Position[] = ['QB', 'RB', 'WR', 'TE'];
+export const VALID_OFFENSIVE_POSITIONS: readonly OffensivePosition[] = ['QB', 'RB', 'WR', 'TE'];
+export const VALID_DEFENSIVE_POSITIONS: readonly DefensivePosition[] = ['EDGE', 'DI', 'LB', 'CB', 'S'];
+export const VALID_FORGE_POSITIONS: readonly Position[] = [...VALID_OFFENSIVE_POSITIONS, ...VALID_DEFENSIVE_POSITIONS];
+
+export function isDefensivePosition(pos: string): pos is DefensivePosition {
+  return VALID_DEFENSIVE_POSITIONS.includes(pos as DefensivePosition);
+}
+
+export function isOffensivePosition(pos: string): pos is OffensivePosition {
+  return VALID_OFFENSIVE_POSITIONS.includes(pos as OffensivePosition);
+}
 
 export function assertValidPosition(position: string): asserts position is Position {
   if (!VALID_FORGE_POSITIONS.includes(position as Position)) {
@@ -240,6 +252,9 @@ const QB_PILLARS: PositionPillarConfig = {
 };
 
 export function getPositionPillarConfig(position: Position): PositionPillarConfig {
+  if (isDefensivePosition(position)) {
+    throw new Error(`Defensive position ${position} uses IDP-specific pillar config`);
+  }
   switch (position) {
     case 'WR':
       return WR_PILLARS;
@@ -334,7 +349,7 @@ function computeDerivedMetric(metricKey: string, context: ForgeContext): number 
     case 'availability_score': {
       // Games played normalized to 17-game season
       // Higher = more available/durable
-      const gamesPlayed = context.gamesPlayed || Number(roleBank['games_played']) || 0;
+      const gamesPlayed = context.gamesPlayed || roleBank['games_played'] as number || 0;
       const maxGames = 17;
       const availScore = Math.min(100, (gamesPlayed / maxGames) * 100);
       return availScore;
@@ -515,15 +530,30 @@ export function extractRecursionSignals(context: ForgeContext): {
 
 async function fetchRoleBankData(
   playerId: string,
-  position: Position,
-  season: number,
-  resolvedStatsId?: string
+  position: OffensivePosition,
+  season: number
 ): Promise<Record<string, number | null>> {
   assertValidPosition(position);
   const tableName = `${position.toLowerCase()}_role_bank`;
-  const roleBankId = resolvedStatsId || playerId;
   
   try {
+    // Role bank uses GSIS IDs (nfl_data_py_id), not canonical IDs
+    // First, look up the GSIS ID from player_identity_map
+    const idLookup = await db.execute(sql`
+      SELECT nfl_data_py_id, gsis_id 
+      FROM player_identity_map 
+      WHERE canonical_id = ${playerId}
+      LIMIT 1
+    `);
+    
+    // Determine which ID to use for role bank lookup
+    let roleBankId = playerId; // Default to canonical ID
+    if (idLookup.rows.length > 0) {
+      const lookupRow = idLookup.rows[0] as Record<string, any>;
+      // Prefer nfl_data_py_id, fall back to gsis_id, then canonical_id
+      roleBankId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
+    }
+    
     const result = await db.execute(sql`
       SELECT * FROM ${sql.identifier(tableName)}
       WHERE player_id = ${roleBankId} AND season = ${season}
@@ -618,7 +648,6 @@ function normalizeTeamContext(row: Record<string, any>): Record<string, number |
   const explosive = parseFloat(row.explosive_20_plus) || 0;
   
   const normalizeRange = (val: number, min: number, max: number) => {
-    if (max === min) return 50;
     const norm = ((val - min) / (max - min)) * 100;
     return Math.max(0, Math.min(100, norm));
   };
@@ -894,20 +923,35 @@ async function computeDynastyContext(
 
 export async function fetchForgeContext(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number,
   week: number | 'season'
 ): Promise<ForgeContext> {
-  const resolved = await resolvePlayerId(playerId);
-  const statsId = resolved.statsId;
+  const roleBank = await fetchRoleBankData(playerId, position, season);
   
-  const roleBank = await fetchRoleBankData(playerId, position, season, statsId);
-  
-  let playerName = resolved.playerName;
-  let nflTeam = resolved.nflTeam;
+  let playerName = 'Unknown';
+  let nflTeam: string | undefined;
   let gamesPlayed = 0;
   
   try {
+    // Weekly stats uses GSIS IDs, not canonical IDs
+    // First look up the GSIS ID from player_identity_map
+    const idLookup = await db.execute(sql`
+      SELECT nfl_data_py_id, gsis_id, full_name, nfl_team 
+      FROM player_identity_map 
+      WHERE canonical_id = ${playerId}
+      LIMIT 1
+    `);
+    
+    let statsId = playerId;
+    if (idLookup.rows.length > 0) {
+      const lookupRow = idLookup.rows[0] as Record<string, any>;
+      statsId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
+      // Use identity map data as fallback
+      playerName = lookupRow.full_name || 'Unknown';
+      nflTeam = lookupRow.nfl_team;
+    }
+    
     const playerResult = await db.execute(sql`
       SELECT DISTINCT player_name, team 
       FROM weekly_stats 
@@ -981,14 +1025,14 @@ export async function fetchForgeContext(
     sosData,
     recursion: {
       priorAlpha: roleBank['alpha_score'] ?? undefined,
-      alphaMomentum: roleBank['momentum_score'] != null ? (Number(roleBank['momentum_score']) - 50) / 10 : undefined,
+      alphaMomentum: roleBank['momentum_score'] ? (roleBank['momentum_score'] - 50) / 10 : undefined,
     },
     xfpData,
     roleConsistency,
   };
 }
 
-const GAMES_FULL_CREDIT: Record<Position, number> = {
+const GAMES_FULL_CREDIT: Record<OffensivePosition, number> = {
   QB: 12,
   RB: 10,
   WR: 10,
@@ -1000,7 +1044,7 @@ const BASELINE_PILLAR = 40;
 function applyGamesPlayedDampening(
   pillars: ForgePillarScores,
   gamesPlayed: number,
-  position: Position
+  position: OffensivePosition
 ): ForgePillarScores {
   const minGames = GAMES_FULL_CREDIT[position];
   if (gamesPlayed >= minGames) return pillars;
@@ -1026,6 +1070,10 @@ export async function runForgeEngine(
   week: number | 'season'
 ): Promise<ForgeEngineOutput> {
   console.log(`[ForgeEngine] Running for ${playerId} (${position}) season=${season} week=${week}`);
+
+  if (isDefensivePosition(position)) {
+    return runIdpForgeEngine(playerId, position, season, week);
+  }
   
   const context = await fetchForgeContext(playerId, position, season, week);
   const lookup = createMetricLookup(context);
@@ -1082,27 +1130,6 @@ export async function runForgeEngine(
 
   console.log(`[ForgeEngine] Pillars for ${context.playerName}: V=${dampenedPillars.volume.toFixed(1)} E=${dampenedPillars.efficiency.toFixed(1)} T=${dampenedPillars.teamContext.toFixed(1)} S=${dampenedPillars.stability.toFixed(1)} D=${(dampenedPillars.dynastyContext ?? dynastyContext).toFixed(1)}${context.gamesPlayed < GAMES_FULL_CREDIT[position] ? ` [GP=${context.gamesPlayed}/${GAMES_FULL_CREDIT[position]} dampened]` : ''}${qbContext ? ` | QB: ${qbContext.qbName}` : ''}`);
 
-  const resolvedMetrics: Record<string, number | null> = { ...context.roleBank };
-  if (context.xfpData && context.xfpData.weeksUsed > 0) {
-    resolvedMetrics['xfp_per_game'] = Math.round(context.xfpData.xfpPerGame * 100) / 100;
-    resolvedMetrics['fpoe_per_game'] = Math.round(context.xfpData.fpoePerGame * 100) / 100;
-  }
-  const allPillars = ['volume', 'efficiency', 'teamContext', 'stability'] as const;
-  for (const pillarKey of allPillars) {
-    const pillarCfg = config[pillarKey];
-    if (pillarCfg?.metrics) {
-      for (const m of pillarCfg.metrics) {
-        if (resolvedMetrics[m.metricKey] === undefined || resolvedMetrics[m.metricKey] === null) {
-          if (m.source === 'snapshot_team_context') {
-            resolvedMetrics[m.metricKey] = context.teamContext[m.metricKey] ?? null;
-          } else if (m.source === 'sos_table') {
-            resolvedMetrics[m.metricKey] = context.sosData[m.metricKey] ?? null;
-          }
-        }
-      }
-    }
-  }
-
   return {
     playerId,
     playerName: context.playerName,
@@ -1114,7 +1141,7 @@ export async function runForgeEngine(
     pillars: dampenedPillars,
     priorAlpha,
     alphaMomentum,
-    rawMetrics: resolvedMetrics,
+    rawMetrics: context.roleBank,
     qbContext,
   };
 }
@@ -1125,8 +1152,30 @@ export async function runForgeEngineBatch(
   week: number | 'season',
   limit: number = 50
 ): Promise<ForgeEngineOutput[]> {
+  assertValidPosition(position);
   console.log(`[ForgeEngine] Batch run for ${position} season=${season} week=${week} limit=${limit}`);
-  
+
+  if (isDefensivePosition(position)) {
+    const result = await db.execute(sql`
+      SELECT gsis_id as player_id FROM idp_player_season
+      WHERE season = ${season} AND position_group = ${position}
+      ORDER BY total_snaps DESC NULLS LAST
+      LIMIT ${limit}
+    `);
+
+    const chunks = [...result.rows] as Array<Record<string, any>>;
+    const outputs: ForgeEngineOutput[] = [];
+    const concurrency = 10;
+    for (let i = 0; i < chunks.length; i += concurrency) {
+      const slice = chunks.slice(i, i + concurrency);
+      const batch = await Promise.all(
+        slice.map((row) => runForgeEngine(String(row.player_id), position, season, week).catch(() => null))
+      );
+      outputs.push(...batch.filter((x): x is ForgeEngineOutput => x !== null));
+    }
+    return outputs;
+  }
+
   const tableName = `${position.toLowerCase()}_role_bank`;
   
   try {
@@ -1141,19 +1190,14 @@ export async function runForgeEngineBatch(
       LIMIT ${limit}
     `);
 
-    const playerIds = result.rows
-      .map((row: any) => row.player_id)
-      .filter(Boolean) as string[];
-
-    const CONCURRENCY = 10;
     const outputs: ForgeEngineOutput[] = [];
-
-    for (let i = 0; i < playerIds.length; i += CONCURRENCY) {
-      const batch = playerIds.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map(pid => runForgeEngine(pid, position, season, week))
-      );
-      outputs.push(...batchResults);
+    
+    for (const row of result.rows) {
+      const playerId = (row as any).player_id;
+      if (playerId) {
+        const output = await runForgeEngine(playerId, position, season, week);
+        outputs.push(output);
+      }
     }
 
     return outputs;

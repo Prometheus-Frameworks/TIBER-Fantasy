@@ -406,12 +406,15 @@ router.get('/health', (req: Request, res: Response) => {
  * - startWeek (optional): number, start of week range filter
  * - endWeek (optional): number, end of week range filter
  * - leagueType (optional): 'redraft' | 'dynasty' (default: redraft)
+ * - pprType (optional): '0.5' | '1' (default: 1 = full PPR)
  * 
- * v2.0: Format-neutral (no PPR coupling). Dynasty mode applies age multiplier.
+ * v1.4: PPR/Dynasty adjustments:
+ * - PPR: Scales efficiency subscore by reception weight (+2 pts per rec above position avg)
+ * - Dynasty: Applies age multiplier (1.1 if <27, 0.95^(age-27) if >27)
  */
 router.get('/batch', async (req: Request, res: Response) => {
   try {
-    const { position, limit, season, week, startWeek, endWeek, leagueType } = req.query;
+    const { position, limit, season, week, startWeek, endWeek, leagueType, pprType } = req.query;
 
     const normalizedPosition =
       typeof position === 'string' && ['QB', 'RB', 'WR', 'TE'].includes(position.toUpperCase())
@@ -444,15 +447,23 @@ router.get('/batch', async (req: Request, res: Response) => {
         ? Number(endWeek)
         : undefined;
 
+    // v1.4: PPR/Dynasty scoring options
     const normalizedLeagueType = 
       typeof leagueType === 'string' && ['redraft', 'dynasty'].includes(leagueType)
         ? (leagueType as 'redraft' | 'dynasty')
+        : undefined;
+    
+    const normalizedPprType = 
+      typeof pprType === 'string' && ['0.5', '1'].includes(pprType)
+        ? (pprType as '0.5' | '1')
         : undefined;
 
     const weekRangeStr = normalizedStartWeek && normalizedEndWeek 
       ? `, weeks ${normalizedStartWeek}-${normalizedEndWeek}` 
       : '';
-    const optionsStr = normalizedLeagueType ? ` [${normalizedLeagueType}]` : '';
+    const optionsStr = normalizedLeagueType || normalizedPprType 
+      ? ` [${normalizedLeagueType ?? 'redraft'}/${normalizedPprType ?? '1'}PPR]` 
+      : '';
     console.log(`[FORGE/Routes] Batch request: position=${normalizedPosition ?? 'ALL'}, limit=${normalizedLimit}, season=${normalizedSeason}, week=${normalizedWeek}${weekRangeStr}${optionsStr}`);
 
     const scores = await forgeService.getForgeScoresBatch({
@@ -463,6 +474,7 @@ router.get('/batch', async (req: Request, res: Response) => {
       startWeek: normalizedStartWeek,
       endWeek: normalizedEndWeek,
       leagueType: normalizedLeagueType,
+      pprType: normalizedPprType,
     });
 
     // Enrich scores with SoS data
@@ -2042,105 +2054,6 @@ router.get('/qb-context/:team', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/forge/admin/backfill-recursive
- * 
- * Run the recursive alpha engine for players across weeks 1-maxWeek.
- * Supports either specific playerIds OR a position to backfill all players.
- * Processes weeks sequentially so each week builds on the previous state.
- * Body: { playerIds?: string[], position?: string, season?: number, maxWeek?: number }
- */
-router.post('/admin/backfill-recursive', async (req: Request, res: Response) => {
-  try {
-    const { calculateRecursiveAlpha } = await import('./recursiveAlphaEngine');
-    const { fetchContext } = await import('./context/contextFetcher');
-    const { buildWRFeatures } = await import('./features/wrFeatures');
-    const { buildRBFeatures } = await import('./features/rbFeatures');
-    const { buildTEFeatures } = await import('./features/teFeatures');
-    const { buildQBFeatures } = await import('./features/qbFeatures');
-
-    const featureBuilders: Record<string, (ctx: any) => any> = {
-      WR: buildWRFeatures,
-      RB: buildRBFeatures,
-      TE: buildTEFeatures,
-      QB: buildQBFeatures,
-    };
-
-    const season = parseInt(req.body.season) || 2025;
-    const maxWeek = parseInt(req.body.maxWeek) || 17;
-    const position = (req.body.position as string)?.toUpperCase();
-
-    let playerIds: string[] = req.body.playerIds || [];
-
-    if (position && ['QB', 'RB', 'WR', 'TE'].includes(position) && playerIds.length === 0) {
-      const tableName = `${position.toLowerCase()}_role_bank`;
-      const result = await db.execute(sql`
-        SELECT player_id FROM ${sql.identifier(tableName)}
-        WHERE season = ${season}
-        ORDER BY games_played DESC NULLS LAST
-      `);
-      playerIds = result.rows.map((r: any) => r.player_id).filter(Boolean);
-      console.log(`[FORGE/Admin] Found ${playerIds.length} ${position} players to backfill`);
-    }
-
-    if (!playerIds || playerIds.length === 0) {
-      return res.status(400).json({ success: false, error: 'playerIds array or position required' });
-    }
-
-    console.log(`[FORGE/Admin] Recursive backfill: ${playerIds.length} players, season=${season}, weeks 1-${maxWeek}`);
-
-    res.writeHead(200, {
-      'Content-Type': 'application/x-ndjson',
-      'Transfer-Encoding': 'chunked',
-    });
-
-    let scored = 0;
-    let failed = 0;
-
-    for (const playerId of playerIds) {
-      try {
-        let playerName = playerId;
-        let playerPos = position || '?';
-        let lastAlpha = 0;
-
-        for (let week = 1; week <= maxWeek; week++) {
-          try {
-            const context = await fetchContext(playerId, season, week);
-            const builder = featureBuilders[context.position];
-            if (!builder) break;
-
-            const features = builder(context);
-            const score = await calculateRecursiveAlpha(context, features, { persistState: true });
-            playerName = context.playerName;
-            playerPos = context.position;
-            lastAlpha = score.alpha;
-          } catch {
-          }
-        }
-
-        scored++;
-        res.write(JSON.stringify({ playerId, playerName, position: playerPos, alpha: lastAlpha, status: 'ok' }) + '\n');
-      } catch (err: any) {
-        failed++;
-        res.write(JSON.stringify({ playerId, status: 'error', error: err.message }) + '\n');
-      }
-
-      if (scored % 10 === 0) {
-        res.write(JSON.stringify({ progress: `${scored + failed}/${playerIds.length}`, scored, failed }) + '\n');
-      }
-    }
-
-    res.write(JSON.stringify({ done: true, total: playerIds.length, scored, failed }) + '\n');
-    res.end();
-  } catch (err) {
-    console.error('[FORGE/Admin] backfill-recursive error:', err);
-    if (!res.headersSent) {
-      return res.status(500).json({ success: false, error: 'Backfill failed' });
-    }
-    res.end();
-  }
-});
-
-/**
  * GET /api/forge/opportunity-shifts
  * 
  * Get opportunity shifts for players when starters go OUT/IR.
@@ -2179,7 +2092,7 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
   try {
     const { runForgeEngineBatch } = await import('./forgeEngine');
     const { gradeForgeWithMeta } = await import('./forgeGrading');
-    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'EDGE' | 'DI' | 'LB' | 'CB' | 'S';
 
     const position = (req.query.position as string)?.toUpperCase();
     const modeParam = (req.query.mode as string)?.toLowerCase();
@@ -2192,10 +2105,10 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
     const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+    if (!position || !['WR', 'RB', 'TE', 'QB', 'EDGE', 'DI', 'LB', 'CB', 'S'].includes(position)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+        error: 'Invalid or missing position. Must be WR, RB, TE, QB, EDGE, DI, LB, CB, or S.',
       });
     }
 
@@ -2273,7 +2186,7 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
   try {
     const { runForgeEngine } = await import('./forgeEngine');
     const { gradeForgeWithMeta } = await import('./forgeGrading');
-    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'EDGE' | 'DI' | 'LB' | 'CB' | 'S';
 
     const { playerId } = req.params;
     const position = (req.query.position as string)?.toUpperCase();
@@ -2293,10 +2206,10 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
       });
     }
 
-    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+    if (!position || !['WR', 'RB', 'TE', 'QB', 'EDGE', 'DI', 'LB', 'CB', 'S'].includes(position)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+        error: 'Invalid or missing position. Must be WR, RB, TE, QB, EDGE, DI, LB, CB, or S.',
       });
     }
 
@@ -2722,7 +2635,9 @@ router.get('/tiers', async (req: Request, res: Response) => {
       gamesPlayed: row.gamesPlayed,
       footballLensIssues: row.footballLensIssues ?? [],
       lensAdjustment: row.lensAdjustment ?? 0,
-      productionStats: {
+      fantasyStats: {
+        ppgPpr: row.ppgPpr,
+        seasonFptsPpr: row.seasonFptsPpr,
         targets: row.targets,
         touches: row.touches,
       },

@@ -5,7 +5,7 @@ import { runForgeEngine, assertValidPosition } from './forgeEngine';
 import { gradeForge } from './forgeGrading';
 import type { Position } from './forgeEngine';
 
-const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'DI', 'LB', 'CB', 'S'];
 const CACHE_VERSION = 'v1';
 
 type ComputeOptions = {
@@ -19,7 +19,9 @@ type PositionComputeResult = {
   durationMs: number;
 };
 
-type ProductionStats = {
+type FantasyStats = {
+  ppgPpr: number | null;
+  seasonFptsPpr: number | null;
   targets: number | null;
   touches: number | null;
 };
@@ -68,7 +70,7 @@ export async function computeAndCacheGrades(
       const gradingNoLens = gradeForge(engineOutput, { mode: 'redraft', skipFootballLens: true });
       const t2 = Date.now();
 
-      const stats = await fetchProductionStats(playerId, season);
+      const stats = await fetchFantasyStats(playerId, season);
       const t3 = Date.now();
 
       const trajectory = deriveTrajectory(engineOutput.alphaMomentum);
@@ -99,8 +101,8 @@ export async function computeAndCacheGrades(
           confidence,
           trajectory,
           gamesPlayed: engineOutput.gamesPlayed,
-          ppgPpr: null,
-          seasonFptsPpr: null,
+          ppgPpr: stats.ppgPpr,
+          seasonFptsPpr: stats.seasonFptsPpr,
           targets: stats.targets,
           touches: stats.touches,
           computedAt: new Date(),
@@ -126,8 +128,8 @@ export async function computeAndCacheGrades(
             confidence,
             trajectory,
             gamesPlayed: engineOutput.gamesPlayed,
-            ppgPpr: null,
-            seasonFptsPpr: null,
+            ppgPpr: stats.ppgPpr,
+            seasonFptsPpr: stats.seasonFptsPpr,
             targets: stats.targets,
             touches: stats.touches,
             computedAt: new Date(),
@@ -265,9 +267,11 @@ async function getLatestAsOfWeek(season: number, version: string): Promise<numbe
   return result[0]?.maxWeek ? Number(result[0].maxWeek) : null;
 }
 
-async function fetchProductionStats(playerId: string, season: number): Promise<ProductionStats> {
+async function fetchFantasyStats(playerId: string, season: number): Promise<FantasyStats> {
   const rows = await db
     .select({
+      seasonFptsPpr: sql<number>`sum(${datadiveSnapshotPlayerWeek.fptsPpr})`,
+      ppgPpr: sql<number>`avg(${datadiveSnapshotPlayerWeek.fptsPpr})`,
       targets: sql<number>`sum(${datadiveSnapshotPlayerWeek.targets})`,
       touches: sql<number>`sum(coalesce(${datadiveSnapshotPlayerWeek.rushAttempts}, 0) + coalesce(${datadiveSnapshotPlayerWeek.receptions}, 0))`,
     })
@@ -276,6 +280,8 @@ async function fetchProductionStats(playerId: string, season: number): Promise<P
 
   const agg = rows[0];
   return {
+    seasonFptsPpr: agg?.seasonFptsPpr !== null ? round1(Number(agg.seasonFptsPpr)) : null,
+    ppgPpr: agg?.ppgPpr !== null ? round1(Number(agg.ppgPpr)) : null,
     targets: agg?.targets !== null && agg?.targets !== undefined ? Number(agg.targets) : null,
     touches: agg?.touches !== null && agg?.touches !== undefined ? Number(agg.touches) : null,
   };

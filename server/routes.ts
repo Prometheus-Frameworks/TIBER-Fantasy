@@ -83,6 +83,7 @@ import metricMatrixRoutes from './routes/metricMatrixRoutes';
 import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import fantasyLabRoutes from './routes/fantasyLabRoutes';
+import idpAdminRoutes from './routes/idpAdminRoutes';
 import fireRoutes from './routes/fireRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
@@ -126,8 +127,8 @@ import playerMappingRoutes, { metricsRouter, forgeLabRouter, adminPlayerMappingR
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
-import { securityHeaders } from './middleware/security';
 import { rateLimiters } from './middleware/rateLimit';
+import { securityHeaders } from './middleware/security';
 import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
@@ -2406,6 +2407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabRoutes);
   app.use('/api/fantasy-lab', fantasyLabRoutes);
   app.use('/api/admin/fantasy-lab', fantasyLabRoutes);
+  app.use('/api/admin/idp', idpAdminRoutes);
   app.use('/api', fireRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   
