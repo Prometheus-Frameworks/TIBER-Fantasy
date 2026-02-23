@@ -5,10 +5,10 @@ import { db } from "../infra/db";
 const router = Router();
 
 type Position = "QB" | "RB" | "WR" | "TE";
-type SkillPosition = "RB" | "WR" | "TE";
+type SkillPosition = "QB" | "RB" | "WR" | "TE";
 type ScoringPreset = "redraft" | "dynasty";
 const SUPPORTED_POSITIONS: Position[] = ["QB", "RB", "WR", "TE"];
-const SKILL_POSITIONS: SkillPosition[] = ["RB", "WR", "TE"];
+const SKILL_POSITIONS: SkillPosition[] = ["QB", "RB", "WR", "TE"];
 
 interface RollingRow {
   player_id: string;
@@ -595,12 +595,44 @@ function buildFire(rows: RollingRow[], season: number, week: number, rollingWeek
 
       const sortedRoleRaw = [...roleRawValues].sort((a, b) => a - b);
 
+      const convRawValues: number[] = [];
+      const convById = new Map<string, number>();
+
+      for (const p of pool) {
+        const pStats = statsByPlayer.get(p.playerId) ?? [];
+        const g = Math.max(pStats.length, 1);
+        const totalPassYds = pStats.reduce((s, w) => s + w.passing_yards, 0);
+        const totalPassTd = pStats.reduce((s, w) => s + w.passing_tds, 0);
+        const totalInt = pStats.reduce((s, w) => s + w.interceptions, 0);
+        const totalRushYds = pStats.reduce((s, w) => s + w.rushing_yards, 0);
+        const totalRushTd = pStats.reduce((s, w) => s + w.rushing_tds, 0);
+
+        const expPassYds = p.raw.qb_exp_pass_yards_R ?? 0;
+        const expPassTd = p.raw.qb_exp_pass_td_R ?? 0;
+        const expInt = p.raw.qb_exp_int_R ?? 0;
+        const expRushYds = p.raw.qb_exp_rush_yards_R ?? 0;
+        const expRushTd = p.raw.qb_exp_rush_td_R ?? 0;
+
+        const passYdsOE = expPassYds > 0 ? (totalPassYds - expPassYds) / g : 0;
+        const passTdOE = expPassTd > 0 ? (totalPassTd - expPassTd) / g : 0;
+        const intOE = expInt > 0 ? (expInt - totalInt) / g : 0;
+        const rushYdsOE = expRushYds > 0 ? (totalRushYds - expRushYds) / g : 0;
+        const rushTdOE = expRushTd > 0 ? (totalRushTd - expRushTd) / g : 0;
+
+        const convRaw = 0.30 * passYdsOE + 4.0 * passTdOE + 2.0 * intOE + 0.10 * rushYdsOE + 6.0 * rushTdOE;
+        convById.set(p.playerId, convRaw);
+        convRawValues.push(convRaw);
+      }
+
+      const sortedConv = [...convRawValues].sort((a, b) => a - b);
+
       for (const p of pool) {
         const opp = percentileRank(oppValues, scoringPreset === "dynasty" ? (p.raw.qb_xfp_dynasty_R ?? 0) : (p.raw.qb_xfp_redraft_R ?? 0));
         const role = percentileRank(sortedRoleRaw, roleById.get(p.playerId) ?? 0);
-        p.pillars = { opportunity: opp, role, conversion: null };
-        p.fireScore = 0.75 * opp + 0.25 * role;
-        p.roleMeta.usedColumns = ["qb_dropbacks", "qb_rush_attempts", "inside10_dropbacks"];
+        const conv = percentileRank(sortedConv, convById.get(p.playerId) ?? 0);
+        p.pillars = { opportunity: opp, role, conversion: conv };
+        p.fireScore = 0.60 * opp + 0.25 * role + 0.15 * conv;
+        p.roleMeta.usedColumns = ["qb_dropbacks", "qb_rush_attempts", "inside10_dropbacks", "pass_yards_oe", "pass_td_oe", "int_oe", "rush_yards_oe", "rush_td_oe"];
       }
       continue;
     }
@@ -729,7 +761,7 @@ router.get('/fire/eg/batch', async (req: Request, res: Response) => {
           TE: scaledThreshold("TE", rollingWeeks.length || 1),
           windowWeeks: rollingWeeks.length || 1,
         },
-        notes: ['QB FIRE v1 uses Opportunity + Role only; Conversion is deferred to v1.1.'],
+        notes: ['QB FIRE uses 3-pillar scoring: Opportunity (60%) + Role (25%) + Conversion (15%). Conversion measures production over expectation (pass yards/TD/INT/rush yards/TD vs expected).'],
       },
       data,
     });
@@ -786,7 +818,7 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'season and week are required integers' });
     }
     if (position && !SKILL_POSITIONS.includes(position)) {
-      return res.status(400).json({ error: 'Delta requires FORGE + FIRE; only RB, WR, TE supported (QB FORGE not yet available)' });
+      return res.status(400).json({ error: 'position must be QB, RB, WR, or TE' });
     }
 
     const { runForgeEngineBatch } = await import('../modules/forge/forgeEngine');
@@ -873,8 +905,8 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
           why: {
             window: `W${Math.max(1, row.weekAnchor - 3)}–W${row.weekAnchor}`,
             gamesPlayed: fireData.games_played_window,
-            xfp_R: fireData.raw.xfp_R,
-            snaps_R: fireData.raw.snaps_R,
+            xfp_R: row.position === 'QB' ? (fireData.raw.qb_xfp_redraft_R ?? fireData.raw.qb_xfp_dynasty_R) : fireData.raw.xfp_R,
+            snaps_R: row.position === 'QB' ? fireData.raw.qb_dropbacks_R : fireData.raw.snaps_R,
             note: whyNote,
           },
         });
@@ -895,8 +927,8 @@ router.get('/delta/eg/batch', async (req: Request, res: Response) => {
         weekAnchor: week,
         position: position ?? 'ALL',
         countsByPosition: countsByPos,
-        eligibilityThresholds: { RB: 50, WR: 80, TE: 80 },
-        notes: ['Hybrid delta: display uses percentile delta, ranking uses z-score delta.', 'QB excluded from DELTA until QB conversion pillar exists.'],
+        eligibilityThresholds: { QB: 80, RB: 50, WR: 80, TE: 80 },
+        notes: ['Hybrid delta: display uses percentile delta, ranking uses z-score delta.', 'All positions (QB/RB/WR/TE) supported.'],
         limit,
         offset,
         total: sorted.length,
@@ -926,7 +958,7 @@ router.get('/delta/eg/player-trend', async (req: Request, res: Response) => {
     const posResult = await db.execute(sql`
       SELECT MAX(position)::text AS position
       FROM fantasy_metrics_weekly_mv
-      WHERE season = ${season} AND player_id = ${playerId} AND position IN ('RB','WR','TE')
+      WHERE season = ${season} AND player_id = ${playerId} AND position IN ('QB','RB','WR','TE')
     `);
 
     const position = posResult.rows[0]?.position as SkillPosition | undefined;

@@ -68,11 +68,13 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **connect-pg-simple**: For PostgreSQL-based session storage.
 - **@neondatabase/serverless**: For PostgreSQL connections in serverless environments.
 - **Google Gemini API**: Integrated for AI embeddings and chat generation capabilities.
-- **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring for all skill positions (QB/RB/WR/TE). QB uses 2-pillar scoring (Opportunity via qb_xfp + Role via dropbacks/rush/inside-10); RB/WR/TE use 3-pillar scoring (Opportunity + Role + Conversion). Surfaced via `/api/fire/eg/batch` and `/api/fire/eg/player`.
+- **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring for all skill positions (QB/RB/WR/TE). All positions use 3-pillar scoring. QB: Opportunity 60% (qb_xfp) + Role 25% (dropbacks/rush/inside-10) + Conversion 15% (pass yards/TD/INT/rush yards/TD over expectation). RB/WR/TE: Opportunity 60% + Role 25% + Conversion 15% (xfpgoe). Surfaced via `/api/fire/eg/batch` and `/api/fire/eg/player`.
 - **Fantasy Lab (`/fantasy-lab`)**: Full analytics dashboard with FIRE table, Hybrid Delta view, and Watchlist. Features position-aware column system (QB-specific passing stats swap in when QB selected), column presets (Basic/Volume/Full), sortable headers, CSV export, and conditional formatting.
 
 ## Update Notes (Agent)
-- **2026-02-22:** Added QB support to Fantasy Lab FIRE. Backend: QB per-game stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G). Frontend: QB position selector, position-aware columns, Conversion column hidden for QB. Fixed Snap% bug (now uses team_off_plays = MAX(snaps) per team/week). Cleaned column labels.
+- **2026-02-23:** Added QB Conversion pillar to FIRE — 3-pillar scoring now for all positions. QB Conversion uses production-over-expectation (pass yards/TD/INT/rush yards/TD vs expected). Weight split: Opp 60%, Role 25%, Conv 15%. Delta engine now supports QB with buy-low/sell-high signals. Conversion column visible for all positions in Fantasy Lab.
+- **2026-02-23:** FORGE engine math hardening: division-by-zero guards, falsy-zero momentum_score fix, NaN guards in cvToScore, shared playerIdResolver to eliminate duplicate lookups, batch parallelization (concurrency=10).
+- **2026-02-22:** Added QB support to Fantasy Lab FIRE. Backend: QB per-game stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G). Frontend: QB position selector, position-aware columns. Fixed Snap% bug (now uses team_off_plays = MAX(snaps) per team/week). Cleaned column labels.
 - **2026-02-22:** Built team-level weekly aggregation pipeline (`team_weekly_totals_mv`). Rush Share% and Target Share% now use proper team-total denominators.
 - **2026-02-22:** Expanded Fantasy Lab FIRE table from 8 to 24 columns with column preset system (Basic/Volume/Full), sortable headers, color-coded column groups, conditional formatting, and CSV export.
 - **2026-02-19:** Merged PR #22 (Phase 3): Delta trust layer with confidence gating, scatter visualization, watchlist, and `/api/delta/eg/player-trend` endpoint.

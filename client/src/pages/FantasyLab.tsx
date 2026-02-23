@@ -43,7 +43,7 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'fire', label: 'FIRE', group: 'identity', render: (r) => num(r.fireScore), align: 'right', sortKey: (r) => r.fireScore ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'opp', label: 'Opportunity', group: 'fire', render: (r) => num(r.pillars?.opportunity), align: 'right', sortKey: (r) => r.pillars?.opportunity ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'role', label: 'Role', group: 'fire', render: (r) => num(r.pillars?.role), align: 'right', sortKey: (r) => r.pillars?.role ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
-  { key: 'conv', label: 'Conversion', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'], positions: ['RB', 'WR', 'TE'] },
+  { key: 'conv', label: 'Conversion', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'conf', label: 'Confidence', group: 'fire', render: (r) => r.confidence || 'LOW', align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'games', label: 'Games', group: 'games', render: (r) => String(r.games_played_window ?? '—'), align: 'right', sortKey: (r) => r.games_played_window ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'snaps', label: 'Snaps', group: 'games', render: (r) => num(r.raw?.snaps_R, 0), align: 'right', sortKey: (r) => r.raw?.snaps_R ?? 0, preset: ['VOLUME', 'FULL'] },
@@ -289,7 +289,7 @@ export default function FantasyLab() {
       <div>
         <h1 className="text-2xl font-semibold">Fantasy Lab</h1>
         <p className="text-sm text-gray-600">FIRE engine + FORGE/FIRE Hybrid Delta for all skill positions.</p>
-        {position === 'QB' && <p className="text-xs text-amber-700 mt-1">QB FIRE uses 2-pillar scoring (Opportunity + Role). Conversion pillar coming soon.</p>}
+        {position === 'QB' && <p className="text-xs text-amber-700 mt-1">QB FIRE uses 3-pillar scoring: Opportunity (60%) + Role (25%) + Conversion (15%). Conversion measures production vs expectation.</p>}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white border rounded-lg p-3">
