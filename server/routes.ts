@@ -127,6 +127,7 @@ import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
 import { requireAdminAuth } from './middleware/adminAuth';
 import { rateLimiters } from './middleware/rateLimit';
+import { securityHeaders } from './middleware/security';
 import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
@@ -167,6 +168,9 @@ async function getSamplePlayersForCompass(position: string, limit: number = 20) 
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply security headers to all API responses (not HTML/static assets)
+  app.use('/api', securityHeaders());
+
   // Serve docs folder for static markdown files
   app.use('/docs', express.static('docs'));
   

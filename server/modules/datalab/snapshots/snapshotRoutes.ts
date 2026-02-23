@@ -41,6 +41,9 @@ const xFptsCoefficients = {
 
 export type PerformanceTag = "RISER" | "FALLER" | "NEUTRAL" | null;
 
+// Whitelisted positions for all snapshot query parameters — never use raw user input in SQL
+const VALID_SNAPSHOT_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
 /**
  * Calculate expected PPR fantasy points based on opportunity volume
  * xPPR = (targets × ppt) + (rush_attempts × ppr)
@@ -614,9 +617,11 @@ router.get("/usage-agg", async (req: Request, res: Response) => {
     }
 
     // Build SQL aggregation query across all snapshots in the week range
-    const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
-      ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
-      : sql.raw('');
+    // Parameterized position filter — whitelist prevents SQL injection
+    const posUpper = position ? (position as string).toUpperCase() : null;
+    const positionFilter = posUpper && posUpper !== 'ALL' && VALID_SNAPSHOT_POSITIONS.includes(posUpper as any)
+      ? sql`AND spw.position = ${posUpper}`
+      : sql``;
 
     const result = await db.execute(sql`
       WITH valid_snapshots AS (
@@ -978,13 +983,15 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
         endWeek = Number(weekTo);
       }
 
-      const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
-        ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
-        : sql.raw('');
+      // Parameterized filters — whitelist/binding prevents SQL injection
+      const posUpperAgg = position ? (position as string).toUpperCase() : null;
+      const positionFilter = posUpperAgg && posUpperAgg !== 'ALL' && VALID_SNAPSHOT_POSITIONS.includes(posUpperAgg as any)
+        ? sql`AND spw.position = ${posUpperAgg}`
+        : sql``;
 
       const playerFilter = player_id
-        ? sql.raw(`AND spw.player_id = '${player_id}'`)
-        : sql.raw('');
+        ? sql`AND spw.player_id = ${player_id as string}`
+        : sql``;
 
       // Aggregated query for season/range mode
       const result = await db.execute(sql`
@@ -1082,20 +1089,22 @@ router.get("/fantasy-logs", async (req: Request, res: Response) => {
     }
 
     // Single week mode - return individual weekly rows
-    let weekFilter = sql.raw('');
+    // Parameterized filters — all user values are bound, never interpolated
+    let weekFilter = sql``;
     if (week) {
-      weekFilter = sql.raw(`AND spw.week = ${Number(week)}`);
+      weekFilter = sql`AND spw.week = ${Number(week)}`;
     } else if (weekFrom && weekTo) {
-      weekFilter = sql.raw(`AND spw.week BETWEEN ${Number(weekFrom)} AND ${Number(weekTo)}`);
+      weekFilter = sql`AND spw.week BETWEEN ${Number(weekFrom)} AND ${Number(weekTo)}`;
     }
 
-    const positionFilter = position && (position as string).toUpperCase() !== 'ALL'
-      ? sql.raw(`AND spw.position = '${(position as string).toUpperCase()}'`)
-      : sql.raw('');
+    const posUpperSingle = position ? (position as string).toUpperCase() : null;
+    const positionFilter = posUpperSingle && posUpperSingle !== 'ALL' && VALID_SNAPSHOT_POSITIONS.includes(posUpperSingle as any)
+      ? sql`AND spw.position = ${posUpperSingle}`
+      : sql``;
 
     const playerFilter = player_id
-      ? sql.raw(`AND spw.player_id = '${player_id}'`)
-      : sql.raw('');
+      ? sql`AND spw.player_id = ${player_id as string}`
+      : sql``;
 
     // Get fantasy-focused data from snapshots, joined with xFPTS v2 data
     const result = await db.execute(sql`
@@ -1410,7 +1419,7 @@ router.get("/lab-agg", async (req: Request, res: Response) => {
       SELECT *
       FROM player_agg
       WHERE total_snaps >= ${minOppsNum}
-      ORDER BY ${sql.raw(sortCol)} ${sql.raw(sortDirection)} NULLS LAST
+      ORDER BY ${sql.raw(sortCol)} ${sql.raw(sortDirection)} NULLS LAST /* sortCol/sortDirection are whitelist-validated above */
       LIMIT ${limitNum}
     `);
 

@@ -2,17 +2,18 @@ import { Request, Response, NextFunction } from 'express';
 
 /**
  * Admin authentication middleware
- * Validates API key for admin-only endpoints
+ * Validates API key for admin-only endpoints.
+ * Keys are accepted via headers only — never via query parameters, which
+ * leak secrets into server logs, browser history, and Referer headers.
  */
 export function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
-  // Check for API key in header or query parameter
-  const apiKey = req.headers['x-admin-api-key'] as string || 
-                 req.headers['authorization']?.replace('Bearer ', '') ||
-                 req.query.admin_key as string;
-  
+  // Accept API key via header only (never via query param — URL keys leak into logs)
+  const apiKey = req.headers['x-admin-api-key'] as string ||
+                 req.headers['authorization']?.replace('Bearer ', '');
+
   // Get expected API key from environment
   const expectedKey = process.env.ADMIN_API_KEY;
-  
+
   // If no API key is configured, block access entirely
   if (!expectedKey) {
     console.warn('⚠️ ADMIN_API_KEY not configured - blocking admin access');
@@ -22,13 +23,13 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
       error: 'ADMIN_API_KEY environment variable not set'
     });
   }
-  
+
   // Check if API key was provided
   if (!apiKey) {
     return res.status(401).json({
       success: false,
       message: 'Authentication required',
-      error: 'Missing API key. Provide via x-admin-api-key header, Authorization Bearer token, or admin_key query parameter'
+      error: 'Missing API key. Provide via x-admin-api-key header or Authorization: Bearer <key>'
     });
   }
   
@@ -49,12 +50,12 @@ export function requireAdminAuth(req: Request, res: Response, next: NextFunction
 
 /**
  * Optional admin auth - allows access with or without key but logs attempts
- * Useful for endpoints that should be monitored but not strictly protected
+ * Useful for endpoints that should be monitored but not strictly protected.
+ * Keys are accepted via headers only — never via query parameters.
  */
 export function optionalAdminAuth(req: Request, res: Response, next: NextFunction) {
-  const apiKey = req.headers['x-admin-api-key'] as string || 
-                 req.headers['authorization']?.replace('Bearer ', '') ||
-                 req.query.admin_key as string;
+  const apiKey = req.headers['x-admin-api-key'] as string ||
+                 req.headers['authorization']?.replace('Bearer ', '');
   
   const expectedKey = process.env.ADMIN_API_KEY;
   
