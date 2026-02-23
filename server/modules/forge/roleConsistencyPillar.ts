@@ -15,7 +15,7 @@
 
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
-import type { Position } from './forgeEngine';
+import type { OffensivePosition } from './forgeEngine';
 import { validateSnapshotRows } from './snapshotDataValidator';
 
 export interface RoleConsistencyResult {
@@ -29,7 +29,7 @@ export interface RoleConsistencyResult {
 // Calibrated against real 2025 data: elite starters should score 50-80+.
 // QB dropbacks naturally vary 20-55/week (CV ~0.25-0.35 for starters).
 // RB touches vary 10-35/week (CV ~0.30-0.50 for starters).
-const CV_CAPS: Record<Position, { primary: number; secondary: number }> = {
+const CV_CAPS: Record<OffensivePosition, { primary: number; secondary: number }> = {
   RB: { primary: 0.65, secondary: 0.55 },  // touch counts, snap share
   WR: { primary: 0.55, secondary: 0.60 },  // route participation, target share
   TE: { primary: 0.55, secondary: 0.60 },  // route participation, target share
@@ -37,7 +37,7 @@ const CV_CAPS: Record<Position, { primary: number; secondary: number }> = {
 };
 
 // Minimum participation gates (per-game averages)
-const MIN_PARTICIPATION: Record<Position, number> = {
+const MIN_PARTICIPATION: Record<OffensivePosition, number> = {
   RB: 5,   // 5 touches per game
   WR: 10,  // 10 routes per game
   TE: 10,  // 10 routes per game
@@ -46,7 +46,7 @@ const MIN_PARTICIPATION: Record<Position, number> = {
 
 // Minimum primary metric value to count a week as "active"
 // Filters out rest games (week 18 sit-outs), injury exits, etc.
-const MIN_ACTIVE_THRESHOLD: Record<Position, number> = {
+const MIN_ACTIVE_THRESHOLD: Record<OffensivePosition, number> = {
   RB: 3,   // At least 3 touches to count as playing
   WR: 5,   // At least 5 routes
   TE: 3,   // At least 3 routes (TEs have fewer)
@@ -60,7 +60,7 @@ const DEFAULT_LOW_SCORE = 25;
  */
 export async function computeRoleConsistency(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number
 ): Promise<RoleConsistencyResult> {
   try {
@@ -137,7 +137,7 @@ interface WeeklyRoleRow {
 
 async function fetchWeeklyRoleData(
   statsId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number
 ): Promise<WeeklyRoleRow[]> {
   const result = await db.execute(sql`
@@ -180,7 +180,7 @@ async function fetchWeeklyRoleData(
  * that blow up CV calculations. A single 0-dropback week can push
  * an elite QB's stability from 60 to 0.
  */
-function filterActiveWeeks(weeks: WeeklyRoleRow[], position: Position): WeeklyRoleRow[] {
+function filterActiveWeeks(weeks: WeeklyRoleRow[], position: OffensivePosition): WeeklyRoleRow[] {
   const threshold = MIN_ACTIVE_THRESHOLD[position];
 
   return weeks.filter(w => {
@@ -198,7 +198,7 @@ function filterActiveWeeks(weeks: WeeklyRoleRow[], position: Position): WeeklyRo
 
 function extractRoleMetrics(
   weeks: WeeklyRoleRow[],
-  position: Position
+  position: OffensivePosition
 ): { primaryValues: number[]; secondaryValues: number[]; participationAvg: number } {
   switch (position) {
     case 'RB': {

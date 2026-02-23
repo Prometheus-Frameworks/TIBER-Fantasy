@@ -161,3 +161,20 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `npm run build` ✅
   - DB-dependent checks blocked (`DATABASE_URL` missing in environment).
+
+### 2026-02-23 — FORGE IDP Phase 1 integration scaffold
+- Added new IDP modules under `server/modules/forge/idp/`:
+  - `idpIngestion.ts` (nflverse defensive CSV pull + upsert into `idp_player_week` / `idp_player_season`)
+  - `idpBaselines.ts` (season baseline aggregation into `idp_position_baselines`)
+  - `idpPillars.ts` (pillar/weight config for EDGE/DI/LB/CB/S)
+  - `idpTeamContext.ts` (defense personnel parser + simple scheme fit scoring)
+  - `idpCalibration.ts` (placeholder percentile anchors)
+  - `idpForgeEngine.ts` (IDP context + metric lookup + pillar computation)
+- Added shared IDP constants/types in `shared/idpSchema.ts`.
+- Extended FORGE position typing in `forgeEngine.ts` with offensive/defensive splits and guards (`isDefensivePosition`, `isOffensivePosition`), then routed defensive requests through `runIdpForgeEngine`.
+- Updated batch logic to source defensive player IDs from `idp_player_season` with concurrency control.
+- Updated grading/cache/types integration to accept defensive positions (`forgeGrading.ts`, `forgeGradeCache.ts`).
+- Added admin API router `server/routes/idpAdminRoutes.ts` and mounted it at `/api/admin/idp` in `server/routes.ts`.
+- Validation:
+  - `npx tsc --noEmit` (fails due existing repo-wide TS issues)
+  - `npx tsc --noEmit --pretty false <changed files...>` (fails due existing dependency/global typing issues)

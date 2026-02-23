@@ -13,11 +13,24 @@ import { getPrimaryQbContext } from './qbContextPopulator';
 import { computeXfpPerGame, normalizeXfpToScore, type XfpResult } from './xfpVolumePillar';
 import { computeRoleConsistency, type RoleConsistencyResult } from './roleConsistencyPillar';
 import { validateSnapshotRows } from './snapshotDataValidator';
+import type { DefensivePosition } from '@shared/idpSchema';
+import { runIdpForgeEngine } from './idp/idpForgeEngine';
 
-export type Position = 'QB' | 'RB' | 'WR' | 'TE';
+export type OffensivePosition = 'QB' | 'RB' | 'WR' | 'TE';
+export type Position = OffensivePosition | DefensivePosition;
 
 // Runtime position whitelist — validates before constructing table names via sql.identifier()
-export const VALID_FORGE_POSITIONS: readonly Position[] = ['QB', 'RB', 'WR', 'TE'];
+export const VALID_OFFENSIVE_POSITIONS: readonly OffensivePosition[] = ['QB', 'RB', 'WR', 'TE'];
+export const VALID_DEFENSIVE_POSITIONS: readonly DefensivePosition[] = ['EDGE', 'DI', 'LB', 'CB', 'S'];
+export const VALID_FORGE_POSITIONS: readonly Position[] = [...VALID_OFFENSIVE_POSITIONS, ...VALID_DEFENSIVE_POSITIONS];
+
+export function isDefensivePosition(pos: string): pos is DefensivePosition {
+  return VALID_DEFENSIVE_POSITIONS.includes(pos as DefensivePosition);
+}
+
+export function isOffensivePosition(pos: string): pos is OffensivePosition {
+  return VALID_OFFENSIVE_POSITIONS.includes(pos as OffensivePosition);
+}
 
 export function assertValidPosition(position: string): asserts position is Position {
   if (!VALID_FORGE_POSITIONS.includes(position as Position)) {
@@ -239,6 +252,9 @@ const QB_PILLARS: PositionPillarConfig = {
 };
 
 export function getPositionPillarConfig(position: Position): PositionPillarConfig {
+  if (isDefensivePosition(position)) {
+    throw new Error(`Defensive position ${position} uses IDP-specific pillar config`);
+  }
   switch (position) {
     case 'WR':
       return WR_PILLARS;
@@ -514,7 +530,7 @@ export function extractRecursionSignals(context: ForgeContext): {
 
 async function fetchRoleBankData(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number
 ): Promise<Record<string, number | null>> {
   assertValidPosition(position);
@@ -907,7 +923,7 @@ async function computeDynastyContext(
 
 export async function fetchForgeContext(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number,
   week: number | 'season'
 ): Promise<ForgeContext> {
@@ -1016,7 +1032,7 @@ export async function fetchForgeContext(
   };
 }
 
-const GAMES_FULL_CREDIT: Record<Position, number> = {
+const GAMES_FULL_CREDIT: Record<OffensivePosition, number> = {
   QB: 12,
   RB: 10,
   WR: 10,
@@ -1028,7 +1044,7 @@ const BASELINE_PILLAR = 40;
 function applyGamesPlayedDampening(
   pillars: ForgePillarScores,
   gamesPlayed: number,
-  position: Position
+  position: OffensivePosition
 ): ForgePillarScores {
   const minGames = GAMES_FULL_CREDIT[position];
   if (gamesPlayed >= minGames) return pillars;
@@ -1054,6 +1070,10 @@ export async function runForgeEngine(
   week: number | 'season'
 ): Promise<ForgeEngineOutput> {
   console.log(`[ForgeEngine] Running for ${playerId} (${position}) season=${season} week=${week}`);
+
+  if (isDefensivePosition(position)) {
+    return runIdpForgeEngine(playerId, position, season, week);
+  }
   
   const context = await fetchForgeContext(playerId, position, season, week);
   const lookup = createMetricLookup(context);
@@ -1134,6 +1154,27 @@ export async function runForgeEngineBatch(
 ): Promise<ForgeEngineOutput[]> {
   assertValidPosition(position);
   console.log(`[ForgeEngine] Batch run for ${position} season=${season} week=${week} limit=${limit}`);
+
+  if (isDefensivePosition(position)) {
+    const result = await db.execute(sql`
+      SELECT gsis_id as player_id FROM idp_player_season
+      WHERE season = ${season} AND position_group = ${position}
+      ORDER BY total_snaps DESC NULLS LAST
+      LIMIT ${limit}
+    `);
+
+    const chunks = [...result.rows] as Array<Record<string, any>>;
+    const outputs: ForgeEngineOutput[] = [];
+    const concurrency = 10;
+    for (let i = 0; i < chunks.length; i += concurrency) {
+      const slice = chunks.slice(i, i + concurrency);
+      const batch = await Promise.all(
+        slice.map((row) => runForgeEngine(String(row.player_id), position, season, week).catch(() => null))
+      );
+      outputs.push(...batch.filter((x): x is ForgeEngineOutput => x !== null));
+    }
+    return outputs;
+  }
 
   const tableName = `${position.toLowerCase()}_role_bank`;
   

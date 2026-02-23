@@ -1,4 +1,4 @@
-import type { Position } from './forgeEngine';
+import type { OffensivePosition } from './forgeEngine';
 
 export interface SnapshotPlayerWeekRow {
   week: number;
@@ -27,7 +27,7 @@ export interface ValidationResult<T> {
   warnings: ValidationWarning[];
 }
 
-const INACTIVE_THRESHOLDS: Record<Position, number> = {
+const INACTIVE_THRESHOLDS: Record<OffensivePosition, number> = {
   QB: 10,
   RB: 3,
   WR: 3,
@@ -38,7 +38,7 @@ const MAX_REASONABLE_SNAP_SHARE = 0.12;
 
 export function validateSnapshotRows<T extends SnapshotPlayerWeekRow>(
   rows: T[],
-  position: Position,
+  position: OffensivePosition,
   playerId: string
 ): ValidationResult<T> {
   const warnings: ValidationWarning[] = [];
@@ -118,7 +118,7 @@ export function validateSnapshotRows<T extends SnapshotPlayerWeekRow>(
 }
 
 function isInactiveWeek(
-  position: Position,
+  position: OffensivePosition,
   metrics: { targets: number; rushAttempts: number; routes: number; dropbacks: number }
 ): boolean {
   switch (position) {
@@ -171,7 +171,7 @@ function detectExtremeOutliers<T extends SnapshotPlayerWeekRow>(
 
 function logValidationSummary(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   rawCount: number,
   cleanCount: number,
   droppedWeeks: Array<{ week: number; rule: string }>,
