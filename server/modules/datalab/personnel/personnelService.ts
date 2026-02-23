@@ -1,5 +1,5 @@
 import { db } from '../../../infra/db';
-import { sql } from 'drizzle-orm';
+import { sql, SQL } from 'drizzle-orm';
 import {
   classifyPersonnelDependency,
   type PersonnelEveryDownGrade,
@@ -83,25 +83,37 @@ interface AggRow {
 export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promise<PlayerPersonnelProfile[]> {
   const limit = query.limit ?? DEFAULT_LIMIT;
 
-  const conditions: string[] = [
-    `p.season = ${Number(query.season)}`,
-    `p.play_type IN ('pass', 'run')`,
-    `p.offense_personnel IS NOT NULL`,
+  // Build WHERE conditions as parameterized SQL fragments to prevent SQL injection
+  const conditions: SQL[] = [
+    sql`p.season = ${Number(query.season)}`,
+    sql`p.play_type IN ('pass', 'run')`,
+    sql`p.offense_personnel IS NOT NULL`,
   ];
 
   if (query.weekStart !== undefined) {
-    conditions.push(`p.week >= ${Number(query.weekStart)}`);
+    conditions.push(sql`p.week >= ${Number(query.weekStart)}`);
   }
   if (query.weekEnd !== undefined) {
-    conditions.push(`p.week <= ${Number(query.weekEnd)}`);
+    conditions.push(sql`p.week <= ${Number(query.weekEnd)}`);
   }
   if (query.team) {
-    conditions.push(`p.posteam = '${query.team.replace(/'/g, "''")}'`);
+    conditions.push(sql`p.posteam = ${query.team}`);
   }
 
-  const whereClause = conditions.join(' AND ');
+  const whereClause = sql.join(conditions, sql` AND `);
 
-  const personnelBucketCase = `
+  // position is typed as 'WR' | 'RB' | 'TE' | 'QB' — bound as parameter for defense-in-depth
+  const positionFilter: SQL = query.position
+    ? sql`AND pim.position = ${query.position}`
+    : sql``;
+
+  // playerIds bound individually as parameters via sql.join
+  const playerIdFilter: SQL = query.playerIds?.length
+    ? sql`AND bp.gsis_id IN (${sql.join(query.playerIds.map(id => sql`${id}`), sql`, `)})`
+    : sql``;
+
+  // personnelBucketCase is entirely fixed SQL with no user input — sql.raw() is safe here
+  const personnelBucketCase = sql.raw(`
     CASE
       WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )0 TE' THEN '10'
       WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel ~ '(^|, )1 TE' THEN '11'
@@ -112,17 +124,9 @@ export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promis
       WHEN offense_personnel ~ '(^|, )1 RB' AND offense_personnel NOT LIKE '%TE%' THEN '10'
       ELSE 'other'
     END
-  `;
+  `);
 
-  const positionFilter = query.position
-    ? `AND pim.position = '${query.position.replace(/'/g, "''")}'`
-    : '';
-
-  const playerIdFilter = query.playerIds?.length
-    ? `AND bp.gsis_id IN (${query.playerIds.map(id => `'${id.replace(/'/g, "''")}'`).join(',')})`
-    : '';
-
-  const aggQuery = `
+  const result = await db.execute(sql`
     WITH play_buckets AS (
       SELECT
         bp.gsis_id AS player_id,
@@ -163,9 +167,7 @@ export async function getPersonnelProfiles(query: PersonnelProfileQuery): Promis
     WHERE 1=1 ${positionFilter}
     ORDER BY a.total_plays DESC
     LIMIT ${limit}
-  `;
-
-  const result = await db.execute(sql.raw(aggQuery));
+  `);
   const rows = result.rows as any[];
 
   return rows.map((row) => {

@@ -13,7 +13,7 @@ const isProd = process.env.NODE_ENV === "production";
 // Create connection pool with SSL for Render Postgres
 const pool = new Pool({
   connectionString: connStr,
-  ssl: isProd ? { rejectUnauthorized: false } : false, // Render requires SSL in production
+  ssl: isProd ? { rejectUnauthorized: true } : false, // Enforce certificate verification in production
   max: 20, // Connection pool size
   idleTimeoutMillis: 30000, // Close idle connections after 30s
   connectionTimeoutMillis: 5000, // 5s timeout for new connections

@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../infra/db';
 import { datadiveSnapshotPlayerWeek, forgeGradeCache } from '@shared/schema';
-import { runForgeEngine } from './forgeEngine';
+import { runForgeEngine, assertValidPosition } from './forgeEngine';
 import { gradeForge } from './forgeGrading';
 import type { Position } from './forgeEngine';
 
@@ -32,6 +32,7 @@ export async function computeAndCacheGrades(
   asOfWeek: number,
   options: ComputeOptions = {}
 ): Promise<PositionComputeResult> {
+  assertValidPosition(position);
   const version = options.version ?? CACHE_VERSION;
   const limit = options.limit ?? 200;
   const posStart = Date.now();
