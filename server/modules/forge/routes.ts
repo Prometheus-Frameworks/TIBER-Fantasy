@@ -2092,7 +2092,7 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
   try {
     const { runForgeEngineBatch } = await import('./forgeEngine');
     const { gradeForgeWithMeta } = await import('./forgeGrading');
-    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'EDGE' | 'DI' | 'LB' | 'CB' | 'S';
 
     const position = (req.query.position as string)?.toUpperCase();
     const modeParam = (req.query.mode as string)?.toLowerCase();
@@ -2105,10 +2105,10 @@ router.get('/eg/batch', async (req: Request, res: Response) => {
     const week = weekParam === 'season' || !weekParam ? 'season' : parseInt(weekParam);
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
 
-    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+    if (!position || !['WR', 'RB', 'TE', 'QB', 'EDGE', 'DI', 'LB', 'CB', 'S'].includes(position)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+        error: 'Invalid or missing position. Must be WR, RB, TE, QB, EDGE, DI, LB, CB, or S.',
       });
     }
 
@@ -2186,7 +2186,7 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
   try {
     const { runForgeEngine } = await import('./forgeEngine');
     const { gradeForgeWithMeta } = await import('./forgeGrading');
-    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE';
+    type EGPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'EDGE' | 'DI' | 'LB' | 'CB' | 'S';
 
     const { playerId } = req.params;
     const position = (req.query.position as string)?.toUpperCase();
@@ -2206,10 +2206,10 @@ router.get('/eg/player/:playerId', async (req: Request, res: Response) => {
       });
     }
 
-    if (!position || !['WR', 'RB', 'TE', 'QB'].includes(position)) {
+    if (!position || !['WR', 'RB', 'TE', 'QB', 'EDGE', 'DI', 'LB', 'CB', 'S'].includes(position)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid or missing position. Must be WR, RB, TE, or QB.',
+        error: 'Invalid or missing position. Must be WR, RB, TE, QB, EDGE, DI, LB, CB, or S.',
       });
     }
 

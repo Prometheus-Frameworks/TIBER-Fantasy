@@ -5,7 +5,7 @@ import { runForgeEngine, assertValidPosition } from './forgeEngine';
 import { gradeForge } from './forgeGrading';
 import type { Position } from './forgeEngine';
 
-const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE'];
+const POSITIONS: Position[] = ['QB', 'RB', 'WR', 'TE', 'EDGE', 'DI', 'LB', 'CB', 'S'];
 const CACHE_VERSION = 'v1';
 
 type ComputeOptions = {

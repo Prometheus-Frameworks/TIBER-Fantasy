@@ -14,7 +14,7 @@
 import { db } from '../../infra/db';
 import { sql } from 'drizzle-orm';
 import { xfpV3Coefficients, xfpNormalizationRanges } from '../../services/xFptsConfig';
-import type { Position } from './forgeEngine';
+import type { OffensivePosition } from './forgeEngine';
 import { validateSnapshotRows } from './snapshotDataValidator';
 
 export interface XfpResult {
@@ -29,7 +29,7 @@ export interface XfpResult {
  */
 export async function computeXfpPerGame(
   playerId: string,
-  position: Position,
+  position: OffensivePosition,
   season: number
 ): Promise<XfpResult> {
   try {
@@ -105,7 +105,7 @@ export async function computeXfpPerGame(
 /**
  * Compute xFP for a single week using v3 coefficients
  */
-function computeWeekXfp(week: Record<string, any>, position: Position): number {
+function computeWeekXfp(week: Record<string, any>, position: OffensivePosition): number {
   const targets = parseInt(week.targets) || 0;
   const rushAttempts = parseInt(week.rush_attempts) || 0;
   const rzRushAttempts = parseInt(week.rz_rush_attempts) || 0;
@@ -186,7 +186,7 @@ async function computeXfpFromV2Fallback(
 /**
  * Normalize raw xFP/G to 0-100 pillar score using position-specific ranges
  */
-export function normalizeXfpToScore(xfpPerGame: number, position: Position): number {
+export function normalizeXfpToScore(xfpPerGame: number, position: OffensivePosition): number {
   const range = xfpNormalizationRanges[position];
   if (!range) return 50;
 
