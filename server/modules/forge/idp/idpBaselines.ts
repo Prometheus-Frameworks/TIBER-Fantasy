@@ -30,15 +30,15 @@ export async function computeIdpBaselines(season: number): Promise<number> {
   for (const row of result.rows as Array<Record<string, any>>) {
     await db.execute(sql`
       INSERT INTO idp_position_baselines (
-        season, position_group, metric_key, mean, std_dev, sample_size
+        season, position_group, metric_name, mean_value, std_dev, sample_size
       ) VALUES
       (${season}, ${row.position_group}, 'havoc_raw_rate', ${Number(row.havoc_rate_mean) || 0}, ${Number(row.havoc_rate_std) || 0}, ${Number(row.sample_size) || 0}),
       (${season}, ${row.position_group}, 'tackles_per_snap', ${Number(row.tackles_per_snap_mean) || 0}, ${Number(row.tackles_per_snap_std) || 0}, ${Number(row.sample_size) || 0}),
       (${season}, ${row.position_group}, 'sack_rate', ${Number(row.sack_rate_mean) || 0}, ${Number(row.sack_rate_std) || 0}, ${Number(row.sample_size) || 0}),
       (${season}, ${row.position_group}, 'tfl_rate', ${Number(row.tfl_rate_mean) || 0}, ${Number(row.tfl_rate_std) || 0}, ${Number(row.sample_size) || 0}),
       (${season}, ${row.position_group}, 'pd_rate', ${Number(row.pd_rate_mean) || 0}, ${Number(row.pd_rate_std) || 0}, ${Number(row.sample_size) || 0})
-      ON CONFLICT (season, position_group, metric_key) DO UPDATE SET
-        mean = EXCLUDED.mean,
+      ON CONFLICT (season, position_group, metric_name) DO UPDATE SET
+        mean_value = EXCLUDED.mean_value,
         std_dev = EXCLUDED.std_dev,
         sample_size = EXCLUDED.sample_size
     `);

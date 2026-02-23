@@ -34,15 +34,15 @@ export async function fetchIdpForgeContext(playerId: string, position: Defensive
   const weeklyRows = weekly.rows as Array<Record<string, any>>;
 
   const team = (seasonRow.team as string | null) ?? null;
-  const gamesPlayed = Number(seasonRow.games_played) || 0;
+  const gamesPlayed = Number(seasonRow.games) || 0;
   const totalSnaps = Number(seasonRow.total_snaps) || 0;
 
-  const snapShareScore = Math.max(0, Math.min(100, Number(seasonRow.snap_share_score) || 50));
-  const opponentQualityScore = Math.max(0, Math.min(100, Number(seasonRow.opponent_quality_score) || 50));
+  const snapShareScore = 50;
+  const opponentQualityScore = 50;
   const scheme = team ? await deriveTeamDefenseScheme(team, season) : null;
   const schemeFitScore = computeSchemeFitScore(position, scheme, opponentQualityScore);
 
-  const activeWeeks = weeklyRows.filter((w) => Number(w.def_snaps) > 0);
+  const activeWeeks = weeklyRows.filter((w) => Number(w.defense_snaps) > 0);
   const stabilityScore = computeStabilityScore(position, activeWeeks);
 
   return {
