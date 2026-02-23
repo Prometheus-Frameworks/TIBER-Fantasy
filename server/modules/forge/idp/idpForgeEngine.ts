@@ -1,10 +1,22 @@
 import { db } from '../../../infra/db';
 import { sql } from 'drizzle-orm';
-import { computePillarScore, type ForgeEngineOutput, type ForgePillarScores, type MetricLookupFn } from '../forgeEngine';
+import { computePillarScore, type ForgePillarScores, type MetricLookupFn } from '../forgeEngine';
 import type { DefensivePosition } from '@shared/idpSchema';
 import { getIdpPillarConfig, IDP_WEIGHTS } from './idpPillars';
 import { calibrateIdpAlpha } from './idpCalibration';
 import { mapHavocToTier } from '@shared/idpSchema';
+
+export type IdpForgeOutput = {
+  playerId: string;
+  playerName: string;
+  position: DefensivePosition;
+  nflTeam?: string;
+  season: number;
+  week: number | 'season';
+  gamesPlayed: number;
+  pillars: ForgePillarScores;
+  rawMetrics: Record<string, any>;
+};
 import { computeSchemeFitScore, deriveTeamDefenseScheme } from './idpTeamContext';
 
 type IdpContext = {
@@ -121,7 +133,7 @@ export function createIdpMetricLookup(context: IdpContext, position: DefensivePo
   };
 }
 
-export async function runIdpForgeEngine(playerId: string, position: DefensivePosition, season: number, week: number | 'season'): Promise<ForgeEngineOutput> {
+export async function runIdpForgeEngine(playerId: string, position: DefensivePosition, season: number, week: number | 'season'): Promise<IdpForgeOutput> {
   const context = await fetchIdpForgeContext(playerId, position, season);
   const config = getIdpPillarConfig(position);
   const lookup = createIdpMetricLookup(context, position);

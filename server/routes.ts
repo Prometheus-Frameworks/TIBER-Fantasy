@@ -84,6 +84,7 @@ import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import fantasyLabRoutes from './routes/fantasyLabRoutes';
 import idpAdminRoutes from './routes/idpAdminRoutes';
+import idpForgeRoutes from './modules/forge/idp/idpForgeRoutes';
 import fireRoutes from './routes/fireRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
@@ -2408,6 +2409,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/fantasy-lab', fantasyLabRoutes);
   app.use('/api/admin/fantasy-lab', fantasyLabRoutes);
   app.use('/api/admin/idp', idpAdminRoutes);
+  app.use('/api/forge/idp', idpForgeRoutes);
+  console.log('🛡️ IDP FORGE routes mounted at /api/forge/idp/*');
   app.use('/api', fireRoutes);
   console.log('🔬 Tiber Data Lab routes mounted at /api/data-lab/*');
   

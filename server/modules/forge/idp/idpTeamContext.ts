@@ -33,7 +33,7 @@ export async function deriveTeamDefenseScheme(team: string, season: number): Pro
   const result = await db.execute(sql`
     SELECT defense_personnel
     FROM bronze_nflfastr_plays
-    WHERE season = ${season} AND defensive_team = ${team} AND defense_personnel IS NOT NULL
+    WHERE season = ${season} AND defteam = ${team} AND defense_personnel IS NOT NULL
   `);
   if (!result.rows.length) return null;
 
