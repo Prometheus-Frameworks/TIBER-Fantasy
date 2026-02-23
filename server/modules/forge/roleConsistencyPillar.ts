@@ -251,10 +251,14 @@ function extractRoleMetrics(
 function cvToScore(values: number[], cvCap: number): number {
   if (values.length < 2) return DEFAULT_LOW_SCORE;
 
-  const avg = mean(values);
+  const cleanValues = values.filter(v => Number.isFinite(v));
+  if (cleanValues.length < 2) return DEFAULT_LOW_SCORE;
+
+  const avg = mean(cleanValues);
   if (avg <= 0) return DEFAULT_LOW_SCORE;
 
-  const sd = stdev(values);
+  const sd = stdev(cleanValues);
+  if (!Number.isFinite(sd)) return DEFAULT_LOW_SCORE;
   const cv = sd / avg;
 
   // Map CV to 0-100: cv=0 → 100, cv>=cvCap → 0

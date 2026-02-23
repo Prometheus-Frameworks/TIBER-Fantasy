@@ -190,6 +190,8 @@ export function normalizeXfpToScore(xfpPerGame: number, position: Position): num
   const range = xfpNormalizationRanges[position];
   if (!range) return 50;
 
-  const normalized = ((xfpPerGame - range.min) / (range.max - range.min)) * 100;
+  const denom = range.max - range.min;
+  if (denom === 0) return 50;
+  const normalized = ((xfpPerGame - range.min) / denom) * 100;
   return Math.max(0, Math.min(100, normalized));
 }

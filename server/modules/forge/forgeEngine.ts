@@ -13,6 +13,7 @@ import { getPrimaryQbContext } from './qbContextPopulator';
 import { computeXfpPerGame, normalizeXfpToScore, type XfpResult } from './xfpVolumePillar';
 import { computeRoleConsistency, type RoleConsistencyResult } from './roleConsistencyPillar';
 import { validateSnapshotRows } from './snapshotDataValidator';
+import { resolvePlayerId } from './utils/playerIdResolver';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -324,7 +325,7 @@ function computeDerivedMetric(metricKey: string, context: ForgeContext): number 
     case 'availability_score': {
       // Games played normalized to 17-game season
       // Higher = more available/durable
-      const gamesPlayed = context.gamesPlayed || roleBank['games_played'] as number || 0;
+      const gamesPlayed = context.gamesPlayed || Number(roleBank['games_played']) || 0;
       const maxGames = 17;
       const availScore = Math.min(100, (gamesPlayed / maxGames) * 100);
       return availScore;
@@ -506,28 +507,13 @@ export function extractRecursionSignals(context: ForgeContext): {
 async function fetchRoleBankData(
   playerId: string,
   position: Position,
-  season: number
+  season: number,
+  resolvedStatsId?: string
 ): Promise<Record<string, number | null>> {
   const tableName = `${position.toLowerCase()}_role_bank`;
+  const roleBankId = resolvedStatsId || playerId;
   
   try {
-    // Role bank uses GSIS IDs (nfl_data_py_id), not canonical IDs
-    // First, look up the GSIS ID from player_identity_map
-    const idLookup = await db.execute(sql`
-      SELECT nfl_data_py_id, gsis_id 
-      FROM player_identity_map 
-      WHERE canonical_id = ${playerId}
-      LIMIT 1
-    `);
-    
-    // Determine which ID to use for role bank lookup
-    let roleBankId = playerId; // Default to canonical ID
-    if (idLookup.rows.length > 0) {
-      const lookupRow = idLookup.rows[0] as Record<string, any>;
-      // Prefer nfl_data_py_id, fall back to gsis_id, then canonical_id
-      roleBankId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
-    }
-    
     const result = await db.execute(sql`
       SELECT * FROM ${sql.identifier(tableName)}
       WHERE player_id = ${roleBankId} AND season = ${season}
@@ -622,6 +608,7 @@ function normalizeTeamContext(row: Record<string, any>): Record<string, number |
   const explosive = parseFloat(row.explosive_20_plus) || 0;
   
   const normalizeRange = (val: number, min: number, max: number) => {
+    if (max === min) return 50;
     const norm = ((val - min) / (max - min)) * 100;
     return Math.max(0, Math.min(100, norm));
   };
@@ -901,31 +888,16 @@ export async function fetchForgeContext(
   season: number,
   week: number | 'season'
 ): Promise<ForgeContext> {
-  const roleBank = await fetchRoleBankData(playerId, position, season);
+  const resolved = await resolvePlayerId(playerId);
+  const statsId = resolved.statsId;
   
-  let playerName = 'Unknown';
-  let nflTeam: string | undefined;
+  const roleBank = await fetchRoleBankData(playerId, position, season, statsId);
+  
+  let playerName = resolved.playerName;
+  let nflTeam = resolved.nflTeam;
   let gamesPlayed = 0;
   
   try {
-    // Weekly stats uses GSIS IDs, not canonical IDs
-    // First look up the GSIS ID from player_identity_map
-    const idLookup = await db.execute(sql`
-      SELECT nfl_data_py_id, gsis_id, full_name, nfl_team 
-      FROM player_identity_map 
-      WHERE canonical_id = ${playerId}
-      LIMIT 1
-    `);
-    
-    let statsId = playerId;
-    if (idLookup.rows.length > 0) {
-      const lookupRow = idLookup.rows[0] as Record<string, any>;
-      statsId = lookupRow.nfl_data_py_id || lookupRow.gsis_id || playerId;
-      // Use identity map data as fallback
-      playerName = lookupRow.full_name || 'Unknown';
-      nflTeam = lookupRow.nfl_team;
-    }
-    
     const playerResult = await db.execute(sql`
       SELECT DISTINCT player_name, team 
       FROM weekly_stats 
@@ -999,7 +971,7 @@ export async function fetchForgeContext(
     sosData,
     recursion: {
       priorAlpha: roleBank['alpha_score'] ?? undefined,
-      alphaMomentum: roleBank['momentum_score'] ? (roleBank['momentum_score'] - 50) / 10 : undefined,
+      alphaMomentum: roleBank['momentum_score'] != null ? (Number(roleBank['momentum_score']) - 50) / 10 : undefined,
     },
     xfpData,
     roleConsistency,
@@ -1159,14 +1131,19 @@ export async function runForgeEngineBatch(
       LIMIT ${limit}
     `);
 
+    const playerIds = result.rows
+      .map((row: any) => row.player_id)
+      .filter(Boolean) as string[];
+
+    const CONCURRENCY = 10;
     const outputs: ForgeEngineOutput[] = [];
-    
-    for (const row of result.rows) {
-      const playerId = (row as any).player_id;
-      if (playerId) {
-        const output = await runForgeEngine(playerId, position, season, week);
-        outputs.push(output);
-      }
+
+    for (let i = 0; i < playerIds.length; i += CONCURRENCY) {
+      const batch = playerIds.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(pid => runForgeEngine(pid, position, season, week))
+      );
+      outputs.push(...batchResults);
     }
 
     return outputs;
