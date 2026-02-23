@@ -25,6 +25,7 @@ router.get('/batch', async (req: Request, res: Response) => {
     `);
 
     const results: any[] = [];
+    const errors: string[] = [];
     const concurrency = 10;
     const queue = [...(rows.rows as any[])];
 
@@ -51,16 +52,19 @@ router.get('/batch', async (req: Request, res: Response) => {
       );
       for (const r of batchResults) {
         if (r.status === 'fulfilled') results.push(r.value);
+        else if (errors.length < 5) errors.push(String((r as PromiseRejectedResult).reason?.message || r.reason));
       }
     }
 
     results.sort((a, b) => b.alpha - a.alpha);
+    const totalAttempted = rows.rows.length;
 
     res.json({
       season,
       position_group: posGroup,
       count: results.length,
       players: results,
+      ...(errors.length > 0 && { warnings: { failed: totalAttempted - results.length, sampleErrors: errors } }),
     });
   } catch (err: any) {
     console.error('[IDP FORGE] Batch error:', err);
