@@ -17,6 +17,15 @@ import { resolvePlayerId } from './utils/playerIdResolver';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
+// Runtime position whitelist — validates before constructing table names via sql.identifier()
+export const VALID_FORGE_POSITIONS: readonly Position[] = ['QB', 'RB', 'WR', 'TE'];
+
+export function assertValidPosition(position: string): asserts position is Position {
+  if (!VALID_FORGE_POSITIONS.includes(position as Position)) {
+    throw new Error(`Invalid position "${position}". Must be one of: ${VALID_FORGE_POSITIONS.join(', ')}`);
+  }
+}
+
 export type MetricSource =
   | 'snapshot_player_week'
   | 'snapshot_team_context'
@@ -510,6 +519,7 @@ async function fetchRoleBankData(
   season: number,
   resolvedStatsId?: string
 ): Promise<Record<string, number | null>> {
+  assertValidPosition(position);
   const tableName = `${position.toLowerCase()}_role_bank`;
   const roleBankId = resolvedStatsId || playerId;
   
