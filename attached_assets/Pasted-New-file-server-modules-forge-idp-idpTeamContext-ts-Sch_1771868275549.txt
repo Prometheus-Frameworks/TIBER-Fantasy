@@ -1,0 +1,58 @@
+New file: server/modules/forge/idp/idpTeamContext.ts
+
+Scheme derivation from defense_personnel (45K+ plays have this data):
+
+Parse string with regex: /(\d+)\s+(DE|DT|NT|ILB|MLB|OLB|LB|CB|FS|SS|S|DB|NB)/g
+Count DL bodies (DE+DT+NT), LB bodies, DB bodies per play
+Aggregate per team: avg_dl_count >= 3.8 → 4-3, <= 3.2 → 3-4, else hybrid
+Compute nickel_rate (% snaps with 5+ DB), dime_rate (6+ DB)
+Simple scheme fit adjustments: EDGE in 3-4 gets +5 context boost, LB in nickel-heavy team gets no snap penalty
+Stability pillar — weekly consistency:
+
+CV (stdev/mean) on weekly metrics, inverted (lower CV = higher score)
+EDGE: weekly havoc_events, weekly (sacks + qb_hits)
+DI: weekly havoc_events, weekly TFL
+LB: weekly tackles_total, weekly havoc_events
+CB: weekly passes_defended, weekly tackles_total
+S: weekly havoc_events, weekly tackles_total
+Only compute over weeks where defense_snaps > 0 (bye/injury exclusion)
+Minimum 4 qualifying weeks required, else default to 50 (neutral)
+Step 4: IDP FORGE Engine
+New file: server/modules/forge/idp/idpForgeEngine.ts
+
+fetchIdpForgeContext() — pull from idp_player_season, idp_player_week, team context
+createIdpMetricLookup() — build metric lookup fn from IDP data
+runIdpForgeEngine() — compute 4 pillars, calibrate Alpha, assign tier
+Route from main runForgeEngine(): if (isDefensivePosition(position)) return runIdpForgeEngine(...)
+Step 5: Calibration
+New file: server/modules/forge/idp/idpCalibration.ts
+
+Placeholder percentile anchors per position group (recalibrate after first batch run on real 2024 data). Same approach as offensive FORGE — map raw weighted pillar composite to 25-95 Alpha range.
+
+Step 6: Batch Support
+Modify runForgeEngineBatch() — when position is defensive, query idp_player_season instead of {position}_role_bank for player list. Same concurrency=10 parallel execution.
+
+File Structure
+server/modules/forge/idp/         (NEW directory)
+├── idpIngestion.ts               (nflverse CSV fetch + DB population)
+├── idpBaselines.ts               (position group stat baselines)
+├── idpPillars.ts                 (pillar configs per IDP group)
+├── idpTeamContext.ts             (scheme derivation, opponent EPA, snap share)
+├── idpForgeEngine.ts             (main IDP FORGE computation)
+└── idpCalibration.ts             (percentile anchors)
+What NOT to Touch
+FIRE — stays QB/RB/WR/TE only, no changes
+Delta engine — stays skill-position only, no changes
+Fantasy Lab — no changes
+Existing offensive FORGE pillar logic — untouched, IDP branches before it
+Verification
+# After ingestion
+psql: SELECT position_group, COUNT(*) FROM idp_player_week WHERE season = 2024 GROUP BY position_group;
+# Expect: EDGE ~200+, DI ~150+, LB ~200+, CB ~200+, S ~150+
+# After engine
+curl "/api/forge/eg/batch?position=EDGE&season=2024&week=17&limit=10"
+curl "/api/forge/eg/batch?position=LB&season=2024&week=17&limit=10"
+# Regression check — offensive FORGE unchanged
+curl "/api/forge/eg/batch?position=WR&season=2025&week=10&limit=5"
+# Compile check
+npx tsc --noEmit
