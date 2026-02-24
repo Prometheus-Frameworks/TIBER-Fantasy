@@ -19,6 +19,28 @@
 - **DB storage**: New `catalyst_scores` table (player, season, week, raw score, alpha, components)
 - **Frontend**: New column in Fantasy Lab + optional standalone gauge in player detail
 
+## `catalyst_scores.components` Schema
+The `components` JSONB column stores the decomposed factors for every player-season-week row. All agents implementing CATALYST must write these exact fields:
+
+```jsonc
+{
+  "leverage_factor": 2.34,      // mean sigmoid-weighted WPA leverage across player's plays (1.0 = neutral, up to ~6.0)
+  "opponent_factor": 1.12,      // mean opponent quality multiplier from defense_dvp z-scores × position role coefficient
+  "script_factor": 1.08,        // mean game-script multiplier (1.0 = neutral, 1.2 = trailing ≤8 pts boost)
+  "recency_factor": 0.87,       // mean recency decay weight (0.94^weeks_ago, 1.0 = current week)
+  "base_epa_sum": 14.72,        // sum of raw EPA across all qualifying plays (before any multipliers)
+  "weighted_epa_sum": 22.41,    // sum of EPA × all multipliers (leverage × opponent × script × recency)
+  "play_count": 87,             // total qualifying plays included in calculation
+  "avg_leverage": 2.34          // convenience duplicate of leverage_factor for quick display
+}
+```
+
+**Rules:**
+- All numeric fields are required (no nulls) — use 0.0 defaults for missing factors
+- `play_count` must be an integer ≥ 30 for a score to be produced (below threshold → no row written)
+- `leverage_factor` and `avg_leverage` are identical — both stored for API convenience vs display convenience
+- `weighted_epa_sum / play_count` ≈ `catalyst_raw` (the final raw score before percentile mapping)
+
 ---
 
 ## Build Phases
@@ -32,6 +54,12 @@
 | 0.2 | Add `score_differential` and `wp` columns to `bronze_nflfastr_plays` schema + backfill from `raw_data` | Codex / Claude Code | Not started |
 | 0.3 | Validate enrichment: spot-check 2024 Week 1 plays for correct values | Codex / Claude Code | Not started |
 
+**Acceptance checks:**
+- 100-play spot check across different game states (blowout, close game, overtime)
+- `score_differential` range sanity: values between -50 and +50, no NULLs on plays that had prior scoring
+- `wp` range: all values between 0.0 and 1.0
+- Coverage: >95% of plays have non-null `score_differential` and `wp`
+
 ### Phase 1: CATALYST Calculator (Python)
 **Goal:** Compute per-player CATALYST scores from play-by-play data.
 
@@ -44,6 +72,14 @@
 | 1.5 | Position-specific percentile calibration (ECDF → 0-100 alpha mapping) | Replit Agent | Not started |
 | 1.6 | Run on 2024 full season, validate top-10 per position against expectations | Replit Agent | Not started |
 
+**Acceptance checks:**
+- Distribution sanity: CATALYST raw scores roughly normal, no extreme outliers beyond 3 stddev
+- Play count thresholds: minimum 30 plays to produce a score (avoid small-sample noise)
+- Alpha distribution: 0-100 spread with ~50 median per position (by ECDF definition)
+- Known-good validation: Josh Allen, Saquon Barkley, Ja'Marr Chase should rank top-10 at their positions for 2024
+- Known-bad validation: players with high raw fantasy points but low leverage situations should score lower than their raw stats suggest
+- No NaN or Infinity values in any output field
+
 ### Phase 2: TypeScript API Layer
 **Goal:** Expose CATALYST scores via REST API.
 
@@ -53,6 +89,14 @@
 | 2.2 | `/api/catalyst/batch?position=QB&season=2024` — returns ranked players with CATALYST scores | Codex / Claude Code | Not started |
 | 2.3 | `/api/catalyst/player/:gsisId` — returns player detail with weekly breakdown | Codex / Claude Code | Not started |
 | 2.4 | Wire routes into `server/routes.ts` | Codex / Claude Code | Not started |
+
+**Acceptance checks:**
+- Batch endpoint p95 latency < 500ms (pre-computed scores, just DB reads)
+- Player detail endpoint p95 latency < 200ms
+- Batch returns 50+ players per position with correct schema
+- Player detail returns weekly breakdown array sorted by week ascending
+- 404 for unknown gsis_id, 400 for invalid position/season params
+- Response shape matches `catalyst_scores.components` field spec exactly
 
 ### Phase 3: Frontend Integration
 **Goal:** Surface CATALYST in existing Fantasy Lab and player views.
@@ -64,6 +108,13 @@
 | 3.3 | Color coding: green (>65), neutral (45-65), red (<45) | Replit Agent | Not started |
 | 3.4 | Add CATALYST to sidebar nav if standalone page warranted | Replit Agent | Not started |
 
+**Acceptance checks:**
+- CATALYST column visible in Fantasy Lab with sortable header
+- Color coding renders correctly at boundary values (44, 45, 65, 66)
+- Player detail modal shows CATALYST gauge with numeric value
+- No layout breakage on mobile-width viewports
+- Loading/skeleton state while CATALYST data fetches
+
 ### Phase 4: FORGE Integration (after validation)
 **Goal:** Blend CATALYST into FORGE Efficiency pillar at calibrated weight.
 
@@ -73,6 +124,13 @@
 | 4.2 | Add CATALYST as optional Efficiency sub-pillar (10-15% initial weight, NOT 25-30%) | Replit Agent | Not started |
 | 4.3 | A/B comparison: Alpha with vs without CATALYST for known breakouts/busts | Replit Agent | Not started |
 | 4.4 | Finalize weight and ship | Replit Agent | Not started |
+
+**Acceptance checks:**
+- Correlation analysis: CATALYST-Alpha Pearson r between 0.3 and 0.7 (useful but not redundant)
+- Alpha shift: mean absolute change < 5 points when CATALYST added (not destabilizing)
+- Tier stability: <10% of players change tiers with CATALYST integration
+- Breakout detection: at least 3 known 2024 breakouts (e.g. Puka Nacua, Brock Bowers) score higher with CATALYST than without
+- Regression detection: at least 3 known 2024 regressions score lower with CATALYST
 
 ---
 
