@@ -7,28 +7,29 @@ interface NavItem {
   comingSoon?: boolean;
 }
 
-const coreNav: NavItem[] = [
-  { label: "Dashboard", path: "/" },
-  { label: "Data Lab", path: "/tiber-data-lab", badge: "4.2k" },
+const evaluateNav: NavItem[] = [
   { label: "FORGE Tiers", path: "/tiers" },
-  { label: "Fantasy Lab", path: "/fantasy-lab", badge: "NEW" },
+  { label: "IDP Lab", path: "/idp-lab" },
+  { label: "Fantasy Lab", path: "/fantasy-lab" },
+  { label: "FORGE Workbench", path: "/forge-workbench" },
+];
+
+const researchNav: NavItem[] = [
+  { label: "Data Lab", path: "/tiber-data-lab" },
   { label: "Schedule", path: "/schedule" },
 ];
 
 const intelligenceNav: NavItem[] = [
   { label: "Tiber Chat", path: "/legacy-chat", badge: "\u03B2" },
   { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
-  { label: "FORGE Engine", path: "/forge" },
-  { label: "FORGE Workbench", path: "/forge-workbench" },
-  { label: "Trade Analyzer", path: "#", comingSoon: true },
-  { label: "Waiver Wire", path: "#", comingSoon: true },
 ];
 
-const systemNav: NavItem[] = [
-  { label: "Quality Sentinel", path: "/sentinel", badge: "NEW" },
+const adminNav: NavItem[] = [
+  { label: "FORGE Hub", path: "/admin/forge-hub" },
+  { label: "FORGE Engine", path: "/forge" },
+  { label: "Quality Sentinel", path: "/sentinel" },
   { label: "Metrics Dictionary", path: "/metrics-dictionary" },
   { label: "Architecture", path: "/architecture" },
-  { label: "FORGE Hub", path: "/admin/forge-hub" },
   { label: "API Lexicon", path: "/admin/api-lexicon" },
 ];
 
@@ -64,6 +65,8 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
 }
 
 export default function TiberLayout({ children }: { children: React.ReactNode }) {
+  const [location] = useLocation();
+
   return (
     <>
       <nav className="tiber-sidebar">
@@ -75,9 +78,13 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
         </div>
 
         <div className="sidebar-nav">
-          <NavSection label="Core" items={coreNav} />
+          <Link href="/" className={`nav-item ${location === "/" ? "active" : ""}`}>
+            Dashboard
+          </Link>
+          <NavSection label="Evaluate" items={evaluateNav} />
+          <NavSection label="Research" items={researchNav} />
           <NavSection label="Intelligence" items={intelligenceNav} />
-          <NavSection label="System" items={systemNav} />
+          <NavSection label="Admin" items={adminNav} />
         </div>
 
         <div className="sidebar-footer">
