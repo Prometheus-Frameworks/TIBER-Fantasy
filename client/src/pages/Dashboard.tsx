@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Search } from "lucide-react";
+import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
 
 interface LabPlayer {
   playerName: string;
@@ -114,11 +115,12 @@ export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("WR");
   const [searchQuery, setSearchQuery] = useState("");
   const [, navigate] = useLocation();
+  const { season } = useCurrentNFLWeek();
 
   const { data: labData, isLoading } = useQuery<{ data: LabPlayer[]; count: number }>({
-    queryKey: ["/api/data-lab/lab-agg", activeFilter],
+    queryKey: ["/api/data-lab/lab-agg", activeFilter, season],
     queryFn: () =>
-      fetch(`/api/data-lab/lab-agg?season=2025&position=${activeFilter}&limit=100`)
+      fetch(`/api/data-lab/lab-agg?season=${season}&position=${activeFilter}&limit=100`)
         .then(r => r.json()),
   });
 

@@ -31,7 +31,7 @@ export function useCurrentNFLWeek() {
   return {
     currentWeek: data?.currentWeek || 1,
     upcomingWeek: data?.upcomingWeek || data?.currentWeek || 1,
-    season: data?.season || 2025,
+    season: data?.season || new Date().getFullYear(),
     weekStatus: data?.weekStatus || 'not_started',
     mondayNightCompleted: data?.mondayNightCompleted || false,
     isLoading,

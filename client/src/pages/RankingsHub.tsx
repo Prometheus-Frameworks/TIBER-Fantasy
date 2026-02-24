@@ -371,8 +371,8 @@ function DSTStreamerTable({ data, isLoading, week }: { data?: DSTStreamerRespons
         </div>
         
         {data.hiddenGem && (
-          <div 
-            className="bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-xl p-4 cursor-pointer hover:border-purple-400 transition-colors"
+          <button
+            className="text-left w-full bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/50 rounded-xl p-4 cursor-pointer hover:border-purple-400 transition-colors"
             onClick={() => setSelectedMatchup(data.hiddenGem!)}
             data-testid="hidden-gem-card"
           >
@@ -390,7 +390,7 @@ function DSTStreamerTable({ data, isLoading, week }: { data?: DSTStreamerRespons
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         )}
 
         <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
@@ -476,12 +476,12 @@ export default function RankingsHub() {
   const [position, setPosition] = useState<Position>('WR');
   const [sortField, setSortField] = useState<SortField>('alpha');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const { currentWeek } = useCurrentNFLWeek();
+  const { currentWeek, season } = useCurrentNFLWeek();
 
   const { data, isLoading, error, refetch } = useQuery<ForgeBatchResponse>({
-    queryKey: ['/api/forge/batch', position],
+    queryKey: ['/api/forge/batch', position, season],
     queryFn: async () => {
-      const res = await fetch(`/api/forge/batch?position=${position}&limit=100&season=2025&week=17`);
+      const res = await fetch(`/api/forge/batch?position=${position}&limit=100&season=${season}&week=17`);
       if (!res.ok) throw new Error('Failed to fetch rankings');
       return res.json();
     },
@@ -489,9 +489,9 @@ export default function RankingsHub() {
   });
 
   const { data: dstData, isLoading: dstLoading, error: dstError, refetch: dstRefetch } = useQuery<DSTStreamerResponse>({
-    queryKey: ['/api/data-lab/dst-streamer', currentWeek],
+    queryKey: ['/api/data-lab/dst-streamer', currentWeek, season],
     queryFn: async () => {
-      const res = await fetch(`/api/data-lab/dst-streamer?week=${currentWeek}&season=2025`);
+      const res = await fetch(`/api/data-lab/dst-streamer?week=${currentWeek}&season=${season}`);
       if (!res.ok) throw new Error('Failed to fetch DST rankings');
       return res.json();
     },

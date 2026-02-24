@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,15 +48,16 @@ const getRankColor = (rank: number) => {
 };
 
 export default function TeamReportsPage() {
+  const { season: currentSeason } = useCurrentNFLWeek();
   const [viewType, setViewType] = useState<'offensive' | 'defensive'>('offensive');
 
   const { data, isLoading } = useQuery<{ success: boolean; data: TeamReportsData }>({
-    queryKey: ['/api/team-reports?season=2025&week=1-7'],
+    queryKey: [`/api/team-reports?season=${currentSeason}&week=1-7`],
   });
 
   const teams = data?.data?.[viewType] || [];
   const weekRange = data?.data?.weekRange || '1-7';
-  const season = data?.data?.season || 2025;
+  const season = data?.data?.season || currentSeason;
 
   return (
     <div className="min-h-screen bg-[#0a0e1a] text-gray-100">

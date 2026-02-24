@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
 import { Search, Users, Filter, ChevronDown, ChevronRight, TrendingUp } from "lucide-react";
 
 type Position = "WR" | "RB" | "TE" | "QB";
@@ -172,15 +173,16 @@ function PlayerCard({ profile, isExpanded, onToggle }: { profile: PersonnelProfi
 }
 
 export default function PersonnelUsage() {
+  const { season } = useCurrentNFLWeek();
   const [position, setPosition] = useState<Position>("WR");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"plays" | "11pct" | "12pct">("plays");
 
   const { data: profiles, isLoading, error } = useQuery<PersonnelProfile[]>({
-    queryKey: ["/api/personnel/profile", position],
+    queryKey: ["/api/personnel/profile", position, season],
     queryFn: async () => {
-      const res = await fetch(`/api/personnel/profile?season=2025&position=${position}&limit=200`);
+      const res = await fetch(`/api/personnel/profile?season=${season}&position=${position}&limit=200`);
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       return json.profiles ?? json;

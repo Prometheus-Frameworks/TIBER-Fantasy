@@ -127,7 +127,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     label: "No Snapshots",
     description: "Season with zero snapshots (should warn)",
     module: "datalab",
-    data: { snapshotCount: 0, season: 2025 },
+    data: { snapshotCount: 0, season: new Date().getFullYear() },
     expectFail: true,
   },
   {
@@ -135,7 +135,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     label: "Stale Snapshot",
     description: "Latest snapshot is 30 days old (should flag info)",
     module: "datalab",
-    data: { snapshotCount: 5, season: 2025, latestSnapshotAt: new Date(Date.now() - 30 * 86400000).toISOString() },
+    data: { snapshotCount: 5, season: new Date().getFullYear(), latestSnapshotAt: new Date(Date.now() - 30 * 86400000).toISOString() },
     expectFail: true,
   },
   {

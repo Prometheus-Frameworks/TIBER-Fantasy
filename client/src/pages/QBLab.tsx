@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Zap, TrendingUp, BarChart3, Activity, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { AiPromptHints } from '@/components/AiPromptHints';
@@ -73,7 +74,12 @@ function SortIcon({ column, sortColumn, sortDirection }: { column: string; sortC
 }
 
 export default function QBLab() {
-  const [season, setSeason] = useState('2025');
+  const { season: currentSeason } = useCurrentNFLWeek();
+  const [season, setSeason] = useState(String(new Date().getFullYear()));
+
+  useEffect(() => {
+    setSeason(String(currentSeason));
+  }, [currentSeason]);
   const [sortColumn, setSortColumn] = useState('totalFptsPpr');
   const [sortDirection, setSortDirection] = useState<SortDir>('desc');
 
@@ -198,8 +204,8 @@ export default function QBLab() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2025">2025</SelectItem>
-            <SelectItem value="2024">2024</SelectItem>
+            <SelectItem value={String(currentSeason)}>{currentSeason}</SelectItem>
+            <SelectItem value={String(currentSeason - 1)}>{currentSeason - 1}</SelectItem>
           </SelectContent>
         </Select>
         {response && (

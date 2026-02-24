@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { Calendar, Users, TrendingUp, TrendingDown, ArrowUpDown, Filter } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -54,14 +55,15 @@ function getSosCellColor(score: number): string {
 }
 
 function PlayerSosView() {
+  const { season } = useCurrentNFLWeek();
   const [position, setPosition] = useState<Position>('WR');
   const [sortField, setSortField] = useState<'alpha' | 'sosRos' | 'sosMultiplier'>('alpha');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterMode, setFilterMode] = useState<'all' | 'boosted' | 'penalized'>('all');
 
   const { data, isLoading, error } = useQuery<{ success: boolean; scores: PlayerSosData[] }>({
-    queryKey: ['/api/forge/preview', { position, season: 2025, limit: 200 }],
-    queryFn: () => fetch(`/api/forge/preview?position=${position}&season=2025&limit=200`).then(r => r.json()),
+    queryKey: ['/api/forge/preview', { position, season, limit: 200 }],
+    queryFn: () => fetch(`/api/forge/preview?position=${position}&season=${season}&limit=200`).then(r => r.json()),
   });
 
   const sortedPlayers = useMemo(() => {
@@ -386,15 +388,16 @@ function TeamSosView() {
 }
 
 function SosImpactView() {
+  const { season } = useCurrentNFLWeek();
   const [position, setPosition] = useState<'all' | Position>('all');
   const [minAlphaBase, setMinAlphaBase] = useState(30);
 
   const positions: Position[] = ['QB', 'RB', 'WR', 'TE'];
 
-  const queries = positions.map(pos => 
+  const queries = positions.map(pos =>
     useQuery<{ success: boolean; scores: PlayerSosData[] }>({
-      queryKey: ['/api/forge/preview', { position: pos, season: 2025, limit: 200 }],
-      queryFn: () => fetch(`/api/forge/preview?position=${pos}&season=2025&limit=200`).then(r => r.json()),
+      queryKey: ['/api/forge/preview', { position: pos, season, limit: 200 }],
+      queryFn: () => fetch(`/api/forge/preview?position=${pos}&season=${season}&limit=200`).then(r => r.json()),
     })
   );
 
