@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "sleeper-api": {
+      "description": "Sleeper fantasy football platform — league sync, player projections, ADP",
+      "url": "https://api.sleeper.app/v1",
+      "note": "REST, no auth required for public endpoints. League-specific data needs league_id."
+    },
+    "nflverse": {
+      "description": "NFL play-by-play data via nflverse/nflfastR",
+      "note": "Accessed via Python nfl_data_py bridge (server/python/). Not a direct MCP server — routed through Flask secondary API."
+    }
+  },
+  "notes": "TIBER uses a hybrid approach: Sleeper API is called directly from Node.js, while nflverse data flows through a Python/Flask bridge. The MCP config here documents the external dependencies for Cowork context. As MCP adapters become available for these sources, swap the REST calls for native MCP connections."
+}

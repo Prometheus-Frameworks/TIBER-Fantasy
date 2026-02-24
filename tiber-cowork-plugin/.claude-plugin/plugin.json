@@ -1,0 +1,22 @@
+{
+  "name": "tiber-fantasy",
+  "version": "0.1.0",
+  "description": "TIBER Fantasy Football Analytics — FORGE-powered player evaluation, dynasty intelligence, and decision support. No paywalls.",
+  "author": "Prometheus Frameworks",
+  "homepage": "https://github.com/Prometheus-Frameworks/TIBER-Fantasy",
+  "tags": ["fantasy-football", "analytics", "nfl", "dynasty", "forge"],
+  "skills": [
+    "skills/forge-engine.md",
+    "skills/fire-pipeline.md",
+    "skills/data-architecture.md",
+    "skills/dynasty-evaluation.md",
+    "skills/tiber-philosophy.md"
+  ],
+  "commands": [
+    "commands/player-eval.md",
+    "commands/forge-batch.md",
+    "commands/start-sit.md",
+    "commands/buy-sell.md",
+    "commands/league-sync.md"
+  ]
+}
