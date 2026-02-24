@@ -474,41 +474,73 @@ export class GoldLayerService {
       duration: 0
     };
 
-    // Process each player in the batch
-    for (const playerId of players) {
+    const CONCURRENCY = 10;
+
+    type PlayerOutcome = {
+      success: boolean;
+      weeklyFacts: number;
+      seasonCreated: number;
+      seasonUpdated: number;
+      marketCreated: number;
+      marketUpdated: number;
+      compositeCreated: number;
+      compositeUpdated: number;
+      error?: { recordId: string; error: string };
+    };
+    
+    const processOnePlayer = async (playerId: string): Promise<PlayerOutcome> => {
       try {
-        // Process weekly facts (always done)
         await this.processPlayerWeeklyFacts(playerId, filters, jobId);
-        batchResult.tableResults.weeklyFactsProcessed++;
+        let weeklyFacts = 1;
 
-        // Process season facts
         const seasonResult = await this.processPlayerSeasonFacts(playerId, filters, jobId);
-        if (seasonResult.created) batchResult.tableResults.seasonFactsCreated++;
-        if (seasonResult.updated) batchResult.tableResults.seasonFactsUpdated++;
+        let seasonCreated = seasonResult.created ? 1 : 0;
+        let seasonUpdated = seasonResult.updated ? 1 : 0;
 
-        // Process market facts if requested
+        let marketCreated = 0, marketUpdated = 0;
         if (filters.includeMarketFacts) {
           const marketResult = await this.processPlayerMarketFacts(playerId, filters, jobId);
-          if (marketResult.created) batchResult.tableResults.marketFactsCreated++;
-          if (marketResult.updated) batchResult.tableResults.marketFactsUpdated++;
+          if (marketResult.created) marketCreated = 1;
+          if (marketResult.updated) marketUpdated = 1;
         }
 
-        // Process composite facts if requested
+        let compositeCreated = 0, compositeUpdated = 0;
         if (filters.includeCompositeFacts) {
           const compositeResult = await this.processPlayerCompositeFacts(playerId, filters, jobId);
-          if (compositeResult.created) batchResult.tableResults.compositeFactsCreated++;
-          if (compositeResult.updated) batchResult.tableResults.compositeFactsUpdated++;
+          if (compositeResult.created) compositeCreated = 1;
+          if (compositeResult.updated) compositeUpdated = 1;
         }
 
-        batchResult.success++;
+        return { success: true, weeklyFacts, seasonCreated, seasonUpdated, marketCreated, marketUpdated, compositeCreated, compositeUpdated };
 
       } catch (error) {
         console.error(`❌ [GoldLayer] Error processing player ${playerId}:`, error);
-        batchResult.errors++;
-        batchResult.errorDetails.push({
-          recordId: playerId,
-          error: error instanceof Error ? error.message : 'Unknown player processing error'
-        });
+        return {
+          success: false, weeklyFacts: 0, seasonCreated: 0, seasonUpdated: 0,
+          marketCreated: 0, marketUpdated: 0, compositeCreated: 0, compositeUpdated: 0,
+          error: { recordId: playerId, error: error instanceof Error ? error.message : 'Unknown player processing error' }
+        };
+      }
+    };
+
+    for (let i = 0; i < players.length; i += CONCURRENCY) {
+      const chunk = players.slice(i, i + CONCURRENCY);
+      const outcomes = await Promise.all(chunk.map(processOnePlayer));
+      
+      for (const outcome of outcomes) {
+        if (outcome.success) {
+          batchResult.success++;
+        } else {
+          batchResult.errors++;
+          if (outcome.error) batchResult.errorDetails.push(outcome.error);
+        }
+        batchResult.tableResults.weeklyFactsProcessed += outcome.weeklyFacts;
+        batchResult.tableResults.seasonFactsCreated += outcome.seasonCreated;
+        batchResult.tableResults.seasonFactsUpdated += outcome.seasonUpdated;
+        batchResult.tableResults.marketFactsCreated += outcome.marketCreated;
+        batchResult.tableResults.marketFactsUpdated += outcome.marketUpdated;
+        batchResult.tableResults.compositeFactsCreated += outcome.compositeCreated;
+        batchResult.tableResults.compositeFactsUpdated += outcome.compositeUpdated;
       }
     }
 

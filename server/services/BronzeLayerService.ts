@@ -101,70 +101,71 @@ export class BronzeLayerService {
     const startTime = Date.now();
     
     try {
-      // Generate checksum for deduplication using stable stringify
-      // Include season/week in salt to prevent over-deduplication across periods
       const payloadString = stableStringify(input.payload);
       const checksumSalt = `${input.source}:${input.endpoint}:${input.season}:${input.week || 'regular'}`;
       const checksumHash = crypto.createHash('sha256')
         .update(`${checksumSalt}:${payloadString}`)
         .digest('hex');
 
-      // Check for existing payload with same checksum
-      const existingPayload = await db
-        .select({ id: ingestPayloads.id })
-        .from(ingestPayloads)
-        .where(
-          and(
-            eq(ingestPayloads.source, input.source),
-            eq(ingestPayloads.endpoint, input.endpoint),
-            eq(ingestPayloads.checksumHash, checksumHash)
-          )
-        )
-        .limit(1);
-
-      if (existingPayload.length > 0) {
-        console.log(`[BronzeLayer] Duplicate payload detected for ${input.source}:${input.endpoint} (checksum: ${checksumHash})`);
-        return {
-          payloadId: existingPayload[0].id,
-          isDuplicate: true,
-          checksumHash,
-          recordCount: 0
-        };
-      }
-
-      // Calculate record count based on payload structure
       const recordCount = this.calculateRecordCount(input.payload);
-      
-      // Store the payload
-      const [storedPayload] = await db
-        .insert(ingestPayloads)
-        .values({
-          source: input.source,
-          endpoint: input.endpoint,
-          payload: input.payload,
-          version: input.version,
-          jobId: input.jobId,
-          season: input.season,
-          week: input.week,
-          status: 'PENDING',
-          recordCount,
+
+      const result = await db.transaction(async (tx) => {
+        const existingPayload = await tx
+          .select({ id: ingestPayloads.id })
+          .from(ingestPayloads)
+          .where(
+            and(
+              eq(ingestPayloads.source, input.source),
+              eq(ingestPayloads.endpoint, input.endpoint),
+              eq(ingestPayloads.checksumHash, checksumHash)
+            )
+          )
+          .limit(1);
+
+        if (existingPayload.length > 0) {
+          console.log(`[BronzeLayer] Duplicate payload detected for ${input.source}:${input.endpoint} (checksum: ${checksumHash})`);
+          return {
+            payloadId: existingPayload[0].id,
+            isDuplicate: true,
+            checksumHash,
+            recordCount: 0
+          };
+        }
+
+        const [storedPayload] = await tx
+          .insert(ingestPayloads)
+          .values({
+            source: input.source,
+            endpoint: input.endpoint,
+            payload: input.payload,
+            version: input.version,
+            jobId: input.jobId,
+            season: input.season,
+            week: input.week,
+            status: 'PENDING',
+            recordCount,
+            checksumHash,
+            ingestedAt: new Date()
+          })
+          .returning({ id: ingestPayloads.id });
+
+        return {
+          payloadId: storedPayload.id,
+          isDuplicate: false,
           checksumHash,
-          ingestedAt: new Date()
-        })
-        .returning({ id: ingestPayloads.id });
+          recordCount
+        };
+      });
 
       const duration = Date.now() - startTime;
       
-      console.log(`✅ [BronzeLayer] Stored raw payload from ${input.source}:${input.endpoint}`);
-      console.log(`   📊 Payload ID: ${storedPayload.id} | Records: ${recordCount} | Duration: ${duration}ms`);
-      console.log(`   🔐 Checksum: ${checksumHash.substring(0, 12)}...`);
+      if (!result.isDuplicate) {
+        console.log(`✅ [BronzeLayer] Stored raw payload from ${input.source}:${input.endpoint}`);
+        console.log(`   📊 Payload ID: ${result.payloadId} | Records: ${result.recordCount} | Duration: ${duration}ms`);
+        console.log(`   🔐 Checksum: ${checksumHash.substring(0, 12)}...`);
+      }
 
-      return {
-        payloadId: storedPayload.id,
-        isDuplicate: false,
-        checksumHash,
-        recordCount
-      };
+      return result;
 
     } catch (error) {
       const duration = Date.now() - startTime;

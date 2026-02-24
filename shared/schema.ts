@@ -601,6 +601,7 @@ export const marketSignals = pgTable("market_signals", {
 }, (table) => ({
   playerSignalIdx: index("market_player_signal_idx").on(table.canonicalPlayerId, table.signalType),
   seasonWeekIdx: index("market_season_week_idx").on(table.season, table.week),
+  playerSeasonWeekIdx: index("market_player_season_week_idx").on(table.canonicalPlayerId, table.season, table.week),
   sourceTypeIdx: index("market_source_type_idx").on(table.source, table.signalType),
   validityIdx: index("market_validity_idx").on(table.validFrom, table.validTo),
   uniqueSignal: unique("market_unique_signal").on(

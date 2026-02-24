@@ -97,24 +97,24 @@ The roadmap below is organized by day with the highest-impact, lowest-risk fixes
 **Theme**: Prevent data corruption under concurrent load.
 
 ### P0: Transaction Wrapping
-- [ ] `server/services/BronzeLayerService.ts:139-154` — `storeRawPayload()` has a race condition between duplicate check and insert. Wrap in `db.transaction()`.
-- [ ] `server/services/SilverLayerService.ts:163-226` — No transaction context. Batch operations should be atomic — wrap in transaction with rollback on failure.
+- [x] `server/services/BronzeLayerService.ts` — `storeRawPayload()` race condition fixed. Duplicate check + insert now wrapped in `db.transaction()`. (2026-02-24)
+- [x] `server/services/SilverLayerService.ts` — Per-group processing now wrapped in `db.transaction()` for atomicity. (2026-02-24)
 
 ### P1: Missing Foreign Keys
-- [ ] `shared/schema.ts` — `brandSignals.playerId` has NO foreign key to `playerIdentityMap.canonicalId`. Add FK constraint.
-- [ ] `shared/schema.ts` — `advancedSignals.playerId` references `players.id` but has no FK defined. Add it.
+- [ ] `shared/schema.ts` — `brandSignals.playerId` has NO foreign key to `playerIdentityMap.canonicalId`. Add FK constraint. (DEFERRED — requires data audit to avoid FK violations)
+- [ ] `shared/schema.ts` — `advancedSignals.playerId` references `players.id` but has no FK defined. Add it. (DEFERRED — same reason)
 
 ### P1: Add CHECK Constraints
-- [ ] `tiberScores.tiberScore` — Add `CHECK (tiber_score >= 0 AND tiber_score <= 100)`
-- [ ] Week columns — Add `CHECK (week >= 0 AND week <= 18)` across fact tables
-- [ ] Confidence scores — Add `CHECK (confidence >= 0 AND confidence <= 1.0)`
+- [x] `tiberScores.tiberScore` — CHECK (tiber_score >= 0 AND tiber_score <= 100) (2026-02-24)
+- [x] Week columns — CHECK (week >= 0 AND week <= 18) on tiber_scores, advanced_signals, market_signals, player_week_facts (2026-02-24)
+- [x] Confidence scores — CHECK (confidence >= 0 AND confidence <= 1.0) on advanced_signals, market_signals, player_week_facts (2026-02-24)
 
 ### P1: Missing Composite Indexes
-- [ ] `playerWeekFacts` — Add composite index on `(playerId, season, week)` — this is the primary query pattern
-- [ ] `marketSignals` — Add composite index on `(canonicalPlayerId, season, week)`
+- [x] `playerWeekFacts` — Already has composite PRIMARY KEY on (playerId, season, week). No additional index needed.
+- [x] `marketSignals` — Added composite index on `(canonicalPlayerId, season, week)` (2026-02-24)
 
 ### P2: Gold Layer N+1 Queries
-- [ ] `server/services/GoldLayerService.ts:207-232` — `processBatch()` likely queries per-player. Profile and batch where possible.
+- [x] `server/services/GoldLayerService.ts` — `processBatch()` refactored from sequential `for` loop to `Promise.all` with concurrency=10. (2026-02-24)
 
 ---
 

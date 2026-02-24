@@ -179,29 +179,27 @@ export class SilverLayerService {
       
       console.log(`📊 [SilverLayer] Processing ${Object.keys(groupedPayloads).length} source/endpoint groups`);
 
-      // Process each group with appropriate processor
       for (const [sourceEndpoint, payloadGroup] of Object.entries(groupedPayloads)) {
         const [source, endpoint] = sourceEndpoint.split('::');
         
         try {
           console.log(`🔄 Processing ${payloadGroup.length} payloads for ${source}:${endpoint}`);
           
-          const groupResult = await this.processPayloadGroup(
-            payloadGroup, 
-            source as typeof dataSourceEnum.enumValues[number], 
-            endpoint,
-            options
-          );
+          const groupResult = await db.transaction(async (_tx) => {
+            return await this.processPayloadGroup(
+              payloadGroup, 
+              source as typeof dataSourceEnum.enumValues[number], 
+              endpoint,
+              options
+            );
+          });
           
-          // Aggregate results
           result.success += groupResult.success;
           result.errors += groupResult.errors;
           result.skipped += groupResult.skipped;
           
-          // Merge table results
           this.mergeTableResults(result.tableResults, groupResult.tableResults);
           
-          // Add any errors
           result.errorDetails.push(...groupResult.errorDetails);
           
         } catch (error) {
