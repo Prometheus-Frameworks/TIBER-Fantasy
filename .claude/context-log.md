@@ -159,3 +159,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `shared/idpSchema.ts`, `server/modules/forge/forgeEngine.ts`, `server/modules/forge/forgeGrading.ts`, `server/modules/forge/forgeGradeCache.ts`, `server/modules/forge/routes.ts`, `server/routes/idpAdminRoutes.ts`, `server/routes.ts`, `server/modules/forge/idp/*`, plus offensive-helper typing updates in `roleConsistencyPillar.ts`, `xfpVolumePillar.ts`, and `snapshotDataValidator.ts`.
 - **Validation:** Ran `npx tsc --noEmit` and a targeted `npx tsc --noEmit ...` command; both are currently blocked by broad pre-existing repository/type dependency issues.
 - **Notes:** IDP tables are queried via raw SQL because current Drizzle schema does not expose `idp_*` models yet.
+
+### 2026-02-24 — Codex: Phase 0 CATALYST PBP enrichment plumbing
+- **What changed:** Added `wp` + `score_differential` columns to Bronze NFLfastR schema, created migration/backfill SQL to populate from `raw_data`, updated NFLfastR import scripts (2024/2025 bulk + fast import) to persist both fields at ingest time, and added a dedicated DB validation script for coverage/range/spot-check queries.
+- **Files modified:** `shared/schema.ts`, `migrations/0013_catalyst_pbp_enrichment.sql`, `server/scripts/import_nflfastr_2024_bulk.py`, `server/scripts/import_nflfastr_2025_bulk.py`, `server/scripts/fast_nflfastr_import.py`, `server/scripts/validate_catalyst_pbp_enrichment.py`
+- **Validation:** `python -m py_compile ...` passed for updated scripts; `npm run build` passed (existing warning in `server/olc/adjusters.ts`).
+- **Notes:** Could not execute DB-backed enrichment validation because this container does not provide `DATABASE_URL`; run `server/scripts/validate_catalyst_pbp_enrichment.py` in a DB-enabled environment after applying migration.

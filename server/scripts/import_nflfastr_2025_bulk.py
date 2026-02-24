@@ -65,6 +65,8 @@ def import_nflfastr_2025_bulk():
             str(row.get('rusher_player_name')) if pd.notna(row.get('rusher_player_name')) else None,
             float(row.get('epa')) if pd.notna(row.get('epa')) else None,
             float(row.get('wpa')) if pd.notna(row.get('wpa')) else None,
+            float(row.get('wp')) if pd.notna(row.get('wp')) else None,
+            int(row.get('score_differential')) if pd.notna(row.get('score_differential')) else None,
             int(row.get('air_yards')) if pd.notna(row.get('air_yards')) else None,
             int(row.get('yards_after_catch')) if pd.notna(row.get('yards_after_catch')) else None,
             int(row.get('yards_gained')) if pd.notna(row.get('yards_gained')) else None,
@@ -94,7 +96,7 @@ def import_nflfastr_2025_bulk():
             passer_player_id, passer_player_name,
             receiver_player_id, receiver_player_name,
             rusher_player_id, rusher_player_name,
-            epa, wpa, air_yards, yards_after_catch, yards_gained,
+            epa, wpa, wp, score_differential, air_yards, yards_after_catch, yards_gained,
             complete_pass, incomplete_pass, interception, touchdown,
             first_down_pass, first_down_rush,
             raw_data
@@ -102,7 +104,7 @@ def import_nflfastr_2025_bulk():
             %s, %s, %s, %s, %s, %s, %s,
             %s, %s, %s,
             %s, %s, %s, %s, %s, %s,
-            %s, %s, %s, %s, %s,
+            %s, %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s,
             %s, %s, %s
         )
