@@ -419,13 +419,14 @@ export default function HomepageRedesign({ isPreview = false }: HomepageRedesign
 
   // Get the week to use for matchup-based features (only valid after weekData loads)
   const currentWeek = weekData?.upcomingWeek || weekData?.currentWeek || 0;
+  const currentSeason = weekData?.season || new Date().getFullYear();
   const hasValidWeek = !!weekData && currentWeek > 0;
 
   // Fetch strategy start/sit recommendations using dynamic week (wait for week data)
   const { data: startSitData, isLoading: startSitLoading } = useQuery({
-    queryKey: ['/api/strategy/start-sit', currentWeek],
+    queryKey: ['/api/strategy/start-sit', currentWeek, currentSeason],
     queryFn: async () => {
-      const response = await fetch(`/api/strategy/start-sit?week=${currentWeek}&season=2025`);
+      const response = await fetch(`/api/strategy/start-sit?week=${currentWeek}&season=${currentSeason}`);
       return response.json();
     },
     enabled: hasValidWeek && !weekLoading,

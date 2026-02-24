@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { ArrowLeft, RefreshCw, Calendar, TrendingUp } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -232,7 +233,12 @@ function WeeklyMatchupsView({ season, week, position }: { season: number; week: 
 }
 
 export default function MatchupsPage() {
-  const [season, setSeason] = useState(2025);
+  const { season: currentSeason } = useCurrentNFLWeek();
+  const [season, setSeason] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setSeason(currentSeason);
+  }, [currentSeason]);
   const [week, setWeek] = useState(12);
   const [position, setPosition] = useState<Position>('WR');
   const [activeTab, setActiveTab] = useState<'season' | 'weekly'>('season');

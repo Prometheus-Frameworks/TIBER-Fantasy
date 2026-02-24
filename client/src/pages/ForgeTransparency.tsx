@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import {
   Home,
   Search,
@@ -128,6 +129,7 @@ function getAlphaGradient(alpha: number): string {
 }
 
 export default function ForgeTransparency() {
+  const { season } = useCurrentNFLWeek();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -158,7 +160,7 @@ export default function ForgeTransparency() {
     queryKey: ['/api/forge/transparency', selectedPlayerId, selectedWeek],
     queryFn: async () => {
       const res = await fetch(
-        `/api/forge/transparency/${selectedPlayerId}?week=${selectedWeek}&season=2025`
+        `/api/forge/transparency/${selectedPlayerId}?week=${selectedWeek}&season=${season}`
       );
       if (!res.ok) {
         const errData = await res.json();

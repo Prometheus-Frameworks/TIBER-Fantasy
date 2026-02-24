@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'wouter';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { ArrowLeft, Copy, Check, FlaskConical, Save, FolderOpen, Trash2, X, Search, Users, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -231,7 +232,12 @@ function PlayerMatchesCard({
   inputs: Record<string, number>;
 }) {
   const { toast } = useToast();
-  const [season, setSeason] = useState('2025');
+  const { season: currentSeason } = useCurrentNFLWeek();
+  const [season, setSeason] = useState(String(new Date().getFullYear()));
+
+  useEffect(() => {
+    setSeason(String(currentSeason));
+  }, [currentSeason]);
   const [week, setWeek] = useState('full');
   const [loading, setLoading] = useState(false);
   const [matches, setMatches] = useState<PlayerMatch[]>([]);
@@ -303,8 +309,8 @@ function PlayerMatchesCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#141824] border-gray-700">
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value={String(currentSeason)}>{currentSeason}</SelectItem>
+                <SelectItem value={String(currentSeason - 1)}>{currentSeason - 1}</SelectItem>
               </SelectContent>
             </Select>
           </div>

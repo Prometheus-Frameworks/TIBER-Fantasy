@@ -95,7 +95,9 @@ function AppContent() {
   const [location] = useLocation();
   
   useEffect(() => {
-    console.log(JSON.stringify({ src:'router', path: location, ts: Date.now() }));
+    if (import.meta.env.DEV) {
+      console.log(JSON.stringify({ src:'router', path: location, ts: Date.now() }));
+    }
   }, [location]);
   
   return (

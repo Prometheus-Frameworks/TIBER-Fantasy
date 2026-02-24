@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { 
   ArrowLeft, 
   Play,
@@ -161,8 +162,13 @@ const DEFAULT_PARAMETERS: SimulationParameters = {
 
 export default function ForgeSimulation() {
   const queryClient = useQueryClient();
-  
-  const [season, setSeason] = useState(2025);
+  const { season: currentSeason } = useCurrentNFLWeek();
+
+  const [season, setSeason] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setSeason(currentSeason);
+  }, [currentSeason]);
   const [weekStart, setWeekStart] = useState(1);
   const [weekEnd, setWeekEnd] = useState(17);
   const [singleWeekMode, setSingleWeekMode] = useState(false);

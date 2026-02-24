@@ -238,7 +238,7 @@ export default function ForgeRankingsTable({
     const json = JSON.stringify(exportPayload, null, 2);
     navigator.clipboard.writeText(json).then(() => {
       const weekLabel = week ?? 'Full Season';
-      console.log(`[FORGE Export] Exporting ${position} rankings for season=${season}, week=${weekLabel}`);
+      if (import.meta.env.DEV) console.log(`[FORGE Export] Exporting ${position} rankings for season=${season}, week=${weekLabel}`);
       alert(`Copied ${exportPayload.data.length} ${position} rankings to clipboard!\n\nSeason: ${season}, Week: ${weekLabel}`);
     });
   };

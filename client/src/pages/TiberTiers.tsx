@@ -72,9 +72,7 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
 export default function TiberTiers() {
   const [position, setPosition] = useState<Position>('WR');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const { currentWeek } = useCurrentNFLWeek();
-
-  const season = 2025;
+  const { currentWeek, season } = useCurrentNFLWeek();
   const asOfWeek = currentWeek || 17;
 
   const { data, isLoading, refetch, isFetching } = useQuery<TiersApiResponse>({

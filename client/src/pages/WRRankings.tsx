@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { fetchForgeBatch } from '../api/forge';
 import AlphaRankingsLayout from '../components/AlphaRankingsLayout';
 import WRFormulaWeightsPanel from '../components/WRFormulaWeightsPanel';
@@ -61,7 +62,12 @@ const DEFAULT_WEIGHTS: WRWeights = {
 };
 
 export default function WRRankings() {
-  const [season, setSeason] = useState(2025);
+  const { season: currentSeason } = useCurrentNFLWeek();
+  const [season, setSeason] = useState(new Date().getFullYear());
+
+  useEffect(() => {
+    setSeason(currentSeason);
+  }, [currentSeason]);
   const [week, setWeek] = useState<number | null>(10);
   const [weights, setWeights] = useState<WRWeights>(DEFAULT_WEIGHTS);
   
