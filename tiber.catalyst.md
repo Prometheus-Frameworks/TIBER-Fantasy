@@ -50,15 +50,16 @@ The `components` JSONB column stores the decomposed factors for every player-sea
 
 | Task | Description | Assignable to | Status |
 |------|-------------|---------------|--------|
-| 0.1 | Check if `raw_data` JSONB contains `score_differential` and `wp` fields | Codex / Claude Code | Not started |
-| 0.2 | Add `score_differential` and `wp` columns to `bronze_nflfastr_plays` schema + backfill from `raw_data` | Codex / Claude Code | Not started |
-| 0.3 | Validate enrichment: spot-check 2024 Week 1 plays for correct values | Codex / Claude Code | Not started |
+| 0.1 | Check if `raw_data` JSONB contains `score_differential` and `wp` fields | Codex / Claude Code | DONE (PR #30) |
+| 0.2 | Add `score_differential` and `wp` columns to `bronze_nflfastr_plays` schema + backfill from `raw_data` | Codex / Claude Code | DONE (PR #30 + migration run) |
+| 0.3 | Validate enrichment: spot-check 2024 Week 1 plays for correct values | Codex / Claude Code | DONE |
+| 0.4 | Re-import 2025 PBP data using updated script (includes wp + score_differential) | Codex / Claude Code | Not started |
 
 **Acceptance checks:**
 - 100-play spot check across different game states (blowout, close game, overtime)
-- `score_differential` range sanity: values between -50 and +50, no NULLs on plays that had prior scoring
-- `wp` range: all values between 0.0 and 1.0
-- Coverage: >95% of plays have non-null `score_differential` and `wp`
+- `score_differential` range sanity: values between -50 and +50, no NULLs on plays that had prior scoring — PASS (range -46 to +46)
+- `wp` range: all values between 0.0 and 1.0 — PASS (0.00004 to 0.9999)
+- Coverage: >95% of plays have non-null `score_differential` and `wp` — PASS for 2024 (99% wp, 95% score_diff). 2025 = 0% (needs re-import, task 0.4)
 
 ### Phase 1: CATALYST Calculator (Python)
 **Goal:** Compute per-player CATALYST scores from play-by-play data.
@@ -157,5 +158,7 @@ Tasks marked "Replit Agent" are:
 ---
 
 ## Status
-**Current phase:** Phase 0 (PBP Data Enrichment)
+**Current phase:** Phase 0 nearly complete → Phase 1 ready to start (2024 data)
+**Phase 0 summary:** PR #30 (Codex) added columns + migration + validation script + import script updates. Migration run, 2024 backfill done (99% wp, 95% score_diff). 2025 needs re-import (task 0.4).
+**Next action:** Begin Phase 1 CATALYST Calculator using 2024 data. 2025 re-import can run in parallel.
 **Last updated:** 2026-02-24
