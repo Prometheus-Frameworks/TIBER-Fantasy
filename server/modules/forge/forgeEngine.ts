@@ -1068,6 +1068,27 @@ export function applyGamesPlayedDampening(
   };
 }
 
+const catalystCache = new Map<string, number | null>();
+
+async function fetchCatalystAlpha(playerId: string, season: number): Promise<number | null> {
+  const cacheKey = `${playerId}:${season}`;
+  if (catalystCache.has(cacheKey)) return catalystCache.get(cacheKey)!;
+
+  try {
+    const result = await db.execute(sql`
+      SELECT catalyst_alpha FROM catalyst_scores
+      WHERE gsis_id = ${playerId} AND season = ${season}
+      ORDER BY week DESC LIMIT 1
+    `);
+    const alpha = result.rows.length > 0 ? Number((result.rows[0] as any).catalyst_alpha) : null;
+    catalystCache.set(cacheKey, alpha);
+    return alpha;
+  } catch {
+    catalystCache.set(cacheKey, null);
+    return null;
+  }
+}
+
 export async function runForgeEngine(
   playerId: string,
   position: Position,
@@ -1085,9 +1106,22 @@ export async function runForgeEngine(
   const config = getPositionPillarConfig(position);
 
   // Compute base pillars
+  const baseEfficiency = computePillarScore(config.efficiency, lookup);
+
+  // CATALYST blend: blend clutch-performance signal into efficiency pillar
+  const catalystAlpha = await fetchCatalystAlpha(playerId, season);
+  const CATALYST_WEIGHT = 0.125; // 12.5% of efficiency pillar
+  const blendedEfficiency = catalystAlpha != null
+    ? (1 - CATALYST_WEIGHT) * baseEfficiency + CATALYST_WEIGHT * catalystAlpha
+    : baseEfficiency;
+
+  if (catalystAlpha != null) {
+    console.log(`[ForgeEngine] CATALYST blend for ${context.playerName}: baseEff=${baseEfficiency.toFixed(1)} + catalyst=${catalystAlpha.toFixed(1)} → blended=${blendedEfficiency.toFixed(1)}`);
+  }
+
   const basePillars: ForgePillarScores = {
     volume: computePillarScore(config.volume, lookup),
-    efficiency: computePillarScore(config.efficiency, lookup),
+    efficiency: blendedEfficiency,
     teamContext: computePillarScore(config.teamContext, lookup),
     stability: computePillarScore(config.stability, lookup),
   };
