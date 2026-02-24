@@ -104,10 +104,10 @@ The `components` JSONB column stores the decomposed factors for every player-sea
 
 | Task | Description | Assignable to | Status |
 |------|-------------|---------------|--------|
-| 3.1 | Add CATALYST column to Fantasy Lab table (alongside FIRE score) | Replit Agent | Not started |
-| 3.2 | Add CATALYST gauge/badge to player detail modal | Replit Agent | Not started |
-| 3.3 | Color coding: green (>65), neutral (45-65), red (<45) | Replit Agent | Not started |
-| 3.4 | Add CATALYST to sidebar nav if standalone page warranted | Replit Agent | Not started |
+| 3.1 | Add CATALYST column to Fantasy Lab table (alongside FIRE score) | Replit Agent | DONE |
+| 3.2 | Add CATALYST gauge/badge to player detail modal | Replit Agent | DONE (standalone CATALYST Lab page with detail panel) |
+| 3.3 | Color coding: green (>65), neutral (45-65), red (<45) | Replit Agent | DONE |
+| 3.4 | Add CATALYST to sidebar nav if standalone page warranted | Replit Agent | DONE (/catalyst-lab with "NEW" badge) |
 
 **Acceptance checks:**
 - CATALYST column visible in Fantasy Lab with sortable header
@@ -158,9 +158,10 @@ Tasks marked "Replit Agent" are:
 ---
 
 ## Status
-**Current phase:** Phase 1 + Phase 2 COMPLETE → Phase 3 (Frontend) next
+**Current phase:** Phase 1 + Phase 2 + Phase 3 COMPLETE → Phase 4 (FORGE Integration) next
 **Phase 0 summary:** PR #30 (Codex) added columns + migration + validation script. Migration run, 2024 backfill done (99% wp, 95% score_diff). 2025 needs re-import (task 0.4).
 **Phase 1 summary:** Calculator built and run. 5,029 player-week scores for 2024. Per-week ECDF percentiles. catalyst_raw = weighted_epa_sum / play_count. NaN/Inf guards added.
 **Phase 2 summary:** API routes live. `/api/catalyst/batch` and `/api/catalyst/player/:gsisId` both tested and working.
-**Next action:** Phase 3 — Frontend integration (Fantasy Lab column + player detail gauge).
+**Phase 3 summary:** Standalone CATALYST Lab page with leaderboard, position filters, player detail panel (component bars + weekly breakdown). CATALYST Alpha column added to Fantasy Lab FIRE table with color-coded badges. Sidebar nav updated.
+**Next action:** Phase 4 — FORGE Integration (correlation analysis, then blend CATALYST into Efficiency pillar at 10-15%).
 **Last updated:** 2026-02-24

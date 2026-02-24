@@ -11,6 +11,7 @@ const evaluateNav: NavItem[] = [
   { label: "FORGE Tiers", path: "/tiers" },
   { label: "IDP Lab", path: "/idp-lab" },
   { label: "Fantasy Lab", path: "/fantasy-lab" },
+  { label: "CATALYST Lab", path: "/catalyst-lab", badge: "NEW" },
   { label: "FORGE Workbench", path: "/forge-workbench" },
 ];
 

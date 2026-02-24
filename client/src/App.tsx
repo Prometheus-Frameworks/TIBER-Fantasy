@@ -37,6 +37,7 @@ import RedZoneLab from "@/pages/RedZoneLab";
 import SituationalLab from "@/pages/SituationalLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
+import CatalystLab from "@/pages/CatalystLab";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -70,6 +71,7 @@ function Router() {
         <Route path="/forge-workbench" component={ForgeWorkbench} />
         <Route path="/fantasy-lab" component={FantasyLab} />
         <Route path="/idp-lab" component={IdpLab} />
+        <Route path="/catalyst-lab" component={CatalystLab} />
         <Route path="/sentinel" component={SentinelDashboard} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />

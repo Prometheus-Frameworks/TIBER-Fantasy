@@ -44,6 +44,7 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'opp', label: 'Opportunity', group: 'fire', render: (r) => num(r.pillars?.opportunity), align: 'right', sortKey: (r) => r.pillars?.opportunity ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'role', label: 'Role', group: 'fire', render: (r) => num(r.pillars?.role), align: 'right', sortKey: (r) => r.pillars?.role ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'conv', label: 'Conversion', group: 'fire', render: (r) => num(r.pillars?.conversion), align: 'right', sortKey: (r) => r.pillars?.conversion ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'catalyst', label: 'CATALYST', group: 'fire', render: (r) => r._catalystAlpha != null ? r._catalystAlpha.toFixed(0) : '—', align: 'right', sortKey: (r) => r._catalystAlpha ?? -1, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'conf', label: 'Confidence', group: 'fire', render: (r) => r.confidence || 'LOW', align: 'left', preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'games', label: 'Games', group: 'games', render: (r) => String(r.games_played_window ?? '—'), align: 'right', sortKey: (r) => r.games_played_window ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'snaps', label: 'Snaps', group: 'games', render: (r) => num(r.raw?.snaps_R, 0), align: 'right', sortKey: (r) => r.raw?.snaps_R ?? 0, preset: ['VOLUME', 'FULL'] },
@@ -173,12 +174,27 @@ export default function FantasyLab() {
     queryKey: [`/api/fire/eg/batch?season=${season}&week=${week}&position=${position}`],
   });
 
+  const catalystQuery = useQuery<any>({
+    queryKey: ['/api/catalyst/batch', position, season],
+    queryFn: async () => {
+      const res = await fetch(`/api/catalyst/batch?position=${position}&season=${season}&limit=300`);
+      return res.json();
+    },
+  });
+
   const deltaQuery = useQuery<any>({
     queryKey: [`/api/delta/eg/batch?season=${season}&week=${week}&position=${position}&limit=200`],
   });
 
   const fireRows = useMemo(() => {
     const rows = (fireQuery.data?.data || []).filter((r: any) => r.eligible && r.fireScore != null) as any[];
+    const catalystMap = new Map<string, number>();
+    for (const cp of (catalystQuery.data?.players || [])) {
+      catalystMap.set(cp.gsis_id, cp.catalyst_alpha);
+    }
+    for (const r of rows) {
+      r._catalystAlpha = catalystMap.get(r.playerId) ?? null;
+    }
     const colDef = FIRE_COLUMNS.find((c) => c.key === fireSortCol);
     const sortFn = colDef?.sortKey;
     if (sortFn) {
@@ -187,7 +203,7 @@ export default function FantasyLab() {
       rows.sort((a, b) => (b.fireScore ?? -1) - (a.fireScore ?? -1));
     }
     return rows;
-  }, [fireQuery.data, fireSortCol, fireSortAsc]);
+  }, [fireQuery.data, catalystQuery.data, fireSortCol, fireSortAsc]);
 
   const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
 
@@ -391,7 +407,13 @@ export default function FantasyLab() {
                         key={col.key}
                         className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''} ${col.key === 'conf' ? '' : ''}`}
                       >
-                        {col.key === 'conf' ? (
+                        {col.key === 'catalyst' ? (
+                          r._catalystAlpha != null ? (
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r._catalystAlpha >= 65 ? 'bg-emerald-100 text-emerald-800' : r._catalystAlpha >= 45 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                              {r._catalystAlpha.toFixed(0)}
+                            </span>
+                          ) : <span className="text-gray-400">—</span>
+                        ) : col.key === 'conf' ? (
                           <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
                             {r.confidence || 'LOW'}
                           </span>
