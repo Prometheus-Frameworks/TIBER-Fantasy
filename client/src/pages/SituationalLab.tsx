@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Clock, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { AiPromptHints } from '@/components/AiPromptHints';
@@ -65,8 +66,13 @@ function SortIcon({ column, sortColumn, sortDirection }: { column: string; sortC
 }
 
 export default function SituationalLab() {
+  const { season: currentSeason } = useCurrentNFLWeek();
   const [position, setPosition] = useState('ALL');
-  const [season, setSeason] = useState('2025');
+  const [season, setSeason] = useState(String(new Date().getFullYear()));
+
+  useEffect(() => {
+    setSeason(String(currentSeason));
+  }, [currentSeason]);
   const [activeTab, setActiveTab] = useState('down-distance');
 
   const [ddSortCol, setDdSortCol] = useState('totalThirdDownSnaps');
@@ -250,8 +256,8 @@ export default function SituationalLab() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="2025">2025</SelectItem>
-            <SelectItem value="2024">2024</SelectItem>
+            <SelectItem value={String(currentSeason)}>{currentSeason}</SelectItem>
+            <SelectItem value={String(currentSeason - 1)}>{currentSeason - 1}</SelectItem>
           </SelectContent>
         </Select>
         {response && (

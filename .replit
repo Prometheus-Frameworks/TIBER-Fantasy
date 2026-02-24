@@ -38,3 +38,8 @@ externalPort = 80
 
 [agent]
 integrations = ["javascript_gemini:1.0.0", "javascript_openrouter_ai_integrations:2.0.0", "javascript_openai_ai_integrations:2.0.0", "javascript_anthropic_ai_integrations:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+replit-tiber = "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"

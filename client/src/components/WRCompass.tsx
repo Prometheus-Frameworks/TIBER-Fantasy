@@ -57,49 +57,44 @@ export default function WRCompass() {
     queryFn: async () => {
       // Primary call to new bridge endpoint
       let url = `/api/compass/WR?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
-      console.log('WRCompass: Fetching WR data from', url);
+      if (import.meta.env.DEV) console.log('WRCompass: Fetching WR data from', url);
       let response = await fetch(url);
       let data = await response.json();
-      
+
       // Fallback to legacy if new route is empty
       if (!data?.data?.length) {
-        console.log('WRCompass: Bridge empty, trying legacy endpoint');
+        if (import.meta.env.DEV) console.log('WRCompass: Bridge empty, trying legacy endpoint');
         url = `/api/compass/wr?search=${encodeURIComponent(debouncedSearch)}&limit=50`;
         response = await fetch(url);
         const legacy = await response.json();
         if (legacy?.data?.length) data = legacy;
       }
-      
-      console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
-      console.log('API rows:', data?.data?.length || 0);
-      console.log('WRCompass: Sample player:', data?.data?.[0]);
+
+      if (import.meta.env.DEV) {
+        console.log('WRCompass: Successfully loaded', data?.data?.length || 0, 'WRs');
+        console.log('WRCompass: Sample player:', data?.data?.[0]);
+      }
       return data;
     },
   });
 
   // Handle response format - expect envelope with data array
   const wrData = (wrResponse as WRSearchResponse)?.data || [];
-  console.log('WRCompass: Processing', wrData.length, 'players');
-  console.log('LEGACY rows:', wrData.length);
-  
+  if (import.meta.env.DEV) console.log('WRCompass: Processing', wrData.length, 'players');
+
   // Ensure proper naming for display
   const mappedData = wrData.map((player: any) => ({
     ...player,
     name: player.name || player.player_name || 'Unknown Player',
     displayName: player.player_name || player.name || 'Unknown Player'
   }));
-  console.log('WRCompass: Mapped', mappedData.length, 'players, sample:', mappedData[0]);
-  
-  // Add health check
-  fetch('/api/health').then(r => r.json()).then(health => {
-    console.log('/api/health object:', health);
-  });
+  if (import.meta.env.DEV) console.log('WRCompass: Mapped', mappedData.length, 'players, sample:', mappedData[0]);
 
   const filteredData = mappedData.filter((player) => {
     if (!debouncedSearch) return true;
     return matches(player, debouncedSearch);
   });
-  console.log('WRCompass: Filtered', filteredData.length, 'players for search:', debouncedSearch);
+  if (import.meta.env.DEV) console.log('WRCompass: Filtered', filteredData.length, 'players for search:', debouncedSearch);
 
   const getCompassColor = (score: number) => {
     if (score >= 80) return 'bg-green-500';

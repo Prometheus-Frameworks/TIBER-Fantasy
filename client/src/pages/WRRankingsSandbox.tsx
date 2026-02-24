@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpDown, RotateCcw, Save, Download, Upload, Copy, X, GitBranch, Eye, Users } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import TETable from '@/components/rankings/TETable';
+import WRTable from '@/components/rankings/WRTable';
 
 // ============================================================
 // RB SANDBOX PHASE 2 FEATURES
@@ -475,7 +477,7 @@ export default function WRRankingsSandbox() {
       weights: { carries: rbCarriesWeight, rushYds: rbYardsWeight, fpPerRush: rbFpRushWeight, receivingWork: rbReceivingWeight }
     };
 
-    console.log('[TIBER RB Alpha] Candidate Formula Saved:', newCandidate);
+    if (import.meta.env.DEV) console.log('[TIBER RB Alpha] Candidate Formula Saved:', newCandidate);
 
     const updatedCandidates = [...rbCandidateFormulas, newCandidate];
     setRbCandidateFormulas(updatedCandidates);
@@ -518,7 +520,7 @@ export default function WRRankingsSandbox() {
       .sort((a, b) => (b.customAlphaScore ?? 0) - (a.customAlphaScore ?? 0))
       .slice(0, 50)
       .map(buildRbAlphaExport);
-    console.log('[TIBER RB Role Bank v2] Preview Payload (Top 50):', rbData);
+    if (import.meta.env.DEV) console.log('[TIBER RB Role Bank v2] Preview Payload (Top 50):', rbData);
   };
 
   // ==============================================
@@ -692,7 +694,7 @@ export default function WRRankingsSandbox() {
       weights: { volume: teVolumeWeight, production: teProductionWeight, efficiency: teEfficiencyWeight, stickiness: teStickinessWeight }
     };
 
-    console.log('[TIBER TE Alpha] Candidate Formula Saved:', newCandidate);
+    if (import.meta.env.DEV) console.log('[TIBER TE Alpha] Candidate Formula Saved:', newCandidate);
 
     const updatedCandidates = [...teCandidateFormulas, newCandidate];
     setTeCandidateFormulas(updatedCandidates);
@@ -764,7 +766,7 @@ export default function WRRankingsSandbox() {
       .sort((a, b) => (b.customAlphaScore ?? 0) - (a.customAlphaScore ?? 0))
       .slice(0, 40)
       .map(buildTeAlphaExport);
-    console.log('[TIBER TE Role Bank v2] Preview Payload (Top 40):', teData);
+    if (import.meta.env.DEV) console.log('[TIBER TE Role Bank v2] Preview Payload (Top 40):', teData);
   };
 
   // Reset weights to defaults
@@ -2076,209 +2078,13 @@ export default function WRRankingsSandbox() {
 
         {/* Table */}
         {position === 'TE' ? (
-          // TE Table Phase 2 (Enhanced with Archetype, RZ Targets, TD Role, Volatility)
-          <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#0d0e11] border-b border-gray-800/50">
-                  <tr>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="playerName" label="Player" />
-                    </th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="team" label="Team" />
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="gamesPlayed" label="G" />
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-lime-400 uppercase tracking-wider" title="TE Role Archetype (Phase 2)">
-                      Type
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-green-400 uppercase tracking-wider">
-                      Tgts
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-red-400 uppercase tracking-wider" title="Red Zone Targets (Phase 2)">
-                      RZ
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-amber-400 uppercase tracking-wider" title="Total Receiving TDs">
-                      TDs
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-pink-400 uppercase tracking-wider" title="TD Role Score (Phase 2)">
-                      TD Role
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-cyan-400 uppercase tracking-wider">
-                      FP/G
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-orange-400 uppercase tracking-wider">
-                      FP/Tgt
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-indigo-400 uppercase tracking-wider" title="Slot% / Inline%">
-                      Align
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-emerald-400 uppercase tracking-wider" title="Snap Stickiness Index 2.0">
-                      SSI
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-yellow-400 uppercase tracking-wider" title="Floor/Ceiling (P20/P80)">
-                      Range
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider" title="Context Tag (Phase 2)">
-                      Context
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-sky-400 uppercase tracking-wider" title="Team Offensive Environment (v0.2.1)">
-                      Env
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-rose-400 uppercase tracking-wider" title="Matchup vs Opponent Defense (v0.2.2)">
-                      Matchup
-                    </th>
-                    <th className="px-3 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                      <button 
-                        onClick={() => handleSort('alphaScore')}
-                        className="flex items-center gap-1 hover:text-purple-300 transition-colors"
-                        data-testid="te-sort-alphaScore"
-                      >
-                        <span>Alpha</span>
-                        <ArrowUpDown className="w-3 h-3" />
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isLoading ? (
-                    [...Array(10)].map((_, idx) => (
-                      <tr key={idx} className="border-b border-gray-800/30">
-                        <td colSpan={16} className="px-4 py-4">
-                          <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    sortedData?.map((player, idx) => {
-                      const tePlayer = player as TESandboxPlayer;
-                      const isCustomWeights = teVolumeWeight !== 40 || teProductionWeight !== 25 || teEfficiencyWeight !== 20 || teStickinessWeight !== 15;
-                      const archetypeColors: Record<string, string> = {
-                        'BIG_SLOT': 'bg-indigo-600/40 text-indigo-200',
-                        'INLINE': 'bg-amber-600/40 text-amber-200',
-                        'HYBRID': 'bg-cyan-600/40 text-cyan-200',
-                        'H_BACK': 'bg-gray-600/40 text-gray-300',
-                      };
-                      return (
-                        <tr
-                          key={tePlayer.playerId}
-                          className="border-b border-gray-800/30 hover:bg-amber-500/5 transition-colors"
-                          data-testid={`te-sandbox-row-${idx}`}
-                        >
-                          <td className="px-3 py-3 text-gray-500 font-medium">{idx + 1}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-white">{tePlayer.playerName}</span>
-                              {(tePlayer.injuryStatus === 'IR' || tePlayer.injuryStatus === 'OUT' || tePlayer.injuryStatus === 'PUP') && (
-                                <span className="px-1.5 py-0.5 bg-red-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wide">
-                                  {tePlayer.injuryStatus}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
-                              {tePlayer.team}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-center text-gray-300">{tePlayer.gamesPlayed}</td>
-                          <td className="px-3 py-3 text-center">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${archetypeColors[tePlayer.archetype] || 'bg-gray-600/40 text-gray-300'}`}>
-                              {tePlayer.archetype === 'BIG_SLOT' ? 'Slot' : 
-                               tePlayer.archetype === 'INLINE' ? 'Inline' :
-                               tePlayer.archetype === 'H_BACK' ? 'H-back' : 'Hybrid'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-center text-green-300 font-semibold">{tePlayer.totalTargets}</td>
-                          <td className="px-3 py-3 text-center text-red-300 font-medium">{tePlayer.rzTargets ?? 0}</td>
-                          <td className="px-3 py-3 text-center text-amber-300 font-bold">{tePlayer.totalReceivingTDs}</td>
-                          <td className="px-3 py-3 text-center">
-                            <span className={`font-semibold ${(tePlayer.tdRoleScore ?? 0) >= 0.5 ? 'text-pink-400' : (tePlayer.tdRoleScore ?? 0) >= 0.3 ? 'text-pink-300' : 'text-gray-400'}`}>
-                              {((tePlayer.tdRoleScore ?? 0) * 100).toFixed(0)}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-center text-cyan-300 font-medium">{tePlayer.fpPerGame.toFixed(1)}</td>
-                          <td className="px-3 py-3 text-center text-orange-300">{tePlayer.fpPerTarget.toFixed(2)}</td>
-                          <td className="px-3 py-3 text-center text-indigo-300 text-xs">
-                            {(tePlayer.slotPct * 100).toFixed(0)}/{(tePlayer.inlinePct * 100).toFixed(0)}
-                          </td>
-                          <td className="px-3 py-3 text-center text-emerald-300 font-medium">{tePlayer.snapStickinessIndex.toFixed(0)}</td>
-                          <td className="px-3 py-3 text-center text-yellow-300 text-xs">
-                            {tePlayer.floorFp?.toFixed(1) ?? '–'}/{tePlayer.ceilingFp?.toFixed(1) ?? '–'}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            {tePlayer.contextTag ? (
-                              <span className="text-[10px] text-gray-400 italic">{tePlayer.contextTag.split(' – ')[0]}</span>
-                            ) : (
-                              <span className="text-gray-600">–</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            {tePlayer.forge_env_score_100 != null ? (
-                              <span 
-                                className={`font-medium ${
-                                  tePlayer.forge_env_score_100 >= 60 ? 'text-green-400' :
-                                  tePlayer.forge_env_score_100 >= 55 ? 'text-emerald-400' :
-                                  tePlayer.forge_env_score_100 >= 45 ? 'text-sky-300' :
-                                  tePlayer.forge_env_score_100 >= 40 ? 'text-orange-400' :
-                                  'text-red-400'
-                                }`}
-                                title={`Env: ${tePlayer.forge_env_score_100} (${tePlayer.forge_env_multiplier?.toFixed(3)}x)`}
-                              >
-                                {tePlayer.forge_env_score_100}
-                              </span>
-                            ) : (
-                              <span className="text-gray-600">–</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            {tePlayer.forge_matchup_score_100 != null && tePlayer.forge_opponent ? (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span 
-                                  className={`text-xs font-medium ${
-                                    tePlayer.forge_matchup_score_100 >= 70 ? 'text-green-400' :
-                                    tePlayer.forge_matchup_score_100 >= 55 ? 'text-emerald-400' :
-                                    tePlayer.forge_matchup_score_100 >= 45 ? 'text-rose-300' :
-                                    tePlayer.forge_matchup_score_100 >= 30 ? 'text-orange-400' :
-                                    'text-red-400'
-                                  }`}
-                                  title={`vs ${tePlayer.forge_opponent}: ${tePlayer.forge_matchup_score_100} (${tePlayer.forge_matchup_multiplier?.toFixed(3)}x)`}
-                                >
-                                  {tePlayer.forge_opponent}
-                                </span>
-                                <span className="text-[10px] text-gray-500">{tePlayer.forge_matchup_score_100}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-600">–</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex flex-col items-center gap-0.5">
-                              <span className="font-bold text-purple-400 text-base">{tePlayer.alphaScore?.toFixed(1) ?? tePlayer.customAlphaScore ?? 0}</span>
-                              {isCustomWeights && (
-                                <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-
-              {!isLoading && sortedData?.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  No data available
-                </div>
-              )}
-            </div>
-          </div>
+          <TETable
+            sortedData={sortedData as any}
+            isLoading={isLoading}
+            isCustomWeights={teVolumeWeight !== 40 || teProductionWeight !== 25 || teEfficiencyWeight !== 20 || teStickinessWeight !== 15}
+            sortField={sortField}
+            handleSort={handleSort}
+          />
         ) : position === 'RB' ? (
           // RB Simple Table (Total Carries, Total Rush Yds, FP/Rush)
           <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
@@ -2422,231 +2228,14 @@ export default function WRRankingsSandbox() {
             </div>
           </div>
         ) : (
-          // WR Complex Table (all the advanced metrics)
-          <div className="bg-[#111217] border border-gray-800/50 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-[#0d0e11] border-b border-gray-800/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="playerName" label="Player" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="team" label="Team" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="gamesPlayed" label="Games" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="targets" label="Targets" />
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                      <SortButton field="fantasyPoints" label="Fantasy Pts" />
-                    </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="pointsPerTarget" label="Pts/Tgt" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="samplePenalty" label="Sample" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="adjustedEfficiency" label="Adj Pts/Tgt" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-purple-400 uppercase tracking-wider">
-                    <SortButton field="customAlphaScore" label="Custom Score" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="roleScore" label="Role Score" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="deepTargetRate" label="Deep %" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="slotRouteShareEst" label="Slot %" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="weightedTargetsPerGame" label="Wt Tgt/G" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="boomRate" label="Boom %" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="bustRate" label="Bust %" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="talentIndex" label="Talent" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="usageStabilityIndex" label="Stability" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="roleDelta" label="Role Δ" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="redZoneDomScore" label="RZ Dom" />
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <SortButton field="energyIndex" label="Energy" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  [...Array(10)].map((_, idx) => (
-                    <tr key={idx} className="border-b border-gray-800/30">
-                      <td colSpan={21} className="px-4 py-4">
-                        <div className="h-8 bg-gray-700/30 rounded animate-pulse"></div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  sortedData?.map((player, idx) => {
-                    const deepThreat = isDeepThreat(player);
-                    const slotHeavy = isSlotHeavy(player);
-                    const highEnergy = (player.energyIndex ?? 0) >= 80;
-                    const rowClassName = `border-b border-gray-800/30 hover:bg-blue-500/5 transition-colors ${
-                      deepThreat ? 'bg-orange-500/10' : slotHeavy ? 'bg-cyan-500/10' : highEnergy ? 'bg-green-500/5' : ''
-                    }`;
-                    
-                    return (
-                      <tr
-                        key={player.playerId}
-                        className={rowClassName}
-                        data-testid={`sandbox-row-${idx}`}
-                      >
-                        <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{player.playerName}</span>
-                            {(player.injuryStatus === 'IR' || player.injuryStatus === 'OUT' || player.injuryStatus === 'PUP') && (
-                              <span className="px-1.5 py-0.5 bg-red-600/80 text-white text-[10px] font-bold rounded uppercase tracking-wide">
-                                {player.injuryStatus}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 bg-gray-800/70 text-gray-300 rounded text-xs font-medium">
-                            {player.team}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-gray-300">{player.gamesPlayed}</td>
-                        <td className="px-4 py-3 text-center text-gray-300">{player.targets}</td>
-                        <td className="px-4 py-3 text-center text-gray-300">{player.fantasyPoints.toFixed(1)}</td>
-                        <td className="px-4 py-3 text-center text-gray-400">{player.pointsPerTarget.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-center text-gray-400">{player.samplePenalty.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-center text-gray-400">{player.adjustedEfficiency.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <span className="font-bold text-purple-400 text-base">{player.customAlphaScore ?? player.alphaScore}</span>
-                            {player.customAlphaScore && player.customAlphaScore !== player.alphaScore && (
-                              <span className="text-[9px] text-purple-300/60 uppercase tracking-wide">custom</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.roleScore !== null ? (
-                            <span className="text-blue-300 font-medium">{player.roleScore}</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.deepTargetRate !== null ? (
-                            <span className={deepThreat ? 'text-orange-400 font-bold' : 'text-gray-300'}>
-                              {(player.deepTargetRate * 100).toFixed(0)}%
-                            </span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.slotRouteShareEst !== null ? (
-                            <span className={slotHeavy ? 'text-cyan-400 font-bold' : 'text-gray-300'}>
-                              {(player.slotRouteShareEst * 100).toFixed(0)}%
-                            </span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        {/* Advanced Metrics (NEW) */}
-                        <td className="px-4 py-3 text-center">
-                          {player.weightedTargetsPerGame !== null ? (
-                            <span className="text-amber-300 font-medium">{player.weightedTargetsPerGame.toFixed(1)}</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.boomRate !== null ? (
-                            <span className="text-green-300">{(player.boomRate * 100).toFixed(0)}%</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.bustRate !== null ? (
-                            <span className="text-red-300">{(player.bustRate * 100).toFixed(0)}%</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.talentIndex !== null ? (
-                            <span className="text-purple-300 font-medium">{player.talentIndex}</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.usageStabilityIndex !== null ? (
-                            <span className="text-blue-300">{player.usageStabilityIndex}</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.roleDelta !== null ? (
-                            <span className={player.roleDelta >= 80 ? 'text-green-400 font-bold' : player.roleDelta <= 50 ? 'text-red-400' : 'text-gray-300'}>
-                              {player.roleDelta}
-                            </span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.redZoneDomScore !== null ? (
-                            <span className="text-orange-300 font-medium">{player.redZoneDomScore}</span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {player.energyIndex !== null ? (
-                            <span className={highEnergy ? 'text-yellow-400 font-bold text-base' : 'text-gray-300'}>
-                              {player.energyIndex}
-                            </span>
-                          ) : (
-                            <span className="text-gray-600 text-xs">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-
-            {!isLoading && sortedData?.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                No data available
-              </div>
-            )}
-          </div>
-        </div>
+          <WRTable
+            sortedData={sortedData as any}
+            isLoading={isLoading}
+            sortField={sortField}
+            handleSort={handleSort}
+            isDeepThreat={isDeepThreat}
+            isSlotHeavy={isSlotHeavy}
+          />
         )}
 
         {/* Progress & Future Features */}

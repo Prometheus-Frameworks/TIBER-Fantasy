@@ -1,0 +1,38 @@
+~/workspace$ git merge --abort
+git pull origin main --no-rebase --no-edit
+git push origin main
+remote: Enumerating objects: 107, done.
+remote: Counting objects: 100% (75/75), done.
+remote: Compressing objects: 100% (13/13), done.
+remote: Total 41 (delta 35), reused 33 (delta 28), pack-reused 0 (from 0)
+Unpacking objects: 100% (41/41), 14.57 KiB | 12.00 KiB/s, done.
+From https://github.com/Prometheus-Frameworks/TIBER-Fantasy
+ * branch              main       -> FETCH_HEAD
+   2e029506..da5121ad  main       -> origin/main
+Auto-merging .claude/context-log.md
+Auto-merging client/src/App.tsx
+Auto-merging client/src/pages/TiberTiers.tsx
+Auto-merging server/middleware/adminAuth.ts
+CONFLICT (content): Merge conflict in server/middleware/adminAuth.ts
+Auto-merging server/modules/datalab/snapshots/snapshotRoutes.ts
+CONFLICT (content): Merge conflict in server/modules/datalab/snapshots/snapshotRoutes.ts
+Auto-merging server/modules/forge/idp/idpBaselines.ts
+CONFLICT (add/add): Merge conflict in server/modules/forge/idp/idpBaselines.ts
+Auto-merging server/modules/forge/idp/idpCalibration.ts
+CONFLICT (add/add): Merge conflict in server/modules/forge/idp/idpCalibration.ts
+Auto-merging server/modules/forge/idp/idpForgeEngine.ts
+CONFLICT (add/add): Merge conflict in server/modules/forge/idp/idpForgeEngine.ts
+Auto-merging server/modules/forge/idp/idpIngestion.ts
+CONFLICT (add/add): Merge conflict in server/modules/forge/idp/idpIngestion.ts
+Auto-merging server/modules/forge/idp/idpTeamContext.ts
+CONFLICT (add/add): Merge conflict in server/modules/forge/idp/idpTeamContext.ts
+Auto-merging server/routes.ts
+CONFLICT (content): Merge conflict in server/routes.ts
+Automatic merge failed; fix conflicts and then commit the result.
+To https://github.com/Prometheus-Frameworks/TIBER-Fantasy.git
+ ! [rejected]          main -> main (non-fast-forward)
+error: failed to push some refs to 'https://github.com/Prometheus-Frameworks/TIBER-Fantasy.git'
+hint: Updates were rejected because the tip of your current branch is behind
+hint: its remote counterpart. If you want to integrate the remote changes,
+hint: use 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.

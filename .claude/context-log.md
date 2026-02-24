@@ -153,3 +153,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `migrations/0012_qb_fire_v1.sql`, `scripts/etl/qb_xfp_weekly.py`, `server/routes/fireRoutes.ts`, `server/routes/fantasyLabRoutes.ts`, `package.json`, `reports/qb_fire_v1_data_audit.md`, `reports/qb_fire_v1_validation.md`
 - **Validation:** Ran build successfully; DB-backed ETL/API validation commands are documented but blocked because `DATABASE_URL` is not set in this container.
 - **Notes:** DELTA remains RB/WR/TE-only by design until QB conversion/FPOE lands in v1.1.
+
+### 2026-02-23 — Codex: FORGE IDP Phase 1 scaffold + routing integration
+- **What changed:** Added initial IDP ingestion/baseline/engine modules, extended FORGE E+G position typing to include defensive groups, added defensive branch in `runForgeEngine` + `runForgeEngineBatch`, and mounted admin IDP routes (`/api/admin/idp/ingest`, `/baselines`, `/status`).
+- **Files modified:** `shared/idpSchema.ts`, `server/modules/forge/forgeEngine.ts`, `server/modules/forge/forgeGrading.ts`, `server/modules/forge/forgeGradeCache.ts`, `server/modules/forge/routes.ts`, `server/routes/idpAdminRoutes.ts`, `server/routes.ts`, `server/modules/forge/idp/*`, plus offensive-helper typing updates in `roleConsistencyPillar.ts`, `xfpVolumePillar.ts`, and `snapshotDataValidator.ts`.
+- **Validation:** Ran `npx tsc --noEmit` and a targeted `npx tsc --noEmit ...` command; both are currently blocked by broad pre-existing repository/type dependency issues.
+- **Notes:** IDP tables are queried via raw SQL because current Drizzle schema does not expose `idp_*` models yet.
