@@ -8,4 +8,8 @@ module.exports = {
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
   injectGlobals: true,
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageThreshold: { global: { lines: 5 } },
+  coveragePathIgnorePatterns: ['/node_modules/', '/client/', '/__tests__/'],
 };

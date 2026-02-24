@@ -640,17 +640,22 @@ async function fetchTeamContext(
   }
 }
 
+/**
+ * Maps a value to the 0-100 range using linear interpolation.
+ * Returns 50 when min === max to avoid NaN.
+ */
+export function normalizeRange(val: number, min: number, max: number): number {
+  if (min === max) return 50;
+  const norm = ((val - min) / (max - min)) * 100;
+  return Math.max(0, Math.min(100, norm));
+}
+
 function normalizeTeamContext(row: Record<string, any>): Record<string, number | null> {
   const passEpa = parseFloat(row.pass_epa) || 0;
   const rushEpa = parseFloat(row.rush_epa) || 0;
   const cpoe = parseFloat(row.cpoe) || 0;
   const runSuccessRate = parseFloat(row.run_success_rate) || 0;
   const explosive = parseFloat(row.explosive_20_plus) || 0;
-  
-  const normalizeRange = (val: number, min: number, max: number) => {
-    const norm = ((val - min) / (max - min)) * 100;
-    return Math.max(0, Math.min(100, norm));
-  };
   
   return {
     team_pass_volume: normalizeRange(passEpa, -0.2, 0.3),
@@ -1041,7 +1046,7 @@ const GAMES_FULL_CREDIT: Record<OffensivePosition, number> = {
 
 const BASELINE_PILLAR = 40;
 
-function applyGamesPlayedDampening(
+export function applyGamesPlayedDampening(
   pillars: ForgePillarScores,
   gamesPlayed: number,
   position: OffensivePosition
