@@ -178,3 +178,19 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `npx tsc --noEmit` (fails due existing repo-wide TS issues)
   - `npx tsc --noEmit --pretty false <changed files...>` (fails due existing dependency/global typing issues)
+
+### 2026-02-24 — CATALYST Phase 0 PBP enrichment (wp + score differential)
+- Added `wp` and `score_differential` fields to `bronze_nflfastr_plays` Drizzle schema in `shared/schema.ts`.
+- Added migration `0013_catalyst_pbp_enrichment.sql`:
+  - `ALTER TABLE` add columns if missing
+  - backfill from `raw_data->>'wp'` and `raw_data->>'score_differential'`
+  - add supporting season/week composite indexes including each new metric.
+- Updated NFLfastR ingestion scripts to populate the new columns during imports:
+  - `server/scripts/import_nflfastr_2024_bulk.py`
+  - `server/scripts/import_nflfastr_2025_bulk.py`
+  - `server/scripts/fast_nflfastr_import.py`
+- Added `server/scripts/validate_catalyst_pbp_enrichment.py` to run coverage/range checks and a 100-play 2024 Week 1 spot-check sample.
+- Validation:
+  - `python -m py_compile server/scripts/import_nflfastr_2024_bulk.py server/scripts/import_nflfastr_2025_bulk.py server/scripts/fast_nflfastr_import.py server/scripts/validate_catalyst_pbp_enrichment.py` ✅
+  - `npm run build` ✅ (with pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+  - DB checks blocked in this environment because `DATABASE_URL` is not set.

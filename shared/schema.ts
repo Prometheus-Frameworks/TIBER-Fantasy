@@ -2362,6 +2362,8 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   
   epa: real("epa"),
   wpa: real("wpa"),
+  wp: real("wp"),
+  scoreDifferential: integer("score_differential"),
   airYards: integer("air_yards"),
   yardsAfterCatch: integer("yards_after_catch"),
   yardsGained: integer("yards_gained"),
