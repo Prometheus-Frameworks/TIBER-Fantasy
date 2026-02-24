@@ -248,7 +248,7 @@ function extractRoleMetrics(
  * Convert a series of weekly values to a 0-100 stability score using CV.
  * Low CV = consistent = high score.
  */
-function cvToScore(values: number[], cvCap: number): number {
+export function cvToScore(values: number[], cvCap: number): number {
   if (values.length < 2) return DEFAULT_LOW_SCORE;
 
   const avg = mean(values);
