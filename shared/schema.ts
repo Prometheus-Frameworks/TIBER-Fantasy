@@ -5458,3 +5458,25 @@ export type IdpPlayerWeek = typeof idpPlayerWeek.$inferSelect;
 export type IdpPlayerSeason = typeof idpPlayerSeason.$inferSelect;
 export type IdpPositionBaseline = typeof idpPositionBaselines.$inferSelect;
 export type IdpPositionMap = typeof idpPositionMap.$inferSelect;
+
+// ========================================
+// CATALYST SCORE
+// ========================================
+
+export const catalystScores = pgTable("catalyst_scores", {
+  id: serial("id").primaryKey(),
+  gsisId: varchar("gsis_id", { length: 20 }).notNull(),
+  playerName: varchar("player_name", { length: 100 }),
+  position: varchar("position", { length: 5 }).notNull(),
+  team: varchar("team", { length: 5 }),
+  season: integer("season").notNull(),
+  week: integer("week").notNull(),
+  catalystRaw: real("catalyst_raw").notNull(),
+  catalystAlpha: real("catalyst_alpha").notNull(),
+  components: jsonb("components").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  unique("catalyst_unique").on(table.gsisId, table.season, table.week),
+]);
+
+export type CatalystScore = typeof catalystScores.$inferSelect;

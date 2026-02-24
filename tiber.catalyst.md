@@ -66,12 +66,12 @@ The `components` JSONB column stores the decomposed factors for every player-sea
 
 | Task | Description | Assignable to | Status |
 |------|-------------|---------------|--------|
-| 1.1 | Create `server/modules/catalyst/catalystCalculator.py` — core math (EPA base, sigmoid leverage, recency decay, game-script factor) | Replit Agent | Not started |
-| 1.2 | Build opponent adjustment using `defense_dvp` z-scores instead of standalone team_strength table | Replit Agent | Not started |
-| 1.3 | Create `catalyst_scores` DB table schema in `shared/schema.ts` | Replit Agent | Not started |
-| 1.4 | Write results to `catalyst_scores` table (player, season, week, raw, alpha, play_count, avg_leverage) | Replit Agent | Not started |
-| 1.5 | Position-specific percentile calibration (ECDF → 0-100 alpha mapping) | Replit Agent | Not started |
-| 1.6 | Run on 2024 full season, validate top-10 per position against expectations | Replit Agent | Not started |
+| 1.1 | Create `server/modules/catalyst/catalystCalculator.py` — core math (EPA base, sigmoid leverage, recency decay, game-script factor) | Replit Agent | DONE |
+| 1.2 | Build opponent adjustment using `defense_dvp` z-scores instead of standalone team_strength table | Replit Agent | DONE |
+| 1.3 | Create `catalyst_scores` DB table schema in `shared/schema.ts` | Replit Agent | DONE |
+| 1.4 | Write results to `catalyst_scores` table (player, season, week, raw, alpha, play_count, avg_leverage) | Replit Agent | DONE |
+| 1.5 | Position-specific percentile calibration (ECDF → 0-100 alpha mapping) | Replit Agent | DONE (per-week ECDF) |
+| 1.6 | Run on 2024 full season, validate top-10 per position against expectations | Replit Agent | DONE |
 
 **Acceptance checks:**
 - Distribution sanity: CATALYST raw scores roughly normal, no extreme outliers beyond 3 stddev
@@ -86,10 +86,10 @@ The `components` JSONB column stores the decomposed factors for every player-sea
 
 | Task | Description | Assignable to | Status |
 |------|-------------|---------------|--------|
-| 2.1 | Create `server/modules/catalyst/catalystRoutes.ts` — batch + player endpoints | Codex / Claude Code | Not started |
-| 2.2 | `/api/catalyst/batch?position=QB&season=2024` — returns ranked players with CATALYST scores | Codex / Claude Code | Not started |
-| 2.3 | `/api/catalyst/player/:gsisId` — returns player detail with weekly breakdown | Codex / Claude Code | Not started |
-| 2.4 | Wire routes into `server/routes.ts` | Codex / Claude Code | Not started |
+| 2.1 | Create `server/modules/catalyst/catalystRoutes.ts` — batch + player endpoints | Replit Agent | DONE |
+| 2.2 | `/api/catalyst/batch?position=QB&season=2024` — returns ranked players with CATALYST scores | Replit Agent | DONE |
+| 2.3 | `/api/catalyst/player/:gsisId` — returns player detail with weekly breakdown | Replit Agent | DONE |
+| 2.4 | Wire routes into `server/routes.ts` | Replit Agent | DONE |
 
 **Acceptance checks:**
 - Batch endpoint p95 latency < 500ms (pre-computed scores, just DB reads)
@@ -158,7 +158,9 @@ Tasks marked "Replit Agent" are:
 ---
 
 ## Status
-**Current phase:** Phase 0 nearly complete → Phase 1 ready to start (2024 data)
-**Phase 0 summary:** PR #30 (Codex) added columns + migration + validation script + import script updates. Migration run, 2024 backfill done (99% wp, 95% score_diff). 2025 needs re-import (task 0.4).
-**Next action:** Begin Phase 1 CATALYST Calculator using 2024 data. 2025 re-import can run in parallel.
+**Current phase:** Phase 1 + Phase 2 COMPLETE → Phase 3 (Frontend) next
+**Phase 0 summary:** PR #30 (Codex) added columns + migration + validation script. Migration run, 2024 backfill done (99% wp, 95% score_diff). 2025 needs re-import (task 0.4).
+**Phase 1 summary:** Calculator built and run. 5,029 player-week scores for 2024. Per-week ECDF percentiles. catalyst_raw = weighted_epa_sum / play_count. NaN/Inf guards added.
+**Phase 2 summary:** API routes live. `/api/catalyst/batch` and `/api/catalyst/player/:gsisId` both tested and working.
+**Next action:** Phase 3 — Frontend integration (Fantasy Lab column + player detail gauge).
 **Last updated:** 2026-02-24
