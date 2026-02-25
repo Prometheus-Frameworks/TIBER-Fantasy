@@ -5461,6 +5461,37 @@ export type IdpPositionBaseline = typeof idpPositionBaselines.$inferSelect;
 export type IdpPositionMap = typeof idpPositionMap.$inferSelect;
 
 // ========================================
+// API PLATFORM (MILESTONE 1)
+// ========================================
+
+export const apiKeys = pgTable("api_keys", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  keyHash: text("key_hash").notNull().unique(),
+  ownerLabel: text("owner_label").notNull(),
+  tier: text("tier").notNull().default("internal"),
+  rateLimitRpm: integer("rate_limit_rpm").notNull().default(60),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+});
+
+export const apiRequestLog = pgTable("api_request_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  apiKeyId: uuid("api_key_id").notNull().references(() => apiKeys.id, { onDelete: "cascade" }),
+  method: text("method").notNull(),
+  route: text("route").notNull(),
+  status: integer("status").notNull(),
+  durationMs: integer("duration_ms").notNull(),
+  requestId: text("request_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertApiKey = typeof apiKeys.$inferInsert;
+export type ApiRequestLog = typeof apiRequestLog.$inferSelect;
+export type InsertApiRequestLog = typeof apiRequestLog.$inferInsert;
+
+// ========================================
 // CATALYST SCORE
 // ========================================
 
