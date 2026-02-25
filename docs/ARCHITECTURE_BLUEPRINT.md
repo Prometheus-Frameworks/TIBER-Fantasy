@@ -1,0 +1,390 @@
+# TIBER Long-Term Architecture Blueprint (API Platform)
+
+Last updated: 2026-02-25  
+Status: Living blueprint (ship it, then revise with ADRs)
+
+TIBER is an NFL intelligence platform. The API is the product. The web app is one client.
+
+This document defines the durable architecture so every future build (human or agent) snaps into the same system, with stable contracts, predictable compute, and explainable outputs.
+
+---
+
+## 1) Non-Negotiable Goals
+
+1. Contract stability
+Public consumers (agents, plugins, external apps) must not break when internal implementation changes. All public endpoints live under `/api/v1/*` and are governed by explicit response contracts.
+
+2. Compute predictability
+On-demand heavyweight queries are a scaling trap. Anything that powers "tables", "batch", or repeated requests must be precomputed or cached.
+
+3. Explainability as first-class output
+Scores are not just numbers. Every score must ship with context: pillar breakdown, deltas, flags (typed), and minimal metadata to reproduce.
+
+4. Safe openness
+Free access does not mean unlimited access. API keys + rate limits + quotas + logging are mandatory before broad distribution.
+
+5. Modular isolation
+FORGE, FIRE, CATALYST, Data Lab evolve independently with stable IO contracts. No spaghetti cross-imports.
+
+---
+
+## 2) Canonical System Model
+
+Clients
+- Web app (React)
+- Claude Cowork plugin
+- Personal agents (GPT/Grok/Claude scripts)
+- Community-built tools (future)
+
+↓ HTTPS (versioned contracts)
+
+API Gateway (Node/Express)
+- request_id
+- auth (API keys)
+- rate limit / quota
+- standard error format
+- contract enforcement (optional validation)
+- routes → controllers → domain services
+
+↓ typed domain services
+
+Domain Modules
+- FORGE: grading engine (Alpha 0–100 + tiers + pillars + issues)
+- FIRE: opportunity + role + xFP-related outputs
+- CATALYST: play-level leverage performance (EPA/WPA/context)
+- Data Lab: research aggregations + CSV exports
+- Identity: player mapping + canonical ids
+- Sentinel/Admin: health checks + audit flags
+
+↓ persistence / compute
+
+Data Platform
+- Bronze: raw ingests (nflfastR, sleeper, etc.)
+- Silver: cleaned/enriched
+- Gold: aggregated + scored + API-ready
+- PostgreSQL (Drizzle schema), optional pgvector
+- Cached tables / materialized views where needed
+
+---
+
+## 3) "API is the Product" Rules
+
+Rule A: Public endpoints only exist under `/api/v1/*`.  
+Rule B: `/api/internal/*` may exist for UI experiments, but must never be depended on externally.  
+Rule C: Breaking changes require `/api/v2/*`. Never silently mutate v1 payload shapes.  
+Rule D: Every response includes meta:
+- meta.version
+- meta.request_id
+- meta.generated_at
+
+---
+
+## 4) Repo Layout (Canonical)
+
+```
+docs/
+  ARCHITECTURE_BLUEPRINT.md
+  API_CONTRACTS.md
+  MODULES/
+    FORGE.md
+    FIRE.md
+    CATALYST.md
+    DATALAB.md
+    IDENTITY.md
+  ADR/
+    0001-api-versioning.md
+    0002-auth-model.md
+    0003-precompute-policy.md
+
+server/
+  api/
+    v1/
+      routes.ts
+      controllers/
+      middleware/
+        requestId.ts
+        auth.ts
+        rateLimit.ts
+        errorFormat.ts
+      contracts/
+        forge.contract.ts
+        fire.contract.ts
+        catalyst.contract.ts
+        datalab.contract.ts
+      errors/
+        codes.ts
+  modules/
+    forge/
+      index.ts
+      service.ts
+      scoring/
+      issues/
+      queries/
+      cache/
+    fire/
+    catalyst/
+    datalab/
+    identity/
+    sentinel/
+  db/
+    schema.ts
+    migrations/
+  jobs/
+    pipelines/
+    recompute/
+    maintenance/
+
+client/
+  (web UI client only)
+
+shared/
+  types/
+  schema/
+```
+
+---
+
+## 5) API Platform Layer (Build Spec)
+
+### 5.1 API Keys (Data Model)
+
+Table: `api_keys`
+- id (uuid)
+- key_hash (text) — store only hashed key
+- owner_label (text) — "BossManJ", "cowork-plugin", "trusted-user-01"
+- tier (text enum) — internal | trusted | public
+- rate_limit_rpm (int)
+- burst (int) (optional)
+- created_at (timestamptz)
+- revoked_at (timestamptz nullable)
+- last_used_at (timestamptz nullable)
+
+Rules:
+- Never store raw keys.
+- Keys are presented once at creation.
+- Revocation is soft (revoked_at set), but treated as hard deny.
+
+Header:
+- `x-tiber-key: <raw_key>`
+
+### 5.2 Auth Middleware
+
+Responsibilities:
+- extract `x-tiber-key`
+- hash it
+- lookup active key (revoked_at is null)
+- attach `req.tiberAuth = { apiKeyId, tier, ownerLabel, limits }`
+- deny with 401/403 using standard error format
+
+### 5.3 Rate Limiting / Quotas
+
+Minimum viable:
+- token bucket per `apiKeyId`
+- return 429 with structured payload
+
+Implementation stages:
+1) MVP: in-memory limiter (single instance only) + strict defaults
+2) Next: Redis-based limiter (shared across instances)
+3) Later: tiered quotas (daily caps) stored in DB aggregates
+
+### 5.4 Logging / Observability
+
+Table: `api_request_log` (or "daily rollups" once volume rises)  
+Minimum fields:
+- id (uuid)
+- api_key_id (uuid)
+- method (text)
+- route (text)
+- status (int)
+- duration_ms (int)
+- created_at (timestamptz)
+- request_id (text)
+
+Add daily rollup:  
+Table: `api_usage_daily`
+- api_key_id
+- date
+- requests
+- errors
+- p95_ms
+
+---
+
+## 6) Contracts (DTOs) + Error Standard
+
+### 6.1 Standard Response Envelope (v1)
+
+All v1 endpoints return:
+- data: (payload)
+- meta: { version, request_id, generated_at }
+
+Example:
+- meta.version = "v1"
+
+### 6.2 Standard Error Envelope
+
+All errors return:
+- error: { code, message, details? }
+- meta: { version, request_id, generated_at }
+
+Codes are stable strings (never change meaning).
+
+Example codes:
+- AUTH_MISSING_KEY
+- AUTH_INVALID_KEY
+- AUTH_REVOKED_KEY
+- RATE_LIMIT_EXCEEDED
+- VALIDATION_ERROR
+- NOT_FOUND
+- INTERNAL_ERROR
+- UPSTREAM_TIMEOUT
+
+---
+
+## 7) Domain Module Contracts (Minimum Set)
+
+This is what makes "agents can build on it" actually true.
+
+### 7.1 FORGE (Core)
+
+Public endpoints (v1):
+- GET `/api/v1/forge/player/:playerId`
+- POST `/api/v1/forge/batch`
+
+FORGE v1 output must include:
+- player: { id, name, position, team }
+- alpha: number (0–100)
+- tier: "T1"…"T5"
+- pillars: { volume, efficiency, context, stability } (0–100)
+- mode: "redraft"|"dynasty"|"bestball"
+- window: { season, week_from, week_to }
+- issues: [{ code, severity, message }]
+- deltas: { alpha_wow?, alpha_4w?, pillars_wow? } (optional but recommended)
+- meta: { version, request_id, generated_at, snapshot_id? }
+
+Typed issue codes (examples):
+- LOW_SNAP_SHARE
+- TD_DEPENDENT
+- ROLE_VOLATILE
+- INJURY_RISK (if you include injuries)
+
+### 7.2 FIRE (Opportunity / xFP)
+
+Public endpoints (v1):
+- GET `/api/v1/fire/player/:playerId`
+- POST `/api/v1/fire/batch`
+
+Minimum output:
+- opportunity: { xfp, usage_score, role_score }
+- actual: { fantasy_points, efficiency_over_expected }
+- window + meta
+
+### 7.3 CATALYST (Leverage Performance)
+
+Public endpoints (v1):
+- GET `/api/v1/catalyst/player/:playerId`
+
+Minimum output:
+- catalyst_score
+- components (wpa-weighted epa, opponent strength, recency)
+- window + meta
+
+### 7.4 Data Lab (Research Aggregations)
+
+Public endpoints (v1):
+- GET `/api/v1/datalab/receiving`
+- GET `/api/v1/datalab/rushing`
+- GET `/api/v1/datalab/qb`
+- GET `/api/v1/datalab/redzone`
+- GET `/api/v1/datalab/situational`
+- GET `/api/v1/datalab/lab-agg` (if this remains the master aggregation endpoint)
+
+Hard rule:
+- anything used by external agents must be contract-stable and documented.
+
+---
+
+## 8) Compute Strategy: Precompute-First
+
+### 8.1 When to precompute
+
+Precompute/cached table is required if ANY are true:
+- Endpoint is batch.
+- Endpoint is used by a ranking/table UI.
+- Endpoint frequently called by agents.
+- Query touches play-by-play at scale.
+- p95 > 500ms locally or > 800ms on prod DB.
+
+### 8.2 Gold is API-Ready
+
+Gold tables should be shaped for fast API reads:
+- keyed by (player_id, season, week / window)
+- indexed for common filters (position, team, week range)
+- include denormalized essentials (name/team/pos) if it reduces joins for hot endpoints
+
+### 8.3 Snapshot semantics
+
+For anything that claims a "week" or "range", the system must be reproducible:
+- store snapshot ids (or snapshot metadata)
+- tie score rows to snapshot id and window inputs
+
+---
+
+## 9) Sentinel (Quality + Safety Net)
+
+Sentinel is not vibes. It's automated sanity checks:
+- range checks (alpha 0–100)
+- missingness (pillars not null)
+- distribution checks (no 90% of players at T1)
+- cross-module consistency (FIRE usage cannot be zero if snaps are high)
+
+Sentinel outputs:
+- flags written to `sentinel_flags`
+- optional inline warnings in API responses (meta.warnings)
+
+---
+
+## 10) Deployment Topology
+
+MVP (simple, stable):
+- 1× Node API service
+- 1× Postgres
+- 1× pipeline runner (Python jobs)
+- optional Redis later (rate limit + caching)
+
+Scaling later:
+- multiple API instances behind load balancer
+- Redis mandatory for rate limiting + hot caches
+- background job worker pool for recomputes
+
+---
+
+## 11) Build Sequence (What We Do Next)
+
+Milestone 1 — Platform MVP
+- add `/api/v1/*` namespace for the core public endpoints
+- implement API key auth + rate limits + request logging
+- standardize meta + error envelopes
+- freeze contracts for: FORGE player, FORGE batch, Data Lab agg, FIRE player
+
+Milestone 2 — Performance Hardening
+- identify top slow endpoints
+- add cache tables / materialized views
+- enforce precompute policy
+
+Milestone 3 — Developer Surface
+- publish API docs (contract tables + examples)
+- ship example clients (TS + Python)
+- Cowork plugin calls live API
+
+---
+
+## 12) Definition of Done (Platform Ready)
+
+- No public endpoint exists outside `/api/v1/`
+- Every v1 response has meta envelope
+- Keys required for all v1 endpoints
+- Rate limiting active
+- Logging active and queryable
+- 3–5 core endpoints have stable, documented contracts
+- At least one external client (Cowork plugin or script) works end-to-end
