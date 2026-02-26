@@ -13,7 +13,12 @@ export function v1Success(data: unknown, requestId: string) {
 
 export function v1Error(code: ErrorCode, message: string, requestId: string, details?: unknown) {
   return {
-    error: { code, message, ...(details ? { details } : {}) },
+    error: {
+      code,
+      message,
+      requestId,
+      ...(details ? { details } : {}),
+    },
     meta: {
       version: "v1",
       request_id: requestId,

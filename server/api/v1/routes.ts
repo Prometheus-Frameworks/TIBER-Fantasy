@@ -152,10 +152,12 @@ router.get("/fire/batch", async (req, res, next) => {
 router.get("/health", async (req, res) => {
   const dbOk = await db.execute(sql`SELECT 1`).then(() => true).catch(() => false);
   res.json(v1Success({
-    status: dbOk ? "ok" : "degraded",
+    ok: dbOk,
+    version: "v1",
+    commit: process.env.REPL_ID ?? "local",
+    time: new Date().toISOString(),
     db: dbOk ? "connected" : "unreachable",
     uptime_seconds: Math.floor(process.uptime()),
-    ts: new Date().toISOString(),
   }, req.requestId!));
 });
 
