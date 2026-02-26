@@ -131,6 +131,34 @@ router.get("/catalyst/player/:playerId", async (req, res, next) => {
   }
 });
 
+router.get("/fire/batch", async (req, res, next) => {
+  try {
+    const currentMonth = new Date().getMonth() + 1;
+    const defaultSeason = currentMonth >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+    const defaultWeek = 18;
+    const params = {
+      season: defaultSeason,
+      week: defaultWeek,
+      ...req.query,
+    };
+    const query = toQueryString(params as Record<string, unknown>);
+    const payload = await proxyToExisting(req, `/api/fire/eg/batch${query}`);
+    res.json(v1Success(payload, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/health", async (req, res) => {
+  const dbOk = await db.execute(sql`SELECT 1`).then(() => true).catch(() => false);
+  res.json(v1Success({
+    status: dbOk ? "ok" : "degraded",
+    db: dbOk ? "connected" : "unreachable",
+    uptime_seconds: Math.floor(process.uptime()),
+    ts: new Date().toISOString(),
+  }, req.requestId!));
+});
+
 router.use(requestLogger);
 router.use(errorFormat);
 
