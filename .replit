@@ -9,7 +9,7 @@ packages = ["arrow-cpp", "glibcLocales", "imagemagick", "jq", "libxcrypt", "pkg-
 [deployment]
 deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+run = ["node", "dist/index.mjs"]
 
 [workflows]
 runButton = "Project"
