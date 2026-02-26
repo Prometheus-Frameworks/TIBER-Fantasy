@@ -161,6 +161,21 @@ router.get("/health", async (req, res) => {
   }, req.requestId!));
 });
 
+router.get("/diagnostic", (req, res) => {
+  const proto = req.get("x-forwarded-proto") ?? req.protocol;
+  const host = req.get("host") ?? "unknown";
+  res.json(v1Success({
+    baseUrlSeen: `${proto}://${host}`,
+    hostHeader: host,
+    xForwardedForPresent: !!req.get("x-forwarded-for"),
+    xForwardedFor: req.get("x-forwarded-for") ?? null,
+    xForwardedProto: req.get("x-forwarded-proto") ?? null,
+    env: process.env.NODE_ENV ?? "unknown",
+    commit: process.env.REPL_ID ?? "local",
+    requestId: req.requestId,
+  }, req.requestId!));
+});
+
 router.use(requestLogger);
 router.use(errorFormat);
 
