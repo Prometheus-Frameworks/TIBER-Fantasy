@@ -1,0 +1,48 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Install the latest PowerShell for new features and improvements! https://aka.ms/PSWindows
+
+PS C:\Users\deebr> cd C:\Users\deebr\TIBER-Fantasy
+PS C:\Users\deebr\TIBER-Fantasy> git pull
+remote: Enumerating objects: 37, done.
+remote: Counting objects: 100% (37/37), done.
+remote: Compressing objects: 100% (10/10), done.
+remote: Total 34 (delta 22), reused 34 (delta 22), pack-reused 0 (from 0)
+Unpacking objects: 100% (34/34), 361.08 KiB | 1.93 MiB/s, done.
+From https://github.com/Prometheus-Frameworks/TIBER-Fantasy
+   2dd9ffc1..9d284a61  main       -> origin/main
+Updating 2dd9ffc1..9d284a61
+Fast-forward
+ .replit                                            |   2 +-
+ .../tiber-cowork-plugin/plugin-config.json         |   5 +++
+ ...ived-in-Tyreek-s-shadow-his-w_1772077629093.txt |  36 +++++++++++++++
+ ...ls-folder-especially-forge-en_1772077956160.txt |  29 ++++++++++++
+ .../Screenshot_2026-02-25_223226_1772076757591.png | Bin 0 -> 160538 bytes
+ .../Screenshot_2026-02-25_223735_1772077067958.png | Bin 0 -> 75789 bytes
+ .../Screenshot_2026-02-25_223907_1772077156732.png | Bin 0 -> 77220 bytes
+ attached_assets/image_1772076883494.png            | Bin 0 -> 95231 bytes
+ tiber-cowork-plugin/CLAUDE.md                      |  49 +++++++++++++++++++++
+ 9 files changed, 120 insertions(+), 1 deletion(-)
+ create mode 100644 TIBER-Fantasy/tiber-cowork-plugin/plugin-config.json
+ create mode 100644 attached_assets/Pasted-Jaylen-Waddle-WR-MIA-Has-lived-in-Tyreek-s-shadow-his-w_1772077629093.txt
+ create mode 100644 attached_assets/Pasted-Read-the-files-in-the-skills-folder-especially-forge-en_1772077956160.txt
+ create mode 100644 attached_assets/Screenshot_2026-02-25_223226_1772076757591.png
+ create mode 100644 attached_assets/Screenshot_2026-02-25_223735_1772077067958.png
+ create mode 100644 attached_assets/Screenshot_2026-02-25_223907_1772077156732.png
+ create mode 100644 attached_assets/image_1772076883494.png
+ create mode 100644 tiber-cowork-plugin/CLAUDE.md
+PS C:\Users\deebr\TIBER-Fantasy> git add railway.toml
+fatal: pathspec 'railway.toml' did not match any files
+PS C:\Users\deebr\TIBER-Fantasy> git commit -m "Add railway.toml to force Node.js build over Python"
+Author identity unknown
+
+*** Please tell me who you are.
+
+Run
+
+  git config --global user.email "you@example.com"
+  git config --global user.name "Your Name"
+
+to set your account's default identity.
+Omit --global to set the identity only in this repository.
