@@ -1,41 +1,59 @@
 # /tiber:forge-batch
 
-Run FORGE scoring across a position group and return tiered rankings.
+Run FORGE scoring across a position group and return tiered rankings from live data.
 
 ## Usage
 ```
-/tiber:forge-batch <position> [--mode redraft|dynasty|bestball] [--week <number>] [--top <number>]
+/tiber:forge-batch <position> [--mode redraft|dynasty|bestball] [--top <number>]
 ```
 
-## What This Does
+## CRITICAL — No Fabrication Rule
+**Never estimate Alpha scores or tier placements without a live API response.**
+If the API call fails, say:
+> "Could not retrieve live FORGE data. Batch rankings require an active API connection."
 
-1. Query the FORGE batch endpoint for the specified position
-2. Return players sorted by Alpha score, grouped by tier
-3. Highlight movers (significant week-over-week Alpha changes)
-4. Flag any Football Lens issues across the group
+## How to Execute This Command
 
-## Parameters
+### Step 1 — Load config
+Read `plugin-config.json` from the tiber-cowork-plugin folder.
 
-- `position`: QB, RB, WR, or TE (required)
-- `--mode`: Scoring mode (default: redraft)
-- `--week`: Specific week to score (default: latest available)
-- `--top`: Number of players to show (default: 30)
+### Step 2 — Call the batch endpoint
+```
+POST {api_base_url}/api/v1/forge/batch
+Header: x-tiber-key: {api_key}
+Header: Content-Type: application/json
+Body: { "position": "{position}", "mode": "{mode}" }
+```
+
+Valid positions: QB, RB, WR, TE  
+Valid modes: redraft, dynasty, bestball (default: redraft)
+
+### Step 3 — Format results
+
+Group players by tier. Show top N (default 30, use --top to override).
 
 ## Output Format
 
-Group results by tier with the most relevant context:
-
 ```
-/tiber:forge-batch WR --mode dynasty --top 15
+[LIVE TIBER BATCH — {position} {mode} — {timestamp}]
 
 T1 ELITE (Alpha 85+)
-  1. Ja'Marr Chase    α91  Vol:94 Eff:88 Ctx:87 Stb:92  ↔ stable
-  2. CeeDee Lamb      α88  Vol:90 Eff:85 Ctx:86 Stb:89  ↑ +3 from last week
+  1. {name}    α{score}  Vol:{v} Eff:{e} Ctx:{c} Stb:{s}  {trend}
+  2. {name}    α{score}  ...
 
-T2 STRONG (Alpha 70-84)
-  3. Amon-Ra St. Brown α82  Vol:86 Eff:79 Ctx:81 Stb:80  ↔ stable
+T2 STRONG (Alpha 70–84)
   ...
 
-MOVERS: Drake London ↑+7 (volume surge), Chris Olave ↓-5 (QB situation)
-FLAGS: Player X — TD-spike warning (38% of FP from TDs)
+T3 SOLID (Alpha 55–69)
+  ...
+
+MOVERS: {players with significant week-over-week Alpha change}
+FLAGS: {any Football Lens warnings present in the data}
 ```
+
+## Notes
+
+- Tier thresholds are position-specific (from forge-engine skill)
+- Show trajectory arrows: ↑ rising, ↓ falling, ↔ stable
+- Only show tiers that have players in them
+- If a player has a Football Lens flag in the API response, mark them with ⚠

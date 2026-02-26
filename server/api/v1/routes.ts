@@ -6,6 +6,8 @@ import { rateLimit } from "./middleware/rateLimit";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorFormat, ApiError } from "./middleware/errorFormat";
 import { ErrorCodes } from "./errors/codes";
+import { db } from "../../infra/db";
+import { sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -51,6 +53,34 @@ router.use(requestId);
 router.use(auth);
 router.use(rateLimit);
 
+router.get("/players/search", async (req, res, next) => {
+  try {
+    const name = (req.query.name as string ?? "").trim();
+    if (!name || name.length < 2) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "name query param required (min 2 chars)");
+    }
+    const rows = await db.execute(sql`
+      SELECT
+        gsis_id,
+        full_name,
+        position,
+        nfl_team,
+        is_active
+      FROM player_identity_map
+      WHERE full_name ILIKE ${"%" + name + "%"}
+        AND is_active = true
+        AND position IN ('QB','RB','WR','TE')
+      ORDER BY
+        CASE WHEN LOWER(full_name) = LOWER(${name}) THEN 0 ELSE 1 END,
+        full_name
+      LIMIT 10
+    `);
+    res.json(v1Success({ players: rows.rows }, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/forge/player/:playerId", async (req, res, next) => {
   try {
     const query = toQueryString(req.query as Record<string, unknown>);
@@ -74,7 +104,16 @@ router.post("/forge/batch", async (req, res, next) => {
 
 router.get("/fire/player/:playerId", async (req, res, next) => {
   try {
-    const query = toQueryString({ ...req.query, playerId: req.params.playerId });
+    const currentMonth = new Date().getMonth() + 1;
+    const defaultSeason = currentMonth >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+    const defaultWeek = 18;
+    const params = {
+      season: defaultSeason,
+      week: defaultWeek,
+      ...req.query,
+      playerId: req.params.playerId,
+    };
+    const query = toQueryString(params as Record<string, unknown>);
     const payload = await proxyToExisting(req, `/api/fire/eg/player${query}`);
     res.json(v1Success(payload, req.requestId!));
   } catch (err) {

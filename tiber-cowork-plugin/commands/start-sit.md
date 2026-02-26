@@ -1,51 +1,61 @@
 # /tiber:start-sit
 
-Get start/sit recommendations for a specific week, optionally personalized to a user's roster.
+Get start/sit recommendations using live FORGE scores and SoS matchup data.
 
 ## Usage
 ```
-/tiber:start-sit [--week <number>] [--position <pos>] [--roster <player1, player2, ...>]
+/tiber:start-sit [--week <number>] [--position QB|RB|WR|TE] [--roster "player1, player2, ..."]
 ```
 
-## What This Does
+## CRITICAL — No Fabrication Rule
+**Never fabricate matchup grades or Alpha scores.**
+If data is missing for a player:
+> "[Player] not found in live TIBER data. Cannot make a data-backed recommendation."
 
-1. Pull FORGE scores for the relevant players
-2. Layer in SoS matchup grades for the target week
-3. Apply the Start/Sit engine logic (`server/modules/startSit/`)
-4. Factor in DvP (Defense vs Position) matchup data
-5. If roster is provided, rank those specific players against each other
+## How to Execute This Command
 
-## Without Roster (General)
+### Step 1 — Load config
+Read `plugin-config.json` from the tiber-cowork-plugin folder.
 
-Returns the best and worst starts at a position for the week based on FORGE + matchup convergence.
-
-## With Roster (Personalized)
-
-Ranks the user's actual players and recommends the optimal lineup:
-
+### Step 2 — Resolve each player on the roster
+For each player in `--roster`, call:
 ```
-/tiber:start-sit --week 14 --roster "Josh Allen, Lamar Jackson"
-
-WEEK 14 QB START/SIT
-
-START: Josh Allen (α85, T1)
-  - Matchup: vs NYJ (29th vs QB, SoS 1.08)
-  - FIRE delta: +3.2 (outproducing opportunity)
-  - Confidence: HIGH
-
-SIT: Lamar Jackson (α79, T2)
-  - Matchup: vs PIT (4th vs QB, SoS 0.91)
-  - FIRE delta: +1.1 (still positive but tough spot)
-  - Confidence: MEDIUM
-
-Reasoning: Both are elite QBs but the matchup gap is significant this week.
-Allen's pass-funnel matchup against NYJ's weak secondary gives him a higher 
-ceiling, while Pittsburgh's defense compresses Lamar's rushing upside.
+GET {api_base_url}/api/v1/players/search?name={player_name}
+Header: x-tiber-key: {api_key}
 ```
 
-## Key Principles
+### Step 3 — Pull FORGE + FIRE data for each player
+```
+GET {api_base_url}/api/v1/forge/player/{gsis_id}
+GET {api_base_url}/api/v1/fire/player/{gsis_id}
+Header: x-tiber-key: {api_key}
+```
 
-- Always explain the reasoning, not just the recommendation
-- Matchup context should supplement FORGE scores, not override them
-- Flag uncertainty: "This is close — either could hit" is valid
-- If data is missing for a player, say so rather than guessing
+### Step 4 — Rank and recommend
+
+Rank players using:
+1. FORGE Alpha (primary signal)
+2. FIRE delta (opportunity vs actuals gap)
+3. SoS / matchup context if available in the response
+
+## Output Format
+
+```
+[LIVE TIBER START/SIT — Week {week} — {timestamp}]
+
+START: {name} (α{score}, {tier})
+  FIRE Delta: {delta}
+  Matchup: {opponent} — {matchup context if available}
+  Reasoning: [tied to actual scores from API]
+
+SIT: {name} (α{score}, {tier})
+  FIRE Delta: {delta}
+  Matchup: {opponent}
+  Reasoning: [tied to actual scores]
+
+[If the call is close, say so. "This is nearly a coin flip — here's why..."]
+```
+
+## Without --roster
+
+Return the best and worst starts for the specified position based on live FORGE batch data. Pull batch, sort by Alpha, show top 5 starts and bottom 3 fades with actual scores.

@@ -40,3 +40,6 @@ backup_*.sql
 # local backups
 backup_*.sql
 *.swp
+
+# TIBER Cowork plugin local config (contains API key)
+tiber-cowork-plugin/plugin-config.json
