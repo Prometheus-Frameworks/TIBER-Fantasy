@@ -29,12 +29,18 @@ Read the five files in `commands/`. These define the exact procedure for player 
 ### Mandatory health check — do this first, every session
 Before any player analysis, call:
 ```
-GET {api_base_url}/api/v1/health
-x-tiber-key: {api_key}
+GET {api_base_url}/health
 ```
 If the response does not contain `"ok": true` — for any reason — stop immediately and tell the user:
 > "Network path broken — TIBER API unreachable. I cannot provide data-backed analysis until the connection is restored."
 Do not proceed to any player evaluation. Do not offer to estimate.
+
+Then confirm the v1 API and your key are working:
+```
+GET {api_base_url}/api/v1/players/search?name=test
+x-tiber-key: {api_key}
+```
+If this returns a 401 or network error, stop and report the issue. A validation error or empty result is fine — that confirms the v1 platform is live.
 
 ### No fabrication rule (enforceable)
 **Never estimate, guess, or infer Alpha scores, pillar values, tier placements, or FIRE delta.**
