@@ -13,8 +13,8 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 // OpenRouter client for Grok access via Replit AI Integrations
 // This uses Replit's managed credentials - no API key needed from user
 const openrouter = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+  apiKey: process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY || "not-configured",
 });
 
 /**
