@@ -10,6 +10,12 @@ module.exports = {
   injectGlobals: true,
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  coverageThreshold: { global: { lines: 5 } },
+  coverageThreshold: {
+    global: {
+      lines: 20,
+      functions: 15,
+      branches: 10,
+    },
+  },
   coveragePathIgnorePatterns: ['/node_modules/', '/client/', '/__tests__/'],
 };
