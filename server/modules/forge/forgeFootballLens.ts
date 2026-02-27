@@ -172,5 +172,16 @@ export function applyFootballLens(
     });
   }
 
-  return { pillars, issues };
+  const clampedPillars: ForgePillarScores = {
+    ...pillars,
+    volume: Math.max(0, Math.min(100, pillars.volume)),
+    efficiency: Math.max(0, Math.min(100, pillars.efficiency)),
+    teamContext: Math.max(0, Math.min(100, pillars.teamContext)),
+    stability: Math.max(0, Math.min(100, pillars.stability)),
+    ...(pillars.dynastyContext !== undefined
+      ? { dynastyContext: Math.max(0, Math.min(100, pillars.dynastyContext)) }
+      : {}),
+  };
+
+  return { pillars: clampedPillars, issues };
 }
