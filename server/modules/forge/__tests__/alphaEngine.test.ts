@@ -273,6 +273,9 @@ describe('calculateAlphaScore', () => {
     expect(result.alpha).toBeLessThanOrEqual(100);
   });
 
+  // TODO: seasonStats override only passes gamesPlayed=1 but inherits receptions=55 from
+  // base fixture, causing rec/g=55.0 in console output. Fix by adding receptions:4 to
+  // the seasonStats override so the per-game rate matches the weeklyStats entry.
   it('handles gamesPlayed = 1 without NaN', () => {
     const context = makeContext({
       seasonStats: { gamesPlayed: 1 },
