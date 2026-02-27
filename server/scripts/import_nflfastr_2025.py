@@ -47,13 +47,13 @@ def import_nflfastr_2025():
                         passer_player_id, passer_player_name,
                         receiver_player_id, receiver_player_name,
                         rusher_player_id, rusher_player_name,
-                        epa, wpa, air_yards, yards_after_catch, yards_gained,
+                        epa, air_epa, comp_air_epa, wpa, air_yards, yards_after_catch, yards_gained,
                         complete_pass, incomplete_pass, interception, touchdown,
                         raw_data
                     ) VALUES (
                         %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s
                     )
                     ON CONFLICT (play_id) DO NOTHING
@@ -72,6 +72,8 @@ def import_nflfastr_2025():
                     str(row.get('rusher_player_id')) if pd.notna(row.get('rusher_player_id')) else None,
                     str(row.get('rusher_player_name')) if pd.notna(row.get('rusher_player_name')) else None,
                     float(row.get('epa')) if pd.notna(row.get('epa')) else None,
+                    float(row.get('air_epa')) if pd.notna(row.get('air_epa')) else None,
+                    float(row.get('comp_air_epa')) if pd.notna(row.get('comp_air_epa')) else None,
                     float(row.get('wpa')) if pd.notna(row.get('wpa')) else None,
                     int(row.get('air_yards')) if pd.notna(row.get('air_yards')) else None,
                     int(row.get('yards_after_catch')) if pd.notna(row.get('yards_after_catch')) else None,

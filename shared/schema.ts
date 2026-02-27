@@ -2362,6 +2362,8 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   rusherPlayerName: varchar("rusher_player_name", { length: 100 }),
   
   epa: real("epa"),
+  airEpa: real("air_epa"),
+  compAirEpa: real("comp_air_epa"),
   wpa: real("wpa"),
   wp: real("wp"),
   scoreDifferential: integer("score_differential"),

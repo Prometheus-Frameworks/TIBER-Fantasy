@@ -1308,7 +1308,9 @@ router.get("/lab-agg", async (req: Request, res: Response) => {
           AVG(spw.yac_over_expected) as avg_yac_over_expected,
           AVG(spw.x_yac_success_rate) as avg_x_yac_success_rate,
           -- WR/TE efficiency
-          AVG(spw.catch_rate) as avg_catch_rate,
+          CASE WHEN SUM(COALESCE(spw.targets, 0)) > 0
+            THEN SUM(COALESCE(spw.receptions, 0))::numeric / SUM(COALESCE(spw.targets, 0))::numeric
+            ELSE NULL END as avg_catch_rate,
           AVG(spw.yards_per_target) as avg_yards_per_target,
           AVG(spw.racr) as avg_racr,
           AVG(spw.wopr) as avg_wopr,
