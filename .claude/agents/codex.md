@@ -194,3 +194,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `python -m py_compile server/scripts/import_nflfastr_2024_bulk.py server/scripts/import_nflfastr_2025_bulk.py server/scripts/fast_nflfastr_import.py server/scripts/validate_catalyst_pbp_enrichment.py` ✅
   - `npm run build` ✅ (with pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
   - DB checks blocked in this environment because `DATABASE_URL` is not set.
+
+### 2026-02-27 — CODEX-001: Unit Tests for `alphaEngine.ts`
+- Added `server/modules/forge/__tests__/alphaEngine.test.ts` with 12 synchronous unit tests for `calculateAlphaScore`.
+- Mocked `server/infra/db`, `fibonacciPatternResonance`, and `forgeAlphaModifiers` to keep tests deterministic and free of runtime DB requirements.
+- Covered output contract, bounds clamping, position handling (QB/RB/WR/TE), dynasty vs redraft age logic, modifier call plumbing, and edge inputs (0/100 scores + gamesPlayed=1 NaN guard).
+- Validation: `npx jest server/modules/forge/__tests__/alphaEngine.test.ts` passed.
