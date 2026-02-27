@@ -165,3 +165,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `shared/schema.ts`, `migrations/0013_catalyst_pbp_enrichment.sql`, `server/scripts/import_nflfastr_2024_bulk.py`, `server/scripts/import_nflfastr_2025_bulk.py`, `server/scripts/fast_nflfastr_import.py`, `server/scripts/validate_catalyst_pbp_enrichment.py`
 - **Validation:** `python -m py_compile ...` passed for updated scripts; `npm run build` passed (existing warning in `server/olc/adjusters.ts`).
 - **Notes:** Could not execute DB-backed enrichment validation because this container does not provide `DATABASE_URL`; run `server/scripts/validate_catalyst_pbp_enrichment.py` in a DB-enabled environment after applying migration.
+
+### 2026-02-27 — Codex: CODEX-001 alphaEngine unit test coverage
+- **What changed:** Added a dedicated unit test suite for `calculateAlphaScore` covering output shape, clamping, all four positions, dynasty/redraft age-mode behavior, modifier passthrough behavior, and edge-case stability.
+- **Files modified:** `server/modules/forge/__tests__/alphaEngine.test.ts`
+- **Validation:** `npx jest server/modules/forge/__tests__/alphaEngine.test.ts` ✅ (12 tests passed).
+- **Notes:** Test suite mocks `infra/db`, `fibonacciPatternResonance`, and `forgeAlphaModifiers` to stay DB-free and deterministic.
