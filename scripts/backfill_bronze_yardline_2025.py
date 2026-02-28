@@ -15,8 +15,8 @@ import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
 
-# nflfastR convention: 2024 season = 2025 in our DB (season-ending year)
-NFL_SEASON_YEAR = 2024
+# The DB stores 2025 season data (Sep 2025 - Feb 2026); nfl_data_py uses same year
+NFL_SEASON_YEAR = 2025
 DB_SEASON = 2025
 
 
@@ -43,7 +43,10 @@ def backfill(df: pd.DataFrame, conn):
     # Build lookup: (game_id, play_id) -> (yardline_100, down, ydstogo, goal_to_go)
     # nflfastR play_id is numeric; our DB stores as varchar — cast on match
     df = df.dropna(subset=["game_id", "play_id"])
-    df["play_id"] = df["play_id"].astype(str)
+    # game_id year prefix should already match DB_SEASON since both use 2025
+    df["game_id"] = df["game_id"].str.replace(f"^{NFL_SEASON_YEAR}_", f"{DB_SEASON}_", regex=True)
+    # DB stores play_id as "1042.0" — preserve decimal to match
+    df["play_id"] = df["play_id"].apply(lambda x: str(float(x)))
     df["yardline_100"] = pd.to_numeric(df["yardline_100"], errors="coerce")
     df["down"] = pd.to_numeric(df["down"], errors="coerce")
     df["ydstogo"] = pd.to_numeric(df["ydstogo"], errors="coerce")
@@ -64,7 +67,7 @@ def backfill(df: pd.DataFrame, conn):
         rows = [
             (
                 row["game_id"],
-                str(int(float(row["play_id"]))),
+                row["play_id"],  # already normalized to '40.0' format matching DB
                 int(row["yardline_100"]) if pd.notna(row["yardline_100"]) else None,
                 int(row["down"]) if pd.notna(row["down"]) else None,
                 int(row["ydstogo"]) if pd.notna(row["ydstogo"]) else None,
@@ -75,9 +78,7 @@ def backfill(df: pd.DataFrame, conn):
 
         cur.execute("BEGIN")
         try:
-            execute_values(
-                cur,
-                """
+            sql = f"""
                 UPDATE bronze_nflfastr_plays AS b
                 SET
                   yardline_100 = v.yardline_100,
@@ -87,9 +88,12 @@ def backfill(df: pd.DataFrame, conn):
                 FROM (VALUES %s) AS v(game_id, play_id, yardline_100, down, ydstogo, goal_to_go)
                 WHERE b.game_id = v.game_id
                   AND b.play_id = v.play_id
-                  AND b.season = %s
-                  AND b.week = %s
-            """,
+                  AND b.season = {DB_SEASON}
+                  AND b.week = {week}
+            """
+            execute_values(
+                cur,
+                sql,
                 rows,
                 template="(%s, %s, %s::smallint, %s::smallint, %s::smallint, %s::boolean)",
                 page_size=500,
