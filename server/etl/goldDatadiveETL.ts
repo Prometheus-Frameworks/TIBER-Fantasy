@@ -324,7 +324,7 @@ async function getPlayByPlayStats(season: number, week: number): Promise<{
         rusher_player_id,
         SUM(CASE WHEN (raw_data->>'tackled_for_loss')::float > 0 THEN 1 ELSE 0 END) as stuffed,
         SUM(CASE WHEN first_down_rush THEN 1 ELSE 0 END) as first_downs,
-        SUM(CASE WHEN (raw_data->>'yardline_100')::float <= 20 THEN 1 ELSE 0 END) as rz_attempts,
+        SUM(CASE WHEN yardline_100 <= 20 THEN 1 ELSE 0 END) as rz_attempts,
         SUM(CASE WHEN (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as successful_plays,
         COUNT(*) as total_plays,
         SUM(CASE WHEN raw_data->>'run_gap' IN ('guard', 'tackle') THEN 1 ELSE 0 END) as inside_runs,
@@ -363,18 +363,18 @@ async function getPlayByPlayStats(season: number, week: number): Promise<{
     const recResult = await db.execute(sql`
       SELECT
         receiver_player_id,
-        SUM(CASE WHEN (first_down_pass OR touchdown) AND complete_pass THEN 1 ELSE 0 END) as first_downs,
+        SUM(CASE WHEN first_down_pass AND complete_pass THEN 1 ELSE 0 END) as first_downs,
         SUM(CASE WHEN complete_pass THEN COALESCE((raw_data->>'xyac_mean_yardage')::float, 0) ELSE 0 END) as total_xyac,
         SUM(CASE WHEN complete_pass THEN yards_after_catch - COALESCE((raw_data->>'xyac_mean_yardage')::float, 0) ELSE 0 END) as total_yac_over_expected,
         SUM(CASE WHEN complete_pass AND (raw_data->>'xyac_success')::float > 0.5 THEN 1 ELSE 0 END) as xyac_successes,
         SUM(CASE WHEN complete_pass THEN 1 ELSE 0 END) as total_receptions,
-        SUM(COALESCE(air_epa, 0)) as total_air_epa,
-        SUM(CASE WHEN complete_pass THEN COALESCE(comp_air_epa, 0) ELSE 0 END) as total_comp_air_epa,
+        SUM(COALESCE((raw_data->>'air_epa')::float, 0)) as total_air_epa,
+        SUM(CASE WHEN complete_pass THEN COALESCE((raw_data->>'comp_air_epa')::float, 0) ELSE 0 END) as total_comp_air_epa,
         COUNT(*) as total_targets,
         SUM(CASE WHEN complete_pass THEN 1 ELSE 0 END) as total_completions,
-        SUM(CASE WHEN air_yards >= 20 THEN 1 ELSE 0 END) as deep_targets,
-        SUM(CASE WHEN air_yards >= 10 AND air_yards < 20 THEN 1 ELSE 0 END) as intermediate_targets,
-        SUM(CASE WHEN air_yards < 10 THEN 1 ELSE 0 END) as short_targets,
+        SUM(CASE WHEN COALESCE((raw_data->>'air_yards')::float, 0) >= 20 THEN 1 ELSE 0 END) as deep_targets,
+        SUM(CASE WHEN COALESCE((raw_data->>'air_yards')::float, 0) >= 10 AND COALESCE((raw_data->>'air_yards')::float, 0) < 20 THEN 1 ELSE 0 END) as intermediate_targets,
+        SUM(CASE WHEN COALESCE((raw_data->>'air_yards')::float, 0) < 10 THEN 1 ELSE 0 END) as short_targets,
         SUM(CASE WHEN raw_data->>'pass_location' = 'left' THEN 1 ELSE 0 END) as left_targets,
         SUM(CASE WHEN raw_data->>'pass_location' = 'middle' THEN 1 ELSE 0 END) as middle_targets,
         SUM(CASE WHEN raw_data->>'pass_location' = 'right' THEN 1 ELSE 0 END) as right_targets
@@ -539,7 +539,7 @@ async function getRedZoneStats(season: number, week: number): Promise<{
       WITH rz_plays AS (
         SELECT * FROM bronze_nflfastr_plays
         WHERE season = ${season} AND week = ${week}
-          AND (raw_data->>'yardline_100')::float <= 20
+          AND yardline_100 <= 20
       )
       SELECT
         player_id,
@@ -588,7 +588,7 @@ async function getRedZoneStats(season: number, week: number): Promise<{
         COUNT(*) as team_rz_targets
       FROM bronze_nflfastr_plays
       WHERE season = ${season} AND week = ${week}
-        AND (raw_data->>'yardline_100')::float <= 20
+        AND yardline_100 <= 20
         AND play_type = 'pass'
         AND receiver_player_id IS NOT NULL
       GROUP BY posteam
@@ -638,41 +638,41 @@ async function getDownDistanceStats(season: number, week: number): Promise<Map<s
         player_id,
 
         -- Third down snaps/conversions (all positions)
-        SUM(CASE WHEN (raw_data->>'down')::float = 3 THEN 1 ELSE 0 END) as third_down_snaps,
-        SUM(CASE WHEN (raw_data->>'down')::float = 3
+        SUM(CASE WHEN down = 3 THEN 1 ELSE 0 END) as third_down_snaps,
+        SUM(CASE WHEN down = 3
           AND (first_down_pass = true OR first_down_rush = true OR touchdown = true) THEN 1 ELSE 0 END) as third_down_conversions,
-        SUM(CASE WHEN (raw_data->>'down')::float = 3 THEN 1 ELSE 0 END) as third_down_plays,
+        SUM(CASE WHEN down = 3 THEN 1 ELSE 0 END) as third_down_plays,
 
         -- Early down (1st/2nd) success rate
-        SUM(CASE WHEN (raw_data->>'down')::float IN (1, 2) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as early_down_successful,
-        SUM(CASE WHEN (raw_data->>'down')::float IN (1, 2) THEN 1 ELSE 0 END) as early_down_plays,
+        SUM(CASE WHEN down IN (1, 2) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as early_down_successful,
+        SUM(CASE WHEN down IN (1, 2) THEN 1 ELSE 0 END) as early_down_plays,
 
         -- Late down (3rd/4th) success rate
-        SUM(CASE WHEN (raw_data->>'down')::float IN (3, 4) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as late_down_successful,
-        SUM(CASE WHEN (raw_data->>'down')::float IN (3, 4) THEN 1 ELSE 0 END) as late_down_plays,
+        SUM(CASE WHEN down IN (3, 4) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as late_down_successful,
+        SUM(CASE WHEN down IN (3, 4) THEN 1 ELSE 0 END) as late_down_plays,
 
         -- RB short yardage (3rd/4th & <= 2 yards)
         SUM(CASE WHEN play_type = 'run' AND rusher_player_id = player_id
-          AND (raw_data->>'down')::float IN (3, 4)
-          AND (raw_data->>'ydstogo')::float <= 2 THEN 1 ELSE 0 END) as short_yardage_attempts,
+          AND down IN (3, 4)
+          AND ydstogo <= 2 THEN 1 ELSE 0 END) as short_yardage_attempts,
         SUM(CASE WHEN play_type = 'run' AND rusher_player_id = player_id
-          AND (raw_data->>'down')::float IN (3, 4)
-          AND (raw_data->>'ydstogo')::float <= 2
+          AND down IN (3, 4)
+          AND ydstogo <= 2
           AND (first_down_rush = true OR touchdown = true) THEN 1 ELSE 0 END) as short_yardage_conversions,
 
         -- WR/TE third down receiving
         SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
-          AND (raw_data->>'down')::float = 3 THEN 1 ELSE 0 END) as third_down_targets,
+          AND down = 3 THEN 1 ELSE 0 END) as third_down_targets,
         SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
-          AND (raw_data->>'down')::float = 3 AND complete_pass = true THEN 1 ELSE 0 END) as third_down_receptions,
+          AND down = 3 AND complete_pass = true THEN 1 ELSE 0 END) as third_down_receptions,
         SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
-          AND (raw_data->>'down')::float = 3
+          AND down = 3
           AND (first_down_pass = true OR touchdown = true) THEN 1 ELSE 0 END) as third_down_rec_conversions
 
       FROM bronze_nflfastr_plays, unnest(ARRAY[passer_player_id, rusher_player_id, receiver_player_id]) AS player_id
       WHERE season = ${season} AND week = ${week}
         AND player_id IS NOT NULL
-        AND raw_data->>'down' IS NOT NULL
+        AND down IS NOT NULL
       GROUP BY player_id
     `);
 
@@ -1476,3 +1476,4 @@ if (isMainModule) {
       process.exit(1);
     });
 }
+

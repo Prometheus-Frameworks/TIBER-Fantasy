@@ -1576,4 +1576,150 @@ router.get("/dst-streamer", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/gamelogs/:playerId", async (req: Request, res: Response) => {
+  try {
+    const { playerId } = req.params;
+    const season = Number(req.query.season) || 2025;
+
+    const result = await db.execute(sql`
+      WITH ranked_snapshots AS (
+        SELECT DISTINCT ON (sm.week)
+          sm.week,
+          sm.id as snapshot_id,
+          sm.snapshot_at
+        FROM datadive_snapshot_meta sm
+        WHERE sm.season = ${season}
+          AND sm.is_official = true
+        ORDER BY sm.week, sm.snapshot_at DESC
+      )
+      SELECT
+        rs.week,
+        spw.player_id,
+        spw.player_name,
+        spw.team_id,
+        spw.position,
+        spw.snaps,
+        ROUND(spw.snap_share::numeric, 3)          AS snap_share,
+        spw.routes,
+        spw.targets,
+        ROUND(spw.target_share::numeric, 3)         AS target_share,
+        spw.receptions,
+        spw.rec_yards,
+        spw.rec_tds,
+        ROUND(spw.adot::numeric, 2)                 AS adot,
+        spw.air_yards,
+        spw.yac,
+        ROUND(spw.yprr::numeric, 3)                 AS yprr,
+        ROUND(spw.epa_per_play::numeric, 4)         AS epa_per_play,
+        ROUND(spw.epa_per_target::numeric, 4)       AS epa_per_target,
+        ROUND(spw.success_rate::numeric, 3)         AS success_rate,
+        ROUND(spw.catch_rate::numeric, 3)           AS catch_rate,
+        ROUND(spw.yards_per_target::numeric, 2)     AS yards_per_target,
+        ROUND(spw.wopr::numeric, 3)                 AS wopr,
+        ROUND(spw.yac_over_expected::numeric, 2)    AS yac_over_expected,
+        spw.rush_attempts,
+        spw.rush_yards,
+        spw.rush_tds,
+        spw.rz_snaps,
+        spw.rz_targets,
+        spw.rz_receptions,
+        spw.rz_rec_tds,
+        spw.rz_rush_attempts,
+        spw.rz_rush_tds,
+        ROUND(spw.rz_snap_rate::numeric, 3)         AS rz_snap_rate,
+        ROUND(spw.rz_target_share::numeric, 3)      AS rz_target_share,
+        spw.third_down_targets,
+        spw.two_minute_targets,
+        spw.deep_target_rate,
+        spw.slot_rate,
+        ROUND(spw.fpts_std::numeric, 1)             AS fpts_std,
+        ROUND(spw.fpts_half::numeric, 1)            AS fpts_half,
+        ROUND(spw.fpts_ppr::numeric, 1)             AS fpts_ppr
+      FROM ranked_snapshots rs
+      JOIN datadive_snapshot_player_week spw
+        ON spw.snapshot_id = rs.snapshot_id
+        AND spw.week = rs.week
+        AND spw.player_id = ${playerId}
+      ORDER BY rs.week ASC
+    `);
+
+    const rows = result.rows as any[];
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        error: "No weekly data found",
+        playerId,
+        season,
+        hint: "Check that the player_id is a valid GSIS ID and has official snapshots for this season",
+      });
+    }
+
+    const first = rows[0];
+    const weeks = rows.map(r => ({
+      week: Number(r.week),
+      snaps: Number(r.snaps) || 0,
+      snapShare: Number(r.snap_share) || 0,
+      routes: Number(r.routes) || 0,
+      targets: Number(r.targets) || 0,
+      targetShare: Number(r.target_share) || 0,
+      receptions: Number(r.receptions) || 0,
+      recYards: Number(r.rec_yards) || 0,
+      recTds: Number(r.rec_tds) || 0,
+      adot: Number(r.adot) || 0,
+      airYards: Number(r.air_yards) || 0,
+      yac: Number(r.yac) || 0,
+      yprr: Number(r.yprr) || 0,
+      epaPerPlay: Number(r.epa_per_play) || 0,
+      epaPerTarget: Number(r.epa_per_target) || 0,
+      successRate: Number(r.success_rate) || 0,
+      catchRate: Number(r.catch_rate) || 0,
+      yardsPerTarget: Number(r.yards_per_target) || 0,
+      wopr: Number(r.wopr) || 0,
+      yacOverExpected: Number(r.yac_over_expected) || 0,
+      rushAttempts: Number(r.rush_attempts) || 0,
+      rushYards: Number(r.rush_yards) || 0,
+      rushTds: Number(r.rush_tds) || 0,
+      rzSnaps: Number(r.rz_snaps) || 0,
+      rzTargets: Number(r.rz_targets) || 0,
+      rzReceptions: Number(r.rz_receptions) || 0,
+      rzRecTds: Number(r.rz_rec_tds) || 0,
+      rzRushAttempts: Number(r.rz_rush_attempts) || 0,
+      rzRushTds: Number(r.rz_rush_tds) || 0,
+      rzSnapRate: Number(r.rz_snap_rate) || 0,
+      rzTargetShare: Number(r.rz_target_share) || 0,
+      thirdDownTargets: Number(r.third_down_targets) || 0,
+      twoMinuteTargets: Number(r.two_minute_targets) || 0,
+      deepTargetRate: Number(r.deep_target_rate) || 0,
+      slotRate: Number(r.slot_rate) || 0,
+      fptsStd: Number(r.fpts_std) || 0,
+      fptsHalf: Number(r.fpts_half) || 0,
+      fptsPpr: Number(r.fpts_ppr) || 0,
+    }));
+
+    const boomWeeks = weeks.filter(w => w.fptsPpr >= 20).length;
+    const bustWeeks = weeks.filter(w => w.fptsPpr < 8 && (w.snaps > 0 || w.routes > 0)).length;
+    const totalFptsPpr = weeks.reduce((s, w) => s + w.fptsPpr, 0);
+
+    res.json({
+      playerId,
+      playerName: first.player_name,
+      position: first.position,
+      team: first.team_id,
+      season,
+      gamesPlayed: weeks.length,
+      summary: {
+        totalFptsPpr: Math.round(totalFptsPpr * 10) / 10,
+        avgFptsPpr: Math.round((totalFptsPpr / weeks.length) * 10) / 10,
+        boomWeeks,
+        bustWeeks,
+        boomRate: Math.round((boomWeeks / weeks.length) * 1000) / 10,
+      },
+      weeks,
+    });
+  } catch (error: any) {
+    console.error("[DataLab] Error in player gamelogs:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

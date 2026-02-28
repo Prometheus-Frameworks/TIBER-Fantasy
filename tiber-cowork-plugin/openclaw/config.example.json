@@ -1,0 +1,6 @@
+{
+  "api_base_url": "https://YOUR-TIBER-INSTANCE.replit.dev",
+  "api_key": "tiber_sk_your_key_here",
+  "default_mode": "dynasty",
+  "default_season": 2025
+}

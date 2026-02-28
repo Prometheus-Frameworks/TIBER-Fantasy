@@ -83,8 +83,22 @@ router.get("/players/search", async (req, res, next) => {
 
 router.get("/forge/player/:playerId", async (req, res, next) => {
   try {
-    const query = toQueryString(req.query as Record<string, unknown>);
-    const payload = await proxyToExisting(req, `/api/forge/eg/player/${req.params.playerId}${query}`);
+    const { playerId } = req.params;
+    const queryParams = req.query as Record<string, unknown>;
+
+    if (!queryParams.position) {
+      const rows = await db.execute(sql`
+        SELECT position FROM player_identity_map
+        WHERE (gsis_id = ${playerId} OR nflfastr_gsis_id = ${playerId})
+          AND position IN ('QB','RB','WR','TE')
+        LIMIT 1
+      `);
+      const resolved = (rows.rows[0] as { position?: string } | undefined)?.position;
+      if (resolved) queryParams.position = resolved;
+    }
+
+    const query = toQueryString(queryParams);
+    const payload = await proxyToExisting(req, `/api/forge/eg/player/${playerId}${query}`);
     res.json(v1Success(payload, req.requestId!));
   } catch (err) {
     next(err);
