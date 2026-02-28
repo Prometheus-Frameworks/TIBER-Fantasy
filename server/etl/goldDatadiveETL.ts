@@ -98,6 +98,13 @@ interface GoldPlayerWeek {
   middleTargetRate: number | null;        // % targets to the middle
   rightTargetRate: number | null;         // % targets to the right
 
+  // QB Volume (from silver layer)
+  passAttempts: number;
+  completions: number;
+  passingYards: number;
+  passingTds: number;
+  interceptions: number;
+
   // QB Efficiency (from play-by-play)
   cpoe: number | null;
   sacks: number;
@@ -863,6 +870,8 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const rushTds = Number(row.rushing_tds) || 0;
     const rushEpa = Number(row.rushing_epa) || 0;
 
+    const passAttempts = Number(row.pass_attempts) || 0;
+    const completions = Number(row.completions) || 0;
     const passingYards = Number(row.passing_yards) || 0;
     const passingTds = Number(row.passing_tds) || 0;
     const interceptions = Number(row.interceptions) || 0;
@@ -949,10 +958,6 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
 
     // QB Efficiency from play-by-play
     const playerQbStats = qbStats.get(row.player_id);
-    const passAttempts = Number(row.pass_attempts) || 0;
-    const passYards = Number(row.pass_yards) || 0;
-    const passTds = Number(row.pass_tds) || 0;
-    const passInterceptions = Number(row.interceptions) || 0;
     const dropbacks = playerQbStats?.dropbacks || passAttempts;
     const cpoe = playerQbStats?.cpoe ?? null;
     const sacks = playerQbStats?.sacks || 0;
@@ -976,7 +981,7 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     // sackYards is typically negative, so we add it (which subtracts)
     const anyADenom = passAttempts + sacks;
     const anyA = anyADenom > 0 
-      ? (passYards + (20 * passTds) - (45 * passInterceptions) + sackYards) / anyADenom 
+      ? (passingYards + (20 * passingTds) - (45 * interceptions) + sackYards) / anyADenom 
       : null;
     // Fantasy points per dropback
     const fpPerDropback = dropbacks > 0 ? fpts.ppr / dropbacks : null;
@@ -1184,6 +1189,12 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
       leftTargetRate,
       middleTargetRate,
       rightTargetRate,
+      // QB Volume
+      passAttempts,
+      completions,
+      passingYards,
+      passingTds,
+      interceptions,
       // QB Efficiency
       cpoe,
       sacks,
@@ -1295,6 +1306,7 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         avg_air_epa, avg_comp_air_epa,
         deep_target_rate, intermediate_target_rate, short_target_rate,
         left_target_rate, middle_target_rate, right_target_rate,
+        pass_attempts, completions, passing_yards, passing_tds, interceptions,
         cpoe, sacks, sack_rate, sack_yards, qb_hits, qb_hit_rate, scrambles, scramble_yards, scramble_tds,
         pass_first_downs, pass_first_down_rate, deep_pass_attempts, deep_pass_rate, pass_adot,
         shotgun_rate, no_huddle_rate, shotgun_success_rate, under_center_success_rate,
@@ -1326,6 +1338,7 @@ async function insertGoldRecords(records: GoldPlayerWeek[], snapshotId: number):
         ${rec.avgAirEpa}, ${rec.avgCompAirEpa},
         ${rec.deepTargetRate}, ${rec.intermediateTargetRate}, ${rec.shortTargetRate},
         ${rec.leftTargetRate}, ${rec.middleTargetRate}, ${rec.rightTargetRate},
+        ${rec.passAttempts}, ${rec.completions}, ${rec.passingYards}, ${rec.passingTds}, ${rec.interceptions},
         ${rec.cpoe}, ${rec.sacks}, ${rec.sackRate}, ${rec.sackYards}, ${rec.qbHits}, ${rec.qbHitRate}, ${rec.scrambles}, ${rec.scrambleYards}, ${rec.scrambleTds},
         ${rec.passFirstDowns}, ${rec.passFirstDownRate}, ${rec.deepPassAttempts}, ${rec.deepPassRate}, ${rec.passAdot},
         ${rec.shotgunRate}, ${rec.noHuddleRate}, ${rec.shotgunSuccessRate}, ${rec.underCenterSuccessRate},
