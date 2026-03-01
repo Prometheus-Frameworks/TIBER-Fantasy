@@ -2379,7 +2379,15 @@ export const bronzeNflfastrPlays = pgTable("bronze_nflfastr_plays", {
   firstDown: boolean("first_down").default(false),
   firstDownRush: boolean("first_down_rush").default(false),
   firstDownPass: boolean("first_down_pass").default(false),
-  
+
+  sack: boolean("sack"),
+  qbHit: boolean("qb_hit"),
+  cpoe: real("cpoe"),
+  shotgun: boolean("shotgun"),
+  noHuddle: boolean("no_huddle"),
+  scramble: boolean("scramble"),
+  gameSecondsRemaining: real("game_seconds_remaining"),
+
   rawData: jsonb("raw_data"),
   
   importedAt: timestamp("imported_at").defaultNow(),

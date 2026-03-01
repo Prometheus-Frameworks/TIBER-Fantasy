@@ -57,4 +57,10 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **@neondatabase/serverless**: PostgreSQL connections in serverless environments.
 - **Google Gemini API**: AI embeddings and chat generation.
 - **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring for all skill positions, surfaced via `/api/fire/eg/batch` and `/api/fire/eg/player`.
+
+## Data Pipeline Notes
+- **Bronze QB columns** (`sack`, `qb_hit`, `cpoe`, `shotgun`, `no_huddle`, `scramble`, `game_seconds_remaining`): Added as first-class columns to `bronze_nflfastr_plays`. Backfilled from nflfastR 2025 parquet via `scripts/backfill_bronze_qb_columns_2025.py`. Import script updated: `server/scripts/import_nflfastr_2025_bulk.py`.
+- **Gold ETL QB metrics** (`epa_per_play`, `success_rate`, `cpoe`, `sack_rate`, `qb_hits`, `scrambles`, `shotgun_rate`, `no_huddle_rate`): All fixed to use first-class bronze columns instead of `raw_data` JSONB. QB EPA/play uses `passing_epa / pass_attempts` from silver (not receiving+rushing EPA). Scrambles require a separate sub-query on `rusher_player_id` since they are `play_type='run'` plays with `passer_player_id=NULL`.
+- **ETL concurrency rule**: The upsert guard deletes by `season+week` (not `snapshot_id`). NEVER run multi-week gold ETL loops as parallel bash processes. Always use `scripts/run_gold_etl_single_week.ts <week>` for one week at a time. If a bash call times out mid-loop, wait ~35 seconds for the background process to clear before re-running that week.
+- **API keys**: `api_keys` and `api_request_log` tables are live. Key generation: `npx tsx scripts/generate-api-key.ts --label "Label" --tier internal`. Auth header: `x-tiber-key`.
 - **Fantasy Lab (`/fantasy-lab`)**: Full analytics dashboard integrating FIRE table, Hybrid Delta view, and Watchlist, with position-aware columns, presets, sorting, CSV export, and conditional formatting.

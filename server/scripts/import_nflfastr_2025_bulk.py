@@ -45,7 +45,19 @@ def import_nflfastr_2025_bulk():
         # Convert first down floats (1.0/0.0) to booleans
         first_down_pass = bool(row.get('first_down_pass')) if pd.notna(row.get('first_down_pass')) and row.get('first_down_pass') == 1.0 else False
         first_down_rush = bool(row.get('first_down_rush')) if pd.notna(row.get('first_down_rush')) and row.get('first_down_rush') == 1.0 else False
-        
+
+        def safe_bool(key):
+            v = row.get(key)
+            if v is None or (hasattr(v, '__class__') and v.__class__.__name__ == 'float' and pd.isna(v)):
+                return None
+            return bool(v == 1 or v is True)
+
+        def safe_float(key):
+            v = row.get(key)
+            if v is None or pd.isna(v):
+                return None
+            return float(v)
+
         record = (
             str(row.get('play_id')) if pd.notna(row.get('play_id')) else None,
             str(row.get('game_id')) if pd.notna(row.get('game_id')) else None,
@@ -74,8 +86,15 @@ def import_nflfastr_2025_bulk():
             bool(row.get('incomplete_pass')) if pd.notna(row.get('incomplete_pass')) else False,
             bool(row.get('interception')) if pd.notna(row.get('interception')) else False,
             bool(row.get('touchdown')) if pd.notna(row.get('touchdown')) else False,
-            first_down_pass,  # Added first down pass
-            first_down_rush,  # Added first down rush
+            first_down_pass,
+            first_down_rush,
+            safe_bool('sack'),
+            safe_bool('qb_hit'),
+            safe_float('cpoe'),
+            safe_bool('shotgun'),
+            safe_bool('no_huddle'),
+            safe_bool('qb_scramble'),
+            safe_float('game_seconds_remaining'),
             Json({k: (None if pd.isna(v) else v) for k, v in row.to_dict().items()})
         )
         records.append(record)
@@ -99,6 +118,7 @@ def import_nflfastr_2025_bulk():
             epa, wpa, wp, score_differential, air_yards, yards_after_catch, yards_gained,
             complete_pass, incomplete_pass, interception, touchdown,
             first_down_pass, first_down_rush,
+            sack, qb_hit, cpoe, shotgun, no_huddle, scramble, game_seconds_remaining,
             raw_data
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s,
@@ -106,7 +126,9 @@ def import_nflfastr_2025_bulk():
             %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s, %s, %s, %s,
             %s, %s, %s, %s,
-            %s, %s, %s
+            %s, %s,
+            %s, %s, %s, %s, %s, %s, %s,
+            %s
         )
     """, records, page_size=500)
     

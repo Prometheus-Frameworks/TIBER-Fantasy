@@ -451,25 +451,25 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
       SELECT
         passer_player_id,
         COUNT(*) as dropbacks,
-        AVG(CASE WHEN raw_data->>'cpoe' != '' THEN (raw_data->>'cpoe')::numeric ELSE NULL END) as avg_cpoe,
-        SUM(CASE WHEN (raw_data->>'sack')::numeric > 0 THEN 1 ELSE 0 END) as sacks,
+        AVG(CASE WHEN cpoe IS NOT NULL THEN cpoe ELSE NULL END) as avg_cpoe,
+        SUM(CASE WHEN sack = true THEN 1 ELSE 0 END) as sacks,
         -- Sack yards: yards_gained on sack plays (typically negative)
-        SUM(CASE WHEN (raw_data->>'sack')::numeric > 0 THEN COALESCE((raw_data->>'yards_gained')::numeric, 0) ELSE 0 END) as sack_yards,
-        SUM(CASE WHEN (raw_data->>'qb_hit')::numeric > 0 THEN 1 ELSE 0 END) as qb_hits,
-        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN 1 ELSE 0 END) as scrambles,
+        SUM(CASE WHEN sack = true THEN COALESCE(yards_gained, 0) ELSE 0 END) as sack_yards,
+        SUM(CASE WHEN qb_hit = true THEN 1 ELSE 0 END) as qb_hits,
+        SUM(CASE WHEN scramble = true THEN 1 ELSE 0 END) as scrambles,
         -- Scramble yards and TDs
-        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 THEN COALESCE((raw_data->>'yards_gained')::numeric, 0) ELSE 0 END) as scramble_yards,
-        SUM(CASE WHEN (raw_data->>'qb_scramble')::numeric > 0 AND touchdown = true THEN 1 ELSE 0 END) as scramble_tds,
+        SUM(CASE WHEN scramble = true THEN COALESCE(yards_gained, 0) ELSE 0 END) as scramble_yards,
+        SUM(CASE WHEN scramble = true AND touchdown = true THEN 1 ELSE 0 END) as scramble_tds,
         SUM(CASE WHEN first_down_pass THEN 1 ELSE 0 END) as pass_first_downs,
         SUM(CASE WHEN air_yards > 20 THEN 1 ELSE 0 END) as deep_pass_attempts,
         SUM(COALESCE(air_yards, 0)) as total_air_yards,
-        SUM(CASE WHEN (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as successful_plays,
+        SUM(CASE WHEN epa > 0 THEN 1 ELSE 0 END) as successful_plays,
         COUNT(*) as total_plays,
-        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 1 THEN 1 ELSE 0 END) as shotgun_plays,
-        SUM(CASE WHEN (raw_data->>'no_huddle')::numeric = 1 THEN 1 ELSE 0 END) as no_huddle_plays,
-        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 1 AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as shotgun_successful,
-        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 0 THEN 1 ELSE 0 END) as under_center_plays,
-        SUM(CASE WHEN (raw_data->>'shotgun')::numeric = 0 AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as under_center_successful
+        SUM(CASE WHEN shotgun = true THEN 1 ELSE 0 END) as shotgun_plays,
+        SUM(CASE WHEN no_huddle = true THEN 1 ELSE 0 END) as no_huddle_plays,
+        SUM(CASE WHEN shotgun = true AND epa > 0 THEN 1 ELSE 0 END) as shotgun_successful,
+        SUM(CASE WHEN shotgun = false OR shotgun IS NULL THEN 1 ELSE 0 END) as under_center_plays,
+        SUM(CASE WHEN (shotgun = false OR shotgun IS NULL) AND epa > 0 THEN 1 ELSE 0 END) as under_center_successful
       FROM bronze_nflfastr_plays
       WHERE season = ${season}
         AND week = ${week}
@@ -485,9 +485,9 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         sacks: Number(row.sacks) || 0,
         sackYards: Number(row.sack_yards) || 0,
         qbHits: Number(row.qb_hits) || 0,
-        scrambles: Number(row.scrambles) || 0,
-        scrambleYards: Number(row.scramble_yards) || 0,
-        scrambleTds: Number(row.scramble_tds) || 0,
+        scrambles: 0,
+        scrambleYards: 0,
+        scrambleTds: 0,
         passFirstDowns: Number(row.pass_first_downs) || 0,
         deepPassAttempts: Number(row.deep_pass_attempts) || 0,
         totalAirYards: Number(row.total_air_yards) || 0,
@@ -500,6 +500,31 @@ async function getQbPlayByPlayStats(season: number, week: number): Promise<Map<s
         underCenterSuccessful: Number(row.under_center_successful) || 0,
       });
     }
+
+    // Scrambles are play_type='run' keyed on rusher_player_id — separate query required
+    const scrambleResult = await db.execute(sql`
+      SELECT
+        rusher_player_id as qb_id,
+        COUNT(*) as scrambles,
+        SUM(COALESCE(yards_gained, 0)) as scramble_yards,
+        SUM(CASE WHEN touchdown = true THEN 1 ELSE 0 END) as scramble_tds
+      FROM bronze_nflfastr_plays
+      WHERE season = ${season}
+        AND week = ${week}
+        AND scramble = true
+        AND rusher_player_id IS NOT NULL
+      GROUP BY rusher_player_id
+    `);
+
+    for (const row of scrambleResult.rows as any[]) {
+      const existing = qbStats.get(row.qb_id);
+      if (existing) {
+        existing.scrambles = Number(row.scrambles) || 0;
+        existing.scrambleYards = Number(row.scramble_yards) || 0;
+        existing.scrambleTds = Number(row.scramble_tds) || 0;
+      }
+    }
+
   } catch (e) {
     console.warn(`  Warning: Could not fetch QB play-by-play stats for week ${week}:`, e);
   }
@@ -651,11 +676,11 @@ async function getDownDistanceStats(season: number, week: number): Promise<Map<s
         SUM(CASE WHEN down = 3 THEN 1 ELSE 0 END) as third_down_plays,
 
         -- Early down (1st/2nd) success rate
-        SUM(CASE WHEN down IN (1, 2) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as early_down_successful,
+        SUM(CASE WHEN down IN (1, 2) AND epa > 0 THEN 1 ELSE 0 END) as early_down_successful,
         SUM(CASE WHEN down IN (1, 2) THEN 1 ELSE 0 END) as early_down_plays,
 
         -- Late down (3rd/4th) success rate
-        SUM(CASE WHEN down IN (3, 4) AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as late_down_successful,
+        SUM(CASE WHEN down IN (3, 4) AND epa > 0 THEN 1 ELSE 0 END) as late_down_successful,
         SUM(CASE WHEN down IN (3, 4) THEN 1 ELSE 0 END) as late_down_plays,
 
         -- RB short yardage (3rd/4th & <= 2 yards)
@@ -727,20 +752,19 @@ async function getTwoMinuteStats(season: number, week: number): Promise<Map<stri
         player_id,
 
         -- Two-minute drill (final 2 minutes of each half)
-        SUM(CASE WHEN (raw_data->>'half_seconds_remaining')::float <= 120 THEN 1 ELSE 0 END) as two_minute_snaps,
-        SUM(CASE WHEN (raw_data->>'half_seconds_remaining')::float <= 120
-          AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as two_minute_successful,
+        SUM(CASE WHEN game_seconds_remaining IS NOT NULL AND game_seconds_remaining <= 120 THEN 1 ELSE 0 END) as two_minute_snaps,
+        SUM(CASE WHEN game_seconds_remaining IS NOT NULL AND game_seconds_remaining <= 120
+          AND epa > 0 THEN 1 ELSE 0 END) as two_minute_successful,
 
         -- Hurry-up / no-huddle offense
-        SUM(CASE WHEN (raw_data->>'no_huddle')::float = 1 THEN 1 ELSE 0 END) as hurry_up_snaps,
-        SUM(CASE WHEN (raw_data->>'no_huddle')::float = 1
-          AND (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as hurry_up_successful,
+        SUM(CASE WHEN no_huddle = true THEN 1 ELSE 0 END) as hurry_up_snaps,
+        SUM(CASE WHEN no_huddle = true AND epa > 0 THEN 1 ELSE 0 END) as hurry_up_successful,
 
         -- WR/TE two-minute targets/receptions
         SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
-          AND (raw_data->>'half_seconds_remaining')::float <= 120 THEN 1 ELSE 0 END) as two_minute_targets,
+          AND game_seconds_remaining IS NOT NULL AND game_seconds_remaining <= 120 THEN 1 ELSE 0 END) as two_minute_targets,
         SUM(CASE WHEN play_type = 'pass' AND receiver_player_id = player_id
-          AND (raw_data->>'half_seconds_remaining')::float <= 120
+          AND game_seconds_remaining IS NOT NULL AND game_seconds_remaining <= 120
           AND complete_pass = true THEN 1 ELSE 0 END) as two_minute_receptions
 
       FROM bronze_nflfastr_plays, unnest(ARRAY[passer_player_id, rusher_player_id, receiver_player_id]) AS player_id
@@ -900,9 +924,13 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const yprr = routes !== null && routes > 0 ? recYards / routes : null;
 
     // EPA metrics
+    const passingEpa = Number(row.passing_epa) || 0;
     const totalPlays = targets + rushAttempts;
     const totalEpa = recEpa + rushEpa;
-    const epaPerPlay = totalPlays > 0 ? totalEpa / totalPlays : null;
+    // QBs: use passing_epa / pass_attempts; skill positions: receiving + rushing EPA / plays
+    const epaPerPlay = row.position === 'QB'
+      ? (passAttempts > 0 ? passingEpa / passAttempts : null)
+      : (totalPlays > 0 ? totalEpa / totalPlays : null);
     const epaPerTarget = targets > 0 ? recEpa / targets : null;
     const rushEpaPerPlay = rushAttempts > 0 ? rushEpa / rushAttempts : null;
 
