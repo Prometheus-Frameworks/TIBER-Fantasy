@@ -1,7 +1,23 @@
-# TIBER as an Open API Platform — Vision Document
+# TiberClaw — Platform Vision Document
 
-**Last updated:** February 25, 2026  
-**Status:** Pre-build — documenting direction before implementation begins
+**Last updated:** March 1, 2026  
+**Status:** Live — API v1 operational, auth layer deployed
+
+---
+
+## What Is TiberClaw?
+
+**TiberClaw** is the official platform-level brand for the agent-accessible intelligence layer of Tiber Fantasy.
+
+It is the name for the entire system that AI agents, personal assistants, and developers connect to — the thing behind the API. The scoring engines (FORGE, FIRE, CATALYST), the data pipeline, the v1 REST endpoints, and the authentication layer are all TiberClaw.
+
+**Hierarchy:**
+- **TiberClaw** — the platform brand (what the agent layer IS)
+- **FORGE / FIRE / CATALYST** — the scoring engines exposed through TiberClaw
+- **OpenClaw** — the shell-based connector skill agents use to reach TiberClaw
+- **The web app** — one client of TiberClaw, same as any agent
+
+The name captures the idea of agents reaching into Tiber's intelligence. The "claw" is the grip — structured, reliable access to scoring engines and player data that no other free platform provides. TiberClaw is not a paywall. It is an interface.
 
 ---
 
@@ -9,7 +25,7 @@
 
 TIBER started as a fantasy football dashboard — a React frontend you visit to see player rankings, FORGE scores, and matchup data. That was the right move to prove the concept and build the engine.
 
-The direction going forward is different. TIBER is becoming an **open intelligence layer** — a platform that provides data and scoring through an API, so that anyone (or any AI agent) can build on top of it without visiting a website at all.
+The direction going forward is different. TIBER is becoming **TiberClaw** — an open intelligence layer that provides data and scoring through an API, so that anyone (or any AI agent) can build on top of it without visiting a website at all.
 
 The web app doesn't go away. It becomes one client among many — and probably not the most important one.
 
@@ -134,6 +150,8 @@ When the API key layer is live, the plugin can make real API calls to the live T
 
 ## Summary
 
-TIBER has already built the hard part — the data pipeline, the scoring engines, the methodology. The next step is a small authentication layer that turns a private tool into a platform. After that, the surface area for distribution expands significantly: personal agents, Cowork plugins, developer tools, and anything else that wants to consume structured NFL intelligence.
+TIBER has already built the hard part — the data pipeline, the scoring engines, the methodology. The authentication layer (API v1 with `x-tiber-key` header auth) is live. TiberClaw is operational.
 
-The website is one client. The API is the product.
+The surface area for distribution continues to expand: personal agents, OpenClaw connector skills, developer tools, and anything else that wants to consume structured NFL intelligence.
+
+The website is one client. TiberClaw is the product.

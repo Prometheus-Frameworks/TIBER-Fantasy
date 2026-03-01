@@ -1,12 +1,13 @@
-# TIBER Skill — OpenClaw Agent Connector
+# OpenClaw — TiberClaw Agent Connector
 **Version:** 0.1.0  
-**For:** OpenClaw agents (and any agent that can exec shell commands)
+**For:** Any agent that can execute shell commands  
+**Connects to:** TiberClaw — the Tiber Fantasy agent-accessible intelligence platform
 
 ---
 
 ## What This Skill Does
 
-Gives you live access to TIBER's player analytics engine mid-conversation. When this skill is active, you can:
+Gives you live access to TiberClaw mid-conversation. TiberClaw is the platform-level API layer for Tiber Fantasy — it exposes FORGE, FIRE, and CATALYST scoring engines to any agent or developer. When this skill is active, you can:
 
 - Search for any NFL skill-position player
 - Fetch their live FORGE Alpha score (Volume, Efficiency, Team Context, Stability)
