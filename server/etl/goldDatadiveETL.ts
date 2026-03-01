@@ -576,7 +576,7 @@ async function getRedZoneStats(season: number, week: number): Promise<{
       SELECT
         player_id,
         SUM(1) as rz_snaps,
-        SUM(CASE WHEN (raw_data->>'success')::float = 1 THEN 1 ELSE 0 END) as rz_successful,
+        SUM(CASE WHEN epa > 0 THEN 1 ELSE 0 END) as rz_successful,
         COUNT(*) as rz_total_plays,
 
         -- QB stats
@@ -1094,8 +1094,8 @@ async function transformWeek(season: number, week: number): Promise<GoldPlayerWe
     const rzTotalPlays = playerRz?.rzTotalPlays || 0;
     const teamRzTargetTotal = row.team ? teamRzTargets.get(row.team) || 0 : 0;
     
-    // All positions
-    const rzSnapRate = teamSnaps && teamSnaps > 0 ? rzSnaps / teamSnaps : null;
+    // All positions — rzSnapRate = player's RZ snaps / player's total snaps (not team aggregate)
+    const rzSnapRate = snaps !== null && snaps > 0 ? rzSnaps / snaps : null;
     const rzSuccessRate = rzTotalPlays > 0 ? rzSuccessful / rzTotalPlays : null;
     
     // QB Red Zone
