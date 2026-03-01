@@ -9,7 +9,6 @@ import Dashboard from "@/pages/Dashboard";
 import TiberTiers from "@/pages/TiberTiers";
 import SchedulePage from "@/pages/SchedulePage";
 import DataLabHub from "@/pages/DataLabHub";
-import TiberDataLab from "@/pages/TiberDataLab";
 import ChatHomepage from "@/pages/ChatHomepage";
 import PlayerPage from "@/pages/PlayerPage";
 import ForgeTransparency from "@/pages/ForgeTransparency";
@@ -33,7 +32,6 @@ import SentinelDashboard from "@/pages/SentinelDashboard";
 import ReceivingLab from "@/pages/ReceivingLab";
 import RushingLab from "@/pages/RushingLab";
 import QBLab from "@/pages/QBLab";
-import RedZoneLab from "@/pages/RedZoneLab";
 import SituationalLab from "@/pages/SituationalLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
@@ -47,13 +45,11 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/tiers" component={TiberTiers} />
         <Route path="/tiber-data-lab" component={DataLabHub} />
-        <Route path="/tiber-data-lab/snapshots" component={TiberDataLab} />
         <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
         <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />
         <Route path="/tiber-data-lab/receiving" component={ReceivingLab} />
         <Route path="/tiber-data-lab/rushing" component={RushingLab} />
         <Route path="/tiber-data-lab/qb" component={QBLab} />
-        <Route path="/tiber-data-lab/red-zone" component={RedZoneLab} />
         <Route path="/tiber-data-lab/situational" component={SituationalLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}

@@ -1,10 +1,9 @@
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Database,
   Users,
   Layers,
-  Camera,
   Target,
   ArrowRight,
   Activity,
@@ -34,17 +33,6 @@ interface SnapshotHealth {
 }
 
 const modules = [
-  {
-    id: "snapshots",
-    title: "Snapshots",
-    subtitle: "Raw Data Spine",
-    description:
-      "Snapshot-based NFL data explorer with per-week and season aggregation. Search players, explore efficiency metrics, red zone data, and situational splits.",
-    icon: Camera,
-    path: "/tiber-data-lab/snapshots",
-    color: "#e2640d",
-    badge: null as string | null,
-  },
   {
     id: "personnel",
     title: "Personnel Groupings",
@@ -101,25 +89,14 @@ const modules = [
     badge: "NEW" as string | null,
   },
   {
-    id: "red-zone",
-    title: "Red Zone Lab",
-    subtitle: "Scoring Opportunity Analysis",
-    description:
-      "Red zone snap rates, target shares, catch rates, rush TD rates, and scoring efficiency across QB, RB, WR, and TE inside the opponent 20-yard line.",
-    icon: Target,
-    path: "/tiber-data-lab/red-zone",
-    color: "#dc2626",
-    badge: "NEW" as string | null,
-  },
-  {
     id: "situational",
     title: "Situational Lab",
-    subtitle: "Context-Dependent Performance",
+    subtitle: "Red Zone & Context-Dependent Performance",
     description:
-      "Third-down conversions, two-minute drill efficiency, hurry-up success rates, short yardage conversions, and situational target data across all positions.",
-    icon: Activity,
+      "Red zone snaps, target shares, and TD rates merged with third-down conversions, two-minute drill efficiency, hurry-up success, and short yardage data across all positions.",
+    icon: Clock,
     path: "/tiber-data-lab/situational",
-    color: "#ca8a04",
+    color: "#e2640d",
     badge: "NEW" as string | null,
   },
 ];
@@ -186,10 +163,6 @@ export default function DataLabHub() {
     queryKey: ["/api/data-lab/health"],
   });
 
-  const snapshotStat = health?.latestSnapshot
-    ? `${health.latestSnapshot.rowCount.toLocaleString()} players · Week ${health.latestSnapshot.week} · ${health.latestSnapshot.season}`
-    : undefined;
-
   const weekCount = health?.tableCounts?.snapshotPlayerWeek;
   const metaCount = health?.tableCounts?.snapshotMeta;
 
@@ -215,8 +188,8 @@ export default function DataLabHub() {
         </div>
         <p className="text-gray-500 text-sm max-w-2xl">
           Snapshot-based NFL data spine for reproducible analytics. Browse raw
-          metrics, personnel intelligence, and role classifications across the
-          three research modules below.
+          metrics, personnel intelligence, role classifications, and situational
+          performance across all skill positions.
         </p>
       </div>
 
@@ -257,7 +230,7 @@ export default function DataLabHub() {
           <ModuleCard
             key={mod.id}
             module={mod}
-            stat={mod.id === "snapshots" ? snapshotStat : undefined}
+            stat={undefined}
           />
         ))}
       </div>
