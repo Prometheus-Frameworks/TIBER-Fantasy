@@ -1,99 +1,197 @@
-# ROADMAP: Rookie Grading Engine (FORGE-R)
+# ROADMAP: TIBER Rookie Grading Engine
 
-**Filed:** 2026-03-01  
-**Session:** SESSION_006  
-**Priority:** High — 2026 NFL Combine is live now  
-**Filed by:** Max (OpenClaw connector)
-
----
-
-## Why Now
-
-The 2026 NFL Combine is happening this week. Every major fantasy platform will publish rookie grades in the next 30 days. TIBER needs a pre-entry scoring system that:
-
-1. Gives rookies a FORGE-comparable Alpha score before they play a single NFL snap
-2. Updates dynamically as NFL data populates week-by-week in Year 1
-3. Powers the @TiberAnalytics player profile content series
+**Filed by:** Max (OpenClaw connector)  
+**Date:** 2026-03-01  
+**Priority:** High — combine is live, draft is ~8 weeks out  
+**Session:** SESSION_006
 
 ---
 
-## Data Foundation (Already Started)
+## Overview
 
-`data/rookies/2026_combine_results.json` — seeded with full 2026 combine athleticism data:
-- **QB:** 16 players
-- **RB:** 20 players  
-- **WR:** 39 players
-- **TE:** 25 players
-
-Fields: height, weight, 40yd, 10yd, vertical, broad jump, 3-cone, shuttle
-
-### Still Needed
-- **RAS scores** — ras.football is web-only, no API. Site currently has SQL errors (updating 2026 data). Options:
-  - Manual scrape once DB stabilizes (est. 2-3 days post-combine)
-  - Use raw combine numbers + build our own RAS-equivalent percentile score
-- **College production stats** — dominator rating, yards/route, target share, breakout age
-  - Source: nflverse college stats, PFF college, cfbfastR
-- **Draft capital** — round + pick (post-April draft)
-- **Landing spot** — team, depth chart position (post-draft)
+TIBER needs a pre-entry rookie grading engine. The existing FORGE system requires NFL on-field data — rookies have none. This roadmap defines a two-phase system that generates a **Rookie Alpha** (0-100) before the draft, then transitions players into standard FORGE scoring as NFL data accumulates.
 
 ---
 
-## FORGE-R: Pre-Entry Alpha Architecture
+## What's Already Built (Max — 2026-03-01)
 
-Rookies have zero NFL data — FORGE v1 pillars can't run. FORGE-R maps pre-entry signals onto the same 0-100 Alpha scale.
+### 1. 2026 Combine DB
+`data/rookies/2026_combine_results.json`
+- 91 players: 41 WR, 21 TE, 17 RB, 12 QB
+- Fields: height, weight, 40yd, 10yd split, vertical, broad jump, 3-cone, shuttle
 
-### Pre-Entry Pillars
+### 2. TIBER-RAS v1 (class-relative)
+`data/rookies/2026_rookie_grades.json`
+- Custom athleticism score built from combine data
+- Percentile ranked within the 2026 combine class by position (0-10 scale per metric, averaged)
+- **v1 limitation:** Ranked within this year's class only — not vs historical peers
+- Metrics: speed (40/10yd), explosion (vert/broad), agility (cone/shuttle), size (ht/wt)
+- All inverted correctly (lower 40 time = higher score, etc.)
 
-| Pillar | Inputs | Weight (WR) | Weight (RB) | Weight (TE) |
-|--------|--------|-------------|-------------|-------------|
-| **Athleticism** | RAS score, 40 time, burst score | 0.25 | 0.30 | 0.25 |
-| **College Production** | Dominator rating, YPRR, breakout age | 0.40 | 0.35 | 0.35 |
-| **Draft Capital** | Round, pick percentile | 0.20 | 0.20 | 0.20 |
-| **Landing Spot** | Team scheme fit, depth chart opportunity | 0.15 | 0.15 | 0.20 |
-
-### Transition to FORGE v1
-- Weeks 1-4: FORGE-R only (no NFL data)
-- Weeks 5-8: Blended (60% FORGE-R, 40% FORGE v1)
-- Week 9+: FORGE v1 takes over, FORGE-R weight fades to 0
-- Full transition complete: ~Week 13
+**2026 TIBER-RAS Leaders:**
+- WR: Jeff Caldwell (9.14), Bryce Lance (8.07), J. Michael Sturdivant (6.90), Deion Burks (6.27)
+- RB: Mike Washington Jr. (8.28), Jeremiyah Love (6.14), Seth McGowan (5.48)
+- TE: Kenyon Sadiq (6.58), Eli Stowers (6.40), Sam Roush (6.44)
+- QB: Taylen Green (7.94), Cole Payton (5.75)
 
 ---
 
-## DB Schema (Proposed)
+## What Replit Needs to Build
+
+### Phase 1: Historical RAS Calibration (TIBER-RAS v2)
+
+**Problem:** v1 ranks within the 2026 class only. A true RAS needs historical context — is Jeff Caldwell's 40 time elite vs all WRs since 1987, not just vs 2026 classmates.
+
+**Data source:** `nflverse` — has combine data going back to 1987 including all measurables.
+
+**Task:**
+1. Ingest `nflverse` historical combine data via `nfl_data_py` (already in the stack)
+2. Build position-stratified percentile tables for each metric (40yd, vert, broad, etc.) using historical distribution
+3. Re-score all 2026 players against historical peers
+4. Store as `tiber_ras_v2` in the rookie grades table
+
+```python
+# nfl_data_py call
+import nfl_data_py as nfl
+combine = nfl.import_combine_data(range(1987, 2026))
+# Filter by position, build percentile distributions
+```
+
+---
+
+### Phase 2: College Production Intake
+
+**Problem:** Athletic freaks who didn't produce in college (or vice versa) need production signals to separate from pure athleticism profiles.
+
+**Key metrics needed per player:**
+- `dominator_rating` — target/carry share vs team total (measures true alpha status)
+- `yprr` / `yards_per_route_run` — efficiency metric for WR/TE
+- `breakout_age` — age at which player hit 20%+ dominator rating (earlier = better)
+- `college_target_share` — % of team targets in final season
+- `college_ypc` / `college_yards_per_carry` — for RB
+- `college_completion_pct`, `college_td_pct` — for QB
+
+**Data sources:**
+- `nflverse` has some college stats
+- `cfbfastR` / college football reference for deeper production data
+- PFF college grades (if accessible)
+
+**Task:**
+1. Pull college production for all 91 players in `2026_combine_results.json`
+2. Store in `data/rookies/2026_college_production.json`
+3. Link to combine data via player name (or add GSIS ID mapping post-draft)
+
+---
+
+### Phase 3: Rookie Alpha Score
+
+The full grading formula once all data is assembled:
+
+```
+Rookie Alpha = weighted average of:
+  - TIBER-RAS v2 (0-10 → normalized to 0-100): 30%
+  - College Production Score (0-100):           40%
+  - Draft Capital Score (0-100):                20%
+  - Age at Entry Score (0-100):                 10%
+```
+
+**Pillar breakdown:**
+
+| Pillar | Inputs | Weight |
+|--------|--------|--------|
+| Athleticism (RAS) | 40yd, vert, broad, cone, shuttle, size | 30% |
+| Production | Dominator rating, YPRR, breakout age, target share | 40% |
+| Draft Capital | Round + pick (logarithmic decay) | 20% |
+| Age at Entry | Younger = higher score | 10% |
+
+**Output:** Each player gets a `rookie_alpha` (0-100) and a `rookie_tier` (T1-T5) using the same FORGE tier thresholds.
+
+---
+
+### Phase 4: Post-Draft Landing Spot Adjustment
+
+Once teams draft players (late April):
+
+1. Pull team context score from existing TIBER team data
+2. Adjust `rookie_alpha` up/down based on:
+   - Depth chart opportunity (is there a clear path to targets/carries?)
+   - Scheme fit (does the offense fit the player's profile?)
+   - QB quality (passing game strength)
+3. Generate a `landing_spot_adjustment` (+/- 0-15 points)
+
+This is where the **World Model** connects to the rookie engine — the same team intelligence layer serves both veteran projections and rookie opportunity scoring.
+
+---
+
+### Phase 5: NFL Data Transition
+
+As rookies play actual NFL games:
+- Week 1-4: Blend `rookie_alpha` (80%) + emerging NFL FORGE data (20%)
+- Week 5-8: 50/50 blend
+- Week 9+: Full FORGE takeover, `rookie_alpha` archived as reference point
+
+This gives continuity — no cliff where a player "disappears" from TIBER between draft and first NFL data.
+
+---
+
+## New API Endpoints Needed
+
+```
+GET /api/rookies/2026                          — All 2026 rookie grades
+GET /api/rookies/2026/:playerId                — Single player rookie profile
+GET /api/rookies/2026/position/:pos            — By position (WR/RB/TE/QB)
+GET /api/rookies/2026/leaderboard              — Sorted by rookie_alpha
+```
+
+Auth: Same `x-tiber-key` header as v1 API.
+
+---
+
+## New DB Table Needed
 
 ```sql
-CREATE TABLE rookie_prospects (
+CREATE TABLE rookie_profiles (
   id SERIAL PRIMARY KEY,
   season INT NOT NULL,
-  name VARCHAR(100) NOT NULL,
+  player_name VARCHAR(100) NOT NULL,
   position VARCHAR(5) NOT NULL,
-  school VARCHAR(100),
-  -- Combine athleticism
-  height_in INT,
-  weight_lbs INT,
-  forty DECIMAL(4,2),
-  ten_split DECIMAL(4,2),
-  vertical DECIMAL(4,1),
-  broad_jump INT,
-  three_cone DECIMAL(4,2),
-  shuttle DECIMAL(4,2),
-  -- RAS (to be added)
-  ras_score DECIMAL(4,2),
-  ras_size DECIMAL(4,2),
-  ras_speed DECIMAL(4,2),
-  ras_burst DECIMAL(4,2),
-  ras_agility DECIMAL(4,2),
-  -- College production (to be added)
-  dominator_rating DECIMAL(5,2),
-  college_yprr DECIMAL(4,3),
-  breakout_age DECIMAL(4,1),
-  -- Draft (post-April)
+  college VARCHAR(100),
+  
+  -- Combine measurables
+  height_in FLOAT,
+  weight_lbs FLOAT,
+  forty FLOAT,
+  ten_split FLOAT,
+  vertical FLOAT,
+  broad_jump FLOAT,
+  three_cone FLOAT,
+  shuttle FLOAT,
+  
+  -- TIBER-RAS
+  tiber_ras_v1 FLOAT,       -- class-relative
+  tiber_ras_v2 FLOAT,       -- historical-relative (pending)
+  
+  -- College production
+  dominator_rating FLOAT,
+  yprr FLOAT,
+  breakout_age FLOAT,
+  college_target_share FLOAT,
+  college_ypc FLOAT,
+  
+  -- Scoring
+  athleticism_score FLOAT,
+  production_score FLOAT,
+  draft_capital_score FLOAT,
+  age_score FLOAT,
+  rookie_alpha FLOAT,
+  rookie_tier VARCHAR(5),
+  landing_spot_adjustment FLOAT,
+  
+  -- Meta
   draft_round INT,
   draft_pick INT,
   nfl_team VARCHAR(5),
-  -- FORGE-R scores (computed)
-  forge_r_alpha DECIMAL(5,1),
-  forge_r_tier VARCHAR(3),
+  gsis_id VARCHAR(20),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -101,37 +199,36 @@ CREATE TABLE rookie_prospects (
 
 ---
 
-## Immediate Actions for Replit Agent
+## Content Angle (X / @TiberAnalytics)
 
-1. **Create `rookie_prospects` table** using schema above
-2. **Seed 2026 combine data** from `data/rookies/2026_combine_results.json`
-3. **Add endpoint:** `GET /api/v1/rookies?season=2026&position=WR` — returns all prospects with available data
-4. **Add endpoint:** `GET /api/v1/rookies/:name` — search by name, returns full profile
-5. **RAS integration:** Once ras.football stabilizes (~2-3 days), build scraper or manual import script for RAS sub-scores
+The rookie engine powers a content series:
+- **Combine weekend:** Drop TIBER-RAS leaderboards by position as results come in
+- **Pre-draft:** Full rookie profile cards (same format as Zay Flowers card) for top prospects
+- **Draft night:** Live rookie alpha scores as players are picked + landing spot reaction
+- **Post-draft:** "TIBER's Rookie Rankings" — full 2026 class sorted by adjusted rookie alpha
 
-## Phase 2 (Post-Draft, April)
-1. Add draft capital and landing spot data
-2. Build FORGE-R scoring model
-3. Expose `GET /api/v1/rookies/:id/forge-r` endpoint
-4. Power content cards: rookie profile graphic same format as veteran cards
+This is a high-engagement content cycle that runs April-August and establishes @TiberAnalytics as a serious analytics voice during the NFL offseason.
 
 ---
 
-## Content Opportunity
+## Immediate Next Steps for Replit
 
-The @TiberAnalytics rookie profile series can drop immediately post-draft:
-- Same card template as veteran profiles
-- FORGE-R Alpha instead of FORGE Alpha
-- "Pre-Entry Score" label to distinguish from NFL data
-- Thread format: card + 4 pillar breakdown tweets
-
-**High-value targets for first cards:**
-- WR: Jeff Caldwell (6'5", 4.31 — elite size/speed combo), Deion Burks (4.30, 42.5 vert), Bryce Lance (4.34, 41.5 vert)
-- TE: Kenyon Sadiq (4.39 for 241 lbs — absurd), Eli Stowers (4.51, 45.5 vert)
-- RB: Mike Washington Jr. (4.33, 223 lbs — rare size/speed)
+1. **Pull nflverse historical combine data** → build TIBER-RAS v2 percentile tables
+2. **Pull college production stats** for all 91 players in `2026_combine_results.json`
+3. **Create `rookie_profiles` DB table** (schema above)
+4. **Build `/api/rookies/2026` endpoints** (basic CRUD to start)
+5. **Wire into FORGE transition logic** for Week 1+ blending (Phase 5)
 
 ---
 
-## Related Roadmap
-- `ROADMAP_world_model_team_intelligence.md` — landing spot scheme fit analysis feeds FORGE-R landing spot pillar
-- `ROADMAP_consensus_intelligence_layer.md` — rookie ADP vs TIBER pre-entry Alpha delta
+## Files
+
+| File | Description |
+|------|-------------|
+| `data/rookies/2026_combine_results.json` | Raw combine data, 91 players |
+| `data/rookies/2026_rookie_grades.json` | TIBER-RAS v1 scores (class-relative) |
+| `reports/ROADMAP_rookie_grading_engine.md` | This document |
+
+---
+
+*Filed by Max (OpenClaw connector) — SESSION_006*
