@@ -1,0 +1,29 @@
+What Aligns (Roughly)
+
+High-level fantasy order & totals: Top guys match the real 2025 season vibe. Stafford had an absolute MVP monster year (~4,700 pass yds, 46 TDs, league leader in a lot of box-score stuff). Allen was the fantasy QB1 or 1A with his rushing. Maye broke out huge. Prescott, Goff, Williams, Nix, etc., land in the top 10-15 exactly where you'd expect. FP totals are in the ballpark (Stafford ~350-360 range, Allen ~364-374, Maye ~359 depending on exact scoring settings—standard 4-pt pass TD, etc.). Yours: Stafford 360.5, Allen 358.7, Maye 325.9. Close enough for dynasty buy-low talk.
+Dropbacks: Solid proxy (real attempts + sacks). Stafford ~617 here vs real 597 att + 23 sacks ≈620. Allen 506 vs real 460+40=500. Maye 512 vs ~492+47=539. Good.
+Rush stats for mobile guys: Directionally right. Allen 94/599/14 here vs real 112/579/14. Maye 76/445/4 vs 103/450/4. Herbert 73/510/2 lines up. Smaller discrepancies but not dealbreakers.
+ANY/A: Plausible range (Stafford 7.7, Allen 6.5, etc.) matches what you'd calc from real passing lines.
+
+Bottom line on usable stuff: The fantasy points, games, dropbacks, and rushing are reliable enough for quick dynasty process-over-results scans or top-10 FP lists. The sample AI prompt you included would mostly work on the FP side.
+What’s Broken/Missing (Big Red Flags)
+This export is incomplete/bugged on the advanced/process side—looks like a data pipeline glitch where pressure & formation metrics didn't load.
+
+Completely blank: CPOE (every single player—,, right after dropbacks). Can't run any CPOE-based process score.
+All zeroed out (wrong):
+Success Rate % = 0.0 across the board (real top QBs are ~45-52% on rbsdm/PFF).
+Sacks = 0, Sack Rate % = 0.0, Sack Yards = 0 for everyone.
+QB Hits = 0, QB Hit Rate % = 0.0 for everyone. (Real: Allen ~40 sacks, Maye ~47, Stafford 23, etc.—from FantasyPros/PFR snippets.)
+
+Blank fields:
+Shotgun %, No Huddle %, Shotgun Success %, Under Center Success % — all empty.
+
+Other zeros that are suspicious:
+Scrambles, Scramble Yards, Scramble TDs = 0 for almost all (real mobile QBs scramble a ton; these probably got lumped into raw rush attempts).
+EPA/Play is off for stars (Stafford -1.47? Negative for an MVP year? Real rbsdm-style EPA/play for top QBs was positive ~0.1-0.3+).
+
+
+Verdict on alignment with leading sources:
+
+Fantasy/box-score side: ~80-85% match (order & scale good, exact numbers off by 5-15% on GP/FP/rush att—maybe scoring variant or one missed game in the export).
+Process/advanced analytics (EPA, Success Rate, CPOE, pressure): 0% usable. All missing or zeroed. You can't trust any "process-over-results" ranking from this file—those are the exact columns the sample prompt wants.
