@@ -65,7 +65,6 @@ import etlRoutes from './routes/etlRoutes';
 import matchupRoutes from './routes/matchupRoutes';
 import strategyRoutes from './routes/strategyRoutes';
 import playerComparisonRoutes from './routes/playerComparisonRoutes';
-import rookieRoutes from './routes/rookieRoutes';
 import playerIdentityRoutes from './routes/playerIdentityRoutes';
 import uphAdminRoutes from './routes/uphAdminRoutes';
 import gameLogRoutes from './routes/gameLogRoutes';
@@ -77,10 +76,8 @@ import { ratingsRouter } from './src/modules/ratings';
 import ovrRouter from './routes/ovrRoutes';
 import tiberRouter from './routes/tiberRoutes';
 import { API_REGISTRY, getEndpointByKey, getAllTags } from './infra/apiRegistry';
-import rookieEvaluationRoutes from './routes/rookieEvaluationRoutes';
 import attributesRoutes from './routes/attributesRoutes';
 import metricMatrixRoutes from './routes/metricMatrixRoutes';
-import redraftWeeklyRoutes from './routes/redraftWeeklyRoutes';
 import buysSellsRoutes from './routes/buysSellsRoutes';
 import fantasyLabRoutes from './routes/fantasyLabRoutes';
 import idpAdminRoutes from './routes/idpAdminRoutes';
@@ -373,12 +370,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             last_updated: dataStats.last_updated
           },
           legacy: {
-            redraft: 'ok',
             dynasty: 'ok', 
             oasis: 'ok',
             trends: 'ok',
             compass: 'ok',
-            rookies: 'ok',
             usage2024: 'ok'
           }
         }
@@ -1988,11 +1983,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Live Compass routes with Sleeper sync (BEFORE legacy routes to prevent conflicts)
   // Import and register live Sleeper-powered routes (order matters - before legacy routes!)
   const { registerCompassRoutes } = await import('./routes/compassRoutes');
-  const { registerRedraftRoutes } = await import('./routes/redraftRoutes');
   const { registerDynastyRoutes } = await import('./routes/dynastyRoutes');
   
   registerCompassRoutes(app);
-  registerRedraftRoutes(app);
   registerDynastyRoutes(app);
 
   // ===== ENHANCED PLAYER COMPASS SYSTEM =====
@@ -2869,10 +2862,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }));
   console.log('🎯 Consensus Benchmark routes mounted at /api/consensus/*');
   
-  // Rookie system routes
-  app.use('/api/rookies', rookieRoutes);
-  app.use('/api/rookie-evaluation', rookieEvaluationRoutes);
-  app.use('/api/redraft', redraftWeeklyRoutes);
   app.use('/api/sos', sosRouter);
   app.use('/api/buys-sells', buysSellsRoutes);
   app.use('/api/matchup', matchupRoutes);
@@ -4114,101 +4103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Missing rookies endpoint - Lamar's request
-  app.get('/api/rookies', async (req, res) => {
-    try {
-      console.log('🚀 [ROOKIES] Fetching rookie evaluation data');
-      
-      // Use existing rookie evaluation logic
-      const rookies = [
-        {
-          id: 'rookie-1',
-          name: 'Malik Nabers',
-          position: 'WR',
-          college: 'LSU',
-          tier: 'A',
-          dynasty_score: 85.2,
-          traits: ['Route running', 'Contested catches', 'YAC ability'],
-          dynasty_flags: ['High target competition']
-        },
-        {
-          id: 'rookie-2', 
-          name: 'Marvin Harrison Jr.',
-          position: 'WR',
-          college: 'Ohio State',
-          tier: 'S',
-          dynasty_score: 92.1,
-          traits: ['Elite separation', 'Reliable hands', 'Route precision'],
-          dynasty_flags: ['Pristine prospect']
-        },
-        {
-          id: 'rookie-3',
-          name: 'Rome Odunze',
-          position: 'WR',
-          college: 'Washington', 
-          tier: 'A',
-          dynasty_score: 83.7,
-          traits: ['Size-speed combo', 'Red zone threat', 'Contested catches'],
-          dynasty_flags: ['QB uncertainty']
-        },
-        {
-          id: 'rookie-4',
-          name: 'Brian Thomas Jr.',
-          position: 'WR',
-          college: 'LSU',
-          tier: 'B',
-          dynasty_score: 78.9,
-          traits: ['Deep threat', 'Vertical stretch', 'Big play ability'],
-          dynasty_flags: ['Route tree limited']
-        },
-        {
-          id: 'rookie-5',
-          name: 'Brock Bowers',
-          position: 'TE',
-          college: 'Georgia',
-          tier: 'S',
-          dynasty_score: 89.4,
-          traits: ['YAC monster', 'Slot versatility', 'Mismatch creator'],
-          dynasty_flags: ['Generational TE talent']
-        }
-      ];
-
-      res.json({ rookies });
-    } catch (error) {
-      console.error('❌ [ROOKIES] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch rookie data' });
-    }
-  });
-
-  // Missing weekly endpoint alias - Lamar's request
-  app.get('/api/weekly', async (req, res) => {
-    try {
-      // Redirect to existing weekly data endpoint
-      const response = await fetch(`${req.protocol}://${req.get('host')}/api/redraft/weekly?${new URLSearchParams(req.query as any)}`);
-      const data = await response.json();
-      
-      // Coerce nulls to zeros (server-side fix per Lamar)
-      const z = (v: any) => (v == null ? 0 : v);
-      
-      if (data.data) {
-        data.data = data.data.map((row: any) => ({
-          ...row,
-          targets: z(row.targets),
-          receptions: z(row.receptions), 
-          rush_attempts: z(row.rush_attempts),
-          receiving_yards: z(row.receiving_yards),
-          rushing_yards: z(row.rushing_yards),
-          fantasy_points: z(row.fantasy_points),
-          fantasy_points_ppr: z(row.fantasy_points_ppr)
-        }));
-      }
-      
-      res.json(data);
-    } catch (error) {
-      console.error('❌ [WEEKLY] Error:', error);
-      res.status(500).json({ error: 'Failed to fetch weekly data' });
-    }
-  });
 
   // DEPRECATED: Usage leaders endpoint - use TIBER system instead
   app.get('/api/usage-leaders', async (req, res) => {
@@ -4279,7 +4173,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const checks = {
         wr: 'ok',
-        rookies: 'ok', 
         vorp: 'ok',
         weekly: 'ok',
         intel: 'ok',
@@ -4292,12 +4185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await fetch(`${req.protocol}://${req.get('host')}/api/wr?limit=1`);
       } catch {
         checks.wr = 'down';
-      }
-
-      try {
-        await fetch(`${req.protocol}://${req.get('host')}/api/rookies`);
-      } catch {
-        checks.rookies = 'down';
       }
 
       try {

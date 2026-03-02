@@ -15,8 +15,7 @@ import {
   type BusEvent 
 } from '../../domain/events';
 
-// Import example plugins
-import { RookieRisersPlugin } from '../plugins/rookieRisers';
+// Import plugins
 import { RedraftBuySellPlugin } from '../plugins/redraftBuySell';
 
 /**
@@ -86,7 +85,6 @@ export class BrandSignalsIntegration {
     console.log('🔌 [BrandSignalsIntegration] Registering brand plugins...');
 
     const plugins = [
-      RookieRisersPlugin,
       RedraftBuySellPlugin
     ];
 
