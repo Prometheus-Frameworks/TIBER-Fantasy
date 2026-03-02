@@ -5522,3 +5522,45 @@ export const catalystScores = pgTable("catalyst_scores", {
 ]);
 
 export type CatalystScore = typeof catalystScores.$inferSelect;
+
+// ========================================
+// ROOKIE PROFILES (2026 COMBINE + GRADES)
+// ========================================
+
+export const rookieProfiles = pgTable("rookie_profiles", {
+  id: serial("id").primaryKey(),
+  playerName: text("player_name").notNull().unique(),
+  position: varchar("position", { length: 10 }),
+  school: text("school"),
+  classYear: integer("class_year"),
+  overallGrade: real("overall_grade"),
+  tier: text("tier"),
+  strengths: text("strengths").array(),
+  concerns: text("concerns").array(),
+  playerComp: text("player_comp"),
+  notes: text("notes"),
+
+  // Combine metrics
+  heightInches: real("height_inches"),
+  weightLbs: real("weight_lbs"),
+  handSize: real("hand_size"),
+  armLength: real("arm_length"),
+  fortyYardDash: real("forty_yard_dash"),
+  tenYardSplit: real("ten_yard_split"),
+  verticalJump: real("vertical_jump"),
+  broadJump: real("broad_jump"),
+  shortShuttle: real("short_shuttle"),
+  threeCone: real("three_cone"),
+  benchPress: integer("bench_press"),
+
+  // Raw source payloads for traceability
+  combineRaw: jsonb("combine_raw").notNull(),
+  gradeRaw: jsonb("grade_raw").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("rookie_profiles_position_idx").on(table.position),
+  index("rookie_profiles_grade_idx").on(table.overallGrade),
+]);
+
+export type RookieProfile = typeof rookieProfiles.$inferSelect;
+export type InsertRookieProfile = typeof rookieProfiles.$inferInsert;
