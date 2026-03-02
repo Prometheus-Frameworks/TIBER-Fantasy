@@ -5522,3 +5522,66 @@ export const catalystScores = pgTable("catalyst_scores", {
 ]);
 
 export type CatalystScore = typeof catalystScores.$inferSelect;
+
+// ========================================
+// ROOKIE PROFILES — FORGE-R pre-entry system
+// ========================================
+
+export const rookieProfiles = pgTable("rookie_profiles", {
+  id: serial("id").primaryKey(),
+  season: integer("season").notNull().default(2026),
+  playerName: text("player_name").notNull().unique(),
+  position: varchar("position", { length: 10 }),
+  school: text("school"),
+  projRound: integer("proj_round"),
+
+  // Combine measurables
+  heightInches: real("height_inches"),
+  weightLbs: real("weight_lbs"),
+  fortyYardDash: real("forty_yard_dash"),
+  tenYardSplit: real("ten_yard_split"),
+  verticalJump: real("vertical_jump"),
+  broadJump: real("broad_jump"),
+  shortShuttle: real("short_shuttle"),
+  threeCone: real("three_cone"),
+
+  // TIBER-RAS scores
+  tiberRasV1: real("tiber_ras_v1"),
+  tiberRasV2: real("tiber_ras_v2"),
+
+  // College production (Phase 2)
+  dominatorRating: real("dominator_rating"),
+  yprr: real("yprr"),
+  breakoutAge: real("breakout_age"),
+  collegeTargetShare: real("college_target_share"),
+  collegeYpc: real("college_ypc"),
+
+  // Rookie Alpha (Phase 3)
+  athleticismScore: real("athleticism_score"),
+  productionScore: real("production_score"),
+  draftCapitalScore: real("draft_capital_score"),
+  ageScore: real("age_score"),
+  rookieAlpha: real("rookie_alpha"),
+  rookieTier: varchar("rookie_tier", { length: 5 }),
+
+  // Post-draft (Phase 4)
+  nflTeam: varchar("nfl_team", { length: 5 }),
+  gsisId: varchar("gsis_id", { length: 20 }),
+  draftRound: integer("draft_round"),
+  draftPick: integer("draft_pick"),
+  landingSpotAdjustment: real("landing_spot_adjustment"),
+
+  // Raw payloads for traceability
+  combineRaw: jsonb("combine_raw"),
+  gradeRaw: jsonb("grade_raw"),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("rookie_profiles_position_idx").on(table.position),
+  index("rookie_profiles_season_idx").on(table.season),
+  index("rookie_profiles_ras_idx").on(table.tiberRasV1),
+]);
+
+export type RookieProfile = typeof rookieProfiles.$inferSelect;
+export type InsertRookieProfile = typeof rookieProfiles.$inferInsert;

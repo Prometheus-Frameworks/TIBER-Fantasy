@@ -5,7 +5,7 @@
     "scraped_at": "2026-03-01",
     "notes": "Height in inches. RAS pending manual pull from ras.football. College stats pending.",
     "college_source": "walterfootball.com 2026 WR rankings",
-    "official_ras_source": "ras.football (partial \u2014 scraped individually)",
+    "official_ras_source": "ras.football (partial — scraped individually)",
     "official_ras_note": "Only players with public RAS.football pages found via search. Full scrape pending."
   },
   "players": [
@@ -350,7 +350,7 @@
       "college_last_season": {
         "rec": 55,
         "yards": 604,
-        "avg": 11.0,
+        "avg": 11,
         "tds": 4
       },
       "official_ras": null,
@@ -830,28 +830,6 @@
         "rec": 69,
         "yards": 872,
         "avg": 12.6,
-        "tds": 9
-      },
-      "official_ras": null,
-      "ras_rank_historical": null
-    },
-    {
-      "name": "Carnell Tate",
-      "pos": "WR",
-      "ht": 74,
-      "wt": 192,
-      "forty": 4.53,
-      "ten": 1.61,
-      "vert": null,
-      "broad": null,
-      "cone": null,
-      "shuttle": null,
-      "college": "Ohio State",
-      "proj_round": 1,
-      "college_last_season": {
-        "rec": 51,
-        "yards": 875,
-        "avg": 14.7,
         "tds": 9
       },
       "official_ras": null,
