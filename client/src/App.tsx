@@ -36,6 +36,7 @@ import SituationalLab from "@/pages/SituationalLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
+import RookieBoard from "@/pages/RookieBoard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/tiers" component={TiberTiers} />
+        <Route path="/rookies" component={RookieBoard} />
         <Route path="/tiber-data-lab" component={DataLabHub} />
         <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
         <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />

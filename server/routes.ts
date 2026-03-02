@@ -10398,6 +10398,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log('📊 Waiver Wisdom routes mounted at /api/waivers/*');
 
+  // ─── Internal Rookie Board (FORGE-R) ───────────────────────────────────────
+  const ROOKIE_VALID_SORT = new Set(['tiber_ras_v1', 'tiber_ras_v2', 'player_name', 'proj_round']);
+  const ROOKIE_VALID_POS = new Set(['QB', 'RB', 'WR', 'TE']);
+
+  app.get('/api/rookies/2026', async (req: Request, res: Response) => {
+    try {
+      const pos = ((req.query.position as string) || '').toUpperCase();
+      const sortBy = (req.query.sort_by as string) || 'tiber_ras_v2';
+      if (!ROOKIE_VALID_SORT.has(sortBy)) {
+        return res.status(400).json({ error: `Invalid sort_by. Valid: ${[...ROOKIE_VALID_SORT].join(', ')}` });
+      }
+      const posClause = pos && ROOKIE_VALID_POS.has(pos) ? `AND position = '${pos}'` : '';
+      const rows = await db.execute(sql`
+        SELECT
+          ROW_NUMBER() OVER (ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST) AS rank,
+          player_name, position, school, proj_round,
+          forty_yard_dash, vertical_jump, broad_jump,
+          ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
+          ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+        FROM rookie_profiles
+        WHERE 1=1 ${sql.raw(posClause)}
+        ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST
+        LIMIT 200
+      `);
+      res.json({ season: 2026, sort_by: sortBy, position: pos || 'ALL', count: rows.rows.length, players: rows.rows });
+    } catch (err) {
+      console.error('Rookie board error:', err);
+      res.status(500).json({ error: 'Failed to load rookie data' });
+    }
+  });
+
+  console.log('🏈 Rookie Board routes mounted at /api/rookies/*');
+
   registerForgeRoutes(app);
   app.use(adminForgeRouter);
 

@@ -16,6 +16,17 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
+## Rookie Grading Engine (FORGE-R)
+- **Data**: `data/rookies/2026_combine_results.json` (90 players, deduped), `data/rookies/2026_rookie_grades.json` (TIBER-RAS v1), `data/rookies/2026_rookie_grades_v2.json` (TIBER-RAS v2)
+- **DB**: `rookie_profiles` table — 90 players seeded with combine measurables + RAS v1 + RAS v2 scores
+- **TIBER-RAS v1**: Class-relative (ranked within 2026 class only, 0–10 scale)
+- **TIBER-RAS v2**: Historical percentile (vs 8,649 combine players 1987–2025, 7 metrics: 40yd, vert, broad, cone, shuttle, ht, wt)
+- **Scripts**: `scripts/tiber_ras_v2.py` (runs nfl_data_py to generate v2 scores), `scripts/seed-rookie-profiles.ts` (seeds DB from JSON files)
+- **Internal API**: `GET /api/rookies/2026` — no auth, supports `?position=WR&sort_by=tiber_ras_v2`
+- **TiberClaw v1 API**: `GET /api/v1/rookies/2026`, `/api/v1/rookies/2026/leaderboard`, `/api/v1/rookies/2026/position/:pos`, `/api/v1/rookies/2026/:playerName` — all behind `x-tiber-key`
+- **UI**: `/rookies` — Rookie Board page with position filters and sortable RAS columns
+- **Phases remaining**: College production (Phase 2), Rookie Alpha (Phase 3), Post-draft landing spot (Phase 4), FORGE blending (Phase 5)
+
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
 - **`feat/openclaw-connector`**: TiberClaw agent's working branch. Agent pushes autonomous research work here (TIBER-RAS v1, 2026 combine data, FORGE-R roadmap). Merge into main via cherry-pick to avoid conflicts from diverged history. Currently 29 commits ahead / 36 behind main.

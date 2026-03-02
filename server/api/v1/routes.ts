@@ -190,6 +190,119 @@ router.get("/diagnostic", (req, res) => {
   }, req.requestId!));
 });
 
+// ─── Rookie Endpoints (FORGE-R) ────────────────────────────────────────────
+
+const VALID_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
+const VALID_SORT_FIELDS = new Set(["tiber_ras_v1", "tiber_ras_v2", "player_name", "proj_round"]);
+
+router.get("/rookies/2026/leaderboard", async (req, res, next) => {
+  try {
+    const sortBy = (req.query.sort_by as string) || "tiber_ras_v2";
+    const pos = (req.query.position as string || "").toUpperCase();
+    if (!VALID_SORT_FIELDS.has(sortBy)) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `Invalid sort_by. Valid: ${[...VALID_SORT_FIELDS].join(", ")}`);
+    }
+    const posFilter = pos && VALID_POSITIONS.has(pos) ? sql`AND position = ${pos}` : sql``;
+    const rows = await db.execute(sql`
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST) AS rank,
+        player_name, position, school, proj_round,
+        forty_yard_dash, vertical_jump, broad_jump,
+        ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+      FROM rookie_profiles
+      WHERE 1=1 ${posFilter}
+      ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST
+      LIMIT 100
+    `);
+    res.json(v1Success({
+      season: 2026,
+      sort_by: sortBy,
+      position: pos || "ALL",
+      count: rows.rows.length,
+      players: rows.rows,
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/rookies/2026/position/:pos", async (req, res, next) => {
+  try {
+    const pos = req.params.pos.toUpperCase();
+    if (!VALID_POSITIONS.has(pos)) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `Invalid position. Valid: QB, RB, WR, TE`);
+    }
+    const rows = await db.execute(sql`
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY tiber_ras_v2 DESC NULLS LAST) AS rank,
+        player_name, position, school, proj_round,
+        forty_yard_dash, vertical_jump, broad_jump,
+        ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+      FROM rookie_profiles
+      WHERE position = ${pos}
+      ORDER BY tiber_ras_v2 DESC NULLS LAST
+    `);
+    res.json(v1Success({
+      season: 2026,
+      position: pos,
+      count: rows.rows.length,
+      players: rows.rows,
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/rookies/2026", async (req, res, next) => {
+  try {
+    const pos = (req.query.position as string || "").toUpperCase();
+    const sortBy = (req.query.sort_by as string) || "tiber_ras_v2";
+    if (sortBy && !VALID_SORT_FIELDS.has(sortBy)) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `Invalid sort_by. Valid: ${[...VALID_SORT_FIELDS].join(", ")}`);
+    }
+    const posFilter = pos && VALID_POSITIONS.has(pos) ? sql`AND position = ${pos}` : sql``;
+    const rows = await db.execute(sql`
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST) AS rank,
+        player_name, position, school, proj_round,
+        forty_yard_dash, vertical_jump, broad_jump,
+        ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+      FROM rookie_profiles
+      WHERE 1=1 ${posFilter}
+      ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST
+      LIMIT 200
+    `);
+    res.json(v1Success({
+      season: 2026,
+      sort_by: sortBy,
+      position: pos || "ALL",
+      count: rows.rows.length,
+      players: rows.rows,
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/rookies/2026/:playerName", async (req, res, next) => {
+  try {
+    const name = req.params.playerName.replace(/-/g, " ");
+    const rows = await db.execute(sql`
+      SELECT
+        player_name, position, school, proj_round,
+        forty_yard_dash, vertical_jump, broad_jump, short_shuttle, three_cone,
+        height_inches, weight_lbs,
+        ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+        combine_raw, grade_raw
+      FROM rookie_profiles
+      WHERE LOWER(player_name) = LOWER(${name})
+      LIMIT 1
+    `);
+    if (!rows.rows.length) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Rookie not found: ${name}`);
+    }
+    res.json(v1Success({ season: 2026, player: rows.rows[0] }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
 router.use(requestLogger);
 router.use(errorFormat);
 
