@@ -16,6 +16,10 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
+## Git Branch Structure
+- **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
+- **`feat/openclaw-connector`**: TiberClaw agent's working branch. Agent pushes autonomous research work here (TIBER-RAS v1, 2026 combine data, FORGE-R roadmap). Merge into main via cherry-pick to avoid conflicts from diverged history. Currently 29 commits ahead / 36 behind main.
+
 ## System Architecture
 The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layers) with a focus on data quality, lineage, and confidence scoring.
 
