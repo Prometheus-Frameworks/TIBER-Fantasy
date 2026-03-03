@@ -76,7 +76,11 @@ export async function initBackground(): Promise<void> {
       app.use(express.static(publicDir));
       const indexHtml = path.join(publicDir, "index.html");
       if (fs.existsSync(indexHtml)) {
-        app.use((_req: Request, res: Response) => res.sendFile(indexHtml));
+        // Guard: never intercept /api routes — those fall through to Express 404
+        app.use((req: Request, res: Response, next: NextFunction) => {
+          if (req.originalUrl.startsWith("/api")) return next();
+          res.sendFile(indexHtml);
+        });
       }
       log(`🗂️  Static assets → ${publicDir}`);
     }
