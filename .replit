@@ -9,7 +9,7 @@ packages = ["arrow-cpp", "glibcLocales", "imagemagick", "jq", "libxcrypt", "pkg-
 [deployment]
 deploymentTarget = "vm"
 build = ["sh", "build.sh"]
-run = ["npm", "start"]
+run = ["node", "dist/index.mjs"]
 
 [workflows]
 runButton = "Project"
