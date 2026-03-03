@@ -81,3 +81,10 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **ETL concurrency rule**: The upsert guard deletes by `season+week` (not `snapshot_id`). NEVER run multi-week gold ETL loops as parallel bash processes. Always use `scripts/run_gold_etl_single_week.ts <week>` for one week at a time. If a bash call times out mid-loop, wait ~35 seconds for the background process to clear before re-running that week.
 - **API keys**: `api_keys` and `api_request_log` tables are live. Key generation: `npx tsx scripts/generate-api-key.ts --label "Label" --tier internal`. Auth header: `x-tiber-key`.
 - **Fantasy Lab (`/fantasy-lab`)**: Full analytics dashboard integrating FIRE table, Hybrid Delta view, and Watchlist, with position-aware columns, presets, sorting, CSV export, and conditional formatting.
+
+## Deployment Architecture
+- **Target**: Autoscale (Cloud Run) — REST API is stateless enough; all persistent state in PostgreSQL.
+- **Build**: `sh build.sh` — runs `vite build` (frontend → `dist/public/`) then bundles server via esbuild → `dist/app.mjs`; copies `server/bootstrap.mjs` → `dist/index.mjs`.
+- **Run**: `node dist/index.mjs` (no npm overhead — saves ~2.8s startup time).
+- **Bootstrap** (`server/bootstrap.mjs`): Tiny ~50-line file Node.js parses in <5ms. Binds port 5000 in ~400ms before the 92k-line Express bundle loads (~3s). Serves `/` (index.html) and `/health` instantly at 200 during bundle load; proxies all other routes to Express once ready.
+- **Why autoscale over VM**: VM health checks are a single one-shot HTTP request with a 5s timeout and no retry. Autoscale (Cloud Run) uses a startup probe that retries until the container responds — our bootstrap answers in <400ms so the first or second probe passes.
