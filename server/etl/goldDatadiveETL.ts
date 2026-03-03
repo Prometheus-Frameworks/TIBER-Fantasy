@@ -1500,9 +1500,13 @@ async function runGoldETL(season: number, startWeek?: number, endWeek?: number):
 }
 
 // CLI entry point - only run when executed directly (not when imported)
+// IMPORTANT: esbuild bundles all server files into dist/index.mjs, so import.meta.url
+// always equals process.argv[1] at runtime — making the naive check fire every boot.
+// The NODE_ENV guard prevents the ETL from auto-running inside the production bundle.
 import { fileURLToPath } from 'url';
 
-const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+const isMainModule = process.env.NODE_ENV !== 'production' &&
+  process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMainModule) {
   const args = process.argv.slice(2);

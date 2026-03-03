@@ -486,7 +486,9 @@ export async function loadAllTeamAnalytics() {
 }
 
 // Run if called directly (ES module check)
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+// NODE_ENV guard prevents auto-run when bundled into dist/index.mjs by esbuild
+const isMainModule = process.env.NODE_ENV !== 'production' &&
+  import.meta.url === `file://${process.argv[1]}`;
 if (isMainModule) {
   loadAllTeamAnalytics()
     .then(() => {
