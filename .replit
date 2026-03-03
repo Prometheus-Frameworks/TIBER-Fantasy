@@ -8,7 +8,7 @@ packages = ["arrow-cpp", "glibcLocales", "imagemagick", "jq", "libxcrypt", "pkg-
 
 [deployment]
 deploymentTarget = "vm"
-build = ["npm", "run", "build"]
+build = ["bash", "-c", "npm run build && npx vite build"]
 run = ["node", "dist/index.mjs"]
 
 [workflows]

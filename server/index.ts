@@ -44,8 +44,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// simple health
+// Health check — responds immediately, before routes or DB are ready
 app.get("/health", (_req, res) => res.json({ ok: true }));
+app.get("/", (req, res, next) => {
+  // Only intercept if we haven't mounted static files yet (i.e. nothing else handles /)
+  // This ensures the healthcheck passes immediately on startup
+  if (process.env.NODE_ENV !== "development") {
+    const publicDir = path.resolve(process.cwd(), "dist", "public");
+    const indexHtml = path.join(publicDir, "index.html");
+    if (fs.existsSync(indexHtml)) return next(); // let express.static handle it
+    return res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
+  }
+  next();
+});
 
 (async () => {
   log("🚀 Starting Tiber Fantasy – quick boot");
@@ -89,11 +100,17 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
       console.warn("Vite dev setup failed (continuing):", e);
     }
   } else {
-    // PROD: serve static files from dist/public if present, no import.meta needed
+    // PROD: serve static files from dist/public if present
     const publicDir = path.resolve(process.cwd(), "dist", "public");
+    const indexHtml = path.join(publicDir, "index.html");
     if (fs.existsSync(publicDir)) {
       app.use(express.static(publicDir));
       log(`🗂️  Serving static assets from ${publicDir}`);
+      // SPA fallback: all non-API routes serve index.html
+      if (fs.existsSync(indexHtml)) {
+        app.use((_req: Request, res: Response) => res.sendFile(indexHtml));
+        log("🗂️  SPA fallback: index.html for unmatched routes");
+      }
     } else {
       log("ℹ️  No dist/public directory found; serving API only");
     }

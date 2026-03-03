@@ -2314,7 +2314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/te-compass', teCompassRoutes);
   
   // Mount RAG (Retrieval-Augmented Generation) router
-  await initRagOnBoot(); // Initialize RAG search index from SQLite
+  // Fire-and-forget: don't await, so startup isn't blocked
+  initRagOnBoot().catch((e) => console.warn("RAG boot init failed (non-fatal):", e));
   app.use('/rag', createRagRouter());
   
   // Mount Power Processing routes (Grok's Enhancement) 
