@@ -6,25 +6,22 @@ import { attachSignatureHeader } from "./middleware/signature";
 
 const log = (...args: any[]) => console.log(...args);
 
-const app = express();
+// Exported so bootstrap.mjs can use it as the request handler.
+export const app = express();
 
-// ---- core middleware ----
+// ── Core middleware ────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(attachSignatureHeader);
 
-// ---- tiny API logger (only /api/*) ----
+// Tiny API request logger
 app.use((req, res, next) => {
   const start = Date.now();
   const pathStr = req.path;
   let captured: unknown;
   const origJson = res.json.bind(res);
-  // @ts-expect-error preserve original signature
-  res.json = (body: unknown, ...rest: unknown[]) => {
-    captured = body;
-    // @ts-expect-error forward
-    return origJson(body, ...rest);
-  };
+  // @ts-expect-error preserve signature
+  res.json = (body: unknown, ...rest: unknown[]) => { captured = body; return origJson(body, ...rest); };
   res.on("finish", () => {
     if (!pathStr.startsWith("/api")) return;
     const ms = Date.now() - start;
@@ -36,31 +33,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── Health — registered synchronously, responds before anything else loads ──
-// Cloud Run / Replit hit these during startup. They must work immediately.
+// ── Instant health routes — no dependencies, never hang ──────────────────────
 app.get("/health", (_req, res) => res.json({ ok: true, service: "TiberClaw" }));
+// In production / returns JSON (health check compatible).
+// In dev the next() falls through to Vite which serves index.html.
 app.get("/", (req, res, next) => {
   if (process.env.NODE_ENV === "development") return next();
-  const indexHtml = path.join(process.cwd(), "dist", "public", "index.html");
-  if (fs.existsSync(indexHtml)) return res.sendFile(indexHtml);
-  return res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
+  res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
 });
 
-// ─── Bind the port FIRST — everything else is background ─────────────────────
-// app.listen() returns only after the OS has assigned the port. The callback
-// fires on the event loop once the bind is complete, so any health check
-// arriving after this point will get a 200 from the handlers above.
-const PORT = Number(process.env.PORT ?? 5000);
-
-app.listen(PORT, "0.0.0.0", () => {
-  log(`[express] serving on port ${PORT} ✓`);
-
-  // All expensive init runs here — port is already accepting connections.
-  initBackground().catch((err) => console.error("Boot init error:", err));
-});
-
-// ─── Background initialisation (runs after port is bound) ────────────────────
-async function initBackground() {
+// ── initBackground — exported so bootstrap.mjs can call it after hand-off ────
+export async function initBackground(): Promise<void> {
   log("🚀 Tiber Fantasy – loading routes in background");
 
   try {
@@ -68,16 +51,15 @@ async function initBackground() {
     logProviderStatus();
   } catch { /* non-fatal */ }
 
-  // Mount all routes
   const { default: v1Router } = await import("./api/v1/routes");
   app.use("/api/v1", v1Router);
 
   const { registerRoutes } = await import("./routes");
-  const maybeServer = await registerRoutes(app);
+  await registerRoutes(app);
 
-  // Catch-all for unmatched /api/*
+  // API 404 catch-all (after all real routes are mounted)
   app.all("/api/*", (_req: Request, res: Response) => {
-    res.status(404).json({ error: "Not found", path: _req.originalUrl });
+    res.status(404).json({ error: "Not found" });
   });
 
   // Error handler
@@ -87,29 +69,20 @@ async function initBackground() {
     console.error("Unhandled error:", err);
   });
 
-  // Static assets / Vite
-  if (process.env.NODE_ENV === "development") {
-    try {
-      const { setupVite } = await import("./vite");
-      await setupVite(app, maybeServer);
-      log("⚡ Vite dev middleware mounted");
-    } catch (e) {
-      console.warn("Vite dev setup failed:", e);
-    }
-  } else {
+  // Static assets (production only — dev uses Vite)
+  if (process.env.NODE_ENV !== "development") {
     const publicDir = path.resolve(process.cwd(), "dist", "public");
     if (fs.existsSync(publicDir)) {
       app.use(express.static(publicDir));
       const indexHtml = path.join(publicDir, "index.html");
       if (fs.existsSync(indexHtml)) {
-        // SPA fallback for deep routes (/ already handled above)
         app.use((_req: Request, res: Response) => res.sendFile(indexHtml));
       }
-      log(`🗂️  Serving static assets from ${publicDir}`);
+      log(`🗂️  Static assets → ${publicDir}`);
     }
   }
 
-  // DB migrations — fully fire-and-forget
+  // DB migrations — fire-and-forget
   import("drizzle-orm/node-postgres/migrator").then(async ({ migrate }) => {
     const { db } = await import("./infra/db");
     await migrate(db, { migrationsFolder: "migrations" });
@@ -132,4 +105,35 @@ async function initBackground() {
   } catch { /* non-fatal */ }
 
   log("✅ Background init complete");
+}
+
+// ── Dev-only startup ──────────────────────────────────────────────────────────
+// Production uses bootstrap.mjs (dist/index.mjs) which imports dist/app.mjs
+// and calls initBackground() after handing the socket to Express.
+if (process.env.NODE_ENV === "development") {
+  const PORT = Number(process.env.PORT ?? 5000);
+  (async () => {
+    const { default: v1Router } = await import("./api/v1/routes");
+    app.use("/api/v1", v1Router);
+
+    const { registerRoutes } = await import("./routes");
+    const httpServer = await registerRoutes(app);
+
+    app.all("/api/*", (_req: Request, res: Response) => {
+      res.status(404).json({ error: "Not found" });
+    });
+
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err?.status ?? err?.statusCode ?? 500;
+      res.status(status).json({ message: err?.message ?? "Internal Server Error" });
+      console.error("Unhandled error:", err);
+    });
+
+    const { setupVite } = await import("./vite");
+    await setupVite(app, httpServer);
+
+    httpServer.listen(PORT, "0.0.0.0", () => {
+      log(`[express] serving on port ${PORT}`);
+    });
+  })().catch(console.error);
 }
