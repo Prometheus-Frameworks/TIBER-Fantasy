@@ -1,6 +1,13 @@
 // server/bootstrap.mjs — copied to dist/index.mjs at build time.
-// Deployment run: node dist/index.mjs  (no npm overhead)
-// Binds port 5000 in ~400ms; Express bundle loads in ~3s behind it.
+// run: ["node", "dist/index.mjs"]
+//
+// Cloud Run startup sequence:
+//   1. Load app.mjs  (CPU fully allocated — startup probe retries on ECONNREFUSED)
+//   2. Call initBackground()  (mount routes, warm caches)
+//   3. Bind port 5000  (startup probe passes here, traffic flows in)
+//
+// This keeps CPU allocated during the expensive JIT/bundle-load phase.
+// Cloud Run allows up to 240s for startup probes, so ~15s init is fine.
 import http from "node:http";
 import fs   from "node:fs";
 import path from "node:path";
@@ -17,53 +24,38 @@ const INDEX_HTML_PATH = path.join(process.cwd(), "dist", "public", "index.html")
 let indexHtmlBuf = null;
 try {
   indexHtmlBuf = fs.readFileSync(INDEX_HTML_PATH);
-  console.log(`[bootstrap] index.html loaded (${indexHtmlBuf.length} bytes)`);
+  console.log(`[bootstrap] index.html cached (${indexHtmlBuf.length} bytes)`);
 } catch {
   console.warn(`[bootstrap] index.html not found at ${INDEX_HTML_PATH}`);
 }
 
-let expressApp = null;
+async function main() {
+  // ── Phase 1: load bundle ──────────────────────────────────────────────────
+  // Cloud Run allocates full CPU while the startup probe is failing (ECONNREFUSED).
+  // Loading app.mjs here (~3s on a real CPU) completes before the probe times out.
+  console.log("[bootstrap] loading app bundle…");
+  const t0 = Date.now();
+  const { app, initBackground } = await import("./app.mjs");
+  console.log(`[bootstrap] bundle loaded in ${Date.now() - t0}ms`);
 
-const server = http.createServer((req, res) => {
-  const url    = (req.url ?? "/").split("?")[0];
-  const method = req.method ?? "GET";
+  // ── Phase 2: mount routes + warm caches ──────────────────────────────────
+  await initBackground();
+  console.log("[bootstrap] routes ready");
 
-  if (url === "/" || url === "/health") {
-    if (url === "/" && indexHtmlBuf) {
-      res.writeHead(200, {
-        "Content-Type":   "text/html; charset=utf-8",
-        "Content-Length": String(indexHtmlBuf.length),
-        "Connection":     "close",
-      });
-      res.end(indexHtmlBuf);
-    } else {
-      const body = `{"ok":true,"status":"${expressApp ? "ready" : "starting"}"}`;
-      res.writeHead(200, { "Content-Type": "application/json", "Content-Length": String(Buffer.byteLength(body)), "Connection": "close" });
-      res.end(body);
-    }
-    return;
-  }
+  // ── Phase 3: bind port — startup probe passes, Cloud Run sends traffic ───
+  const server = http.createServer(app);
+  server.on("error", (err) => console.error("[bootstrap] server error:", err));
 
-  if (expressApp) {
-    expressApp(req, res);
-  } else {
-    const body = '{"error":"starting"}';
-    res.writeHead(503, { "Content-Type": "application/json", "Content-Length": String(Buffer.byteLength(body)), "Connection": "close" });
-    res.end(body);
-  }
-});
+  await new Promise((resolve, reject) => {
+    server.listen(PORT, "0.0.0.0", () => {
+      console.log(`[bootstrap] port ${PORT} bound — fully ready`);
+      resolve(null);
+    });
+    server.once("error", reject);
+  });
+}
 
-server.on("error", (err) => console.error("[bootstrap] server error:", err));
-
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`[bootstrap] port ${PORT} bound — loading app bundle`);
-  const t = Date.now();
-
-  (async () => {
-    const { app, initBackground } = await import("./app.mjs");
-    expressApp = app;
-    console.log(`[bootstrap] bundle ready in ${Date.now() - t}ms — Express active`);
-    await initBackground();
-    console.log(`[bootstrap] fully initialized`);
-  })().catch((err) => console.error("[bootstrap] FATAL:", err));
+main().catch((err) => {
+  console.error("[bootstrap] FATAL — exiting:", err);
+  process.exit(1);
 });

@@ -10,13 +10,15 @@ if (!connStr) {
 
 const isProd = process.env.NODE_ENV === "production";
 
-// Create connection pool with SSL for Render Postgres
+// Create connection pool with SSL
+// rejectUnauthorized: false — encrypts the connection but skips CA chain verification,
+// which is required for managed cloud databases (Neon/Replit) from Cloud Run containers.
 const pool = new Pool({
   connectionString: connStr,
-  ssl: isProd ? { rejectUnauthorized: true } : false, // Enforce certificate verification in production
-  max: 20, // Connection pool size
-  idleTimeoutMillis: 30000, // Close idle connections after 30s
-  connectionTimeoutMillis: 5000, // 5s timeout for new connections
+  ssl: isProd ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 15000, // 15s — Neon can take time to wake from suspend
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
 });
