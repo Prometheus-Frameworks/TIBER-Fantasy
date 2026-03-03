@@ -2,11 +2,9 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import path from "node:path";
 import fs from "node:fs";
+import http from "node:http";
 import { attachSignatureHeader } from "./middleware/signature";
-import { registerRoutes } from "./routes";
-import v1Router from "./api/v1/routes";
 
-// dumb logger helper so we don't pull extra deps
 const log = (...args: any[]) => console.log(...args);
 
 const app = express();
@@ -21,47 +19,48 @@ app.use((req, res, next) => {
   const start = Date.now();
   const pathStr = req.path;
   let captured: unknown;
-
   const origJson = res.json.bind(res);
   // @ts-expect-error preserve original signature
-  res.json = (body: unknown, ...args: unknown[]) => {
+  res.json = (body: unknown, ...rest: unknown[]) => {
     captured = body;
     // @ts-expect-error forward
-    return origJson(body, ...args);
+    return origJson(body, ...rest);
   };
-
   res.on("finish", () => {
     if (!pathStr.startsWith("/api")) return;
     const ms = Date.now() - start;
     let line = `${req.method} ${pathStr} ${res.statusCode} in ${ms}ms`;
-    try {
-      if (captured) line += ` :: ${JSON.stringify(captured)}`;
-    } catch {/* ignore */}
+    try { if (captured) line += ` :: ${JSON.stringify(captured)}`; } catch {/* */}
     if (line.length > 160) line = line.slice(0, 159) + "…";
     log(line);
   });
-
   next();
 });
 
-// Health check — responds immediately, before routes or DB are ready
-app.get("/health", (_req, res) => res.json({ ok: true }));
+// ─── Health — mounted FIRST, responds before anything else is ready ───────────
+app.get("/health", (_req, res) => res.json({ ok: true, service: "TiberClaw" }));
 app.get("/", (req, res, next) => {
-  // Only intercept if we haven't mounted static files yet (i.e. nothing else handles /)
-  // This ensures the healthcheck passes immediately on startup
-  if (process.env.NODE_ENV !== "development") {
-    const publicDir = path.resolve(process.cwd(), "dist", "public");
-    const indexHtml = path.join(publicDir, "index.html");
-    if (fs.existsSync(indexHtml)) return next(); // let express.static handle it
-    return res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
-  }
-  next();
+  if (process.env.NODE_ENV === "development") return next();
+  const indexHtml = path.join(process.cwd(), "dist", "public", "index.html");
+  if (fs.existsSync(indexHtml)) return res.sendFile(indexHtml);
+  return res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
 });
 
-(async () => {
-  log("🚀 Starting Tiber Fantasy – quick boot");
+// ─── Startup ──────────────────────────────────────────────────────────────────
+const PORT = Number(process.env.PORT ?? 5000);
+const HOST = "0.0.0.0";
 
-  // Log LLM provider availability at startup
+// Create HTTP server and START LISTENING IMMEDIATELY.
+// Health checks will pass from this point forward.
+const server = http.createServer(app);
+server.listen({ port: PORT, host: HOST, reusePort: true } as any, () => {
+  log(`[express] serving on port ${PORT}`);
+});
+
+// Everything after this is background — it does NOT block health checks.
+(async () => {
+  log("🚀 Starting Tiber Fantasy – initialising routes in background");
+
   try {
     const { logProviderStatus } = await import("./llm");
     logProviderStatus();
@@ -69,111 +68,76 @@ app.get("/", (req, res, next) => {
     console.warn("LLM gateway status check skipped:", e);
   }
 
-  // 1) Mount v1 API platform routes first
+  // Mount v1 API
+  const { default: v1Router } = await import("./api/v1/routes");
   app.use("/api/v1", v1Router);
 
-  // 2) Mount existing API routes
-  const maybeServer = await registerRoutes(app);
+  // Mount all other routes (this is the slow part — ~5-10s)
+  const { registerRoutes } = await import("./routes");
+  await registerRoutes(app);
 
-  // 3) Catch-all for unmatched /api/* routes — return JSON 404 instead of SPA HTML
+  // Catch-all for unmatched /api/*
   app.all("/api/*", (_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found", path: _req.originalUrl });
   });
 
-  // 4) Error handler (after routes)
+  // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err?.status ?? err?.statusCode ?? 500;
     res.status(status).json({ message: err?.message ?? "Internal Server Error" });
     console.error("Unhandled error:", err);
   });
 
-  // 5) Dev vs Prod assets
-  const isDev = process.env.NODE_ENV === "development";
-
-  if (isDev) {
-    // DEV-ONLY: dynamically import Vite so esbuild can drop it from the prod bundle
+  // Static assets (prod) / Vite (dev)
+  if (process.env.NODE_ENV === "development") {
     try {
       const { setupVite } = await import("./vite");
-      await setupVite(app, maybeServer);
+      await setupVite(app, server);
       log("⚡ Vite dev middleware mounted");
     } catch (e) {
       console.warn("Vite dev setup failed (continuing):", e);
     }
   } else {
-    // PROD: serve static files from dist/public if present
     const publicDir = path.resolve(process.cwd(), "dist", "public");
-    const indexHtml = path.join(publicDir, "index.html");
     if (fs.existsSync(publicDir)) {
       app.use(express.static(publicDir));
       log(`🗂️  Serving static assets from ${publicDir}`);
-      // SPA fallback: all non-API routes serve index.html
+      const indexHtml = path.join(publicDir, "index.html");
       if (fs.existsSync(indexHtml)) {
         app.use((_req: Request, res: Response) => res.sendFile(indexHtml));
-        log("🗂️  SPA fallback: index.html for unmatched routes");
       }
     } else {
-      log("ℹ️  No dist/public directory found; serving API only");
+      log("ℹ️  No dist/public directory found; API-only mode");
     }
   }
 
-  // 6) Auto-migrate database (non-fatal, runs in background)
-  async function autoMigrate() {
-    try {
-      log("🔄 Running database migrations...");
-      const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-      const { db } = await import("./infra/db");
-      await migrate(db, { migrationsFolder: "migrations" });
-      log("✅ Drizzle migrations applied successfully");
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      // Known issue: pgEnum types like "consensus_format" show "already exists" on subsequent runs.
-      // This is expected behavior when schema hasn't changed - Drizzle doesn't track enum state.
-      // Use `npm run db:push` for schema changes instead of migrations folder.
-      const isEnumExists = errMsg.includes("already exists");
-      if (isEnumExists) {
-        log("ℹ️  Database schema up-to-date (enum already exists)");
-      } else {
-        console.warn("⚠️  Drizzle auto-migrate failed (continuing):", errMsg);
-      }
+  // DB migrations — fire and forget, fully background
+  import("drizzle-orm/node-postgres/migrator").then(async ({ migrate }) => {
+    const { db } = await import("./infra/db");
+    await migrate(db, { migrationsFolder: "migrations" });
+    log("✅ Drizzle migrations applied");
+  }).catch((e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("already exists")) {
+      log("ℹ️  DB schema up-to-date");
+    } else {
+      console.warn("⚠️  Migration failed (non-fatal):", msg);
     }
-  }
+  });
 
-  // 7) Verify database connection (non-fatal)
-  async function checkDatabase() {
-    try {
-      const { pingDb } = await import("./infra/db");
-      const ok = await pingDb();
-      log(ok ? "✅ Database ping successful" : "⚠️  Database ping failed (check connection)");
-      return ok;
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      console.warn("⚠️  Database ping error (continuing to boot):", errMsg);
-      return false;
-    }
-  }
+  // DB ping — fire and forget
+  import("./infra/db").then(async ({ pingDb }) => {
+    const ok = await pingDb();
+    log(ok ? "✅ Database ping successful" : "⚠️  DB ping failed");
+  }).catch(() => {});
 
-  // Run DB checks before starting server
-  await autoMigrate();
-  await checkDatabase();
-
-  // 8) Listen on Render port (or 5000 for local)
-  const PORT = Number(process.env.PORT ?? 5000);
-  const HOST = "0.0.0.0";
-
-  const httpListener: { listen: (...args: any[]) => any } =
-    (maybeServer as any)?.listen ? (maybeServer as any) : (app as any);
-
-  httpListener.listen(
-    { port: PORT, host: HOST, reusePort: true } as any,
-    () => log(`[express] serving on port ${PORT}`)
-  );
-
-  // ---- Sleeper Sync Scheduler (optional background job) ----
-  // Enabled via ENABLE_SLEEPER_SYNC=true env flag
+  // Sleeper scheduler
   try {
     const { startScheduler } = await import("./services/sleeperSyncV2/scheduler");
     startScheduler();
   } catch (e) {
     console.warn("Sleeper scheduler init failed (non-fatal):", e);
   }
-})();
+
+  log("✅ Background initialisation complete");
+})().catch((err) => console.error("Boot error:", err));
