@@ -2,7 +2,6 @@
 import express, { type Request, type Response, type NextFunction } from "express";
 import path from "node:path";
 import fs from "node:fs";
-import http from "node:http";
 import { attachSignatureHeader } from "./middleware/signature";
 
 const log = (...args: any[]) => console.log(...args);
@@ -37,7 +36,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// ─── Health — mounted FIRST, responds before anything else is ready ───────────
+// ─── Health — registered synchronously, responds before anything else loads ──
+// Cloud Run / Replit hit these during startup. They must work immediately.
 app.get("/health", (_req, res) => res.json({ ok: true, service: "TiberClaw" }));
 app.get("/", (req, res, next) => {
   if (process.env.NODE_ENV === "development") return next();
@@ -46,35 +46,34 @@ app.get("/", (req, res, next) => {
   return res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
 });
 
-// ─── Startup ──────────────────────────────────────────────────────────────────
+// ─── Bind the port FIRST — everything else is background ─────────────────────
+// app.listen() returns only after the OS has assigned the port. The callback
+// fires on the event loop once the bind is complete, so any health check
+// arriving after this point will get a 200 from the handlers above.
 const PORT = Number(process.env.PORT ?? 5000);
-const HOST = "0.0.0.0";
 
-// Create HTTP server and START LISTENING IMMEDIATELY.
-// Health checks will pass from this point forward.
-const server = http.createServer(app);
-server.listen({ port: PORT, host: HOST, reusePort: true } as any, () => {
-  log(`[express] serving on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  log(`[express] serving on port ${PORT} ✓`);
+
+  // All expensive init runs here — port is already accepting connections.
+  initBackground().catch((err) => console.error("Boot init error:", err));
 });
 
-// Everything after this is background — it does NOT block health checks.
-(async () => {
-  log("🚀 Starting Tiber Fantasy – initialising routes in background");
+// ─── Background initialisation (runs after port is bound) ────────────────────
+async function initBackground() {
+  log("🚀 Tiber Fantasy – loading routes in background");
 
   try {
     const { logProviderStatus } = await import("./llm");
     logProviderStatus();
-  } catch (e) {
-    console.warn("LLM gateway status check skipped:", e);
-  }
+  } catch { /* non-fatal */ }
 
-  // Mount v1 API
+  // Mount all routes
   const { default: v1Router } = await import("./api/v1/routes");
   app.use("/api/v1", v1Router);
 
-  // Mount all other routes (this is the slow part — ~5-10s)
   const { registerRoutes } = await import("./routes");
-  await registerRoutes(app);
+  const maybeServer = await registerRoutes(app);
 
   // Catch-all for unmatched /api/*
   app.all("/api/*", (_req: Request, res: Response) => {
@@ -88,56 +87,49 @@ server.listen({ port: PORT, host: HOST, reusePort: true } as any, () => {
     console.error("Unhandled error:", err);
   });
 
-  // Static assets (prod) / Vite (dev)
+  // Static assets / Vite
   if (process.env.NODE_ENV === "development") {
     try {
       const { setupVite } = await import("./vite");
-      await setupVite(app, server);
+      await setupVite(app, maybeServer);
       log("⚡ Vite dev middleware mounted");
     } catch (e) {
-      console.warn("Vite dev setup failed (continuing):", e);
+      console.warn("Vite dev setup failed:", e);
     }
   } else {
     const publicDir = path.resolve(process.cwd(), "dist", "public");
     if (fs.existsSync(publicDir)) {
       app.use(express.static(publicDir));
-      log(`🗂️  Serving static assets from ${publicDir}`);
       const indexHtml = path.join(publicDir, "index.html");
       if (fs.existsSync(indexHtml)) {
+        // SPA fallback for deep routes (/ already handled above)
         app.use((_req: Request, res: Response) => res.sendFile(indexHtml));
       }
-    } else {
-      log("ℹ️  No dist/public directory found; API-only mode");
+      log(`🗂️  Serving static assets from ${publicDir}`);
     }
   }
 
-  // DB migrations — fire and forget, fully background
+  // DB migrations — fully fire-and-forget
   import("drizzle-orm/node-postgres/migrator").then(async ({ migrate }) => {
     const { db } = await import("./infra/db");
     await migrate(db, { migrationsFolder: "migrations" });
-    log("✅ Drizzle migrations applied");
+    log("✅ DB migrations applied");
   }).catch((e: unknown) => {
     const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("already exists")) {
-      log("ℹ️  DB schema up-to-date");
-    } else {
-      console.warn("⚠️  Migration failed (non-fatal):", msg);
-    }
+    log(msg.includes("already exists") ? "ℹ️  DB schema up-to-date" : `⚠️  Migration: ${msg}`);
   });
 
-  // DB ping — fire and forget
+  // DB ping — fire-and-forget
   import("./infra/db").then(async ({ pingDb }) => {
     const ok = await pingDb();
-    log(ok ? "✅ Database ping successful" : "⚠️  DB ping failed");
+    log(ok ? "✅ DB ping ok" : "⚠️  DB ping failed");
   }).catch(() => {});
 
   // Sleeper scheduler
   try {
     const { startScheduler } = await import("./services/sleeperSyncV2/scheduler");
     startScheduler();
-  } catch (e) {
-    console.warn("Sleeper scheduler init failed (non-fatal):", e);
-  }
+  } catch { /* non-fatal */ }
 
-  log("✅ Background initialisation complete");
-})().catch((err) => console.error("Boot error:", err));
+  log("✅ Background init complete");
+}
