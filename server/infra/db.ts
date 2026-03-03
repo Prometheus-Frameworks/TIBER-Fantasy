@@ -23,6 +23,16 @@ const pool = new Pool({
   keepAliveInitialDelayMillis: 10000,
 });
 
+// Set statement_timeout on every new connection so no query can hang indefinitely.
+// Critical for cold Neon DB wakeup: if the DB accepts the TCP connection but never
+// responds to a query, this ensures the query errors out after 15s rather than
+// blocking the entire startup sequence.
+pool.on('connect', (client) => {
+  client.query('SET statement_timeout = 15000; SET lock_timeout = 10000;').catch((err) => {
+    console.warn('⚠️ [db] Could not set statement_timeout:', err.message);
+  });
+});
+
 // Handle pool errors gracefully without crashing
 pool.on('error', (err) => {
   console.error('❌ Unexpected pool error (non-fatal):', err.message);

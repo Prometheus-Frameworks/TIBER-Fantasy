@@ -44,18 +44,29 @@ app.get("/", (req, res, next) => {
 
 // ── initBackground — exported so bootstrap.mjs can call it after hand-off ────
 export async function initBackground(): Promise<void> {
-  log("🚀 Tiber Fantasy – loading routes in background");
+  const t = () => `[+${((Date.now() - _initStart) / 1000).toFixed(1)}s]`;
+  const _initStart = Date.now();
+  log(`🚀 Tiber Fantasy – loading routes in background`);
 
   try {
+    log(`${t()} step 1: loading LLM provider`);
     const { logProviderStatus } = await import("./llm");
     logProviderStatus();
+    log(`${t()} step 1: done`);
   } catch { /* non-fatal */ }
 
+  log(`${t()} step 2: loading v1 router`);
   const { default: v1Router } = await import("./api/v1/routes");
   app.use("/api/v1", v1Router);
+  log(`${t()} step 2: done`);
 
+  log(`${t()} step 3: importing routes module`);
   const { registerRoutes } = await import("./routes");
+  log(`${t()} step 3: done`);
+
+  log(`${t()} step 4: calling registerRoutes`);
   await registerRoutes(app);
+  log(`${t()} step 4: done`);
 
   // API 404 catch-all (after all real routes are mounted)
   app.all("/api/*", (_req: Request, res: Response) => {
