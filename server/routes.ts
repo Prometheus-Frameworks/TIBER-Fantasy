@@ -10399,7 +10399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('📊 Waiver Wisdom routes mounted at /api/waivers/*');
 
   // ─── Internal Rookie Board (FORGE-R) ───────────────────────────────────────
-  const ROOKIE_VALID_SORT = new Set(['tiber_ras_v1', 'tiber_ras_v2', 'player_name', 'proj_round', 'production_score', 'dominator_rating']);
+  const ROOKIE_VALID_SORT = new Set(['tiber_ras_v1', 'tiber_ras_v2', 'player_name', 'proj_round', 'production_score', 'dominator_rating', 'rookie_alpha', 'athleticism_score']);
   const ROOKIE_VALID_POS = new Set(['QB', 'RB', 'WR', 'TE']);
 
   app.get('/api/rookies/2026', async (req: Request, res: Response) => {
@@ -10414,13 +10414,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         SELECT
           ROW_NUMBER() OVER (ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST) AS rank,
           player_name, position, school, proj_round,
-          forty_yard_dash, vertical_jump, broad_jump,
+          height_inches, weight_lbs,
+          forty_yard_dash, ten_yard_split, vertical_jump, broad_jump, short_shuttle, three_cone,
           ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
           ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
           ROUND(production_score::numeric, 1) AS production_score,
           ROUND(dominator_rating::numeric, 1) AS dominator_rating,
           ROUND(college_target_share::numeric, 1) AS college_target_share,
-          ROUND(college_ypc::numeric, 2) AS college_ypc
+          ROUND(college_ypc::numeric, 2) AS college_ypc,
+          ROUND(rookie_alpha::numeric, 0) AS rookie_alpha,
+          rookie_tier,
+          ROUND(athleticism_score::numeric, 0) AS athleticism_score,
+          ROUND(draft_capital_score::numeric, 0) AS draft_capital_score
         FROM rookie_profiles
         WHERE 1=1 ${sql.raw(posClause)}
         ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST

@@ -193,7 +193,7 @@ router.get("/diagnostic", (req, res) => {
 // ─── Rookie Endpoints (FORGE-R) ────────────────────────────────────────────
 
 const VALID_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
-const VALID_SORT_FIELDS = new Set(["tiber_ras_v1", "tiber_ras_v2", "player_name", "proj_round"]);
+const VALID_SORT_FIELDS = new Set(["tiber_ras_v1", "tiber_ras_v2", "player_name", "proj_round", "rookie_alpha", "production_score", "dominator_rating"]);
 
 router.get("/rookies/2026/leaderboard", async (req, res, next) => {
   try {
@@ -209,7 +209,15 @@ router.get("/rookies/2026/leaderboard", async (req, res, next) => {
         player_name, position, school, proj_round,
         forty_yard_dash, vertical_jump, broad_jump,
         ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
-        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+        ROUND(rookie_alpha::numeric, 0) AS rookie_alpha,
+        rookie_tier,
+        ROUND(production_score::numeric, 1) AS production_score,
+        ROUND(dominator_rating::numeric, 1) AS dominator_rating,
+        ROUND(college_target_share::numeric, 1) AS college_target_share,
+        ROUND(college_ypc::numeric, 2) AS college_ypc,
+        ROUND(athleticism_score::numeric, 0) AS athleticism_score,
+        ROUND(draft_capital_score::numeric, 0) AS draft_capital_score
       FROM rookie_profiles
       WHERE 1=1 ${posFilter}
       ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST
@@ -237,7 +245,15 @@ router.get("/rookies/2026/position/:pos", async (req, res, next) => {
         player_name, position, school, proj_round,
         forty_yard_dash, vertical_jump, broad_jump,
         ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
-        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+        ROUND(rookie_alpha::numeric, 0) AS rookie_alpha,
+        rookie_tier,
+        ROUND(production_score::numeric, 1) AS production_score,
+        ROUND(dominator_rating::numeric, 1) AS dominator_rating,
+        ROUND(college_target_share::numeric, 1) AS college_target_share,
+        ROUND(college_ypc::numeric, 2) AS college_ypc,
+        ROUND(athleticism_score::numeric, 0) AS athleticism_score,
+        ROUND(draft_capital_score::numeric, 0) AS draft_capital_score
       FROM rookie_profiles
       WHERE position = ${pos}
       ORDER BY tiber_ras_v2 DESC NULLS LAST
@@ -265,7 +281,15 @@ router.get("/rookies/2026", async (req, res, next) => {
         player_name, position, school, proj_round,
         forty_yard_dash, vertical_jump, broad_jump,
         ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
-        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+        ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+        ROUND(rookie_alpha::numeric, 0) AS rookie_alpha,
+        rookie_tier,
+        ROUND(production_score::numeric, 1) AS production_score,
+        ROUND(dominator_rating::numeric, 1) AS dominator_rating,
+        ROUND(college_target_share::numeric, 1) AS college_target_share,
+        ROUND(college_ypc::numeric, 2) AS college_ypc,
+        ROUND(athleticism_score::numeric, 0) AS athleticism_score,
+        ROUND(draft_capital_score::numeric, 0) AS draft_capital_score
       FROM rookie_profiles
       WHERE 1=1 ${posFilter}
       ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST
@@ -291,6 +315,14 @@ router.get("/rookies/2026/:playerName", async (req, res, next) => {
         height_inches, weight_lbs,
         ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
         ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+        ROUND(rookie_alpha::numeric, 0) AS rookie_alpha,
+        rookie_tier,
+        ROUND(athleticism_score::numeric, 0) AS athleticism_score,
+        ROUND(production_score::numeric, 1) AS production_score,
+        ROUND(dominator_rating::numeric, 1) AS dominator_rating,
+        ROUND(college_target_share::numeric, 1) AS college_target_share,
+        ROUND(college_ypc::numeric, 2) AS college_ypc,
+        ROUND(draft_capital_score::numeric, 0) AS draft_capital_score,
         combine_raw, grade_raw
       FROM rookie_profiles
       WHERE LOWER(player_name) = LOWER(${name})
