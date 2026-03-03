@@ -7,7 +7,7 @@ channel = "stable-24_05"
 packages = ["arrow-cpp", "glibcLocales", "imagemagick", "jq", "libxcrypt", "pkg-config", "xsimd"]
 
 [deployment]
-deploymentTarget = "autoscale"
+deploymentTarget = "vm"
 build = ["npm", "run", "build"]
 run = ["node", "dist/index.mjs"]
 
