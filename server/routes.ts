@@ -10399,7 +10399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   console.log('📊 Waiver Wisdom routes mounted at /api/waivers/*');
 
   // ─── Internal Rookie Board (FORGE-R) ───────────────────────────────────────
-  const ROOKIE_VALID_SORT = new Set(['tiber_ras_v1', 'tiber_ras_v2', 'player_name', 'proj_round']);
+  const ROOKIE_VALID_SORT = new Set(['tiber_ras_v1', 'tiber_ras_v2', 'player_name', 'proj_round', 'production_score', 'dominator_rating']);
   const ROOKIE_VALID_POS = new Set(['QB', 'RB', 'WR', 'TE']);
 
   app.get('/api/rookies/2026', async (req: Request, res: Response) => {
@@ -10416,7 +10416,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           player_name, position, school, proj_round,
           forty_yard_dash, vertical_jump, broad_jump,
           ROUND(tiber_ras_v1::numeric, 2) AS tiber_ras_v1,
-          ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2
+          ROUND(tiber_ras_v2::numeric, 2) AS tiber_ras_v2,
+          ROUND(production_score::numeric, 1) AS production_score,
+          ROUND(dominator_rating::numeric, 1) AS dominator_rating,
+          ROUND(college_target_share::numeric, 1) AS college_target_share,
+          ROUND(college_ypc::numeric, 2) AS college_ypc
         FROM rookie_profiles
         WHERE 1=1 ${sql.raw(posClause)}
         ORDER BY ${sql.raw(sortBy)} DESC NULLS LAST

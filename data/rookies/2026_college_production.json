@@ -1,0 +1,1551 @@
+{
+  "season": 2026,
+  "generated_at": "2026-03-03",
+  "sources": [
+    "cfbfastR 2024 play-by-play (public GitHub)",
+    "ESPN team stats API"
+  ],
+  "coverage": {
+    "total": 90,
+    "cfbfastr_matched": 87,
+    "combine_json_only": 1,
+    "no_data": 2
+  },
+  "players": [
+    {
+      "player_name": "Brenen Thompson",
+      "position": "WR",
+      "school": "Mississippi State",
+      "cfb_stats": {
+        "receptions": 19,
+        "rec_yards": 230.0,
+        "targets": 9,
+        "tds": 2,
+        "ypr": 12.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 8.04,
+      "college_target_share": 8.01,
+      "college_ypc": null,
+      "production_score": 22.4
+    },
+    {
+      "player_name": "Zavion Thomas",
+      "position": "WR",
+      "school": null,
+      "cfb_stats": {
+        "receptions": 19,
+        "rec_yards": 184.0,
+        "targets": 15,
+        "tds": null,
+        "ypr": 9.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 15.4
+    },
+    {
+      "player_name": "Deion Burks",
+      "position": "WR",
+      "school": "Oklahoma",
+      "cfb_stats": {
+        "receptions": 30,
+        "rec_yards": 242.0,
+        "targets": 5,
+        "tds": 3,
+        "ypr": 8.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 10.67,
+      "college_target_share": 10.59,
+      "college_ypc": null,
+      "production_score": 34.3
+    },
+    {
+      "player_name": "Jeff Caldwell",
+      "position": "WR",
+      "school": "Cincinnati",
+      "cfb_stats": {
+        "receptions": 46,
+        "rec_yards": 936.0,
+        "targets": 7,
+        "tds": 11,
+        "ypr": 20.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 33.25,
+      "college_target_share": 32.98,
+      "college_ypc": null,
+      "production_score": 92.1
+    },
+    {
+      "player_name": "Bryce Lance",
+      "position": "WR",
+      "school": "North Dakota State",
+      "cfb_stats": {
+        "receptions": 52,
+        "rec_yards": 723.0,
+        "targets": 3,
+        "tds": 2,
+        "ypr": 13.9
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 57.1
+    },
+    {
+      "player_name": "Zachariah Branch",
+      "position": "WR",
+      "school": "Georgia",
+      "cfb_stats": {
+        "receptions": 46,
+        "rec_yards": 510.0,
+        "targets": 4,
+        "tds": null,
+        "ypr": 11.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 12.82,
+      "college_target_share": 12.96,
+      "college_ypc": null,
+      "production_score": 38.5
+    },
+    {
+      "player_name": "Eric Rivers",
+      "position": "WR",
+      "school": "Georgia Tech",
+      "cfb_stats": {
+        "receptions": 62,
+        "rec_yards": 1167.0,
+        "targets": null,
+        "tds": 11,
+        "ypr": 18.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 38.01,
+      "college_target_share": 37.79,
+      "college_ypc": null,
+      "production_score": 95.8
+    },
+    {
+      "player_name": "De'Zhaun Stribling",
+      "position": "WR",
+      "school": "Ole Miss",
+      "cfb_stats": {
+        "receptions": 47,
+        "rec_yards": 661.0,
+        "targets": 18,
+        "tds": 1,
+        "ypr": 14.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 14.38,
+      "college_target_share": 14.49,
+      "college_ypc": null,
+      "production_score": 40.5
+    },
+    {
+      "player_name": "Malik Benson",
+      "position": "WR",
+      "school": "Oregon",
+      "cfb_stats": {
+        "receptions": 25,
+        "rec_yards": 311.0,
+        "targets": 8,
+        "tds": null,
+        "ypr": 12.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 7.86,
+      "college_target_share": 7.95,
+      "college_ypc": null,
+      "production_score": 20.3
+    },
+    {
+      "player_name": "Chris Brazzell II",
+      "position": "WR",
+      "school": "Tennessee",
+      "cfb_stats": {
+        "receptions": 27,
+        "rec_yards": 266.0,
+        "targets": 14,
+        "tds": null,
+        "ypr": 9.9
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 9.15,
+      "college_target_share": 9.25,
+      "college_ypc": null,
+      "production_score": 24.7
+    },
+    {
+      "player_name": "Caleb Douglas",
+      "position": "WR",
+      "school": "Texas Tech",
+      "cfb_stats": {
+        "receptions": 52,
+        "rec_yards": 751.0,
+        "targets": 8,
+        "tds": null,
+        "ypr": 14.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 19.24,
+      "college_target_share": 19.47,
+      "college_ypc": null,
+      "production_score": 69.9
+    },
+    {
+      "player_name": "Skyler Bell",
+      "position": "WR",
+      "school": "UConn",
+      "cfb_stats": {
+        "receptions": 47,
+        "rec_yards": 791.0,
+        "targets": 5,
+        "tds": null,
+        "ypr": 16.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 30.23,
+      "college_target_share": 30.67,
+      "college_ypc": null,
+      "production_score": 87.1
+    },
+    {
+      "player_name": "Barion Brown",
+      "position": "WR",
+      "school": "LSU",
+      "cfb_stats": {
+        "receptions": 29,
+        "rec_yards": 361.0,
+        "targets": 3,
+        "tds": 1,
+        "ypr": 12.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 8.75,
+      "college_target_share": 8.81,
+      "college_ypc": null,
+      "production_score": 19.9
+    },
+    {
+      "player_name": "J. Michael Sturdivant",
+      "position": "WR",
+      "school": "Florida",
+      "cfb_stats": {
+        "receptions": null,
+        "rec_yards": null,
+        "targets": null,
+        "tds": null,
+        "ypr": null
+      },
+      "cfb_source": "none",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": null
+    },
+    {
+      "player_name": "Chris Hilton Jr.",
+      "position": "WR",
+      "school": "LSU",
+      "cfb_stats": {
+        "receptions": 5,
+        "rec_yards": 130.0,
+        "targets": 4,
+        "tds": 2,
+        "ypr": 26.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 3.21,
+      "college_target_share": 3.17,
+      "college_ypc": null,
+      "production_score": 10.8
+    },
+    {
+      "player_name": "Antonio Williams",
+      "position": "WR",
+      "school": "Clemson",
+      "cfb_stats": {
+        "receptions": 66,
+        "rec_yards": 759.0,
+        "targets": 12,
+        "tds": 1,
+        "ypr": 11.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 19.23,
+      "college_target_share": 19.47,
+      "college_ypc": null,
+      "production_score": 55.3
+    },
+    {
+      "player_name": "Omar Cooper Jr.",
+      "position": "WR",
+      "school": "Indiana",
+      "cfb_stats": {
+        "receptions": 26,
+        "rec_yards": 529.0,
+        "targets": null,
+        "tds": 3,
+        "ypr": 20.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 15.48,
+      "college_target_share": 15.57,
+      "college_ypc": null,
+      "production_score": 47.6
+    },
+    {
+      "player_name": "Ted Hurst",
+      "position": "WR",
+      "school": "Georgia State",
+      "cfb_stats": {
+        "receptions": 54,
+        "rec_yards": 920.0,
+        "targets": 2,
+        "tds": null,
+        "ypr": 17.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 29.67,
+      "college_target_share": 29.98,
+      "college_ypc": null,
+      "production_score": 86.3
+    },
+    {
+      "player_name": "Emmanuel Henderson Jr.",
+      "position": "WR",
+      "school": "Kansas",
+      "cfb_stats": {
+        "receptions": 4,
+        "rec_yards": 82.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 20.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 4.31,
+      "college_target_share": 4.37,
+      "college_ypc": null,
+      "production_score": 8.1
+    },
+    {
+      "player_name": "Kendrick Law",
+      "position": "WR",
+      "school": "Kentucky",
+      "cfb_stats": {
+        "receptions": 9,
+        "rec_yards": 83.0,
+        "targets": 4,
+        "tds": null,
+        "ypr": 9.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 3.7,
+      "college_target_share": 3.74,
+      "college_ypc": null,
+      "production_score": 5.5
+    },
+    {
+      "player_name": "Ja'Kobi Lane",
+      "position": "WR",
+      "school": "USC",
+      "cfb_stats": {
+        "receptions": 35,
+        "rec_yards": 366.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 10.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 9.53,
+      "college_target_share": 9.64,
+      "college_ypc": null,
+      "production_score": 31.2
+    },
+    {
+      "player_name": "Kaden Wetjen",
+      "position": "WR",
+      "school": "Iowa",
+      "cfb_stats": {
+        "receptions": 1,
+        "rec_yards": 33.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 33.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 1.91,
+      "college_target_share": 1.93,
+      "college_ypc": null,
+      "production_score": 0.0
+    },
+    {
+      "player_name": "Germie Bernard",
+      "position": "WR",
+      "school": "Alabama",
+      "cfb_stats": {
+        "receptions": 44,
+        "rec_yards": 628.0,
+        "targets": 16,
+        "tds": 1,
+        "ypr": 14.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 20.32,
+      "college_target_share": 20.44,
+      "college_ypc": null,
+      "production_score": 51.0
+    },
+    {
+      "player_name": "Kevin Coleman Jr.",
+      "position": "WR",
+      "school": "Missouri",
+      "cfb_stats": {
+        "receptions": 68,
+        "rec_yards": 784.0,
+        "targets": 9,
+        "tds": 2,
+        "ypr": 11.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 26.71,
+      "college_target_share": 26.79,
+      "college_ypc": null,
+      "production_score": 73.1
+    },
+    {
+      "player_name": "Colbie Young",
+      "position": "WR",
+      "school": "Georgia",
+      "cfb_stats": {
+        "receptions": 11,
+        "rec_yards": 149.0,
+        "targets": 3,
+        "tds": null,
+        "ypr": 13.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 3.75,
+      "college_target_share": 3.79,
+      "college_ypc": null,
+      "production_score": 9.2
+    },
+    {
+      "player_name": "Dillon Bell",
+      "position": "WR",
+      "school": "Georgia",
+      "cfb_stats": {
+        "receptions": 36,
+        "rec_yards": 366.0,
+        "targets": 18,
+        "tds": 1,
+        "ypr": 10.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 9.24,
+      "college_target_share": 9.3,
+      "college_ypc": null,
+      "production_score": 23.5
+    },
+    {
+      "player_name": "Carnell Tate",
+      "position": "WR",
+      "school": "Ohio State",
+      "cfb_stats": {
+        "receptions": 38,
+        "rec_yards": 525.0,
+        "targets": 5,
+        "tds": null,
+        "ypr": 13.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 12.31,
+      "college_target_share": 12.48,
+      "college_ypc": null,
+      "production_score": 37.6
+    },
+    {
+      "player_name": "Vinny Anthony II",
+      "position": "WR",
+      "school": "Wisconsin",
+      "cfb_stats": {
+        "receptions": 38,
+        "rec_yards": 614.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 16.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 25.79,
+      "college_target_share": 26.02,
+      "college_ypc": null,
+      "production_score": 66.3
+    },
+    {
+      "player_name": "Harrison Wallace III",
+      "position": "WR",
+      "school": "Ole Miss",
+      "cfb_stats": {
+        "receptions": 40,
+        "rec_yards": 650.0,
+        "targets": 4,
+        "tds": 4,
+        "ypr": 16.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 14.24,
+      "college_target_share": 14.25,
+      "college_ypc": null,
+      "production_score": 50.6
+    },
+    {
+      "player_name": "Caullin Lacy",
+      "position": "WR",
+      "school": "Louisville",
+      "cfb_stats": {
+        "receptions": 15,
+        "rec_yards": 179.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 11.9
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 5.16,
+      "college_target_share": 5.21,
+      "college_ypc": null,
+      "production_score": 13.7
+    },
+    {
+      "player_name": "Reggie Virgil",
+      "position": "WR",
+      "school": "Texas Tech",
+      "cfb_stats": {
+        "receptions": 57,
+        "rec_yards": 705,
+        "targets": null,
+        "tds": 6,
+        "ypr": 12.4
+      },
+      "cfb_source": "combine_json",
+      "dominator_rating": 18.29,
+      "college_target_share": 18.28,
+      "college_ypc": null,
+      "production_score": 65.3
+    },
+    {
+      "player_name": "Jalen Walthall",
+      "position": "WR",
+      "school": "Incarnate Word",
+      "cfb_stats": {
+        "receptions": 70,
+        "rec_yards": 977.0,
+        "targets": 16,
+        "tds": 1,
+        "ypr": 14.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 55.4
+    },
+    {
+      "player_name": "Malachi Fields",
+      "position": "WR",
+      "school": "Notre Dame",
+      "cfb_stats": {
+        "receptions": 49,
+        "rec_yards": 631.0,
+        "targets": 5,
+        "tds": 5,
+        "ypr": 12.9
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 19.92,
+      "college_target_share": 19.91,
+      "college_ypc": null,
+      "production_score": 65.3
+    },
+    {
+      "player_name": "Chase Roberts",
+      "position": "WR",
+      "school": null,
+      "cfb_stats": {
+        "receptions": 49,
+        "rec_yards": 684.0,
+        "targets": 8,
+        "tds": 4,
+        "ypr": 14.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 66.0
+    },
+    {
+      "player_name": "Aaron Anderson",
+      "position": "WR",
+      "school": "LSU",
+      "cfb_stats": {
+        "receptions": 51,
+        "rec_yards": 680.0,
+        "targets": 13,
+        "tds": null,
+        "ypr": 13.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 16.42,
+      "college_target_share": 16.6,
+      "college_ypc": null,
+      "production_score": 56.2
+    },
+    {
+      "player_name": "Chris Bell",
+      "position": "WR",
+      "school": "Louisville",
+      "cfb_stats": {
+        "receptions": 37,
+        "rec_yards": 677.0,
+        "targets": 3,
+        "tds": null,
+        "ypr": 18.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 19.5,
+      "college_target_share": 19.72,
+      "college_ypc": null,
+      "production_score": 65.9
+    },
+    {
+      "player_name": "Denzel Boston",
+      "position": "WR",
+      "school": "Washington",
+      "cfb_stats": {
+        "receptions": 58,
+        "rec_yards": 731.0,
+        "targets": 2,
+        "tds": 1,
+        "ypr": 12.6
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 21.32,
+      "college_target_share": 21.49,
+      "college_ypc": null,
+      "production_score": 60.9
+    },
+    {
+      "player_name": "Josh Cameron",
+      "position": "WR",
+      "school": "Baylor",
+      "cfb_stats": {
+        "receptions": 44,
+        "rec_yards": 643.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 14.6
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 18.67,
+      "college_target_share": 18.93,
+      "college_ypc": null,
+      "production_score": 56.7
+    },
+    {
+      "player_name": "Makai Lemon",
+      "position": "WR",
+      "school": "USC",
+      "cfb_stats": {
+        "receptions": 44,
+        "rec_yards": 651.0,
+        "targets": 2,
+        "tds": null,
+        "ypr": 14.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 16.96,
+      "college_target_share": 17.15,
+      "college_ypc": null,
+      "production_score": 55.1
+    },
+    {
+      "player_name": "Jordyn Tyson",
+      "position": "WR",
+      "school": "Arizona State",
+      "cfb_stats": {
+        "receptions": 73,
+        "rec_yards": 1033.0,
+        "targets": 8,
+        "tds": 10,
+        "ypr": 14.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 32.23,
+      "college_target_share": 32.15,
+      "college_ypc": null,
+      "production_score": 91.2
+    },
+    {
+      "player_name": "Mike Washington Jr.",
+      "position": "RB",
+      "school": "Arkansas",
+      "cfb_stats": {
+        "carries": null,
+        "rush_yards": null,
+        "tds": null,
+        "receptions": 2,
+        "rec_yards": 25.0,
+        "rush_avg": null
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": null
+    },
+    {
+      "player_name": "Jeremiyah Love",
+      "position": "RB",
+      "school": "Notre Dame",
+      "cfb_stats": {
+        "carries": 134,
+        "rush_yards": 984.0,
+        "tds": 15,
+        "receptions": 22,
+        "rec_yards": 170.0,
+        "rush_avg": 7.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 30.66,
+      "college_target_share": null,
+      "college_ypc": 7.3,
+      "production_score": 70.7
+    },
+    {
+      "player_name": "Demond Claiborne",
+      "position": "RB",
+      "school": "Wake Forest",
+      "cfb_stats": {
+        "carries": 226,
+        "rush_yards": 1069.0,
+        "tds": 11,
+        "receptions": 23,
+        "rec_yards": 254.0,
+        "rush_avg": 4.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 68.1,
+      "college_target_share": null,
+      "college_ypc": 4.7,
+      "production_score": 75.0
+    },
+    {
+      "player_name": "Jam Miller",
+      "position": "RB",
+      "school": "Alabama",
+      "cfb_stats": {
+        "carries": null,
+        "rush_yards": null,
+        "tds": null,
+        "receptions": null,
+        "rec_yards": null,
+        "rush_avg": null
+      },
+      "cfb_source": "none",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": null
+    },
+    {
+      "player_name": "Eli Heidenreich",
+      "position": "RB",
+      "school": "Navy",
+      "cfb_stats": {
+        "carries": 55,
+        "rush_yards": 406.0,
+        "tds": 4,
+        "receptions": 35,
+        "rec_yards": 523.0,
+        "rush_avg": 7.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 12.58,
+      "college_target_share": null,
+      "college_ypc": 7.4,
+      "production_score": 19.3
+    },
+    {
+      "player_name": "Seth McGowan",
+      "position": "RB",
+      "school": "Kentucky",
+      "cfb_stats": {
+        "carries": 148,
+        "rush_yards": 782.0,
+        "tds": 6,
+        "receptions": 23,
+        "rec_yards": 277.0,
+        "rush_avg": 5.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 44.85,
+      "college_target_share": null,
+      "college_ypc": 5.3,
+      "production_score": 52.1
+    },
+    {
+      "player_name": "Jadarian Price",
+      "position": "RB",
+      "school": "Notre Dame",
+      "cfb_stats": {
+        "carries": 86,
+        "rush_yards": 618.0,
+        "tds": 7,
+        "receptions": 3,
+        "rec_yards": 2.0,
+        "rush_avg": 7.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 19.15,
+      "college_target_share": null,
+      "college_ypc": 7.2,
+      "production_score": 27.8
+    },
+    {
+      "player_name": "Adam Randall",
+      "position": "RB",
+      "school": null,
+      "cfb_stats": {
+        "carries": null,
+        "rush_yards": null,
+        "tds": null,
+        "receptions": 10,
+        "rec_yards": 119.0,
+        "rush_avg": null
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": null
+    },
+    {
+      "player_name": "Robert Henry Jr.",
+      "position": "RB",
+      "school": "UTSA",
+      "cfb_stats": {
+        "carries": 129,
+        "rush_yards": 734.0,
+        "tds": 7,
+        "receptions": 19,
+        "rec_yards": 208.0,
+        "rush_avg": 5.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 33.41,
+      "college_target_share": null,
+      "college_ypc": 5.7,
+      "production_score": 49.3
+    },
+    {
+      "player_name": "Emmett Johnson",
+      "position": "RB",
+      "school": "Nebraska",
+      "cfb_stats": {
+        "carries": 99,
+        "rush_yards": 518.0,
+        "tds": 2,
+        "receptions": 31,
+        "rec_yards": 203.0,
+        "rush_avg": 5.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 30.1,
+      "college_target_share": null,
+      "college_ypc": 5.2,
+      "production_score": 27.9
+    },
+    {
+      "player_name": "Kaytron Allen",
+      "position": "RB",
+      "school": "Penn State",
+      "cfb_stats": {
+        "carries": 171,
+        "rush_yards": 800.0,
+        "tds": 8,
+        "receptions": 15,
+        "rec_yards": 119.0,
+        "rush_avg": 4.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 24.68,
+      "college_target_share": null,
+      "college_ypc": 4.7,
+      "production_score": 29.3
+    },
+    {
+      "player_name": "Jonah Coleman",
+      "position": "RB",
+      "school": "Washington",
+      "cfb_stats": {
+        "carries": 180,
+        "rush_yards": 1021.0,
+        "tds": 10,
+        "receptions": 21,
+        "rec_yards": 151.0,
+        "rush_avg": 5.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 61.12,
+      "college_target_share": null,
+      "college_ypc": 5.7,
+      "production_score": 72.9
+    },
+    {
+      "player_name": "CJ Donaldson",
+      "position": "RB",
+      "school": "Ohio State",
+      "cfb_stats": {
+        "carries": 140,
+        "rush_yards": 661.0,
+        "tds": 9,
+        "receptions": 11,
+        "rec_yards": 87.0,
+        "rush_avg": 4.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 24.86,
+      "college_target_share": null,
+      "college_ypc": 4.7,
+      "production_score": 25.7
+    },
+    {
+      "player_name": "Rahsul Faison",
+      "position": "RB",
+      "school": "South Carolina",
+      "cfb_stats": {
+        "carries": 185,
+        "rush_yards": 1096.0,
+        "tds": 7,
+        "receptions": 20,
+        "rec_yards": 92.0,
+        "rush_avg": 5.9
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 45.42,
+      "college_target_share": null,
+      "college_ypc": 5.9,
+      "production_score": 73.6
+    },
+    {
+      "player_name": "Roman Hemby",
+      "position": "RB",
+      "school": "Indiana",
+      "cfb_stats": {
+        "carries": 133,
+        "rush_yards": 604.0,
+        "tds": 6,
+        "receptions": 40,
+        "rec_yards": 274.0,
+        "rush_avg": 4.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 27.84,
+      "college_target_share": null,
+      "college_ypc": 4.5,
+      "production_score": 20.0
+    },
+    {
+      "player_name": "Le'Veon Moss",
+      "position": "RB",
+      "school": "Texas A&M",
+      "cfb_stats": {
+        "carries": 121,
+        "rush_yards": 742.0,
+        "tds": 10,
+        "receptions": 9,
+        "rec_yards": 130.0,
+        "rush_avg": 6.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 29.28,
+      "college_target_share": null,
+      "college_ypc": 6.1,
+      "production_score": 49.3
+    },
+    {
+      "player_name": "Nicholas Singleton",
+      "position": "RB",
+      "school": "Penn State",
+      "cfb_stats": {
+        "carries": 131,
+        "rush_yards": 837.0,
+        "tds": 11,
+        "receptions": 36,
+        "rec_yards": 329.0,
+        "rush_avg": 6.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 25.95,
+      "college_target_share": null,
+      "college_ypc": 6.4,
+      "production_score": 52.9
+    },
+    {
+      "player_name": "Kenyon Sadiq",
+      "position": "TE",
+      "school": "Oregon",
+      "cfb_stats": {
+        "receptions": 21,
+        "rec_yards": 243.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 11.6
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 6.14,
+      "college_target_share": 6.21,
+      "college_ypc": null,
+      "production_score": 36.9
+    },
+    {
+      "player_name": "Eli Stowers",
+      "position": "TE",
+      "school": "Vanderbilt",
+      "cfb_stats": {
+        "receptions": 43,
+        "rec_yards": 558.0,
+        "targets": 2,
+        "tds": 5,
+        "ypr": 13.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 24.03,
+      "college_target_share": 24.03,
+      "college_ypc": null,
+      "production_score": 87.6
+    },
+    {
+      "player_name": "RJ Maryland",
+      "position": "TE",
+      "school": "SMU",
+      "cfb_stats": {
+        "receptions": 23,
+        "rec_yards": 331.0,
+        "targets": null,
+        "tds": 3,
+        "ypr": 14.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 9.05,
+      "college_target_share": 9.03,
+      "college_ypc": null,
+      "production_score": 54.4
+    },
+    {
+      "player_name": "Jaren Kanak",
+      "position": "TE",
+      "school": "Oklahoma",
+      "cfb_stats": {
+        "receptions": null,
+        "rec_yards": null,
+        "targets": null,
+        "tds": 1,
+        "ypr": null
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 0.0
+    },
+    {
+      "player_name": "Matthew Hibner",
+      "position": "TE",
+      "school": "SMU",
+      "cfb_stats": {
+        "receptions": 20,
+        "rec_yards": 312.0,
+        "targets": 2,
+        "tds": 4,
+        "ypr": 15.6
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 8.58,
+      "college_target_share": 8.51,
+      "college_ypc": null,
+      "production_score": 53.3
+    },
+    {
+      "player_name": "John Michael Gyllenborg",
+      "position": "TE",
+      "school": "Wyoming",
+      "cfb_stats": {
+        "receptions": 29,
+        "rec_yards": 425.0,
+        "targets": null,
+        "tds": 3,
+        "ypr": 14.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 13.5,
+      "college_target_share": 13.48,
+      "college_ypc": null,
+      "production_score": 71.4
+    },
+    {
+      "player_name": "Marlin Klein",
+      "position": "TE",
+      "school": "Michigan",
+      "cfb_stats": {
+        "receptions": 12,
+        "rec_yards": 101.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 8.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 5.96,
+      "college_target_share": 6.02,
+      "college_ypc": null,
+      "production_score": 28.1
+    },
+    {
+      "player_name": "Dallen Bentley",
+      "position": "TE",
+      "school": "Utah",
+      "cfb_stats": {
+        "receptions": 2,
+        "rec_yards": 15.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 7.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 0.62,
+      "college_target_share": 0.63,
+      "college_ypc": null,
+      "production_score": 0.0
+    },
+    {
+      "player_name": "Eli Raridon",
+      "position": "TE",
+      "school": "Notre Dame",
+      "cfb_stats": {
+        "receptions": 7,
+        "rec_yards": 54.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 7.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 1.68,
+      "college_target_share": 1.7,
+      "college_ypc": null,
+      "production_score": 10.0
+    },
+    {
+      "player_name": "Jack Endries",
+      "position": "TE",
+      "school": "Texas",
+      "cfb_stats": {
+        "receptions": 46,
+        "rec_yards": 541.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 11.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 11.97,
+      "college_target_share": 12.13,
+      "college_ypc": null,
+      "production_score": 75.6
+    },
+    {
+      "player_name": "Bauer Sharp",
+      "position": "TE",
+      "school": "LSU",
+      "cfb_stats": {
+        "receptions": 39,
+        "rec_yards": 315.0,
+        "targets": 3,
+        "tds": null,
+        "ypr": 8.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 7.61,
+      "college_target_share": 7.69,
+      "college_ypc": null,
+      "production_score": 48.8
+    },
+    {
+      "player_name": "Josh Cuevas",
+      "position": "TE",
+      "school": "Alabama",
+      "cfb_stats": {
+        "receptions": 15,
+        "rec_yards": 213.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 14.2
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 6.87,
+      "college_target_share": 6.93,
+      "college_ypc": null,
+      "production_score": 36.2
+    },
+    {
+      "player_name": "Riley Nowakowski",
+      "position": "TE",
+      "school": "Indiana",
+      "cfb_stats": {
+        "receptions": 11,
+        "rec_yards": 74.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 6.7
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 2.15,
+      "college_target_share": 2.18,
+      "college_ypc": null,
+      "production_score": 15.0
+    },
+    {
+      "player_name": "Sam Roush",
+      "position": "TE",
+      "school": "Stanford",
+      "cfb_stats": {
+        "receptions": 40,
+        "rec_yards": 334.0,
+        "targets": 2,
+        "tds": 2,
+        "ypr": 8.3
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 14.51,
+      "college_target_share": 14.55,
+      "college_ypc": null,
+      "production_score": 68.7
+    },
+    {
+      "player_name": "Tanner Koziol",
+      "position": "TE",
+      "school": "Houston",
+      "cfb_stats": {
+        "receptions": 91,
+        "rec_yards": 804.0,
+        "targets": 9,
+        "tds": 7,
+        "ypr": 8.8
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 44.13,
+      "college_target_share": 43.89,
+      "college_ypc": null,
+      "production_score": 93.8
+    },
+    {
+      "player_name": "Khalil Dinkins",
+      "position": "TE",
+      "school": "Penn State",
+      "cfb_stats": {
+        "receptions": 11,
+        "rec_yards": 88.0,
+        "targets": 1,
+        "tds": null,
+        "ypr": 8.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 2.38,
+      "college_target_share": 2.41,
+      "college_ypc": null,
+      "production_score": 20.0
+    },
+    {
+      "player_name": "Will Kacmarek",
+      "position": "TE",
+      "school": "Ohio State",
+      "cfb_stats": {
+        "receptions": 3,
+        "rec_yards": 39.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 13.0
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 0.91,
+      "college_target_share": 0.93,
+      "college_ypc": null,
+      "production_score": 5.0
+    },
+    {
+      "player_name": "Miles Kitselman",
+      "position": "TE",
+      "school": "Tennessee",
+      "cfb_stats": {
+        "receptions": 21,
+        "rec_yards": 296.0,
+        "targets": 4,
+        "tds": 1,
+        "ypr": 14.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 10.24,
+      "college_target_share": 10.3,
+      "college_ypc": null,
+      "production_score": 43.5
+    },
+    {
+      "player_name": "Michael Trigg",
+      "position": "TE",
+      "school": "Baylor",
+      "cfb_stats": {
+        "receptions": 29,
+        "rec_yards": 390.0,
+        "targets": null,
+        "tds": null,
+        "ypr": 13.4
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 11.33,
+      "college_target_share": 11.48,
+      "college_ypc": null,
+      "production_score": 66.9
+    },
+    {
+      "player_name": "Max Klare",
+      "position": "TE",
+      "school": "Ohio State",
+      "cfb_stats": {
+        "receptions": 43,
+        "rec_yards": 536.0,
+        "targets": 4,
+        "tds": 1,
+        "ypr": 12.5
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 12.61,
+      "college_target_share": 12.74,
+      "college_ypc": null,
+      "production_score": 61.5
+    },
+    {
+      "player_name": "Oscar Delp",
+      "position": "TE",
+      "school": "Georgia",
+      "cfb_stats": {
+        "receptions": 19,
+        "rec_yards": 230.0,
+        "targets": 8,
+        "tds": null,
+        "ypr": 12.1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": 5.78,
+      "college_target_share": 5.85,
+      "college_ypc": null,
+      "production_score": 28.8
+    },
+    {
+      "player_name": "Taylen Green",
+      "position": "QB",
+      "school": "Arkansas",
+      "cfb_stats": {
+        "completions": 218,
+        "pass_yards": 2774.0,
+        "pass_attempts": null,
+        "tds": 19
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 50.0
+    },
+    {
+      "player_name": "Haynes King",
+      "position": "QB",
+      "school": "Georgia Tech",
+      "cfb_stats": {
+        "completions": 171,
+        "pass_yards": 1910.0,
+        "pass_attempts": null,
+        "tds": 21
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 30.6
+    },
+    {
+      "player_name": "Cole Payton",
+      "position": "QB",
+      "school": "North Dakota State",
+      "cfb_stats": {
+        "completions": 10,
+        "pass_yards": 125.0,
+        "pass_attempts": null,
+        "tds": 1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 0.0
+    },
+    {
+      "player_name": "Sawyer Robertson",
+      "position": "QB",
+      "school": "Baylor",
+      "cfb_stats": {
+        "completions": 195,
+        "pass_yards": 2535.0,
+        "pass_attempts": null,
+        "tds": 26
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 55.6
+    },
+    {
+      "player_name": "Jalon Daniels",
+      "position": "QB",
+      "school": "Kansas",
+      "cfb_stats": {
+        "completions": 166,
+        "pass_yards": 2266.0,
+        "pass_attempts": null,
+        "tds": 13
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 27.8
+    },
+    {
+      "player_name": "Luke Altmyer",
+      "position": "QB",
+      "school": "Illinois",
+      "cfb_stats": {
+        "completions": 187,
+        "pass_yards": 2283.0,
+        "pass_attempts": null,
+        "tds": 22
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 44.4
+    },
+    {
+      "player_name": "Fernando Mendoza",
+      "position": "QB",
+      "school": "Indiana",
+      "cfb_stats": {
+        "completions": 249,
+        "pass_yards": 2805.0,
+        "pass_attempts": null,
+        "tds": 11
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 47.2
+    },
+    {
+      "player_name": "Garrett Nussmeier",
+      "position": "QB",
+      "school": "LSU",
+      "cfb_stats": {
+        "completions": 302,
+        "pass_yards": 3543.0,
+        "pass_attempts": null,
+        "tds": 18
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 75.0
+    },
+    {
+      "player_name": "Carson Beck",
+      "position": "QB",
+      "school": "Miami (FL)",
+      "cfb_stats": {
+        "completions": 284,
+        "pass_yards": 3323.0,
+        "pass_attempts": null,
+        "tds": 25
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 80.5
+    },
+    {
+      "player_name": "Cade Klubnik",
+      "position": "QB",
+      "school": "Clemson",
+      "cfb_stats": {
+        "completions": 255,
+        "pass_yards": 2895.0,
+        "pass_attempts": null,
+        "tds": 27
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 80.6
+    },
+    {
+      "player_name": "Drew Allar",
+      "position": "QB",
+      "school": "Penn State",
+      "cfb_stats": {
+        "completions": 222,
+        "pass_yards": 2876.0,
+        "pass_attempts": null,
+        "tds": 6
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 50.0
+    },
+    {
+      "player_name": "Ty Simpson",
+      "position": "QB",
+      "school": "Alabama",
+      "cfb_stats": {
+        "completions": 14,
+        "pass_yards": 167.0,
+        "pass_attempts": null,
+        "tds": 1
+      },
+      "cfb_source": "cfbfastr_2024",
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null,
+      "production_score": 5.5
+    }
+  ]
+}

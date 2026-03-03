@@ -25,7 +25,9 @@ Intelligence Feed System:
 - **Internal API**: `GET /api/rookies/2026` — no auth, supports `?position=WR&sort_by=tiber_ras_v2`
 - **TiberClaw v1 API**: `GET /api/v1/rookies/2026`, `/api/v1/rookies/2026/leaderboard`, `/api/v1/rookies/2026/position/:pos`, `/api/v1/rookies/2026/:playerName` — all behind `x-tiber-key`
 - **UI**: `/rookies` — Rookie Board page with position filters and sortable RAS columns
-- **Phases remaining**: College production (Phase 2), Rookie Alpha (Phase 3), Post-draft landing spot (Phase 4), FORGE blending (Phase 5)
+- **Phase 2 complete**: College production — dominator rating, target share, YPC, production score (0-100 percentile within class) from cfbfastR 2024 PBP + ESPN team totals; 87/90 players matched
+- **UI**: Two view modes — Athleticism (RAS v1/v2) and Production (prod score, dom%, tgt%, YPC)
+- **Phases remaining**: Rookie Alpha composite (Phase 3), Post-draft landing spot (Phase 4), FORGE blending (Phase 5)
 
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.

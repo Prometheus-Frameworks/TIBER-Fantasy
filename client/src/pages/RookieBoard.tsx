@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, Zap, TrendingUp, ChevronUp, ChevronDown } from 'lucide-react';
+import { Users, Zap, TrendingUp, ChevronUp, ChevronDown, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 type Position = 'ALL' | 'QB' | 'RB' | 'WR' | 'TE';
-type SortField = 'tiber_ras_v2' | 'tiber_ras_v1' | 'proj_round';
+type SortField = 'tiber_ras_v2' | 'tiber_ras_v1' | 'proj_round' | 'production_score' | 'dominator_rating';
 
 interface RookiePlayer {
   rank: number;
@@ -17,6 +17,10 @@ interface RookiePlayer {
   broad_jump: number | null;
   tiber_ras_v1: number | null;
   tiber_ras_v2: number | null;
+  production_score: number | null;
+  dominator_rating: number | null;
+  college_target_share: number | null;
+  college_ypc: number | null;
 }
 
 interface RookieApiResponse {
@@ -26,10 +30,15 @@ interface RookieApiResponse {
   players: RookiePlayer[];
 }
 
+function toNum(val: number | string | null): number | null {
+  if (val === null || val === undefined) return null;
+  const n = typeof val === 'string' ? parseFloat(val) : val;
+  return isNaN(n) ? null : n;
+}
+
 function rasGrade(score: number | string | null): { label: string; color: string } {
-  if (score === null || score === undefined) return { label: '—', color: 'text-slate-500' };
-  const n = typeof score === 'string' ? parseFloat(score) : score;
-  if (isNaN(n)) return { label: '—', color: 'text-slate-500' };
+  const n = toNum(score);
+  if (n === null) return { label: '—', color: 'text-slate-500' };
   if (n >= 9.0) return { label: 'ELITE', color: 'text-emerald-400' };
   if (n >= 8.0) return { label: 'GREAT', color: 'text-teal-400' };
   if (n >= 7.0) return { label: 'GOOD', color: 'text-blue-400' };
@@ -39,9 +48,8 @@ function rasGrade(score: number | string | null): { label: string; color: string
 }
 
 function rasBar(score: number | string | null) {
-  if (score === null || score === undefined) return null;
-  const n = typeof score === 'string' ? parseFloat(score) : score;
-  if (isNaN(n)) return null;
+  const n = toNum(score);
+  if (n === null) return null;
   const pct = Math.round((n / 10) * 100);
   const color =
     n >= 9.0 ? 'bg-emerald-500' :
@@ -59,9 +67,30 @@ function rasBar(score: number | string | null) {
   );
 }
 
-function fmt(val: number | null, decimals = 2) {
-  if (val === null || val === undefined) return <span className="text-slate-600">—</span>;
-  return <span className="font-mono text-xs">{val.toFixed(decimals)}</span>;
+function prodBar(score: number | string | null) {
+  const n = toNum(score);
+  if (n === null) return <span className="text-slate-600 text-xs">—</span>;
+  const pct = Math.round(n);
+  const color =
+    n >= 85 ? 'bg-emerald-500' :
+    n >= 70 ? 'bg-teal-500' :
+    n >= 55 ? 'bg-blue-500' :
+    n >= 40 ? 'bg-amber-500' :
+    n >= 25 ? 'bg-orange-500' : 'bg-red-500';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-14 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs text-slate-300 tabular-nums font-mono">{n.toFixed(0)}</span>
+    </div>
+  );
+}
+
+function fmt(val: number | null | string, decimals = 2) {
+  const n = toNum(val);
+  if (n === null) return <span className="text-slate-600">—</span>;
+  return <span className="font-mono text-xs">{n.toFixed(decimals)}</span>;
 }
 
 const POSITIONS: Position[] = ['ALL', 'QB', 'RB', 'WR', 'TE'];
@@ -72,9 +101,12 @@ const POS_COLORS: Record<string, string> = {
   TE: 'bg-emerald-900/50 text-emerald-300 border-emerald-700/50',
 };
 
+type ViewMode = 'athleticism' | 'production';
+
 export default function RookieBoard() {
   const [position, setPosition] = useState<Position>('ALL');
   const [sortBy, setSortBy] = useState<SortField>('tiber_ras_v2');
+  const [view, setView] = useState<ViewMode>('athleticism');
 
   const { data, isLoading } = useQuery<RookieApiResponse>({
     queryKey: ['/api/rookies/2026', position, sortBy],
@@ -89,13 +121,9 @@ export default function RookieBoard() {
 
   const players = data?.players ?? [];
 
-  const sortToggle = (field: SortField) => {
-    setSortBy(field);
-  };
-
   const SortHeader = ({ field, label }: { field: SortField; label: string }) => (
     <button
-      onClick={() => sortToggle(field)}
+      onClick={() => setSortBy(field)}
       className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
         sortBy === field ? 'text-[#e2640d]' : 'text-slate-400 hover:text-slate-200'
       }`}
@@ -104,6 +132,8 @@ export default function RookieBoard() {
       {sortBy === field ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3 opacity-40" />}
     </button>
   );
+
+  const isAthletics = view === 'athleticism';
 
   return (
     <div className="p-6 space-y-6">
@@ -115,33 +145,63 @@ export default function RookieBoard() {
             <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Instrument Sans, sans-serif' }}>
               2026 Rookie Board
             </h1>
-            <Badge className="bg-[#e2640d]/20 text-[#e2640d] border-[#e2640d]/30 text-xs">TIBER-RAS</Badge>
+            <Badge className="bg-[#e2640d]/20 text-[#e2640d] border-[#e2640d]/30 text-xs">FORGE-R</Badge>
+            <Badge className="bg-slate-700/50 text-slate-400 border-slate-600/30 text-xs">Phase 2</Badge>
           </div>
           <p className="text-sm text-slate-400">
-            {players.length} prospects · Athleticism ranked vs 8,649 combine players since 1987
+            {players.length} prospects · Athleticism (TIBER-RAS v2) + College Production
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <TrendingUp className="h-3.5 w-3.5" />
-          <span>v2 = historical percentile · v1 = class-relative</span>
+          <span>cfbfastR 2024 · ESPN team totals</span>
         </div>
       </div>
 
-      {/* Position Filter */}
-      <div className="flex gap-1">
-        {POSITIONS.map(pos => (
+      {/* Controls row */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Position filter */}
+        <div className="flex gap-1">
+          {POSITIONS.map(pos => (
+            <button
+              key={pos}
+              onClick={() => setPosition(pos)}
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-all ${
+                position === pos
+                  ? 'bg-[#e2640d] text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {pos}
+            </button>
+          ))}
+        </div>
+
+        {/* View mode toggle */}
+        <div className="flex gap-1 ml-auto">
           <button
-            key={pos}
-            onClick={() => setPosition(pos)}
-            className={`px-4 py-1.5 rounded text-sm font-medium transition-all ${
-              position === pos
-                ? 'bg-[#e2640d] text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-700'
+            onClick={() => { setView('athleticism'); setSortBy('tiber_ras_v2'); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+              isAthletics
+                ? 'bg-slate-700 text-white border border-slate-600'
+                : 'bg-slate-800/50 text-slate-500 hover:text-slate-300 border border-slate-700/30'
             }`}
           >
-            {pos}
+            <Zap className="h-3 w-3" />
+            Athleticism
           </button>
-        ))}
+          <button
+            onClick={() => { setView('production'); setSortBy('production_score'); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all ${
+              !isAthletics
+                ? 'bg-slate-700 text-white border border-slate-600'
+                : 'bg-slate-800/50 text-slate-500 hover:text-slate-300 border border-slate-700/30'
+            }`}
+          >
+            <Activity className="h-3 w-3" />
+            Production
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -157,23 +217,42 @@ export default function RookieBoard() {
                 <th className="px-4 py-3 text-center text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">
                   <SortHeader field="proj_round" label="Rd" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">40yd</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">Vert</th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">Broad</th>
-                <th className="px-4 py-3 text-left">
-                  <SortHeader field="tiber_ras_v1" label="RAS v1" />
-                </th>
-                <th className="px-4 py-3 text-left">
-                  <SortHeader field="tiber_ras_v2" label="RAS v2" />
-                </th>
-                <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">Grade</th>
+
+                {isAthletics ? (
+                  <>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">40yd</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">Vert</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">Broad</th>
+                    <th className="px-4 py-3 text-left">
+                      <SortHeader field="tiber_ras_v1" label="RAS v1" />
+                    </th>
+                    <th className="px-4 py-3 text-left">
+                      <SortHeader field="tiber_ras_v2" label="RAS v2" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">Grade</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="px-4 py-3 text-left hidden lg:table-cell">
+                      <SortHeader field="dominator_rating" label="DOM%" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">Tgt%</th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden lg:table-cell">YPC</th>
+                    <th className="px-4 py-3 text-left">
+                      <SortHeader field="production_score" label="Prod Score" />
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">
+                      <SortHeader field="tiber_ras_v2" label="RAS v2" />
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 Array.from({ length: 15 }).map((_, i) => (
                   <tr key={i} className="border-b border-slate-800/50">
-                    {Array.from({ length: 11 }).map((_, j) => (
+                    {Array.from({ length: isAthletics ? 11 : 10 }).map((_, j) => (
                       <td key={j} className="px-4 py-3">
                         <div className="h-3 bg-slate-800 rounded animate-pulse w-16" />
                       </td>
@@ -210,14 +289,35 @@ export default function RookieBoard() {
                       <td className="px-4 py-3 text-center text-slate-400 text-xs hidden lg:table-cell">
                         {p.proj_round ? `R${p.proj_round}` : '—'}
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.forty_yard_dash)}</td>
-                      <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.vertical_jump, 1)}</td>
-                      <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.broad_jump, 0)}</td>
-                      <td className="px-4 py-3">{rasBar(p.tiber_ras_v1)}</td>
-                      <td className="px-4 py-3">{rasBar(p.tiber_ras_v2)}</td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className={`text-xs font-bold ${grade.color}`}>{grade.label}</span>
-                      </td>
+
+                      {isAthletics ? (
+                        <>
+                          <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.forty_yard_dash)}</td>
+                          <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.vertical_jump, 1)}</td>
+                          <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.broad_jump, 0)}</td>
+                          <td className="px-4 py-3">{rasBar(p.tiber_ras_v1)}</td>
+                          <td className="px-4 py-3">{rasBar(p.tiber_ras_v2)}</td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <span className={`text-xs font-bold ${grade.color}`}>{grade.label}</span>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            {p.dominator_rating !== null && toNum(p.dominator_rating) !== null
+                              ? <span className="font-mono text-xs text-slate-300">{toNum(p.dominator_rating)!.toFixed(1)}%</span>
+                              : <span className="text-slate-600">—</span>}
+                          </td>
+                          <td className="px-4 py-3 hidden lg:table-cell">
+                            {p.college_target_share !== null && toNum(p.college_target_share) !== null
+                              ? <span className="font-mono text-xs text-slate-300">{toNum(p.college_target_share)!.toFixed(1)}%</span>
+                              : <span className="text-slate-600">—</span>}
+                          </td>
+                          <td className="px-4 py-3 hidden lg:table-cell">{fmt(p.college_ypc)}</td>
+                          <td className="px-4 py-3">{prodBar(p.production_score)}</td>
+                          <td className="px-4 py-3 hidden md:table-cell">{rasBar(p.tiber_ras_v2)}</td>
+                        </>
+                      )}
                     </tr>
                   );
                 })
@@ -228,22 +328,30 @@ export default function RookieBoard() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-        <span className="font-semibold text-slate-400">TIBER-RAS Grade:</span>
-        {[
-          { label: 'ELITE', color: 'text-emerald-400', range: '9.0+' },
-          { label: 'GREAT', color: 'text-teal-400', range: '8.0–8.9' },
-          { label: 'GOOD', color: 'text-blue-400', range: '7.0–7.9' },
-          { label: 'AVG', color: 'text-amber-400', range: '5.5–6.9' },
-          { label: 'BELOW', color: 'text-orange-400', range: '4.0–5.4' },
-          { label: 'POOR', color: 'text-red-400', range: '<4.0' },
-        ].map(g => (
-          <span key={g.label}>
-            <span className={`font-bold ${g.color}`}>{g.label}</span>
-            <span className="text-slate-600 ml-1">{g.range}</span>
-          </span>
-        ))}
-      </div>
+      {isAthletics ? (
+        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+          <span className="font-semibold text-slate-400">TIBER-RAS Grade:</span>
+          {[
+            { label: 'ELITE', color: 'text-emerald-400', range: '9.0+' },
+            { label: 'GREAT', color: 'text-teal-400', range: '8.0–8.9' },
+            { label: 'GOOD', color: 'text-blue-400', range: '7.0–7.9' },
+            { label: 'AVG', color: 'text-amber-400', range: '5.5–6.9' },
+            { label: 'BELOW', color: 'text-orange-400', range: '4.0–5.4' },
+            { label: 'POOR', color: 'text-red-400', range: '<4.0' },
+          ].map(g => (
+            <span key={g.label}>
+              <span className={`font-bold ${g.color}`}>{g.label}</span>
+              <span className="text-slate-600 ml-1">{g.range}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+          <span className="font-semibold text-slate-400">Production Score:</span>
+          <span>Percentile within position class · <span className="text-slate-400">Dominator Rating</span> = player yards+TDs as % of team total</span>
+          <span className="text-slate-600">Source: cfbfastR 2024 play-by-play + ESPN team totals</span>
+        </div>
+      )}
     </div>
   );
 }
