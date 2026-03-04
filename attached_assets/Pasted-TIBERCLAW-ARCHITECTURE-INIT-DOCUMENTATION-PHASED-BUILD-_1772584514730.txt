@@ -1,0 +1,202 @@
+TIBERCLAW ARCHITECTURE INIT — DOCUMENTATION + PHASED BUILD PLAN
+
+Objective  
+We are beginning the implementation of TiberClaw, the connector layer that allows OpenClaw-compatible agents to interact with the Tiber engine and operate inside a fantasy league environment.  
+
+Before any code is written, your task is to create a local architecture document and phased build plan that aligns with the current Tiber system.
+
+Tiber already contains the analytics engine (FORGE, FIRE, CATALYST, player data, etc.).  
+TiberClaw will add three new capabilities:
+
+1. Agent connectivity  
+2. League context awareness  
+3. Dynasty GM reasoning layer
+
+You must first document the architecture locally so future agents (Claude Code, Codex, Replit Agent) work from the same blueprint.
+
+---
+
+Step 1 — Create Local Documentation
+
+Create a new directory if it does not exist:
+
+/docs/tiberclaw/
+
+Create the following document:
+
+docs/tiberclaw/TIBERCLAW_ARCHITECTURE.md
+
+The document must include these sections:
+
+1. System Overview
+
+Explain the purpose of TiberClaw.
+
+TiberClaw connects AI agents to the Tiber engine and enables league-aware reasoning for fantasy team management.
+
+Define the high-level system stack:
+
+Agent Layer  
+TiberClaw Connector  
+League Context Engine  
+Strategy Doctrine Layer  
+Tiber Core Engine
+
+Describe the responsibilities of each layer.
+
+---
+
+2. Tiber Engine Integration
+
+Document how TiberClaw interacts with existing Tiber endpoints.
+
+Examples:
+
+/api/v1/forge/player  
+/api/data-lab/gamelogs  
+/api/v1/players/search  
+
+Explain that Tiber remains the data and scoring engine and should not contain strategy logic.
+
+---
+
+3. League Context Layer
+
+Document the structure of the league context object.
+
+Example schema:
+
+league_context
+  league_id
+  platform
+  scoring_settings
+  roster_settings
+  teams
+  rosters
+  future_picks
+  standings
+  transactions
+
+Explain that agent sessions bind to a league context before analysis begins.
+
+Example command:
+
+tiberclaw connect <league_id>
+
+---
+
+4. Dynasty Strategy Doctrine
+
+Document the reasoning layer.
+
+This layer interprets Tiber data and league context.
+
+Initial doctrine modules:
+
+Team Window Detection  
+Asset Insulation Model  
+Positional Aging Curves  
+League Market Modeling  
+Roster Construction Heuristics
+
+Explain that these modules produce strategic evaluations rather than raw metrics.
+
+---
+
+5. GM Execution Layer
+
+Document how the agent generates actionable outputs.
+
+Example outputs:
+
+team archetype classification  
+trade suggestions  
+sell candidates  
+waiver targets  
+lineup recommendations
+
+Explain the evaluation pipeline:
+
+Pull roster from league context  
+Map players to Tiber IDs  
+Retrieve engine metrics  
+Apply doctrine modules  
+Generate strategic outputs
+
+---
+
+6. TiberClaw Operating Modes
+
+Define three modes:
+
+Engine Mode  
+Direct queries to Tiber metrics.
+
+League Mode  
+Agent bound to a specific league environment.
+
+GM Mode  
+Full dynasty team management reasoning.
+
+---
+
+Step 2 — Produce a Phased Implementation Plan
+
+After the architecture document is complete, create a second file:
+
+docs/tiberclaw/TIBERCLAW_BUILD_PHASES.md
+
+Break the implementation into build phases.
+
+Example structure:
+
+Phase 1 — League Context Infrastructure  
+Create league context schema  
+Add league import endpoints  
+Store league snapshots
+
+Phase 2 — Agent Connector  
+Implement TiberClaw API interface  
+Support OpenClaw agent authentication  
+Enable context binding
+
+Phase 3 — Doctrine Layer  
+Implement dynasty strategy modules  
+Add archetype detection  
+Add asset insulation scoring
+
+Phase 4 — GM Engine  
+Generate roster evaluations  
+Trade suggestion engine  
+Lineup recommendations
+
+Phase 5 — League Intelligence  
+Analyze entire league ecosystem  
+Market inefficiency detection  
+Trade network insights
+
+Each phase should list:
+
+objectives  
+required components  
+dependencies  
+expected outputs
+
+---
+
+Step 3 — Architecture Validation
+
+Once the documentation and phased build plan are complete:
+
+Review the current Tiber repository structure.  
+Confirm compatibility with existing APIs and modules.  
+Identify any missing infrastructure required for TiberClaw.
+
+Do not write production code yet.
+
+Your final output should be two documents:
+
+docs/tiberclaw/TIBERCLAW_ARCHITECTURE.md  
+docs/tiberclaw/TIBERCLAW_BUILD_PHASES.md
+
+These documents will be used by Claude Code, Codex, and the Replit agent to implement the system in controlled phases.
