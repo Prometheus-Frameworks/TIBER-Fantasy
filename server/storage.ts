@@ -295,6 +295,7 @@ export interface IStorage {
   getLeagueDashboardSnapshot(leagueId: string, season?: number | null, week?: number | null): Promise<LeagueDashboardSnapshot | null>;
   saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; snapshotTrigger?: string; payload: any }): Promise<LeagueDashboardSnapshot>;
   upsertLeagueFuturePicks(leagueId: string, picks: Array<{ season: number; round: number; originalRosterId: string; currentRosterId: string; source: string }>): Promise<void>;
+  getLeagueFuturePicks(leagueId: string): Promise<LeagueFuturePick[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1065,6 +1066,10 @@ export class MemStorage implements IStorage {
   }
 
   async upsertLeagueFuturePicks(_leagueId: string, _picks: Array<{ season: number; round: number; originalRosterId: string; currentRosterId: string; source: string }>): Promise<void> {
+  }
+
+  async getLeagueFuturePicks(_leagueId: string): Promise<LeagueFuturePick[]> {
+    return [];
   }
 }
 
@@ -3142,6 +3147,15 @@ export class DatabaseStorage implements IStorage {
         DO UPDATE SET current_roster_id = EXCLUDED.current_roster_id, source = EXCLUDED.source, synced_at = NOW()
       `);
     }
+  }
+
+  async getLeagueFuturePicks(leagueId: string): Promise<LeagueFuturePick[]> {
+    const rows = await db.execute(sql`
+      SELECT * FROM league_future_picks
+      WHERE league_id = ${leagueId}
+      ORDER BY season ASC, round ASC
+    `);
+    return rows.rows as LeagueFuturePick[];
   }
 
   async deletePlaybookEntry(id: number): Promise<void> {

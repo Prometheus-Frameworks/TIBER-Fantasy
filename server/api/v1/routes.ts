@@ -8,6 +8,8 @@ import { errorFormat, ApiError } from "./middleware/errorFormat";
 import { ErrorCodes } from "./errors/codes";
 import { db } from "../../infra/db";
 import { sql } from "drizzle-orm";
+import { storage } from "../../storage";
+import { normalizeScoringSettings } from "../../services/normalizeScoringSettings";
 
 const router = Router();
 
@@ -332,6 +334,104 @@ router.get("/rookies/2026/:playerName", async (req, res, next) => {
       throw new ApiError(404, ErrorCodes.NOT_FOUND, `Rookie not found: ${name}`);
     }
     res.json(v1Success({ season: 2026, player: rows.rows[0] }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/league/:id/context", async (req, res, next) => {
+  try {
+    const leagueId = req.params.id;
+    const raw = await storage.getLeagueWithTeams(leagueId);
+    if (!raw) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `League not found: ${leagueId}`);
+    }
+    const league = raw as any;
+
+    const settings = (league.settings ?? {}) as Record<string, any>;
+    const scoringProfile = settings.scoring_profile
+      ? settings.scoring_profile
+      : normalizeScoringSettings(settings.scoring_settings ?? {});
+
+    const picks = await storage.getLeagueFuturePicks(leagueId);
+
+    res.json(v1Success({
+      league: {
+        id: league.id,
+        league_name: league.league_name ?? league.leagueName ?? null,
+        platform: league.platform ?? null,
+        external_league_id: league.league_id_external ?? league.leagueIdExternal ?? null,
+        season: league.season ?? null,
+        scoring_format: league.scoring_format ?? league.scoringFormat ?? null,
+      },
+      scoring_profile: scoringProfile,
+      teams: (league.teams ?? []).map((t: any) => ({
+        id: t.id,
+        display_name: t.display_name ?? t.displayName ?? null,
+        external_roster_id: t.external_roster_id ?? t.externalRosterId ?? null,
+        external_user_id: t.external_user_id ?? t.externalUserId ?? null,
+        is_commissioner: Boolean(t.is_commissioner ?? t.isCommissioner),
+        avatar: t.avatar ?? null,
+      })),
+      picks_count: picks.length,
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/league/:id/picks", async (req, res, next) => {
+  try {
+    const leagueId = req.params.id;
+    const raw = await storage.getLeagueWithTeams(leagueId);
+    if (!raw) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `League not found: ${leagueId}`);
+    }
+    const league = raw as any;
+
+    const picks = await storage.getLeagueFuturePicks(leagueId);
+
+    const rosterIndex = Object.fromEntries(
+      (league.teams ?? []).map((t: any) => [
+        (t.external_roster_id ?? t.externalRosterId ?? ''),
+        { id: t.id, display_name: t.display_name ?? t.displayName },
+      ])
+    );
+
+    res.json(v1Success({
+      league_id: leagueId,
+      season: league.season,
+      picks: picks.map((p) => ({
+        id: p.id,
+        season: p.season,
+        round: p.round,
+        source: p.source,
+        original_roster_id: p.originalRosterId,
+        current_roster_id: p.currentRosterId,
+        original_team: rosterIndex[p.originalRosterId ?? ''] ?? null,
+        current_team: rosterIndex[p.currentRosterId ?? ''] ?? null,
+        synced_at: p.syncedAt,
+      })),
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/league/:id/scoring", async (req, res, next) => {
+  try {
+    const leagueId = req.params.id;
+    const raw = await storage.getLeagueWithTeams(leagueId);
+    if (!raw) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `League not found: ${leagueId}`);
+    }
+    const league = raw as any;
+
+    const settings = (league.settings ?? {}) as Record<string, any>;
+    const scoringProfile = settings.scoring_profile
+      ? settings.scoring_profile
+      : normalizeScoringSettings(settings.scoring_settings ?? {});
+
+    res.json(v1Success({
+      league_id: leagueId,
+      league_name: league.league_name ?? league.leagueName ?? null,
+      season: league.season ?? null,
+      scoring_profile: scoringProfile,
+    }, req.requestId!));
   } catch (err) { next(err); }
 });
 
