@@ -42,7 +42,15 @@ Intelligence Feed System:
   - `POST /api/v1/dynasty/roster/:leagueId/:rosterId` — team window + roster construction (body: `{ player_ids: [...] }`)
   - `GET /api/v1/dynasty/player/:playerId/market/:leagueId?pool_ids=id1,id2,...` — market position vs. league player pool
   - All routes behind `x-tiber-key`; doctrine modules receive the caller's key for internal FORGE/FIRE fetches
-- **Phase 5 (next)**: League-wide market intelligence — rank all rostered players across all teams in a league, surface buy/sell signals, identify positional imbalances across franchises
+- **Phase 5 (complete)**: League-wide market intelligence — `GET /api/v1/dynasty/league/:leagueId/market` (behind `x-tiber-key`)
+  - Fetches all Sleeper rosters via `sleeperClient.getLeagueRosters(externalLeagueId)`
+  - Looks up player identity by `sleeper_id` → gets `gsis_id` for FORGE calls
+  - Fans out individual FORGE calls concurrently (cap 10) using `gsis_id`
+  - Ranks each player by position across the whole league (forge_alpha desc)
+  - Generates buy/sell/hold signals per player (FORGE percentile + age vs position prime band)
+  - Returns `player_pool`, `team_summaries` (sorted by avg FORGE), `position_rankings`, and `meta`
+  - Team summaries include: player count, avg FORGE, positional imbalance flags, top 3 assets, signal counts
+  - **Note**: Age signals default to 27 when `birth_date` is null in `player_identity_map` (data enrichment gap)
 
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
