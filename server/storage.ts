@@ -42,6 +42,7 @@ import {
   type UserLeaguePreference,
   type UserPlatformProfile,
   type LeagueDashboardSnapshot,
+  type LeagueFuturePick,
   type InsertTeam,
   type InsertPlayer,
   type InsertTeamPlayer,
@@ -292,7 +293,8 @@ export interface IStorage {
   getUserPlatformProfile(userId: string, platform?: string): Promise<UserPlatformProfile | null>;
 
   getLeagueDashboardSnapshot(leagueId: string, season?: number | null, week?: number | null): Promise<LeagueDashboardSnapshot | null>;
-  saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot>;
+  saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; snapshotTrigger?: string; payload: any }): Promise<LeagueDashboardSnapshot>;
+  upsertLeagueFuturePicks(leagueId: string, picks: Array<{ season: number; round: number; originalRosterId: string; currentRosterId: string; source: string }>): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1050,15 +1052,19 @@ export class MemStorage implements IStorage {
     return null;
   }
 
-  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot> {
+  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; snapshotTrigger?: string; payload: any }): Promise<LeagueDashboardSnapshot> {
     return {
       id: 'mem-snapshot',
       leagueId: data.leagueId,
       season: data.season ?? null,
       week: data.week ?? null,
+      snapshotTrigger: data.snapshotTrigger ?? 'manual',
       payload: data.payload,
       computedAt: new Date(),
     } as any;
+  }
+
+  async upsertLeagueFuturePicks(_leagueId: string, _picks: Array<{ season: number; round: number; originalRosterId: string; currentRosterId: string; source: string }>): Promise<void> {
   }
 }
 
@@ -3119,10 +3125,23 @@ export class DatabaseStorage implements IStorage {
     return snapshot || null;
   }
 
-  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; payload: any }): Promise<LeagueDashboardSnapshot> {
-    const [snapshot] = (await db.execute(sql`INSERT INTO league_dashboard_snapshots (league_id, season, week, payload) VALUES (${data.leagueId}, ${data.season ?? null}, ${data.week ?? null}, ${JSON.stringify(data.payload)}::jsonb) ON CONFLICT (league_id, week, season) DO UPDATE SET payload = EXCLUDED.payload, computed_at = NOW() RETURNING *`)).rows as LeagueDashboardSnapshot[];
+  async saveLeagueDashboardSnapshot(data: { leagueId: string; season?: number | null; week?: number | null; snapshotTrigger?: string; payload: any }): Promise<LeagueDashboardSnapshot> {
+    const trigger = data.snapshotTrigger ?? 'manual';
+    const [snapshot] = (await db.execute(sql`INSERT INTO league_dashboard_snapshots (league_id, season, week, snapshot_trigger, payload) VALUES (${data.leagueId}, ${data.season ?? null}, ${data.week ?? null}, ${trigger}, ${JSON.stringify(data.payload)}::jsonb) ON CONFLICT (league_id, week, season) DO UPDATE SET payload = EXCLUDED.payload, snapshot_trigger = EXCLUDED.snapshot_trigger, computed_at = NOW() RETURNING *`)).rows as LeagueDashboardSnapshot[];
 
     return snapshot;
+  }
+
+  async upsertLeagueFuturePicks(leagueId: string, picks: Array<{ season: number; round: number; originalRosterId: string; currentRosterId: string; source: string }>): Promise<void> {
+    if (picks.length === 0) return;
+    for (const pick of picks) {
+      await db.execute(sql`
+        INSERT INTO league_future_picks (league_id, season, round, original_roster_id, current_roster_id, source, synced_at)
+        VALUES (${leagueId}, ${pick.season}, ${pick.round}, ${pick.originalRosterId}, ${pick.currentRosterId}, ${pick.source}, NOW())
+        ON CONFLICT (league_id, season, round, original_roster_id)
+        DO UPDATE SET current_roster_id = EXCLUDED.current_roster_id, source = EXCLUDED.source, synced_at = NOW()
+      `);
+    }
   }
 
   async deletePlaybookEntry(id: number): Promise<void> {

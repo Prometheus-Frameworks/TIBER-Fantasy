@@ -29,6 +29,14 @@ export interface SleeperRoster {
   starters?: string[] | null;
 }
 
+export interface SleeperTradedPick {
+  season: string;
+  round: number;
+  roster_id: number;
+  previous_owner_id: number;
+  owner_id: number;
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`);
   if (!res.ok) {
@@ -53,7 +61,11 @@ export const sleeperClient = {
 
   async getLeagueRosters(leagueId: string): Promise<SleeperRoster[]> {
     return fetchJson<SleeperRoster[]>(`/league/${leagueId}/rosters`);
-  }
+  },
+
+  async getTradedPicks(leagueId: string): Promise<SleeperTradedPick[]> {
+    return fetchJson<SleeperTradedPick[]>(`/league/${leagueId}/traded_picks`);
+  },
 };
 
 export function deriveSleeperScoringFormat(scoringSettings?: Record<string, any>): string | null {

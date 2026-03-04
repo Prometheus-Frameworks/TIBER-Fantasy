@@ -2,6 +2,7 @@ import express from "express";
 import { deriveSleeperScoringFormat, sleeperClient } from "../integrations/sleeperClient";
 import { storage } from "../storage";
 import { createPlaybookForgeLogger } from "../utils/playbookForgeLogger";
+import { normalizeScoringSettings } from "../services/normalizeScoringSettings";
 
 type LeagueSyncDeps = {
   storage: typeof storage;
@@ -60,10 +61,11 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         return res.status(400).json({ success: false, error: 'league_id_external is required' });
       }
 
-      const [league, users, rosters] = await Promise.all([
+      const [league, users, rosters, tradedPicks] = await Promise.all([
         deps.sleeperClient.getLeague(externalLeagueId),
         deps.sleeperClient.getLeagueUsers(externalLeagueId),
         deps.sleeperClient.getLeagueRosters(externalLeagueId),
+        deps.sleeperClient.getTradedPicks(externalLeagueId).catch(() => []),
       ]);
 
       const scoringFormat = deps.deriveSleeperScoringFormat(league.scoring_settings);
@@ -94,6 +96,8 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         };
       });
 
+      const scoringProfile = normalizeScoringSettings(league.scoring_settings);
+
       const result = await deps.storage.upsertLeagueWithTeams({
         userId: user_id as string,
         leagueName: league.name || `Sleeper League ${league.league_id}`,
@@ -103,6 +107,7 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         scoringFormat,
         settings: {
           scoring_settings: league.scoring_settings ?? {},
+          scoring_profile: scoringProfile,
           status: league.status,
           total_rosters: league.total_rosters,
           roster_positions: (league as any).roster_positions ?? [],
@@ -111,6 +116,19 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
       });
 
       const auto = await maybeAutoSetContext({ userId: user_id, leagueId: result.league.id, teams: result.teams });
+
+      if (tradedPicks.length > 0) {
+        const normalizedPicks = tradedPicks.map((p) => ({
+          season: Number(p.season),
+          round: p.round,
+          originalRosterId: String(p.roster_id),
+          currentRosterId: String(p.owner_id),
+          source: String(p.roster_id) === String(p.owner_id) ? 'original' : 'trade',
+        }));
+        await deps.storage.upsertLeagueFuturePicks(result.league.id, normalizedPicks).catch((err) =>
+          console.warn('[LeagueSync] picks upsert failed (non-fatal):', err?.message)
+        );
+      }
 
       logger.log('league-sync-upserted', {
         requestId: logger.requestId,

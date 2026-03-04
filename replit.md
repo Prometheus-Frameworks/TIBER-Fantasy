@@ -29,6 +29,15 @@ Intelligence Feed System:
 - **UI**: Two view modes — Athleticism (RAS v1/v2) and Production (prod score, dom%, tgt%, YPC)
 - **Phases remaining**: Rookie Alpha composite (Phase 3), Post-draft landing spot (Phase 4), FORGE blending (Phase 5)
 
+## TiberClaw Build Status
+- **Phase 1 (complete)**: League context infrastructure stabilized
+  - `snapshot_trigger` column on `league_dashboard_snapshots` — tracks 'import' | 'weekly_rollover' | 'transaction' | 'manual'
+  - `league_future_picks` table — dynasty traded picks stored as first-class structured data (league_id, season, round, original_roster_id, current_roster_id, source)
+  - `normalizeScoringSettings()` — `server/services/normalizeScoringSettings.ts` — normalizes raw Sleeper scoring_settings into a typed `ScoringProfile` (format, rec_multiplier, te_premium, dynasty_relevant)
+  - League sync route now fetches `traded_picks` from Sleeper in parallel, stores them in `league_future_picks`, and embeds `scoring_profile` in the league settings payload
+- **Phase 2 (next)**: Expose league context via authenticated v1 endpoints (`GET /api/v1/league/:id/context`, picks, scoring profile)
+- **Phase 3 (spec to Claude Code)**: Doctrine modules in `server/doctrine/` — aging curves, window detection, asset insulation, market model, roster construction
+
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
 - **`feat/openclaw-connector`**: TiberClaw agent's working branch. Agent pushes autonomous research work here (TIBER-RAS v1, 2026 combine data, FORGE-R roadmap). Merge into main via cherry-pick to avoid conflicts from diverged history. Currently 29 commits ahead / 36 behind main.

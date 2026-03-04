@@ -4352,10 +4352,26 @@ export const leagueDashboardSnapshots = pgTable("league_dashboard_snapshots", {
   leagueId: text("league_id").notNull(),
   week: integer("week"),
   season: integer("season"),
+  snapshotTrigger: text("snapshot_trigger").default("manual"),
   payload: jsonb("payload").notNull(),
   computedAt: timestamp("computed_at").defaultNow(),
 }, (table) => ({
   leagueSnapshotIdx: uniqueIndex("league_dashboard_snapshots_key").on(table.leagueId, table.week, table.season),
+}));
+
+export const leagueFuturePicks = pgTable("league_future_picks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leagueId: varchar("league_id").notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  season: integer("season").notNull(),
+  round: integer("round").notNull(),
+  originalTeamId: varchar("original_team_id").references(() => leagueTeams.id, { onDelete: 'set null' }),
+  currentTeamId: varchar("current_team_id").references(() => leagueTeams.id, { onDelete: 'set null' }),
+  originalRosterId: text("original_roster_id"),
+  currentRosterId: text("current_roster_id"),
+  source: text("source").notNull().default("original"),
+  syncedAt: timestamp("synced_at").defaultNow(),
+}, (table) => ({
+  leaguePickIdx: uniqueIndex("league_future_picks_key").on(table.leagueId, table.season, table.round, table.originalRosterId),
 }));
 
 // RAG System Insert Schemas
@@ -4372,6 +4388,8 @@ export type UserPlatformProfile = typeof userPlatformProfiles.$inferSelect;
 export type LeagueContext = typeof leagueContext.$inferSelect;
 export type InsertLeagueContext = z.infer<typeof insertLeagueContextSchema>;
 export type LeagueDashboardSnapshot = typeof leagueDashboardSnapshots.$inferSelect;
+export type LeagueFuturePick = typeof leagueFuturePicks.$inferSelect;
+export type InsertLeagueFuturePick = typeof leagueFuturePicks.$inferInsert;
 
 // RAG System Types
 export type Chunk = typeof chunks.$inferSelect;

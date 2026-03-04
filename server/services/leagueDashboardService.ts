@@ -503,6 +503,7 @@ export async function computeLeagueDashboard(
     leagueId,
     season: payload.meta.season,
     week: payload.meta.week,
+    snapshotTrigger: 'weekly_rollover',
     payload,
   });
 
