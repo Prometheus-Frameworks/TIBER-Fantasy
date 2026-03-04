@@ -48,12 +48,13 @@ export async function initBackground(): Promise<void> {
   const _initStart = Date.now();
   log(`🚀 Tiber Fantasy – loading routes in background`);
 
-  try {
-    log(`${t()} step 1: loading LLM provider`);
-    const { logProviderStatus } = await import("./llm");
-    logProviderStatus();
-    log(`${t()} step 1: done`);
-  } catch { /* non-fatal */ }
+  // Step 1: LLM provider — fire-and-forget, never blocks route mounting.
+  // In production the LLM import can stall indefinitely (no error, no resolve),
+  // which previously caused steps 2-4 (API routes) to never register.
+  import("./llm")
+    .then(({ logProviderStatus }) => { logProviderStatus(); log(`${t()} step 1: done`); })
+    .catch(() => { /* non-fatal */ });
+  log(`${t()} step 1: fired (non-blocking)`);
 
   log(`${t()} step 2: loading v1 router`);
   const { default: v1Router } = await import("./api/v1/routes");
