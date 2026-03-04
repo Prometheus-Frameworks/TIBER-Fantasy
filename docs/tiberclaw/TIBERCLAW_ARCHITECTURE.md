@@ -1,6 +1,6 @@
 # TiberClaw — System Architecture
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Last updated:** March 2026  
 **Status:** Engine live. League context built. Doctrine + GM layers pending.
 
@@ -169,6 +169,19 @@ league_context
 
 The `league_dashboard_snapshots` table stores point-in-time snapshots of full league state (rosters, standings, matchups) keyed by `(league_id, week, season)`.
 
+### League Snapshot Lifecycle
+
+Snapshots are the source of truth for league state. They are created at the following trigger points:
+
+| Trigger | When | Retention |
+|---|---|---|
+| `league_import` | Immediately after `POST /api/league-sync/sleeper` completes | Indefinite |
+| `weekly_rollover` | After final MNF game each week, automated | Indefinite |
+| `transaction_event` | On trade or waiver processed (optional, configurable) | 90 days |
+| `manual_refresh` | On `POST /api/league-sync/sync` call | Indefinite |
+
+Weekly snapshots are retained indefinitely to support historical analysis across seasons. Transaction snapshots are pruned after 90 days. This prevents over-querying the Sleeper API — any system requiring current league state reads from the most recent snapshot rather than hitting Sleeper directly.
+
 ### Agent Session Binding
 
 Before a GM Mode session begins, the agent binds to a league:
@@ -207,19 +220,47 @@ Builds a model of what the specific league values vs. what Tiber values. If a le
 **Roster Construction Heuristics**  
 Position limits, taxi squad rules, and roster balance requirements vary per league. This module validates whether a proposed move is legal and evaluates its effect on roster construction quality.
 
-### Output Contract
+### Doctrine Module Output Contract
 
-Doctrine modules produce evaluations, not raw metrics. Example:
+All Doctrine modules must return a standardized evaluation object. No module may invent a custom output format. Downstream systems (GM layer, LLM gateway, strategy endpoints) depend on this contract being consistent.
 
-```json
-{
-  "team_id": "...",
-  "window": "contend",
-  "window_confidence": 0.82,
-  "core_assets": ["justin-jefferson", "saquon-barkley"],
-  "sell_candidates": ["mike-evans"],
-  "reasoning": "Team is in a 2–3 year contention window. Evans is 31 and on a declining usage curve..."
+```typescript
+interface DoctrineEvaluation {
+  module: string;                    // e.g. "team_window_detection"
+  entity_type: "team" | "player" | "league";
+  entity_id: string;                 // team_id, gsis_id, or league_id
+  evaluation_score: number;          // 0–1 normalized
+  confidence: number;                // 0–1
+  contributing_signals: string[];    // named signals used in evaluation
+  reasoning: string;                 // human-readable explanation
+  generated_at: string;              // ISO 8601 timestamp
 }
+```
+
+This schema applies to all five modules:
+
+| Module | `entity_type` | `evaluation_score` meaning |
+|---|---|---|
+| `team_window_detection` | `team` | 0 = full rebuild, 1 = peak contend |
+| `asset_insulation_model` | `player` | 0 = fully movable, 1 = untouchable |
+| `positional_aging_curves` | `player` | 0 = past peak, 1 = peak value |
+| `league_market_model` | `league` | 0 = efficient, 1 = maximally inefficient |
+| `roster_construction_heuristics` | `team` | 0 = poor construction, 1 = optimal |
+
+### League Market Signals
+
+The League Market Model analyzes the following deterministic signals. All signals must be derivable from existing `league_context`, `league_dashboard_snapshots`, and Sleeper ADP data — no ad-hoc analysis.
+
+```
+league_market_signals
+  trade_frequency_per_team          — avg trades per team per season
+  positional_trade_bias             — which positions appear most in trade payloads
+  average_roster_age_by_team        — roster age distribution across the league
+  draft_pick_liquidity_distribution — how often picks trade hands vs. being held
+  rebuild_team_count                — teams classified as Rebuild or Tear Down
+  contender_team_count              — teams classified as Contend
+  waiver_activity_rate              — waiver claims per week per team (active vs. passive managers)
+  qb_premium_index                  — relative QB trade price vs. WR1 baseline in this league
 ```
 
 ---
@@ -261,7 +302,25 @@ GET /api/strategy/targets?league_id=...&position=...
 
 ### LLM Gateway Integration
 
-Tiber includes a provider-agnostic LLM gateway (`server/llm/`) with fallback across OpenRouter, OpenAI, Anthropic, and Gemini. The GM Layer can route Doctrine outputs through this gateway to produce human-readable explanations. The LLM does not generate the analysis — it narrates it.
+Tiber includes a provider-agnostic LLM gateway (`server/llm/`) with fallback across OpenRouter, OpenAI, Anthropic, and Gemini. The GM Layer can route Doctrine outputs through this gateway to produce human-readable explanations.
+
+### LLM Boundary Rule
+
+**LLMs receive only Doctrine outputs. LLMs do not receive raw Tiber engine metrics.**
+
+LLMs must not perform strategic analysis. Their role is narrative explanation only. If an LLM call receives a FORGE score, a FIRE batch, or any raw metric directly — that is a bug. All strategic reasoning must complete within the Doctrine layer before the LLM is invoked.
+
+Correct flow:
+```
+Tiber metrics → Doctrine module → DoctrineEvaluation → LLM gateway → narrative string
+```
+
+Incorrect flow:
+```
+Tiber metrics → LLM gateway  ← never do this
+```
+
+This rule is enforced architecturally: the GM execution endpoints call Doctrine first, then optionally call the LLM with the structured `DoctrineEvaluation` result.
 
 ---
 
@@ -298,7 +357,29 @@ Endpoints: GM endpoints (Phase 4 build target)
 
 ---
 
-## 7. Authentication
+## 7. Agent Session Contract
+
+An agent session is the runtime context for a TiberClaw interaction. It tracks which agent is operating, which league and team are bound, which mode is active, and when the session expires. All GM Mode and League Mode operations require a valid session.
+
+```typescript
+interface AgentSession {
+  session_id: string;      // UUID — unique per session
+  agent_id: string;        // identifies the calling agent or key owner
+  league_id: string;       // bound league (required for League + GM modes)
+  team_id: string;         // bound team within the league
+  mode: "engine" | "league" | "gm";
+  created_at: string;      // ISO 8601
+  expires_at: string;      // ISO 8601 — sessions expire after inactivity
+}
+```
+
+Sessions are created on `POST /api/league-context`. The `session_id` may be passed in subsequent requests to restore context without rebinding. Sessions in Engine Mode do not require `league_id` or `team_id`.
+
+Consistent session structure ensures predictable behavior across agent implementations — a Claude agent and a Codex agent operating in the same league context will receive the same state.
+
+---
+
+## 8. Authentication
 
 All v1 endpoints require `x-tiber-key` in the request header.
 
@@ -316,7 +397,7 @@ api_request_log  — method, route, status, duration, request ID per call
 
 ---
 
-## 8. Infrastructure Notes
+## 9. Infrastructure Notes
 
 - **Runtime**: Node.js / TypeScript (Express) + Python (Flask for ETL scripts)
 - **Frontend**: React 18, Tailwind, shadcn/ui (one client among many)
@@ -325,3 +406,23 @@ api_request_log  — method, route, status, duration, request ID per call
 - **LLM Gateway**: OpenRouter → OpenAI → Anthropic → Gemini fallback chain
 - **Player Identity**: `gsis_id` as canonical ID, Identity Bridge for cross-source resolution
 - **League Sync**: Sleeper API is the primary platform integration
+
+### Doctrine Implementation Location
+
+Doctrine modules are implemented in **Node.js / TypeScript only**. Python handles ELT pipelines and heavy statistical computation. Doctrine logic belongs in the API layer for low-latency decision evaluation.
+
+```
+server/doctrine/                     — all Doctrine module implementations
+  team_window_detection.ts
+  asset_insulation_model.ts
+  positional_aging_curves.ts
+  league_market_model.ts
+  roster_construction_heuristics.ts
+  types.ts                           — DoctrineEvaluation interface + shared types
+
+server/api/v1/routes.ts              — v1 endpoints for dynasty/*, gm/*, league-intel/*
+shared/schema.ts                     — any new DB tables go here first
+docs/tiberclaw/                      — this document lives here
+```
+
+Each module is a standalone TypeScript file that exports a single function conforming to the `DoctrineEvaluation` return type. No module shares state with another.

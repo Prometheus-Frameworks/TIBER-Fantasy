@@ -1,283 +1,465 @@
 # TiberClaw — Phased Build Plan
 
-**Version:** 1.0  
+**Version:** 1.1  
 **Last updated:** March 2026  
 **Reference:** TIBERCLAW_ARCHITECTURE.md
 
 ---
 
-## Build Status Summary
+## Prerequisites (Already Live)
+
+Before the phases begin, the following infrastructure is complete and must not be rebuilt:
+
+| Component | Status | Notes |
+|---|---|---|
+| v1 API auth (`x-tiber-key`) | Live | All `/api/v1/*` endpoints authenticated |
+| FORGE / FIRE / CATALYST endpoints | Live | `/api/v1/forge/player`, `/fire/player`, `/catalyst/player` |
+| Player search | Live | `/api/v1/players/search` |
+| Rookies 2026 | Live | `/api/v1/rookies/2026` + variants |
+| API key management | Live | `api_keys` + `api_request_log` tables |
+| Request logging | Live | Per-key, per-tier rate limiting |
+| Sleeper league import | Live | `POST /api/league-sync/sleeper` |
+| League context binding | Live | `POST/GET /api/league-context` |
+| League dashboard snapshot | Live | `GET /api/league-dashboard` |
+
+Agents reading this plan: verify the above against the live repo before starting any phase.
+
+---
+
+## Build Status
 
 | Phase | Name | Status |
 |---|---|---|
-| Phase 1 | League Context Infrastructure | Live (partially) |
-| Phase 2 | Agent Connector | Live |
-| Phase 3 | Dynasty Doctrine Layer | Not started |
-| Phase 4 | GM Execution Engine | Partial (start-sit, targets) |
-| Phase 5 | League Intelligence | Not started |
+| Phase 1 | Stabilize League Context Infrastructure | In progress |
+| Phase 2 | Expose League Context via Authenticated v1 Endpoints | Not started |
+| Phase 3 | Doctrine Layer Implementation | Not started |
+| Phase 4 | GM Execution Endpoints | Not started |
+| Phase 5 | League-Wide Market Intelligence | Not started |
 
 ---
 
-## Phase 1 — League Context Infrastructure
+## Phase 1 — Stabilize League Context Infrastructure
 
-**Status: Live (partial)**
+**Status: In progress**
 
 ### Objectives
-Provide the data foundation that allows agents to operate within a specific fantasy league environment. Without this layer, the agent has no roster awareness and no league-specific context.
+Complete and harden the league context layer so it provides a reliable, structured data foundation for Doctrine modules. The basic import and binding work — the remaining tasks normalize the data and define its lifecycle.
 
-### What Is Already Built
-- `POST /api/league-sync/sleeper` — full Sleeper league import (rosters, teams, standings, picks)
-- `GET /api/league-sync/leagues` — list leagues synced for a user
-- `POST /api/league-context` — bind a session to a league and team
-- `GET /api/league-context` — retrieve active context
-- `GET /api/league-dashboard` — full dashboard snapshot with matchups and standings
-- `league_context` table — vector-embedded context entries (trades, moves, roster snapshots)
-- `league_dashboard_snapshots` table — point-in-time league state keyed by week/season
+### Required Components
 
-### What Remains
-- Expose league sync via authenticated v1 endpoints (`/api/v1/league/*`) so agents can import and query leagues through the same auth layer as scoring endpoints
-- Add `future_picks` to the league context schema (currently stored in league snapshot payload but not as a first-class queryable field)
-- Add `scoring_settings` normalization — currently raw from Sleeper, needs a canonical representation so doctrine modules can use it without parsing platform-specific formats
+**1.1 — Snapshot Lifecycle Implementation**
+
+Implement the four snapshot triggers defined in the Architecture doc:
+- `league_import` → snapshot on first sync (already happens implicitly, needs explicit tagging)
+- `weekly_rollover` → automated snapshot after final MNF game (scheduler hook required)
+- `transaction_event` → optional snapshot per trade/waiver (configurable per league)
+- `manual_refresh` → snapshot on `POST /api/league-sync/sync` (already happens, needs retention flag)
+
+Add a `snapshot_type` column to `league_dashboard_snapshots` to distinguish trigger source. Implement 90-day pruning for `transaction_event` snapshots.
+
+**1.2 — Scoring Settings Normalization**
+
+Current state: scoring settings are stored raw from Sleeper's JSON format. Doctrine modules cannot consume platform-specific formats.
+
+Task: write a `normalizeScoringSettings()` function that maps Sleeper's scoring format to a canonical representation:
+
+```typescript
+interface ScoringSettings {
+  rec: number;           // PPR value (0, 0.5, 1.0)
+  pass_td: number;
+  rush_td: number;
+  rec_td: number;
+  bonus_rec_te: number;  // TE premium
+  [key: string]: number;
+}
+```
+
+**1.3 — Future Picks as First-Class Field**
+
+Draft picks are currently stored inside the league snapshot payload as unstructured JSON. Doctrine modules need picks as queryable data.
+
+Task: add a `future_picks` table (or a typed column on the league snapshot) that surfaces pick data as structured records with `season`, `round`, `original_owner`, `current_owner`, and `pick_grade` (1st/2nd/3rd tier classification).
 
 ### Dependencies
 - Sleeper API (live)
-- `leagues`, `teams`, `rosters` tables (live)
-- Player Identity Bridge for roster-to-gsis_id mapping (live)
+- `leagues`, `teams`, `rosters`, `league_dashboard_snapshots` tables (live)
 
 ### Expected Outputs
-- Agent can call `tiberclaw connect <league_id>` equivalent
-- Roster, standings, picks, and scoring settings available as structured data
-- League state queryable by week and season
+- `snapshot_type` field on snapshots with correct trigger labeling
+- `ScoringSettings` normalized object available from league context
+- `future_picks` queryable as structured data
+- League state reads from snapshots, not live Sleeper calls
 
 ---
 
-## Phase 2 — Agent Connector
+## Phase 2 — Expose League Context via Authenticated v1 Endpoints
 
-**Status: Live**
+**Status: Not started**
 
 ### Objectives
-Provide a stable, authenticated REST interface that agents and developers can query without any knowledge of Tiber internals.
+Bring the league context layer under the same `x-tiber-key` auth that covers scoring endpoints. Currently, league sync and context endpoints are internal only. Agents need to call them through the v1 surface.
 
-### What Is Built
-- `x-tiber-key` authentication on all `/api/v1/*` endpoints
-- Rate limiting per key, per tier
-- Request logging to `api_request_log`
-- Key management via `api_keys` table
-- Full v1 endpoint surface:
-  - `GET /api/v1/players/search`
-  - `GET /api/v1/forge/player/:id`
-  - `POST /api/v1/forge/batch`
-  - `GET /api/v1/fire/player/:id`
-  - `GET /api/v1/fire/batch`
-  - `GET /api/v1/catalyst/player/:id`
-  - `GET /api/v1/rookies/2026` (+ leaderboard, position, player name variants)
-  - `GET /api/v1/health`
-  - `GET /api/v1/diagnostic`
+### Required Components
 
-### What Remains
-- Expose league endpoints under `/api/v1/league/*` (Phase 1 completion dependency)
-- OpenClaw skill — the shell-level connector that wraps v1 calls for Claude agents. This is a skill file, not server code, but it needs to be kept in sync with the v1 surface.
-- Version negotiation header (`x-tiber-version`) for future API versioning
+**2.1 — v1 League Endpoints**
+
+Add the following routes to `server/api/v1/routes.ts`:
+
+```
+POST /api/v1/league/connect          — import + bind (wraps league-sync/sleeper + league-context)
+POST /api/v1/league/sync             — re-sync an existing league
+GET  /api/v1/league/context          — get current session context
+GET  /api/v1/league/roster           — get bound team's roster with Tiber IDs resolved
+GET  /api/v1/league/standings        — current standings
+GET  /api/v1/league/picks            — future picks for bound team (Phase 1.3 dependency)
+GET  /api/v1/league/scoring          — normalized scoring settings
+```
+
+All routes sit behind the existing `auth` and `rateLimit` middleware. No new auth system.
+
+**2.2 — Agent Session Object**
+
+Implement the `AgentSession` interface from the Architecture doc. Sessions are created on `POST /api/v1/league/connect` and return a `session_id` the agent can pass in subsequent calls.
+
+```typescript
+interface AgentSession {
+  session_id: string;
+  agent_id: string;
+  league_id: string;
+  team_id: string;
+  mode: "engine" | "league" | "gm";
+  created_at: string;
+  expires_at: string;
+}
+```
+
+Store sessions in a lightweight `agent_sessions` table or in memory with TTL (in-memory is acceptable for initial implementation).
+
+**2.3 — OpenClaw Skill Sync**
+
+Update the OpenClaw connector skill to wrap the new v1 league endpoints. This is a skill file update, not server code.
 
 ### Dependencies
-- `api_keys` and `api_request_log` tables (live as of March 2026)
+- Phase 1 complete (normalized scoring settings, picks as structured data)
+- `api_keys` auth middleware (live)
 
 ### Expected Outputs
-- Any OpenClaw-compatible agent can authenticate, search players, retrieve FORGE/FIRE/CATALYST scores, and query rookie data with no friction
+- Agent can authenticate once with `x-tiber-key`, then call `POST /api/v1/league/connect` to bind to a league
+- All subsequent calls return league-contextualized data
+- Session object tracks mode, expiry, and league binding
 
 ---
 
-## Phase 3 — Dynasty Doctrine Layer
+## Phase 3 — Doctrine Layer Implementation
 
 **Status: Not started — primary build target**
 
 ### Objectives
-Apply dynasty-specific reasoning to Tiber metrics and league context. This is what separates TiberClaw from a simple stats API — it produces evaluations, not just numbers.
+Implement the five Doctrine modules in `server/doctrine/`. Each module consumes Tiber metrics and league context, and returns a `DoctrineEvaluation` object conforming to the standardized schema.
+
+### Implementation Location
+
+```
+server/doctrine/
+  types.ts                           — DoctrineEvaluation interface, shared types
+  team_window_detection.ts
+  positional_aging_curves.ts
+  asset_insulation_model.ts
+  league_market_model.ts
+  roster_construction_heuristics.ts
+```
+
+All modules are TypeScript only. No Python. No shared mutable state between modules.
+
+### Standardized Output (all modules)
+
+```typescript
+interface DoctrineEvaluation {
+  module: string;
+  entity_type: "team" | "player" | "league";
+  entity_id: string;
+  evaluation_score: number;      // 0–1 normalized
+  confidence: number;            // 0–1
+  contributing_signals: string[];
+  reasoning: string;
+  generated_at: string;
+}
+```
+
+No module may return a custom format. The `contributing_signals` array must name each signal explicitly so outputs are auditable.
 
 ### Required Components
 
-**3.1 — Team Window Detection**
+**3.1 — `types.ts` (build first)**
 
-Inputs: roster FORGE Alphas, player ages, draft capital (picks + grade), win/loss record  
-Output: `{ window: "contend" | "retool" | "rebuild" | "tear_down", confidence: float, reasoning: string }`
+Define `DoctrineEvaluation`, aging curve priors by position, window classification enum (`contend | retool | rebuild | tear_down`), and shared signal name constants. All modules import from this file.
 
-Logic: Calculate roster age-weighted FORGE score. High score + low average age + picks = build. High score + aging starters + few picks = sell window. Low score + youth = rebuild.
+**3.2 — Team Window Detection**
 
-**3.2 — Positional Aging Curves**
+```
+Inputs:  roster FORGE Alphas (via POST /api/v1/forge/batch)
+         player ages
+         draft capital (future_picks from Phase 1.3)
+         win/loss record (standings from league context)
 
-Inputs: player position, current age, FORGE trend (last 4 weeks vs. prior season)  
-Output: dynasty value adjustment multiplier, years-of-peak-value estimate
+Signals: age_weighted_forge_score, draft_capital_score, starter_concentration,
+         depth_score, record_trajectory
 
-Priors by position:
-- RB: peak 22–25, sharp decline after 27, near-zero dynasty value at 29+
-- WR: peak 24–27, gradual decline, usable to 31 with right role
-- TE: peak 25–28, longest plateau of any skill position
-- QB: peak 27–34, extends further in stable systems
+Logic:   compute age-weighted FORGE mean → classify window →
+         set evaluation_score (0=tear_down, 1=peak_contend)
+```
 
-**3.3 — Asset Insulation Model**
+**3.3 — Positional Aging Curves**
 
-Inputs: roster, window classification, aging curve adjustments  
-Output: list of `core_assets` (do not trade) and `movable_assets` (can be included in proposals)
+```
+Inputs:  player gsis_id, position, current age, FORGE trend (last 4 weeks)
 
-Logic: Core = top FORGE players whose ages align with the team's window. Movable = high ADP but declining curve, or players the team has depth behind.
+Priors:
+  RB:  peak 22–25, cliff at 27, near-zero at 29+
+  WR:  peak 24–27, gradual decline, viable to 31
+  TE:  peak 25–28, longest plateau
+  QB:  peak 27–34, extends in stable systems
 
-**3.4 — League Market Modeling**
+Output:  evaluation_score = dynasty value multiplier (0–1)
+         contributing_signals: ["age", "position_curve", "forge_trend"]
+```
 
-Inputs: league transaction history, Sleeper ADP for the league's scoring format  
-Output: `market_premium_map` — which positions/player types the league systematically overvalues vs. Tiber
+**3.4 — Asset Insulation Model**
 
-Initially can use Sleeper's platform-wide ADP as a proxy. As transaction history accumulates, shift to league-specific model.
+```
+Inputs:  roster, window classification (from 3.2), aging curve scores (from 3.3)
 
-**3.5 — Roster Construction Heuristics**
+Logic:   core = players where (age curve score > 0.6) AND (forge_alpha > 65) 
+                AND (age aligns with window)
+         evaluation_score per player = insulation strength (1 = untouchable)
 
-Inputs: league roster settings (from league context), current roster, proposed changes  
-Output: construction score, legality check, balance assessment
+Output:  one DoctrineEvaluation per player on roster
+```
 
-Validates: position limits, taxi eligibility, IR slot usage, positional balance (starter count vs. bench depth by position).
+**3.5 — League Market Model**
+
+```
+Inputs:  league_market_signals (see Architecture doc, Section 4)
+
+Signals:
+  trade_frequency_per_team
+  positional_trade_bias
+  average_roster_age_by_team
+  draft_pick_liquidity_distribution
+  rebuild_team_count
+  contender_team_count
+  waiver_activity_rate
+  qb_premium_index
+
+Output:  evaluation_score = market inefficiency index (0=efficient, 1=maximally biased)
+         market_premium_map embedded in contributing_signals
+```
+
+Bootstrap with Sleeper platform-wide ADP. Shift to league-specific model as transaction history accumulates.
+
+**3.6 — Roster Construction Heuristics**
+
+```
+Inputs:  league scoring settings (normalized from Phase 1.2)
+         current roster
+         proposed changes (optional)
+
+Validates:
+  - position limits per league rules
+  - taxi squad eligibility
+  - IR slot usage
+  - positional balance (starter count vs. bench depth by position)
+
+Output:  evaluation_score = construction quality (0–1)
+         contributing_signals list legality issues and balance gaps
+```
+
+### Build Order
+
+Build in this order. Each module depends on the previous:
+1. `types.ts`
+2. `positional_aging_curves.ts` (no dependencies on other modules)
+3. `team_window_detection.ts` (depends on aging curves for window scoring)
+4. `asset_insulation_model.ts` (depends on window + aging)
+5. `league_market_model.ts` (independent, needs transaction history)
+6. `roster_construction_heuristics.ts` (independent, needs scoring settings from Phase 1)
 
 ### Dependencies
-- Phase 1 complete (league context available)
-- Phase 2 live (FORGE/FIRE batch endpoints)
-- `rookie_profiles` table (for rookie-specific aging curve seeding)
-
-### Build Notes
-- Doctrine modules are server-side only — no DB tables required for the initial implementation (stateless computation on top of existing data)
-- Results can be cached in a new `doctrine_snapshots` table if latency becomes a concern
-- Do not hardcode dynasty values — derive from Tiber metrics to stay engine-aligned
+- Phase 1 complete (scoring settings, picks structured)
+- Phase 2 complete (v1 league endpoints providing roster and context)
+- FORGE/FIRE batch endpoints (live)
 
 ### Expected Outputs
-- `GET /api/v1/dynasty/window?team_id=...` — team window classification
-- `GET /api/v1/dynasty/core-assets?team_id=...` — insulation recommendations
-- `GET /api/v1/dynasty/aging?player_id=...` — curve-adjusted value
-- All outputs include a `reasoning` field for agent consumption
+
+```
+GET /api/v1/doctrine/window?team_id=...&league_id=...
+GET /api/v1/doctrine/aging?player_id=...
+GET /api/v1/doctrine/insulation?team_id=...&league_id=...
+GET /api/v1/doctrine/market?league_id=...
+GET /api/v1/doctrine/construction?team_id=...&league_id=...
+```
+
+All return `DoctrineEvaluation`. All include `reasoning` field.
 
 ---
 
-## Phase 4 — GM Execution Engine
+## Phase 4 — GM Execution Endpoints
 
-**Status: Partial (start-sit and targets exist at internal endpoints)**
+**Status: Not started**
 
 ### Objectives
-Generate concrete, actionable outputs for dynasty team management. This is the layer an agent surfaces to the end user.
+Compose Doctrine evaluations into actionable GM outputs. This is the layer an agent surfaces to an end user asking dynasty questions.
 
-### Existing Endpoints
+### Evaluation Pipeline
+
 ```
-GET /api/strategy/start-sit   — weekly start/sit with FIRE context
-GET /api/strategy/targets     — waiver and buy targets by position
+1. Pull roster from bound session (v1 league endpoints)
+2. Resolve player IDs via Identity Bridge
+3. Retrieve FORGE + FIRE scores via batch endpoints
+4. Run applicable Doctrine modules
+5. Compose DoctrineEvaluations into GM output
+6. (Optional) Route through LLM gateway for natural language narrative
 ```
-These are functional but not authenticated via v1 and not Doctrine-aware.
+
+The LLM receives only the composed `DoctrineEvaluation[]` — never raw metrics.
 
 ### Required Components
 
 **4.1 — Roster Evaluation Report**
 
-Full evaluation of a team's roster through FORGE, FIRE, aging curves, and window classification. The entry point for GM Mode.
+Entry point for GM Mode. Runs window detection, aging curves, and insulation model across the full roster. Returns a complete team profile.
 
-Output: complete team evaluation with tier per player, window classification, core vs. movable list, key vulnerabilities.
+```
+GET /api/v1/gm/roster-eval?team_id=...&league_id=...
+```
 
 **4.2 — Trade Suggestion Engine**
 
-Inputs: roster evaluation, league market model, available trade partners  
-Logic: identify movable assets → identify likely trade partners (who needs your surplus) → propose deals that improve both sides according to Tiber valuation → apply market model to find exploitable pricing gaps  
-Output: specific trade proposals with Tiber-backed rationale
+```
+Inputs:  roster evaluation (4.1), league market model, league standings
+Logic:   identify movable assets → find complementary surplus/deficit across
+         league → propose specific swaps exploiting market pricing gaps
+Output:  ranked trade proposals with Tiber-backed rationale
+
+GET /api/v1/gm/trade-targets?team_id=...&league_id=...
+```
 
 **4.3 — Sell Candidate Identification**
 
-Inputs: aging curve output, FIRE trend (declining opportunity), market model  
-Logic: players approaching or past dynasty peak where market valuation lags Tiber's forward projection  
-Output: ranked sell list with sell-by window estimate
+```
+Inputs:  aging curve scores, FIRE trend, market model
+Logic:   players past dynasty peak where market valuation lags Tiber projection
+Output:  ranked sell list with sell-by window estimate
+
+GET /api/v1/gm/sell-candidates?team_id=...&league_id=...
+```
 
 **4.4 — Waiver Wire Prioritization**
 
-Inputs: FIRE batch for current week, roster construction gaps  
-Logic: rank unrostered players by opportunity score, filter by roster fit  
-Output: ranked waiver list with fit rationale
+```
+Inputs:  FIRE batch (current week), roster construction gaps
+Logic:   rank unrostered players by opportunity score, filter by roster fit
+Output:  ranked waiver list with fit rationale
 
-**4.5 — Start-Sit Upgrade (v2)**
+GET /api/v1/gm/waiver-wire?team_id=...&league_id=...&week=...
+```
 
-Upgrade existing `/api/strategy/start-sit` to be v1-authenticated, Doctrine-aware (considers whether the team is in a win-now or development mode), and FIRE-weighted for current-week context.
+**4.5 — Start-Sit (v2)**
+
+Upgrade existing `/api/strategy/start-sit` to be v1-authenticated and Doctrine-aware. Considers team window (win-now vs. development) when weighting lineup decisions.
+
+```
+GET /api/v1/gm/start-sit?team_id=...&league_id=...&week=...
+```
 
 ### Dependencies
-- Phase 2 live
-- Phase 3 complete (Doctrine layer needed for trade and sell logic)
-- League market model seeded with transaction history
+- Phase 3 complete (all Doctrine modules operational)
+- League market model seeded (at least partial transaction history)
 
 ### Expected Outputs
-- `GET /api/v1/gm/roster-eval?team_id=...&league_id=...`
-- `GET /api/v1/gm/trade-targets?team_id=...&league_id=...`
-- `GET /api/v1/gm/sell-candidates?team_id=...&league_id=...`
-- `GET /api/v1/gm/waiver-wire?team_id=...&league_id=...&week=...`
-- `GET /api/v1/gm/start-sit?team_id=...&league_id=...&week=...`
+- All five GM endpoints live under `/api/v1/gm/*`
+- All outputs auditable — `contributing_signals` visible in response
+- LLM narrative optional via `?narrative=true` query param
 
 ---
 
-## Phase 5 — League Intelligence
+## Phase 5 — League-Wide Market Intelligence
 
 **Status: Not started**
 
 ### Objectives
-Shift the analysis scope from a single team to the full league ecosystem. Identify market inefficiencies, model trade network dynamics, and surface meta-level insights about league tendencies.
+Expand from single-team analysis to the full league ecosystem. Surface market inefficiencies, trade network dynamics, and competitive landscape for use in any GM Mode decision.
 
 ### Required Components
 
 **5.1 — Full League Scan**
 
-Run Doctrine evaluation across every team in a league simultaneously. Classify each team's window and asset structure. Produces a league-wide map of who is building, contending, or tanking.
+Run Doctrine evaluation across every team simultaneously. Produces a league-wide window map: who is contending, retooling, rebuilding, or tearing down. Used by the trade suggestion engine to find natural trading partners.
 
-Use: find which rebuilding teams hold assets you need. Find which contending teams are desperate for your surplus.
+```
+GET /api/v1/league-intel/scan?league_id=...
+```
 
 **5.2 — Market Inefficiency Detection**
 
-Compare Tiber valuations to league-specific transaction history across the full roster pool. Identify player types or positions systematically mispriced in this league.
+Compare Tiber valuations to league-specific transaction history across the full roster pool. Identify player types or positions systematically mispriced relative to FORGE.
 
-Use: buy undervalued positions before the league corrects. Avoid overpaying for positions the league overvalues.
+```
+GET /api/v1/league-intel/inefficiencies?league_id=...
+```
 
 **5.3 — Trade Network Analysis**
 
-Map which teams historically trade with each other. Identify which team managers are active vs. passive. Flag likely trading partners based on complementary window and position surplus/deficit.
+Map historical trading relationships. Identify active vs. passive managers. Flag likely partners based on complementary window classification and position surplus/deficit.
+
+```
+GET /api/v1/league-intel/trade-network?league_id=...
+```
 
 **5.4 — Competitive Landscape Report**
 
-Full-league assessment: who are the legitimate threats to win this season, who is on a 3-year rebuild, what the positional arms race looks like at WR vs. TE vs. QB. Produces a league meta document an agent can reference when advising on any decision.
+Full-league assessment: legitimate contenders, rebuild timelines, positional arms race, win-now desperation index. Produces a meta document the agent can reference for any decision.
+
+```
+GET /api/v1/league-intel/landscape?league_id=...
+```
 
 ### Dependencies
 - Phase 4 operational (roster evaluation must run for all teams)
-- Meaningful transaction history in `league_context` (requires at least one active season)
+- Meaningful transaction history in `league_context` (requires at least one active season of data)
 
 ### Expected Outputs
-- `GET /api/v1/league-intel/scan?league_id=...` — full league window map
-- `GET /api/v1/league-intel/inefficiencies?league_id=...` — market pricing gaps
-- `GET /api/v1/league-intel/trade-network?league_id=...` — partner analysis
-- `GET /api/v1/league-intel/landscape?league_id=...` — competitive report
+- All four endpoints live under `/api/v1/league-intel/*`
+- Phase 5 feeds back into Phase 4 (trade suggestions improve with full league scan)
 
 ---
 
-## Implementation Notes for Agents
+## Implementation Rules for All Agents
 
-### Reading This Document
-
-This document is a contract, not a wishlist. Phases 1 and 2 are done — do not rebuild what exists. Verify against the live repo before starting any phase.
-
-### Where to Start Phase 3
-
-Begin with Team Window Detection (3.1) and Positional Aging Curves (3.2). These are the foundation that all other Doctrine modules depend on. They can be built as stateless TypeScript functions in `server/services/doctrine/` before being exposed through routes.
-
-### Tiber Boundary Rule
-
-Never move scoring logic into the Doctrine layer. If you find yourself querying play-by-play data or computing EPA inside a Doctrine module, stop. That belongs in Tiber Core. The Doctrine layer consumes FORGE/FIRE/CATALYST outputs via the v1 API.
+### Do Not
+- Rebuild what is already live (see Prerequisites)
+- Add strategy logic to engine files (`forgeRoutes.ts`, etc.)
+- Create separate authentication — use the existing `x-tiber-key` system
+- Hardcode player values — derive from Tiber metrics
+- Return custom output shapes from Doctrine modules — use `DoctrineEvaluation`
+- Pass raw Tiber metrics to the LLM gateway — pass only `DoctrineEvaluation` objects
+- Skip a phase to start the next — dependencies are real
 
 ### File Locations
 
 ```
-server/services/doctrine/        — Doctrine module implementations
-server/api/v1/routes.ts          — add new v1 endpoints here (dynasty/*, gm/*, league-intel/*)
-docs/tiberclaw/                  — this document lives here
-shared/schema.ts                 — add any new tables here first
+server/doctrine/          — all Doctrine modules (Phase 3)
+server/api/v1/routes.ts   — all new v1 endpoints (Phases 2, 3, 4, 5)
+shared/schema.ts          — any new DB tables (define here first)
+docs/tiberclaw/           — architecture and build plan live here
 ```
 
-### Do Not
+### Verifying Prerequisites
 
-- Add strategy logic to `server/routes/forgeRoutes.ts` or any engine file
-- Create separate authentication for TiberClaw — it uses the existing `x-tiber-key` system
-- Hardcode player values — always derive from Tiber metrics
-- Skip Phase 3 to build Phase 4 — GM outputs are only as good as the Doctrine beneath them
+Before starting any phase, run:
+```
+GET /api/v1/health        — confirms v1 API is up
+GET /api/v1/diagnostic    — confirms DB and key auth are live
+```
+
+Then check the repo for existing route files before assuming something needs to be built.

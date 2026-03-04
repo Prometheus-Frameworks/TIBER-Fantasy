@@ -1,0 +1,137 @@
+TIBERCLAW ARCHITECTURE — REVISION REQUEST
+
+The architecture document looks solid and the layer separation is correct. Before we proceed to implementation phases, we need to tighten several areas so that multiple agents (Claude Code, Codex, Replit Agent) can build against the same deterministic contracts.
+
+Your task is to update the architecture documentation with the following clarifications.
+
+---
+
+1. Doctrine Module Output Contract
+
+All Doctrine modules must return a standardized evaluation object so downstream systems (GM layer, LLM gateway, strategy endpoints) can consume them reliably.
+
+Add a shared Doctrine response schema to the architecture doc.
+
+Required fields:
+
+* module
+* entity_type (team | player | league)
+* entity_id
+* evaluation_score (0–1 normalized)
+* confidence (0–1)
+* contributing_signals[]
+* reasoning
+* generated_at
+
+This schema will be used by all Doctrine modules:
+
+* team_window_detection
+* asset_insulation_model
+* positional_aging_curves
+* league_market_model
+* roster_construction_heuristics
+
+Do not allow modules to invent custom output formats.
+
+---
+
+2. League Market Model Inputs
+
+Explicitly define the signals the market model must analyze.
+
+Add a "league_market_signals" section with these inputs:
+
+* trade_frequency_per_team
+* positional_trade_bias
+* average_roster_age_by_team
+* draft_pick_liquidity_distribution
+* rebuild_team_count
+* contender_team_count
+* waiver_activity_rate
+* qb_premium_index (relative QB trade price vs WR baseline)
+
+This ensures market modeling is based on deterministic signals rather than ad-hoc analysis.
+
+---
+
+3. League Snapshot Lifecycle
+
+Define when league snapshots are created.
+
+Add snapshot triggers:
+
+* league_import → create baseline snapshot
+* weekly_rollover → snapshot after final MNF game
+* transaction_event → optional snapshot on trades/waivers
+* manual_refresh → triggered by `/api/league-sync/sync`
+
+Also define retention rules:
+
+* weekly snapshots retained indefinitely
+* transaction snapshots retained for 90 days
+
+This prevents agents from over-querying the Sleeper API and ensures consistent league state.
+
+---
+
+4. LLM Boundary Rule
+
+Add an explicit rule to the architecture:
+
+LLMs must only receive Doctrine outputs.
+
+LLMs must not receive raw Tiber engine metrics or perform strategic analysis.
+
+Their role is narrative explanation only. Strategic reasoning must occur entirely within Doctrine modules.
+
+---
+
+5. Agent Session Contract
+
+Document the structure of an agent session object.
+
+Example:
+
+agent_session
+
+* session_id
+* agent_id
+* league_id
+* team_id
+* mode (engine | league | gm)
+* created_at
+* expires_at
+
+This ensures consistent behavior across agent sessions.
+
+---
+
+6. Doctrine Implementation Location
+
+Doctrine modules will be implemented in the Node/TypeScript service, not in Python.
+
+Python remains responsible for ELT pipelines and heavy statistical modeling. Doctrine logic belongs in the API layer for low-latency decision evaluation.
+
+Create the following directory for Phase 3 implementation:
+
+server/doctrine/
+
+Each module should live independently within this directory.
+
+---
+
+Next Step
+
+Once the architecture document is updated with these constraints, generate the phased build plan:
+
+docs/tiberclaw/TIBERCLAW_BUILD_PHASES.md
+
+Implementation phases should follow this order:
+
+Phase 1 — stabilize League Context infrastructure
+Phase 2 — expose league context through authenticated v1 endpoints
+Phase 3 — implement Doctrine modules
+Phase 4 — GM execution endpoints
+Phase 5 — league-wide market intelligence
+
+Do not begin writing production code yet. The goal of this step is a finalized architecture and a deterministic build plan that other agents can follow safely.
