@@ -24,9 +24,15 @@ interface ForgePlayerResult {
   tier?: string;
 }
 
-interface ForgeBatchResponse {
-  scores?: ForgePlayerResult[];
-  results?: ForgePlayerResult[];
+interface ForgePlayerDetailResponse {
+  success?: boolean;
+  score?: {
+    playerId: string;
+    playerName?: string;
+    position: string;
+    alpha: number;
+    tier?: string;
+  };
 }
 
 // ── Primary export ──────────────────────────────────────────
@@ -53,16 +59,23 @@ export async function evaluateRosterConstruction(
     });
   }
 
-  // Fetch FORGE batch
-  const batchData = await doctrineFetch<ForgeBatchResponse>(
-    '/api/v1/forge/batch',
-    apiKey,
-    baseUrl,
-    { method: 'POST', body: { player_ids: playerIds, mode: 'dynasty' } },
+  // Fetch FORGE for each player individually (batch endpoint doesn't filter by gsis_id)
+  const forgeResults = await Promise.all(
+    playerIds.map((id) =>
+      doctrineFetch<ForgePlayerDetailResponse>(`/api/v1/forge/player/${id}?mode=dynasty`, apiKey, baseUrl),
+    ),
   );
 
-  const players = batchData?.scores ?? batchData?.results ?? [];
-  const matched = players.filter((p) => p.alpha !== undefined && p.alpha !== null);
+  const matched: ForgePlayerResult[] = forgeResults
+    .filter((r): r is ForgePlayerDetailResponse => r !== null && r?.score !== undefined)
+    .map((r) => ({
+      playerId: r!.score!.playerId,
+      playerName: r!.score!.playerName,
+      position: r!.score!.position,
+      alpha: r!.score!.alpha,
+      tier: r!.score!.tier,
+    }))
+    .filter((p) => p.alpha !== undefined && p.alpha !== null);
 
   if (matched.length === 0) {
     return makeEvaluation({

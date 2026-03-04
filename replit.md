@@ -35,8 +35,14 @@ Intelligence Feed System:
   - `league_future_picks` table — dynasty traded picks stored as first-class structured data (league_id, season, round, original_roster_id, current_roster_id, source)
   - `normalizeScoringSettings()` — `server/services/normalizeScoringSettings.ts` — normalizes raw Sleeper scoring_settings into a typed `ScoringProfile` (format, rec_multiplier, te_premium, dynasty_relevant)
   - League sync route now fetches `traded_picks` from Sleeper in parallel, stores them in `league_future_picks`, and embeds `scoring_profile` in the league settings payload
-- **Phase 2 (next)**: Expose league context via authenticated v1 endpoints (`GET /api/v1/league/:id/context`, picks, scoring profile)
-- **Phase 3 (spec to Claude Code)**: Doctrine modules in `server/doctrine/` — aging curves, window detection, asset insulation, market model, roster construction
+- **Phase 2 (complete)**: Authenticated v1 league endpoints — `GET /api/v1/league/:id/context`, `/picks`, `/scoring` — all behind `x-tiber-key`
+- **Phase 3 (complete)**: Doctrine layer — 5 TypeScript modules in `server/doctrine/`: `positional_aging_curves`, `team_window_detection`, `asset_insulation_model`, `league_market_model`, `roster_construction_heuristics`. Each returns a `DoctrineEvaluation` object (score 0–1, confidence, contributing signals, plain-English reasoning). Modules call v1 endpoints via HTTP, never import engine files directly.
+- **Phase 4 (complete)**: GM Execution Endpoints — 3 new routes in `server/api/v1/routes.ts` that wire doctrine modules into the v1 API:
+  - `GET /api/v1/dynasty/player/:playerId/evaluate` — aging curve + asset insulation for a player (age auto-computed from birth_date)
+  - `POST /api/v1/dynasty/roster/:leagueId/:rosterId` — team window + roster construction (body: `{ player_ids: [...] }`)
+  - `GET /api/v1/dynasty/player/:playerId/market/:leagueId?pool_ids=id1,id2,...` — market position vs. league player pool
+  - All routes behind `x-tiber-key`; doctrine modules receive the caller's key for internal FORGE/FIRE fetches
+- **Phase 5 (next)**: League-wide market intelligence — rank all rostered players across all teams in a league, surface buy/sell signals, identify positional imbalances across franchises
 
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.

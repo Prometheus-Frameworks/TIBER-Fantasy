@@ -46,9 +46,15 @@ interface ForgePlayerDetailResponse {
   };
 }
 
-interface ForgeBatchResponse {
-  scores?: ForgePlayerResult[];
-  results?: ForgePlayerResult[];
+interface ForgePoolPlayerResponse {
+  success?: boolean;
+  score?: {
+    playerId: string;
+    playerName?: string;
+    position: string;
+    alpha: number;
+    tier?: string;
+  };
 }
 
 // ── Tier mapping ────────────────────────────────────────────
@@ -77,26 +83,36 @@ export async function evaluateMarketPosition(
   apiKey: string,
   baseUrl: string,
 ): Promise<DoctrineEvaluation> {
-  // Fetch target player and batch pool in parallel
-  const [targetRaw, batchData] = await Promise.all([
+  // Fetch target player and all pool players individually in parallel
+  const poolIds = allLeaguePlayerIds.filter((id) => id !== playerId);
+  const [targetRaw, ...poolResults] = await Promise.all([
     doctrineFetch<ForgePlayerDetailResponse>(
       `/api/v1/forge/player/${playerId}?mode=dynasty`,
       apiKey,
       baseUrl,
     ),
-    allLeaguePlayerIds.length > 0
-      ? doctrineFetch<ForgeBatchResponse>(
-          '/api/v1/forge/batch',
-          apiKey,
-          baseUrl,
-          { method: 'POST', body: { player_ids: allLeaguePlayerIds, mode: 'dynasty' } },
-        )
-      : Promise.resolve(null),
+    ...poolIds.map((id) =>
+      doctrineFetch<ForgePoolPlayerResponse>(`/api/v1/forge/player/${id}?mode=dynasty`, apiKey, baseUrl),
+    ),
   ]);
 
   // Normalize target player
   const target = normalizeTarget(targetRaw, playerId);
-  const pool = batchData?.scores ?? batchData?.results ?? [];
+
+  // Build pool including target player
+  const allForgeResults: ForgePlayerResult[] = [];
+  // Add target player to pool
+  if (target) {
+    allForgeResults.push({ playerId: target.playerId, position: target.position, alpha: target.alpha, tier: target.tier });
+  }
+  // Add pool players
+  for (const r of poolResults) {
+    const pr = r as ForgePoolPlayerResponse | null;
+    if (pr?.score) {
+      allForgeResults.push({ playerId: pr.score.playerId, position: pr.score.position, alpha: pr.score.alpha, tier: pr.score.tier });
+    }
+  }
+  const pool = allForgeResults;
 
   if (!target) {
     return makeEvaluation({

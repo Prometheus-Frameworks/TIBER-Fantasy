@@ -10,6 +10,11 @@ import { db } from "../../infra/db";
 import { sql } from "drizzle-orm";
 import { storage } from "../../storage";
 import { normalizeScoringSettings } from "../../services/normalizeScoringSettings";
+import { evaluateAgingCurve } from "../../doctrine/positional_aging_curves";
+import { detectTeamWindow } from "../../doctrine/team_window_detection";
+import { evaluateAssetInsulation } from "../../doctrine/asset_insulation_model";
+import { evaluateMarketPosition } from "../../doctrine/league_market_model";
+import { evaluateRosterConstruction } from "../../doctrine/roster_construction_heuristics";
 
 const router = Router();
 
@@ -431,6 +436,144 @@ router.get("/league/:id/scoring", async (req, res, next) => {
       league_name: league.league_name ?? league.leagueName ?? null,
       season: league.season ?? null,
       scoring_profile: scoringProfile,
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+// ─── Dynasty / GM Endpoints ────────────────────────────────────────────────
+
+router.get("/dynasty/player/:playerId/evaluate", async (req, res, next) => {
+  try {
+    const { playerId } = req.params;
+    const apiKey = req.header("x-tiber-key") ?? process.env.TIBER_API_KEY ?? "";
+    const baseUrl = `http://127.0.0.1:${process.env.PORT ?? "5000"}`;
+
+    const rows = await db.execute(sql`
+      SELECT full_name, position, birth_date
+      FROM player_identity_map
+      WHERE (gsis_id = ${playerId} OR nflfastr_gsis_id = ${playerId})
+        AND position IN ('QB','RB','WR','TE')
+      LIMIT 1
+    `);
+
+    if (!rows.rows.length) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${playerId}`);
+    }
+
+    const row = rows.rows[0] as { full_name: string; position: string; birth_date: string | null };
+    const position = row.position as "QB" | "RB" | "WR" | "TE";
+
+    let age: number;
+    if (req.query.age) {
+      age = parseFloat(req.query.age as string);
+      if (isNaN(age) || age < 18 || age > 55) {
+        throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "age must be a decimal number between 18 and 55");
+      }
+    } else if (row.birth_date) {
+      const birthMs = new Date(row.birth_date).getTime();
+      age = (Date.now() - birthMs) / (1000 * 60 * 60 * 24 * 365.25);
+    } else {
+      age = 27;
+    }
+
+    let forgeAlpha = 50;
+    try {
+      const forgeData = await proxyToExisting(req, `/api/v1/forge/player/${playerId}?mode=dynasty`);
+      const score = (forgeData as Record<string, unknown>)?.score as Record<string, unknown> | undefined;
+      if (typeof score?.alpha === "number") forgeAlpha = score.alpha;
+    } catch {
+      // non-fatal — continue with default alpha
+    }
+
+    const [aging, insulation] = await Promise.all([
+      evaluateAgingCurve(playerId, age, position, forgeAlpha, apiKey, baseUrl),
+      evaluateAssetInsulation(playerId, position, apiKey, baseUrl),
+    ]);
+
+    res.json(v1Success({
+      player: {
+        id: playerId,
+        name: row.full_name,
+        position,
+        age: Math.round(age * 10) / 10,
+      },
+      evaluations: { aging, insulation },
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.post("/dynasty/roster/:leagueId/:rosterId", async (req, res, next) => {
+  try {
+    const { leagueId, rosterId } = req.params;
+    const body = req.body as Record<string, unknown>;
+    const playerIds = body.player_ids;
+
+    if (!Array.isArray(playerIds) || playerIds.length === 0) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "player_ids must be a non-empty array of gsis_ids");
+    }
+
+    const apiKey = req.header("x-tiber-key") ?? process.env.TIBER_API_KEY ?? "";
+    const baseUrl = `http://127.0.0.1:${process.env.PORT ?? "5000"}`;
+
+    const raw = await storage.getLeagueWithTeams(leagueId);
+    if (!raw) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `League not found: ${leagueId}`);
+    }
+    const league = raw as Record<string, unknown>;
+    const settings = (league.settings ?? {}) as Record<string, unknown>;
+    const scoringProfile = (settings.scoring_profile
+      ? settings.scoring_profile
+      : normalizeScoringSettings((settings.scoring_settings ?? {}) as Record<string, number>)) as Parameters<typeof evaluateRosterConstruction>[3];
+
+    const allPicks = await storage.getLeagueFuturePicks(leagueId);
+    const picks = allPicks
+      .filter((p) => p.currentRosterId === rosterId)
+      .map((p) => ({
+        id: p.id,
+        season: p.season ?? 0,
+        round: p.round,
+        source: p.source ?? "traded",
+        original_roster_id: p.originalRosterId ?? "",
+        current_roster_id: p.currentRosterId ?? "",
+        original_team: null,
+        current_team: null,
+        synced_at: typeof p.syncedAt === "string" ? p.syncedAt : new Date(p.syncedAt ?? Date.now()).toISOString(),
+      }));
+
+    const [windowEval, constructionEval] = await Promise.all([
+      detectTeamWindow(leagueId, rosterId, playerIds as string[], apiKey, baseUrl),
+      evaluateRosterConstruction(leagueId, rosterId, playerIds as string[], scoringProfile, picks, apiKey, baseUrl),
+    ]);
+
+    res.json(v1Success({
+      league_id: leagueId,
+      roster_id: rosterId,
+      evaluations: { window: windowEval, construction: constructionEval },
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/dynasty/player/:playerId/market/:leagueId", async (req, res, next) => {
+  try {
+    const { playerId, leagueId } = req.params;
+    const rawPool = (req.query.pool_ids as string ?? "").trim();
+    if (!rawPool) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "pool_ids query param required (comma-separated gsis_ids)");
+    }
+    const poolIds = rawPool.split(",").map((s) => s.trim()).filter(Boolean);
+    if (poolIds.length === 0) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "pool_ids must contain at least one gsis_id");
+    }
+
+    const apiKey = req.header("x-tiber-key") ?? process.env.TIBER_API_KEY ?? "";
+    const baseUrl = `http://127.0.0.1:${process.env.PORT ?? "5000"}`;
+
+    const evaluation = await evaluateMarketPosition(playerId, leagueId, poolIds, apiKey, baseUrl);
+
+    res.json(v1Success({
+      player_id: playerId,
+      league_id: leagueId,
+      evaluation,
     }, req.requestId!));
   } catch (err) { next(err); }
 });

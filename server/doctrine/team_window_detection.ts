@@ -13,7 +13,7 @@ import { PRIME_WINDOWS, AGE_DECAY_RATE } from './positional_aging_curves';
 
 const MODULE_NAME = 'team_window_detection';
 
-// ── Response types for FORGE batch endpoint ─────────────────
+// ── Response types for FORGE player endpoint ─────────────────
 
 interface ForgeBatchPlayer {
   playerId: string;
@@ -30,9 +30,16 @@ interface ForgeBatchPlayer {
   };
 }
 
-interface ForgeBatchResponse {
-  scores?: ForgeBatchPlayer[];
-  results?: ForgeBatchPlayer[];
+interface ForgePlayerResponse {
+  success?: boolean;
+  score?: {
+    playerId: string;
+    playerName: string;
+    position: string;
+    alpha: number;
+    tier?: string;
+    age?: number;
+  };
 }
 
 // ── Primary export ──────────────────────────────────────────
@@ -57,16 +64,23 @@ export async function detectTeamWindow(
     });
   }
 
-  // Fetch FORGE batch for all roster players
-  const batchData = await doctrineFetch<ForgeBatchResponse>(
-    '/api/v1/forge/batch',
-    apiKey,
-    baseUrl,
-    { method: 'POST', body: { player_ids: playerIds, mode: 'dynasty' } },
+  // Fetch FORGE for each player individually (batch endpoint doesn't filter by gsis_id)
+  const forgeResults = await Promise.all(
+    playerIds.map((id) =>
+      doctrineFetch<ForgePlayerResponse>(`/api/v1/forge/player/${id}?mode=dynasty`, apiKey, baseUrl),
+    ),
   );
 
-  const players = batchData?.scores ?? batchData?.results ?? [];
-  const matched = players.filter((p) => p.alpha !== undefined && p.alpha !== null);
+  const matched: ForgeBatchPlayer[] = forgeResults
+    .filter((r): r is ForgePlayerResponse => r !== null && r?.score !== undefined)
+    .map((r) => ({
+      playerId: r!.score!.playerId,
+      playerName: r!.score!.playerName,
+      position: r!.score!.position,
+      alpha: r!.score!.alpha,
+      age: r!.score!.age,
+    }))
+    .filter((p) => p.alpha !== undefined && p.alpha !== null);
 
   if (matched.length === 0) {
     return makeEvaluation({
