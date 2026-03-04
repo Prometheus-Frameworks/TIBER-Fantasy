@@ -50,7 +50,7 @@ Intelligence Feed System:
   - Generates buy/sell/hold signals per player (FORGE percentile + age vs position prime band)
   - Returns `player_pool`, `team_summaries` (sorted by avg FORGE), `position_rankings`, and `meta`
   - Team summaries include: player count, avg FORGE, positional imbalance flags, top 3 assets, signal counts
-  - **Note**: Age signals default to 27 when `birth_date` is null in `player_identity_map` (data enrichment gap)
+  - **Note**: `birth_date` now populated for all 594 skill-position players via `scripts/enrich-birth-dates-from-sleeper.ts` (Sleeper /players/nfl → match on sleeper_id). Re-run script when identity map grows.
 
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
