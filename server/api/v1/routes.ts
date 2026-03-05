@@ -15,7 +15,8 @@ import { detectTeamWindow } from "../../doctrine/team_window_detection";
 import { evaluateAssetInsulation } from "../../doctrine/asset_insulation_model";
 import { evaluateMarketPosition } from "../../doctrine/league_market_model";
 import { evaluateRosterConstruction } from "../../doctrine/roster_construction_heuristics";
-import { sleeperClient } from "../../integrations/sleeperClient";
+import { sleeperClient, deriveSleeperScoringFormat } from "../../integrations/sleeperClient";
+import type { SleeperLeagueDetail } from "../../integrations/sleeperClient";
 import type { Position } from "../../doctrine/types";
 
 const router = Router();
@@ -935,6 +936,179 @@ router.get("/dynasty/league/:leagueId/market", async (req, res, next) => {
         forge_scored: Object.keys(forgeMap).length,
         rosters_scanned: sleeperRosters.length,
         position_thresholds: posStats,
+      },
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+// ─── User / Team Sync Endpoints ────────────────────────────────────────────
+
+router.get("/user/:username/leagues", async (req, res, next) => {
+  try {
+    const { username } = req.params;
+    const season = (req.query.season as string) || "2025";
+
+    let sleeperUser: any;
+    try {
+      sleeperUser = await sleeperClient.getUser(username);
+    } catch {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Sleeper user not found: ${username}`);
+    }
+    if (!sleeperUser?.user_id) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Sleeper user not found: ${username}`);
+    }
+
+    let allLeagues: SleeperLeagueDetail[] = [];
+    try {
+      allLeagues = await sleeperClient.getUserLeagues(sleeperUser.user_id, season);
+    } catch {
+      allLeagues = [];
+    }
+
+    const LEAGUE_TYPE_MAP: Record<number, string> = { 0: "redraft", 1: "keeper", 2: "dynasty" };
+    const formatted = allLeagues.map((l) => {
+      const typeNum = l.settings?.type ?? 0;
+      const typeStr = LEAGUE_TYPE_MAP[typeNum] ?? "redraft";
+      return {
+        league_id: l.league_id,
+        name: l.name,
+        season: l.season,
+        type: typeStr,
+        is_dynasty: typeNum === 2,
+        scoring_format: deriveSleeperScoringFormat(l.scoring_settings ?? {}),
+        total_rosters: l.total_rosters ?? null,
+        status: l.status ?? null,
+      };
+    });
+
+    res.json(v1Success({
+      user: {
+        user_id: sleeperUser.user_id,
+        display_name: sleeperUser.display_name,
+        username: sleeperUser.username ?? username,
+        avatar: sleeperUser.avatar ?? null,
+      },
+      leagues: formatted,
+      meta: {
+        season,
+        total_leagues: formatted.length,
+        dynasty_leagues: formatted.filter((l) => l.is_dynasty).length,
+      },
+    }, req.requestId!));
+  } catch (err) { next(err); }
+});
+
+router.get("/user/:username/leagues/:leagueId/roster", async (req, res, next) => {
+  try {
+    const { username, leagueId } = req.params;
+    const apiKey = req.headers["x-tiber-key"] as string;
+    const baseUrl = getBaseUrl(req);
+
+    let sleeperUser: any;
+    try {
+      sleeperUser = await sleeperClient.getUser(username);
+    } catch {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Sleeper user not found: ${username}`);
+    }
+    if (!sleeperUser?.user_id) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `Sleeper user not found: ${username}`);
+    }
+
+    const [sleeperLeague, allRosters] = await Promise.all([
+      sleeperClient.getLeague(leagueId),
+      sleeperClient.getLeagueRosters(leagueId),
+    ]);
+
+    const myRoster = allRosters.find((r) => r.owner_id === sleeperUser.user_id);
+    if (!myRoster) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, `User ${username} has no roster in league ${leagueId}`);
+    }
+
+    const sleeperIds = (myRoster.players ?? []).filter(Boolean);
+    if (sleeperIds.length === 0) {
+      return res.json(v1Success({
+        user: { user_id: sleeperUser.user_id, display_name: sleeperUser.display_name },
+        league: { league_id: sleeperLeague.league_id, name: sleeperLeague.name, season: sleeperLeague.season },
+        roster: { roster_id: myRoster.roster_id, players: [] },
+        meta: { total_players: 0, forge_scored: 0 },
+      }, req.requestId!));
+    }
+
+    const idRows = await dbPool.query(
+      `SELECT sleeper_id, nflfastr_gsis_id AS gsis_id, full_name AS display_name, position, birth_date
+       FROM player_identity_map
+       WHERE sleeper_id = ANY($1::text[])`,
+      [sleeperIds]
+    );
+    const identityMap: Record<string, { gsis_id: string; display_name: string; position: string; birth_date: string | null }> = {};
+    for (const row of idRows.rows) {
+      identityMap[row.sleeper_id] = row;
+    }
+
+    const playersWithGsis = sleeperIds
+      .map((sid) => ({ sleeper_id: sid, ...identityMap[sid] }))
+      .filter((p) => p.gsis_id);
+
+    const forgeMap: Record<string, any> = {};
+    const CONCURRENCY = 10;
+    for (let i = 0; i < playersWithGsis.length; i += CONCURRENCY) {
+      const batch = playersWithGsis.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(
+        batch.map(async (p) => {
+          const data = await fetch(`${baseUrl}/api/v1/forge/player/${p.gsis_id}?mode=dynasty`, {
+            headers: { "x-tiber-key": apiKey },
+          }).then((r) => r.json()).catch(() => null);
+          if (data?.data?.score?.alpha != null) {
+            forgeMap[p.gsis_id] = data.data;
+          }
+        })
+      );
+    }
+
+    const posOrder: Record<string, number> = { QB: 0, RB: 1, WR: 2, TE: 3 };
+    const players = sleeperIds.map((sid) => {
+      const identity = identityMap[sid];
+      const forge = identity?.gsis_id ? forgeMap[identity.gsis_id] : null;
+      let age: number | null = null;
+      if (identity?.birth_date) {
+        const born = new Date(identity.birth_date);
+        age = Math.floor((Date.now() - born.getTime()) / (365.25 * 24 * 3600 * 1000));
+      }
+      return {
+        sleeper_id: sid,
+        gsis_id: identity?.gsis_id ?? null,
+        display_name: identity?.display_name ?? null,
+        position: identity?.position ?? null,
+        age,
+        forge_alpha: forge?.score?.alpha ?? null,
+        forge_tier: forge?.score?.tier ?? null,
+        forge_label: forge?.score?.label ?? null,
+      };
+    }).sort((a, b) => {
+      const posDiff = (posOrder[a.position ?? ""] ?? 9) - (posOrder[b.position ?? ""] ?? 9);
+      if (posDiff !== 0) return posDiff;
+      return (b.forge_alpha ?? -1) - (a.forge_alpha ?? -1);
+    });
+
+    res.json(v1Success({
+      user: {
+        user_id: sleeperUser.user_id,
+        display_name: sleeperUser.display_name,
+        username: sleeperUser.username ?? username,
+      },
+      league: {
+        league_id: sleeperLeague.league_id,
+        name: sleeperLeague.name,
+        season: sleeperLeague.season,
+        type: (sleeperLeague as any).type ?? "redraft",
+      },
+      roster: {
+        roster_id: myRoster.roster_id,
+        players,
+      },
+      meta: {
+        total_players: players.length,
+        forge_scored: players.filter((p) => p.forge_alpha !== null).length,
       },
     }, req.requestId!));
   } catch (err) { next(err); }

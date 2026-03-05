@@ -10,6 +10,12 @@ export interface SleeperLeague {
   roster_positions?: string[];
 }
 
+export interface SleeperLeagueDetail extends SleeperLeague {
+  type?: string;
+  draft_id?: string;
+  settings?: Record<string, any> & { type?: number };
+}
+
 export interface SleeperUser {
   user_id: string;
   display_name: string;
@@ -65,6 +71,10 @@ export const sleeperClient = {
 
   async getTradedPicks(leagueId: string): Promise<SleeperTradedPick[]> {
     return fetchJson<SleeperTradedPick[]>(`/league/${leagueId}/traded_picks`);
+  },
+
+  async getUserLeagues(userId: string, season: string): Promise<SleeperLeagueDetail[]> {
+    return fetchJson<SleeperLeagueDetail[]>(`/user/${userId}/leagues/nfl/${season}`);
   },
 };
 

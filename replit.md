@@ -51,6 +51,10 @@ Intelligence Feed System:
   - Returns `player_pool`, `team_summaries` (sorted by avg FORGE), `position_rankings`, and `meta`
   - Team summaries include: player count, avg FORGE, positional imbalance flags, top 3 assets, signal counts
   - **Note**: `birth_date` now populated for all 594 skill-position players via `scripts/enrich-birth-dates-from-sleeper.ts` (Sleeper /players/nfl → match on sleeper_id). Re-run script when identity map grows.
+- **Phase 6 (complete)**: User / Team Sync — 2 new routes in `server/api/v1/routes.ts`:
+  - `GET /api/v1/user/:username/leagues?season=2025` — resolves Sleeper username → user_id → returns all leagues with `type` (redraft/keeper/dynasty via `settings.type`), `is_dynasty`, `scoring_format`, `status`. Defaults to 2025 season.
+  - `GET /api/v1/user/:username/leagues/:leagueId/roster` — resolves username to Sleeper user_id, finds their roster in the league, maps sleeper_ids → gsis_ids via `player_identity_map`, fans out FORGE calls (cap 10 concurrent), returns full roster with `forge_alpha`, `forge_tier`, `forge_label`, `age`, sorted by position then FORGE score.
+  - Both routes behind `x-tiber-key`. Sleeper `settings.type` values: `0`=redraft, `1`=keeper, `2`=dynasty.
 
 ## Git Branch Structure
 - **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
