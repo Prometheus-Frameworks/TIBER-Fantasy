@@ -1,0 +1,323 @@
+# TIBER Agent Task — Intelligence Contract Unification
+
+## Mission
+
+Implement the first pass of **Intelligence Contract Unification** in the TIBER repo.
+
+The goal is to create one canonical intelligence response contract that can be used across:
+- player evaluation
+- player comparison
+- trade analysis
+- voice adapters
+
+This is a consolidation task, not a feature-expansion task.
+
+## Context
+
+Repo facts to respect:
+- FORGE is publicly defined as a 4-pillar engine: `volume`, `efficiency`, `team_context`, `stability`
+- Current official phase is still **Feature Consolidation & Validation**
+- Out of scope in current phase: new modules, FORGE scoring changes unless explicitly requested, new ingestion pipelines beyond QB xFP ETL
+- Architecture doc still flags `server/routes.ts` as a large monolith
+- Codebase currently includes overlapping comparison and trade surfaces
+- Voice layer already has a typed `TiberAnswer`, but it is too loose to be the long-term canonical machine contract
+
+## Non-goals
+
+Do **not**:
+- add new football features
+- change FORGE weights
+- add new ingestion pipelines
+- invent new endpoint families unless needed for compatibility
+- expand plugin capability set
+- redesign unrelated frontend UI
+
+## Deliverables
+
+### 1) Add canonical contract doc
+Create:
+
+- `INTELLIGENCE_API.md`
+
+This doc should define:
+- purpose
+- design principles
+- canonical response shape
+- verdict enums
+- evidence rules
+- uncertainty rules
+- intent-specific specializations
+- migration rules
+- definition of done
+
+Use the contract below as source of truth.
+
+### 2) Add shared TypeScript contract
+Create one shared type file in a neutral location, preferred:
+
+- `shared/types/intelligence.ts`
+
+If that path conflicts with repo conventions, use:
+- `server/contracts/intelligence.ts`
+
+This file must export:
+- `TiberIntent`
+- `VerdictWinner`
+- `EdgeStrength`
+- `Actionability`
+- `ConfidenceBand`
+- `CanonicalPillarName`
+- `TiberIntelligenceResponse`
+- `PlayerEvalResponse`
+- `ComparisonResponse`
+- `TradeAnalysisResponse`
+
+### 3) Preserve voice compatibility but stop treating voice as source-of-truth
+Refactor `server/voice/types.ts` so that:
+- existing voice usage does not break
+- voice types clearly map to the shared intelligence contract
+- comments indicate that voice is an adapter layer, not the canonical contract owner
+
+Do **not** rip out voice behavior in this pass.
+Do **not** fully rewrite voice routes unless necessary.
+This pass is about schema foundations and adapter readiness.
+
+### 4) Identify comparison/trade convergence points
+Do a light audit of these likely files:
+- `server/routes/playerComparePilotRoutes.ts`
+- `server/routes/playerComparisonRoutes.ts`
+- `server/routes/tradeAnalyzerRoutes.ts`
+- `server/services/trade/evaluateTradePackage.ts`
+- `server/services/trade/tradeLogic.ts`
+- any direct comparison service files discovered during inspection
+- `server/routes/voice.ts`
+
+For this pass:
+- do not do a massive refactor
+- add TODO comments or small adapter helpers where needed
+- document which route/service should become the canonical comparison engine in the next pass
+
+### 5) Add migration notes
+In `INTELLIGENCE_API.md`, include:
+- which existing routes are legacy-compatible
+- which output shapes are now considered transitional
+- explicit note that future agent integrations must target the canonical contract
+
+## Canonical contract to implement
+
+### Type shape
+
+Use this as the basis for the shared contract:
+
+```ts
+export type TiberIntent =
+  | "player_eval"
+  | "comparison"
+  | "trade_analysis"
+  | "waiver_eval"
+  | "start_sit";
+
+export type VerdictWinner =
+  | "subject"
+  | "side_a"
+  | "side_b"
+  | "even"
+  | "unknown";
+
+export type EdgeStrength =
+  | "strong"
+  | "moderate"
+  | "slight"
+  | "indeterminate";
+
+export type Actionability =
+  | "act_now"
+  | "lean_only"
+  | "more_research_needed";
+
+export type ConfidenceBand = "high" | "medium" | "low";
+
+export type CanonicalPillarName =
+  | "volume"
+  | "efficiency"
+  | "team_context"
+  | "stability";
+
+export interface RequestMeta {
+  version: string;
+  intent: TiberIntent;
+  generated_at: string;
+  season?: number;
+  week?: number | null;
+  league_type?: "redraft" | "dynasty" | "best_ball";
+  scoring_format?: "PPR" | "Half" | "Standard";
+  trace_id?: string;
+  source?: string;
+}
+
+export interface SubjectRef {
+  label: string;
+  id?: string;
+}
+
+export interface SubjectDescriptor {
+  type: "player" | "comparison" | "trade_package";
+  label: string;
+  id?: string;
+  side_a?: SubjectRef;
+  side_b?: SubjectRef;
+  assets?: SubjectRef[];
+}
+
+export interface VerdictBlock {
+  label: string;
+  winner: VerdictWinner;
+  edge_strength: EdgeStrength;
+  actionability: Actionability;
+}
+
+export interface ConfidenceBlock {
+  score: number; // normalized 0..1
+  band: ConfidenceBand;
+}
+
+export interface SummarySignal {
+  alpha?: number;
+  tier?: string;
+  rank_context?: string;
+  package_value?: number;
+  market_delta?: number;
+  [key: string]: unknown;
+}
+
+export interface PillarEvidence {
+  name: CanonicalPillarName | string;
+  score?: number;
+  delta?: number | null;
+  direction?: "subject" | "side_a" | "side_b" | "even" | "unknown";
+  notes?: string[];
+}
+
+export interface MetricEvidence {
+  name: string;
+  value: string | number | boolean | null;
+  unit?: string;
+  context?: string;
+  source?: string;
+}
+
+export interface EvidenceBlock {
+  summary_signal: SummarySignal;
+  pillars: PillarEvidence[];
+  metrics: MetricEvidence[];
+  reasons: string[];
+}
+
+export interface UncertaintyBlock {
+  could_change_if: string[];
+  missing_inputs?: string[];
+  warnings?: string[];
+}
+
+export interface TiberIntelligenceResponse {
+  request_meta: RequestMeta;
+  subject: SubjectDescriptor;
+  verdict: VerdictBlock;
+  confidence: ConfidenceBlock;
+  summary: string;
+  evidence: EvidenceBlock;
+  uncertainty: UncertaintyBlock;
+}
+
+export interface PlayerEvalResponse extends TiberIntelligenceResponse {
+  request_meta: RequestMeta & { intent: "player_eval" };
+  subject: SubjectDescriptor & { type: "player" };
+}
+
+export interface ComparisonResponse extends TiberIntelligenceResponse {
+  request_meta: RequestMeta & { intent: "comparison" };
+  subject: SubjectDescriptor & {
+    type: "comparison";
+    side_a: SubjectRef;
+    side_b: SubjectRef;
+  };
+}
+
+export interface TradeAnalysisResponse extends TiberIntelligenceResponse {
+  request_meta: RequestMeta & { intent: "trade_analysis" };
+  subject: SubjectDescriptor & {
+    type: "trade_package";
+    side_a: SubjectRef;
+    side_b: SubjectRef;
+    assets?: SubjectRef[];
+  };
+}
+Rules
+Contract rules
+
+shared intelligence contract is canonical
+
+voice may adapt from it
+
+plugins may adapt from it
+
+comparison and trade must converge toward it
+
+no new parallel response schemas
+
+Confidence rule
+
+Canonical confidence must use normalized decimal 0..1.
+If voice/UI needs 0..100, convert at adapter layer.
+
+Pillar rule
+
+Canonical FORGE pillar names must remain:
+
+volume
+
+efficiency
+
+team_context
+
+stability
+
+Do not rename pillars in engine-facing contexts during this pass.
+
+Uncertainty rule
+
+Every intelligence response must include:
+
+uncertainty.could_change_if
+
+Even if empty.
+
+Acceptance criteria
+
+This task is complete when all of the following are true:
+
+INTELLIGENCE_API.md exists and is coherent
+
+shared TS intelligence contract exists in a neutral location
+
+voice types are updated or annotated to clearly map to the canonical contract
+
+no existing behavior is broken by the change
+
+comparison/trade convergence points are identified and documented for follow-up
+
+repo now has a clear source-of-truth contract for future agent integrations
+
+Output format required from you
+
+Return:
+
+summary of changes made
+
+exact files created
+
+exact files modified
+
+any compatibility risks
+
+recommended next pass for comparison/trade route consolidation
