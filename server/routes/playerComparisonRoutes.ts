@@ -1,5 +1,11 @@
 /**
  * Player Comparison API Routes
+ *
+ * TRANSITIONAL: This is the current comparison endpoint using comparePlayers().
+ * comparePlayers() is the likely canonical comparison engine for the next pass.
+ * Target output shape: ComparisonResponse (shared/types/intelligence.ts).
+ * Next pass action: wrap comparePlayers() output in EvidenceBlock + VerdictBlock
+ * and surface it via a v1 canonical endpoint under /api/v1/intelligence/compare.
  */
 
 import { Router } from 'express';

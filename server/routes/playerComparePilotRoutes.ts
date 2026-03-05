@@ -1,3 +1,9 @@
+// LEGACY PILOT: predates the canonical intelligence contract.
+// Output shape (PlayerComparisonData) is ad-hoc and not machine-portable.
+// Next pass: converge PlayerComparisonData → ComparisonResponse (shared/types/intelligence.ts).
+// Do not add new response fields here. This route is a candidate for deprecation
+// once playerComparisonRoutes.ts is promoted to canonical.
+
 import { Router } from 'express';
 import { db } from '../infra/db';
 import { players, gameLogs, defenseVP } from '@shared/schema';

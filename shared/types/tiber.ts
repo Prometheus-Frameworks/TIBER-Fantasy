@@ -1,8 +1,22 @@
 /**
- * Tiber Voice System Types
- * For frontend compatibility
+ * Tiber Frontend / UI Compatibility Layer
+ * =========================================
+ * This file exists for frontend compatibility. It is NOT the canonical
+ * intelligence contract owner.
+ *
+ * Canonical contract: shared/types/intelligence.ts
+ * Voice adapter layer: server/voice/types.ts
+ *
+ * Do not add new response shapes here. Extend shared/types/intelligence.ts
+ * and add a UI-layer mapping when needed.
  */
 
+/**
+ * Frontend-scoped intent type (mirrors voice/types.ts for UI routing).
+ * Canonical equivalents live in shared/types/intelligence.ts as TiberIntent
+ * (lowercase snake_case). This duplicate exists for historical frontend
+ * compatibility — do not propagate it to new surfaces.
+ */
 export type TiberIntent = 'START_SIT' | 'TRADE' | 'WAIVER' | 'RANKING_EXPLAIN' | 'PLAYER_OUTLOOK';
 
 export interface TiberResponse {

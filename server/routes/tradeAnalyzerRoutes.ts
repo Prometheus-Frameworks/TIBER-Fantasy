@@ -1,3 +1,9 @@
+// TRANSITIONAL: uses Compass scores, not FORGE/Doctrine vocabulary.
+// Output shape (TradeAnalysisResponse here) is route-local and ad-hoc.
+// Next pass: replace local TradeAnalysisResponse.analysis with EvidenceBlock + VerdictBlock
+// from shared/types/intelligence.ts. Canonical target: TradeAnalysisResponse (intelligence.ts).
+// Compass scores should eventually be replaced by forge_alpha from the FORGE engine.
+
 import { Router } from 'express';
 import { z } from 'zod';
 import { exec } from 'child_process';

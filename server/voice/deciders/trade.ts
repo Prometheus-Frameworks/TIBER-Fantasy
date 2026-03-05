@@ -1,5 +1,14 @@
 /**
- * Trade Decision Logic
+ * VOICE ADAPTER — Trade Decision Logic
+ * This module is scoped to the voice layer (start/sit, waiver, quick trade signals).
+ * It is NOT the canonical trade analysis engine.
+ *
+ * Canonical trade output target: TradeAnalysisResponse (shared/types/intelligence.ts).
+ * Do not treat DecisionResult here as a machine-portable trade verdict.
+ * Next pass: canonical trade engine should use forge_alpha + Doctrine signals,
+ * returning a full TiberIntelligenceResponse via /api/v1/intelligence/trade.
+ *
+ * Trade Decision Logic — voice-scoped
  * Uses market edge, trajectory, and health
  */
 

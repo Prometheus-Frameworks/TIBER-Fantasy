@@ -1,3 +1,9 @@
+// TRANSITIONAL: trade evaluation service using prometheusScore as the player value metric.
+// prometheusScore is a legacy internal scoring system — not FORGE/Doctrine.
+// Next pass: replace prometheusScore with forge_alpha from the FORGE engine.
+// Align TradeEvaluationResult toward TiberIntelligenceResponse (shared/types/intelligence.ts).
+// Canonical output target: TradeAnalysisResponse with EvidenceBlock + VerdictBlock.
+
 import { determineTradeVerdict, TradeVerdict, calculateTradeBalanceIndex, PlayerProfile } from './verdictSystem';
 import { applyRBValueDeRisker, PlayerProfile as RBPlayerProfile } from './rbValueDeRisker';
 

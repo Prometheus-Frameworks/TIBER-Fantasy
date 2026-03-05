@@ -1,3 +1,8 @@
+// TRANSITIONAL: trade evaluation endpoint backed by prometheusScore via tradeLogic.ts.
+// prometheusScore is not FORGE/Doctrine-sourced. This endpoint predates the canonical contract.
+// Future canonical shape: TradeAnalysisResponse from shared/types/intelligence.ts.
+// Next pass: wire tradeLogic.ts to forge_alpha and align output to EvidenceBlock + VerdictBlock.
+
 import express from 'express';
 import { evaluateTradePackage, type TradeInput } from '../../services/trade/tradeLogic';
 
