@@ -165,3 +165,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `shared/schema.ts`, `migrations/0013_catalyst_pbp_enrichment.sql`, `server/scripts/import_nflfastr_2024_bulk.py`, `server/scripts/import_nflfastr_2025_bulk.py`, `server/scripts/fast_nflfastr_import.py`, `server/scripts/validate_catalyst_pbp_enrichment.py`
 - **Validation:** `python -m py_compile ...` passed for updated scripts; `npm run build` passed (existing warning in `server/olc/adjusters.ts`).
 - **Notes:** Could not execute DB-backed enrichment validation because this container does not provide `DATABASE_URL`; run `server/scripts/validate_catalyst_pbp_enrichment.py` in a DB-enabled environment after applying migration.
+
+### 2026-03-02 — Codex: Add rookie profiles schema + seed script
+- **What changed:** Added `rookie_profiles` Drizzle table to `shared/schema.ts` and created `scripts/seed-rookie-profiles.ts` to merge combine + grade JSON inputs on player name and insert 91 merged rows.
+- **Files modified:** `shared/schema.ts`, `scripts/seed-rookie-profiles.ts`
+- **Validation:** Ran `npm run db:push` (blocked by missing `DATABASE_URL` in this environment).
+- **Notes:** Seed script expects `data/rookies/2026_combine_results.json` and `data/rookies/2026_rookie_grades.json` to exist and enforces exactly 91 merged rows.

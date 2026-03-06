@@ -194,3 +194,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `python -m py_compile server/scripts/import_nflfastr_2024_bulk.py server/scripts/import_nflfastr_2025_bulk.py server/scripts/fast_nflfastr_import.py server/scripts/validate_catalyst_pbp_enrichment.py` ✅
   - `npm run build` ✅ (with pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
   - DB checks blocked in this environment because `DATABASE_URL` is not set.
+
+### 2026-03-02 — Rookie profiles DB schema + seed script
+- Added `rookie_profiles` table in `shared/schema.ts` with profile/grade/combine fields and supporting indexes.
+- Added `scripts/seed-rookie-profiles.ts` that reads `data/rookies/2026_combine_results.json` + `data/rookies/2026_rookie_grades.json`, merges by normalized player name, validates 91 rows, and inserts into `rookie_profiles` via `server/infra/db.ts`.
+- Validation: `npm run db:push` attempted, but environment has no `DATABASE_URL`.
