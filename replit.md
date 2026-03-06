@@ -1,14 +1,16 @@
 # Tiber Fantasy
 
 ## Overview
-Tiber Fantasy is an open API platform, branded as TiberClaw, providing an intelligence layer for fantasy football analysis. It offers advanced scoring engines (FORGE, FIRE, CATALYST) accessible via authenticated REST endpoints. The project is free, open-source, and aims to democratize access to sophisticated fantasy football tools without paywalls. Its mission is to transform statistical insights into meaningful discussions to help users make better fantasy decisions. The web application serves as one client among many, including AI agents and personal assistants, that can consume the platform's intelligence.
+TIBER is an open NFL intelligence platform designed to serve as a central "brain" for football analysis, accessible to AI agents, personal assistants, and human users. Externally branded as TiberClaw, it offers a unified intelligence layer covering both fantasy football and real NFL evaluation, including scoring engines, player evaluation, matchup analysis, rookie grading, and trade analysis. All intelligence is provided via authenticated REST endpoints. The platform is free, open-source, and committed to being paywall-free.
+
+The core concept is that TIBER provides structured, high-confidence outputs that various agents and clients can consume and act upon, without dictating their specific actions. Its broad coverage spans fantasy skill positions, IDP, matchup context, and real NFL efficiency metrics, positioning it as a general football intelligence source rather than a narrow tool.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
-League focus: Dynasty leagues (skill positions only - QB, RB, WR, TE). No kickers or defense.
 Mission commitment: Strictly avoid all paywall partnerships or data sources. Maintain complete independence and free access to all platform features.
 Community Discussion Philosophy: Transform statistical insights into meaningful conversations that help real people make better fantasy decisions.
 Player Evaluation System: "Player Compass" - Dynamic, context-aware player profiles with tiers, scenario scores, and decision-making guidance instead of rigid rankings. Emphasizes flexibility and serves multiple team strategies.
+Agent Integration Philosophy: TIBER outputs canonical, structured intelligence that agents (TiberClaw and others) can consume directly. Responses follow the shared intelligence contract (shared/types/intelligence.ts) so any agent can parse them without custom logic per endpoint.
 Intelligence Feed System:
 - Simple API endpoints ready for real-time updates when season starts
 - Preseason observations archived but not weighted in analysis
@@ -16,58 +18,14 @@ Intelligence Feed System:
 - `/api/intel` endpoint serves scouting reports with filtering by player, position, and signal strength
 - Ready to receive meaningful intel updates during regular season
 
-## Rookie Grading Engine (FORGE-R)
-- **Data**: `data/rookies/2026_combine_results.json` (90 players, deduped), `data/rookies/2026_rookie_grades.json` (TIBER-RAS v1), `data/rookies/2026_rookie_grades_v2.json` (TIBER-RAS v2)
-- **DB**: `rookie_profiles` table — 90 players seeded with combine measurables + RAS v1 + RAS v2 scores
-- **TIBER-RAS v1**: Class-relative (ranked within 2026 class only, 0–10 scale)
-- **TIBER-RAS v2**: Historical percentile (vs 8,649 combine players 1987–2025, 7 metrics: 40yd, vert, broad, cone, shuttle, ht, wt)
-- **Scripts**: `scripts/tiber_ras_v2.py` (runs nfl_data_py to generate v2 scores), `scripts/seed-rookie-profiles.ts` (seeds DB from JSON files)
-- **Internal API**: `GET /api/rookies/2026` — no auth, supports `?position=WR&sort_by=tiber_ras_v2`
-- **TiberClaw v1 API**: `GET /api/v1/rookies/2026`, `/api/v1/rookies/2026/leaderboard`, `/api/v1/rookies/2026/position/:pos`, `/api/v1/rookies/2026/:playerName` — all behind `x-tiber-key`
-- **UI**: `/rookies` — Rookie Board page with position filters and sortable RAS columns
-- **Phase 2 complete**: College production — dominator rating, target share, YPC, production score (0-100 percentile within class) from cfbfastR 2024 PBP + ESPN team totals; 87/90 players matched
-- **UI**: Two view modes — Athleticism (RAS v1/v2) and Production (prod score, dom%, tgt%, YPC)
-- **Phases remaining**: Rookie Alpha composite (Phase 3), Post-draft landing spot (Phase 4), FORGE blending (Phase 5)
-
-## TiberClaw Build Status
-- **Phase 1 (complete)**: League context infrastructure stabilized
-  - `snapshot_trigger` column on `league_dashboard_snapshots` — tracks 'import' | 'weekly_rollover' | 'transaction' | 'manual'
-  - `league_future_picks` table — dynasty traded picks stored as first-class structured data (league_id, season, round, original_roster_id, current_roster_id, source)
-  - `normalizeScoringSettings()` — `server/services/normalizeScoringSettings.ts` — normalizes raw Sleeper scoring_settings into a typed `ScoringProfile` (format, rec_multiplier, te_premium, dynasty_relevant)
-  - League sync route now fetches `traded_picks` from Sleeper in parallel, stores them in `league_future_picks`, and embeds `scoring_profile` in the league settings payload
-- **Phase 2 (complete)**: Authenticated v1 league endpoints — `GET /api/v1/league/:id/context`, `/picks`, `/scoring` — all behind `x-tiber-key`
-- **Phase 3 (complete)**: Doctrine layer — 5 TypeScript modules in `server/doctrine/`: `positional_aging_curves`, `team_window_detection`, `asset_insulation_model`, `league_market_model`, `roster_construction_heuristics`. Each returns a `DoctrineEvaluation` object (score 0–1, confidence, contributing signals, plain-English reasoning). Modules call v1 endpoints via HTTP, never import engine files directly.
-- **Phase 4 (complete)**: GM Execution Endpoints — 3 new routes in `server/api/v1/routes.ts` that wire doctrine modules into the v1 API:
-  - `GET /api/v1/dynasty/player/:playerId/evaluate` — aging curve + asset insulation for a player (age auto-computed from birth_date)
-  - `POST /api/v1/dynasty/roster/:leagueId/:rosterId` — team window + roster construction (body: `{ player_ids: [...] }`)
-  - `GET /api/v1/dynasty/player/:playerId/market/:leagueId?pool_ids=id1,id2,...` — market position vs. league player pool
-  - All routes behind `x-tiber-key`; doctrine modules receive the caller's key for internal FORGE/FIRE fetches
-- **Phase 5 (complete)**: League-wide market intelligence — `GET /api/v1/dynasty/league/:leagueId/market` (behind `x-tiber-key`)
-  - Fetches all Sleeper rosters via `sleeperClient.getLeagueRosters(externalLeagueId)`
-  - Looks up player identity by `sleeper_id` → gets `gsis_id` for FORGE calls
-  - Fans out individual FORGE calls concurrently (cap 10) using `gsis_id`
-  - Ranks each player by position across the whole league (forge_alpha desc)
-  - Generates buy/sell/hold signals per player (FORGE percentile + age vs position prime band)
-  - Returns `player_pool`, `team_summaries` (sorted by avg FORGE), `position_rankings`, and `meta`
-  - Team summaries include: player count, avg FORGE, positional imbalance flags, top 3 assets, signal counts
-  - **Note**: `birth_date` now populated for all 594 skill-position players via `scripts/enrich-birth-dates-from-sleeper.ts` (Sleeper /players/nfl → match on sleeper_id). Re-run script when identity map grows.
-- **Phase 6 (complete)**: User / Team Sync — 2 new routes in `server/api/v1/routes.ts`:
-  - `GET /api/v1/user/:username/leagues?season=2025` — resolves Sleeper username → user_id → returns all leagues with `type` (redraft/keeper/dynasty via `settings.type`), `is_dynasty`, `scoring_format`, `status`. Defaults to 2025 season.
-  - `GET /api/v1/user/:username/leagues/:leagueId/roster` — resolves username to Sleeper user_id, finds their roster in the league, maps sleeper_ids → gsis_ids via `player_identity_map`, fans out FORGE calls (cap 10 concurrent), returns full roster with `forge_alpha`, `forge_tier`, `forge_label`, `age`, sorted by position then FORGE score.
-  - Both routes behind `x-tiber-key`. Sleeper `settings.type` values: `0`=redraft, `1`=keeper, `2`=dynasty.
-
-## Git Branch Structure
-- **`main`**: Production branch — Replit working copy syncs here. Contains all ETL fixes, API auth, gold layer, Data Lab, and TiberClaw v1 endpoints.
-- **`feat/openclaw-connector`**: TiberClaw agent's working branch. Agent pushes autonomous research work here (TIBER-RAS v1, 2026 combine data, FORGE-R roadmap). Merge into main via cherry-pick to avoid conflicts from diverged history. Currently 29 commits ahead / 36 behind main.
-
 ## System Architecture
-The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layers) with a focus on data quality, lineage, and confidence scoring.
+The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold layers) emphasizing data quality and confidence scoring.
 
 **Core Infrastructure:**
 - **Backend**: Node.js/TypeScript (Express.js) and Python (Flask).
 - **Frontend**: React 18, TypeScript, Tailwind CSS, TanStack Query, shadcn/ui.
 - **Database**: PostgreSQL with Drizzle ORM and `pgvector` extension.
-- **Player Identity**: Uses `gsis_id` and an `Identity Bridge` for unified player resolution, focusing on `activeSkillPlayers`.
+- **Player Identity**: A unified `Identity Bridge` uses `gsis_id` for consistent player resolution, focusing on `activeSkillPlayers`.
 
 **UI/UX Decisions (v2 Light Mode Redesign):**
 - **Color Scheme**: Light mode with white/grey backgrounds, accented by Ember (`#e2640d`).
@@ -89,6 +47,12 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **Data Integration & Sync**: Includes Sleeper Sync, Canonical Player Pool, and NFL Schedule Sync.
 - **LLM Gateway (`server/llm/`)**: A provider-agnostic `callLLM()` entry point with fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini, supporting 9 task types. Includes an X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`) for Grok-powered X/Twitter analysis.
 
+**Deployment Architecture:**
+- **Target**: Autoscale (Cloud Run) for stateless REST API, with persistent state in PostgreSQL.
+- **Build Process**: `sh build.sh` compiles frontend via `vite build` and bundles server via esbuild.
+- **Runtime**: `node dist/index.mjs` for faster startup.
+- **Bootstrap (`server/bootstrap.mjs`):** A small file to quickly bind a port and serve basic routes while the main Express app loads.
+
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
 - **Sleeper API**: Player projections, game logs, ADP data, league/roster sync.
@@ -100,18 +64,4 @@ The platform employs a 3-tier ELT architecture (Bronze → Silver → Gold layer
 - **connect-pg-simple**: PostgreSQL-based session storage.
 - **@neondatabase/serverless**: PostgreSQL connections in serverless environments.
 - **Google Gemini API**: AI embeddings and chat generation.
-- **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring for all skill positions, surfaced via `/api/fire/eg/batch` and `/api/fire/eg/player`.
-
-## Data Pipeline Notes
-- **Bronze QB columns** (`sack`, `qb_hit`, `cpoe`, `shotgun`, `no_huddle`, `scramble`, `game_seconds_remaining`): Added as first-class columns to `bronze_nflfastr_plays`. Backfilled from nflfastR 2025 parquet via `scripts/backfill_bronze_qb_columns_2025.py`. Import script updated: `server/scripts/import_nflfastr_2025_bulk.py`.
-- **Gold ETL QB metrics** (`epa_per_play`, `success_rate`, `cpoe`, `sack_rate`, `qb_hits`, `scrambles`, `shotgun_rate`, `no_huddle_rate`): All fixed to use first-class bronze columns instead of `raw_data` JSONB. QB EPA/play uses `passing_epa / pass_attempts` from silver (not receiving+rushing EPA). Scrambles require a separate sub-query on `rusher_player_id` since they are `play_type='run'` plays with `passer_player_id=NULL`.
-- **ETL concurrency rule**: The upsert guard deletes by `season+week` (not `snapshot_id`). NEVER run multi-week gold ETL loops as parallel bash processes. Always use `scripts/run_gold_etl_single_week.ts <week>` for one week at a time. If a bash call times out mid-loop, wait ~35 seconds for the background process to clear before re-running that week.
-- **API keys**: `api_keys` and `api_request_log` tables are live. Key generation: `npx tsx scripts/generate-api-key.ts --label "Label" --tier internal`. Auth header: `x-tiber-key`.
-- **Fantasy Lab (`/fantasy-lab`)**: Full analytics dashboard integrating FIRE table, Hybrid Delta view, and Watchlist, with position-aware columns, presets, sorting, CSV export, and conditional formatting.
-
-## Deployment Architecture
-- **Target**: Autoscale (Cloud Run) — REST API is stateless enough; all persistent state in PostgreSQL.
-- **Build**: `sh build.sh` — runs `vite build` (frontend → `dist/public/`) then bundles server via esbuild → `dist/app.mjs`; copies `server/bootstrap.mjs` → `dist/index.mjs`.
-- **Run**: `node dist/index.mjs` (no npm overhead — saves ~2.8s startup time).
-- **Bootstrap** (`server/bootstrap.mjs`): Tiny ~50-line file Node.js parses in <5ms. Binds port 5000 in ~400ms before the 92k-line Express bundle loads (~3s). Serves `/` (index.html) and `/health` instantly at 200 during bundle load; proxies all other routes to Express once ready.
-- **Why autoscale over VM**: VM health checks are a single one-shot HTTP request with a 5s timeout and no retry. Autoscale (Cloud Run) uses a startup probe that retries until the container responds — our bootstrap answers in <400ms so the first or second probe passes.
+- **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring.
