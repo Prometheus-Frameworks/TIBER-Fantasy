@@ -80,6 +80,7 @@ export function toTradeAnalysisResponse(
   const winner = mapWinner(result.winner);
   const sideALabel = 'Team A';
   const sideBLabel = 'Team B';
+  const valueDelta = result.teamATotal - result.teamBTotal;
 
   return {
     request_meta: {
@@ -106,17 +107,20 @@ export function toTradeAnalysisResponse(
       score: confidence,
       band: confidenceBand,
     },
-    summary: `${result.winner} (value gap: ${result.valueDifference.toFixed(1)}, balance index: ${result.balanceIndex.toFixed(2)}).`,
+    summary: `${result.winner} (Team A ${result.teamATotal.toFixed(1)} vs Team B ${result.teamBTotal.toFixed(1)}; gap ${result.valueDifference.toFixed(1)}).`,
     evidence: {
       summary_signal: {
-        package_value: (result.teamATotal + result.teamBTotal) / 2,
+        side_a_package_value: result.teamATotal,
+        side_b_package_value: result.teamBTotal,
+        value_delta: valueDelta,
         market_delta: result.valueDifference,
+        anchor_side: winner,
       },
       pillars: [
         {
           name: 'volume',
-          delta: result.teamATotal - result.teamBTotal,
-          direction: result.teamATotal > result.teamBTotal ? 'side_a' : result.teamATotal < result.teamBTotal ? 'side_b' : 'even',
+          delta: valueDelta,
+          direction: valueDelta > 0 ? 'side_a' : valueDelta < 0 ? 'side_b' : 'even',
           notes: [
             `Team A total: ${result.teamATotal.toFixed(1)}`,
             `Team B total: ${result.teamBTotal.toFixed(1)}`,
