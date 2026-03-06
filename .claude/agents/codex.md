@@ -199,3 +199,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added `rookie_profiles` table in `shared/schema.ts` with profile/grade/combine fields and supporting indexes.
 - Added `scripts/seed-rookie-profiles.ts` that reads `data/rookies/2026_combine_results.json` + `data/rookies/2026_rookie_grades.json`, merges by normalized player name, validates 91 rows, and inserts into `rookie_profiles` via `server/infra/db.ts`.
 - Validation: `npm run db:push` attempted, but environment has no `DATABASE_URL`.
+
+### 2026-03-06 — Canonical trade analyze endpoint (v1) + comparison semantic cleanup
+- Added compatibility-aware compare semantics in `POST /api/v1/intelligence/compare` by accepting canonical `player_a/player_b` and transitional aliases `player1/player2`, while keeping canonical `ComparisonResponse` output and existing comparison service logic unchanged.
+- Implemented `POST /api/v1/intelligence/trade/analyze` returning canonical `TradeAnalysisResponse` by adapting existing `evaluateTradePackage` output through a new mapper (`server/api/v1/mappers/toTradeAnalysisResponse.ts`).
+- Kept legacy trade routes/services working; no changes to transitional routes in `server/routes/*` or trade service scoring logic.
+- Validation run:
+  - `npm run typecheck` (fails due pre-existing repository-wide TS errors)
+  - `npm test` (fails in existing suites; includes `DATABASE_URL`-dependent failure)
+  - `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails due pre-existing global typings/dependency issues)
+- Follow-up deploy fix: replaced the v1 route's runtime use of `tradeLogic.ts` (which pulled unresolved local imports in production bundle) with local package-total aggregation and canonical mapping, preserving canonical response shape and compatibility aliases.
