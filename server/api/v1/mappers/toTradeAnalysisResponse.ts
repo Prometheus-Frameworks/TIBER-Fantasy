@@ -127,10 +127,18 @@ export function toTradeAnalysisResponse(
       score: confidence,
       band: confidenceBand,
     },
-    summary: `${result.winnerLabel} (value gap: ${result.valueDifference.toFixed(1)}, balance index: ${result.balanceIndex.toFixed(2)}).`,
+    summary: (() => {
+      const aLabel = `Team A ${result.sideATotal.toFixed(1)}`;
+      const bLabel = `Team B ${result.sideBTotal.toFixed(1)}`;
+      return `${result.winnerLabel} (${aLabel} vs ${bLabel}; gap ${result.valueDifference.toFixed(1)}).`;
+    })(),
     evidence: {
       summary_signal: {
+        side_a_package_value: result.sideATotal,
+        side_b_package_value: result.sideBTotal,
+        value_delta: result.sideATotal - result.sideBTotal,
         market_delta: result.valueDifference,
+        anchor_side: winner,
       },
       pillars: [
         {
