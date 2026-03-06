@@ -57,13 +57,13 @@ interface OpponentDefense {
   defenseRank?: string;
 }
 
-interface ComparisonVerdict {
+export interface ComparisonVerdict {
   recommendation: string; // "Lean Player A", "Lean Player B", "Coin flip"
   confidence: string; // "High", "Medium", "Low"
   keyFactors: string[];
 }
 
-interface PlayerComparison {
+export interface PlayerComparison {
   player1: {
     usage: PlayerUsageWithWeek;
     opponent: OpponentDefense;

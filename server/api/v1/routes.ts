@@ -7,7 +7,7 @@ import { requestLogger } from "./middleware/requestLogger";
 import { errorFormat, ApiError } from "./middleware/errorFormat";
 import { ErrorCodes } from "./errors/codes";
 import { db, dbPool } from "../../infra/db";
-import { sql } from "drizzle-orm";
+import { sql, ilike, or } from "drizzle-orm";
 import { storage } from "../../storage";
 import { normalizeScoringSettings } from "../../services/normalizeScoringSettings";
 import { evaluateAgingCurve } from "../../doctrine/positional_aging_curves";
@@ -18,6 +18,9 @@ import { evaluateRosterConstruction } from "../../doctrine/roster_construction_h
 import { sleeperClient, deriveSleeperScoringFormat } from "../../integrations/sleeperClient";
 import type { SleeperLeagueDetail } from "../../integrations/sleeperClient";
 import type { Position } from "../../doctrine/types";
+import { comparePlayers } from "../../services/playerComparisonService";
+import { toComparisonResponse } from "./mappers/toComparisonResponse";
+import { playerIdentityMap } from "../../../shared/schema";
 
 const router = Router();
 
@@ -1112,6 +1115,75 @@ router.get("/user/:username/leagues/:leagueId/roster", async (req, res, next) =>
       },
     }, req.requestId!));
   } catch (err) { next(err); }
+});
+
+// ── Canonical Intelligence: Compare ─────────────────────────────────────────
+//
+// POST /api/v1/intelligence/compare
+//
+// Returns a canonical ComparisonResponse (shared/types/intelligence.ts).
+// This is the blessed v1 comparison endpoint. The existing
+// POST /api/player-comparison/compare route remains live as a transitional
+// surface until all consumers are migrated.
+//
+// Body: {
+//   player_a: string  — player name or canonical ID
+//   player_b: string  — player name or canonical ID
+//   week: number      — target week for matchup context
+//   season?: number   — defaults to 2025
+// }
+//
+router.post("/intelligence/compare", async (req, res, next) => {
+  try {
+    const { player_a, player_b, week, season = 2025 } = req.body as {
+      player_a?: string;
+      player_b?: string;
+      week?: number;
+      season?: number;
+    };
+
+    if (!player_a || !player_b || !week) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "player_a, player_b, and week are required");
+    }
+    if (typeof week !== "number" || week < 1 || week > 22) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "week must be a number between 1 and 22");
+    }
+
+    // Resolve player name or canonical-id slug to canonical ID.
+    // A canonical slug has no spaces and uses hyphens (e.g. "justin-jefferson").
+    // A player name always contains at least one space.
+    const resolveId = async (input: string): Promise<string | null> => {
+      if (!input.includes(" ")) return input; // looks like a slug ID — pass through
+      const rows = await db
+        .select({ id: playerIdentityMap.canonicalId })
+        .from(playerIdentityMap)
+        .where(ilike(playerIdentityMap.fullName, `%${input}%`))
+        .limit(1);
+      return rows.length > 0 ? rows[0].id : null;
+    };
+
+    const [idA, idB] = await Promise.all([resolveId(player_a), resolveId(player_b)]);
+
+    if (!idA) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_a}`);
+    if (!idB) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_b}`);
+
+    const raw = await comparePlayers(idA, idB, week, season);
+
+    if (!raw) {
+      throw new ApiError(404, ErrorCodes.NOT_FOUND, "No comparison data available — check that both players have recent usage data and a valid schedule matchup for the requested week");
+    }
+
+    const canonical = toComparisonResponse(raw, {
+      week,
+      season,
+      traceId: req.requestId,
+      source: "api_v1",
+    });
+
+    res.json(v1Success(canonical, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.use(requestLogger);
