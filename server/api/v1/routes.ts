@@ -20,6 +20,7 @@ import type { SleeperLeagueDetail } from "../../integrations/sleeperClient";
 import type { Position } from "../../doctrine/types";
 import { comparePlayers } from "../../services/playerComparisonService";
 import { toComparisonResponse } from "./mappers/toComparisonResponse";
+import { toTradeAnalysisResponse, type CanonicalTradeInput, type CanonicalTradeResult, type TradeAsset } from "./mappers/toTradeAnalysisResponse";
 import { playerIdentityMap } from "../../../shared/schema";
 
 const router = Router();
@@ -1135,14 +1136,19 @@ router.get("/user/:username/leagues/:leagueId/roster", async (req, res, next) =>
 //
 router.post("/intelligence/compare", async (req, res, next) => {
   try {
-    const { player_a, player_b, week, season = 2025 } = req.body as {
+    const { player_a, player_b, player1, player2, week, season = 2025 } = req.body as {
       player_a?: string;
       player_b?: string;
+      player1?: string;
+      player2?: string;
       week?: number;
       season?: number;
     };
 
-    if (!player_a || !player_b || !week) {
+    const sideA = (player_a ?? player1)?.trim();
+    const sideB = (player_b ?? player2)?.trim();
+
+    if (!sideA || !sideB || !week) {
       throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "player_a, player_b, and week are required");
     }
     if (typeof week !== "number" || week < 1 || week > 22) {
@@ -1162,10 +1168,10 @@ router.post("/intelligence/compare", async (req, res, next) => {
       return rows.length > 0 ? rows[0].id : null;
     };
 
-    const [idA, idB] = await Promise.all([resolveId(player_a), resolveId(player_b)]);
+    const [idA, idB] = await Promise.all([resolveId(sideA), resolveId(sideB)]);
 
-    if (!idA) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_a}`);
-    if (!idB) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_b}`);
+    if (!idA) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${sideA}`);
+    if (!idB) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${sideB}`);
 
     const raw = await comparePlayers(idA, idB, week, season);
 
@@ -1176,6 +1182,93 @@ router.post("/intelligence/compare", async (req, res, next) => {
     const canonical = toComparisonResponse(raw, {
       week,
       season,
+      traceId: req.requestId,
+      source: "api_v1",
+    });
+
+    res.json(v1Success(canonical, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Canonical Intelligence: Trade Analysis ───────────────────────────────────
+//
+// POST /api/v1/intelligence/trade/analyze
+//
+// Returns a canonical TradeAnalysisResponse (shared/types/intelligence.ts).
+// Accepts side_a/side_b (canonical) or teamA/teamB (compatibility aliases).
+//
+// Body:
+// {
+//   side_a: TradeAsset[]   — each asset needs { id, prometheusScore }
+//   side_b: TradeAsset[]
+// }
+//
+router.post("/intelligence/trade/analyze", async (req, res, next) => {
+  try {
+    const { side_a, side_b, teamA, teamB } = req.body as {
+      side_a?: TradeAsset[];
+      side_b?: TradeAsset[];
+      teamA?: TradeAsset[];
+      teamB?: TradeAsset[];
+    };
+
+    const resolvedSideA = side_a ?? teamA;
+    const resolvedSideB = side_b ?? teamB;
+
+    if (!Array.isArray(resolvedSideA) || !Array.isArray(resolvedSideB)) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "side_a and side_b must be arrays");
+    }
+    if (resolvedSideA.length === 0 || resolvedSideB.length === 0) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "Both sides must include at least one asset");
+    }
+
+    const validateAsset = (asset: TradeAsset, sideLabel: string, index: number) => {
+      if (!asset?.id && !asset?.name) {
+        throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `${sideLabel}[${index}] must include id or name`);
+      }
+      if (typeof asset?.prometheusScore !== "number" || Number.isNaN(asset.prometheusScore)) {
+        throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `${sideLabel}[${index}] must include numeric prometheusScore`);
+      }
+    };
+
+    resolvedSideA.forEach((asset, idx) => validateAsset(asset, "side_a", idx));
+    resolvedSideB.forEach((asset, idx) => validateAsset(asset, "side_b", idx));
+
+    const tradeInput: CanonicalTradeInput = {
+      side_a: resolvedSideA,
+      side_b: resolvedSideB,
+    };
+
+    const sideATotal = resolvedSideA.reduce((sum, asset) => sum + asset.prometheusScore, 0);
+    const sideBTotal = resolvedSideB.reduce((sum, asset) => sum + asset.prometheusScore, 0);
+    const valueDifference = Math.abs(sideATotal - sideBTotal);
+    const maxTotal = Math.max(sideATotal, sideBTotal, 1);
+    const balanceIndex = Number((1 - valueDifference / maxTotal).toFixed(3));
+
+    const winnerLabel = valueDifference < 2
+      ? "Fair Trade"
+      : sideATotal > sideBTotal
+        ? "Team A Wins"
+        : "Team B Wins";
+
+    const raw: CanonicalTradeResult = {
+      winnerLabel,
+      confidence: Math.max(0.2, Math.min(0.95, 0.55 + valueDifference / 100)),
+      sideATotal,
+      sideBTotal,
+      valueDifference,
+      balanceIndex,
+      reasons: [
+        `Team A package score: ${sideATotal.toFixed(1)}`,
+        `Team B package score: ${sideBTotal.toFixed(1)}`,
+        balanceIndex >= 0.95 ? "Packages are effectively balanced" : "Package totals show a measurable gap",
+      ],
+      warnings: valueDifference > 30 ? ["Large value gap between packages"] : undefined,
+    };
+
+    const canonical = toTradeAnalysisResponse(raw, tradeInput, {
       traceId: req.requestId,
       source: "api_v1",
     });
