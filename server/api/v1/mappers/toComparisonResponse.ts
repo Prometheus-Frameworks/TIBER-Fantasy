@@ -287,6 +287,22 @@ function deriveSideScores(edge: EdgeStrength, winner: VerdictWinner): { sideASco
   return { sideAScore, sideBScore, scoreDelta: sideAScore - sideBScore };
 }
 
+function deriveSignalPrimitiveDescriptor(data: PlayerComparison): string {
+  const p1 = data.player1.usage;
+  const p2 = data.player2.usage;
+
+  if (p1.targetSharePct !== undefined && p2.targetSharePct !== undefined) {
+    return 'relative_target_share_signal';
+  }
+  if (p1.snapSharePct !== undefined && p2.snapSharePct !== undefined) {
+    return 'relative_snap_share_signal';
+  }
+  if ((p1.targets ?? p1.carriesTotal) !== undefined && (p2.targets ?? p2.carriesTotal) !== undefined) {
+    return 'relative_opportunity_volume_signal';
+  }
+  return 'derived_recommendation_signal';
+}
+
 // ── Main mapper ───────────────────────────────────────────────────────────────
 
 export function toComparisonResponse(
@@ -340,9 +356,10 @@ export function toComparisonResponse(
     summary: buildSummary(label, edge, p1Name, p2Name),
     evidence: {
       summary_signal: {
-        side_a_score: sideScores.sideAScore,
-        side_b_score: sideScores.sideBScore,
-        score_delta: sideScores.scoreDelta,
+        side_a_signal_score: sideScores.sideAScore,
+        side_b_signal_score: sideScores.sideBScore,
+        signal_score_delta: sideScores.scoreDelta,
+        signal_score_descriptor: deriveSignalPrimitiveDescriptor(data),
         market_delta: Math.abs(confScore - 0.5) * 2,
       },
       pillars: buildPillars(data),
