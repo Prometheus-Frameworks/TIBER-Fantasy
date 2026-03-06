@@ -1,0 +1,169 @@
+# TIBER Codex Task — Compare Semantic Cleanup + Canonical Trade Route
+
+## Mission
+
+Perform the next bounded consolidation pass for TIBER’s intelligence layer.
+
+This is **not** a feature-expansion task.
+This is a **schema enforcement and route convergence** task.
+
+Use the existing canonical comparison route pattern as the model.
+Do not invent a new response family.
+
+## Current repo reality
+
+Treat these as already true:
+- canonical shared intelligence contract exists in `shared/types/intelligence.ts`
+- compare adapter exists in `server/api/v1/mappers/toComparisonResponse.ts`
+- v1 API route layer is already being used for canonical intelligence work
+- legacy comparison surface still exists in `server/routes/playerComparisonRoutes.ts`
+
+You are building on top of that foundation.
+
+## Primary objectives
+
+### Objective A — Clean up compare semantics
+
+Tighten the canonical comparison output so labels, pillar meanings, and reasons stop contradicting themselves.
+
+Fix the following classes of issues:
+
+1. **Verdict label consistency**
+   - Human-readable `verdict.label` must align with machine `edge_strength`
+   - Example:
+     - `edge_strength = strong` should not produce `Lean X`
+     - `Lean X` should generally map to `slight` or `moderate`, depending on current system conventions
+   - Preserve current verdict taxonomy structure:
+     - `winner`
+     - `edge_strength`
+     - `actionability`
+     - `label`
+
+2. **Pillar semantic consistency**
+   - Supporting notes and metrics must actually fit the pillar they justify
+   - Do not use snap share notes as primary support for `efficiency` unless the service explicitly defines that and documents it
+   - If existing underlying compare logic is coarse, use mapper-layer discipline to avoid obviously wrong pillar explanations
+
+3. **Reason wording consistency**
+   - Reasons must match the actual metrics included in `evidence.metrics`
+   - If metric source is pass EPA allowed, do not describe it as run defense
+   - Remove wording drift and category confusion
+
+4. **Summary signal improvement**
+   - Expand `evidence.summary_signal` so it contains more than a thin `market_delta`
+   - Without adding new football logic, expose clearer top-level comparison primitives if already available from existing comparison output
+   - Good examples:
+     - `side_a_score`
+     - `side_b_score`
+     - `score_delta`
+     - existing market delta if available
+
+### Objective B — Implement one canonical trade endpoint
+
+Create a real canonical trade-analysis endpoint under the v1 API surface.
+
+Preferred path:
+- `POST /api/v1/intelligence/trade/analyze`
+
+If repo routing conventions require a slightly different v1 path, keep it consistent with existing v1 design. Do **not** create an off-pattern route family.
+
+Requirements:
+- return canonical `TradeAnalysisResponse`
+- reuse shared types from `shared/types/intelligence.ts`
+- wrap existing trade logic only
+- do **not** add new football scoring logic
+- do **not** redesign trade philosophy
+- keep legacy trade routes functioning if needed
+
+## Required response shape
+
+The canonical trade endpoint must return the same contract family as compare.
+
+Required fields inside canonical response object:
+- `request_meta`
+- `subject`
+- `verdict`
+- `confidence`
+- `summary`
+- `evidence.summary_signal`
+- `evidence.pillars`
+- `evidence.metrics`
+- `evidence.reasons`
+- `uncertainty.could_change_if`
+
+If transport-layer response envelopes already exist in v1, preserve them.
+But the canonical object inside the envelope must conform to `TradeAnalysisResponse`.
+
+## Constraints
+
+Do **not**:
+- add new football modules
+- change FORGE weights
+- create a second canonical trade schema
+- expand plugin behavior
+- touch unrelated frontend code
+- perform broad monolith cleanup in this pass
+
+Keep this pass tight.
+
+## Implementation guidance
+
+### For compare cleanup
+- inspect the existing compare mapper in `server/api/v1/mappers/toComparisonResponse.ts`
+- fix semantics at the mapper/adaptation layer whenever possible
+- avoid invasive service-layer changes unless mapper cleanup is impossible
+- preserve endpoint behavior while improving payload integrity
+
+### For trade route
+- inspect current trade route and service stack
+- create a mapper equivalent to compare if needed, e.g.:
+  - `server/api/v1/mappers/toTradeAnalysisResponse.ts`
+- keep route implementation small
+- route should translate existing trade service output into canonical contract
+
+### Legacy handling
+- keep existing legacy comparison/trade routes alive
+- add clear comments that they are transitional if not already marked
+- point future agent integrations toward the canonical v1 intelligence routes
+
+## Files likely to touch
+
+Expected files:
+- `server/api/v1/routes.ts`
+- `server/api/v1/mappers/toComparisonResponse.ts`
+- `server/api/v1/mappers/toTradeAnalysisResponse.ts` (new, if needed)
+- trade service / route files discovered during implementation
+- possibly shared helpers if needed
+
+Avoid sprawling edits.
+
+## Acceptance criteria
+
+This task is complete when all of the following are true:
+
+1. canonical compare payload semantics are cleaner
+   - verdict label matches edge strength
+   - pillar support aligns with pillar meaning
+   - reasons match metrics
+
+2. canonical compare route still works
+
+3. one live canonical trade endpoint exists under v1
+
+4. canonical trade endpoint returns `TradeAnalysisResponse`
+
+5. no new parallel schema is introduced
+
+6. legacy trade routes remain functional or clearly transitional
+
+## Output required from Codex
+
+Return exactly this:
+
+1. summary of changes made
+2. files created
+3. files modified
+4. sample compare response after cleanup
+5. sample trade response from live route
+6. any remaining semantic caveats
+7. any compatibility risks
