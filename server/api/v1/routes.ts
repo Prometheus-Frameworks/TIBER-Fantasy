@@ -20,6 +20,8 @@ import type { SleeperLeagueDetail } from "../../integrations/sleeperClient";
 import type { Position } from "../../doctrine/types";
 import { comparePlayers } from "../../services/playerComparisonService";
 import { toComparisonResponse } from "./mappers/toComparisonResponse";
+import { evaluateTradePackage, type TradeInput, type TradePlayer } from "../../services/trade/tradeLogic";
+import { toTradeAnalysisResponse } from "./mappers/toTradeAnalysisResponse";
 import { playerIdentityMap } from "../../../shared/schema";
 
 const router = Router();
@@ -1135,14 +1137,19 @@ router.get("/user/:username/leagues/:leagueId/roster", async (req, res, next) =>
 //
 router.post("/intelligence/compare", async (req, res, next) => {
   try {
-    const { player_a, player_b, week, season = 2025 } = req.body as {
+    const { player_a, player_b, player1, player2, week, season = 2025 } = req.body as {
       player_a?: string;
       player_b?: string;
+      player1?: string;
+      player2?: string;
       week?: number;
       season?: number;
     };
 
-    if (!player_a || !player_b || !week) {
+    const sideA = (player_a ?? player1)?.trim();
+    const sideB = (player_b ?? player2)?.trim();
+
+    if (!sideA || !sideB || !week) {
       throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "player_a, player_b, and week are required");
     }
     if (typeof week !== "number" || week < 1 || week > 22) {
@@ -1162,10 +1169,10 @@ router.post("/intelligence/compare", async (req, res, next) => {
       return rows.length > 0 ? rows[0].id : null;
     };
 
-    const [idA, idB] = await Promise.all([resolveId(player_a), resolveId(player_b)]);
+    const [idA, idB] = await Promise.all([resolveId(sideA), resolveId(sideB)]);
 
-    if (!idA) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_a}`);
-    if (!idB) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${player_b}`);
+    if (!idA) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${sideA}`);
+    if (!idB) throw new ApiError(404, ErrorCodes.NOT_FOUND, `Player not found: ${sideB}`);
 
     const raw = await comparePlayers(idA, idB, week, season);
 
@@ -1176,6 +1183,72 @@ router.post("/intelligence/compare", async (req, res, next) => {
     const canonical = toComparisonResponse(raw, {
       week,
       season,
+      traceId: req.requestId,
+      source: "api_v1",
+    });
+
+    res.json(v1Success(canonical, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Canonical Intelligence: Trade Analysis ───────────────────────────────────
+//
+// POST /api/v1/intelligence/trade/analyze
+//
+// Returns a canonical TradeAnalysisResponse (shared/types/intelligence.ts)
+// while delegating value/scoring logic to the existing transitional
+// evaluateTradePackage() service to avoid introducing new football logic.
+//
+// Body (canonical):
+// {
+//   side_a: TradePlayer[]
+//   side_b: TradePlayer[]
+// }
+//
+// Compatibility aliases are accepted:
+// - teamA -> side_a
+// - teamB -> side_b
+//
+router.post("/intelligence/trade/analyze", async (req, res, next) => {
+  try {
+    const { side_a, side_b, teamA, teamB } = req.body as {
+      side_a?: TradePlayer[];
+      side_b?: TradePlayer[];
+      teamA?: TradePlayer[];
+      teamB?: TradePlayer[];
+    };
+
+    const resolvedSideA = side_a ?? teamA;
+    const resolvedSideB = side_b ?? teamB;
+
+    if (!Array.isArray(resolvedSideA) || !Array.isArray(resolvedSideB)) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "side_a and side_b must be arrays");
+    }
+    if (resolvedSideA.length === 0 || resolvedSideB.length === 0) {
+      throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, "Both sides must include at least one asset");
+    }
+
+    const validateAsset = (asset: TradePlayer, sideLabel: string, index: number) => {
+      if (!asset?.id && !asset?.name) {
+        throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `${sideLabel}[${index}] must include id or name`);
+      }
+      if (typeof asset?.prometheusScore !== "number" || Number.isNaN(asset.prometheusScore)) {
+        throw new ApiError(400, ErrorCodes.VALIDATION_ERROR, `${sideLabel}[${index}] must include numeric prometheusScore`);
+      }
+    };
+
+    resolvedSideA.forEach((asset, idx) => validateAsset(asset, "side_a", idx));
+    resolvedSideB.forEach((asset, idx) => validateAsset(asset, "side_b", idx));
+
+    const tradeInput: TradeInput = {
+      teamA: resolvedSideA,
+      teamB: resolvedSideB,
+    };
+
+    const raw = evaluateTradePackage(tradeInput);
+    const canonical = toTradeAnalysisResponse(raw, tradeInput, {
       traceId: req.requestId,
       source: "api_v1",
     });

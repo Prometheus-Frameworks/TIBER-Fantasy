@@ -171,3 +171,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `shared/schema.ts`, `scripts/seed-rookie-profiles.ts`
 - **Validation:** Ran `npm run db:push` (blocked by missing `DATABASE_URL` in this environment).
 - **Notes:** Seed script expects `data/rookies/2026_combine_results.json` and `data/rookies/2026_rookie_grades.json` to exist and enforces exactly 91 merged rows.
+
+### 2026-03-06 — Codex: Canonical v1 trade analyze endpoint + compare semantic cleanup
+- **What changed:** Extended canonical comparison route semantics to accept either `player_a/player_b` or legacy-style `player1/player2` aliases while preserving canonical output. Added new `POST /api/v1/intelligence/trade/analyze` route in v1 API that accepts canonical `side_a/side_b` (plus compatibility aliases `teamA/teamB`) and returns canonical `TradeAnalysisResponse` via a new mapper adapter. Reused existing `evaluateTradePackage` service without introducing new football logic.
+- **Files modified:** `server/api/v1/routes.ts`, `server/api/v1/mappers/toTradeAnalysisResponse.ts`
+- **Validation:** Ran `npm run typecheck` (fails due broad pre-existing repo TypeScript issues), `npm test` (partial pass; failures include DB-dependent tests due missing `DATABASE_URL` plus existing suite failures), and targeted `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails from existing global typing/dependency conflicts).
+- **Notes:** Legacy trade surfaces remain untouched; this is additive via `/api/v1/intelligence/trade/analyze`.
