@@ -63,6 +63,10 @@ interface YoYPlayer {
   delta: number | null;
 }
 
+type QueryError = Error & { status?: number; statusText?: string; body?: string };
+type JsonValue = null | boolean | number | string | JsonObject | JsonValue[];
+type JsonObject = Record<string, JsonValue>;
+
 type SortKey = 'alpha' | 'raw' | 'plays' | 'leverage' | 'opponent' | 'script' | 'name';
 
 const COMPONENT_EXPLANATIONS: Record<string, string> = {
@@ -71,6 +75,92 @@ const COMPONENT_EXPLANATIONS: Record<string, string> = {
   'Game Script': 'Boost for trailing/competitive situations — filters out garbage-time stat padding.',
   Recency: 'Recent weeks weighted more — measures sustained clutch production, not just early-season.',
 };
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function hasNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasComponents(value: unknown): value is CatalystPlayer['components'] {
+  if (!isObject(value)) return false;
+  return (
+    hasNumber(value.leverage_factor)
+    && hasNumber(value.opponent_factor)
+    && hasNumber(value.script_factor)
+    && hasNumber(value.recency_factor)
+    && hasNumber(value.base_epa_sum)
+    && hasNumber(value.weighted_epa_sum)
+    && hasNumber(value.play_count)
+    && hasNumber(value.avg_leverage)
+  );
+}
+
+
+
+function hasCatalystPlayer(value: unknown): value is CatalystPlayer {
+  if (!isObject(value)) return false;
+  return (
+    typeof value.gsis_id === 'string'
+    && typeof value.player_name === 'string'
+    && typeof value.position === 'string'
+    && typeof value.team === 'string'
+    && hasNumber(value.catalyst_raw)
+    && hasNumber(value.catalyst_alpha)
+    && hasComponents(value.components)
+  );
+}
+
+function hasCatalystPlayerDetail(value: unknown): value is CatalystPlayerDetail {
+  if (!hasCatalystPlayer(value) || !hasNumber(value.season) || !Array.isArray(value.weekly)) return false;
+  return value.weekly.every((w) => isObject(w)
+    && hasNumber(w.week)
+    && hasNumber(w.catalyst_raw)
+    && hasNumber(w.catalyst_alpha)
+    && hasComponents(w.components));
+}
+
+function toQueryError(message: string, details?: Partial<QueryError>): QueryError {
+  const error = new Error(message) as QueryError;
+  if (details) Object.assign(error, details);
+  return error;
+}
+
+async function fetchJsonOrThrow<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  const text = await res.text();
+  let parsed: JsonValue = null;
+
+  if (text) {
+    try {
+      parsed = JSON.parse(text) as JsonValue;
+    } catch {
+      if (res.ok) {
+        throw toQueryError('Server returned an unreadable response body.');
+      }
+    }
+  }
+
+  if (!res.ok) {
+    const backendMessage = isObject(parsed) && typeof parsed.error === 'string'
+      ? parsed.error
+      : text;
+    throw toQueryError(`Request failed (${res.status} ${res.statusText})${backendMessage ? `: ${backendMessage}` : ''}`, {
+      status: res.status,
+      statusText: res.statusText,
+      body: backendMessage,
+    });
+  }
+
+  return parsed as T;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'An unexpected error occurred.';
+}
 
 export default function CatalystLab() {
   const [position, setPosition] = useState<Position>('QB');
@@ -82,31 +172,27 @@ export default function CatalystLab() {
 
   const batchQuery = useQuery<{ players: CatalystPlayer[] }>({
     queryKey: ['/api/catalyst/batch', position, season],
-    queryFn: async () => {
-      const res = await fetch(`/api/catalyst/batch?position=${position}&season=${season}&limit=200`);
-      return res.json();
-    },
+    queryFn: () => fetchJsonOrThrow<{ players: CatalystPlayer[] }>(`/api/catalyst/batch?position=${position}&season=${season}&limit=200`),
   });
 
   const playerQuery = useQuery<CatalystPlayerDetail>({
     queryKey: ['/api/catalyst/player', selectedPlayer, season],
-    queryFn: async () => {
-      const res = await fetch(`/api/catalyst/player/${selectedPlayer}?season=${season}`);
-      return res.json();
+    queryFn: () => {
+      if (!selectedPlayer) throw toQueryError('No player selected.');
+      return fetchJsonOrThrow<CatalystPlayerDetail>(`/api/catalyst/player/${selectedPlayer}?season=${season}`);
     },
     enabled: !!selectedPlayer,
   });
 
   const yoyQuery = useQuery<{ players: YoYPlayer[] }>({
     queryKey: ['/api/catalyst/yoy', position],
-    queryFn: async () => {
-      const res = await fetch(`/api/catalyst/yoy?position=${position}&limit=25`);
-      return res.json();
-    },
+    queryFn: () => fetchJsonOrThrow<{ players: YoYPlayer[] }>(`/api/catalyst/yoy?position=${position}&limit=25`),
   });
 
   const players = useMemo(() => {
-    const rows = batchQuery.data?.players || [];
+    const rows = Array.isArray(batchQuery.data?.players)
+      ? batchQuery.data.players.filter(hasCatalystPlayer)
+      : [];
     const sorted = [...rows];
     const sortFns: Record<SortKey, (a: CatalystPlayer, b: CatalystPlayer) => number> = {
       alpha: (a, b) => a.catalyst_alpha - b.catalyst_alpha,
@@ -138,7 +224,9 @@ export default function CatalystLab() {
     return <span className="ml-1 text-orange-600">{sortAsc ? '▲' : '▼'}</span>;
   };
 
-  const detail = playerQuery.data;
+  const detail = hasCatalystPlayerDetail(playerQuery.data)
+    ? playerQuery.data
+    : null;
   const tier = detail ? getTier(detail.catalyst_alpha) : null;
 
   const tierDescription = (alpha: number) => {
@@ -230,6 +318,7 @@ export default function CatalystLab() {
 
         <span className="text-xs text-gray-500">{season} Season</span>
         {batchQuery.isLoading && <span className="text-xs text-gray-400">Loading...</span>}
+        {batchQuery.isError && <span className="text-xs text-red-600">Failed to load list.</span>}
         <span className="text-xs text-gray-400">{players.length} players</span>
         <button
           onClick={exportCSV}
@@ -284,6 +373,18 @@ export default function CatalystLab() {
                   </tr>
                 );
               })}
+              {batchQuery.isError && (
+                <tr>
+                  <td colSpan={9} className="p-4 text-center text-sm text-red-600 bg-red-50 border-t">
+                    Unable to load CATALYST batch data. {getErrorMessage(batchQuery.error)}
+                  </td>
+                </tr>
+              )}
+              {!batchQuery.isLoading && !batchQuery.isError && players.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="p-4 text-center text-sm text-gray-500 border-t">No players returned for this selection.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -298,6 +399,18 @@ export default function CatalystLab() {
           {selectedPlayer && playerQuery.isLoading && (
             <div className="bg-white border rounded-lg p-6 text-center text-gray-400 text-sm">
               Loading player detail...
+            </div>
+          )}
+
+          {selectedPlayer && playerQuery.isError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+              Failed to load player details. {getErrorMessage(playerQuery.error)}
+            </div>
+          )}
+
+          {selectedPlayer && playerQuery.data && !detail && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-700">
+              Player detail payload is malformed or missing required component data.
             </div>
           )}
 
@@ -432,7 +545,13 @@ export default function CatalystLab() {
               <div className="p-6 text-center text-sm text-gray-400">Loading comparison data...</div>
             )}
 
-            {yoyQuery.data && (
+            {yoyQuery.isError && (
+              <div className="p-6 text-center text-sm text-red-700 bg-red-50 border-b">
+                Failed to load YoY validation data. {getErrorMessage(yoyQuery.error)}
+              </div>
+            )}
+
+            {yoyQuery.data && !yoyQuery.isError && (
               <div className="overflow-auto" style={{ maxHeight: '50vh' }}>
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 text-left sticky top-0">
