@@ -663,30 +663,47 @@ export async function getEnrichedPlayerWeek(
     }
     const { playerId, gsisId, nflDataPyId: legacyNflDataPyId } = playerIdResult;
     
-    // Get all official snapshot IDs for the season within week range
+    // Get all snapshot IDs for the season within week range
     // v1.2: Added startWeek support for week range filtering
+    // v1.3: Include non-official snapshots as fallback for weeks with no official snapshot,
+    // preventing incomplete official snapshot coverage from missing late-season data.
     const weekFilterMax = asOfWeek !== undefined ? asOfWeek : 99; // 99 = all weeks
     const weekFilterMin = startWeek !== undefined ? startWeek : 1; // default to week 1
-    
-    const officialSnapshots = await db
-      .select({ id: datadiveSnapshotMeta.id, week: datadiveSnapshotMeta.week })
+
+    // Fetch ALL snapshots (official and non-official), preferring official ones per week
+    const allSnapshots = await db
+      .select({
+        id: datadiveSnapshotMeta.id,
+        week: datadiveSnapshotMeta.week,
+        isOfficial: datadiveSnapshotMeta.isOfficial,
+      })
       .from(datadiveSnapshotMeta)
       .where(
         and(
           eq(datadiveSnapshotMeta.season, season),
-          eq(datadiveSnapshotMeta.isOfficial, true),
           sql`${datadiveSnapshotMeta.week} >= ${weekFilterMin}`,
           sql`${datadiveSnapshotMeta.week} <= ${weekFilterMax}`
         )
       );
-    
-    if (officialSnapshots.length === 0) {
-      console.log(`[DatadiveContext] No official snapshots found for season ${season}`);
+
+    if (allSnapshots.length === 0) {
+      console.log(`[DatadiveContext] No snapshots found for season ${season}`);
       return null;
     }
-    
-    const snapshotIds = officialSnapshots.map(s => s.id);
-    console.log(`[DatadiveContext] Fetching from ${snapshotIds.length} official snapshots for ${canonicalId} (weeks ${weekFilterMin}-${weekFilterMax})`);
+
+    // Deduplicate: prefer official snapshot per week, fallback to non-official
+    const bestPerWeek = new Map<number, { id: number; isOfficial: boolean }>();
+    for (const snap of allSnapshots) {
+      const existing = bestPerWeek.get(snap.week);
+      if (!existing || (!existing.isOfficial && snap.isOfficial)) {
+        bestPerWeek.set(snap.week, { id: snap.id, isOfficial: snap.isOfficial ?? false });
+      }
+    }
+
+    const snapshotIds = Array.from(bestPerWeek.values()).map(s => s.id);
+    const officialCount = Array.from(bestPerWeek.values()).filter(s => s.isOfficial).length;
+    const nonOfficialCount = bestPerWeek.size - officialCount;
+    console.log(`[DatadiveContext] Fetching from ${snapshotIds.length} snapshots for ${canonicalId} (weeks ${weekFilterMin}-${weekFilterMax}, ${officialCount} official, ${nonOfficialCount} non-official)`);
     
     // Fetch weekly rows across ALL official snapshots for this player
     // Use DISTINCT ON to handle duplicate week entries from re-snapshots
