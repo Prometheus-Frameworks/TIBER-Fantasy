@@ -43,14 +43,19 @@ function mapConfidenceBand(band: string): ConfidenceBand {
 // ── Verdict mapping ───────────────────────────────────────────────────────────
 
 function mapWinner(recommendation: string, p1Name: string, p2Name: string): VerdictWinner {
-  if (recommendation.toLowerCase().includes('coin flip')) return 'even';
+  const normalized = recommendation.toLowerCase();
+  if (normalized.includes('coin flip')) return 'even';
   if (recommendation.includes(p1Name)) return 'side_a';
   if (recommendation.includes(p2Name)) return 'side_b';
   return 'unknown';
 }
 
 function mapEdgeStrength(confidence: string, recommendation: string): EdgeStrength {
-  if (recommendation.toLowerCase().includes('coin flip')) return 'indeterminate';
+  const normalizedRecommendation = recommendation.toLowerCase();
+  if (normalizedRecommendation.includes('coin flip')) return 'indeterminate';
+  if (normalizedRecommendation.includes('lean')) {
+    return confidence.toLowerCase() === 'high' ? 'moderate' : 'slight';
+  }
   switch (confidence.toLowerCase()) {
     case 'high':   return 'strong';
     case 'medium': return 'moderate';
@@ -115,7 +120,13 @@ function buildSummary(
   return `${winnerName} ${strengthPhrase} ${loserName} based on recent usage and matchup data.`;
 }
 
-// ── Evidence assembly ─────────────────────────────────────────────────────────
+type PillarDirection = 'side_a' | 'side_b' | 'even';
+
+function mapDirection(delta: number, threshold: number): PillarDirection {
+  if (delta > threshold) return 'side_a';
+  if (delta < -threshold) return 'side_b';
+  return 'even';
+}
 
 function buildPillars(data: PlayerComparison) {
   const { player1, player2 } = data;
@@ -153,7 +164,7 @@ function buildPillars(data: PlayerComparison) {
     pillars.push({
       name: 'team_context' as const,
       delta,
-      direction: (delta > 0.02 ? 'side_a' : delta < -0.02 ? 'side_b' : 'even') as VerdictWinner,
+      direction: mapDirection(delta, 0.02),
       notes: [
         `${p1.playerName} opp ${defLabel} EPA allowed: ${p1Epa.toFixed(3)}`,
         `${p2.playerName} opp ${defLabel} EPA allowed: ${p2Epa.toFixed(3)}`,
@@ -169,7 +180,21 @@ function buildPillars(data: PlayerComparison) {
     pillars.push({
       name: 'stability' as const,
       delta,
-      direction: (delta > 5 ? 'side_a' : delta < -5 ? 'side_b' : 'even') as VerdictWinner,
+      direction: mapDirection(delta, 3),
+      notes: [
+        `${p1.playerName} target share: ${p1.targetSharePct.toFixed(1)}%`,
+        `${p2.playerName} target share: ${p2.targetSharePct.toFixed(1)}%`,
+      ],
+    });
+  }
+
+  if (p1.snapSharePct !== undefined && p2.snapSharePct !== undefined) {
+    const delta = p1.snapSharePct - p2.snapSharePct;
+    pillars.push({
+      name: 'stability' as const,
+      score: undefined,
+      delta,
+      direction: mapDirection(delta, 5),
       notes: [
         `${p1.playerName} snap share: ${p1.snapSharePct.toFixed(1)}%`,
         `${p2.playerName} snap share: ${p2.snapSharePct.toFixed(1)}%`,
@@ -194,6 +219,10 @@ function buildMetrics(data: PlayerComparison) {
     metrics.push({ name: `${p1.playerName} carries`, value: p1.carriesTotal, source: 'nflfastR' });
   if (p2.carriesTotal !== undefined)
     metrics.push({ name: `${p2.playerName} carries`, value: p2.carriesTotal, source: 'nflfastR' });
+  if (p1.targets !== undefined)
+    metrics.push({ name: `${p1.playerName} targets`, value: p1.targets, source: 'nflfastR' });
+  if (p2.targets !== undefined)
+    metrics.push({ name: `${p2.playerName} targets`, value: p2.targets, source: 'nflfastR' });
   if (p1.snapSharePct !== undefined)
     metrics.push({ name: `${p1.playerName} snap share`, value: p1.snapSharePct, unit: '%', source: 'nflfastR' });
   if (p2.snapSharePct !== undefined)
@@ -299,6 +328,33 @@ function buildWarnings(data: PlayerComparison): string[] {
   }
 
   return warnings;
+}
+
+function deriveSideScores(edge: EdgeStrength, winner: VerdictWinner): { sideAScore: number; sideBScore: number; scoreDelta: number } {
+  if (winner !== 'side_a' && winner !== 'side_b') {
+    return { sideAScore: 50, sideBScore: 50, scoreDelta: 0 };
+  }
+
+  const delta = edge === 'strong' ? 20 : edge === 'moderate' ? 12 : 6;
+  const sideAScore = winner === 'side_a' ? 50 + delta : 50 - delta;
+  const sideBScore = winner === 'side_b' ? 50 + delta : 50 - delta;
+  return { sideAScore, sideBScore, scoreDelta: sideAScore - sideBScore };
+}
+
+function deriveSignalPrimitiveDescriptor(data: PlayerComparison): string {
+  const p1 = data.player1.usage;
+  const p2 = data.player2.usage;
+
+  if (p1.targetSharePct !== undefined && p2.targetSharePct !== undefined) {
+    return 'relative_target_share_signal';
+  }
+  if (p1.snapSharePct !== undefined && p2.snapSharePct !== undefined) {
+    return 'relative_snap_share_signal';
+  }
+  if ((p1.targets ?? p1.carriesTotal) !== undefined && (p2.targets ?? p2.carriesTotal) !== undefined) {
+    return 'relative_opportunity_volume_signal';
+  }
+  return 'derived_recommendation_signal';
 }
 
 // ── Main mapper ───────────────────────────────────────────────────────────────
