@@ -2,11 +2,19 @@ import { Router, Request, Response } from "express";
 import { db } from "../../infra/db";
 import { catalystScores } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import {
+  type CatalystBatchResponse,
+  type CatalystErrorResponse,
+  type CatalystPlayerResponse,
+  type CatalystComponents,
+  type CatalystPosition,
+  type CatalystYoYPlayer,
+  type CatalystYoYResponse,
+  VALID_CATALYST_POSITIONS,
+} from "@shared/types/catalyst";
 
 const router = Router();
 
-const VALID_CATALYST_POSITIONS = ["QB", "RB", "WR", "TE"] as const;
-type CatalystPosition = (typeof VALID_CATALYST_POSITIONS)[number];
 type CatalystScoreRow = typeof catalystScores.$inferSelect;
 
 class ValidationError extends Error {
@@ -74,7 +82,7 @@ const parseLimit = (limitQuery: unknown, max: number, fallback: number): number 
   return Math.min(limit, max);
 };
 
-const buildValidationErrorResponse = (error: ValidationError) => ({
+const buildValidationErrorResponse = (error: ValidationError): CatalystErrorResponse => ({
   error: {
     code: error.code,
     message: error.message,
@@ -90,56 +98,54 @@ const buildBatchResponse = (
 ) => ({
   players: players.map((player) => ({
     gsis_id: player.gsisId,
-    player_name: player.playerName,
+    player_name: player.playerName ?? "",
     position: player.position,
-    team: player.team,
+    team: player.team ?? "",
     catalyst_raw: player.catalystRaw,
     catalyst_alpha: player.catalystAlpha,
-    components: player.components,
+    components: player.components as CatalystComponents,
   })),
   season,
   position,
   week,
   total: players.length,
-});
+} satisfies CatalystBatchResponse);
 
 const buildPlayerDetailResponse = (
   gsisId: string,
   season: number,
   weeklyScores: CatalystScoreRow[]
-) => {
+): CatalystPlayerResponse => {
   const latest = weeklyScores[weeklyScores.length - 1];
 
   return {
     gsis_id: gsisId,
-    player_name: latest.playerName,
+    player_name: latest.playerName ?? "",
     position: latest.position,
-    team: latest.team,
+    team: latest.team ?? "",
     season,
     catalyst_raw: latest.catalystRaw,
     catalyst_alpha: latest.catalystAlpha,
-    components: latest.components,
+    components: latest.components as CatalystComponents,
     weekly: weeklyScores.map((weekly) => ({
       week: weekly.week,
       catalyst_raw: weekly.catalystRaw,
       catalyst_alpha: weekly.catalystAlpha,
-      components: weekly.components,
+      components: weekly.components as CatalystComponents,
     })),
   };
 };
 
-const buildYoyResponse = (position: CatalystPosition, rows: Record<string, unknown>[]) => ({
+const buildYoyResponse = (
+  position: CatalystPosition,
+  baseSeason: number,
+  comparisonSeason: number,
+  players: CatalystYoYPlayer[]
+): CatalystYoYResponse => ({
   position,
-  players: rows.map((row) => ({
-    gsis_id: row.gsis_id,
-    player_name: row.player_name,
-    position: row.position,
-    team_2024: row.team_2024,
-    team_2025: row.team_2025,
-    alpha_2024: row.alpha_2024 != null ? Number(row.alpha_2024) : null,
-    alpha_2025: row.alpha_2025 != null ? Number(row.alpha_2025) : null,
-    delta: row.delta != null ? Number(row.delta) : null,
-  })),
+  base_season: baseSeason,
+  comparison_season: comparisonSeason,
+  players,
 });
 
 const handleRouteError = (error: unknown, res: Response) => {
@@ -221,6 +227,8 @@ router.get("/api/catalyst/yoy", async (req: Request, res: Response) => {
   try {
     const position = parseCatalystPosition(req.query.position);
     const limit = parseLimit(req.query.limit, 50, 25);
+    const baseSeason = 2024;
+    const comparisonSeason = 2025;
 
     const result = await db.execute(sql`
       WITH base_2024 AS (
@@ -232,11 +240,11 @@ router.get("/api/catalyst/yoy", async (req: Request, res: Response) => {
           cs.catalyst_alpha AS alpha_2024,
           cs.catalyst_raw AS raw_2024
         FROM catalyst_scores cs
-        WHERE cs.season = 2024
+        WHERE cs.season = ${baseSeason}
           AND cs.position = ${position}
           AND cs.week = (
             SELECT MAX(week) FROM catalyst_scores
-            WHERE season = 2024 AND position = ${position}
+            WHERE season = ${baseSeason} AND position = ${position}
           )
         ORDER BY cs.catalyst_alpha DESC
         LIMIT ${limit}
@@ -248,11 +256,11 @@ router.get("/api/catalyst/yoy", async (req: Request, res: Response) => {
           cs.catalyst_alpha AS alpha_2025,
           cs.catalyst_raw AS raw_2025
         FROM catalyst_scores cs
-        WHERE cs.season = 2025
+        WHERE cs.season = ${comparisonSeason}
           AND cs.position = ${position}
           AND cs.week = (
             SELECT MAX(week) FROM catalyst_scores
-            WHERE season = 2025 AND position = ${position}
+            WHERE season = ${comparisonSeason} AND position = ${position}
           )
       )
       SELECT
@@ -274,7 +282,18 @@ router.get("/api/catalyst/yoy", async (req: Request, res: Response) => {
       ORDER BY b24.alpha_2024 DESC
     `);
 
-    return res.json(buildYoyResponse(position, result.rows as Record<string, unknown>[]));
+    const players = (result.rows as Record<string, unknown>[]).map((row) => ({
+      gsis_id: String(row.gsis_id),
+      player_name: String(row.player_name),
+      position: String(row.position),
+      team_2024: String(row.team_2024),
+      team_2025: String(row.team_2025),
+      alpha_2024: row.alpha_2024 != null ? Number(row.alpha_2024) : null,
+      alpha_2025: row.alpha_2025 != null ? Number(row.alpha_2025) : null,
+      delta: row.delta != null ? Number(row.delta) : null,
+    } satisfies CatalystYoYPlayer));
+
+    return res.json(buildYoyResponse(position, baseSeason, comparisonSeason, players));
   } catch (error) {
     return handleRouteError(error, res);
   }
