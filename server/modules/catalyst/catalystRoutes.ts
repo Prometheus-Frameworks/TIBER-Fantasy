@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { db } from "../../infra/db";
 import { catalystScores } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import type { CatalystBatchResponse, CatalystErrorResponse, CatalystPlayerResponse, CatalystYoYResponse, CatalystYoYPlayer } from "@shared/types/catalyst";
 
 const router = Router();
 
@@ -74,7 +75,7 @@ const parseLimit = (limitQuery: unknown, max: number, fallback: number): number 
   return Math.min(limit, max);
 };
 
-const buildValidationErrorResponse = (error: ValidationError) => ({
+const buildValidationErrorResponse = (error: ValidationError): CatalystErrorResponse => ({
   error: {
     code: error.code,
     message: error.message,
@@ -87,7 +88,7 @@ const buildBatchResponse = (
   season: number,
   position: CatalystPosition,
   week: number
-) => ({
+): CatalystBatchResponse => ({
   players: players.map((player) => ({
     gsis_id: player.gsisId,
     player_name: player.playerName,
@@ -107,7 +108,7 @@ const buildPlayerDetailResponse = (
   gsisId: string,
   season: number,
   weeklyScores: CatalystScoreRow[]
-) => {
+): CatalystPlayerResponse => {
   const latest = weeklyScores[weeklyScores.length - 1];
 
   return {
@@ -128,14 +129,14 @@ const buildPlayerDetailResponse = (
   };
 };
 
-const buildYoyResponse = (position: CatalystPosition, rows: Record<string, unknown>[]) => ({
+const buildYoyResponse = (position: CatalystPosition, rows: Record<string, unknown>[]): CatalystYoYResponse => ({
   position,
-  players: rows.map((row) => ({
-    gsis_id: row.gsis_id,
-    player_name: row.player_name,
-    position: row.position,
-    team_2024: row.team_2024,
-    team_2025: row.team_2025,
+  players: rows.map((row): CatalystYoYPlayer => ({
+    gsis_id: String(row.gsis_id ?? ""),
+    player_name: String(row.player_name ?? ""),
+    position: String(row.position ?? ""),
+    team_2024: String(row.team_2024 ?? ""),
+    team_2025: String(row.team_2025 ?? ""),
     alpha_2024: row.alpha_2024 != null ? Number(row.alpha_2024) : null,
     alpha_2025: row.alpha_2025 != null ? Number(row.alpha_2025) : null,
     delta: row.delta != null ? Number(row.delta) : null,
@@ -148,12 +149,13 @@ const handleRouteError = (error: unknown, res: Response) => {
   }
 
   console.error("Catalyst route error", error);
-  return res.status(500).json({
+  const internalErrorResponse: CatalystErrorResponse = {
     error: {
       code: "INTERNAL_ERROR",
       message: "Unexpected error while processing request",
     },
-  });
+  };
+  return res.status(500).json(internalErrorResponse);
 };
 
 router.get("/api/catalyst/batch", async (req: Request, res: Response) => {
@@ -202,13 +204,14 @@ router.get("/api/catalyst/player/:gsisId", async (req: Request, res: Response) =
       .orderBy(catalystScores.week);
 
     if (weeklyScores.length === 0) {
-      return res.status(404).json({
+      const notFoundResponse: CatalystErrorResponse = {
         error: {
           code: "PLAYER_NOT_FOUND",
           message: "Player not found for this season",
           details: { gsisId, season },
         },
-      });
+      };
+      return res.status(404).json(notFoundResponse);
     }
 
     return res.json(buildPlayerDetailResponse(gsisId, season, weeklyScores));

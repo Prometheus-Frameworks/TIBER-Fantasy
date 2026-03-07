@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import type { CatalystBatchResponse, CatalystPlayer, CatalystPlayerDetail, CatalystYoYResponse } from '@shared/types/catalyst';
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -23,46 +24,6 @@ function barWidth(value: number, max: number): string {
   return `${Math.min(100, Math.max(0, (value / max) * 100))}%`;
 }
 
-interface CatalystPlayer {
-  gsis_id: string;
-  player_name: string;
-  position: string;
-  team: string;
-  catalyst_raw: number;
-  catalyst_alpha: number;
-  components: {
-    leverage_factor: number;
-    opponent_factor: number;
-    script_factor: number;
-    recency_factor: number;
-    base_epa_sum: number;
-    weighted_epa_sum: number;
-    play_count: number;
-    avg_leverage: number;
-  };
-}
-
-interface CatalystPlayerDetail extends CatalystPlayer {
-  season: number;
-  weekly: {
-    week: number;
-    catalyst_raw: number;
-    catalyst_alpha: number;
-    components: CatalystPlayer['components'];
-  }[];
-}
-
-interface YoYPlayer {
-  gsis_id: string;
-  player_name: string;
-  position: string;
-  team_2024: string;
-  team_2025: string;
-  alpha_2024: number | null;
-  alpha_2025: number | null;
-  delta: number | null;
-}
-
 type SortKey = 'alpha' | 'raw' | 'plays' | 'leverage' | 'opponent' | 'script' | 'name';
 
 const COMPONENT_EXPLANATIONS: Record<string, string> = {
@@ -80,7 +41,7 @@ export default function CatalystLab() {
   const [sortAsc, setSortAsc] = useState(false);
   const [yoyOpen, setYoyOpen] = useState(true);
 
-  const batchQuery = useQuery<{ players: CatalystPlayer[] }>({
+  const batchQuery = useQuery<CatalystBatchResponse>({
     queryKey: ['/api/catalyst/batch', position, season],
     queryFn: async () => {
       const res = await fetch(`/api/catalyst/batch?position=${position}&season=${season}&limit=200`);
@@ -97,7 +58,7 @@ export default function CatalystLab() {
     enabled: !!selectedPlayer,
   });
 
-  const yoyQuery = useQuery<{ players: YoYPlayer[] }>({
+  const yoyQuery = useQuery<CatalystYoYResponse>({
     queryKey: ['/api/catalyst/yoy', position],
     queryFn: async () => {
       const res = await fetch(`/api/catalyst/yoy?position=${position}&limit=25`);

@@ -208,3 +208,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run typecheck` (fails due pre-existing repository-wide TS errors)
   - `npm test` (fails in existing suites; includes `DATABASE_URL`-dependent failure)
   - `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails due pre-existing global typings/dependency issues)
+
+### 2026-03-07 — Shared CATALYST API types contract
+- Added `shared/types/catalyst.ts` to define shared CATALYST payload interfaces (`CatalystComponents`, `CatalystPlayer`, `CatalystPlayerDetail`, `CatalystYoYPlayer`, and response/error wrappers).
+- Updated CATALYST route builders in `server/modules/catalyst/catalystRoutes.ts` to return typed response objects using shared contracts.
+- Updated `client/src/pages/CatalystLab.tsx` to import shared CATALYST response/player types instead of locally duplicated interfaces.
+- Validation: `npm run typecheck` (pre-existing repo-wide TS failures; no task-specific runtime changes).

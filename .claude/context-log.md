@@ -177,3 +177,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/api/v1/routes.ts`, `server/api/v1/mappers/toTradeAnalysisResponse.ts`
 - **Validation:** Ran `npm run typecheck` (fails due broad pre-existing repo TypeScript issues), `npm test` (partial pass; failures include DB-dependent tests due missing `DATABASE_URL` plus existing suite failures), and targeted `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails from existing global typing/dependency conflicts).
 - **Notes:** Legacy trade surfaces remain untouched; this is additive via `/api/v1/intelligence/trade/analyze`.
+
+### 2026-03-07 — Codex: Shared CATALYST API payload types
+- **What changed:** Added a shared `@shared/types/catalyst` contract for Catalyst payloads and wired both server CATALYST routes and `CatalystLab` client page to consume those shared interfaces.
+- **Files modified:** `shared/types/catalyst.ts`, `server/modules/catalyst/catalystRoutes.ts`, `client/src/pages/CatalystLab.tsx`
+- **Validation:** Ran `npm run typecheck` (fails due existing repository-wide TypeScript issues unrelated to this task).
+- **Notes:** Catalyst client/server now share one source of truth for batch/player/YoY/error response shapes and core component/player row payloads.
