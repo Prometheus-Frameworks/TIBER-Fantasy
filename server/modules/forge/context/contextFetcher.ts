@@ -157,33 +157,59 @@ async function fetchPlayerIdentity(playerId: string) {
  * @param startWeek - Optional start week for week range filtering
  */
 async function fetchSeasonStats(
-  canonicalId: string, 
-  season: number, 
+  canonicalId: string,
+  season: number,
   asOfWeek: number,
   startWeek?: number
 ): Promise<ForgeContext['seasonStats']> {
   try {
-    // For 2025+, use NEW enriched weekly data path (single source of truth)
-    // v1.2: Pass startWeek for week range filtering
+    // For 2025+, try both Datadive and weeklyStats, then pick the most complete source.
+    // This prevents incomplete Datadive snapshots (e.g., only weeks 1-14) from shadowing
+    // complete data in the weekly_stats table.
     if (season >= 2025 && USE_DATADIVE_FORGE) {
+      let datadiveResult: ForgeContext['seasonStats'] | null = null;
+      let datadiveGames = 0;
+
       const enrichedData = await getEnrichedPlayerWeek(canonicalId, season, asOfWeek > 0 ? asOfWeek : undefined, startWeek);
       if (enrichedData && enrichedData.gamesPlayed > 0) {
-        console.log(`[FORGE/Context] Using enriched weekly data for ${canonicalId}: ${enrichedData.gamesPlayed} games, enrichments: [${enrichedData.enrichmentList.join(', ')}]`);
+        datadiveGames = enrichedData.gamesPlayed;
         const forgeInput = enrichedToForgeInput(enrichedData);
-        return toForgeSeasonStats(forgeInput);
+        datadiveResult = toForgeSeasonStats(forgeInput);
       }
-      
-      // Fallback to old season snapshot if enriched weekly data not available
-      const gsisIdFallback = await getGsisIdForCanonical(canonicalId);
-      if (gsisIdFallback) {
-        const datadiveStats = await getSnapshotSeasonStats(gsisIdFallback, season);
-        if (datadiveStats && datadiveStats.gamesPlayed > 0) {
-          console.log(`[FORGE/Context] Fallback to Datadive season snapshot for ${canonicalId}: ${datadiveStats.gamesPlayed} games`);
-          return toForgeSeasonStats(datadiveStats);
+
+      if (!datadiveResult) {
+        // Fallback to old season snapshot if enriched weekly data not available
+        const gsisIdFallback = await getGsisIdForCanonical(canonicalId);
+        if (gsisIdFallback) {
+          const datadiveStats = await getSnapshotSeasonStats(gsisIdFallback, season);
+          if (datadiveStats && datadiveStats.gamesPlayed > 0) {
+            datadiveGames = datadiveStats.gamesPlayed;
+            datadiveResult = toForgeSeasonStats(datadiveStats);
+          }
         }
       }
+
+      // Also fetch from weeklyStats to compare completeness
+      const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek, startWeek);
+      const weeklyGames = weeklyResult?.gamesPlayed ?? 0;
+
+      // Use the source with more games played (more complete data)
+      if (datadiveResult && weeklyResult && weeklyGames > datadiveGames) {
+        console.log(`[FORGE/Context] ⚠️ weeklyStats more complete for ${canonicalId}: ${weeklyGames} games vs Datadive ${datadiveGames} games — using weeklyStats`);
+        return weeklyResult;
+      }
+
+      if (datadiveResult) {
+        console.log(`[FORGE/Context] Using enriched data for ${canonicalId}: ${datadiveGames} games`);
+        return datadiveResult;
+      }
+
+      if (weeklyResult && weeklyGames > 0) {
+        console.log(`[FORGE/Context] Using weeklyStats fallback for ${canonicalId}: ${weeklyGames} games`);
+        return weeklyResult;
+      }
     }
-    
+
     // Fallback to legacy path for 2025+ if Datadive didn't return data
     if (season >= 2025) {
       const weeklyResult = await fetchFromWeeklyStats(canonicalId, season, asOfWeek, startWeek);
@@ -480,11 +506,12 @@ async function fetchAdvancedMetrics(
 ): Promise<ForgeContext['advancedMetrics']> {
   try {
     // For 2025+, use NEW enriched weekly data path (single source of truth)
+    // v1.7: Check enriched data completeness before committing to it
     if (season >= 2025 && USE_DATADIVE_FORGE) {
       const enrichedData = await getEnrichedPlayerWeek(canonicalId, season);
       if (enrichedData && enrichedData.gamesPlayed > 0) {
         const enriched = enrichedData.enrichedMetrics;
-        
+
         // Build advanced metrics from enriched data
         const metrics: ForgeContext['advancedMetrics'] = {
           yprr: enrichedData.yprr > 0 ? enrichedData.yprr : undefined,

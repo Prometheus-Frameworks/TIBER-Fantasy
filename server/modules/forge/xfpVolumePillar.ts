@@ -48,8 +48,11 @@ export async function computeXfpPerGame(
     }
 
     // Fetch weekly snapshot data with opportunity breakdowns
+    // v1.1: Use DISTINCT ON (week) to include all available weeks,
+    // preferring official snapshots when multiple exist for the same week.
+    // This prevents incomplete official snapshot coverage from missing late-season weeks.
     const result = await db.execute(sql`
-      SELECT
+      SELECT DISTINCT ON (sm.week)
         sm.week,
         spw.player_id,
         spw.targets,
@@ -65,8 +68,7 @@ export async function computeXfpPerGame(
       JOIN datadive_snapshot_meta sm ON sm.id = spw.snapshot_id
       WHERE spw.player_id = ${statsId}
         AND sm.season = ${season}
-        AND sm.is_official = true
-      ORDER BY sm.week
+      ORDER BY sm.week ASC, sm.is_official DESC, sm.snapshot_at DESC
     `);
 
     if (result.rows.length === 0) {
