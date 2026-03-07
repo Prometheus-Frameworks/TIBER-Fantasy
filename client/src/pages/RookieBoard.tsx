@@ -375,21 +375,32 @@ export default function RookieBoard() {
   function exportCSV() {
     if (!players.length) return;
 
+    // Draft Capital Score mapping: R1=100, R2=78, R3=56, R4=34, R5=18, R6=10
+    // When Proj Round is unknown, Draft Capital Score defaults to 50 (position median).
+    const meta = [
+      ['# TIBER 2026 Rookie Board Export'],
+      ['# Source: FORGE-R Phase 3 composite (Athleticism 35% · Production 45% · Draft Capital 20%)'],
+      ['# Draft Capital Score: R1=100 R2=78 R3=56 R4=34 R5=18 R6=10; null proj round → 50 (position median)'],
+      ['# Null policy: School/Proj Round → "Unknown"; numeric fields → blank = not yet available'],
+      [],
+    ];
+
     const headers = [
       'Rank', 'Player', 'Position', 'School', 'Proj Round',
       'Rookie Alpha', 'Tier',
-      'RAS v2', 'RAS v1', 'Athleticism Score', 'Production Score', 'Draft Capital Score',
-      'Dominator Rating (%)', 'Target Share (%)', 'YPC',
+      'RAS v2', 'RAS v1', 'Athleticism Score', 'Production Score',
+      'Draft Capital Score (R1=100,R2=78,R3=56,R4=34,R5=18,null=50)',
+      'Dominator Rating (%)', 'Target Share (%)', 'YPC (RB)',
       'Height (in)', 'Weight (lbs)', '40yd', '10yd Split',
       'Vertical (in)', 'Broad (in)', '3-Cone', 'Shuttle',
     ];
 
-    const rows = players.map(p => [
-      p.rank,
+    const rows = players.map((p, i) => [
+      i + 1,
       p.player_name,
       p.position,
-      p.school ?? '',
-      p.proj_round ?? '',
+      p.school ?? 'Unknown',
+      p.proj_round ?? 'Unknown',
       p.rookie_alpha ?? '',
       p.rookie_tier ?? '',
       p.tiber_ras_v2 ?? '',
@@ -398,8 +409,8 @@ export default function RookieBoard() {
       p.production_score ?? '',
       p.draft_capital_score ?? '',
       p.dominator_rating ?? '',
-      p.college_target_share ?? '',
-      p.college_ypc ?? '',
+      p.position !== 'RB' ? (p.college_target_share ?? '') : '',
+      p.position === 'RB' ? (p.college_ypc ?? '') : '',
       p.height_inches ?? '',
       p.weight_lbs ?? '',
       p.forty_yard_dash ?? '',
@@ -410,9 +421,16 @@ export default function RookieBoard() {
       p.short_shuttle ?? '',
     ]);
 
-    const csv = [headers, ...rows]
-      .map(row => row.map(v => (String(v).includes(',') ? `"${v}"` : v)).join(','))
-      .join('\n');
+    const escapeCell = (v: unknown) => {
+      const s = String(v ?? '');
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const csv = [
+      ...meta.map(row => row.map(escapeCell).join(',')),
+      headers.map(escapeCell).join(','),
+      ...rows.map(row => row.map(escapeCell).join(',')),
+    ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

@@ -1,0 +1,166 @@
+Data Quality Audit v1 — tiber_rookie_board_2026.csv
+
+Status: Pass with warnings
+Severity: Medium
+Use recommendation: Safe for manual analysis and board review. Not ideal as a fully trusted scoring input until flagged issues are resolved.
+
+Summary
+
+The rookie board export is structurally clean. The CSV parses correctly, all rows align to the header, ranks are unique and sequential, player names are unique, and there are no obvious malformed values or impossible physical metrics.
+
+The remaining issues are semantic rather than structural. A small number of rows contain missing core fields, and several position-relevant production fields are incomplete. This does not make the file unusable, but it does reduce confidence if the board is being used as a standardized engine input inside Tiber.
+
+Blocking issues
+
+None at the file-format level. The CSV is loadable and stable.
+
+There is, however, one near-blocking logic issue if this board is being used programmatically:
+
+Three rows have missing School and missing Proj Round while still carrying Draft Capital Score = 50.
+
+This breaks consistency with the rest of the file, where Draft Capital Score appears tightly tied to Proj Round.
+
+Affected rows:
+
+Rank 22 — Chase Roberts (WR)
+
+Rank 47 — Adam Randall (RB)
+
+Rank 77 — Zavion Thomas (WR)
+
+If Draft Capital Score is meant to be derived from projected round, this needs correction or documentation before automated downstream use.
+
+Warnings
+
+Incomplete receiver production coverage
+Target Share (%) is missing for 6 WR/TE players. That means the receiver production layer is not complete.
+
+Affected players:
+
+Chase Roberts
+
+Bryce Lance
+
+Jalen Walthall
+
+J. Michael Sturdivant
+
+Zavion Thomas
+
+Jaren Kanak
+
+Incomplete Dominator coverage
+Dominator Rating (%) is missing in 21 rows. Some of this may be understandable by position or source availability, but it still requires explicit null handling if used in scoring.
+
+Hidden fallback behavior likely exists
+The observed draft capital mapping is very consistent across populated rounds:
+
+Round 1 → 100
+
+Round 2 → 78
+
+Round 3 → 56
+
+Round 4 → 34
+
+Round 5 → 18
+
+Round 6 → 10
+
+The three rows with missing projected round still receive 50, which implies fallback logic, manual override, or export inconsistency. That should be explicit, not inferred.
+
+Sparse athletic testing fields
+High missingness in athletic drill columns is not unusual for draft data, but it should still be treated as sparse source coverage rather than assumed completeness.
+
+What checked out
+
+CSV structure is valid
+
+23 columns present
+
+90 data rows present
+
+No row-width mismatches
+
+No duplicate players
+
+No duplicate ranks
+
+Rank sequence is intact from 1 to 90
+
+Positions are constrained to WR, TE, QB, RB
+
+YPC is correctly limited to RB-type rows
+
+Numeric values fall within realistic football ranges
+
+No obvious parsing or datatype failures
+
+Risk assessment
+
+For a human-facing rookie board, current risk is low.
+
+For a machine-facing scoring or ranking pipeline, current risk is medium because:
+
+null semantics are not explicit,
+
+draft-capital fallback behavior is unclear,
+
+some position-specific production fields are incomplete.
+
+This is the kind of dataset that looks clean enough to fool a model into acting more certain than it should. That’s the real problem.
+
+Recommended action items
+
+Priority 1
+
+Patch missing School values for the 3 affected rows.
+
+Patch or explicitly label missing Proj Round values for the same rows.
+
+Reconcile Draft Capital Score = 50 with actual projection logic.
+
+Priority 2
+
+Define null policy for Target Share (%) and Dominator Rating (%).
+
+Decide whether missing values mean:
+
+unavailable,
+
+not applicable,
+
+zero,
+
+or imputed.
+
+Priority 3
+
+Add export validation rules so this does not slip through again.
+
+Proposed validation rules
+
+Rank must be unique and sequential.
+
+Player must be unique and non-empty.
+
+School must be non-empty.
+
+Position must be one of QB, RB, WR, TE.
+
+Proj Round must be populated or explicitly marked with an approved non-round value such as UDFA or Unknown.
+
+Draft Capital Score must match approved mapping logic.
+
+WR/TE rows with missing Target Share (%) should be flagged.
+
+Rows with missing Dominator Rating (%) should be flagged for review.
+
+Any derived score should have a documented source rule or fallback rule.
+
+Final verdict
+
+This export passes as a structurally valid rookie board. It does not yet pass as a fully governed engine-grade dataset.
+
+It is fine for board viewing, rough analysis, and manual ranking work.
+It should get a cleanup pass before being treated as authoritative input for Tiber scoring, comparisons, or agent-facing reasoning.
