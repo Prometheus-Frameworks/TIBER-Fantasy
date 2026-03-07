@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Users, Zap, TrendingUp, ChevronUp, ChevronDown,
-  Activity, Star, X, Ruler, Weight
+  Activity, Star, X, Ruler, Weight, Download
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -372,6 +372,57 @@ export default function RookieBoard() {
     setSortBy(VIEW_SORT_DEFAULT[v]);
   }
 
+  function exportCSV() {
+    if (!players.length) return;
+
+    const headers = [
+      'Rank', 'Player', 'Position', 'School', 'Proj Round',
+      'Rookie Alpha', 'Tier',
+      'RAS v2', 'RAS v1', 'Athleticism Score', 'Production Score', 'Draft Capital Score',
+      'Dominator Rating (%)', 'Target Share (%)', 'YPC',
+      'Height (in)', 'Weight (lbs)', '40yd', '10yd Split',
+      'Vertical (in)', 'Broad (in)', '3-Cone', 'Shuttle',
+    ];
+
+    const rows = players.map(p => [
+      p.rank,
+      p.player_name,
+      p.position,
+      p.school ?? '',
+      p.proj_round ?? '',
+      p.rookie_alpha ?? '',
+      p.rookie_tier ?? '',
+      p.tiber_ras_v2 ?? '',
+      p.tiber_ras_v1 ?? '',
+      p.athleticism_score ?? '',
+      p.production_score ?? '',
+      p.draft_capital_score ?? '',
+      p.dominator_rating ?? '',
+      p.college_target_share ?? '',
+      p.college_ypc ?? '',
+      p.height_inches ?? '',
+      p.weight_lbs ?? '',
+      p.forty_yard_dash ?? '',
+      p.ten_yard_split ?? '',
+      p.vertical_jump ?? '',
+      p.broad_jump ?? '',
+      p.three_cone ?? '',
+      p.short_shuttle ?? '',
+    ]);
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(v => (String(v).includes(',') ? `"${v}"` : v)).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tiber_rookie_board_2026${position !== 'ALL' ? `_${position}` : ''}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const SortHeader = ({ field, label }: { field: SortField; label: string }) => (
     <button onClick={() => setSortBy(field)}
       className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
@@ -445,6 +496,15 @@ export default function RookieBoard() {
               {label}
             </button>
           ))}
+          <button
+            onClick={exportCSV}
+            disabled={!players.length}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-all border border-slate-700/30 bg-slate-800/50 text-slate-500 hover:text-[#e2640d] hover:border-[#e2640d]/40 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Export current view as CSV"
+          >
+            <Download className="h-3 w-3" />
+            CSV
+          </button>
         </div>
       </div>
 
