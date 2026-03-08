@@ -29,6 +29,7 @@ const intelligenceNav: NavItem[] = [
 const adminNav: NavItem[] = [
   { label: "FORGE Hub", path: "/admin/forge-hub" },
   { label: "FORGE Engine", path: "/forge" },
+  { label: "FORGE Inspector", path: "/forge/inspect" },
   { label: "Quality Sentinel", path: "/sentinel" },
   { label: "Metrics Dictionary", path: "/metrics-dictionary" },
   { label: "Architecture", path: "/architecture" },

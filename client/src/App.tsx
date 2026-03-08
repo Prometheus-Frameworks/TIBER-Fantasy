@@ -12,6 +12,7 @@ import DataLabHub from "@/pages/DataLabHub";
 import ChatHomepage from "@/pages/ChatHomepage";
 import PlayerPage from "@/pages/PlayerPage";
 import ForgeTransparency from "@/pages/ForgeTransparency";
+import ForgeLanding from "@/pages/ForgeLanding";
 import ForgeHub from "@/pages/admin/ForgeHub";
 import PlayerMapping from "@/pages/admin/PlayerMapping";
 import PlayerMappingTest from "@/pages/admin/PlayerMappingTest";
@@ -59,7 +60,8 @@ function Router() {
         <Route path="/schedule" component={SchedulePage} />
         <Route path="/legacy-chat" component={ChatHomepage} />
         <Route path="/player/:playerId" component={PlayerPage} />
-        <Route path="/forge" component={ForgeTransparency} />
+        <Route path="/forge" component={ForgeLanding} />
+        <Route path="/forge/inspect" component={ForgeTransparency} />
         <Route path="/rankings">
           {() => <Redirect to="/tiers" />}
         </Route>
