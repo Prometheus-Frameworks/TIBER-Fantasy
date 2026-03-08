@@ -122,7 +122,7 @@ export default function CatalystLab() {
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [tierFilter, setTierFilter] = useState<Set<string>>(new Set());
-  const [minPlays, setMinPlays] = useState(0);
+  const [minPlays, setMinPlays] = useState(100);
   const [teamSearch, setTeamSearch] = useState('');
 
   const activeFilterCount =
@@ -402,7 +402,10 @@ export default function CatalystLab() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-gray-600">Min Plays</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-gray-600">Min Plays</label>
+                <span className="text-[10px] text-gray-400">QB dropbacks · WR/TE targets · RB carries</span>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="range"
@@ -416,7 +419,7 @@ export default function CatalystLab() {
                 <span className="text-xs font-mono w-8 text-right text-gray-700">{minPlays || 'Any'}</span>
               </div>
               <div className="flex gap-1">
-                {[0, 30, 50, 100, 200].map((v) => (
+                {[0, 50, 100, 150, 200].map((v) => (
                   <button
                     key={v}
                     onClick={() => setMinPlays(v)}
@@ -426,6 +429,9 @@ export default function CatalystLab() {
                   </button>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400">
+                100+ filters to meaningful contributors. Season-total plays are cumulative across all weeks played.
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -454,7 +460,13 @@ export default function CatalystLab() {
                 <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('alpha')}>Alpha{sortIndicator('alpha')}</th>
                 {visibleCols.has('tier') && <th className="p-2 text-right">Tier</th>}
                 {visibleCols.has('raw') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('raw')}>Raw{sortIndicator('raw')}</th>}
-                {visibleCols.has('plays') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('plays')}>Plays{sortIndicator('plays')}</th>}
+                {visibleCols.has('plays') && (
+                  <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('plays')}>
+                    <span title="Season total plays directly involved in: QB dropbacks, WR/TE targets, RB carries. Not total snaps.">
+                      Plays{sortIndicator('plays')}
+                    </span>
+                  </th>
+                )}
                 {visibleCols.has('leverage') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('leverage')}>Leverage{sortIndicator('leverage')}</th>}
                 {visibleCols.has('opponent') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('opponent')}>Opp{sortIndicator('opponent')}</th>}
                 {visibleCols.has('script') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('script')}>Script{sortIndicator('script')}</th>}
