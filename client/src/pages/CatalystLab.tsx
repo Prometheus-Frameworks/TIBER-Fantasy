@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, SlidersHorizontal, Columns3 } from 'lucide-react';
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
@@ -18,6 +18,8 @@ function getTier(alpha: number): TierInfo {
   if (alpha >= 25) return { label: 'Low Signal', short: 'Low', color: 'text-amber-700', bg: 'bg-amber-100', text: 'text-amber-800' };
   return { label: 'Garbage Time Risk', short: 'GBG', color: 'text-red-600', bg: 'bg-red-100', text: 'text-red-700' };
 }
+
+const ALL_TIERS = ['Elite Clutch', 'Clutch', 'Neutral', 'Low Signal', 'Garbage Time Risk'] as const;
 
 function barWidth(value: number, max: number): string {
   return `${Math.min(100, Math.max(0, (value / max) * 100))}%`;
@@ -65,12 +67,45 @@ interface YoYPlayer {
 
 type SortKey = 'alpha' | 'raw' | 'plays' | 'leverage' | 'opponent' | 'script' | 'name';
 
-const COMPONENT_EXPLANATIONS: Record<string, string> = {
-  Leverage: 'Win probability swing per play — high means they produced when the game was on the line.',
-  Opponent: 'Adjustment for defense quality — performing well vs strong defenses scores higher.',
-  'Game Script': 'Boost for trailing/competitive situations — filters out garbage-time stat padding.',
-  Recency: 'Recent weeks weighted more — measures sustained clutch production, not just early-season.',
+type ColKey = 'raw' | 'tier' | 'plays' | 'leverage' | 'opponent' | 'script' | 'baseEpa' | 'weightedEpa';
+
+const COL_DEFS: { key: ColKey; label: string; sortKey?: SortKey }[] = [
+  { key: 'tier',       label: 'Tier' },
+  { key: 'raw',        label: 'Raw Score',      sortKey: 'raw' },
+  { key: 'plays',      label: 'Plays',          sortKey: 'plays' },
+  { key: 'leverage',   label: 'Avg Leverage',   sortKey: 'leverage' },
+  { key: 'opponent',   label: 'Opp Factor',     sortKey: 'opponent' },
+  { key: 'script',     label: 'Game Script',    sortKey: 'script' },
+  { key: 'baseEpa',    label: 'Base EPA' },
+  { key: 'weightedEpa', label: 'Weighted EPA' },
+];
+
+const DEFAULT_COLS: Set<ColKey> = new Set(['tier', 'raw', 'plays', 'leverage', 'opponent', 'script']);
+
+const TIER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  'Elite Clutch':      { bg: 'bg-emerald-100', text: 'text-emerald-800', border: 'border-emerald-300' },
+  'Clutch':            { bg: 'bg-green-100',   text: 'text-green-800',   border: 'border-green-300' },
+  'Neutral':           { bg: 'bg-gray-100',    text: 'text-gray-700',    border: 'border-gray-300' },
+  'Low Signal':        { bg: 'bg-amber-100',   text: 'text-amber-800',   border: 'border-amber-300' },
+  'Garbage Time Risk': { bg: 'bg-red-100',     text: 'text-red-700',     border: 'border-red-300' },
 };
+
+const COMPONENT_EXPLANATIONS: Record<string, string> = {
+  Leverage:     'Win probability swing per play — high means they produced when the game was on the line.',
+  Opponent:     'Adjustment for defense quality — performing well vs strong defenses scores higher.',
+  'Game Script': 'Boost for trailing/competitive situations — filters out garbage-time stat padding.',
+  Recency:      'Recent weeks weighted more — measures sustained clutch production, not just early-season.',
+};
+
+function useClickOutside(ref: React.RefObject<HTMLElement>, cb: () => void) {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) cb();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [ref, cb]);
+}
 
 export default function CatalystLab() {
   const [position, setPosition] = useState<Position>('QB');
@@ -79,6 +114,21 @@ export default function CatalystLab() {
   const [sortKey, setSortKey] = useState<SortKey>('alpha');
   const [sortAsc, setSortAsc] = useState(false);
   const [yoyOpen, setYoyOpen] = useState(true);
+
+  const [visibleCols, setVisibleCols] = useState<Set<ColKey>>(new Set(DEFAULT_COLS));
+  const [colsOpen, setColsOpen] = useState(false);
+  const colsRef = useRef<HTMLDivElement>(null!);
+  useClickOutside(colsRef, () => setColsOpen(false));
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [tierFilter, setTierFilter] = useState<Set<string>>(new Set());
+  const [minPlays, setMinPlays] = useState(0);
+  const [teamSearch, setTeamSearch] = useState('');
+
+  const activeFilterCount =
+    tierFilter.size +
+    (minPlays > 0 ? 1 : 0) +
+    (teamSearch.trim() ? 1 : 0);
 
   const batchQuery = useQuery<{ players: CatalystPlayer[] }>({
     queryKey: ['/api/catalyst/batch', position, season],
@@ -109,33 +159,57 @@ export default function CatalystLab() {
     const rows = batchQuery.data?.players || [];
     const sorted = [...rows];
     const sortFns: Record<SortKey, (a: CatalystPlayer, b: CatalystPlayer) => number> = {
-      alpha: (a, b) => a.catalyst_alpha - b.catalyst_alpha,
-      raw: (a, b) => a.catalyst_raw - b.catalyst_raw,
-      plays: (a, b) => a.components.play_count - b.components.play_count,
+      alpha:    (a, b) => a.catalyst_alpha - b.catalyst_alpha,
+      raw:      (a, b) => a.catalyst_raw - b.catalyst_raw,
+      plays:    (a, b) => a.components.play_count - b.components.play_count,
       leverage: (a, b) => a.components.avg_leverage - b.components.avg_leverage,
       opponent: (a, b) => a.components.opponent_factor - b.components.opponent_factor,
-      script: (a, b) => a.components.script_factor - b.components.script_factor,
-      name: (a, b) => a.player_name.localeCompare(b.player_name),
+      script:   (a, b) => a.components.script_factor - b.components.script_factor,
+      name:     (a, b) => a.player_name.localeCompare(b.player_name),
     };
     sorted.sort((a, b) => {
       const result = sortFns[sortKey](a, b);
       return sortAsc ? result : -result;
     });
-    return sorted;
-  }, [batchQuery.data, sortKey, sortAsc]);
+
+    return sorted.filter((p) => {
+      if (tierFilter.size > 0 && !tierFilter.has(getTier(p.catalyst_alpha).label)) return false;
+      if (minPlays > 0 && p.components.play_count < minPlays) return false;
+      if (teamSearch.trim() && !p.team.toLowerCase().includes(teamSearch.trim().toLowerCase())) return false;
+      return true;
+    });
+  }, [batchQuery.data, sortKey, sortAsc, tierFilter, minPlays, teamSearch]);
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortKey(key);
-      setSortAsc(false);
-    }
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(false); }
   };
 
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return null;
     return <span className="ml-1 text-orange-600">{sortAsc ? '▲' : '▼'}</span>;
+  };
+
+  const toggleTier = (t: string) => {
+    setTierFilter((prev) => {
+      const next = new Set(prev);
+      next.has(t) ? next.delete(t) : next.add(t);
+      return next;
+    });
+  };
+
+  const toggleCol = (k: ColKey) => {
+    setVisibleCols((prev) => {
+      const next = new Set(prev);
+      next.has(k) ? next.delete(k) : next.add(k);
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setTierFilter(new Set());
+    setMinPlays(0);
+    setTeamSearch('');
   };
 
   const detail = playerQuery.data;
@@ -163,24 +237,21 @@ export default function CatalystLab() {
       `# Tiers: Elite Clutch (85+) | Clutch (65–84) | Neutral (45–64) | Low Signal (25–44) | Garbage Time Risk (<25)`,
       `# catalyst_alpha: 0–100 percentile within position group`,
       `# catalyst_raw: weighted EPA per play (EPA × leverage × opponent × game_script × recency)`,
+      ...(activeFilterCount > 0 ? [`# Filters applied: ${[
+        tierFilter.size ? `tiers: ${[...tierFilter].join(', ')}` : '',
+        minPlays > 0 ? `min plays: ${minPlays}` : '',
+        teamSearch ? `team: ${teamSearch}` : '',
+      ].filter(Boolean).join(' | ')}`] : []),
       '',
     ];
     const rows = players.map((p, i) => {
-      const tier = getTier(p.catalyst_alpha);
+      const t = getTier(p.catalyst_alpha);
       return [
-        i + 1,
-        p.player_name,
-        p.position,
-        p.team,
-        p.catalyst_alpha.toFixed(1),
-        tier.label,
-        p.catalyst_raw.toFixed(4),
-        p.components.play_count,
-        p.components.avg_leverage.toFixed(4),
-        p.components.opponent_factor.toFixed(4),
-        p.components.script_factor.toFixed(4),
-        p.components.recency_factor.toFixed(4),
-        p.components.base_epa_sum.toFixed(2),
+        i + 1, p.player_name, p.position, p.team,
+        p.catalyst_alpha.toFixed(1), t.label, p.catalyst_raw.toFixed(4),
+        p.components.play_count, p.components.avg_leverage.toFixed(4),
+        p.components.opponent_factor.toFixed(4), p.components.script_factor.toFixed(4),
+        p.components.recency_factor.toFixed(4), p.components.base_epa_sum.toFixed(2),
         p.components.weighted_epa_sum.toFixed(2),
       ].join(',');
     });
@@ -193,6 +264,8 @@ export default function CatalystLab() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const totalCount = batchQuery.data?.players?.length ?? 0;
 
   return (
     <div className="p-6 space-y-5">
@@ -228,9 +301,58 @@ export default function CatalystLab() {
           ))}
         </div>
 
-        <span className="text-xs text-gray-500">{season} Season</span>
+        <button
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded transition-colors ${filtersOpen || activeFilterCount > 0 ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-white hover:bg-gray-50'}`}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="ml-0.5 px-1.5 py-0.5 bg-orange-600 text-white rounded-full text-[10px] font-bold leading-none">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+
+        <div className="relative" ref={colsRef}>
+          <button
+            onClick={() => setColsOpen(!colsOpen)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded transition-colors ${colsOpen ? 'bg-gray-100 border-gray-300' : 'bg-white hover:bg-gray-50'}`}
+          >
+            <Columns3 className="w-3.5 h-3.5" />
+            Columns
+            {visibleCols.size !== DEFAULT_COLS.size && (
+              <span className="ml-0.5 text-[10px] text-gray-500">({visibleCols.size}/{COL_DEFS.length})</span>
+            )}
+          </button>
+
+          {colsOpen && (
+            <div className="absolute top-full left-0 mt-1 z-30 bg-white border rounded-lg shadow-lg p-2 w-44 space-y-0.5">
+              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide px-2 pb-1">Toggle Columns</div>
+              {COL_DEFS.map((col) => (
+                <label key={col.key} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer text-xs">
+                  <input
+                    type="checkbox"
+                    checked={visibleCols.has(col.key)}
+                    onChange={() => toggleCol(col.key)}
+                    className="accent-orange-600"
+                  />
+                  {col.label}
+                </label>
+              ))}
+              <div className="border-t pt-1 mt-1 flex gap-1 px-1">
+                <button onClick={() => setVisibleCols(new Set(COL_DEFS.map(c => c.key)))} className="flex-1 text-[10px] text-gray-500 hover:text-gray-700 py-0.5">All</button>
+                <button onClick={() => setVisibleCols(new Set(DEFAULT_COLS))} className="flex-1 text-[10px] text-gray-500 hover:text-gray-700 py-0.5">Reset</button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {batchQuery.isLoading && <span className="text-xs text-gray-400">Loading...</span>}
-        <span className="text-xs text-gray-400">{players.length} players</span>
+        <span className="text-xs text-gray-400">
+          {players.length}{players.length !== totalCount ? ` of ${totalCount}` : ''} players
+        </span>
+
         <button
           onClick={exportCSV}
           disabled={players.length === 0}
@@ -241,6 +363,86 @@ export default function CatalystLab() {
         </button>
       </div>
 
+      {filtersOpen && (
+        <div className="bg-white border rounded-lg p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Filters</span>
+            {activeFilterCount > 0 && (
+              <button onClick={clearFilters} className="text-xs text-orange-600 hover:text-orange-700">
+                Clear all
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="text-xs font-medium text-gray-600">Tier</div>
+            <div className="flex flex-wrap gap-2">
+              {ALL_TIERS.map((t) => {
+                const c = TIER_COLORS[t];
+                const active = tierFilter.has(t);
+                return (
+                  <button
+                    key={t}
+                    onClick={() => toggleTier(t)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                      active
+                        ? `${c.bg} ${c.text} ${c.border} ring-1 ring-offset-1 ring-current`
+                        : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                );
+              })}
+            </div>
+            {tierFilter.size > 0 && (
+              <p className="text-[10px] text-gray-400">Showing {tierFilter.size} of 5 tiers</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600">Min Plays</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={300}
+                  step={10}
+                  value={minPlays}
+                  onChange={(e) => setMinPlays(Number(e.target.value))}
+                  className="flex-1 accent-orange-600"
+                />
+                <span className="text-xs font-mono w-8 text-right text-gray-700">{minPlays || 'Any'}</span>
+              </div>
+              <div className="flex gap-1">
+                {[0, 30, 50, 100, 200].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setMinPlays(v)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${minPlays === v ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {v || 'Any'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-600">Team</label>
+              <input
+                type="text"
+                placeholder="e.g. BUF, KC, SF"
+                value={teamSearch}
+                onChange={(e) => setTeamSearch(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-orange-400 uppercase"
+                maxLength={4}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 bg-white border rounded-lg overflow-auto" style={{ maxHeight: '70vh' }}>
           <table className="w-full text-sm">
@@ -250,14 +452,27 @@ export default function CatalystLab() {
                 <th className="p-2 cursor-pointer" onClick={() => handleSort('name')}>Player{sortIndicator('name')}</th>
                 <th className="p-2">Team</th>
                 <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('alpha')}>Alpha{sortIndicator('alpha')}</th>
-                <th className="p-2 text-right">Tier</th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('plays')}>Plays{sortIndicator('plays')}</th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('leverage')}>Leverage{sortIndicator('leverage')}</th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('opponent')}>Opp{sortIndicator('opponent')}</th>
-                <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('script')}>Script{sortIndicator('script')}</th>
+                {visibleCols.has('tier') && <th className="p-2 text-right">Tier</th>}
+                {visibleCols.has('raw') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('raw')}>Raw{sortIndicator('raw')}</th>}
+                {visibleCols.has('plays') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('plays')}>Plays{sortIndicator('plays')}</th>}
+                {visibleCols.has('leverage') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('leverage')}>Leverage{sortIndicator('leverage')}</th>}
+                {visibleCols.has('opponent') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('opponent')}>Opp{sortIndicator('opponent')}</th>}
+                {visibleCols.has('script') && <th className="p-2 text-right cursor-pointer" onClick={() => handleSort('script')}>Script{sortIndicator('script')}</th>}
+                {visibleCols.has('baseEpa') && <th className="p-2 text-right">Base EPA</th>}
+                {visibleCols.has('weightedEpa') && <th className="p-2 text-right">Wtd EPA</th>}
               </tr>
             </thead>
             <tbody>
+              {players.length === 0 && !batchQuery.isLoading && (
+                <tr>
+                  <td colSpan={12} className="p-8 text-center text-sm text-gray-400">
+                    No players match the current filters.{' '}
+                    {activeFilterCount > 0 && (
+                      <button onClick={clearFilters} className="text-orange-600 hover:underline">Clear filters</button>
+                    )}
+                  </td>
+                </tr>
+              )}
               {players.map((p, i) => {
                 const t = getTier(p.catalyst_alpha);
                 return (
@@ -274,13 +489,32 @@ export default function CatalystLab() {
                         {num(p.catalyst_alpha, 0)}
                       </span>
                     </td>
-                    <td className="p-2 text-right">
-                      <span className={`text-xs font-medium ${t.color}`}>{t.short}</span>
-                    </td>
-                    <td className="p-2 text-right tabular-nums">{p.components.play_count}</td>
-                    <td className="p-2 text-right tabular-nums">{num(p.components.avg_leverage, 2)}</td>
-                    <td className="p-2 text-right tabular-nums">{num(p.components.opponent_factor, 3)}</td>
-                    <td className="p-2 text-right tabular-nums">{num(p.components.script_factor, 3)}</td>
+                    {visibleCols.has('tier') && (
+                      <td className="p-2 text-right">
+                        <span className={`text-xs font-medium ${t.color}`}>{t.short}</span>
+                      </td>
+                    )}
+                    {visibleCols.has('raw') && (
+                      <td className={`p-2 text-right tabular-nums ${t.color}`}>{num(p.catalyst_raw, 3)}</td>
+                    )}
+                    {visibleCols.has('plays') && (
+                      <td className="p-2 text-right tabular-nums">{p.components.play_count}</td>
+                    )}
+                    {visibleCols.has('leverage') && (
+                      <td className="p-2 text-right tabular-nums">{num(p.components.avg_leverage, 2)}</td>
+                    )}
+                    {visibleCols.has('opponent') && (
+                      <td className="p-2 text-right tabular-nums">{num(p.components.opponent_factor, 3)}</td>
+                    )}
+                    {visibleCols.has('script') && (
+                      <td className="p-2 text-right tabular-nums">{num(p.components.script_factor, 3)}</td>
+                    )}
+                    {visibleCols.has('baseEpa') && (
+                      <td className="p-2 text-right tabular-nums">{num(p.components.base_epa_sum, 1)}</td>
+                    )}
+                    {visibleCols.has('weightedEpa') && (
+                      <td className="p-2 text-right tabular-nums">{num(p.components.weighted_epa_sum, 1)}</td>
+                    )}
                   </tr>
                 );
               })}
@@ -343,10 +577,10 @@ export default function CatalystLab() {
                 <div className="space-y-2">
                   <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Component Factors</div>
                   {[
-                    { label: 'Leverage', value: detail.components.avg_leverage, max: 5 },
-                    { label: 'Opponent', value: detail.components.opponent_factor, max: 2 },
-                    { label: 'Game Script', value: detail.components.script_factor, max: 1.5 },
-                    { label: 'Recency', value: detail.components.recency_factor, max: 1 },
+                    { label: 'Leverage',    value: detail.components.avg_leverage,    max: 5 },
+                    { label: 'Opponent',    value: detail.components.opponent_factor,  max: 2 },
+                    { label: 'Game Script', value: detail.components.script_factor,    max: 1.5 },
+                    { label: 'Recency',     value: detail.components.recency_factor,   max: 1 },
                   ].map((comp) => (
                     <div key={comp.label} className="space-y-0.5">
                       <div className="flex justify-between text-xs">
