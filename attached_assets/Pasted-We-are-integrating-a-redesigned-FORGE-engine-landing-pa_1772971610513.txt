@@ -1,0 +1,191 @@
+We are integrating a redesigned FORGE engine landing page into TIBER. The goal is to make the FORGE landing page feel native to the product, not like a generic marketing page. It should present FORGE as the scoring backbone of TIBER and visually explain how the engine works.
+
+Objective:
+Replace or redesign the current FORGE landing page so it has a darker premium-tech look and a schematic-style engine visualization that feels like part of the actual TIBER product.
+
+Design intent:
+The page should communicate that FORGE is the machine behind the grade. It ingests raw football data, normalizes it, blends weighted pillars, and outputs an Alpha score that powers rankings, player pages, trade tools, and agent responses. The page should feel like exposed product architecture, not dashboard fluff.
+
+Implementation requirements:
+
+Use the existing TIBER app shell, navigation, spacing, and styling conventions so the page fits naturally with the rest of the app.
+
+Keep the page dark, clean, and technical.
+
+Avoid generic SaaS marketing styling.
+
+Preserve responsiveness for desktop and mobile.
+
+Use existing design tokens/components where possible.
+
+Content structure:
+
+Hero section
+
+Eyebrow: “TIBER Core Engine”
+
+Main headline: “FORGE is the machine behind the grade.”
+
+Supporting copy: explain that FORGE processes noisy football inputs, stabilizes context, and produces explainable player signal. Position it as scoring infrastructure underneath TIBER.
+
+CTA buttons:
+
+“Enter FORGE”
+
+“Inspect Engine Flow”
+
+Add 3 compact stat/info cards under the hero copy:
+
+Signal: “87.4” / “FORGE Alpha”
+
+Classification: “High-conviction asset” / “Stable role, strong translation”
+
+Deployment: “Rankings · Profiles · Agents” / “Downstream engine outputs”
+
+Right-side hero visual
+Replace any generic glossy card with a schematic-style “FORGE Signal Pipeline” panel.
+This should include:
+
+Header label: “Engine Schematic”
+
+Title: “FORGE Signal Pipeline”
+
+Status pill: “Core Active”
+
+Inside the schematic:
+Top row:
+
+Raw Data → Normalization Layer → Alpha Score
+
+Descriptions:
+
+Raw Data: “Snaps, routes, targets, efficiency, athletic markers, team context”
+
+Normalization Layer: “Adjusts for role, position, volatility, and environmental distortion”
+
+Alpha Score: “Tiering, ranking placement, and engine-readable player signal”
+
+Second row:
+
+Talent + Usage ↘
+
+Pillar Blending
+
+Environment + Translation ↙
+
+Descriptions:
+
+Talent + Usage: “Ability, deployment, volume shape, and workload quality”
+
+Pillar Blending: “Talent, usage, environment, and translation merged into final grade”
+
+Environment + Translation: “Context insulation, offensive conditions, and fantasy signal conversion”
+
+Bottom routing block:
+
+“Rankings · Player Pages · Trade Tools · Agent Responses”
+
+Include compact pillar chips/cards for:
+
+Talent: 91
+
+Usage: 88
+
+Environment: 84
+
+Translation: 90
+
+Engine sequence section
+Header:
+
+Eyebrow: “Engine Sequence”
+
+Headline: “Show the mechanism clearly or don’t bother showing the engine at all.”
+
+Four cards:
+
+01 Ingest — Raw game, player, and context data enter the engine
+
+02 Normalize — FORGE adjusts for role, environment, and position-specific interpretation
+
+03 Weight — Pillars are blended into a unified grade with transparent scoring logic
+
+04 Deploy — Outputs feed rankings, profiles, comparisons, and agent-facing responses
+
+Infrastructure/operational section
+Two-column block:
+Left:
+
+Position FORGE as technical, dependable infrastructure
+
+Make it clear this powers rankings, player pages, comparisons, and future agent workflows
+
+Include these output cards:
+
+Alpha score and tiering
+
+Pillar-level architecture
+
+Role vs efficiency signal
+
+Context-aware player evaluation
+
+Right:
+Operational Diagram stack:
+
+Inputs
+
+FORGE Core
+
+Products
+
+Descriptions:
+
+Inputs: usage, efficiency, athleticism, historical production, surrounding team context
+
+FORGE Core: role normalization, pillar blending, weight application, signal translation into unified grade
+
+Products: rankings, trade analysis, player pages, comparison workflows, agent-consumable outputs
+
+Closing positioning section
+Headline:
+
+“Stop presenting FORGE like a feature. Present it like the scoring backbone.”
+Supporting copy should reinforce that FORGE is core machinery powering the rest of TIBER.
+CTA:
+
+“Open FORGE Lab”
+
+Styling notes:
+
+Use dark backgrounds, subtle borders, restrained glow, grid/radial background texture if it matches existing TIBER style
+
+The schematic should feel native and product-like, not like a Dribbble mockup
+
+Typography should be strong and clean
+
+Keep motion subtle if added
+
+No cheesy football graphics
+
+No overdone sci-fi effects
+
+Important:
+
+Do not break existing routing or app layout
+
+Reuse current components where possible
+
+If there is an existing FORGE route/page, refactor it in place instead of creating disconnected dead code
+
+Keep the implementation production-usable, not just a mock section
+
+Deliverable:
+
+Implement the redesigned FORGE landing page in the real app
+
+Share which files were changed
+
+Note any reusable components created
+
+Call out anything where current TIBER styling/system prevented an exact match
