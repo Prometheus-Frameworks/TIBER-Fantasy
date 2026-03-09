@@ -1,15 +1,23 @@
 /**
  * TIBER Canonical Intelligence Contract
  * ======================================
- * This is the single source of truth for all intelligence response shapes.
+ * @frozen — This file is the single source of truth for all intelligence
+ * response shapes. DO NOT add fields, rename types, or change semantics
+ * without a version bump to INTELLIGENCE_CONTRACT_VERSION.
  *
- * All agent integrations, voice adapters, comparison routes, and trade routes
- * must converge toward these types. Voice and UI layers adapt from this contract
- * at their boundary — they do not define their own competing contracts.
+ * Rules:
+ * - All agent-facing surfaces (API v1, voice adapters) must emit these shapes.
+ * - Legacy/internal routes that cannot yet emit these shapes must be marked
+ *   DEPRECATED with X-Tiber-Deprecated: true response headers.
+ * - UI layers adapt from this contract at their boundary — they do not define
+ *   their own competing contracts.
+ * - Version this file using INTELLIGENCE_CONTRACT_VERSION below.
  *
- * See INTELLIGENCE_API.md at the repo root for full design principles,
- * migration rules, and legacy surface map.
+ * See TIBERCLAW_AGENT_GUIDE.md for the agent-facing workflow specification.
  */
+
+/** Semver version of this intelligence contract. Bump on any breaking change. */
+export const INTELLIGENCE_CONTRACT_VERSION = "1.0.0";
 
 // ─── Intent ─────────────────────────────────────────────────────────────────
 

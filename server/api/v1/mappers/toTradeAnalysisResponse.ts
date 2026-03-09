@@ -16,6 +16,7 @@ import type {
   MetricEvidence,
   SubjectRef,
 } from '../../../../shared/types/intelligence';
+import { INTELLIGENCE_CONTRACT_VERSION } from '../../../../shared/types/intelligence';
 
 export interface TradeAsset {
   id: string;
@@ -39,8 +40,6 @@ export interface CanonicalTradeResult {
   reasons: string[];
   warnings?: string[];
 }
-
-const CONTRACT_VERSION = '1.0.0';
 
 function clampConfidence(score: number): number {
   if (Number.isNaN(score)) return 0;
@@ -104,7 +103,7 @@ export function toTradeAnalysisResponse(
 
   return {
     request_meta: {
-      version: CONTRACT_VERSION,
+      version: INTELLIGENCE_CONTRACT_VERSION,
       intent: 'trade_analysis',
       generated_at: new Date().toISOString(),
       trace_id: opts.traceId,

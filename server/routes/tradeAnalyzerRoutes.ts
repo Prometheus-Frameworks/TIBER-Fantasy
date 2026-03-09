@@ -1,8 +1,8 @@
-// TRANSITIONAL: uses Compass scores, not FORGE/Doctrine vocabulary.
-// Output shape (TradeAnalysisResponse here) is route-local and ad-hoc.
-// Next pass: replace local TradeAnalysisResponse.analysis with EvidenceBlock + VerdictBlock
-// from shared/types/intelligence.ts. Canonical target: TradeAnalysisResponse (intelligence.ts).
-// Compass scores should eventually be replaced by forge_alpha from the FORGE engine.
+// DEPRECATED — Uses Compass scores, not FORGE/Doctrine vocabulary.
+// Output shape (TradeAnalysisResponse here) is route-local and ad-hoc, NOT the canonical contract.
+// Do NOT use this in new agent integrations.
+// Canonical successor: POST /api/v1/intelligence/trade/analyze (emits TradeAnalysisResponse)
+// Sunset target: 2026-09-01
 
 import { Router } from 'express';
 import { z } from 'zod';
@@ -12,6 +12,13 @@ import { computeComponents, getCompassDataFromPython } from '../compassCalculati
 
 const router = Router();
 const execAsync = promisify(exec);
+
+router.use((_req, res, next) => {
+  res.setHeader('X-Tiber-Deprecated', 'true');
+  res.setHeader('X-Tiber-Sunset', '2026-09-01');
+  res.setHeader('X-Tiber-Successor', 'POST /api/v1/intelligence/trade/analyze');
+  next();
+});
 
 // Input validation schema
 const tradeComparisonSchema = z.object({

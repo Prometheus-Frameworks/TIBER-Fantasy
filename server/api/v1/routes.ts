@@ -6,6 +6,7 @@ import { rateLimit } from "./middleware/rateLimit";
 import { requestLogger } from "./middleware/requestLogger";
 import { errorFormat, ApiError } from "./middleware/errorFormat";
 import { ErrorCodes } from "./errors/codes";
+import { INTELLIGENCE_CONTRACT_VERSION } from "../../../shared/types/intelligence";
 import { db, dbPool } from "../../infra/db";
 import { sql, ilike, or } from "drizzle-orm";
 import { storage } from "../../storage";
@@ -181,7 +182,9 @@ router.get("/health", async (req, res) => {
   const dbOk = await db.execute(sql`SELECT 1`).then(() => true).catch(() => false);
   res.json(v1Success({
     ok: dbOk,
+    service: "TiberClaw",
     version: "v1",
+    contract_version: INTELLIGENCE_CONTRACT_VERSION,
     commit: process.env.REPL_ID ?? "local",
     time: new Date().toISOString(),
     db: dbOk ? "connected" : "unreachable",
@@ -201,6 +204,114 @@ router.get("/diagnostic", (req, res) => {
     env: process.env.NODE_ENV ?? "unknown",
     commit: process.env.REPL_ID ?? "local",
     requestId: req.requestId,
+  }, req.requestId!));
+});
+
+// ─── Capabilities ─────────────────────────────────────────────────────────
+
+router.get("/capabilities", (req, res) => {
+  res.json(v1Success({
+    service: "TiberClaw",
+    contract_version: INTELLIGENCE_CONTRACT_VERSION,
+    auth: {
+      header: "x-tiber-key",
+      description: "All requests require a valid API key in the x-tiber-key header.",
+    },
+    intents: ["player_eval", "comparison", "trade_analysis", "waiver_eval", "start_sit"],
+    endpoints: [
+      {
+        method: "GET",
+        path: "/api/v1/capabilities",
+        description: "Returns this capabilities document. Call this first to discover available endpoints.",
+        auth_required: true,
+      },
+      {
+        method: "GET",
+        path: "/api/v1/health",
+        description: "Service health and contract version.",
+        auth_required: true,
+      },
+      {
+        method: "GET",
+        path: "/api/v1/players/search",
+        description: "Search for players by name. Returns gsis_id for use in other endpoints.",
+        auth_required: true,
+        params: [
+          { name: "q", type: "string", required: true, description: "Player name query (partial match supported)" },
+          { name: "position", type: "string", required: false, description: "Filter by position: QB, RB, WR, TE" },
+        ],
+      },
+      {
+        method: "GET",
+        path: "/api/v1/forge/player/:playerId",
+        description: "FORGE evaluation for a single player. Returns alpha score, tier, and pillar breakdown.",
+        auth_required: true,
+        params: [
+          { name: "playerId", type: "string", required: true, description: "Player gsis_id from /players/search" },
+          { name: "mode", type: "string", required: false, description: "redraft | dynasty | bestball (default: redraft)" },
+        ],
+      },
+      {
+        method: "GET",
+        path: "/api/v1/fire/player/:playerId",
+        description: "FIRE rolling evaluation for a single player. Returns in-season opportunity and role score.",
+        auth_required: true,
+        params: [
+          { name: "playerId", type: "string", required: true, description: "Player gsis_id" },
+          { name: "season", type: "number", required: false },
+          { name: "week", type: "number", required: false },
+        ],
+      },
+      {
+        method: "GET",
+        path: "/api/v1/catalyst/player/:playerId",
+        description: "CATALYST rookie evaluation for a single player.",
+        auth_required: true,
+        params: [
+          { name: "playerId", type: "string", required: true, description: "Player gsis_id" },
+        ],
+      },
+      {
+        method: "POST",
+        path: "/api/v1/intelligence/compare",
+        description: "Head-to-head player comparison. Returns canonical ComparisonResponse (TiberIntelligenceResponse).",
+        auth_required: true,
+        intent: "comparison",
+        response_shape: "ComparisonResponse",
+        body: {
+          player1_id: "string (gsis_id)",
+          player2_id: "string (gsis_id)",
+          week: "number (optional)",
+          season: "number (optional)",
+          scoring_format: "PPR | Half | Standard (optional, default PPR)",
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/v1/intelligence/trade/analyze",
+        description: "Multi-asset trade package analysis. Returns canonical TradeAnalysisResponse (TiberIntelligenceResponse).",
+        auth_required: true,
+        intent: "trade_analysis",
+        response_shape: "TradeAnalysisResponse",
+        body: {
+          side_a: "Array<{ id: string, name?: string, position?: string }>",
+          side_b: "Array<{ id: string, name?: string, position?: string }>",
+          league_type: "redraft | dynasty | best_ball (optional)",
+        },
+      },
+    ],
+    scoring_formats: ["PPR", "Half", "Standard"],
+    rate_limiting: {
+      mechanism: "token_bucket",
+      default_rpm: 60,
+      header_on_exceeded: "X-Tiber-RateLimit-Reset",
+    },
+    notes: [
+      "All intelligence endpoints emit TiberIntelligenceResponse. Consume verdict.winner, verdict.edge_strength, verdict.actionability, and confidence.band.",
+      "If confidence.band is 'low' or actionability is 'more_research_needed', treat the verdict as directional only.",
+      "Check uncertainty.could_change_if before acting on any verdict.",
+      "See TIBERCLAW_AGENT_GUIDE.md for the full agent workflow specification.",
+    ],
   }, req.requestId!));
 });
 

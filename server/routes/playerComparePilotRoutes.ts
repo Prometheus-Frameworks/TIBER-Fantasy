@@ -1,8 +1,8 @@
-// LEGACY PILOT: predates the canonical intelligence contract.
+// DEPRECATED — Legacy pilot route. Predates the canonical intelligence contract.
 // Output shape (PlayerComparisonData) is ad-hoc and not machine-portable.
-// Next pass: converge PlayerComparisonData → ComparisonResponse (shared/types/intelligence.ts).
-// Do not add new response fields here. This route is a candidate for deprecation
-// once playerComparisonRoutes.ts is promoted to canonical.
+// Do NOT add new response fields here. Do NOT use this in new agent integrations.
+// Canonical successor: POST /api/v1/intelligence/compare (emits ComparisonResponse)
+// Sunset target: 2026-09-01
 
 import { Router } from 'express';
 import { db } from '../infra/db';
@@ -10,6 +10,13 @@ import { players, gameLogs, defenseVP } from '@shared/schema';
 import { eq, and, sql, desc, gte, or, ilike } from 'drizzle-orm';
 
 const router = Router();
+
+router.use((_req, res, next) => {
+  res.setHeader('X-Tiber-Deprecated', 'true');
+  res.setHeader('X-Tiber-Sunset', '2026-09-01');
+  res.setHeader('X-Tiber-Successor', 'POST /api/v1/intelligence/compare');
+  next();
+});
 
 interface PlayerComparisonData {
   player1: PlayerData;

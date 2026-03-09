@@ -18,9 +18,8 @@
  */
 
 import type { ComparisonResponse, VerdictWinner, EdgeStrength, Actionability, ConfidenceBand } from '../../../../shared/types/intelligence';
+import { INTELLIGENCE_CONTRACT_VERSION } from '../../../../shared/types/intelligence';
 import type { PlayerComparison } from '../../../services/playerComparisonService';
-
-const CONTRACT_VERSION = '1.0.0';
 
 // ── Confidence mapping ────────────────────────────────────────────────────────
 
@@ -381,7 +380,7 @@ export function toComparisonResponse(
 
   return {
     request_meta: {
-      version: CONTRACT_VERSION,
+      version: INTELLIGENCE_CONTRACT_VERSION,
       intent: 'comparison',
       generated_at: data.generatedAt,
       season: opts.season,

@@ -1,3 +1,12 @@
+// DEPRECATED — These routes predate the canonical intelligence contract.
+// They are not gated by the x-tiber-key auth layer and emit ad-hoc response shapes.
+// Agent consumers must use /api/v1/* instead.
+// Canonical successors:
+//   /api/tiber/compare   → POST /api/v1/intelligence/compare
+//   /api/tiber/rankings  → GET  /api/v1/forge/batch (or FIRE equivalent)
+//   /api/tiber/score/:id → GET  /api/v1/forge/player/:playerId
+// Sunset target: 2026-09-01
+
 import { Router } from 'express';
 import { tiberService } from '../services/tiberService';
 import { db } from '../infra/db';
@@ -6,6 +15,13 @@ import { eq, and, desc, sql, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { injurySyncService } from '../services/injurySyncService';
 
 const router = Router();
+
+router.use((_req, res, next) => {
+  res.setHeader('X-Tiber-Deprecated', 'true');
+  res.setHeader('X-Tiber-Sunset', '2026-09-01');
+  res.setHeader('X-Tiber-Successor', '/api/v1 — see /api/v1/capabilities for available endpoints');
+  next();
+});
 
 // Helper function to transform flat DB record to nested structure
 function transformCachedScore(cachedRecord: any) {
