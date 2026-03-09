@@ -24,6 +24,10 @@ function pct(v: unknown): string {
   return v.toFixed(0) + '%';
 }
 
+function isMeaningful(v: string) {
+  return v && v !== '—' && v !== '0' && v !== '0.0' && v !== '0%';
+}
+
 interface ColDef {
   key: string;
   label: string;
@@ -69,12 +73,15 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'rushYG', label: 'Rush Y/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'recYG', label: 'Rec Y/G', group: 'production', render: (r) => num(r.stats?.recYdsPerGame), align: 'right', sortKey: (r) => r.stats?.recYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'tds', label: 'TDs', group: 'production', render: (r) => String(r.stats?.totalTds ?? '—'), align: 'right', sortKey: (r) => r.stats?.totalTds ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'fpg', label: 'Fantasy PPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'fpg', label: 'Fantasy PPG', shortLabel: 'FPPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'xfpDiff', label: 'xFP Diff', group: 'production', render: (r) => num(r.stats?.xfpDiff), align: 'right', sortKey: (r) => r.stats?.xfpDiff ?? 0, preset: ['FULL'] },
   { key: 'fpSd', label: 'FP Std Dev', group: 'consistency', render: (r) => num(r.stats?.fpStdDev), align: 'right', sortKey: (r) => r.stats?.fpStdDev ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'boom', label: 'Boom %', group: 'consistency', render: (r) => pct(r.stats?.boomPct), align: 'right', sortKey: (r) => r.stats?.boomPct ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'rzSh', label: 'RZ Touch %', group: 'consistency', render: (r) => pct(r.stats?.rzTouchSharePct), align: 'right', sortKey: (r) => r.stats?.rzTouchSharePct ?? 0, preset: [], positions: ['RB', 'WR', 'TE'] },
 ];
+
+const WR_FIRE_COL_KEYS = ['rank', 'player', 'team', 'fire', 'role', 'catalyst', 'conf', 'snapPct', 'tgtGm', 'recYG', 'fpg'];
+const WR_FIRE_COLS = WR_FIRE_COL_KEYS.map((k) => FIRE_COLUMNS.find((c) => c.key === k)!).filter(Boolean);
 
 const GROUP_COLORS: Record<string, string> = {
   identity: '',
@@ -105,6 +112,131 @@ function confidenceClass(v?: string) {
   return 'bg-gray-100 text-gray-700';
 }
 
+function fireColor(score: number) {
+  if (score >= 80) return 'text-emerald-700';
+  if (score >= 60) return 'text-blue-700';
+  if (score >= 40) return 'text-gray-800';
+  return 'text-red-600';
+}
+
+function catalystBadgeClass(v: number) {
+  if (v >= 65) return 'bg-emerald-100 text-emerald-800';
+  if (v >= 45) return 'bg-amber-100 text-amber-800';
+  return 'bg-red-100 text-red-700';
+}
+
+function DetailTile({ label, value }: { label: string; value: string }) {
+  if (!isMeaningful(value)) return null;
+  return (
+    <div className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
+      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-xs font-medium tabular-nums text-gray-800">{value}</span>
+    </div>
+  );
+}
+
+function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const tiles = Array.isArray(children) ? children.flat().filter(Boolean) : children;
+  const hasContent = Array.isArray(tiles) ? tiles.some(Boolean) : !!tiles;
+  if (!hasContent) return null;
+  return (
+    <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
+      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function WRDetailPanel({ row }: { row: any }) {
+  const name = row.playerName || row.playerId;
+  const team = row.team || '—';
+  const fire = num(row.fireScore);
+  const catalyst = row._catalystAlpha != null ? row._catalystAlpha.toFixed(0) : '—';
+  const conf = row.confidence || 'LOW';
+  const role = num(row.pillars?.role);
+  const opp = num(row.pillars?.opportunity);
+  const conv = num(row.pillars?.conversion);
+  const snapPct = pct(row.stats?.snapPct);
+  const tgtShare = pct(row.stats?.targetSharePct);
+  const snaps = num(row.raw?.snaps_R, 0);
+  const routesPerGame = num(row.stats?.routesPerGame);
+  const tchG = num(row.stats?.touchesPerGame);
+  const carG = num(row.stats?.carriesPerGame);
+  const sampleGames = row.games_played_window != null ? String(row.games_played_window) : '—';
+  const recG = num(row.stats?.recsPerGame ?? row.stats?.receptionsPerGame);
+  const recYG = num(row.stats?.recYdsPerGame);
+  const ypr = num(row.stats?.ypr);
+  const tdG = num(row.stats?.recTdPerGame ?? row.stats?.tdPerGame, 2);
+  const boom = pct(row.stats?.boomPct);
+  const fppg = num(row.stats?.fantasyPpg);
+  const xfpDiff = num(row.stats?.xfpDiff);
+  const fpSd = num(row.stats?.fpStdDev);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <div className="font-semibold text-sm text-gray-900 leading-tight">{name}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{team} &middot; WR</div>
+          </div>
+          <span className={`text-base font-bold tabular-nums ${fireColor(row.fireScore)}`}>{fire}</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {isMeaningful(role) && (
+            <span className="px-2 py-0.5 rounded text-xs bg-orange-50 text-orange-700 border border-orange-100">
+              Role {role}
+            </span>
+          )}
+          {row._catalystAlpha != null && (
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${catalystBadgeClass(row._catalystAlpha)}`}>
+              CAT {catalyst}
+            </span>
+          )}
+          <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(conf)}`}>{conf}</span>
+          {isMeaningful(snapPct) && (
+            <span className="px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-100">
+              {snapPct} snaps
+            </span>
+          )}
+          {isMeaningful(tgtShare) && (
+            <span className="px-2 py-0.5 rounded text-xs bg-green-50 text-green-700 border border-green-100">
+              {tgtShare} tgt share
+            </span>
+          )}
+        </div>
+      </div>
+
+      <DetailCard title="Usage">
+        <DetailTile label="Snaps" value={snaps} />
+        <DetailTile label="Routes / G" value={routesPerGame} />
+        <DetailTile label="Tgt / G" value={num(row.stats?.targetsPerGame)} />
+        <DetailTile label="Tch / G" value={tchG} />
+        <DetailTile label="Car / G" value={carG} />
+        <DetailTile label="Target Share" value={tgtShare} />
+        <DetailTile label="Sample Games" value={sampleGames} />
+      </DetailCard>
+
+      <DetailCard title="Efficiency">
+        <DetailTile label="Rec / G" value={recG} />
+        <DetailTile label="Rec Y / G" value={recYG} />
+        <DetailTile label="YPR" value={ypr} />
+        <DetailTile label="TD / G" value={tdG} />
+        <DetailTile label="Boom %" value={boom} />
+        <DetailTile label="FPPG" value={fppg} />
+      </DetailCard>
+
+      <DetailCard title="Model">
+        <DetailTile label="Opportunity" value={opp} />
+        <DetailTile label="Conversion" value={conv} />
+        <DetailTile label="Confidence" value={conf} />
+        <DetailTile label="xFP Diff" value={xfpDiff} />
+        <DetailTile label="FP Std Dev" value={fpSd} />
+      </DetailCard>
+    </div>
+  );
+}
+
 export default function FantasyLab() {
   const initial = parseParams();
   const [season, setSeason] = useState(initial.season);
@@ -115,6 +247,7 @@ export default function FantasyLab() {
   const [confidence, setConfidence] = useState<ConfidenceFilter>(initial.confidence);
   const [sort, setSort] = useState<SortMode>(initial.sort);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [selectedFireRow, setSelectedFireRow] = useState<any | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [trends, setTrends] = useState<Record<string, any[]>>({});
   const [columnPreset, setColumnPreset] = useState<ColumnPreset>(() => {
@@ -124,6 +257,8 @@ export default function FantasyLab() {
   });
   const [fireSortCol, setFireSortCol] = useState<string>('fire');
   const [fireSortAsc, setFireSortAsc] = useState(false);
+
+  const isWRFireMode = position === 'WR' && view === 'FIRE';
 
   useEffect(() => {
     localStorage.setItem(PRESET_KEY, columnPreset);
@@ -144,7 +279,7 @@ export default function FantasyLab() {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) setWatchlist(parsed.filter((v) => typeof v === 'string'));
-    } catch { /* ignore */ }
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -204,6 +339,18 @@ export default function FantasyLab() {
     }
     return rows;
   }, [fireQuery.data, catalystQuery.data, fireSortCol, fireSortAsc]);
+
+  useEffect(() => {
+    if (isWRFireMode && fireRows.length > 0) {
+      setSelectedFireRow((prev: any) => {
+        if (prev) {
+          const stillExists = fireRows.find((r: any) => r.playerId === prev.playerId);
+          return stillExists ?? fireRows[0];
+        }
+        return fireRows[0];
+      });
+    }
+  }, [fireRows, isWRFireMode]);
 
   const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
 
@@ -265,10 +412,11 @@ export default function FantasyLab() {
     let csvRows: string[][] = [];
 
     if (view === 'FIRE') {
-      headers = visibleCols.map((c) => c.label);
-      csvRows = fireRows.map((r) => visibleCols.map((c) => c.render(r)));
+      const cols = isWRFireMode ? WR_FIRE_COLS : visibleCols;
+      headers = cols.map((c) => c.label);
+      csvRows = fireRows.map((r) => cols.map((c) => c.render(r)));
     } else if (view === 'DELTA') {
-      headers = ['Player', 'Team', 'Confidence', 'Display Delta', 'Rank Z', 'Games', 'Direction', 'Why'];
+      headers = ['Player', 'Team', 'Confidence', 'Display Delta', 'Rank Z', 'Sample Games', 'Direction', 'Why'];
       csvRows = deltaRows.map((r) => [
         r.playerName || r.playerId,
         r.team || '',
@@ -300,6 +448,8 @@ export default function FantasyLab() {
     URL.revokeObjectURL(url);
   };
 
+  const activeCols = isWRFireMode ? WR_FIRE_COLS : visibleCols;
+
   return (
     <div className="p-6 space-y-5">
       <div>
@@ -328,7 +478,7 @@ export default function FantasyLab() {
           ))}
         </div>
 
-        {view === 'FIRE' && (
+        {view === 'FIRE' && !isWRFireMode && (
           <div className="flex border rounded overflow-hidden">
             {([['BASIC', 'Basic'], ['VOLUME', 'Volume'], ['FULL', 'Full']] as [ColumnPreset, string][]).map(([k, label]) => (
               <button key={k} onClick={() => setColumnPreset(k)} className={`px-3 py-1 text-sm ${columnPreset === k ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-gray-50'}`}>{label}</button>
@@ -369,73 +519,94 @@ export default function FantasyLab() {
       {isLoading && <div className="text-sm text-gray-500">Loading...</div>}
 
       {!isLoading && view === 'FIRE' && (
-        <div className="bg-white border rounded-lg overflow-auto">
-          <div className="px-3 py-2 border-b text-xs text-gray-500 flex items-center justify-between">
-            <span>{fireRows.length} eligible players &middot; {visibleCols.length} columns &middot; Click headers to sort</span>
-            <span className="text-gray-400">PPR scoring &middot; Last {fireQuery.data?.metadata?.rollingWeeks?.length ?? 4} weeks</span>
+        <div className={isWRFireMode ? 'flex flex-col lg:flex-row gap-4 items-start' : ''}>
+          <div className={isWRFireMode ? 'flex-1 min-w-0' : ''}>
+            <div className="bg-white border rounded-lg overflow-auto">
+              <div className="px-3 py-2 border-b text-xs text-gray-500 flex items-center justify-between">
+                <span>{fireRows.length} eligible players &middot; {activeCols.length} columns &middot; Click headers to sort</span>
+                <span className="text-gray-400">PPR scoring &middot; Last {fireQuery.data?.metadata?.rollingWeeks?.length ?? 4} weeks</span>
+              </div>
+              {!fireRows.length ? (
+                <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-left sticky top-0 z-10">
+                    <tr>
+                      {!isWRFireMode && <th className="p-2 w-8"></th>}
+                      {activeCols.map((col) => (
+                        <th
+                          key={col.key}
+                          className={`p-2 cursor-pointer select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : 'text-left'} ${GROUP_COLORS[col.group] || ''}`}
+                          onClick={() => col.sortKey && handleFireSort(col.key)}
+                          title={col.label}
+                        >
+                          {col.shortLabel || col.label}
+                          {fireSortCol === col.key && <span className="ml-1 text-orange-600">{fireSortAsc ? '▲' : '▼'}</span>}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fireRows.map((r) => {
+                      const isSelected = isWRFireMode
+                        ? selectedFireRow?.playerId === r.playerId
+                        : false;
+                      return (
+                        <tr
+                          key={r.playerId}
+                          className={`border-t ${isWRFireMode ? 'cursor-pointer' : 'hover:bg-gray-50'} ${isSelected ? 'bg-orange-50 border-l-2 border-l-orange-400' : isWRFireMode ? 'hover:bg-gray-50' : ''}`}
+                          onClick={() => isWRFireMode && setSelectedFireRow(r)}
+                        >
+                          {!isWRFireMode && (
+                            <td className="p-2">
+                              <button onClick={(e) => { e.stopPropagation(); toggleStar(r.playerId); }} className="text-lg leading-none">
+                                {watchlist.includes(r.playerId) ? '★' : '☆'}
+                              </button>
+                            </td>
+                          )}
+                          {activeCols.map((col) => (
+                            <td
+                              key={col.key}
+                              className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''}`}
+                            >
+                              {col.key === 'catalyst' ? (
+                                r._catalystAlpha != null ? (
+                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${catalystBadgeClass(r._catalystAlpha)}`}>
+                                    {r._catalystAlpha.toFixed(0)}
+                                  </span>
+                                ) : <span className="text-gray-400">—</span>
+                              ) : col.key === 'conf' ? (
+                                <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
+                                  {r.confidence || 'LOW'}
+                                </span>
+                              ) : col.key === 'fire' ? (
+                                <span className={fireColor(r.fireScore)}>
+                                  {col.render(r)}
+                                </span>
+                              ) : col.key === 'boom' ? (
+                                <span className={r.stats?.boomPct >= 50 ? 'text-emerald-700 font-medium' : ''}>
+                                  {col.render(r)}
+                                </span>
+                              ) : col.key === 'xfpDiff' ? (
+                                <span className={(r.stats?.xfpDiff ?? 0) > 0 ? 'text-emerald-700' : (r.stats?.xfpDiff ?? 0) < -5 ? 'text-red-600' : ''}>
+                                  {col.render(r)}
+                                </span>
+                              ) : col.render(r)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-          {!fireRows.length ? (
-            <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-left sticky top-0 z-10">
-                <tr>
-                  <th className="p-2 w-8"></th>
-                  {visibleCols.map((col) => (
-                    <th
-                      key={col.key}
-                      className={`p-2 cursor-pointer select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : 'text-left'} ${GROUP_COLORS[col.group] || ''}`}
-                      onClick={() => col.sortKey && handleFireSort(col.key)}
-                      title={col.label}
-                    >
-                      {col.shortLabel || col.label}
-                      {fireSortCol === col.key && <span className="ml-1 text-orange-600">{fireSortAsc ? '▲' : '▼'}</span>}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {fireRows.map((r) => (
-                  <tr key={r.playerId} className="border-t hover:bg-gray-50">
-                    <td className="p-2">
-                      <button onClick={() => toggleStar(r.playerId)} className="text-lg leading-none">
-                        {watchlist.includes(r.playerId) ? '★' : '☆'}
-                      </button>
-                    </td>
-                    {visibleCols.map((col) => (
-                      <td
-                        key={col.key}
-                        className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''} ${col.key === 'conf' ? '' : ''}`}
-                      >
-                        {col.key === 'catalyst' ? (
-                          r._catalystAlpha != null ? (
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r._catalystAlpha >= 65 ? 'bg-emerald-100 text-emerald-800' : r._catalystAlpha >= 45 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
-                              {r._catalystAlpha.toFixed(0)}
-                            </span>
-                          ) : <span className="text-gray-400">—</span>
-                        ) : col.key === 'conf' ? (
-                          <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
-                            {r.confidence || 'LOW'}
-                          </span>
-                        ) : col.key === 'fire' ? (
-                          <span className={r.fireScore >= 80 ? 'text-emerald-700' : r.fireScore >= 60 ? 'text-blue-700' : r.fireScore >= 40 ? 'text-gray-800' : 'text-red-600'}>
-                            {col.render(r)}
-                          </span>
-                        ) : col.key === 'boom' ? (
-                          <span className={r.stats?.boomPct >= 50 ? 'text-emerald-700 font-medium' : ''}>
-                            {col.render(r)}
-                          </span>
-                        ) : col.key === 'xfpDiff' ? (
-                          <span className={(r.stats?.xfpDiff ?? 0) > 0 ? 'text-emerald-700' : (r.stats?.xfpDiff ?? 0) < -5 ? 'text-red-600' : ''}>
-                            {col.render(r)}
-                          </span>
-                        ) : col.render(r)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          {isWRFireMode && selectedFireRow && (
+            <div className="w-full lg:w-72 xl:w-80 shrink-0">
+              <WRDetailPanel row={selectedFireRow} />
+            </div>
           )}
         </div>
       )}
@@ -461,7 +632,7 @@ export default function FantasyLab() {
                         <div className="font-semibold">{p.playerName || p.playerId} ({p.team || '—'} {p.position})</div>
                         <div>forge.pct: {num(p.forge?.pct, 1)} | fire.pct: {num(p.fire?.pct, 1)}</div>
                         <div>displayPct: {num(p.delta?.displayPct, 1)} | rankZ: {num(p.delta?.rankZ, 2)}</div>
-                        <div>games: {p.games_played_window} | xfp_R: {num(p.why?.xfp_R, 2)} | snaps_R: {num(p.why?.snaps_R, 0)}</div>
+                        <div>sample games: {p.games_played_window} | xfp_R: {num(p.why?.xfp_R, 2)} | snaps_R: {num(p.why?.snaps_R, 0)}</div>
                       </div>
                     );
                   }} />
@@ -490,7 +661,7 @@ export default function FantasyLab() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-left">
                   <tr>
-                    <th className="p-2">★</th><th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">Confidence</th><th className="p-2">Display Delta</th><th className="p-2">Rank Delta (z)</th><th className="p-2">Games</th><th className="p-2">Badge</th><th className="p-2">Why</th>
+                    <th className="p-2">★</th><th className="p-2">Player</th><th className="p-2">Team</th><th className="p-2">Confidence</th><th className="p-2">Display Delta</th><th className="p-2">Rank Delta (z)</th><th className="p-2">Sample Games</th><th className="p-2">Badge</th><th className="p-2">Why</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -502,7 +673,7 @@ export default function FantasyLab() {
                       <td className="p-2"><span className={`px-2 py-1 rounded text-xs ${confidenceClass(r.confidence)}`}>{r.confidence}</span></td>
                       <td className="p-2">{num(r.delta?.displayPct)}</td>
                       <td className="p-2">{num(r.delta?.rankZ, 2)}</td>
-                      <td className="p-2">{r.games_played_window}</td>
+                      <td className="p-2">{r.games_played_window ?? '—'}</td>
                       <td className="p-2">
                         <span className={`px-2 py-1 rounded text-xs ${r.delta?.direction === 'BUY_LOW' ? 'bg-green-100 text-green-700' : r.delta?.direction === 'SELL_HIGH' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{r.delta?.direction}</span>
                       </td>
