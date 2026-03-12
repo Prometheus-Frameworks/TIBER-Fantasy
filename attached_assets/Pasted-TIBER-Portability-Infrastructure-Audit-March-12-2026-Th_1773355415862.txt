@@ -1,0 +1,87 @@
+TIBER Portability & Infrastructure Audit — March 12, 2026
+
+This is a portability-first audit, not a feature audit. The goal is to make TIBER runnable outside Replit without breaking the app, the data pipeline, or deployment flow.
+
+Based on the public repo surface, TIBER already has some good portability signs: it has a .env.example, a migrations/ directory, .github/workflows, scripts/, server/, client/, and a large docs layer. That is the right general shape for a portable system.  ￼
+
+At the same time, the repo is still materially tied to Replit at the runtime layer. The .replit file explicitly declares Replit modules including postgresql-16, uses npm run dev as the run command, and sets deployment target to autoscale with a Replit-specific build/run flow. Replit’s own docs also state that scheduled deployments are for periodic jobs and are not designed for continuous long-running tasks, which matters for any ETL or recompute pipeline. Publishing costs also consume monthly credits first, which is exactly why always-on infrastructure becomes annoying there over time.  ￼
+
+The .env.example is a positive sign because it already uses standard Postgres environment variables and a DATABASE_URL, which means the app is at least conceptually prepared to point at an external database.  ￼
+
+My conclusion is blunt: TIBER is repo-portable in spirit, but not yet infra-portable in practice. The skeleton is there. The operational separation is not fully proven yet.
+
+Use this as the task brief:
+
+⸻
+
+Replit Agent Task: TIBER Portability & Infrastructure Audit
+
+Objective: make TIBER genuinely portable so Replit becomes optional rather than mandatory.
+
+What appears true already:
+	•	GitHub is acting as a real source-of-truth repo with app code, migrations, scripts, workflows, docs, and environment examples.  ￼
+	•	Database configuration is already expressed in portable env-var form via DATABASE_URL, PGHOST, PGPORT, PGUSER, PGPASSWORD, and PGDATABASE.  ￼
+	•	There is at least some CI/workflow structure present via .github/workflows.  ￼
+
+What is probably still too Replit-dependent:
+	•	.replit includes postgresql-16 as a module, suggesting local Replit DB assumptions may still exist in the dev workflow.  ￼
+	•	The runtime and deployment path are explicitly configured for Replit autoscale deployment.  ￼
+	•	The current run path appears centered on one app process (npm run dev for dev, node dist/index.mjs for deployment), which may mean workers and scheduled jobs are not yet cleanly separated from the web app. This needs codebase verification, not guessing.  ￼
+	•	Replit scheduled jobs are not meant for long-running worker workloads, so if TIBER depends on that model for core pipeline continuity, that is an infra risk.  ￼
+
+Critical security note:
+	•	The public .replit file appears to expose a GitHub personal access token under [userenv.shared]. That token should be treated as compromised and rotated immediately. Remove it from the repo history if possible, revoke it, issue a new one, and move all secrets to proper secret management. Do not leave this as-is.  ￼
+
+Required deliverables:
+	1.	Produce a Worker Map of every background job in TIBER.
+For each job, list:
+	•	name
+	•	trigger method
+	•	current execution path
+	•	whether it is tied to web app startup
+	•	inputs
+	•	outputs
+	•	retry behavior
+	•	failure impact
+	2.	Produce a Database Portability Check.
+Confirm:
+	•	whether all DB access goes through env vars
+	•	whether migrations run cleanly against non-Replit Postgres
+	•	whether any code assumes Replit-local Postgres behavior
+	•	whether seed/setup scripts work on external Postgres
+	3.	Produce an Infra Separation Report.
+Confirm whether these can run independently:
+	•	API app
+	•	ETL / sync workers
+	•	recompute / rankings jobs
+	•	frontend build
+	•	tests
+	4.	Produce a Replit Lock-In List.
+Enumerate every dependency on:
+	•	.replit
+	•	Replit Postgres
+	•	Replit deployment config
+	•	Replit-only secrets handling
+	•	Replit-only scheduled job behavior
+	•	any Replit path, command, or startup assumption
+	5.	Produce a Portability Refactor Plan with priority order:
+	•	P0: security cleanup
+	•	P1: externalize Postgres
+	•	P2: separate workers from web app
+	•	P3: document deploy targets for Replit, Render, Railway
+	•	P4: verify GitHub-driven CI/CD and local boot path
+
+Success criteria:
+	•	TIBER can run locally or on another host with only env-var changes.
+	•	Postgres can be swapped to Render, Railway, Neon, Supabase, or local Docker without code changes.
+	•	Core workers can run without the main web app process.
+	•	Deployment instructions exist for at least one non-Replit target.
+	•	No secret is stored in tracked repo files.
+	•	Replit remains a convenience layer, not a dependency for survival.
+
+Specific asks for this pass:
+	•	Inspect repo and identify all worker/scheduled/background jobs.
+	•	Verify whether any core ETL or refresh logic is coupled to the server lifecycle.
+	•	Verify whether migrations and DB bootstrap are host-agnostic.
+	•	Recommend exact file changes needed to make TIBER portable.
+	•	Do not change business logic yet; focus on infrastructure separation and risk removal first.

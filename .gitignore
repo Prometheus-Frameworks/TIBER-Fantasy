@@ -25,6 +25,9 @@ yarn-error.log*
 archive/.replit
 replit_move-*.txt
 
+# Replit config — contains userenv shared secrets, must not be tracked
+.replit
+
 # local DB backups
 backup_*.sql
 

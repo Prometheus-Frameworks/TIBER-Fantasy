@@ -31,11 +31,10 @@ export class ApiConfig {
       return process.env.API_BASE_URL;
     }
 
-    // In production deployment, this should be set to the proper domain
+    // In production, APP_BASE_URL must be set explicitly — no platform-specific fallback.
     if (process.env.NODE_ENV === 'production') {
-      return process.env.REPL_SLUG 
-        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER || 'replit'}.repl.co`
-        : 'http://localhost:5000';
+      console.warn('[ApiConfig] API_BASE_URL is not set in production. Falling back to localhost:5000. Set APP_BASE_URL or API_BASE_URL to the deployed domain.');
+      return 'http://localhost:5000';
     }
 
     return 'http://localhost:5000';
