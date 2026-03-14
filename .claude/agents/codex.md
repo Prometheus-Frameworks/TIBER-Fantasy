@@ -208,3 +208,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run typecheck` (fails due pre-existing repository-wide TS errors)
   - `npm test` (fails in existing suites; includes `DATABASE_URL`-dependent failure)
   - `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails due pre-existing global typings/dependency issues)
+
+### 2026-03-14 — Tiber Matrix Role Ontology v1
+- Implemented shared role ontology and assignment output contracts for deployment-based offensive role language.
+- Added canonical v1 role dictionary for QB/RB/WR/TE role IDs.
+- Built deterministic `assignRoleFromUsage()` with threshold constants, reasoning output, confidence banding, and stability labels.
+- Added `teamRoleMapBuilder()` utility for team+season grouping.
+- Added representative Jest coverage for QB/RB/WR/TE archetypes, missing-data fallback, and determinism.
+- Validation: `npm test -- server/modules/tiberMatrix/__tests__/assignRoleFromUsage.test.ts` ✅; `npm run typecheck` still fails due existing repo-wide TS issues.

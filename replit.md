@@ -47,6 +47,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses.
 - **Data Integration & Sync**: Includes Sleeper Sync, Canonical Player Pool, and NFL Schedule Sync.
 - **LLM Gateway (`server/llm/`)**: A provider-agnostic `callLLM()` entry point with fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini, supporting 9 task types. Includes an X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`) for Grok-powered X/Twitter analysis.
+- **Tiber Matrix Role Ontology v1 (`server/modules/tiberMatrix/`)**: Canonical, deterministic offensive deployment-role language for QB/RB/WR/TE. Includes normalized usage input contracts, static v1 role dictionary, rules-based `assignRoleFromUsage()` with explainable reasoning + confidence/stability labels, and a `teamRoleMapBuilder` utility for team/season role grouping.
 
 **Deployment Architecture:**
 - **Target**: Autoscale (Cloud Run) for stateless REST API, with persistent state in PostgreSQL.

@@ -177,3 +177,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/api/v1/routes.ts`, `server/api/v1/mappers/toTradeAnalysisResponse.ts`
 - **Validation:** Ran `npm run typecheck` (fails due broad pre-existing repo TypeScript issues), `npm test` (partial pass; failures include DB-dependent tests due missing `DATABASE_URL` plus existing suite failures), and targeted `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails from existing global typing/dependency conflicts).
 - **Notes:** Legacy trade surfaces remain untouched; this is additive via `/api/v1/intelligence/trade/analyze`.
+
+### 2026-03-14 — Codex: Tiber Matrix Role Ontology v1
+- **What changed:** Added canonical offensive role ontology types/dictionary, deterministic usage-based role assignment with explainable reasoning + confidence/stability labels, and team-season role map grouping utility.
+- **Files modified:** `shared/types/roleOntology.ts`, `shared/types/playerRoleAssignment.ts`, `server/modules/tiberMatrix/roleOntology.ts`, `server/modules/tiberMatrix/assignRoleFromUsage.ts`, `server/modules/tiberMatrix/teamRoleMapBuilder.ts`, `server/modules/tiberMatrix/__tests__/assignRoleFromUsage.test.ts`
+- **Validation:** Ran targeted Jest suite for role assignment module (pass). Full repo typecheck still fails due pre-existing unrelated TypeScript issues.
+- **Notes:** Thresholds are centralized in `TIBER_MATRIX_ROLE_THRESHOLDS` for future tuning and simulation integration.
