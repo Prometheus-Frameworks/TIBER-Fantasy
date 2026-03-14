@@ -160,6 +160,26 @@ router.get("/catalyst/player/:playerId", async (req, res, next) => {
   }
 });
 
+router.get("/catalyst/batch", async (req, res, next) => {
+  try {
+    const query = toQueryString(req.query as Record<string, unknown>);
+    const payload = await proxyToExisting(req, `/api/catalyst/batch${query}`);
+    res.json(v1Success(payload, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/catalyst/yoy", async (req, res, next) => {
+  try {
+    const query = toQueryString(req.query as Record<string, unknown>);
+    const payload = await proxyToExisting(req, `/api/catalyst/yoy${query}`);
+    res.json(v1Success(payload, req.requestId!));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/fire/batch", async (req, res, next) => {
   try {
     const currentMonth = new Date().getMonth() + 1;

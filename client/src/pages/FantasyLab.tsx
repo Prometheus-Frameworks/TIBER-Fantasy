@@ -13,6 +13,7 @@ const seasons = [2025, 2024, 2023];
 const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
 const WATCHLIST_KEY = 'fantasy-lab-watchlist-v1';
 const PRESET_KEY = 'fantasy-lab-preset-v1';
+const WR_MAIN_COLUMN_KEYS = ['rank', 'player', 'team', 'fire', 'role', 'catalyst', 'conf', 'snapPct', 'tgtGm', 'recYG', 'fpg'] as const;
 
 function num(v: unknown, digits = 1): string {
   if (typeof v !== 'number' || Number.isNaN(v)) return '—';
@@ -24,8 +25,14 @@ function pct(v: unknown): string {
   return v.toFixed(0) + '%';
 }
 
-function isMeaningful(v: string) {
-  return !!v && v !== '—' && v !== '0' && v !== '0.0' && v !== '0%';
+function meaningfulValue(v: unknown): boolean {
+  if (v == null) return false;
+  if (typeof v === 'string') {
+    const trimmed = v.trim();
+    return trimmed.length > 0 && trimmed !== '—' && trimmed.toLowerCase() !== 'nan';
+  }
+  if (typeof v === 'number') return !Number.isNaN(v);
+  return true;
 }
 
 interface ColDef {
@@ -73,7 +80,7 @@ const FIRE_COLUMNS: ColDef[] = [
   { key: 'rushYG', label: 'Rush Y/G', group: 'production', render: (r) => num(r.stats?.rushYdsPerGame), align: 'right', sortKey: (r) => r.stats?.rushYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'recYG', label: 'Rec Y/G', group: 'production', render: (r) => num(r.stats?.recYdsPerGame), align: 'right', sortKey: (r) => r.stats?.recYdsPerGame ?? 0, preset: ['FULL'], positions: ['RB', 'WR', 'TE'] },
   { key: 'tds', label: 'TDs', group: 'production', render: (r) => String(r.stats?.totalTds ?? '—'), align: 'right', sortKey: (r) => r.stats?.totalTds ?? 0, preset: ['VOLUME', 'FULL'] },
-  { key: 'fpg', label: 'Fantasy PPG', shortLabel: 'FPPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
+  { key: 'fpg', label: 'FPPG', group: 'production', render: (r) => num(r.stats?.fantasyPpg), align: 'right', sortKey: (r) => r.stats?.fantasyPpg ?? 0, preset: ['BASIC', 'VOLUME', 'FULL'] },
   { key: 'xfpDiff', label: 'xFP Diff', group: 'production', render: (r) => num(r.stats?.xfpDiff), align: 'right', sortKey: (r) => r.stats?.xfpDiff ?? 0, preset: ['FULL'] },
   { key: 'fpSd', label: 'FP Std Dev', group: 'consistency', render: (r) => num(r.stats?.fpStdDev), align: 'right', sortKey: (r) => r.stats?.fpStdDev ?? 0, preset: ['VOLUME', 'FULL'] },
   { key: 'boom', label: 'Boom %', group: 'consistency', render: (r) => pct(r.stats?.boomPct), align: 'right', sortKey: (r) => r.stats?.boomPct ?? 0, preset: ['VOLUME', 'FULL'] },
@@ -134,7 +141,7 @@ function catalystBadgeClass(v: number) {
 }
 
 function DetailTile({ label, value }: { label: string; value: string }) {
-  if (!isMeaningful(value)) return null;
+  if (!meaningfulValue(value)) return null;
   return (
     <div className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
       <span className="text-xs text-gray-400">{label}</span>
@@ -164,8 +171,8 @@ function SummaryCard({ row, position }: { row: any; position: Position }) {
   const rushShare = pct(row.stats?.rushSharePct);
 
   const shareTag = position === 'QB' ? null
-    : (position === 'RB') ? (isMeaningful(rushShare) ? `${rushShare} rush share` : null)
-    : (isMeaningful(tgtShare) ? `${tgtShare} tgt share` : null);
+    : (position === 'RB') ? (meaningfulValue(rushShare) ? `${rushShare} rush share` : null)
+    : (meaningfulValue(tgtShare) ? `${tgtShare} tgt share` : null);
 
   return (
     <div className="bg-white border border-gray-100 rounded-lg p-3 shadow-sm">
@@ -177,7 +184,7 @@ function SummaryCard({ row, position }: { row: any; position: Position }) {
         <span className={`text-base font-bold tabular-nums ${fireColor(row.fireScore)}`}>{num(row.fireScore)}</span>
       </div>
       <div className="flex flex-wrap gap-1.5 mt-2">
-        {isMeaningful(role) && (
+        {meaningfulValue(role) && (
           <span className="px-2 py-0.5 rounded text-xs bg-orange-50 text-orange-700 border border-orange-100">Role {role}</span>
         )}
         {row._catalystAlpha != null && (
@@ -186,7 +193,7 @@ function SummaryCard({ row, position }: { row: any; position: Position }) {
           </span>
         )}
         <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(conf)}`}>{conf}</span>
-        {isMeaningful(snapPct) && (
+        {meaningfulValue(snapPct) && (
           <span className="px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700 border border-blue-100">{snapPct} snaps</span>
         )}
         {shareTag && (
@@ -307,7 +314,6 @@ export default function FantasyLab() {
   const [confidence, setConfidence] = useState<ConfidenceFilter>(initial.confidence);
   const [sort, setSort] = useState<SortMode>(initial.sort);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [selectedFireRow, setSelectedFireRow] = useState<any | null>(null);
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [trends, setTrends] = useState<Record<string, any[]>>({});
   const [columnPreset, setColumnPreset] = useState<ColumnPreset>(() => {
@@ -318,8 +324,6 @@ export default function FantasyLab() {
   const [fireSortCol, setFireSortCol] = useState<string>('fire');
   const [fireSortAsc, setFireSortAsc] = useState(false);
 
-  const isFireDetailMode = view === 'FIRE';
-
   useEffect(() => {
     localStorage.setItem(PRESET_KEY, columnPreset);
   }, [columnPreset]);
@@ -328,6 +332,7 @@ export default function FantasyLab() {
     FIRE_COLUMNS.filter((c) => c.preset.includes(columnPreset) && (!c.positions || c.positions.includes(position))),
     [columnPreset, position]
   );
+  const wrMainCols = useMemo(() => FIRE_COLUMNS.filter((c) => WR_MAIN_COLUMN_KEYS.includes(c.key as (typeof WR_MAIN_COLUMN_KEYS)[number])), []);
 
   const weekMetaQuery = useQuery<{ metadata?: { weeksReturned?: { max?: number } } }>({
     queryKey: [`/api/fantasy-lab/weekly?season=${season}&limit=1`],
@@ -400,21 +405,15 @@ export default function FantasyLab() {
     return rows;
   }, [fireQuery.data, catalystQuery.data, fireSortCol, fireSortAsc]);
 
-  useEffect(() => {
-    if (isFireDetailMode && fireRows.length > 0) {
-      setSelectedFireRow((prev: any) => {
-        if (prev) {
-          const stillExists = fireRows.find((r: any) => r.playerId === prev.playerId);
-          return stillExists ?? fireRows[0];
-        }
-        return fireRows[0];
-      });
-    }
-  }, [fireRows, isFireDetailMode]);
+  const activeFireColumns = useMemo(() => {
+    if (position === 'WR') return wrMainCols;
+    return visibleCols;
+  }, [position, visibleCols, wrMainCols]);
 
-  useEffect(() => {
-    setSelectedFireRow(null);
-  }, [position]);
+  const selectedFireRow = useMemo(
+    () => (view === 'FIRE' ? fireRows.find((row) => row.playerId === selectedPlayerId) ?? null : null),
+    [fireRows, selectedPlayerId, view]
+  );
 
   const deltaRowsRaw = useMemo(() => (deltaQuery.data?.data || []) as any[], [deltaQuery.data]);
 
@@ -456,6 +455,18 @@ export default function FantasyLab() {
     else setTrends({});
   }, [watchlist, season, week]);
 
+  useEffect(() => {
+    if (view !== 'FIRE' || position !== 'WR') return;
+    if (!fireRows.length) {
+      setSelectedPlayerId(null);
+      return;
+    }
+    const hasSelection = selectedPlayerId && fireRows.some((r) => r.playerId === selectedPlayerId);
+    if (!hasSelection) {
+      setSelectedPlayerId(fireRows[0].playerId);
+    }
+  }, [fireRows, selectedPlayerId, view, position]);
+
   const isLoading = view === 'FIRE' ? fireQuery.isLoading : deltaQuery.isLoading;
 
   const toggleStar = (playerId: string) => {
@@ -478,8 +489,8 @@ export default function FantasyLab() {
     let csvRows: string[][] = [];
 
     if (view === 'FIRE') {
-      headers = curatedCols.map((c) => c.label);
-      csvRows = fireRows.map((r) => curatedCols.map((c) => c.render(r)));
+      headers = activeFireColumns.map((c) => c.label);
+      csvRows = fireRows.map((r) => activeFireColumns.map((c) => c.render(r)));
     } else if (view === 'DELTA') {
       headers = ['Player', 'Team', 'Confidence', 'Display Delta', 'Rank Z', 'Sample Games', 'Direction', 'Why'];
       csvRows = deltaRows.map((r) => [
@@ -541,6 +552,15 @@ export default function FantasyLab() {
           ))}
         </div>
 
+        {view === 'FIRE' && position !== 'WR' && (
+          <div className="flex border rounded overflow-hidden">
+            {([['BASIC', 'Basic'], ['VOLUME', 'Volume'], ['FULL', 'Full']] as [ColumnPreset, string][]).map(([k, label]) => (
+              <button key={k} onClick={() => setColumnPreset(k)} className={`px-3 py-1 text-sm ${columnPreset === k ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-gray-50'}`}>{label}</button>
+            ))}
+          </div>
+        )}
+
+
         <button
           onClick={exportCsv}
           disabled={isLoading}
@@ -574,75 +594,132 @@ export default function FantasyLab() {
       {isLoading && <div className="text-sm text-gray-500">Loading...</div>}
 
       {!isLoading && view === 'FIRE' && (
-        <div className="flex flex-col lg:flex-row gap-4 items-start">
-          <div className="flex-1 min-w-0">
-            <div className="bg-white border rounded-lg overflow-auto">
-              <div className="px-3 py-2 border-b text-xs text-gray-500 flex items-center justify-between">
-                <span>{fireRows.length} eligible players &middot; {curatedCols.length} columns &middot; Click headers to sort</span>
-                <span className="text-gray-400">PPR scoring &middot; Last {fireQuery.data?.metadata?.rollingWeeks?.length ?? 4} weeks</span>
-              </div>
-              {!fireRows.length ? (
-                <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-left sticky top-0 z-10">
-                    <tr>
-                      {curatedCols.map((col) => (
-                        <th
-                          key={col.key}
-                          className={`p-2 cursor-pointer select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : 'text-left'} ${GROUP_COLORS[col.group] || ''}`}
-                          onClick={() => col.sortKey && handleFireSort(col.key)}
-                          title={col.label}
-                        >
-                          {col.shortLabel || col.label}
-                          {fireSortCol === col.key && <span className="ml-1 text-orange-600">{fireSortAsc ? '▲' : '▼'}</span>}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fireRows.map((r) => {
-                      const isSelected = selectedFireRow?.playerId === r.playerId;
-                      return (
-                        <tr
-                          key={r.playerId}
-                          className={`border-t cursor-pointer ${isSelected ? 'bg-orange-50 border-l-2 border-l-orange-400' : 'hover:bg-gray-50'}`}
-                          onClick={() => setSelectedFireRow(r)}
-                        >
-                          {curatedCols.map((col) => (
-                            <td
-                              key={col.key}
-                              className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''}`}
-                            >
-                              {col.key === 'catalyst' ? (
-                                r._catalystAlpha != null ? (
-                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${catalystBadgeClass(r._catalystAlpha)}`}>
-                                    {r._catalystAlpha.toFixed(0)}
-                                  </span>
-                                ) : <span className="text-gray-400">—</span>
-                              ) : col.key === 'conf' ? (
-                                <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
-                                  {r.confidence || 'LOW'}
-                                </span>
-                              ) : col.key === 'fire' ? (
-                                <span className={fireColor(r.fireScore)}>{col.render(r)}</span>
-                              ) : col.key === 'boom' ? (
-                                <span className={r.stats?.boomPct >= 50 ? 'text-emerald-700 font-medium' : ''}>{col.render(r)}</span>
-                              ) : col.render(r)}
-                            </td>
-                          ))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <div className="bg-white border rounded-lg overflow-auto">
+            <div className="px-3 py-2 border-b text-xs text-gray-500 flex items-center justify-between">
+              <span>{fireRows.length} eligible players &middot; {activeFireColumns.length} columns &middot; Click headers to sort</span>
+              <span className="text-gray-400">PPR scoring &middot; Last {fireQuery.data?.metadata?.rollingWeeks?.length ?? 4} weeks</span>
             </div>
+            {!fireRows.length ? (
+              <div className="p-4 text-sm text-gray-500">No eligible players for this filter/window.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-left sticky top-0 z-10">
+                  <tr>
+                    <th className="p-2 w-8"></th>
+                    {activeFireColumns.map((col) => (
+                      <th
+                        key={col.key}
+                        className={`p-2 cursor-pointer select-none whitespace-nowrap ${col.align === 'right' ? 'text-right' : 'text-left'} ${GROUP_COLORS[col.group] || ''}`}
+                        onClick={() => col.sortKey && handleFireSort(col.key)}
+                        title={col.label}
+                      >
+                        {col.shortLabel || col.label}
+                        {fireSortCol === col.key && <span className="ml-1 text-orange-600">{fireSortAsc ? '▲' : '▼'}</span>}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {fireRows.map((r) => {
+                    const isSelected = selectedPlayerId === r.playerId;
+                    return (
+                      <tr
+                        key={r.playerId}
+                        className={`border-t hover:bg-gray-50 cursor-pointer ${position === 'WR' && isSelected ? 'bg-orange-50/60 ring-1 ring-inset ring-orange-200' : ''}`}
+                        onClick={() => position === 'WR' && setSelectedPlayerId(r.playerId)}
+                      >
+                        <td className="p-2">
+                          <button onClick={(e) => { e.stopPropagation(); toggleStar(r.playerId); }} className="text-lg leading-none">
+                            {watchlist.includes(r.playerId) ? '★' : '☆'}
+                          </button>
+                        </td>
+                        {activeFireColumns.map((col) => (
+                          <td
+                            key={col.key}
+                            className={`p-2 whitespace-nowrap ${col.align === 'right' ? 'text-right tabular-nums' : ''} ${col.key === 'fire' ? 'font-semibold' : ''}`}
+                          >
+                            {col.key === 'catalyst' ? (
+                              r._catalystAlpha != null ? (
+                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${r._catalystAlpha >= 65 ? 'bg-emerald-100 text-emerald-800' : r._catalystAlpha >= 45 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'}`}>
+                                  {r._catalystAlpha.toFixed(0)}
+                                </span>
+                              ) : <span className="text-gray-400">—</span>
+                            ) : col.key === 'conf' ? (
+                              <span className={`px-2 py-0.5 rounded text-xs ${confidenceClass(r.confidence)}`}>
+                                {r.confidence || 'LOW'}
+                              </span>
+                            ) : col.key === 'fire' ? (
+                              <span className={r.fireScore >= 80 ? 'text-emerald-700' : r.fireScore >= 60 ? 'text-blue-700' : r.fireScore >= 40 ? 'text-gray-800' : 'text-red-600'}>
+                                {col.render(r)}
+                              </span>
+                            ) : col.render(r)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
 
-          {selectedFireRow && (
-            <div className="w-full lg:w-72 xl:w-80 shrink-0">
-              <PositionDetailPanel row={selectedFireRow} position={position} />
+          {position === 'WR' && (
+            <div className="bg-white border rounded-lg p-3 space-y-3 h-fit">
+              {!selectedFireRow ? (
+                <div className="text-sm text-gray-500">Select a player to view details.</div>
+              ) : (
+                <>
+                  <section className="border rounded-md p-3 bg-slate-50">
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">Summary</h3>
+                    <div className="text-sm font-semibold text-gray-900">{selectedFireRow.playerName || selectedFireRow.playerId}</div>
+                    <div className="text-xs text-gray-500 mb-2">{selectedFireRow.team || '—'} · WR</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>FIRE: <span className="font-mono">{num(selectedFireRow.fireScore)}</span></div>
+                      <div>Role: <span className="font-mono">{num(selectedFireRow.pillars?.role)}</span></div>
+                      <div>CATALYST: <span className="font-mono">{selectedFireRow._catalystAlpha != null ? selectedFireRow._catalystAlpha.toFixed(0) : '—'}</span></div>
+                      <div>Confidence: <span className="font-mono">{selectedFireRow.confidence || 'LOW'}</span></div>
+                      {meaningfulValue(selectedFireRow.stats?.snapPct) && <div>Snap %: <span className="font-mono">{pct(selectedFireRow.stats?.snapPct)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.targetSharePct) && <div>Target Share: <span className="font-mono">{pct(selectedFireRow.stats?.targetSharePct)}</span></div>}
+                    </div>
+                  </section>
+
+                  <section className="border rounded-md p-3">
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">Usage Detail</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {meaningfulValue(selectedFireRow.raw?.snaps_R) && <div>Snaps: <span className="font-mono">{num(selectedFireRow.raw?.snaps_R, 0)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.routesPerGame) && <div>Routes / G: <span className="font-mono">{num(selectedFireRow.stats?.routesPerGame)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.touchesPerGame) && <div>Tch / G: <span className="font-mono">{num(selectedFireRow.stats?.touchesPerGame)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.carriesPerGame) && <div>Car / G: <span className="font-mono">{num(selectedFireRow.stats?.carriesPerGame)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.targetSharePct) && <div>Target Share: <span className="font-mono">{pct(selectedFireRow.stats?.targetSharePct)}</span></div>}
+                      {meaningfulValue(selectedFireRow.games_played_window) && <div>Sample Games: <span className="font-mono">{String(selectedFireRow.games_played_window)}</span></div>}
+                    </div>
+                  </section>
+
+                  <section className="border rounded-md p-3">
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">Efficiency Detail</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {meaningfulValue(selectedFireRow.stats?.receptionsPerGame) && <div>Rec / G: <span className="font-mono">{num(selectedFireRow.stats?.receptionsPerGame)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.recYdsPerGame) && <div>Rec Y / G: <span className="font-mono">{num(selectedFireRow.stats?.recYdsPerGame)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.ypr) && <div>YPR: <span className="font-mono">{num(selectedFireRow.stats?.ypr)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.tdPerGame) && <div>TD / G: <span className="font-mono">{num(selectedFireRow.stats?.tdPerGame, 2)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.boomPct) && <div>Boom %: <span className="font-mono">{pct(selectedFireRow.stats?.boomPct)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.fantasyPpg) && <div>FPPG: <span className="font-mono">{num(selectedFireRow.stats?.fantasyPpg)}</span></div>}
+                    </div>
+                  </section>
+
+                  <section className="border rounded-md p-3">
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-2">Model Detail</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {meaningfulValue(selectedFireRow.pillars?.opportunity) && <div>Opportunity: <span className="font-mono">{num(selectedFireRow.pillars?.opportunity)}</span></div>}
+                      {meaningfulValue(selectedFireRow.pillars?.conversion) && <div>Conversion: <span className="font-mono">{num(selectedFireRow.pillars?.conversion)}</span></div>}
+                      {meaningfulValue(selectedFireRow.confidence) && <div>Confidence: <span className="font-mono">{selectedFireRow.confidence}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.xfpDiff) && <div>xFP Diff: <span className="font-mono">{num(selectedFireRow.stats?.xfpDiff)}</span></div>}
+                      {meaningfulValue(selectedFireRow.stats?.fpStdDev) && <div>FP Std Dev: <span className="font-mono">{num(selectedFireRow.stats?.fpStdDev)}</span></div>}
+                    </div>
+                  </section>
+                </>
+              )}
             </div>
           )}
         </div>

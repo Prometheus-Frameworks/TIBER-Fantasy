@@ -2,170 +2,301 @@ import { Router, Request, Response } from "express";
 import { db } from "../../infra/db";
 import { catalystScores } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import {
+  type CatalystBatchResponse,
+  type CatalystErrorResponse,
+  type CatalystPlayerResponse,
+  type CatalystComponents,
+  type CatalystPosition,
+  type CatalystYoYPlayer,
+  type CatalystYoYResponse,
+  VALID_CATALYST_POSITIONS,
+} from "@shared/types/catalyst";
 
 const router = Router();
 
-router.get("/api/catalyst/batch", async (req: Request, res: Response) => {
-  const position = (req.query.position as string || "QB").toUpperCase();
-  const season = parseInt(req.query.season as string) || 2025;
-  const limit = Math.min(parseInt(req.query.limit as string) || 100, 200);
+type CatalystScoreRow = typeof catalystScores.$inferSelect;
 
-  const validPositions = ["QB", "RB", "WR", "TE"];
-  if (!validPositions.includes(position)) {
-    return res.status(400).json({ error: `Invalid position. Must be one of: ${validPositions.join(", ")}` });
+class ValidationError extends Error {
+  status = 400;
+  code: string;
+  details?: Record<string, unknown>;
+
+  constructor(code: string, message: string, details?: Record<string, unknown>) {
+    super(message);
+    this.code = code;
+    this.details = details;
+  }
+}
+
+const parseCatalystPosition = (positionQuery: unknown): CatalystPosition => {
+  const parsedPosition = String(positionQuery ?? "QB").toUpperCase();
+
+  if (!VALID_CATALYST_POSITIONS.includes(parsedPosition as CatalystPosition)) {
+    throw new ValidationError(
+      "INVALID_POSITION",
+      "Invalid position query parameter",
+      {
+        field: "position",
+        allowed: VALID_CATALYST_POSITIONS,
+      }
+    );
   }
 
-  const maxWeekResult = await db.execute(
-    sql`SELECT MAX(week) as max_week FROM catalyst_scores WHERE season = ${season} AND position = ${position}`
-  );
-  const maxWeek = maxWeekResult.rows?.[0]?.max_week;
-  if (!maxWeek) {
-    return res.json({ players: [], season, position, week: 0 });
+  return parsedPosition as CatalystPosition;
+};
+
+const parseCatalystSeason = (seasonQuery: unknown, fallback?: number): number => {
+  if (seasonQuery == null || seasonQuery === "") {
+    if (fallback != null) return fallback;
+    throw new ValidationError("MISSING_SEASON", "Missing required season query parameter", {
+      field: "season",
+    });
   }
 
-  const players = await db
-    .select()
-    .from(catalystScores)
-    .where(
-      and(
-        eq(catalystScores.season, season),
-        eq(catalystScores.position, position),
-        eq(catalystScores.week, Number(maxWeek))
-      )
-    )
-    .orderBy(desc(catalystScores.catalystAlpha))
-    .limit(limit);
+  const season = Number(seasonQuery);
+  if (!Number.isInteger(season) || season < 1900) {
+    throw new ValidationError("INVALID_SEASON", "Invalid season query parameter", {
+      field: "season",
+      value: seasonQuery,
+    });
+  }
 
-  res.json({
-    players: players.map((p: typeof catalystScores.$inferSelect) => ({
-      gsis_id: p.gsisId,
-      player_name: p.playerName,
-      position: p.position,
-      team: p.team,
-      catalyst_raw: p.catalystRaw,
-      catalyst_alpha: p.catalystAlpha,
-      components: p.components,
-    })),
-    season,
-    position,
-    week: Number(maxWeek),
-    total: players.length,
-  });
+  return season;
+};
+
+const parseLimit = (limitQuery: unknown, max: number, fallback: number): number => {
+  if (limitQuery == null || limitQuery === "") {
+    return fallback;
+  }
+
+  const limit = Number(limitQuery);
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new ValidationError("INVALID_LIMIT", "Invalid limit query parameter", {
+      field: "limit",
+      value: limitQuery,
+      max,
+    });
+  }
+
+  return Math.min(limit, max);
+};
+
+const buildValidationErrorResponse = (error: ValidationError): CatalystErrorResponse => ({
+  error: {
+    code: error.code,
+    message: error.message,
+    details: error.details ?? null,
+  },
 });
 
-router.get("/api/catalyst/player/:gsisId", async (req: Request, res: Response) => {
-  const { gsisId } = req.params;
-  const season = parseInt(req.query.season as string) || 2025;
+const buildBatchResponse = (
+  players: CatalystScoreRow[],
+  season: number,
+  position: CatalystPosition,
+  week: number
+) => ({
+  players: players.map((player) => ({
+    gsis_id: player.gsisId,
+    player_name: player.playerName ?? "",
+    position: player.position,
+    team: player.team ?? "",
+    catalyst_raw: player.catalystRaw,
+    catalyst_alpha: player.catalystAlpha,
+    components: player.components as CatalystComponents,
+  })),
+  season,
+  position,
+  week,
+  total: players.length,
+} satisfies CatalystBatchResponse);
 
-  const weeklyScores = await db
-    .select()
-    .from(catalystScores)
-    .where(
-      and(
-        eq(catalystScores.gsisId, gsisId),
-        eq(catalystScores.season, season)
-      )
-    )
-    .orderBy(catalystScores.week);
-
-  if (weeklyScores.length === 0) {
-    return res.status(404).json({ error: "Player not found for this season" });
-  }
-
+const buildPlayerDetailResponse = (
+  gsisId: string,
+  season: number,
+  weeklyScores: CatalystScoreRow[]
+): CatalystPlayerResponse => {
   const latest = weeklyScores[weeklyScores.length - 1];
 
-  res.json({
+  return {
     gsis_id: gsisId,
-    player_name: latest.playerName,
+    player_name: latest.playerName ?? "",
     position: latest.position,
-    team: latest.team,
+    team: latest.team ?? "",
     season,
     catalyst_raw: latest.catalystRaw,
     catalyst_alpha: latest.catalystAlpha,
-    components: latest.components,
-    weekly: weeklyScores.map((w: typeof catalystScores.$inferSelect) => ({
-      week: w.week,
-      catalyst_raw: w.catalystRaw,
-      catalyst_alpha: w.catalystAlpha,
-      components: w.components,
+    components: latest.components as CatalystComponents,
+    weekly: weeklyScores.map((weekly) => ({
+      week: weekly.week,
+      catalyst_raw: weekly.catalystRaw,
+      catalyst_alpha: weekly.catalystAlpha,
+      components: weekly.components as CatalystComponents,
     })),
+  };
+};
+
+const buildYoyResponse = (
+  position: CatalystPosition,
+  baseSeason: number,
+  comparisonSeason: number,
+  players: CatalystYoYPlayer[]
+): CatalystYoYResponse => ({
+  position,
+  base_season: baseSeason,
+  comparison_season: comparisonSeason,
+  players,
+});
+
+const handleRouteError = (error: unknown, res: Response) => {
+  if (error instanceof ValidationError) {
+    return res.status(error.status).json(buildValidationErrorResponse(error));
+  }
+
+  console.error("Catalyst route error", error);
+  return res.status(500).json({
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "Unexpected error while processing request",
+    },
   });
+};
+
+router.get("/api/catalyst/batch", async (req: Request, res: Response) => {
+  try {
+    const position = parseCatalystPosition(req.query.position);
+    const season = parseCatalystSeason(req.query.season, 2025);
+    const limit = parseLimit(req.query.limit, 200, 100);
+
+    const maxWeekResult = await db.execute(
+      sql`SELECT MAX(week) as max_week FROM catalyst_scores WHERE season = ${season} AND position = ${position}`
+    );
+    const maxWeek = maxWeekResult.rows?.[0]?.max_week;
+
+    if (!maxWeek) {
+      return res.json(buildBatchResponse([], season, position, 0));
+    }
+
+    const players = await db
+      .select()
+      .from(catalystScores)
+      .where(
+        and(
+          eq(catalystScores.season, season),
+          eq(catalystScores.position, position),
+          eq(catalystScores.week, Number(maxWeek))
+        )
+      )
+      .orderBy(desc(catalystScores.catalystAlpha))
+      .limit(limit);
+
+    return res.json(buildBatchResponse(players, season, position, Number(maxWeek)));
+  } catch (error) {
+    return handleRouteError(error, res);
+  }
+});
+
+router.get("/api/catalyst/player/:gsisId", async (req: Request, res: Response) => {
+  try {
+    const { gsisId } = req.params;
+    const season = parseCatalystSeason(req.query.season, 2025);
+
+    const weeklyScores = await db
+      .select()
+      .from(catalystScores)
+      .where(and(eq(catalystScores.gsisId, gsisId), eq(catalystScores.season, season)))
+      .orderBy(catalystScores.week);
+
+    if (weeklyScores.length === 0) {
+      return res.status(404).json({
+        error: {
+          code: "PLAYER_NOT_FOUND",
+          message: "Player not found for this season",
+          details: { gsisId, season },
+        },
+      });
+    }
+
+    return res.json(buildPlayerDetailResponse(gsisId, season, weeklyScores));
+  } catch (error) {
+    return handleRouteError(error, res);
+  }
 });
 
 router.get("/api/catalyst/yoy", async (req: Request, res: Response) => {
-  const position = (req.query.position as string || "QB").toUpperCase();
-  const limit = Math.min(parseInt(req.query.limit as string) || 25, 50);
+  try {
+    const position = parseCatalystPosition(req.query.position);
+    const limit = parseLimit(req.query.limit, 50, 25);
+    const baseSeason = 2024;
+    const comparisonSeason = 2025;
 
-  const validPositions = ["QB", "RB", "WR", "TE"];
-  if (!validPositions.includes(position)) {
-    return res.status(400).json({ error: `Invalid position. Must be one of: ${validPositions.join(", ")}` });
+    const result = await db.execute(sql`
+      WITH base_2024 AS (
+        SELECT
+          cs.gsis_id,
+          cs.player_name,
+          cs.position,
+          cs.team AS team_2024,
+          cs.catalyst_alpha AS alpha_2024,
+          cs.catalyst_raw AS raw_2024
+        FROM catalyst_scores cs
+        WHERE cs.season = ${baseSeason}
+          AND cs.position = ${position}
+          AND cs.week = (
+            SELECT MAX(week) FROM catalyst_scores
+            WHERE season = ${baseSeason} AND position = ${position}
+          )
+        ORDER BY cs.catalyst_alpha DESC
+        LIMIT ${limit}
+      ),
+      base_2025 AS (
+        SELECT
+          cs.gsis_id,
+          cs.team AS team_2025,
+          cs.catalyst_alpha AS alpha_2025,
+          cs.catalyst_raw AS raw_2025
+        FROM catalyst_scores cs
+        WHERE cs.season = ${comparisonSeason}
+          AND cs.position = ${position}
+          AND cs.week = (
+            SELECT MAX(week) FROM catalyst_scores
+            WHERE season = ${comparisonSeason} AND position = ${position}
+          )
+      )
+      SELECT
+        b24.gsis_id,
+        b24.player_name,
+        b24.position,
+        b24.team_2024,
+        COALESCE(b25.team_2025, b24.team_2024) AS team_2025,
+        b24.alpha_2024,
+        b24.raw_2024,
+        b25.alpha_2025,
+        b25.raw_2025,
+        CASE WHEN b25.alpha_2025 IS NOT NULL
+          THEN ROUND((b25.alpha_2025 - b24.alpha_2024)::numeric, 1)
+          ELSE NULL
+        END AS delta
+      FROM base_2024 b24
+      LEFT JOIN base_2025 b25 ON b24.gsis_id = b25.gsis_id
+      ORDER BY b24.alpha_2024 DESC
+    `);
+
+    const players = (result.rows as Record<string, unknown>[]).map((row) => ({
+      gsis_id: String(row.gsis_id),
+      player_name: String(row.player_name),
+      position: String(row.position),
+      team_2024: String(row.team_2024),
+      team_2025: String(row.team_2025),
+      alpha_2024: row.alpha_2024 != null ? Number(row.alpha_2024) : null,
+      alpha_2025: row.alpha_2025 != null ? Number(row.alpha_2025) : null,
+      delta: row.delta != null ? Number(row.delta) : null,
+    } satisfies CatalystYoYPlayer));
+
+    return res.json(buildYoyResponse(position, baseSeason, comparisonSeason, players));
+  } catch (error) {
+    return handleRouteError(error, res);
   }
-
-  const result = await db.execute(sql`
-    WITH base_2024 AS (
-      SELECT
-        cs.gsis_id,
-        cs.player_name,
-        cs.position,
-        cs.team AS team_2024,
-        cs.catalyst_alpha AS alpha_2024,
-        cs.catalyst_raw AS raw_2024
-      FROM catalyst_scores cs
-      WHERE cs.season = 2024
-        AND cs.position = ${position}
-        AND cs.week = (
-          SELECT MAX(week) FROM catalyst_scores
-          WHERE season = 2024 AND position = ${position}
-        )
-      ORDER BY cs.catalyst_alpha DESC
-      LIMIT ${limit}
-    ),
-    base_2025 AS (
-      SELECT
-        cs.gsis_id,
-        cs.team AS team_2025,
-        cs.catalyst_alpha AS alpha_2025,
-        cs.catalyst_raw AS raw_2025
-      FROM catalyst_scores cs
-      WHERE cs.season = 2025
-        AND cs.position = ${position}
-        AND cs.week = (
-          SELECT MAX(week) FROM catalyst_scores
-          WHERE season = 2025 AND position = ${position}
-        )
-    )
-    SELECT
-      b24.gsis_id,
-      b24.player_name,
-      b24.position,
-      b24.team_2024,
-      COALESCE(b25.team_2025, b24.team_2024) AS team_2025,
-      b24.alpha_2024,
-      b24.raw_2024,
-      b25.alpha_2025,
-      b25.raw_2025,
-      CASE WHEN b25.alpha_2025 IS NOT NULL
-        THEN ROUND((b25.alpha_2025 - b24.alpha_2024)::numeric, 1)
-        ELSE NULL
-      END AS delta
-    FROM base_2024 b24
-    LEFT JOIN base_2025 b25 ON b24.gsis_id = b25.gsis_id
-    ORDER BY b24.alpha_2024 DESC
-  `);
-
-  res.json({
-    position,
-    players: result.rows.map((r: Record<string, unknown>) => ({
-      gsis_id: r.gsis_id,
-      player_name: r.player_name,
-      position: r.position,
-      team_2024: r.team_2024,
-      team_2025: r.team_2025,
-      alpha_2024: r.alpha_2024 != null ? Number(r.alpha_2024) : null,
-      alpha_2025: r.alpha_2025 != null ? Number(r.alpha_2025) : null,
-      delta: r.delta != null ? Number(r.delta) : null,
-    })),
-  });
 });
 
 export default router;
