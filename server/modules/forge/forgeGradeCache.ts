@@ -38,6 +38,16 @@ export async function computeAndCacheGrades(
   const posStart = Date.now();
   const tableName = `${position.toLowerCase()}_role_bank`;
 
+  const tableCheck = await db.execute(sql`
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = ${tableName}
+    LIMIT 1
+  `);
+  if (tableCheck.rows.length === 0) {
+    console.log(`[ForgeGradeCache] Skipping ${position}: table "${tableName}" does not exist yet`);
+    return { computed: 0, errors: 0, durationMs: 0 };
+  }
+
   const playerRows = await db.execute(sql`
     SELECT DISTINCT rb.player_id
     FROM ${sql.identifier(tableName)} rb
