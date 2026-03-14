@@ -1,4 +1,4 @@
-import { TIBER_MATRIX_ROLE_ONTOLOGY_V1 } from '../roleOntology';
+import { TIBER_MATRIX_ROLE_ONTOLOGY } from '../roleOntology';
 import {
   TIBER_MATRIX_ROLE_IDS,
   CANONICAL_ROLE_IDS,
@@ -9,12 +9,12 @@ import {
 describe('role ontology coverage', () => {
   it('every TIBER_MATRIX_ROLE_ID has an entry in the ontology dictionary', () => {
     for (const roleId of TIBER_MATRIX_ROLE_IDS) {
-      expect(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles[roleId]).toBeDefined();
+      expect(TIBER_MATRIX_ROLE_ONTOLOGY.roles[roleId]).toBeDefined();
     }
   });
 
   it('ontology contains no extra roles beyond TIBER_MATRIX_ROLE_IDS', () => {
-    const ontologyKeys = Object.keys(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles);
+    const ontologyKeys = Object.keys(TIBER_MATRIX_ROLE_ONTOLOGY.roles);
     const roleIdSet = new Set(TIBER_MATRIX_ROLE_IDS as readonly string[]);
     for (const key of ontologyKeys) {
       expect(roleIdSet.has(key)).toBe(true);
@@ -23,7 +23,7 @@ describe('role ontology coverage', () => {
 
   it('every canonical role has all required rich metadata fields populated', () => {
     for (const roleId of CANONICAL_ROLE_IDS) {
-      const entry: RoleOntologyEntry = TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles[roleId];
+      const entry: RoleOntologyEntry = TIBER_MATRIX_ROLE_ONTOLOGY.roles[roleId];
       expect(entry).toBeDefined();
 
       for (const field of REQUIRED_RICH_FIELDS) {
@@ -49,27 +49,27 @@ describe('role ontology coverage', () => {
   });
 
   it('every role entry has matching role_id key', () => {
-    for (const [key, entry] of Object.entries(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles)) {
+    for (const [key, entry] of Object.entries(TIBER_MATRIX_ROLE_ONTOLOGY.roles)) {
       expect(entry.role_id).toBe(key);
     }
   });
 
   it('every role entry has a valid position', () => {
     const validPositions = new Set(['QB', 'RB', 'WR', 'TE']);
-    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles)) {
+    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY.roles)) {
       expect(validPositions.has(entry.position)).toBe(true);
     }
   });
 
   it('role_id prefix matches position field', () => {
-    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles)) {
+    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY.roles)) {
       expect(entry.role_id.startsWith(entry.position + '_')).toBe(true);
     }
   });
 
   it('fallback_adjacent_roles reference valid role IDs', () => {
     const validIds = new Set(TIBER_MATRIX_ROLE_IDS as readonly string[]);
-    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles)) {
+    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY.roles)) {
       for (const adj of entry.fallback_adjacent_roles) {
         expect(validIds.has(adj)).toBe(true);
       }
@@ -77,7 +77,7 @@ describe('role ontology coverage', () => {
   });
 
   it('usage_signature elevated/suppressed contain strings', () => {
-    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles)) {
+    for (const entry of Object.values(TIBER_MATRIX_ROLE_ONTOLOGY.roles)) {
       expect(Array.isArray(entry.usage_signature.elevated)).toBe(true);
       expect(Array.isArray(entry.usage_signature.suppressed)).toBe(true);
     }
@@ -88,7 +88,7 @@ describe('role ontology coverage', () => {
     expect(unknownIds.length).toBe(4); // one per position
 
     for (const roleId of unknownIds) {
-      const entry = TIBER_MATRIX_ROLE_ONTOLOGY_V1.roles[roleId];
+      const entry = TIBER_MATRIX_ROLE_ONTOLOGY.roles[roleId];
       expect(entry.core_traits).toEqual([]);
       expect(entry.common_failure_modes).toEqual([]);
       expect(entry.common_upside_triggers).toEqual([]);

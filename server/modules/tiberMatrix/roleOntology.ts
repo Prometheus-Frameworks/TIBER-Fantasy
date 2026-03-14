@@ -7,7 +7,7 @@ import {
 
 const role = (entry: RoleOntologyEntry): [TiberMatrixRoleId, RoleOntologyEntry] => [entry.role_id, entry];
 
-export const TIBER_MATRIX_ROLE_ONTOLOGY_V1: RoleOntology = {
+export const TIBER_MATRIX_ROLE_ONTOLOGY: RoleOntology = {
   version: TIBER_MATRIX_ROLE_ONTOLOGY_VERSION,
   roles: Object.fromEntries([
     // ── Quarterbacks ──────────────────────────────────────────────────────
