@@ -120,6 +120,14 @@ export async function initBackground(): Promise<void> {
     startScheduler();
   } catch { /* non-fatal */ }
 
+  // Cron jobs — nightly buys/sells, injury sync, schedule sync, RB context check, weekly recompute
+  try {
+    const { setupAllCronJobs } = await import("./cron/weeklyUpdate");
+    setupAllCronJobs();
+  } catch (e) {
+    log(`⚠️  Cron init failed (non-fatal): ${e instanceof Error ? e.message : String(e)}`);
+  }
+
   log("✅ Background init complete");
 }
 
