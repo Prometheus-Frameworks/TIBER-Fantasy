@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../infra/db';
 import { datadiveSnapshotPlayerWeek, forgeGradeCache } from '@shared/schema';
-import { runForgeEngine, assertValidPosition } from './forgeEngine';
+import { runForgeEngine, assertValidPosition, isDefensivePosition } from './forgeEngine';
 import { gradeForge } from './forgeGrading';
 import type { Position } from './forgeEngine';
 
@@ -48,19 +48,31 @@ export async function computeAndCacheGrades(
     return { computed: 0, errors: 0, durationMs: 0 };
   }
 
-  const playerRows = await db.execute(sql`
-    SELECT DISTINCT rb.player_id
-    FROM ${sql.identifier(tableName)} rb
-    INNER JOIN (
-      SELECT DISTINCT player_id 
-      FROM datadive_snapshot_player_week 
-      WHERE season = ${season} AND position = ${position}
-    ) dd ON rb.player_id = dd.player_id
-    WHERE rb.season = ${season}
-      AND rb.player_id IS NOT NULL
-    ORDER BY rb.player_id
-    LIMIT ${limit}
-  `);
+  const playerRows = isDefensivePosition(position)
+    ? await db.execute(sql`
+        SELECT DISTINCT rb.player_id
+        FROM ${sql.identifier(tableName)} rb
+        INNER JOIN idp_player_season ips ON rb.player_id = ips.gsis_id
+        WHERE rb.season = ${season}
+          AND ips.season = ${season}
+          AND ips.position_group = ${position}
+          AND rb.player_id IS NOT NULL
+        ORDER BY rb.player_id
+        LIMIT ${limit}
+      `)
+    : await db.execute(sql`
+        SELECT DISTINCT rb.player_id
+        FROM ${sql.identifier(tableName)} rb
+        INNER JOIN (
+          SELECT DISTINCT player_id
+          FROM datadive_snapshot_player_week
+          WHERE season = ${season} AND position = ${position}
+        ) dd ON rb.player_id = dd.player_id
+        WHERE rb.season = ${season}
+          AND rb.player_id IS NOT NULL
+        ORDER BY rb.player_id
+        LIMIT ${limit}
+      `);
 
   let computed = 0;
   let errors = 0;

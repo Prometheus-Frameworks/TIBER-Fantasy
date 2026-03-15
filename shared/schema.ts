@@ -3764,6 +3764,205 @@ export const insertQBRoleBankSchema = createInsertSchema(qbRoleBank).omit({
 });
 
 // ========================================
+// DEFENSIVE ROLE BANKS (IDP)
+// ========================================
+
+export const edgeRoleBank = pgTable("edge_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  nflPosition: text("nfl_position"),
+  team: text("team"),
+
+  gamesPlayed: integer("games_played").notNull(),
+  totalSnaps: integer("total_snaps"),
+  sacks: real("sacks"),
+  pressures: real("pressures"),
+  qbHits: real("qb_hits"),
+  tacklesForLoss: real("tackles_for_loss"),
+  forcedFumbles: real("forced_fumbles"),
+  totalHavocEvents: real("total_havoc_events"),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocIndex: real("havoc_index"),
+  havocTier: text("havoc_tier"),
+
+  volumeScore: integer("volume_score").notNull(),
+  impactScore: integer("impact_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  roleScore: integer("role_score").notNull(),
+  roleTier: text("role_tier").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: uniqueIndex("edge_role_bank_unique").on(table.playerId, table.season),
+  playerIdx: index("edge_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("edge_role_bank_season_idx").on(table.season),
+}));
+
+export type EDGERoleBank = typeof edgeRoleBank.$inferSelect;
+export type InsertEDGERoleBank = z.infer<typeof insertEDGERoleBankSchema>;
+export const insertEDGERoleBankSchema = createInsertSchema(edgeRoleBank).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const diRoleBank = pgTable("di_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  nflPosition: text("nfl_position"),
+  team: text("team"),
+
+  gamesPlayed: integer("games_played").notNull(),
+  totalSnaps: integer("total_snaps"),
+  sacks: real("sacks"),
+  pressures: real("pressures"),
+  qbHits: real("qb_hits"),
+  tacklesForLoss: real("tackles_for_loss"),
+  forcedFumbles: real("forced_fumbles"),
+  totalHavocEvents: real("total_havoc_events"),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocIndex: real("havoc_index"),
+  havocTier: text("havoc_tier"),
+
+  volumeScore: integer("volume_score").notNull(),
+  impactScore: integer("impact_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  roleScore: integer("role_score").notNull(),
+  roleTier: text("role_tier").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: uniqueIndex("di_role_bank_unique").on(table.playerId, table.season),
+  playerIdx: index("di_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("di_role_bank_season_idx").on(table.season),
+}));
+
+export type DIRoleBank = typeof diRoleBank.$inferSelect;
+export type InsertDIRoleBank = z.infer<typeof insertDIRoleBankSchema>;
+export const insertDIRoleBankSchema = createInsertSchema(diRoleBank).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const lbRoleBank = pgTable("lb_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  nflPosition: text("nfl_position"),
+  team: text("team"),
+
+  gamesPlayed: integer("games_played").notNull(),
+  totalSnaps: integer("total_snaps"),
+  tacklesTotal: real("tackles_total"),
+  tacklesForLoss: real("tackles_for_loss"),
+  sacks: real("sacks"),
+  interceptions: real("interceptions"),
+  passesDefended: real("passes_defended"),
+  forcedFumbles: real("forced_fumbles"),
+  totalHavocEvents: real("total_havoc_events"),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocIndex: real("havoc_index"),
+  havocTier: text("havoc_tier"),
+
+  volumeScore: integer("volume_score").notNull(),
+  impactScore: integer("impact_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  roleScore: integer("role_score").notNull(),
+  roleTier: text("role_tier").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: uniqueIndex("lb_role_bank_unique").on(table.playerId, table.season),
+  playerIdx: index("lb_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("lb_role_bank_season_idx").on(table.season),
+}));
+
+export type LBRoleBank = typeof lbRoleBank.$inferSelect;
+export type InsertLBRoleBank = z.infer<typeof insertLBRoleBankSchema>;
+export const insertLBRoleBankSchema = createInsertSchema(lbRoleBank).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const cbRoleBank = pgTable("cb_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  nflPosition: text("nfl_position"),
+  team: text("team"),
+
+  gamesPlayed: integer("games_played").notNull(),
+  totalSnaps: integer("total_snaps"),
+  interceptions: real("interceptions"),
+  passesDefended: real("passes_defended"),
+  tacklesTotal: real("tackles_total"),
+  forcedFumbles: real("forced_fumbles"),
+  totalHavocEvents: real("total_havoc_events"),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocIndex: real("havoc_index"),
+  havocTier: text("havoc_tier"),
+
+  volumeScore: integer("volume_score").notNull(),
+  impactScore: integer("impact_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  roleScore: integer("role_score").notNull(),
+  roleTier: text("role_tier").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: uniqueIndex("cb_role_bank_unique").on(table.playerId, table.season),
+  playerIdx: index("cb_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("cb_role_bank_season_idx").on(table.season),
+}));
+
+export type CBRoleBank = typeof cbRoleBank.$inferSelect;
+export type InsertCBRoleBank = z.infer<typeof insertCBRoleBankSchema>;
+export const insertCBRoleBankSchema = createInsertSchema(cbRoleBank).omit({ id: true, createdAt: true, updatedAt: true });
+
+export const sRoleBank = pgTable("s_role_bank", {
+  id: serial("id").primaryKey(),
+  playerId: text("player_id").notNull(),
+  sleeperId: text("sleeper_id"),
+  season: integer("season").notNull(),
+  nflPosition: text("nfl_position"),
+  team: text("team"),
+
+  gamesPlayed: integer("games_played").notNull(),
+  totalSnaps: integer("total_snaps"),
+  interceptions: real("interceptions"),
+  passesDefended: real("passes_defended"),
+  tacklesTotal: real("tackles_total"),
+  tacklesForLoss: real("tackles_for_loss"),
+  forcedFumbles: real("forced_fumbles"),
+  totalHavocEvents: real("total_havoc_events"),
+  havocRawRate: real("havoc_raw_rate"),
+  havocSmoothedRate: real("havoc_smoothed_rate"),
+  havocIndex: real("havoc_index"),
+  havocTier: text("havoc_tier"),
+
+  volumeScore: integer("volume_score").notNull(),
+  impactScore: integer("impact_score").notNull(),
+  consistencyScore: integer("consistency_score").notNull(),
+  roleScore: integer("role_score").notNull(),
+  roleTier: text("role_tier").notNull(),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniquePlayerSeason: uniqueIndex("s_role_bank_unique").on(table.playerId, table.season),
+  playerIdx: index("s_role_bank_player_idx").on(table.playerId),
+  seasonIdx: index("s_role_bank_season_idx").on(table.season),
+}));
+
+export type SRoleBank = typeof sRoleBank.$inferSelect;
+export type InsertSRoleBank = z.infer<typeof insertSRoleBankSchema>;
+export const insertSRoleBankSchema = createInsertSchema(sRoleBank).omit({ id: true, createdAt: true, updatedAt: true });
+
+// ========================================
 // EPA REFERENCE SYSTEM
 // ========================================
 
