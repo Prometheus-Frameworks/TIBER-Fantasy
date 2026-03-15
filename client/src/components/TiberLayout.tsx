@@ -7,49 +7,88 @@ interface NavItem {
   comingSoon?: boolean;
 }
 
-const evaluateNav: NavItem[] = [
-  { label: "FORGE Tiers", path: "/tiers" },
-  { label: "Rookie Board", path: "/rookies", badge: "2026" },
-  { label: "IDP Lab", path: "/idp-lab" },
-  { label: "Fantasy Lab", path: "/fantasy-lab" },
-  { label: "CATALYST Lab", path: "/catalyst-lab", badge: "NEW" },
-  { label: "FORGE Workbench", path: "/forge-workbench" },
+type NavSectionConfig = {
+  label: string;
+  description?: string;
+  items: NavItem[];
+};
+
+const navSections: NavSectionConfig[] = [
+  {
+    label: "Core Decisions",
+    description: "Your main paths for rankings, scouting, and day-to-day calls.",
+    items: [
+      { label: "FORGE Tiers", path: "/tiers" },
+      { label: "Rookie Board", path: "/rookies", badge: "2026" },
+      { label: "Fantasy Lab", path: "/fantasy-lab" },
+    ],
+  },
+  {
+    label: "Player & Prospect Evaluation",
+    description: "Deep FORGE breakdowns and experimental labs.",
+    items: [
+      { label: "FORGE Workbench", path: "/forge-workbench" },
+      { label: "CATALYST Lab", path: "/catalyst-lab", badge: "NEW" },
+      { label: "IDP Lab", path: "/idp-lab" },
+    ],
+  },
+  {
+    label: "Analytics & Research",
+    description: "Schedules, raw views, and advanced data tools.",
+    items: [
+      { label: "Schedule & Matchups", path: "/schedule" },
+      { label: "Data Lab", path: "/tiber-data-lab" },
+    ],
+  },
+  {
+    label: "AI & Intelligence",
+    description: "Assistants and signal scanners that think with you.",
+    items: [
+      { label: "Tiber Chat", path: "/legacy-chat", badge: "β" },
+      { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
+    ],
+  },
+  {
+    label: "FORGE & System",
+    description: "Engine internals and builder tools. Most users can ignore this.",
+    items: [
+      { label: "FORGE Hub", path: "/admin/forge-hub" },
+      { label: "FORGE Engine", path: "/forge" },
+      { label: "FORGE Inspector", path: "/forge/inspect" },
+      { label: "Quality Sentinel", path: "/sentinel" },
+      { label: "Metrics Dictionary", path: "/metrics-dictionary" },
+      { label: "Architecture", path: "/architecture" },
+      { label: "API Lexicon", path: "/admin/api-lexicon" },
+    ],
+  },
 ];
 
-const researchNav: NavItem[] = [
-  { label: "Data Lab", path: "/tiber-data-lab" },
-  { label: "Schedule", path: "/schedule" },
-];
-
-const intelligenceNav: NavItem[] = [
-  { label: "Tiber Chat", path: "/legacy-chat", badge: "\u03B2" },
-  { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
-];
-
-const adminNav: NavItem[] = [
-  { label: "FORGE Hub", path: "/admin/forge-hub" },
-  { label: "FORGE Engine", path: "/forge" },
-  { label: "FORGE Inspector", path: "/forge/inspect" },
-  { label: "Quality Sentinel", path: "/sentinel" },
-  { label: "Metrics Dictionary", path: "/metrics-dictionary" },
-  { label: "Architecture", path: "/architecture" },
-  { label: "API Lexicon", path: "/admin/api-lexicon" },
-];
-
-function NavSection({ label, items }: { label: string; items: NavItem[] }) {
+function NavSection({ label, description, items }: NavSectionConfig) {
   const [location] = useLocation();
 
   return (
     <>
-      <div className="nav-section-label">{label}</div>
+      <div className="nav-section-label">
+        <div>{label}</div>
+        {description && (
+          <div style={{ marginTop: 4, fontSize: 10, opacity: 0.85 }}>
+            {description}
+          </div>
+        )}
+      </div>
       {items.map((item) => {
-        const isActive = item.path === "/"
-          ? location === "/"
-          : location.startsWith(item.path) && item.path !== "#";
+        const isActive =
+          item.path === "/"
+            ? location === "/"
+            : location.startsWith(item.path) && item.path !== "#";
 
         if (item.comingSoon) {
           return (
-            <div key={item.label} className="nav-item" style={{ opacity: 0.4, cursor: "default" }}>
+            <div
+              key={item.label}
+              className="nav-item"
+              style={{ opacity: 0.4, cursor: "default" }}
+            >
               {item.label}
               <span className="nav-badge">Soon</span>
             </div>
@@ -57,7 +96,11 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
         }
 
         return (
-          <Link key={item.label} href={item.path} className={`nav-item ${isActive ? "active" : ""}`}>
+          <Link
+            key={item.label}
+            href={item.path}
+            className={`nav-item ${isActive ? "active" : ""}`}
+          >
             {item.label}
             {item.badge && <span className="nav-badge">{item.badge}</span>}
           </Link>
@@ -84,10 +127,14 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
           <Link href="/" className={`nav-item ${location === "/" ? "active" : ""}`}>
             Dashboard
           </Link>
-          <NavSection label="Evaluate" items={evaluateNav} />
-          <NavSection label="Research" items={researchNav} />
-          <NavSection label="Intelligence" items={intelligenceNav} />
-          <NavSection label="Admin" items={adminNav} />
+          {navSections.map((section) => (
+            <NavSection
+              key={section.label}
+              label={section.label}
+              description={section.description}
+              items={section.items}
+            />
+          ))}
         </div>
 
         <div className="sidebar-footer">
