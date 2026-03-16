@@ -15,6 +15,12 @@ type NavSectionConfig = {
 
 const navSections: NavSectionConfig[] = [
   {
+    label: "Platform",
+    items: [
+      { label: "TiberClaw", path: "/tiberclaw", badge: "↗" },
+    ],
+  },
+  {
     label: "Core Decisions",
     description: "Your main paths for rankings, scouting, and day-to-day calls.",
     items: [

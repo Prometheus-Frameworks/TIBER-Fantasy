@@ -38,6 +38,7 @@ import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
 import RookieBoard from "@/pages/RookieBoard";
+import TiberClawPage from "@/pages/TiberClawPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -72,6 +73,7 @@ function Router() {
         <Route path="/fantasy-lab" component={FantasyLab} />
         <Route path="/idp-lab" component={IdpLab} />
         <Route path="/catalyst-lab" component={CatalystLab} />
+        <Route path="/tiberclaw" component={TiberClawPage} />
         <Route path="/sentinel" component={SentinelDashboard} />
         <Route path="/admin/forge-hub" component={ForgeHub} />
         <Route path="/admin/player-mapping" component={PlayerMapping} />
