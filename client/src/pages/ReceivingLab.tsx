@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Target, TrendingUp, BarChart3, Zap, Download, Search } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { AiPromptHints } from '@/components/AiPromptHints';
 import { Card, CardContent } from '@/components/ui/card';
@@ -98,6 +98,7 @@ export default function ReceivingLab() {
   }, [currentSeason]);
   const [sortColumn, setSortColumn] = useState('totalFptsPpr');
   const [sortDirection, setSortDirection] = useState<SortDir>('desc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: response, isLoading } = useQuery<AggResponse>({
     queryKey: ['/api/data-lab/lab-agg', { season, position, module: 'receiving' }],
@@ -112,8 +113,9 @@ export default function ReceivingLab() {
       const bVal = (b as any)[sortColumn] ?? -Infinity;
       return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
     });
-    return rows;
-  }, [response?.data, sortColumn, sortDirection]);
+    const q = searchQuery.trim().toLowerCase();
+    return q ? rows.filter(r => r.playerName.toLowerCase().includes(q)) : rows;
+  }, [response?.data, sortColumn, sortDirection, searchQuery]);
 
   const summaryStats = useMemo(() => {
     if (!response?.data?.length) return null;
@@ -248,6 +250,16 @@ export default function ReceivingLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search player..."
+            className="pl-8 pr-3 py-1.5 text-sm bg-[#f4f4f4] border border-gray-200 rounded-md w-44 focus:outline-none focus:ring-1 focus:ring-[#7c3aed]/40 placeholder:text-gray-400"
+          />
+        </div>
         <div className="ml-auto flex items-center gap-2">
           {sortedData.length > 0 && (
             <>

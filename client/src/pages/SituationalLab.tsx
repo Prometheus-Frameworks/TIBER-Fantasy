@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import {
   ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown,
-  Clock, TrendingUp, BarChart3, Zap, Download, Target,
+  Clock, TrendingUp, BarChart3, Zap, Download, Target, Search,
 } from 'lucide-react';
 import { exportLabCsv, CsvColumn } from '@/lib/csvExport';
 import { AiPromptHints } from '@/components/AiPromptHints';
@@ -121,6 +121,7 @@ export default function SituationalLab() {
 
   useEffect(() => { setSeason(String(currentSeason)); }, [currentSeason]);
 
+  const [searchQuery, setSearchQuery] = useState('');
   const rz = useSortState('totalRzSnaps');
   const dd = useSortState('totalThirdDownSnaps');
   const tm = useSortState('totalTwoMinuteSnaps');
@@ -143,10 +144,30 @@ export default function SituationalLab() {
     return rows;
   };
 
-  const rzData = useMemo(() => response?.data ? sortData(response.data, rz.col, rz.dir) : [], [response?.data, rz.col, rz.dir]);
-  const ddData = useMemo(() => response?.data ? sortData(response.data, dd.col, dd.dir) : [], [response?.data, dd.col, dd.dir]);
-  const tmData = useMemo(() => response?.data ? sortData(response.data, tm.col, tm.dir) : [], [response?.data, tm.col, tm.dir]);
-  const huData = useMemo(() => response?.data ? sortData(response.data, hu.col, hu.dir) : [], [response?.data, hu.col, hu.dir]);
+  const rzData = useMemo(() => {
+    if (!response?.data) return [];
+    const rows = sortData(response.data, rz.col, rz.dir);
+    const q = searchQuery.trim().toLowerCase();
+    return q ? rows.filter(r => r.playerName.toLowerCase().includes(q)) : rows;
+  }, [response?.data, rz.col, rz.dir, searchQuery]);
+  const ddData = useMemo(() => {
+    if (!response?.data) return [];
+    const rows = sortData(response.data, dd.col, dd.dir);
+    const q = searchQuery.trim().toLowerCase();
+    return q ? rows.filter(r => r.playerName.toLowerCase().includes(q)) : rows;
+  }, [response?.data, dd.col, dd.dir, searchQuery]);
+  const tmData = useMemo(() => {
+    if (!response?.data) return [];
+    const rows = sortData(response.data, tm.col, tm.dir);
+    const q = searchQuery.trim().toLowerCase();
+    return q ? rows.filter(r => r.playerName.toLowerCase().includes(q)) : rows;
+  }, [response?.data, tm.col, tm.dir, searchQuery]);
+  const huData = useMemo(() => {
+    if (!response?.data) return [];
+    const rows = sortData(response.data, hu.col, hu.dir);
+    const q = searchQuery.trim().toLowerCase();
+    return q ? rows.filter(r => r.playerName.toLowerCase().includes(q)) : rows;
+  }, [response?.data, hu.col, hu.dir, searchQuery]);
 
   const rzStats = useMemo(() => {
     if (!response?.data?.length) return null;
@@ -273,6 +294,16 @@ export default function SituationalLab() {
             {response.count} players · Wk {response.weekRange?.from}–{response.weekRange?.to}
           </span>
         )}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search player..."
+            className="pl-8 pr-3 py-1.5 text-sm bg-[#f4f4f4] border border-gray-200 rounded-md w-44 focus:outline-none focus:ring-1 focus:ring-[#e2640d]/40 placeholder:text-gray-400"
+          />
+        </div>
         <div className="ml-auto flex items-center gap-2">
           {hasData && (
             <>
