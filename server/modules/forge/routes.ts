@@ -1719,7 +1719,7 @@ router.get('/player-context/:playerId', async (req: Request, res: Response) => {
  */
 router.get('/search-players', async (req: Request, res: Response) => {
   try {
-    const query = (req.query.query as string) || '';
+    const query = (req.query.query as string) || (req.query.q as string) || (req.query.name as string) || '';
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
 
     if (!query || query.trim().length < 2) {
