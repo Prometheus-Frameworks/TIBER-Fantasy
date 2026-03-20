@@ -11,6 +11,9 @@ import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 import { db } from '../infra/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
+import { buildRoleOpportunityInsightStatus } from '../modules/externalModels/roleOpportunity/playerDetailEnrichment';
+
+const includeRoleOpportunityValues = new Set(['1', 'true']);
 
 const router = Router();
 
@@ -66,12 +69,25 @@ router.get('/resolve/:platform/:externalId', async (req: Request, res: Response)
 router.get('/player/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const includeRoleOpportunity = includeRoleOpportunityValues.has(String(req.query.includeRoleOpportunity ?? '').toLowerCase());
     
     if (!id) {
       return res.status(400).json({
         success: false,
         message: 'Player ID is required'
       });
+    }
+
+    if (includeRoleOpportunity) {
+      const season = Number(req.query.season);
+      const week = Number(req.query.week);
+
+      if (!Number.isInteger(season) || !Number.isInteger(week)) {
+        return res.status(400).json({
+          success: false,
+          message: 'season and week are required when includeRoleOpportunity=true'
+        });
+      }
     }
 
     const player = await playerIdentityService.getByAnyId(id);
@@ -83,9 +99,21 @@ router.get('/player/:id', async (req: Request, res: Response) => {
       });
     }
 
+    const responseData: Record<string, unknown> = {
+      ...player,
+    };
+
+    if (includeRoleOpportunity) {
+      responseData.roleOpportunityInsight = await buildRoleOpportunityInsightStatus({
+        playerId: player.canonicalId,
+        season: Number(req.query.season),
+        week: Number(req.query.week),
+      });
+    }
+
     res.json({
       success: true,
-      data: player
+      data: responseData
     });
   } catch (error) {
     console.error('[PlayerIdentityRoutes] Error getting player:', error);

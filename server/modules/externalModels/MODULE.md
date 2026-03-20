@@ -20,3 +20,10 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 3. Add a service that exposes the stable internal TIBER interface.
 4. Add one contained integration route or enrichment surface in `server/routes/`.
 5. Add tests for happy path, malformed payloads, and explicit failure mapping.
+
+
+## Current product integration
+
+- `GET /api/player-identity/player/:id?includeRoleOpportunity=true&season=<year>&week=<week>` enriches a player-detail response with `roleOpportunityInsight`.
+- The enrichment uses the existing role opportunity service and always returns a stable status object with `available`, `fetchedAt`, and either `data` or `error`.
+- Enrichment failures are contained so the base player detail payload still succeeds.

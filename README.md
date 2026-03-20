@@ -142,6 +142,76 @@ The adapter pattern is intentionally small and repeatable:
 
 This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
 
+### Player detail enrichment
+
+`GET /api/player-identity/player/:id` now supports an explicit opt-in enrichment:
+
+```http
+GET /api/player-identity/player/00-0036322?includeRoleOpportunity=true&season=2025&week=17
+```
+
+Behavior:
+- The base player detail payload is unchanged when `includeRoleOpportunity` is omitted.
+- Role-opportunity insight is fetched only when `includeRoleOpportunity=true`.
+- Enrichment is non-fatal: if the external model is disabled, times out, returns malformed data, or has no record, the player detail response still returns `200 OK` with the normal player payload.
+
+Added response field when requested:
+
+```json
+{
+  "success": true,
+  "data": {
+    "canonicalId": "00-0036322",
+    "fullName": "Justin Jefferson",
+    "roleOpportunityInsight": {
+      "available": true,
+      "fetchedAt": "2026-03-20T00:00:00.000Z",
+      "data": {
+        "playerId": "00-0036322",
+        "season": 2025,
+        "week": 17,
+        "position": "WR",
+        "team": "MIN",
+        "primaryRole": "alpha_x",
+        "roleTags": ["boundary", "downfield"],
+        "usage": {
+          "snapShare": 0.93,
+          "routeShare": 0.96,
+          "targetShare": 0.31,
+          "usageRate": 0.28
+        },
+        "opportunity": {
+          "tier": "featured",
+          "weightedOpportunityIndex": 0.88,
+          "insights": ["High route participation", "Target leader"]
+        },
+        "confidence": 0.91,
+        "source": {
+          "provider": "role-and-opportunity-model",
+          "modelVersion": "role-opportunity-v1",
+          "generatedAt": "2026-03-20T00:00:00.000Z"
+        }
+      }
+    }
+  }
+}
+```
+
+Unavailable example:
+
+```json
+{
+  "roleOpportunityInsight": {
+    "available": false,
+    "fetchedAt": "2026-03-20T00:00:00.000Z",
+    "error": {
+      "category": "upstream_timeout",
+      "message": "Role-and-opportunity-model timed out after 5000ms."
+    }
+  }
+}
+```
+
 ---
 
 ## Philosophy

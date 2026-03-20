@@ -46,7 +46,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **EPA Analytics**: Advanced efficiency metrics.
 - **Defense vs Position (DvP) Matchup System**: Calculates fantasy points allowed by defenses.
 - **Data Integration & Sync**: Includes Sleeper Sync, Canonical Player Pool, and NFL Schedule Sync.
-- **External Model Adapter Layer**: Promoted lab/model repos must enter through `server/modules/externalModels/` using dedicated clients, edge validation, typed error mapping, and stable TIBER-facing interfaces. First integration: `Role-and-opportunity-model` via `GET /api/integrations/role-opportunity/:playerId?season=<year>&week=<week>`.
+- **External Model Adapter Layer**: Promoted lab/model repos must enter through `server/modules/externalModels/` using dedicated clients, edge validation, typed error mapping, and stable TIBER-facing interfaces. First integration: `Role-and-opportunity-model` via `GET /api/integrations/role-opportunity/:playerId?season=<year>&week=<week>`. Player detail hydration at `GET /api/player-identity/player/:id` now supports opt-in `includeRoleOpportunity=true&season=<year>&week=<week>` enrichment, returning a stable non-fatal `roleOpportunityInsight` status envelope.
 - **LLM Gateway (`server/llm/`)**: A provider-agnostic `callLLM()` entry point with fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini, supporting 9 task types. Includes an X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`) for Grok-powered X/Twitter analysis.
 
 **Deployment Architecture:**
