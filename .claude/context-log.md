@@ -183,3 +183,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/**`, `server/routes/roleOpportunityIntegrationRoutes.ts`, `server/routes.ts`, `README.md`, `replit.md`, `.claude/conventions.md`
 - **Validation:** Ran targeted Jest suites for the adapter/service and integration route, built the production bundle, and smoke-tested the readiness endpoint with curl against a minimal Express app.
 - **Notes:** The adapter normalizes share-style metrics into 0..1 decimals for TIBER-facing output while preserving optional raw canonical payloads for debugging.
+
+### 2026-03-20 — Codex: Player detail role opportunity enrichment
+- **What changed:** Added opt-in role-opportunity enrichment to `GET /api/player-identity/player/:id`, introduced a failure-tolerant player-detail insight envelope helper, added focused route/enrichment tests, and documented the response contract plus non-fatal behavior.
+- **Files modified:** `server/routes/playerIdentityRoutes.ts`, `server/modules/externalModels/roleOpportunity/playerDetailEnrichment.ts`, `server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `README.md`, `replit.md`, `server/modules/externalModels/MODULE.md`
+- **Validation:** Ran targeted Jest suites for the player-detail enrichment helper and player identity route, and ran a production build.
+- **Notes:** Enrichment is only fetched when `includeRoleOpportunity=true` and still requires explicit `season` + `week`; upstream failures are surfaced inside `roleOpportunityInsight.error` instead of breaking the base player payload.

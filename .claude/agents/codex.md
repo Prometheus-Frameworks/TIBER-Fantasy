@@ -232,3 +232,17 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm test -- roleOpportunityIntegrationRoutes.test.ts` ✅
   - `npm run build` ✅
   - `curl http://127.0.0.1:<port>/api/integrations/role-opportunity/health` against a minimal local Express mount ✅
+
+### 2026-03-20 — Player detail role opportunity enrichment
+- Added opt-in `roleOpportunityInsight` enrichment to `GET /api/player-identity/player/:id` using the existing external-model adapter/service rather than direct upstream calls.
+- Added `playerDetailEnrichment.ts` helper to convert role-opportunity success/failure into a stable player-detail status envelope with `available`, `fetchedAt`, and either `data` or `error`.
+- Added focused tests covering:
+  - normal player detail response with no enrichment request
+  - enriched player detail response when requested
+  - successful upstream mapping into the player-detail envelope
+  - timeout, unavailable, not-found, disabled-config, and malformed-payload containment
+- Updated `README.md`, `replit.md`, and `server/modules/externalModels/MODULE.md` with the endpoint contract, opt-in query params, example payloads, and explicit non-fatal behavior.
+- Validation:
+  - `npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts` ✅
+  - `npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/playerIdentityRoutes.test.ts` ✅
+  - `npm run build` ✅ (with existing duplicate-class-member warning in `server/olc/adjusters.ts`)
