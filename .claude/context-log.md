@@ -189,3 +189,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/routes/playerIdentityRoutes.ts`, `server/modules/externalModels/roleOpportunity/playerDetailEnrichment.ts`, `server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `README.md`, `replit.md`, `server/modules/externalModels/MODULE.md`
 - **Validation:** Ran targeted Jest suites for the player-detail enrichment helper and player identity route, and ran a production build.
 - **Notes:** Enrichment is only fetched when `includeRoleOpportunity=true` and still requires explicit `season` + `week`; upstream failures are surfaced inside `roleOpportunityInsight.error` instead of breaking the base player payload.
+
+### 2026-03-20 — Codex: Player detail enrichment orchestrator
+- **What changed:** Extracted player-detail external insight assembly into a reusable orchestrator module, moved role-opportunity enrichment behind it, kept the route-level opt-in validation/response semantics intact, and added focused orchestrator + route compatibility coverage.
+- **Files modified:** `server/modules/externalModels/playerDetailEnrichment/*`, `server/routes/playerIdentityRoutes.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
+- **Validation:** Ran targeted Jest suites for the orchestrator, route, and role-opportunity envelope helper; ran production build.
+- **Notes:** Future player-detail enrichments should plug into the orchestrator rather than add direct conditionals inside `playerIdentityRoutes.ts`.

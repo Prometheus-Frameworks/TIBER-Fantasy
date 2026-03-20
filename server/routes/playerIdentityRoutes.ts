@@ -11,7 +11,7 @@ import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 import { db } from '../infra/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
-import { buildRoleOpportunityInsightStatus } from '../modules/externalModels/roleOpportunity/playerDetailEnrichment';
+import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
 
 const includeRoleOpportunityValues = new Set(['1', 'true']);
 
@@ -99,21 +99,19 @@ router.get('/player/:id', async (req: Request, res: Response) => {
       });
     }
 
-    const responseData: Record<string, unknown> = {
-      ...player,
-    };
-
-    if (includeRoleOpportunity) {
-      responseData.roleOpportunityInsight = await buildRoleOpportunityInsightStatus({
-        playerId: player.canonicalId,
-        season: Number(req.query.season),
-        week: Number(req.query.week),
-      });
-    }
+    const enrichment = await orchestratePlayerDetailEnrichment({
+      playerId: player.canonicalId,
+      season: includeRoleOpportunity ? Number(req.query.season) : undefined,
+      week: includeRoleOpportunity ? Number(req.query.week) : undefined,
+      includeRoleOpportunity,
+    });
 
     res.json({
       success: true,
-      data: responseData
+      data: {
+        ...player,
+        ...enrichment,
+      }
     });
   } catch (error) {
     console.error('[PlayerIdentityRoutes] Error getting player:', error);

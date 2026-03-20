@@ -246,3 +246,19 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts` ✅
   - `npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/playerIdentityRoutes.test.ts` ✅
   - `npm run build` ✅ (with existing duplicate-class-member warning in `server/olc/adjusters.ts`)
+
+### 2026-03-20 — Player detail enrichment orchestrator for external insights
+- Added `server/modules/externalModels/playerDetailEnrichment/` with:
+  - `types.ts` defining stable request/result contracts for player-detail external insights.
+  - `playerDetailEnrichmentOrchestrator.ts` delegating enrichment assembly and keeping role-opportunity failure-tolerant.
+- Refactored `server/routes/playerIdentityRoutes.ts` so the route now parses/validates query params, fetches the base player identity, and delegates opt-in external insight assembly to the orchestrator.
+- Added/updated tests covering:
+  - empty orchestration result when no enrichments are requested
+  - happy-path role-opportunity orchestration
+  - preserved unavailable/error envelopes
+  - clear missing-season/week handling inside the orchestrator
+  - route compatibility for happy path, unavailable path, and missing-param validation
+- Updated docs (`README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`) to document the orchestrator as the extension point for future player-detail insights.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/playerDetailEnrichment/__tests__/playerDetailEnrichmentOrchestrator.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)

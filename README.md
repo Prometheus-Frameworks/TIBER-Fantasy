@@ -153,6 +153,8 @@ GET /api/player-identity/player/00-0036322?includeRoleOpportunity=true&season=20
 Behavior:
 - The base player detail payload is unchanged when `includeRoleOpportunity` is omitted.
 - Role-opportunity insight is fetched only when `includeRoleOpportunity=true`.
+- Player-detail external insights now flow through a reusable enrichment orchestrator under `server/modules/externalModels/playerDetailEnrichment/`, keeping the route thin and giving future enrichments a single plug-in point.
+- Role-opportunity is the first supported external insight in that orchestrator.
 - Enrichment is non-fatal: if the external model is disabled, times out, returns malformed data, or has no record, the player detail response still returns `200 OK` with the normal player payload.
 
 Added response field when requested:
