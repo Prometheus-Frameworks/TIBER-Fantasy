@@ -8,6 +8,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - Canonical contracts are validated at the edge before they reach application logic.
 - Failures are mapped into stable internal error categories.
 - Core code consumes stable TIBER-facing interfaces instead of raw remote payloads.
+- TIBER-Fantasy is the shell/orchestration core; standalone model brains should live outside core when practical, and any in-repo legacy model logic should be treated as temporary unless explicitly justified.
 
 ## First integration
 

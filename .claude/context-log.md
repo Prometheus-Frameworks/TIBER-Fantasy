@@ -195,3 +195,10 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/playerDetailEnrichment/*`, `server/routes/playerIdentityRoutes.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
 - **Validation:** Ran targeted Jest suites for the orchestrator, route, and role-opportunity envelope helper; ran production build.
 - **Notes:** Future player-detail enrichments should plug into the orchestrator rather than add direct conditionals inside `playerIdentityRoutes.ts`.
+
+
+### 2026-03-20 — Codex: Module classification audit + architecture doctrine
+- **What changed:** Added a repo-level module classification audit documenting which in-repo model-like systems are core, temporary legacy core, extract candidates, deprecations, deletes-after-replacement, or unknown. Added explicit architecture doctrine notes clarifying that TIBER-Fantasy is the shell/orchestration core and that standalone model brains should move behind adapters/orchestrators when practical.
+- **Files modified:** `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
+- **Validation:** Ran `git diff --check` and `npm run build` (passes with a pre-existing duplicate-class-member warning in `server/olc/adjusters.ts`).
+- **Notes:** This PR is documentation-only and does not move, delete, or rewrite business logic; `UNKNOWN` is used where runtime usage could not be confirmed from the audit.
