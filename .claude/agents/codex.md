@@ -208,3 +208,27 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run typecheck` (fails due pre-existing repository-wide TS errors)
   - `npm test` (fails in existing suites; includes `DATABASE_URL`-dependent failure)
   - `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails due pre-existing global typings/dependency issues)
+
+### 2026-03-20 — External model adapter layer for role opportunity
+- Added `server/modules/externalModels/` as the first dedicated boundary for promoted lab/model repos.
+- Implemented `Role-and-opportunity-model` integration as a focused client/adapter/service stack:
+  - `roleOpportunityClient.ts` for env-based config, timeout handling, and HTTP→typed error mapping.
+  - `roleOpportunityAdapter.ts` for canonical payload validation and stable TIBER insight mapping.
+  - `roleOpportunityService.ts` for the internal interface consumed by routes.
+- Added contained integration routes in `server/routes/roleOpportunityIntegrationRoutes.ts`:
+  - `GET /api/integrations/role-opportunity/:playerId?season=2025&week=17`
+  - `GET /api/integrations/role-opportunity/health`
+- Registered the new route module in `server/routes.ts` without widening the integration surface elsewhere.
+- Updated docs/conventions (`README.md`, `replit.md`, `.claude/conventions.md`) to document the adapter pattern and required env vars.
+- Added tests covering:
+  - canonical payload → internal insight mapping
+  - malformed payload rejection
+  - timeout mapping
+  - 404 mapping
+  - integration endpoint envelope
+  - disabled/missing-config behavior
+- Validation:
+  - `npm test -- roleOpportunityAdapter.test.ts` ✅
+  - `npm test -- roleOpportunityIntegrationRoutes.test.ts` ✅
+  - `npm run build` ✅
+  - `curl http://127.0.0.1:<port>/api/integrations/role-opportunity/health` against a minimal local Express mount ✅

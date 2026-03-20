@@ -70,6 +70,12 @@ FANTASYPROS_API_KEY=
 MSF_USERNAME=
 MSF_PASSWORD=
 SPORTSDATA_API_KEY=
+
+# Optional — promoted lab / external model adapters
+ROLE_OPPORTUNITY_MODEL_BASE_URL=
+ROLE_OPPORTUNITY_MODEL_ENDPOINT_PATH=/api/role-opportunity
+ROLE_OPPORTUNITY_MODEL_TIMEOUT_MS=5000
+ROLE_OPPORTUNITY_MODEL_ENABLED=1
 ```
 
 ### Install & Run
@@ -123,6 +129,18 @@ Tiber Fantasy uses a 3-tier ELT pipeline:
 - **Gold** — Aggregated metrics consumed by FORGE and the API layer
 
 Player identity is unified across fantasy platforms via a `player_identity_map` table keyed on GSIS ID (`00-XXXXXXX` format).
+
+### External Model Adapter Layer
+
+TIBER-Fantasy now routes promoted lab/model integrations through a dedicated adapter boundary under `server/modules/externalModels/`. The first live adapter wraps `Role-and-opportunity-model` and exposes a stable `TiberRoleOpportunityInsight` interface instead of leaking raw upstream payloads into core logic.
+
+The adapter pattern is intentionally small and repeatable:
+- **Client** handles base URL config, timeout control, and HTTP-to-internal error mapping.
+- **Adapter** validates the canonical payload at the edge and maps it into a TIBER-facing shape.
+- **Service** exposes a stable internal interface for routes and future enrichments.
+- **Integration route** provides one contained surface at `GET /api/integrations/role-opportunity/:playerId?season=2025&week=17`.
+
+This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
 
 ---
 

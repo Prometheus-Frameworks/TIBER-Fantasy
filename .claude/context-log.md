@@ -177,3 +177,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/api/v1/routes.ts`, `server/api/v1/mappers/toTradeAnalysisResponse.ts`
 - **Validation:** Ran `npm run typecheck` (fails due broad pre-existing repo TypeScript issues), `npm test` (partial pass; failures include DB-dependent tests due missing `DATABASE_URL` plus existing suite failures), and targeted `npx tsc --noEmit server/api/v1/routes.ts server/api/v1/mappers/toTradeAnalysisResponse.ts` (fails from existing global typing/dependency conflicts).
 - **Notes:** Legacy trade surfaces remain untouched; this is additive via `/api/v1/intelligence/trade/analyze`.
+
+### 2026-03-20 — Codex: External model adapter layer for role opportunity
+- **What changed:** Added a dedicated external model adapter layer for promoted lab integrations, implemented the first `Role-and-opportunity-model` client/adapter/service stack with canonical edge validation and typed failure mapping, and exposed a contained integration endpoint plus readiness/config status route.
+- **Files modified:** `server/modules/externalModels/**`, `server/routes/roleOpportunityIntegrationRoutes.ts`, `server/routes.ts`, `README.md`, `replit.md`, `.claude/conventions.md`
+- **Validation:** Ran targeted Jest suites for the adapter/service and integration route, built the production bundle, and smoke-tested the readiness endpoint with curl against a minimal Express app.
+- **Notes:** The adapter normalizes share-style metrics into 0..1 decimals for TIBER-facing output while preserving optional raw canonical payloads for debugging.
