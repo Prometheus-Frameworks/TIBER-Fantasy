@@ -262,3 +262,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/playerDetailEnrichment/__tests__/playerDetailEnrichmentOrchestrator.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/modules/externalModels/roleOpportunity/__tests__/playerDetailEnrichment.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+
+
+### 2026-03-20 — Module classification audit + architecture doctrine
+- Added `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` to classify major in-repo model-like systems as `CORE`, `LEGACY_CORE_TEMP`, `EXTRACT`, `DEPRECATE_NOW`, `DELETE_AFTER_REPLACEMENT`, or `UNKNOWN`.
+- Documented the cleanup map with executive summary, classification table, extraction priorities, safe-to-keep core list, orphan/unclear list, and staged cleanup plan.
+- Updated `README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` with a short doctrine note: TIBER-Fantasy is the shell/orchestration core, while standalone model brains should live outside core when practical and be consumed through adapters/orchestrators.
+- Validation run:
+  - `git diff --check` ✅
+  - `npm run build` ✅ (existing duplicate class member warning remains in `server/olc/adjusters.ts`)

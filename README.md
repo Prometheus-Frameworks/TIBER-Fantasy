@@ -142,6 +142,8 @@ The adapter pattern is intentionally small and repeatable:
 
 This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
 
+**Doctrine note:** TIBER-Fantasy is the product shell and orchestration core. Standalone model brains should live outside this repo when practical and be consumed through adapters/orchestrators. Any in-repo legacy model stacks are temporary unless they have an explicit core justification. See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` for the current cleanup map.
+
 ### Player detail enrichment
 
 `GET /api/player-identity/player/:id` now supports an explicit opt-in enrichment:
