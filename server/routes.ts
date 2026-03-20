@@ -84,6 +84,7 @@ import idpAdminRoutes from './routes/idpAdminRoutes';
 import idpForgeRoutes from './modules/forge/idp/idpForgeRoutes';
 import catalystRoutes from './modules/catalyst/catalystRoutes';
 import fireRoutes from './routes/fireRoutes';
+import { roleOpportunityIntegrationRouter } from './routes/roleOpportunityIntegrationRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -217,6 +218,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ownership Analytics - History and churn endpoints
   app.use('/api/ownership', ownershipRouter);
   console.log('📊 Ownership analytics routes mounted at /api/ownership/*');
+
+  // External model adapter integrations
+  app.use(roleOpportunityIntegrationRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS

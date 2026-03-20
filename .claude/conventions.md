@@ -25,6 +25,12 @@ Routes go in `server/routes/<name>Routes.ts` and register in `server/routes.ts`.
 - Use Zod schemas for request validation (see `server/routes/personnelRoutes.ts` for example)
 - Return consistent JSON error shapes: `{ error: string, details?: any }`
 
+### External Model Integrations
+- Promoted lab/model repos must be wrapped by a dedicated adapter boundary under `server/modules/externalModels/`
+- Split responsibilities into **client** (transport/config/error mapping), **adapter** (canonical validation + mapping), and **service** (stable internal interface)
+- Never call external model services directly from unrelated routes/components
+- Map failures into stable internal error codes instead of leaking raw fetch/axios exceptions
+
 ### Player Identity
 - Always use GSIS format for player IDs: `00-XXXXXXX`
 - Resolve player names/positions via `player_identity_map` table
