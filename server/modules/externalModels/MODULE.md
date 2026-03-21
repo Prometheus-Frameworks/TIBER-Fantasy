@@ -14,6 +14,11 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 
 `roleOpportunity/` wraps the `Role-and-opportunity-model` service and exposes a stable `TiberRoleOpportunityInsight` shape.
 
+## Next planned externalization target
+
+- FORGE is the next major legacy in-repo model target. The transition contract and staged migration plan live in `docs/architecture/FORGE_EXTERNALIZATION_TRANSITION_SPEC.md`.
+- That future integration should follow the same client -> adapter -> service pattern used by `roleOpportunity/`, while preserving TIBER-owned orchestration and route compatibility.
+
 ## Pattern for future promoted labs
 
 1. Add a dedicated client for transport + timeout + config handling.
