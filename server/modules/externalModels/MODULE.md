@@ -43,4 +43,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - `server/modules/externalModels/forge/forgeClient.ts` handles transport/config/timeout/error mapping for the standalone FORGE service.
 - `server/modules/externalModels/forge/forgeAdapter.ts` validates the external contract and maps it into a stable TIBER-facing evaluation type.
 - `server/modules/externalModels/forge/forgeCompareService.ts` dual-runs legacy and external FORGE side by side and computes stable diff metadata for migration analysis.
+- `server/modules/externalModels/forge/fixtures/forgeParityFixtures.ts` provides a committed parity fixture pack with labeled request cases and migration notes.
+- `server/modules/externalModels/forge/forgeParityHarness.ts` runs the compare service across that fixture pack and emits deterministic summary output suitable for tests or migration snapshots.
+- `server/modules/externalModels/forge/runForgeParityHarness.ts` is the optional local runner (`tsx ...`) for concise parity reports during migration work.
 - `POST /api/integrations/forge/compare` is the contained migration endpoint; it is not a production cutover path.
