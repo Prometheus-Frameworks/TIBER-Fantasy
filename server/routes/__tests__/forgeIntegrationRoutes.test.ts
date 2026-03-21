@@ -73,6 +73,61 @@ function buildService(overrides: Partial<any> = {}) {
       startupConfigLogged: true,
     }),
     compare: jest.fn().mockResolvedValue(buildCompareResponse()),
+    generateReport: jest.fn().mockResolvedValue({
+      generatedAt: '2026-03-21T00:00:00.000Z',
+      integration: {
+        enabled: true,
+        baseUrlConfigured: true,
+        endpointPath: '/v1/forge/evaluations',
+        timeoutMs: 5000,
+        readiness: 'ready',
+        startupConfigLogged: true,
+        harnessRan: true,
+        skippedReason: null,
+      },
+      summary: {
+        totalFixtures: 2,
+        comparableCount: 2,
+        closeCount: 1,
+        driftCount: 1,
+        unavailableCount: 0,
+        notComparableCount: 0,
+        averageAbsoluteScoreDelta: 3.75,
+        worstScoreDelta: {
+          fixtureId: 'fixture-drift',
+          fixtureName: 'Fixture drift',
+          delta: 6.5,
+          absoluteDelta: 6.5,
+        },
+      },
+      results: [
+        {
+          fixtureId: 'fixture-close',
+          fixtureName: 'Fixture close',
+          fixtureNote: 'close',
+          request: {
+            playerId: '00-0036322',
+            position: 'WR',
+            season: 2025,
+            week: 'season',
+            mode: 'redraft',
+            includeSourceMeta: true,
+            includeRawCanonical: false,
+          },
+          parityStatus: 'close',
+          comparable: true,
+          scoreDelta: 1,
+          absoluteScoreDelta: 1,
+          confidenceDelta: 0.01,
+          componentDeltas: { volume: 1, efficiency: 1, teamContext: 0, stability: 1 },
+          notes: ['Within tolerance.'],
+          legacyAvailable: true,
+          externalAvailable: true,
+          legacyStatus: 'ok',
+          externalStatus: 'ok',
+        },
+      ],
+    }),
     ...overrides,
   };
 }
@@ -97,7 +152,7 @@ describe('forge integration routes', () => {
     const service = buildService();
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/compare', {
       method: 'POST',
@@ -139,7 +194,7 @@ describe('forge integration routes', () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/compare', {
       method: 'POST',
@@ -159,6 +214,121 @@ describe('forge integration routes', () => {
     expect(res.body.data.comparison.parityStatus).toBe('unavailable');
   });
 
+
+  it('returns a deterministic parity report contract for migration inspection', async () => {
+    const service = buildService();
+    const app = express();
+    app.use(express.json());
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+
+    const res = await call(app, '/api/integrations/forge/parity-report');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: {
+        generatedAt: '2026-03-21T00:00:00.000Z',
+        integration: {
+          enabled: true,
+          baseUrlConfigured: true,
+          readiness: 'ready',
+          harnessRan: true,
+          skippedReason: null,
+        },
+        summary: {
+          totalFixtures: 2,
+          comparableCount: 2,
+          closeCount: 1,
+          driftCount: 1,
+          unavailableCount: 0,
+          notComparableCount: 0,
+          averageAbsoluteScoreDelta: 3.75,
+        },
+        results: [
+          expect.objectContaining({ fixtureId: 'fixture-close', parityStatus: 'close', scoreDelta: 1 }),
+        ],
+      },
+      meta: expect.objectContaining({
+        integration: 'forge',
+        mode: 'migration_parity_report',
+      }),
+    });
+  });
+
+  it('returns a clear disabled parity report when external FORGE is unavailable by config', async () => {
+    const service = buildService({
+      generateReport: jest.fn().mockResolvedValue({
+        generatedAt: '2026-03-21T00:00:00.000Z',
+        integration: {
+          enabled: false,
+          baseUrlConfigured: false,
+          endpointPath: '/v1/forge/evaluations',
+          timeoutMs: 5000,
+          readiness: 'not_ready',
+          startupConfigLogged: true,
+          harnessRan: false,
+          skippedReason: 'integration_disabled',
+        },
+        summary: {
+          totalFixtures: 2,
+          comparableCount: 0,
+          closeCount: 0,
+          driftCount: 0,
+          unavailableCount: 2,
+          notComparableCount: 0,
+          averageAbsoluteScoreDelta: null,
+          worstScoreDelta: null,
+        },
+        results: [
+          {
+            fixtureId: 'fixture-close',
+            fixtureName: 'Fixture close',
+            fixtureNote: 'close',
+            request: {
+              playerId: '00-0036322',
+              position: 'WR',
+              season: 2025,
+              week: 'season',
+              mode: 'redraft',
+              includeSourceMeta: true,
+              includeRawCanonical: false,
+            },
+            parityStatus: 'unavailable',
+            comparable: false,
+            scoreDelta: null,
+            absoluteScoreDelta: null,
+            confidenceDelta: null,
+            componentDeltas: null,
+            notes: ['External FORGE parity report skipped because the integration is disabled.'],
+            legacyAvailable: false,
+            externalAvailable: false,
+            legacyStatus: null,
+            externalStatus: null,
+            externalErrorCategory: 'config_error',
+          },
+        ],
+      }),
+    });
+    const app = express();
+    app.use(express.json());
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+
+    const res = await call(app, '/api/integrations/forge/parity-report');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.integration).toMatchObject({
+      enabled: false,
+      baseUrlConfigured: false,
+      harnessRan: false,
+      skippedReason: 'integration_disabled',
+    });
+    expect(res.body.data.summary).toMatchObject({ unavailableCount: 2, comparableCount: 0 });
+    expect(res.body.data.results[0]).toMatchObject({
+      parityStatus: 'unavailable',
+      externalErrorCategory: 'config_error',
+    });
+  });
+
   it('returns sensible health/config output', async () => {
     const service = buildService({
       getStatus: jest.fn().mockReturnValue({
@@ -173,7 +343,7 @@ describe('forge integration routes', () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/health');
 

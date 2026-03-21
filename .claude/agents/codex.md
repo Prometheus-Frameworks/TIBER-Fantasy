@@ -308,3 +308,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Files modified:** `server/modules/externalModels/forge/forgeParityHarness.ts`, `server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts`, `server/modules/externalModels/forge/README.md`, `server/modules/externalModels/MODULE.md`, `README.md`, `replit.md`, `package.json`
 - **Validation:** Ran targeted Jest parity suites with snapshot update and ran `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** This keeps the existing compare endpoint contract intact; the new `results` field is additive and mirrors `perFixture` for deterministic migration reporting.
+
+### 2026-03-21 — FORGE parity report endpoint + exporter
+- Added `forgeParityReportService.ts` to wrap the existing parity harness in a stable migration-only contract with `generatedAt`, integration readiness metadata, summary counts, and deterministic `results`.
+- Added `GET /api/integrations/forge/parity-report` in `server/routes/forgeIntegrationRoutes.ts` without changing legacy `/api/forge/*` behavior or the existing compare endpoint.
+- Added `forgeParityReportExporter.ts` plus `runForgeParityReport.ts` and `npm run forge:parity:report` for local stdout/JSON export of the parity report contract.
+- Expanded focused Jest coverage for the new report route, report service, and exporter while keeping the compare/health route tests intact.
+- Updated `README.md`, `server/modules/externalModels/forge/README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` to document the migration-only endpoint, exporter usage, and parity-status interpretation.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/forgeIntegrationRoutes.test.ts server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts server/modules/externalModels/forge/__tests__/forgeParityReportService.test.ts server/modules/externalModels/forge/__tests__/forgeParityReportExporter.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅

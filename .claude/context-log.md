@@ -231,3 +231,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/forge/forgeParityHarness.ts`, `server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts`, `server/modules/externalModels/forge/README.md`, `server/modules/externalModels/MODULE.md`, `README.md`, `replit.md`, `package.json`
 - **Validation:** Ran targeted Jest parity suites with snapshot update and ran `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** This keeps the existing compare endpoint contract intact; the new `results` field is additive and mirrors `perFixture` for deterministic migration reporting.
+
+### 2026-03-21 — Codex: FORGE parity report endpoint + exporter
+- **What changed:** Added a migration-only `GET /api/integrations/forge/parity-report` route plus a dedicated parity report service that wraps the existing FORGE parity harness in a stable readiness-aware contract. Added a small report exporter/runner for local stdout or JSON inspection without changing production `/api/forge/*` behavior.
+- **Files modified:** `server/modules/externalModels/forge/*`, `server/routes/forgeIntegrationRoutes.ts`, `server/routes/__tests__/forgeIntegrationRoutes.test.ts`, `README.md`, `server/modules/externalModels/forge/README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`, `package.json`
+- **Validation:** Ran targeted Jest suites for the integration route, parity harness, report service, and exporter; ran `npm run build`; ran `git diff --check`.
+- **Notes:** When external FORGE is disabled or `FORGE_SERVICE_BASE_URL` is missing, the parity report returns a deterministic unavailable summary with `harnessRan=false` and `skippedReason` metadata instead of throwing.

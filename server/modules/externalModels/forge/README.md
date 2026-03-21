@@ -1,12 +1,60 @@
-# External FORGE migration parity harness
+# External FORGE migration parity tooling
 
-This folder now includes a small deterministic parity pack for the compare-only external FORGE migration path.
+This folder includes deterministic migration-only parity tooling for the compare-only external FORGE rollout.
 
 ## What is here
 
 - `fixtures/forgeParityFixtures.ts` — labeled migration fixtures with IDs, requests, and notes.
 - `forgeParityHarness.ts` — runs the existing compare service across the fixture pack and aggregates a stable summary.
-- `runForgeParityHarness.ts` — optional dev entrypoint that prints deterministic snapshot-style output.
+- `forgeParityReportService.ts` — wraps the harness in a stable report contract with generated-at and integration readiness metadata.
+- `forgeParityReportExporter.ts` — renders the report for stdout or writes JSON for local inspection.
+- `runForgeParityHarness.ts` — optional dev entrypoint that prints deterministic harness snapshot output.
+- `runForgeParityReport.ts` — optional dev entrypoint that prints or exports the stable parity report contract.
+
+## Migration-only endpoint
+
+- `GET /api/integrations/forge/parity-report`
+
+This route is additive and migration-only. It does **not** replace legacy FORGE and does **not** change existing `/api/forge/*` production behavior.
+
+Example response shape:
+
+```json
+{
+  "success": true,
+  "data": {
+    "generatedAt": "2026-03-21T00:00:00.000Z",
+    "integration": {
+      "enabled": true,
+      "baseUrlConfigured": true,
+      "endpointPath": "/v1/forge/evaluations",
+      "timeoutMs": 5000,
+      "readiness": "ready",
+      "startupConfigLogged": true,
+      "harnessRan": true,
+      "skippedReason": null
+    },
+    "summary": {
+      "totalFixtures": 8,
+      "comparableCount": 6,
+      "closeCount": 4,
+      "driftCount": 2,
+      "unavailableCount": 1,
+      "notComparableCount": 1,
+      "averageAbsoluteScoreDelta": 2.417,
+      "worstScoreDelta": {
+        "fixtureId": "rb-christian-mccaffrey-bestball-ceiling",
+        "fixtureName": "Christian McCaffrey best ball ceiling check",
+        "delta": 6.5,
+        "absoluteDelta": 6.5
+      }
+    },
+    "results": []
+  }
+}
+```
+
+If external FORGE is disabled or `FORGE_SERVICE_BASE_URL` is missing, the report still returns a deterministic contract. In that case `integration.harnessRan` is `false`, `integration.skippedReason` explains why, and each fixture result is marked `unavailable` with `config_error` metadata.
 
 ## How to run it
 
@@ -14,19 +62,23 @@ From the repo root:
 
 ```bash
 npm run forge:parity
-# or
-tsx server/modules/externalModels/forge/runForgeParityHarness.ts
+npm run forge:parity:report
+npm run forge:parity:report -- --json --out tmp/forge-parity-report.json
 ```
 
-The harness intentionally uses the existing compare path rather than a new production endpoint contract. It does **not** switch live FORGE traffic. It is for migration analysis only.
+- `forge:parity` prints the raw deterministic harness summary.
+- `forge:parity:report` prints the stable report contract plus a short human-readable summary.
+- `--json` prints machine-friendly JSON to stdout.
+- `--out <path>` writes the report contract to JSON on disk for local inspection.
 
-## How to use it during migration
+## How to interpret the report
 
-- Run the harness before and after external FORGE changes.
-- Treat the output as a compact regression snapshot for parity drift.
-- Review `close`, `drift`, `unavailable`, and `not_comparable` counts along with the worst delta fixture.
-- Use the deterministic `results` array for per-fixture debug metadata such as `scoreDelta`, `confidenceDelta`, `componentDeltas`, availability, and notes.
+- `close` — both legacy and external FORGE returned comparable results within the current migration tolerance.
+- `drift` — both sides returned data, but alpha/tier/pillar deltas exceeded tolerance.
+- `unavailable` — one side failed, or external FORGE was disabled/unconfigured.
+- `not_comparable` — both sides responded, but the outputs should not be compared directly.
 
 ## Deterministic output
 
-The harness exposes `formatForgeParitySnapshot(summary)` so tests or migration logs can persist the same stable summary shape each run.
+- `formatForgeParitySnapshot(summary)` keeps the raw harness summary stable.
+- `formatForgeParityReportJson(report)` keeps the higher-level route/export contract stable.

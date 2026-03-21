@@ -149,11 +149,19 @@ This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
 - `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.
-- `npm run forge:parity` (or `tsx server/modules/externalModels/forge/runForgeParityHarness.ts`) — runs a labeled parity fixture pack through the compare service and prints deterministic snapshot-style output for migration tracking.
+- `GET /api/integrations/forge/parity-report` — returns a stable migration-only parity summary contract built from the committed fixture pack and existing parity harness.
+- `npm run forge:parity` (or `tsx server/modules/externalModels/forge/runForgeParityHarness.ts`) — runs the raw labeled parity harness through the compare service and prints deterministic snapshot-style output for migration tracking.
+- `npm run forge:parity:report` (or `tsx server/modules/externalModels/forge/runForgeParityReport.ts --json --out tmp/forge-parity-report.json`) — exports the stable parity report contract for local inspection or JSON snapshots.
 
 The compare response keeps each side isolated (`legacy`, `external`) and adds stable diff metadata (`scoreDelta`, `componentDeltas`, `confidenceDelta`, `parityStatus`, `notes`) so migration analysis can happen without switching live product behavior.
 
-The FORGE migration tooling now also includes a committed fixture pack plus a repeatable parity harness under `server/modules/externalModels/forge/`. Use it to re-run the same compact corpus of compare requests over time and track close/drift/unavailable outcomes without relying on ad hoc one-off checks. The deterministic summary output includes a stable `results` array with per-fixture delta metadata for migration debugging and reporting.
+The FORGE migration tooling now also includes a committed fixture pack plus a repeatable parity harness/report layer under `server/modules/externalModels/forge/`. Use it to re-run the same compact corpus of compare requests over time and track close/drift/unavailable outcomes without relying on ad hoc one-off checks. The stable parity report returns integration readiness metadata, aggregate summary counts, and a deterministic `results` array with per-fixture delta metadata for migration debugging and reporting.
+
+Parity interpretation guide:
+- `close` — both legacy and external FORGE returned comparable results within the current migration tolerance.
+- `drift` — both sides returned data, but alpha/tier/pillar deltas exceeded the migration tolerance and deserve inspection.
+- `unavailable` — at least one side could not return a usable evaluation, or the external integration is disabled/not configured.
+- `not_comparable` — both sides returned data, but the outputs cannot be compared safely (for example, mismatched positions).
 
 **Doctrine note:** TIBER-Fantasy is the product shell and orchestration core. Standalone model brains should live outside this repo when practical and be consumed through adapters/orchestrators. Any in-repo legacy model stacks are temporary unless they have an explicit core justification. See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` for the current cleanup map.
 
