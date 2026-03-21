@@ -20,7 +20,8 @@
     "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts",
     "qa:fantasy-lab": "tsx server/scripts/qaFantasyLabPhase1.ts",
     "qa:fantasy-lab-phase3": "tsx server/scripts/qaFantasyLabPhase3.ts",
-    "forge:parity": "tsx server/modules/externalModels/forge/runForgeParityHarness.ts"
+    "forge:parity": "tsx server/modules/externalModels/forge/runForgeParityHarness.ts",
+    "forge:parity:report": "tsx server/modules/externalModels/forge/runForgeParityReport.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",

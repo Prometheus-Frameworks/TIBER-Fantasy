@@ -45,5 +45,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - `server/modules/externalModels/forge/forgeCompareService.ts` dual-runs legacy and external FORGE side by side and computes stable diff metadata for migration analysis.
 - `server/modules/externalModels/forge/fixtures/forgeParityFixtures.ts` provides a committed parity fixture pack with labeled request cases and migration notes.
 - `server/modules/externalModels/forge/forgeParityHarness.ts` runs the compare service across that fixture pack and emits deterministic summary output suitable for tests or migration snapshots, including a stable per-fixture `results` array with delta/debug metadata.
-- `server/modules/externalModels/forge/runForgeParityHarness.ts` is the optional local runner (`npm run forge:parity` or `tsx ...`) for concise parity reports during migration work.
-- `POST /api/integrations/forge/compare` is the contained migration endpoint; it is not a production cutover path.
+- `server/modules/externalModels/forge/forgeParityReportService.ts` wraps the existing harness in a stable report contract with readiness/config metadata and safe skipped-report behavior when the external integration is disabled or unconfigured.
+- `server/modules/externalModels/forge/runForgeParityHarness.ts` is the optional local runner (`npm run forge:parity` or `tsx ...`) for concise parity summaries during migration work.
+- `server/modules/externalModels/forge/runForgeParityReport.ts` / `npm run forge:parity:report` export the stable parity report contract for local inspection or JSON snapshots.
+- `POST /api/integrations/forge/compare` and `GET /api/integrations/forge/parity-report` are contained migration endpoints; neither is a production cutover path.
