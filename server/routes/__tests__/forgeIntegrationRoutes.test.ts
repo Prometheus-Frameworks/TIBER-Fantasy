@@ -128,6 +128,79 @@ function buildService(overrides: Partial<any> = {}) {
         },
       ],
     }),
+    generateReview: jest.fn().mockResolvedValue({
+      generatedAt: '2026-03-21T00:00:00.000Z',
+      filters: {
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        limit: 2,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      integration: {
+        enabled: true,
+        baseUrlConfigured: true,
+        endpointPath: '/v1/forge/evaluations',
+        timeoutMs: 5000,
+        readiness: 'ready',
+        startupConfigLogged: true,
+        reviewRan: true,
+        skippedReason: null,
+      },
+      sampledPlayers: [
+        { playerId: '00-0036322', playerName: 'Justin Jefferson', team: 'MIN', position: 'WR' },
+        { playerId: '00-0033280', playerName: "Ja'Marr Chase", team: 'CIN', position: 'WR' },
+      ],
+      summary: {
+        totalPlayers: 2,
+        comparableCount: 2,
+        closeCount: 1,
+        driftCount: 1,
+        unavailableCount: 0,
+        notComparableCount: 0,
+        averageAbsoluteScoreDelta: 5.25,
+        worstScoreDelta: {
+          playerId: '00-0033280',
+          playerName: "Ja'Marr Chase",
+          delta: 9,
+          absoluteDelta: 9,
+        },
+      },
+      results: [
+        {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+          team: 'MIN',
+          position: 'WR',
+          legacy: buildCompareResponse().legacy,
+          external: buildCompareResponse().external,
+          comparison: buildCompareResponse().comparison,
+        },
+        {
+          playerId: '00-0033280',
+          playerName: "Ja'Marr Chase",
+          team: 'CIN',
+          position: 'WR',
+          legacy: buildCompareResponse().legacy,
+          external: {
+            available: false,
+            error: {
+              category: 'upstream_timeout',
+              message: 'External FORGE timed out after 5000ms.',
+            },
+          },
+          comparison: {
+            notes: ['Alpha drift is 9 points.'],
+            parityStatus: 'drift',
+            scoreDelta: 9,
+            componentDeltas: { volume: 11, efficiency: 9, teamContext: 7, stability: 9 },
+            confidenceDelta: 0.11,
+          },
+        },
+      ],
+    }),
     ...overrides,
   };
 }
@@ -152,7 +225,7 @@ describe('forge integration routes', () => {
     const service = buildService();
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/compare', {
       method: 'POST',
@@ -194,7 +267,7 @@ describe('forge integration routes', () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/compare', {
       method: 'POST',
@@ -219,7 +292,7 @@ describe('forge integration routes', () => {
     const service = buildService();
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/parity-report');
 
@@ -311,7 +384,7 @@ describe('forge integration routes', () => {
     });
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/parity-report');
 
@@ -329,6 +402,80 @@ describe('forge integration routes', () => {
     });
   });
 
+  it('returns a stable migration review contract for sampled player comparisons', async () => {
+    const service = buildService();
+    const app = express();
+    app.use(express.json());
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
+
+    const res = await call(app, '/api/integrations/forge/review?position=WR&season=2025&week=17&limit=2&mode=redraft');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      success: true,
+      data: {
+        generatedAt: '2026-03-21T00:00:00.000Z',
+        filters: {
+          position: 'WR',
+          season: 2025,
+          week: 17,
+          limit: 2,
+          mode: 'redraft',
+        },
+        integration: {
+          enabled: true,
+          baseUrlConfigured: true,
+          reviewRan: true,
+          skippedReason: null,
+        },
+        summary: {
+          totalPlayers: 2,
+          comparableCount: 2,
+          closeCount: 1,
+          driftCount: 1,
+          unavailableCount: 0,
+          notComparableCount: 0,
+          averageAbsoluteScoreDelta: 5.25,
+        },
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            playerId: '00-0036322',
+            comparison: expect.objectContaining({ parityStatus: 'close' }),
+          }),
+        ]),
+      },
+      meta: expect.objectContaining({
+        integration: 'forge',
+        mode: 'migration_review',
+      }),
+    });
+    expect(service.generateReview).toHaveBeenCalledWith({
+      position: 'WR',
+      season: 2025,
+      week: 17,
+      limit: 2,
+      mode: 'redraft',
+      includeSourceMeta: true,
+      includeRawCanonical: false,
+    });
+  });
+
+  it('validates migration review filters before executing the service', async () => {
+    const service = buildService();
+    const app = express();
+    app.use(express.json());
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
+
+    const res = await call(app, '/api/integrations/forge/review?position=K&season=2025&limit=100');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      success: false,
+      error: 'Invalid FORGE migration review request.',
+    });
+    expect(service.generateReview).not.toHaveBeenCalled();
+  });
+
   it('returns sensible health/config output', async () => {
     const service = buildService({
       getStatus: jest.fn().mockReturnValue({
@@ -343,7 +490,7 @@ describe('forge integration routes', () => {
 
     const app = express();
     app.use(express.json());
-    app.use(createForgeIntegrationRouter(service as any, service as any, service as any));
+    app.use(createForgeIntegrationRouter(service as any, service as any, service as any, service as any));
 
     const res = await call(app, '/api/integrations/forge/health');
 

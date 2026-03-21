@@ -150,12 +150,22 @@ FORGE now has its first migration-safe external adapter under `server/modules/ex
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
 - `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.
 - `GET /api/integrations/forge/parity-report` — returns a stable migration-only parity summary contract built from the committed fixture pack and existing parity harness.
+- `GET /api/integrations/forge/review?position=WR&season=2025&week=17&limit=10&mode=redraft` — samples 1-25 players from the existing legacy FORGE batch source, reuses the compare service for each player, and returns one migration-only review payload with stable summary metrics plus per-player parity results.
 - `npm run forge:parity` (or `tsx server/modules/externalModels/forge/runForgeParityHarness.ts`) — runs the raw labeled parity harness through the compare service and prints deterministic snapshot-style output for migration tracking.
 - `npm run forge:parity:report` (or `tsx server/modules/externalModels/forge/runForgeParityReport.ts --json --out tmp/forge-parity-report.json`) — exports the stable parity report contract for local inspection or JSON snapshots.
 
 The compare response keeps each side isolated (`legacy`, `external`) and adds stable diff metadata (`scoreDelta`, `componentDeltas`, `confidenceDelta`, `parityStatus`, `notes`) so migration analysis can happen without switching live product behavior.
 
 The FORGE migration tooling now also includes a committed fixture pack plus a repeatable parity harness/report layer under `server/modules/externalModels/forge/`. Use it to re-run the same compact corpus of compare requests over time and track close/drift/unavailable outcomes without relying on ad hoc one-off checks. The stable parity report returns integration readiness metadata, aggregate summary counts, and a deterministic `results` array with per-fixture delta metadata for migration debugging and reporting.
+
+The migration review endpoint is meant for operator review only. It does **not** switch defaults, does **not** replace rankings, does **not** persist history, and does **not** add any frontend UI. Use it when you want to quickly inspect drift patterns for a small sampled cohort (for example 10-25 WRs in a given season/week) without clicking through player detail one player at a time.
+
+Recommended review workflow:
+- Choose one offensive position (`QB`, `RB`, `WR`, or `TE`).
+- Pass `season`, optional `week` (`season` or a week number), and `limit` between `1` and `25`.
+- Keep `mode` aligned with the migration question you are inspecting (`redraft`, `dynasty`, or `bestball`).
+- Treat `summary` as the top-level scan, then inspect `results[*].comparison.notes`, `scoreDelta`, and `componentDeltas` for the worst offenders.
+- If external FORGE is disabled or unconfigured, the route still returns a stable unavailable review contract instead of crashing so operators can see why the batch was skipped.
 
 Parity interpretation guide:
 - `close` — both legacy and external FORGE returned comparable results within the current migration tolerance.

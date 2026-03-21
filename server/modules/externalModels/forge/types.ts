@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+const booleanQueryParamSchema = z.preprocess((value) => {
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'true') return true;
+    if (value.toLowerCase() === 'false') return false;
+  }
+
+  return value;
+}, z.boolean());
+
 export const forgeCompareModeSchema = z.enum(['redraft', 'dynasty', 'bestball']);
 export const forgeCanonicalModeSchema = z.enum(['redraft', 'dynasty', 'best_ball']);
 export const forgePositionSchema = z.enum(['QB', 'RB', 'WR', 'TE']);
@@ -18,10 +27,21 @@ export const forgeComparisonRequestSchema = z.object({
   includeRawCanonical: z.boolean().optional().default(false),
 });
 
+export const forgeMigrationReviewRequestSchema = z.object({
+  position: forgePositionSchema,
+  season: z.coerce.number().int().min(2000).max(2100),
+  week: z.union([z.coerce.number().int().min(1).max(25), z.literal('season')]).default('season'),
+  limit: z.coerce.number().int().min(1).max(25).default(10),
+  mode: forgeCompareModeSchema.default('redraft'),
+  includeSourceMeta: booleanQueryParamSchema.optional().default(true),
+  includeRawCanonical: booleanQueryParamSchema.optional().default(false),
+});
+
 export type TiberForgeComparisonRequest = z.infer<typeof forgeComparisonRequestSchema>;
 export type TiberForgeMode = z.infer<typeof forgeCompareModeSchema>;
 export type TiberForgePosition = z.infer<typeof forgePositionSchema>;
 export type TiberForgeWeek = z.infer<typeof forgeWeekSchema>;
+export type TiberForgeMigrationReviewRequest = z.infer<typeof forgeMigrationReviewRequestSchema>;
 
 const canonicalIssueSchema = z.object({
   code: z.string().min(1),
