@@ -8,6 +8,7 @@ This folder includes deterministic migration-only review/parity tooling for the 
 - `forgeParityHarness.ts` — runs the existing compare service across the fixture pack and aggregates a stable summary.
 - `forgeParityReportService.ts` — wraps the harness in a stable report contract with generated-at and integration readiness metadata.
 - `forgeMigrationReviewService.ts` — samples players from the existing legacy FORGE batch source, reuses the compare service for each player, and aggregates a stable operator review payload.
+- `forgeSourceSelector.ts` — stable source-selection policy layer for contained cutover previews, with `legacy`, `external_preview`, and `auto_with_legacy_fallback` modes.
 - `forgeParityReportExporter.ts` — renders the report for stdout or writes JSON for local inspection.
 - `runForgeParityHarness.ts` — optional dev entrypoint that prints deterministic harness snapshot output.
 - `runForgeParityReport.ts` — optional dev entrypoint that prints or exports the stable parity report contract.
@@ -112,9 +113,19 @@ npm run forge:parity:report -- --json --out tmp/forge-parity-report.json
 
 ## Product-facing preview adoption
 
-- `GET /api/player-identity/player/:id?includeExternalForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` exposes the first narrow product-facing external FORGE adoption.
+- `GET /api/player-identity/player/:id?includeExternalForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` preserves the original external-only preview behavior.
+- `GET /api/player-identity/player/:id?includeSelectedForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball][&forgeSourceMode=legacy|external_preview|auto_with_legacy_fallback]` exposes the first contained source-selector cutover preview.
 - `GET /api/player-identity/player/:id?includeForgeComparison=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` reuses the compare service on the same player-detail surface to return both legacy and external FORGE plus a stable `forgeComparison.comparison` parity block.
 - This is preview-only migration behavior: legacy FORGE remains the default source of truth everywhere else, including existing rankings and `/api/forge/*` routes.
-- The player-detail route keeps failures non-fatal by returning a stable `externalForgeInsight` envelope with `available=false` and typed error metadata when external FORGE is disabled, unavailable, times out, or returns malformed data.
+- `forgeSourceMode=legacy` forces legacy FORGE only.
+- `forgeSourceMode=external_preview` attempts external FORGE only and returns an unavailable envelope if the selector preview flag is off or the external service fails.
+- `forgeSourceMode=auto_with_legacy_fallback` attempts external FORGE first and automatically falls back to legacy FORGE on preview-flag disablement, config errors, timeouts, upstream unavailability, and other invalid external responses.
+- The selector preview returns explicit `selection` metadata (`requestedMode`, `selectedSource`, `fallbackOccurred`, `fallbackReason`) alongside either the resulting data or a stable unavailable/error envelope.
+- The player-detail route keeps failures non-fatal by returning a stable `externalForgeInsight` or `selectedForgeInsight` envelope with `available=false` and typed error metadata when external FORGE is disabled, unavailable, times out, or returns malformed data.
 - The comparison preview keeps the same non-fatal behavior: `forgeComparison` still returns on partial failures, with per-side `available/error` status plus a `parityStatus` of `unavailable` when only one side responds.
-- The route reuses the existing external FORGE client -> adapter -> service stack and the existing compare/parity semantics through the player-detail enrichment orchestrator; it does not call the remote service directly from the route.
+- The route reuses the existing legacy FORGE evaluator, the external FORGE client -> adapter -> service stack, and the compare/parity semantics through the player-detail enrichment orchestrator; it does not call the remote service directly from the route.
+
+## Feature flag
+
+- `FORGE_SOURCE_SELECTOR_PREVIEW_ENABLED=1` enables external-backed selector modes for the contained `selectedForgeInsight` preview path.
+- The default remains migration-safe: if the flag is unset, `external_preview` returns unavailable and `auto_with_legacy_fallback` stays on legacy FORGE.

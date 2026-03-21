@@ -1,30 +1,35 @@
 import { orchestratePlayerDetailEnrichment } from '../playerDetailEnrichmentOrchestrator';
 
+function createDependencies() {
+  return {
+    buildRoleOpportunityInsightStatus: jest.fn(),
+    buildExternalForgeInsightStatus: jest.fn(),
+    buildSelectedForgeInsightStatus: jest.fn(),
+    buildForgeComparisonInsightStatus: jest.fn(),
+  };
+}
+
 describe('orchestratePlayerDetailEnrichment', () => {
   it('returns an empty result when no enrichments are requested', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
+    const dependencies = createDependencies();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
         playerId: '00-0036322',
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result).toEqual({});
-    expect(buildRoleOpportunityInsightStatus).not.toHaveBeenCalled();
-    expect(buildExternalForgeInsightStatus).not.toHaveBeenCalled();
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildRoleOpportunityInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildExternalForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns roleOpportunityInsight when requested with valid params', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn().mockResolvedValue({
+    const dependencies = createDependencies();
+    dependencies.buildRoleOpportunityInsightStatus.mockResolvedValue({
       available: true,
       fetchedAt: '2026-03-20T00:00:00.000Z',
       data: {
@@ -54,8 +59,6 @@ describe('orchestratePlayerDetailEnrichment', () => {
         },
       },
     });
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -64,11 +67,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         week: 17,
         includeRoleOpportunity: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.roleOpportunityInsight).toMatchObject({
@@ -77,18 +76,19 @@ describe('orchestratePlayerDetailEnrichment', () => {
         primaryRole: 'alpha_x',
       },
     });
-    expect(buildRoleOpportunityInsightStatus).toHaveBeenCalledWith({
+    expect(dependencies.buildRoleOpportunityInsightStatus).toHaveBeenCalledWith({
       playerId: '00-0036322',
       season: 2025,
       week: 17,
     });
-    expect(buildExternalForgeInsightStatus).not.toHaveBeenCalled();
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildExternalForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns externalForgeInsight when requested with valid params', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn().mockResolvedValue({
+    const dependencies = createDependencies();
+    dependencies.buildExternalForgeInsightStatus.mockResolvedValue({
       available: true,
       fetchedAt: '2026-03-21T00:00:00.000Z',
       data: {
@@ -124,7 +124,6 @@ describe('orchestratePlayerDetailEnrichment', () => {
         },
       },
     });
-    const buildForgeComparisonInsightStatus = jest.fn();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -133,11 +132,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         season: 2025,
         includeExternalForge: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.externalForgeInsight).toMatchObject({
@@ -149,7 +144,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         confidence: 0.82,
       },
     });
-    expect(buildExternalForgeInsightStatus).toHaveBeenCalledWith({
+    expect(dependencies.buildExternalForgeInsightStatus).toHaveBeenCalledWith({
       playerId: '00-0036322',
       position: 'WR',
       season: 2025,
@@ -158,13 +153,99 @@ describe('orchestratePlayerDetailEnrichment', () => {
       includeSourceMeta: true,
       includeRawCanonical: false,
     });
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+  });
+
+  it('returns selectedForgeInsight when requested with valid params', async () => {
+    const dependencies = createDependencies();
+    dependencies.buildSelectedForgeInsightStatus.mockResolvedValue({
+      available: true,
+      fetchedAt: '2026-03-21T00:00:00.000Z',
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'legacy',
+        fallbackOccurred: true,
+        fallbackReason: 'upstream_timeout',
+      },
+      data: {
+        playerId: '00-0036322',
+        playerName: 'Justin Jefferson',
+        position: 'WR',
+        team: 'MIN',
+        season: 2025,
+        week: 'season',
+        mode: 'redraft',
+        score: {
+          alpha: 80,
+          tier: 'T2',
+          tierRank: 2,
+        },
+        components: {
+          volume: 82,
+          efficiency: 77,
+          teamContext: 70,
+          stability: 79,
+        },
+        confidence: 0.8,
+        metadata: {
+          gamesSampled: 15,
+          positionRank: 2,
+          status: 'ok',
+          issues: [],
+        },
+        source: {
+          provider: 'legacy-forge',
+          modelVersion: 'legacy-eg-v2',
+          generatedAt: '2026-03-21T00:00:00.000Z',
+        },
+      },
+    });
+
+    const result = await orchestratePlayerDetailEnrichment(
+      {
+        playerId: '00-0036322',
+        playerPosition: 'WR',
+        season: 2025,
+        includeSelectedForge: true,
+        forgeSourceMode: 'auto_with_legacy_fallback',
+      },
+      dependencies,
+    );
+
+    expect(result.selectedForgeInsight).toMatchObject({
+      available: true,
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'legacy',
+        fallbackOccurred: true,
+        fallbackReason: 'upstream_timeout',
+      },
+      data: {
+        score: {
+          alpha: 80,
+        },
+      },
+    });
+    expect(dependencies.buildSelectedForgeInsightStatus).toHaveBeenCalledWith(
+      {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 'season',
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      'auto_with_legacy_fallback',
+    );
+    expect(dependencies.buildExternalForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns forgeComparison when requested with valid params', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn().mockResolvedValue({
+    const dependencies = createDependencies();
+    dependencies.buildForgeComparisonInsightStatus.mockResolvedValue({
       available: true,
       fetchedAt: '2026-03-21T00:00:00.000Z',
       legacy: {
@@ -258,11 +339,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         season: 2025,
         includeForgeComparison: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.forgeComparison).toMatchObject({
@@ -288,7 +365,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         parityStatus: 'close',
       },
     });
-    expect(buildForgeComparisonInsightStatus).toHaveBeenCalledWith({
+    expect(dependencies.buildForgeComparisonInsightStatus).toHaveBeenCalledWith({
       playerId: '00-0036322',
       position: 'WR',
       season: 2025,
@@ -297,11 +374,13 @@ describe('orchestratePlayerDetailEnrichment', () => {
       includeSourceMeta: true,
       includeRawCanonical: false,
     });
-    expect(buildExternalForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildExternalForgeInsightStatus).not.toHaveBeenCalled();
   });
 
   it('preserves failure-tolerant unavailable results from role opportunity enrichment', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn().mockResolvedValue({
+    const dependencies = createDependencies();
+    dependencies.buildRoleOpportunityInsightStatus.mockResolvedValue({
       available: false,
       fetchedAt: '2026-03-20T00:00:00.000Z',
       error: {
@@ -309,8 +388,6 @@ describe('orchestratePlayerDetailEnrichment', () => {
         message: 'Role opportunity service is temporarily unavailable.',
       },
     });
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -319,11 +396,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         week: 17,
         includeRoleOpportunity: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result).toEqual({
@@ -336,13 +409,11 @@ describe('orchestratePlayerDetailEnrichment', () => {
         },
       },
     });
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns a stable unavailable status when role opportunity params are missing', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
+    const dependencies = createDependencies();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -350,11 +421,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         includeRoleOpportunity: true,
         season: 2025,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.roleOpportunityInsight).toMatchObject({
@@ -364,14 +431,12 @@ describe('orchestratePlayerDetailEnrichment', () => {
         message: 'season and week are required when includeRoleOpportunity=true',
       },
     });
-    expect(buildRoleOpportunityInsightStatus).not.toHaveBeenCalled();
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildRoleOpportunityInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns a stable unavailable status when external FORGE preview request params are ambiguous', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
+    const dependencies = createDependencies();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -379,11 +444,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         playerPosition: 'WR',
         includeExternalForge: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.externalForgeInsight).toMatchObject({
@@ -393,14 +454,69 @@ describe('orchestratePlayerDetailEnrichment', () => {
         message: 'season is required when requesting external FORGE preview or comparison',
       },
     });
-    expect(buildExternalForgeInsightStatus).not.toHaveBeenCalled();
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildExternalForgeInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+  });
+
+  it('returns a stable unavailable selectedForgeInsight status when request params are ambiguous', async () => {
+    const dependencies = createDependencies();
+
+    const result = await orchestratePlayerDetailEnrichment(
+      {
+        playerId: '00-0036322',
+        playerPosition: 'WR',
+        includeSelectedForge: true,
+      },
+      dependencies,
+    );
+
+    expect(result.selectedForgeInsight).toMatchObject({
+      available: false,
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'external_preview',
+        fallbackOccurred: false,
+      },
+      error: {
+        category: 'ambiguous',
+        message: 'season is required when requesting external FORGE preview or comparison',
+      },
+    });
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
+  });
+
+  it('returns a stable unavailable selectedForgeInsight status when forgeSourceMode is invalid', async () => {
+    const dependencies = createDependencies();
+
+    const result = await orchestratePlayerDetailEnrichment(
+      {
+        playerId: '00-0036322',
+        playerPosition: 'WR',
+        season: 2025,
+        includeSelectedForge: true,
+        forgeSourceMode: 'ship_it',
+      },
+      dependencies,
+    );
+
+    expect(result.selectedForgeInsight).toMatchObject({
+      available: false,
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'external_preview',
+        fallbackOccurred: false,
+      },
+      error: {
+        category: 'ambiguous',
+        message:
+          'forgeSourceMode must be one of legacy, external_preview, or auto_with_legacy_fallback when requesting selected FORGE preview',
+      },
+    });
+    expect(dependencies.buildSelectedForgeInsightStatus).not.toHaveBeenCalled();
   });
 
   it('returns a stable unavailable forgeComparison status when comparison request params are ambiguous', async () => {
-    const buildRoleOpportunityInsightStatus = jest.fn();
-    const buildExternalForgeInsightStatus = jest.fn();
-    const buildForgeComparisonInsightStatus = jest.fn();
+    const dependencies = createDependencies();
 
     const result = await orchestratePlayerDetailEnrichment(
       {
@@ -408,11 +524,7 @@ describe('orchestratePlayerDetailEnrichment', () => {
         playerPosition: 'WR',
         includeForgeComparison: true,
       },
-      {
-        buildRoleOpportunityInsightStatus,
-        buildExternalForgeInsightStatus,
-        buildForgeComparisonInsightStatus,
-      },
+      dependencies,
     );
 
     expect(result.forgeComparison).toMatchObject({
@@ -436,6 +548,6 @@ describe('orchestratePlayerDetailEnrichment', () => {
         message: 'season is required when requesting external FORGE preview or comparison',
       },
     });
-    expect(buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
+    expect(dependencies.buildForgeComparisonInsightStatus).not.toHaveBeenCalled();
   });
 });

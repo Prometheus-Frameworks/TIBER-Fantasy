@@ -10,6 +10,12 @@ import {
   TiberForgeWeek,
 } from './types';
 import { ForgeCompareService, forgeCompareService } from './forgeCompareService';
+import {
+  ForgeSourceSelectionMode,
+  ForgeSourceSelector,
+  ForgeSourceSelectionResult,
+  forgeSourceSelector,
+} from './forgeSourceSelector';
 
 export interface PlayerDetailForgeInsightData {
   playerId: string;
@@ -45,6 +51,22 @@ export interface ExternalForgeInsightStatus {
   data?: PlayerDetailForgeInsightData;
   error?: {
     category: ForgeIntegrationError['code'] | 'unexpected_error' | 'ambiguous';
+    message: string;
+  };
+}
+
+export interface SelectedForgeInsightStatus {
+  available: boolean;
+  fetchedAt: string;
+  selection: {
+    requestedMode: ForgeSourceSelectionMode;
+    selectedSource: 'legacy' | 'external_preview';
+    fallbackOccurred: boolean;
+    fallbackReason?: string;
+  };
+  data?: PlayerDetailForgeInsightData;
+  error?: {
+    category: ForgeIntegrationError['code'] | 'unexpected_error' | 'ambiguous' | 'legacy_error';
     message: string;
   };
 }
@@ -99,6 +121,39 @@ function toPlayerDetailForgeInsightStatus(side: TiberForgeComparisonSide): Playe
   };
 }
 
+function toSelectedForgeInsightStatus(
+  fetchedAt: string,
+  selectionResult: ForgeSourceSelectionResult,
+): SelectedForgeInsightStatus {
+  if (selectionResult.available) {
+    return {
+      available: true,
+      fetchedAt,
+      selection: {
+        requestedMode: selectionResult.requestedMode,
+        selectedSource: selectionResult.selectedSource,
+        fallbackOccurred: selectionResult.fallbackOccurred,
+        fallbackReason: selectionResult.fallbackReason,
+      },
+      data: toPlayerDetailForgeInsightData(selectionResult.data),
+    };
+  }
+
+  const selectionFailure = selectionResult as Extract<ForgeSourceSelectionResult, { available: false }>;
+
+  return {
+    available: false,
+    fetchedAt,
+    selection: {
+      requestedMode: selectionFailure.requestedMode,
+      selectedSource: selectionFailure.selectedSource,
+      fallbackOccurred: selectionFailure.fallbackOccurred,
+      fallbackReason: selectionFailure.fallbackReason,
+    },
+    error: selectionFailure.error,
+  };
+}
+
 export async function buildExternalForgeInsightStatus(
   request: TiberForgeComparisonRequest,
   service: Pick<ForgeService, 'evaluatePlayer'> = forgeService,
@@ -133,6 +188,33 @@ export async function buildExternalForgeInsightStatus(
       error: {
         category: 'unexpected_error',
         message: 'External FORGE insight failed unexpectedly.',
+      },
+    };
+  }
+}
+
+export async function buildSelectedForgeInsightStatus(
+  request: TiberForgeComparisonRequest,
+  selectionMode: ForgeSourceSelectionMode,
+  selector: Pick<ForgeSourceSelector, 'select'> = forgeSourceSelector,
+): Promise<SelectedForgeInsightStatus> {
+  const fetchedAt = new Date().toISOString();
+
+  try {
+    const selection = await selector.select(request, selectionMode);
+    return toSelectedForgeInsightStatus(fetchedAt, selection);
+  } catch {
+    return {
+      available: false,
+      fetchedAt,
+      selection: {
+        requestedMode: selectionMode,
+        selectedSource: selectionMode === 'legacy' ? 'legacy' : 'external_preview',
+        fallbackOccurred: false,
+      },
+      error: {
+        category: 'unexpected_error',
+        message: 'Selected FORGE insight failed unexpectedly.',
       },
     };
   }

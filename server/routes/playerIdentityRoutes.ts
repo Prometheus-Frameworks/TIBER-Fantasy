@@ -16,6 +16,7 @@ import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/pla
 const includeRoleOpportunityValues = new Set(['1', 'true']);
 const includeExternalForgeValues = new Set(['1', 'true']);
 const includeForgeComparisonValues = new Set(['1', 'true']);
+const includeSelectedForgeValues = new Set(['1', 'true']);
 
 const router = Router();
 
@@ -74,6 +75,7 @@ router.get('/player/:id', async (req: Request, res: Response) => {
     const includeRoleOpportunity = includeRoleOpportunityValues.has(String(req.query.includeRoleOpportunity ?? '').toLowerCase());
     const includeExternalForge = includeExternalForgeValues.has(String(req.query.includeExternalForge ?? '').toLowerCase());
     const includeForgeComparison = includeForgeComparisonValues.has(String(req.query.includeForgeComparison ?? '').toLowerCase());
+    const includeSelectedForge = includeSelectedForgeValues.has(String(req.query.includeSelectedForge ?? '').toLowerCase());
     
     if (!id) {
       return res.status(400).json({
@@ -111,7 +113,9 @@ router.get('/player/:id', async (req: Request, res: Response) => {
       includeRoleOpportunity,
       includeExternalForge,
       includeForgeComparison,
+      includeSelectedForge,
       externalForgeMode: typeof req.query.externalForgeMode === 'string' ? req.query.externalForgeMode : undefined,
+      forgeSourceMode: typeof req.query.forgeSourceMode === 'string' ? req.query.forgeSourceMode : undefined,
     });
 
     res.json({

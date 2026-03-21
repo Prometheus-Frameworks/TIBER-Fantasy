@@ -77,7 +77,9 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       includeRoleOpportunity: false,
       includeExternalForge: false,
       includeForgeComparison: false,
+      includeSelectedForge: false,
       externalForgeMode: undefined,
+      forgeSourceMode: undefined,
     });
   });
 
@@ -141,7 +143,89 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       includeRoleOpportunity: false,
       includeExternalForge: true,
       includeForgeComparison: false,
+      includeSelectedForge: false,
       externalForgeMode: undefined,
+      forgeSourceMode: undefined,
+    });
+  });
+
+  it('returns selected FORGE insight metadata when includeSelectedForge=true is requested', async () => {
+    mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
+      selectedForgeInsight: {
+        available: true,
+        fetchedAt: '2026-03-21T00:00:00.000Z',
+        selection: {
+          requestedMode: 'auto_with_legacy_fallback',
+          selectedSource: 'legacy',
+          fallbackOccurred: true,
+          fallbackReason: 'upstream_timeout',
+        },
+        data: {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+          position: 'WR',
+          team: 'MIN',
+          season: 2025,
+          week: 'season',
+          mode: 'redraft',
+          score: {
+            alpha: 80,
+            tier: 'T2',
+            tierRank: 2,
+          },
+          components: {
+            volume: 82,
+            efficiency: 77,
+            teamContext: 70,
+            stability: 79,
+          },
+          confidence: 0.8,
+          metadata: {
+            gamesSampled: 15,
+            positionRank: 2,
+            status: 'ok',
+            issues: [],
+          },
+          source: {
+            provider: 'legacy-forge',
+            modelVersion: 'legacy-eg-v2',
+            generatedAt: '2026-03-21T00:00:00.000Z',
+          },
+        },
+      },
+    });
+
+    const res = await call(
+      '/player/00-0036322?includeSelectedForge=true&season=2025&forgeSourceMode=auto_with_legacy_fallback',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.selectedForgeInsight).toMatchObject({
+      available: true,
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'legacy',
+        fallbackOccurred: true,
+        fallbackReason: 'upstream_timeout',
+      },
+      data: {
+        score: {
+          alpha: 80,
+        },
+      },
+    });
+    expect(mockedOrchestratePlayerDetailEnrichment).toHaveBeenCalledWith({
+      playerId: '00-0036322',
+      playerPosition: 'WR',
+      season: 2025,
+      week: undefined,
+      includeRoleOpportunity: false,
+      includeExternalForge: false,
+      includeForgeComparison: false,
+      includeSelectedForge: true,
+      externalForgeMode: undefined,
+      forgeSourceMode: 'auto_with_legacy_fallback',
     });
   });
 
@@ -271,7 +355,9 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       includeRoleOpportunity: false,
       includeExternalForge: false,
       includeForgeComparison: true,
+      includeSelectedForge: false,
       externalForgeMode: undefined,
+      forgeSourceMode: undefined,
     });
   });
 
