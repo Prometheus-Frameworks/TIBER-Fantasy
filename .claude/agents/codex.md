@@ -319,3 +319,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/forgeIntegrationRoutes.test.ts server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts server/modules/externalModels/forge/__tests__/forgeParityReportService.test.ts server/modules/externalModels/forge/__tests__/forgeParityReportExporter.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+
+### 2026-03-21 — Codex: Opt-in external FORGE player detail preview
+- **What changed:** Added an additive `externalForgeInsight` preview path to `GET /api/player-identity/player/:id` behind `includeExternalForge=true`, reused the existing external FORGE adapter/service boundary via the player-detail enrichment orchestrator, and kept failures non-fatal with a stable unavailable/error envelope.
+- **Files modified:** `server/routes/playerIdentityRoutes.ts`, `server/modules/externalModels/playerDetailEnrichment/*`, `server/modules/externalModels/forge/playerDetailEnrichment.ts`, `server/modules/externalModels/forge/__tests__/playerDetailEnrichment.test.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `server/modules/externalModels/forge/README.md`, `replit.md`
+- **Validation:** Ran targeted Jest suites for the player-detail orchestrator, new external FORGE player-detail helper, and player identity route; ran `npm run build`; ran `git diff --check`.
+- **Notes:** Legacy FORGE remains the default everywhere else. External FORGE preview currently stays narrow to QB/RB/WR/TE player detail and defaults preview `week` to `season` plus mode to `redraft` unless explicitly overridden.

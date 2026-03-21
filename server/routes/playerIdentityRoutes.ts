@@ -14,6 +14,7 @@ import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema
 import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
 
 const includeRoleOpportunityValues = new Set(['1', 'true']);
+const includeExternalForgeValues = new Set(['1', 'true']);
 
 const router = Router();
 
@@ -70,6 +71,7 @@ router.get('/player/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const includeRoleOpportunity = includeRoleOpportunityValues.has(String(req.query.includeRoleOpportunity ?? '').toLowerCase());
+    const includeExternalForge = includeExternalForgeValues.has(String(req.query.includeExternalForge ?? '').toLowerCase());
     
     if (!id) {
       return res.status(400).json({
@@ -101,9 +103,12 @@ router.get('/player/:id', async (req: Request, res: Response) => {
 
     const enrichment = await orchestratePlayerDetailEnrichment({
       playerId: player.canonicalId,
-      season: includeRoleOpportunity ? Number(req.query.season) : undefined,
-      week: includeRoleOpportunity ? Number(req.query.week) : undefined,
+      playerPosition: player.position,
+      season: req.query.season != null ? Number(req.query.season) : undefined,
+      week: req.query.week === 'season' ? 'season' : req.query.week != null ? Number(req.query.week) : undefined,
       includeRoleOpportunity,
+      includeExternalForge,
+      externalForgeMode: typeof req.query.externalForgeMode === 'string' ? req.query.externalForgeMode : undefined,
     });
 
     res.json({

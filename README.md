@@ -167,20 +167,23 @@ Parity interpretation guide:
 
 ### Player detail enrichment
 
-`GET /api/player-identity/player/:id` now supports an explicit opt-in enrichment:
+`GET /api/player-identity/player/:id` now supports explicit opt-in external enrichments:
 
 ```http
 GET /api/player-identity/player/00-0036322?includeRoleOpportunity=true&season=2025&week=17
+GET /api/player-identity/player/00-0036322?includeExternalForge=true&season=2025&week=season&externalForgeMode=redraft
 ```
 
 Behavior:
-- The base player detail payload is unchanged when `includeRoleOpportunity` is omitted.
+- The base player detail payload is unchanged when both opt-ins are omitted.
 - Role-opportunity insight is fetched only when `includeRoleOpportunity=true`.
-- Player-detail external insights now flow through a reusable enrichment orchestrator under `server/modules/externalModels/playerDetailEnrichment/`, keeping the route thin and giving future enrichments a single plug-in point.
-- Role-opportunity is the first supported external insight in that orchestrator.
-- Enrichment is non-fatal: if the external model is disabled, times out, returns malformed data, or has no record, the player detail response still returns `200 OK` with the normal player payload.
+- External FORGE preview is fetched only when `includeExternalForge=true`.
+- Legacy FORGE remains the default source of truth; `externalForgeInsight` is additive migration/preview behavior only.
+- Player-detail external insights flow through a reusable enrichment orchestrator under `server/modules/externalModels/playerDetailEnrichment/`, keeping the route thin and giving future enrichments a single plug-in point.
+- External FORGE preview currently supports only QB/RB/WR/TE player detail, defaults `week` to `season`, and defaults `externalForgeMode` to `redraft`.
+- Enrichment is non-fatal: if an external model is disabled, times out, returns malformed data, or has no record, the player detail response still returns `200 OK` with the normal player payload.
 
-Added response field when requested:
+Added response fields when requested:
 
 ```json
 {
@@ -217,21 +220,59 @@ Added response field when requested:
           "generatedAt": "2026-03-20T00:00:00.000Z"
         }
       }
+    },
+    "externalForgeInsight": {
+      "available": true,
+      "fetchedAt": "2026-03-21T00:00:00.000Z",
+      "data": {
+        "playerId": "00-0036322",
+        "playerName": "Justin Jefferson",
+        "position": "WR",
+        "team": "MIN",
+        "season": 2025,
+        "week": "season",
+        "mode": "redraft",
+        "score": {
+          "alpha": 81.5,
+          "tier": "T2",
+          "tierRank": 2
+        },
+        "components": {
+          "volume": 84,
+          "efficiency": 78,
+          "teamContext": 72,
+          "stability": 80
+        },
+        "confidence": 0.82,
+        "metadata": {
+          "gamesSampled": 15,
+          "positionRank": 2,
+          "status": "ok",
+          "issues": []
+        },
+        "source": {
+          "provider": "external-forge",
+          "contractVersion": "1.0.0",
+          "modelVersion": "2026.03.0",
+          "calibrationVersion": "alpha-redraft-2025-v1",
+          "generatedAt": "2026-03-21T00:00:00.000Z"
+        }
+      }
     }
   }
 }
 ```
 
-Unavailable example:
+Unavailable preview example:
 
 ```json
 {
-  "roleOpportunityInsight": {
+  "externalForgeInsight": {
     "available": false,
-    "fetchedAt": "2026-03-20T00:00:00.000Z",
+    "fetchedAt": "2026-03-21T00:00:00.000Z",
     "error": {
-      "category": "upstream_timeout",
-      "message": "Role-and-opportunity-model timed out after 5000ms."
+      "category": "config_error",
+      "message": "External FORGE integration is disabled by configuration."
     }
   }
 }
