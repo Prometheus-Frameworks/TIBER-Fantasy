@@ -34,8 +34,9 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 
 - `GET /api/player-identity/player/:id?includeRoleOpportunity=true&season=<year>&week=<week>` enriches a player-detail response with `roleOpportunityInsight`.
 - `GET /api/player-identity/player/:id?includeExternalForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` adds an additive `externalForgeInsight` preview block without changing legacy FORGE behavior.
+- `GET /api/player-identity/player/:id?includeForgeComparison=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` adds a migration-only `forgeComparison` block with side-by-side legacy/external FORGE plus stable parity metadata.
 - Player detail enrichment now flows through `playerDetailEnrichment/playerDetailEnrichmentOrchestrator.ts`, which owns external insight assembly away from the route layer.
-- The orchestrator currently supports role-opportunity plus an opt-in external FORGE preview and returns a stable result object that can grow with future enrichments.
+- The orchestrator currently supports role-opportunity, an opt-in external FORGE preview, and an opt-in legacy-vs-external FORGE comparison preview while returning a stable result object that can grow with future enrichments.
 - The route still controls opt-in query params and keeps the same non-fatal response semantics.
 - Enrichment failures are contained so the base player detail payload still succeeds.
 

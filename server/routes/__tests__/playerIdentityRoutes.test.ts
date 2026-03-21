@@ -68,6 +68,7 @@ describe('playerIdentityRoutes player detail enrichment', () => {
     expect(res.body.data.canonicalId).toBe('00-0036322');
     expect(res.body.data.roleOpportunityInsight).toBeUndefined();
     expect(res.body.data.externalForgeInsight).toBeUndefined();
+    expect(res.body.data.forgeComparison).toBeUndefined();
     expect(mockedOrchestratePlayerDetailEnrichment).toHaveBeenCalledWith({
       playerId: '00-0036322',
       playerPosition: 'WR',
@@ -75,6 +76,7 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       week: undefined,
       includeRoleOpportunity: false,
       includeExternalForge: false,
+      includeForgeComparison: false,
       externalForgeMode: undefined,
     });
   });
@@ -138,7 +140,217 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       week: undefined,
       includeRoleOpportunity: false,
       includeExternalForge: true,
+      includeForgeComparison: false,
       externalForgeMode: undefined,
+    });
+  });
+
+  it('returns both sides plus parity metadata when includeForgeComparison=true is requested', async () => {
+    mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
+      forgeComparison: {
+        available: true,
+        fetchedAt: '2026-03-21T00:00:00.000Z',
+        legacy: {
+          available: true,
+          data: {
+            playerId: '00-0036322',
+            playerName: 'Justin Jefferson',
+            position: 'WR',
+            team: 'MIN',
+            season: 2025,
+            week: 'season',
+            mode: 'redraft',
+            score: {
+              alpha: 80,
+              tier: 'T2',
+              tierRank: 2,
+            },
+            components: {
+              volume: 82,
+              efficiency: 77,
+              teamContext: 70,
+              stability: 79,
+            },
+            confidence: 0.8,
+            metadata: {
+              gamesSampled: 15,
+              positionRank: 2,
+              status: 'ok',
+              issues: [],
+            },
+            source: {
+              provider: 'legacy-forge',
+              modelVersion: 'legacy-eg-v2',
+              generatedAt: '2026-03-21T00:00:00.000Z',
+            },
+          },
+        },
+        external: {
+          available: true,
+          data: {
+            playerId: '00-0036322',
+            playerName: 'Justin Jefferson',
+            position: 'WR',
+            team: 'MIN',
+            season: 2025,
+            week: 'season',
+            mode: 'redraft',
+            score: {
+              alpha: 81.5,
+              tier: 'T2',
+              tierRank: 2,
+            },
+            components: {
+              volume: 84,
+              efficiency: 78,
+              teamContext: 72,
+              stability: 80,
+            },
+            confidence: 0.82,
+            metadata: {
+              gamesSampled: 15,
+              positionRank: 2,
+              status: 'ok',
+              issues: [],
+            },
+            source: {
+              provider: 'external-forge',
+              modelVersion: '2026.03.0',
+              generatedAt: '2026-03-21T00:00:00.000Z',
+            },
+          },
+        },
+        comparison: {
+          scoreDelta: 1.5,
+          componentDeltas: {
+            volume: 2,
+            efficiency: 1,
+            teamContext: 2,
+            stability: 1,
+          },
+          confidenceDelta: 0.02,
+          parityStatus: 'close',
+          notes: ['Alpha delta stayed within migration tolerance at 1.5 points.'],
+        },
+      },
+    });
+
+    const res = await call('/player/00-0036322?includeForgeComparison=true&season=2025');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.forgeComparison).toMatchObject({
+      available: true,
+      legacy: {
+        available: true,
+        data: {
+          score: {
+            alpha: 80,
+          },
+        },
+      },
+      external: {
+        available: true,
+        data: {
+          score: {
+            alpha: 81.5,
+          },
+        },
+      },
+      comparison: {
+        parityStatus: 'close',
+        scoreDelta: 1.5,
+        confidenceDelta: 0.02,
+      },
+    });
+    expect(mockedOrchestratePlayerDetailEnrichment).toHaveBeenCalledWith({
+      playerId: '00-0036322',
+      playerPosition: 'WR',
+      season: 2025,
+      week: undefined,
+      includeRoleOpportunity: false,
+      includeExternalForge: false,
+      includeForgeComparison: true,
+      externalForgeMode: undefined,
+    });
+  });
+
+  it('keeps player detail successful when comparison mode has a one-side failure', async () => {
+    mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
+      forgeComparison: {
+        available: true,
+        fetchedAt: '2026-03-21T00:00:00.000Z',
+        legacy: {
+          available: true,
+          data: {
+            playerId: '00-0036322',
+            playerName: 'Justin Jefferson',
+            position: 'WR',
+            team: 'MIN',
+            season: 2025,
+            week: 'season',
+            mode: 'redraft',
+            score: {
+              alpha: 80,
+              tier: 'T2',
+              tierRank: 2,
+            },
+            components: {
+              volume: 82,
+              efficiency: 77,
+              teamContext: 70,
+              stability: 79,
+            },
+            confidence: 0.8,
+            metadata: {
+              gamesSampled: 15,
+              positionRank: 2,
+              status: 'ok',
+              issues: [],
+            },
+            source: {
+              provider: 'legacy-forge',
+              modelVersion: 'legacy-eg-v2',
+              generatedAt: '2026-03-21T00:00:00.000Z',
+            },
+          },
+        },
+        external: {
+          available: false,
+          error: {
+            category: 'upstream_timeout',
+            message: 'External FORGE timed out.',
+          },
+        },
+        comparison: {
+          parityStatus: 'unavailable',
+          notes: ['Only one FORGE implementation returned data for this request.'],
+        },
+      },
+    });
+
+    const res = await call('/player/00-0036322?includeForgeComparison=true&season=2025');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.canonicalId).toBe('00-0036322');
+    expect(res.body.data.forgeComparison).toEqual({
+      available: true,
+      fetchedAt: '2026-03-21T00:00:00.000Z',
+      legacy: expect.objectContaining({
+        available: true,
+      }),
+      external: {
+        available: false,
+        error: {
+          category: 'upstream_timeout',
+          message: 'External FORGE timed out.',
+        },
+      },
+      comparison: {
+        parityStatus: 'unavailable',
+        notes: ['Only one FORGE implementation returned data for this request.'],
+      },
     });
   });
 

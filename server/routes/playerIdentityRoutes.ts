@@ -15,6 +15,7 @@ import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/pla
 
 const includeRoleOpportunityValues = new Set(['1', 'true']);
 const includeExternalForgeValues = new Set(['1', 'true']);
+const includeForgeComparisonValues = new Set(['1', 'true']);
 
 const router = Router();
 
@@ -72,6 +73,7 @@ router.get('/player/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const includeRoleOpportunity = includeRoleOpportunityValues.has(String(req.query.includeRoleOpportunity ?? '').toLowerCase());
     const includeExternalForge = includeExternalForgeValues.has(String(req.query.includeExternalForge ?? '').toLowerCase());
+    const includeForgeComparison = includeForgeComparisonValues.has(String(req.query.includeForgeComparison ?? '').toLowerCase());
     
     if (!id) {
       return res.status(400).json({
@@ -108,6 +110,7 @@ router.get('/player/:id', async (req: Request, res: Response) => {
       week: req.query.week === 'season' ? 'season' : req.query.week != null ? Number(req.query.week) : undefined,
       includeRoleOpportunity,
       includeExternalForge,
+      includeForgeComparison,
       externalForgeMode: typeof req.query.externalForgeMode === 'string' ? req.query.externalForgeMode : undefined,
     });
 
