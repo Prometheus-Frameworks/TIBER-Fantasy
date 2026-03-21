@@ -21,6 +21,7 @@ export interface ForgeParityFixtureResult {
   comparable: boolean;
   scoreDelta: number | null;
   absoluteScoreDelta: number | null;
+  confidenceDelta: number | null;
   componentDeltas: Record<ParityComponentKey, number> | null;
   notes: string[];
   legacyAvailable: boolean;
@@ -46,6 +47,7 @@ export interface ForgeParitySummary {
     delta: number;
     absoluteDelta: number;
   } | null;
+  results: ForgeParityFixtureResult[];
   perFixture: ForgeParityFixtureResult[];
 }
 
@@ -66,6 +68,7 @@ function createUnavailableFixtureResult(fixture: ForgeParityFixture, error: unkn
     comparable: false,
     scoreDelta: null,
     absoluteScoreDelta: null,
+    confidenceDelta: null,
     componentDeltas: null,
     notes: ['Compare service threw unexpectedly; result recorded as unavailable for containment.'],
     legacyAvailable: false,
@@ -78,6 +81,9 @@ function createUnavailableFixtureResult(fixture: ForgeParityFixture, error: unkn
 
 function toFixtureResult(fixture: ForgeParityFixture, result: TiberForgeComparisonResult): ForgeParityFixtureResult {
   const scoreDelta = typeof result.comparison.scoreDelta === 'number' ? round(result.comparison.scoreDelta) : null;
+  const confidenceDelta = typeof result.comparison.confidenceDelta === 'number'
+    ? round(result.comparison.confidenceDelta)
+    : result.comparison.confidenceDelta ?? null;
   const componentDeltas = result.comparison.componentDeltas
     ? {
         volume: round(result.comparison.componentDeltas.volume),
@@ -96,6 +102,7 @@ function toFixtureResult(fixture: ForgeParityFixture, result: TiberForgeComparis
     comparable: result.comparison.parityStatus === 'close' || result.comparison.parityStatus === 'drift',
     scoreDelta,
     absoluteScoreDelta: scoreDelta == null ? null : round(Math.abs(scoreDelta)),
+    confidenceDelta,
     componentDeltas,
     notes: [...result.comparison.notes],
     legacyAvailable: result.legacy.available,
@@ -144,6 +151,7 @@ export function summarizeForgeParityResults(results: ForgeParityFixtureResult[])
           absoluteDelta: worst.absoluteScoreDelta,
         }
       : null,
+    results: perFixture,
     perFixture,
   };
 }
@@ -158,7 +166,7 @@ export function formatForgeParitySnapshot(summary: ForgeParitySummary): string {
     notComparableCount: summary.notComparableCount,
     averageAbsoluteScoreDelta: summary.averageAbsoluteScoreDelta,
     worstScoreDelta: summary.worstScoreDelta,
-    perFixture: summary.perFixture.map((fixture) => ({
+    results: summary.results.map((fixture) => ({
       fixtureId: fixture.fixtureId,
       fixtureName: fixture.fixtureName,
       fixtureNote: fixture.fixtureNote,
@@ -167,6 +175,8 @@ export function formatForgeParitySnapshot(summary: ForgeParitySummary): string {
       comparable: fixture.comparable,
       scoreDelta: fixture.scoreDelta,
       absoluteScoreDelta: fixture.absoluteScoreDelta,
+      confidenceDelta: fixture.confidenceDelta,
+      componentDeltas: fixture.componentDeltas,
       legacyAvailable: fixture.legacyAvailable,
       externalAvailable: fixture.externalAvailable,
       legacyStatus: fixture.legacyStatus,
