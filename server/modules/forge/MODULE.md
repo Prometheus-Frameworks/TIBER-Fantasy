@@ -1,5 +1,12 @@
 # FORGE Module Navigation Manifest
 
+> [!WARNING]
+> **Classification:** `LEGACY_CORE_TEMP`.
+> **Work status:** Freeze net-new standalone model scope in FORGE. Do not add new engine-shaped football reasoning here unless it is required for bug fixes, compatibility, calibration hardening, or an approved migration step.
+> **Long-term destination:** FORGE remains in core for now because it still powers active product surfaces, but it should be stabilized behind cleaner contracts and treated as a deliberate later-stage extraction candidate rather than a permanent expansion zone.
+> **Dependency caveat:** This module still powers active rankings, tiers, APIs, and downstream consumers across the product.
+> **Repo-wide doctrine:** See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` and `docs/architecture/LEGACY_MODULE_WORK_RULES.md` before making changes.
+
 ## 1. Overview
 
 **FORGE** (Football-Oriented Recursive Grading Engine) is the core player evaluation system that computes Alpha scores (0–100) for NFL skill positions (QB, RB, WR, TE). It aggregates weekly statistical snapshots, role bank data, team context, and strength-of-schedule into four pillar scores—**Volume**, **Efficiency**, **Team Context**, and **Stability**—then applies position-specific weights across three scoring modes (redraft, dynasty, bestball) to produce a calibrated Alpha and tier assignment (T1–T5). A recursive pass blends prior Alpha history with momentum to smooth week-over-week volatility, and a Football Lens filter flags suspicious statistical patterns before final output.

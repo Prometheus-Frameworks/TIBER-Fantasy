@@ -1,5 +1,13 @@
 # Start/Sit Engine
 
+> [!WARNING]
+> **Classification:** `EXTRACT`.
+> **Work status:** Do not add net-new recommendation logic or broaden this engine's scope inside core.
+> **Allowed changes:** Bug fixes, compatibility work, contract hardening, and migration support only.
+> **Long-term destination:** Freeze outputs, then move the recommendation engine behind an external service boundary consumed through core adapters.
+> **Dependency caveat:** This module still assembles live TIBER inputs and may remain operational until an external replacement is ready.
+> **Repo-wide doctrine:** See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` and `docs/architecture/LEGACY_MODULE_WORK_RULES.md`.
+
 Assembles player data from multiple TIBER systems and produces start/sit verdicts with factor breakdowns, projections, and confidence levels.
 
 ## Files

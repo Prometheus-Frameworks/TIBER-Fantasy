@@ -1,3 +1,12 @@
+/**
+ * FIRE route notice
+ * Classification: EXTRACT.
+ * Do not add net-new standalone model logic here.
+ * Allowed work is limited to bug fixes, compatibility, contract hardening,
+ * and extraction prep while this route still powers active product surfaces.
+ * See docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md and
+ * docs/architecture/LEGACY_MODULE_WORK_RULES.md.
+ */
 import { Router, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "../infra/db";

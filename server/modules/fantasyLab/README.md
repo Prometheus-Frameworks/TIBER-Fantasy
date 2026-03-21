@@ -1,5 +1,12 @@
 # Fantasy Lab Phase 1 Data Foundation
 
+> [!WARNING]
+> **FIRE classification:** `EXTRACT`.
+> **Work status:** Do not add net-new standalone FIRE model logic here or in `server/routes/fireRoutes.ts` beyond bug fixes, compatibility work, contract documentation, and extraction prep.
+> **Long-term destination:** FIRE should move behind the `server/modules/externalModels/` adapter/orchestrator boundary after its consumer contract is frozen.
+> **Dependency caveat:** FIRE still powers active in-season product surfaces, so the payload contract must remain stable during transition.
+> **Repo-wide doctrine:** See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` and `docs/architecture/LEGACY_MODULE_WORK_RULES.md`.
+
 ## Consolidated source
 
 `fantasy_metrics_weekly_mv` is the Phase 1 consolidated materialized view that powers Fantasy Lab weekly tables.

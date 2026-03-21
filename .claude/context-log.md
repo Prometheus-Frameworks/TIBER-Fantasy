@@ -202,3 +202,8 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
 - **Validation:** Ran `git diff --check` and `npm run build` (passes with a pre-existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** This PR is documentation-only and does not move, delete, or rewrite business logic; `UNKNOWN` is used where runtime usage could not be confirmed from the audit.
+### 2026-03-20 — Codex: Legacy module freeze/extraction notices
+- **What changed:** Added blunt module-level classification notices for FORGE, CATALYST, FIRE, doctrine modules, Metric Matrix, Start/Sit, OVR, and tiberMatrix, plus a short architecture work-rules doc that makes the repo-wide audit operational.
+- **Files modified:** `server/modules/forge/MODULE.md`, `server/modules/catalyst/MODULE.md`, `server/modules/fantasyLab/README.md`, `server/routes/fireRoutes.ts`, `server/doctrine/MODULE.md`, `server/modules/metricMatrix/MODULE.md`, `server/modules/startSit/MODULE.md`, `server/modules/ovr/MODULE.md`, `server/modules/tiberMatrix/MODULE.md`, `docs/architecture/LEGACY_MODULE_WORK_RULES.md`
+- **Validation:** `git diff --check` passed; `npm run build` passed with the existing duplicate-class-member warning in `server/olc/adjusters.ts`.
+- **Notes:** This PR is documentation-only and intentionally does not extract, delete, or rewrite any legacy module runtime paths.

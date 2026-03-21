@@ -1,5 +1,13 @@
 # OVR (Overall Rating) System
 
+> [!WARNING]
+> **Classification:** `DEPRECATE_NOW`.
+> **Work status:** Freeze net-new feature work here. Do not add new scoring paradigms, new routes, or new product bets on top of OVR.
+> **Allowed changes:** Bug fixes, compatibility fixes, consumer support, and retirement/replacement prep only.
+> **Long-term destination:** Replace OVR with one canonical derived consumer path or retire it after downstream consumers are migrated.
+> **Dependency caveat:** OVR overlaps with other player-evaluation systems and still has active consumers, so cleanup must be deliberate.
+> **Repo-wide doctrine:** See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` and `docs/architecture/LEGACY_MODULE_WORK_RULES.md`.
+
 Madden-style 1–99 player ratings that aggregate multiple data sources into a single unified score. Supports both redraft (Sleeper performance-based) and dynasty (Compass-based) scoring modes.
 
 ## Files
