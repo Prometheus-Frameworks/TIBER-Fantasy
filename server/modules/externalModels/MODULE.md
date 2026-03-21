@@ -34,9 +34,10 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 
 - `GET /api/player-identity/player/:id?includeRoleOpportunity=true&season=<year>&week=<week>` enriches a player-detail response with `roleOpportunityInsight`.
 - `GET /api/player-identity/player/:id?includeExternalForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` adds an additive `externalForgeInsight` preview block without changing legacy FORGE behavior.
+- `GET /api/player-identity/player/:id?includeSelectedForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball][&forgeSourceMode=legacy|external_preview|auto_with_legacy_fallback]` adds a migration-safe `selectedForgeInsight` preview block that reuses the new FORGE source selector and returns explicit source/fallback metadata.
 - `GET /api/player-identity/player/:id?includeForgeComparison=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` adds a migration-only `forgeComparison` block with side-by-side legacy/external FORGE plus stable parity metadata.
 - Player detail enrichment now flows through `playerDetailEnrichment/playerDetailEnrichmentOrchestrator.ts`, which owns external insight assembly away from the route layer.
-- The orchestrator currently supports role-opportunity, an opt-in external FORGE preview, and an opt-in legacy-vs-external FORGE comparison preview while returning a stable result object that can grow with future enrichments.
+- The orchestrator currently supports role-opportunity, an opt-in external FORGE preview, an opt-in source-selected FORGE preview with legacy fallback controls, and an opt-in legacy-vs-external FORGE comparison preview while returning a stable result object that can grow with future enrichments.
 - The route still controls opt-in query params and keeps the same non-fatal response semantics.
 - Enrichment failures are contained so the base player detail payload still succeeds.
 
@@ -45,6 +46,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - `server/modules/externalModels/forge/forgeClient.ts` handles transport/config/timeout/error mapping for the standalone FORGE service.
 - `server/modules/externalModels/forge/forgeAdapter.ts` validates the external contract and maps it into a stable TIBER-facing evaluation type.
 - `server/modules/externalModels/forge/forgeCompareService.ts` dual-runs legacy and external FORGE side by side and computes stable diff metadata for migration analysis.
+- `server/modules/externalModels/forge/forgeSourceSelector.ts` provides the first stable cutover policy layer (`legacy`, `external_preview`, `auto_with_legacy_fallback`) while keeping legacy FORGE as the safe fallback.
 - `server/modules/externalModels/forge/forgeMigrationReviewService.ts` samples an existing legacy FORGE player batch, reuses the compare service for each player, and returns a stable migration-review contract with aggregate summary metrics plus per-player containment.
 - `server/modules/externalModels/forge/fixtures/forgeParityFixtures.ts` provides a committed parity fixture pack with labeled request cases and migration notes.
 - `server/modules/externalModels/forge/forgeParityHarness.ts` runs the compare service across that fixture pack and emits deterministic summary output suitable for tests or migration snapshots, including a stable per-fixture `results` array with delta/debug metadata.

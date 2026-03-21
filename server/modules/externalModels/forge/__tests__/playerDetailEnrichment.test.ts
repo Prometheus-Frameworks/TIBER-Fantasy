@@ -1,10 +1,12 @@
 import {
   buildExternalForgeInsightStatus,
   buildForgeComparisonInsightStatus,
+  buildSelectedForgeInsightStatus,
 } from '../playerDetailEnrichment';
 import { ForgeService } from '../forgeService';
 import { ForgeIntegrationError } from '../types';
 import { ForgeCompareService } from '../forgeCompareService';
+import { ForgeSourceSelector } from '../forgeSourceSelector';
 
 const validEvaluation = {
   playerId: '00-0036322',
@@ -152,6 +154,103 @@ describe('buildExternalForgeInsightStatus', () => {
     expect(result.error).toEqual({
       category: 'invalid_payload',
       message: 'External FORGE returned a payload that does not match the canonical contract.',
+    });
+  });
+});
+
+describe('buildSelectedForgeInsightStatus', () => {
+  it('maps selector success and fallback metadata into a stable player-detail envelope', async () => {
+    const selector = {
+      select: jest.fn().mockResolvedValue({
+        available: true,
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'legacy',
+        fallbackOccurred: true,
+        fallbackReason: 'upstream_timeout',
+        data: {
+          ...validEvaluation,
+          source: {
+            provider: 'legacy-forge',
+            modelVersion: 'legacy-eg-v2',
+            generatedAt: '2026-03-21T00:00:00.000Z',
+          },
+        },
+      }),
+    } as unknown as ForgeSourceSelector;
+
+    const result = await buildSelectedForgeInsightStatus(
+      {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      'auto_with_legacy_fallback',
+      selector,
+    );
+
+    expect(result).toEqual({
+      available: true,
+      fetchedAt: expect.any(String),
+      selection: {
+        requestedMode: 'auto_with_legacy_fallback',
+        selectedSource: 'legacy',
+        fallbackOccurred: true,
+        fallbackReason: 'upstream_timeout',
+      },
+      data: expect.objectContaining({
+        playerId: '00-0036322',
+        source: expect.objectContaining({
+          provider: 'legacy-forge',
+        }),
+      }),
+    });
+  });
+
+  it('maps selector unavailable results without throwing', async () => {
+    const selector = {
+      select: jest.fn().mockResolvedValue({
+        available: false,
+        requestedMode: 'external_preview',
+        selectedSource: 'external_preview',
+        fallbackOccurred: false,
+        error: {
+          category: 'config_error',
+          message: 'FORGE source selector preview mode is disabled by configuration.',
+        },
+      }),
+    } as unknown as ForgeSourceSelector;
+
+    const result = await buildSelectedForgeInsightStatus(
+      {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      'external_preview',
+      selector,
+    );
+
+    expect(result).toEqual({
+      available: false,
+      fetchedAt: expect.any(String),
+      selection: {
+        requestedMode: 'external_preview',
+        selectedSource: 'external_preview',
+        fallbackOccurred: false,
+        fallbackReason: undefined,
+      },
+      error: {
+        category: 'config_error',
+        message: 'FORGE source selector preview mode is disabled by configuration.',
+      },
     });
   });
 });
