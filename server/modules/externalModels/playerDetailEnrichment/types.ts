@@ -1,4 +1,7 @@
-import { ExternalForgeInsightStatus } from '../forge/playerDetailEnrichment';
+import {
+  ExternalForgeInsightStatus,
+  ForgeComparisonInsightStatus,
+} from '../forge/playerDetailEnrichment';
 import { RoleOpportunityInsightStatus } from '../roleOpportunity/playerDetailEnrichment';
 import { TiberForgeMode, TiberForgePosition, TiberForgeWeek } from '../forge/types';
 
@@ -9,12 +12,14 @@ export interface PlayerDetailEnrichmentRequest {
   week?: number | TiberForgeWeek;
   includeRoleOpportunity?: boolean;
   includeExternalForge?: boolean;
+  includeForgeComparison?: boolean;
   externalForgeMode?: string;
 }
 
 export interface PlayerDetailEnrichmentResult {
   roleOpportunityInsight?: RoleOpportunityInsightStatus;
   externalForgeInsight?: ExternalForgeInsightStatus;
+  forgeComparison?: ForgeComparisonInsightStatus;
 }
 
 export interface ParsedExternalForgeRequest {

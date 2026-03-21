@@ -1,6 +1,10 @@
-import { buildExternalForgeInsightStatus } from '../playerDetailEnrichment';
+import {
+  buildExternalForgeInsightStatus,
+  buildForgeComparisonInsightStatus,
+} from '../playerDetailEnrichment';
 import { ForgeService } from '../forgeService';
 import { ForgeIntegrationError } from '../types';
+import { ForgeCompareService } from '../forgeCompareService';
 
 const validEvaluation = {
   playerId: '00-0036322',
@@ -148,6 +152,170 @@ describe('buildExternalForgeInsightStatus', () => {
     expect(result.error).toEqual({
       category: 'invalid_payload',
       message: 'External FORGE returned a payload that does not match the canonical contract.',
+    });
+  });
+});
+
+describe('buildForgeComparisonInsightStatus', () => {
+  it('maps both legacy and external FORGE results plus stable parity metadata', async () => {
+    const compare = jest.fn().mockResolvedValue({
+      request: {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      legacy: {
+        available: true,
+        data: {
+          ...validEvaluation,
+          source: {
+            provider: 'legacy-forge',
+            modelVersion: 'legacy-eg-v2',
+            generatedAt: '2026-03-21T00:00:00.000Z',
+          },
+          score: {
+            ...validEvaluation.score,
+            alpha: 80,
+            confidence: 0.8,
+          },
+          components: {
+            volume: 82,
+            efficiency: 77,
+            teamContext: 70,
+            stability: 79,
+          },
+        },
+      },
+      external: {
+        available: true,
+        data: validEvaluation,
+      },
+      comparison: {
+        scoreDelta: 1.5,
+        componentDeltas: {
+          volume: 2,
+          efficiency: 1,
+          teamContext: 2,
+          stability: 1,
+        },
+        confidenceDelta: 0.02,
+        notes: ['Alpha delta stayed within migration tolerance at 1.5 points.'],
+        parityStatus: 'close',
+      },
+    });
+
+    const result = await buildForgeComparisonInsightStatus(
+      {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      { compare } as unknown as ForgeCompareService,
+    );
+
+    expect(result).toMatchObject({
+      available: true,
+      legacy: {
+        available: true,
+        data: {
+          score: {
+            alpha: 80,
+          },
+        },
+      },
+      external: {
+        available: true,
+        data: {
+          score: {
+            alpha: 81.5,
+          },
+        },
+      },
+      comparison: {
+        scoreDelta: 1.5,
+        confidenceDelta: 0.02,
+        parityStatus: 'close',
+      },
+    });
+    expect(result.fetchedAt).toEqual(expect.any(String));
+  });
+
+  it('keeps comparison preview non-fatal when one side fails', async () => {
+    const compare = jest.fn().mockResolvedValue({
+      request: {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      legacy: {
+        available: true,
+        data: {
+          ...validEvaluation,
+          source: {
+            provider: 'legacy-forge',
+            modelVersion: 'legacy-eg-v2',
+            generatedAt: '2026-03-21T00:00:00.000Z',
+          },
+        },
+      },
+      external: {
+        available: false,
+        error: {
+          category: 'upstream_timeout',
+          message: 'External FORGE timed out.',
+        },
+      },
+      comparison: {
+        notes: ['Only one FORGE implementation returned data for this request.'],
+        parityStatus: 'unavailable',
+      },
+    });
+
+    const result = await buildForgeComparisonInsightStatus(
+      {
+        playerId: '00-0036322',
+        position: 'WR',
+        season: 2025,
+        week: 17,
+        mode: 'redraft',
+        includeSourceMeta: true,
+        includeRawCanonical: false,
+      },
+      { compare } as unknown as ForgeCompareService,
+    );
+
+    expect(result).toEqual({
+      available: true,
+      fetchedAt: expect.any(String),
+      legacy: {
+        available: true,
+        data: expect.objectContaining({
+          playerId: '00-0036322',
+        }),
+      },
+      external: {
+        available: false,
+        error: {
+          category: 'upstream_timeout',
+          message: 'External FORGE timed out.',
+        },
+      },
+      comparison: {
+        notes: ['Only one FORGE implementation returned data for this request.'],
+        parityStatus: 'unavailable',
+      },
     });
   });
 });

@@ -172,13 +172,16 @@ Parity interpretation guide:
 ```http
 GET /api/player-identity/player/00-0036322?includeRoleOpportunity=true&season=2025&week=17
 GET /api/player-identity/player/00-0036322?includeExternalForge=true&season=2025&week=season&externalForgeMode=redraft
+GET /api/player-identity/player/00-0036322?includeForgeComparison=true&season=2025&week=season&externalForgeMode=redraft
 ```
 
 Behavior:
 - The base player detail payload is unchanged when both opt-ins are omitted.
 - Role-opportunity insight is fetched only when `includeRoleOpportunity=true`.
 - External FORGE preview is fetched only when `includeExternalForge=true`.
+- Comparison preview is fetched only when `includeForgeComparison=true`, and it explicitly dual-runs legacy plus external FORGE for the same player detail request.
 - Legacy FORGE remains the default source of truth; `externalForgeInsight` is additive migration/preview behavior only.
+- `forgeComparison` is also migration-only preview behavior; it does not switch defaults, remove legacy FORGE, or change existing `/api/forge/*` behavior.
 - Player-detail external insights flow through a reusable enrichment orchestrator under `server/modules/externalModels/playerDetailEnrichment/`, keeping the route thin and giving future enrichments a single plug-in point.
 - External FORGE preview currently supports only QB/RB/WR/TE player detail, defaults `week` to `season`, and defaults `externalForgeMode` to `redraft`.
 - Enrichment is non-fatal: if an external model is disabled, times out, returns malformed data, or has no record, the player detail response still returns `200 OK` with the normal player payload.
@@ -258,10 +261,54 @@ Added response fields when requested:
           "generatedAt": "2026-03-21T00:00:00.000Z"
         }
       }
+    },
+    "forgeComparison": {
+      "available": true,
+      "fetchedAt": "2026-03-21T00:00:00.000Z",
+      "legacy": {
+        "available": true,
+        "data": {
+          "score": {
+            "alpha": 80,
+            "tier": "T2",
+            "tierRank": 2
+          }
+        }
+      },
+      "external": {
+        "available": true,
+        "data": {
+          "score": {
+            "alpha": 81.5,
+            "tier": "T2",
+            "tierRank": 2
+          }
+        }
+      },
+      "comparison": {
+        "scoreDelta": 1.5,
+        "componentDeltas": {
+          "volume": 2,
+          "efficiency": 1,
+          "teamContext": 2,
+          "stability": 1
+        },
+        "confidenceDelta": 0.02,
+        "parityStatus": "close",
+        "notes": [
+          "Alpha delta stayed within migration tolerance at 1.5 points."
+        ]
+      }
     }
   }
 }
 ```
+
+`forgeComparison.parityStatus` uses the same migration semantics as the compare/parity tooling:
+- `close` — both sides returned comparable results within the current tolerance.
+- `drift` — both sides returned data, but score/tier/pillar deltas deserve inspection.
+- `unavailable` — at least one side failed, so TIBER returns partial preview data without breaking player detail.
+- `not_comparable` — both sides returned data, but the outputs should not be compared directly.
 
 Unavailable preview example:
 

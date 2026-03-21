@@ -1,6 +1,8 @@
 import {
   buildExternalForgeInsightStatus,
   ExternalForgeInsightStatus,
+  ForgeComparisonInsightStatus,
+  buildForgeComparisonInsightStatus,
 } from '../forge/playerDetailEnrichment';
 import {
   buildRoleOpportunityInsightStatus,
@@ -15,11 +17,13 @@ import {
 interface PlayerDetailEnrichmentDependencies {
   buildRoleOpportunityInsightStatus: typeof buildRoleOpportunityInsightStatus;
   buildExternalForgeInsightStatus: typeof buildExternalForgeInsightStatus;
+  buildForgeComparisonInsightStatus: typeof buildForgeComparisonInsightStatus;
 }
 
 const defaultDependencies: PlayerDetailEnrichmentDependencies = {
   buildRoleOpportunityInsightStatus,
   buildExternalForgeInsightStatus,
+  buildForgeComparisonInsightStatus,
 };
 
 const supportedForgePositions = new Set(['QB', 'RB', 'WR', 'TE']);
@@ -47,23 +51,48 @@ function buildExternalForgeUnavailable(message: string): ExternalForgeInsightSta
   };
 }
 
+function buildForgeComparisonUnavailable(message: string): ForgeComparisonInsightStatus {
+  return {
+    available: false,
+    fetchedAt: new Date().toISOString(),
+    legacy: {
+      available: false,
+      error: {
+        category: 'ambiguous',
+        message,
+      },
+    },
+    external: {
+      available: false,
+      error: {
+        category: 'ambiguous',
+        message,
+      },
+    },
+    error: {
+      category: 'ambiguous',
+      message,
+    },
+  };
+}
+
 function parseExternalForgeRequest(
   request: PlayerDetailEnrichmentRequest,
 ): ParsedExternalForgeRequest | ExternalForgeInsightStatus {
   if (!Number.isInteger(request.season)) {
-    return buildExternalForgeUnavailable('season is required when includeExternalForge=true');
+    return buildExternalForgeUnavailable('season is required when requesting external FORGE preview or comparison');
   }
 
   if (!request.playerPosition || !supportedForgePositions.has(request.playerPosition)) {
     return buildExternalForgeUnavailable(
-      `External FORGE preview only supports QB/RB/WR/TE player detail right now (received ${request.playerPosition ?? 'unknown'}).`,
+      `External FORGE preview/comparison only supports QB/RB/WR/TE player detail right now (received ${request.playerPosition ?? 'unknown'}).`,
     );
   }
 
   const mode = request.externalForgeMode ?? 'redraft';
   if (!supportedForgeModes.has(mode)) {
     return buildExternalForgeUnavailable(
-      'externalForgeMode must be one of redraft, dynasty, or bestball when includeExternalForge=true',
+      'externalForgeMode must be one of redraft, dynasty, or bestball when requesting external FORGE preview or comparison',
     );
   }
 
@@ -75,7 +104,7 @@ function parseExternalForgeRequest(
 
   if (parsedWeek !== 'season' && !Number.isInteger(parsedWeek)) {
     return buildExternalForgeUnavailable(
-      'week must be an integer or the string "season" when includeExternalForge=true',
+      'week must be an integer or the string "season" when requesting external FORGE preview or comparison',
     );
   }
 
@@ -136,6 +165,47 @@ export async function orchestratePlayerDetailEnrichment(
           error: {
             category: 'unexpected_error',
             message: 'External FORGE insight failed unexpectedly.',
+          },
+        };
+      }
+    }
+  }
+
+  if (request.includeForgeComparison) {
+    const forgeRequest = parseExternalForgeRequest(request);
+
+    if ('available' in forgeRequest) {
+      result.forgeComparison = buildForgeComparisonUnavailable(
+        forgeRequest.error?.message ?? 'FORGE comparison preview request is ambiguous.',
+      );
+    } else {
+      try {
+        result.forgeComparison = await dependencies.buildForgeComparisonInsightStatus({
+          ...forgeRequest,
+          includeSourceMeta: true,
+          includeRawCanonical: false,
+        });
+      } catch {
+        result.forgeComparison = {
+          available: false,
+          fetchedAt: new Date().toISOString(),
+          legacy: {
+            available: false,
+            error: {
+              category: 'unexpected_error',
+              message: 'Legacy FORGE comparison preview failed unexpectedly.',
+            },
+          },
+          external: {
+            available: false,
+            error: {
+              category: 'unexpected_error',
+              message: 'External FORGE comparison preview failed unexpectedly.',
+            },
+          },
+          error: {
+            category: 'unexpected_error',
+            message: 'FORGE comparison preview failed unexpectedly.',
           },
         };
       }
