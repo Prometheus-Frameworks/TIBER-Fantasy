@@ -42,7 +42,7 @@ async function call(path: string) {
   }
 }
 
-describe('playerIdentityRoutes role opportunity enrichment', () => {
+describe('playerIdentityRoutes player detail enrichment', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({});
@@ -67,87 +67,130 @@ describe('playerIdentityRoutes role opportunity enrichment', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.canonicalId).toBe('00-0036322');
     expect(res.body.data.roleOpportunityInsight).toBeUndefined();
+    expect(res.body.data.externalForgeInsight).toBeUndefined();
     expect(mockedOrchestratePlayerDetailEnrichment).toHaveBeenCalledWith({
       playerId: '00-0036322',
+      playerPosition: 'WR',
       season: undefined,
       week: undefined,
       includeRoleOpportunity: false,
+      includeExternalForge: false,
+      externalForgeMode: undefined,
     });
   });
 
-  it('returns an enriched player payload when includeRoleOpportunity=true is requested', async () => {
+  it('returns an enriched player payload when includeExternalForge=true is requested', async () => {
     mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
-      roleOpportunityInsight: {
+      externalForgeInsight: {
         available: true,
-        fetchedAt: '2026-03-20T00:00:00.000Z',
+        fetchedAt: '2026-03-21T00:00:00.000Z',
         data: {
           playerId: '00-0036322',
-          season: 2025,
-          week: 17,
+          playerName: 'Justin Jefferson',
           position: 'WR',
           team: 'MIN',
-          primaryRole: 'alpha_x',
-          roleTags: ['boundary'],
-          usage: {
-            snapShare: 0.93,
-            routeShare: 0.96,
-            targetShare: 0.31,
-            usageRate: 0.28,
+          season: 2025,
+          week: 'season',
+          mode: 'redraft',
+          score: {
+            alpha: 81.5,
+            tier: 'T2',
+            tierRank: 2,
           },
-          opportunity: {
-            tier: 'featured',
-            weightedOpportunityIndex: 0.88,
-            insights: ['High route participation'],
+          components: {
+            volume: 84,
+            efficiency: 78,
+            teamContext: 72,
+            stability: 80,
           },
-          confidence: 0.91,
+          confidence: 0.82,
+          metadata: {
+            gamesSampled: 15,
+            positionRank: 2,
+            status: 'ok',
+            issues: [],
+          },
           source: {
-            provider: 'role-and-opportunity-model',
-            modelVersion: 'role-opportunity-v1',
-            generatedAt: '2026-03-20T00:00:00.000Z',
+            provider: 'external-forge',
+            modelVersion: '2026.03.0',
+            generatedAt: '2026-03-21T00:00:00.000Z',
           },
         },
       },
     });
 
-    const res = await call('/player/00-0036322?includeRoleOpportunity=true&season=2025&week=17');
+    const res = await call('/player/00-0036322?includeExternalForge=true&season=2025');
 
     expect(res.status).toBe(200);
-    expect(res.body.data.roleOpportunityInsight).toMatchObject({
+    expect(res.body.data.externalForgeInsight).toMatchObject({
       available: true,
       data: {
-        primaryRole: 'alpha_x',
+        score: {
+          alpha: 81.5,
+        },
+        confidence: 0.82,
       },
     });
     expect(mockedOrchestratePlayerDetailEnrichment).toHaveBeenCalledWith({
       playerId: '00-0036322',
+      playerPosition: 'WR',
       season: 2025,
-      week: 17,
-      includeRoleOpportunity: true,
+      week: undefined,
+      includeRoleOpportunity: false,
+      includeExternalForge: true,
+      externalForgeMode: undefined,
     });
   });
 
-  it('returns the same stable unavailable insight payload semantics when enrichment is unavailable', async () => {
+  it('returns the same stable unavailable insight payload semantics when external FORGE preview is unavailable', async () => {
     mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
-      roleOpportunityInsight: {
+      externalForgeInsight: {
         available: false,
-        fetchedAt: '2026-03-20T00:00:00.000Z',
+        fetchedAt: '2026-03-21T00:00:00.000Z',
         error: {
-          category: 'upstream_unavailable',
-          message: 'Role opportunity service is temporarily unavailable.',
+          category: 'config_error',
+          message: 'External FORGE integration is disabled by configuration.',
         },
       },
     });
 
-    const res = await call('/player/00-0036322?includeRoleOpportunity=true&season=2025&week=17');
+    const res = await call('/player/00-0036322?includeExternalForge=true&season=2025');
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.roleOpportunityInsight).toEqual({
+    expect(res.body.data.externalForgeInsight).toEqual({
       available: false,
-      fetchedAt: '2026-03-20T00:00:00.000Z',
+      fetchedAt: '2026-03-21T00:00:00.000Z',
       error: {
-        category: 'upstream_unavailable',
-        message: 'Role opportunity service is temporarily unavailable.',
+        category: 'config_error',
+        message: 'External FORGE integration is disabled by configuration.',
+      },
+    });
+  });
+
+  it('keeps the route non-fatal when the preview insight reports a malformed payload', async () => {
+    mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({
+      externalForgeInsight: {
+        available: false,
+        fetchedAt: '2026-03-21T00:00:00.000Z',
+        error: {
+          category: 'invalid_payload',
+          message: 'External FORGE returned a payload that does not match the canonical contract.',
+        },
+      },
+    });
+
+    const res = await call('/player/00-0036322?includeExternalForge=true&season=2025');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.canonicalId).toBe('00-0036322');
+    expect(res.body.data.externalForgeInsight).toEqual({
+      available: false,
+      fetchedAt: '2026-03-21T00:00:00.000Z',
+      error: {
+        category: 'invalid_payload',
+        message: 'External FORGE returned a payload that does not match the canonical contract.',
       },
     });
   });

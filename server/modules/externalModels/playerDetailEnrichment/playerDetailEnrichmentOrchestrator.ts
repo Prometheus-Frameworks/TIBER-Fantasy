@@ -1,16 +1,29 @@
 import {
+  buildExternalForgeInsightStatus,
+  ExternalForgeInsightStatus,
+} from '../forge/playerDetailEnrichment';
+import {
   buildRoleOpportunityInsightStatus,
   RoleOpportunityInsightStatus,
 } from '../roleOpportunity/playerDetailEnrichment';
-import { PlayerDetailEnrichmentRequest, PlayerDetailEnrichmentResult } from './types';
+import {
+  ParsedExternalForgeRequest,
+  PlayerDetailEnrichmentRequest,
+  PlayerDetailEnrichmentResult,
+} from './types';
 
 interface PlayerDetailEnrichmentDependencies {
   buildRoleOpportunityInsightStatus: typeof buildRoleOpportunityInsightStatus;
+  buildExternalForgeInsightStatus: typeof buildExternalForgeInsightStatus;
 }
 
 const defaultDependencies: PlayerDetailEnrichmentDependencies = {
   buildRoleOpportunityInsightStatus,
+  buildExternalForgeInsightStatus,
 };
+
+const supportedForgePositions = new Set(['QB', 'RB', 'WR', 'TE']);
+const supportedForgeModes = new Set(['redraft', 'dynasty', 'bestball']);
 
 function buildMissingRoleOpportunityParamsStatus(): RoleOpportunityInsightStatus {
   return {
@@ -23,36 +36,110 @@ function buildMissingRoleOpportunityParamsStatus(): RoleOpportunityInsightStatus
   };
 }
 
+function buildExternalForgeUnavailable(message: string): ExternalForgeInsightStatus {
+  return {
+    available: false,
+    fetchedAt: new Date().toISOString(),
+    error: {
+      category: 'ambiguous',
+      message,
+    },
+  };
+}
+
+function parseExternalForgeRequest(
+  request: PlayerDetailEnrichmentRequest,
+): ParsedExternalForgeRequest | ExternalForgeInsightStatus {
+  if (!Number.isInteger(request.season)) {
+    return buildExternalForgeUnavailable('season is required when includeExternalForge=true');
+  }
+
+  if (!request.playerPosition || !supportedForgePositions.has(request.playerPosition)) {
+    return buildExternalForgeUnavailable(
+      `External FORGE preview only supports QB/RB/WR/TE player detail right now (received ${request.playerPosition ?? 'unknown'}).`,
+    );
+  }
+
+  const mode = request.externalForgeMode ?? 'redraft';
+  if (!supportedForgeModes.has(mode)) {
+    return buildExternalForgeUnavailable(
+      'externalForgeMode must be one of redraft, dynasty, or bestball when includeExternalForge=true',
+    );
+  }
+
+  const parsedWeek = request.week === 'season'
+    ? 'season'
+    : request.week == null
+      ? 'season'
+      : request.week;
+
+  if (parsedWeek !== 'season' && !Number.isInteger(parsedWeek)) {
+    return buildExternalForgeUnavailable(
+      'week must be an integer or the string "season" when includeExternalForge=true',
+    );
+  }
+
+  return {
+    playerId: request.playerId,
+    position: request.playerPosition as ParsedExternalForgeRequest['position'],
+    season: request.season,
+    week: parsedWeek,
+    mode: mode as ParsedExternalForgeRequest['mode'],
+  };
+}
+
 export async function orchestratePlayerDetailEnrichment(
   request: PlayerDetailEnrichmentRequest,
   dependencies: PlayerDetailEnrichmentDependencies = defaultDependencies,
 ): Promise<PlayerDetailEnrichmentResult> {
   const result: PlayerDetailEnrichmentResult = {};
 
-  if (!request.includeRoleOpportunity) {
-    return result;
+  if (request.includeRoleOpportunity) {
+    if (!Number.isInteger(request.season) || !Number.isInteger(request.week)) {
+      result.roleOpportunityInsight = buildMissingRoleOpportunityParamsStatus();
+    } else {
+      try {
+        result.roleOpportunityInsight = await dependencies.buildRoleOpportunityInsightStatus({
+          playerId: request.playerId,
+          season: request.season,
+          week: request.week,
+        });
+      } catch {
+        result.roleOpportunityInsight = {
+          available: false,
+          fetchedAt: new Date().toISOString(),
+          error: {
+            category: 'unexpected_error',
+            message: 'Role opportunity insight failed unexpectedly.',
+          },
+        };
+      }
+    }
   }
 
-  if (!Number.isInteger(request.season) || !Number.isInteger(request.week)) {
-    result.roleOpportunityInsight = buildMissingRoleOpportunityParamsStatus();
-    return result;
-  }
+  if (request.includeExternalForge) {
+    const forgeRequest = parseExternalForgeRequest(request);
 
-  try {
-    result.roleOpportunityInsight = await dependencies.buildRoleOpportunityInsightStatus({
-      playerId: request.playerId,
-      season: request.season,
-      week: request.week,
-    });
-  } catch {
-    result.roleOpportunityInsight = {
-      available: false,
-      fetchedAt: new Date().toISOString(),
-      error: {
-        category: 'unexpected_error',
-        message: 'Role opportunity insight failed unexpectedly.',
-      },
-    };
+    if ('available' in forgeRequest) {
+      result.externalForgeInsight = forgeRequest;
+    } else {
+      try {
+        result.externalForgeInsight = await dependencies.buildExternalForgeInsightStatus({
+          ...forgeRequest,
+          includeSourceMeta: true,
+          includeRawCanonical: false,
+        });
+      } catch {
+        result.externalForgeInsight = {
+          available: false,
+          fetchedAt: new Date().toISOString(),
+          error: {
+            category: 'unexpected_error',
+            message: 'External FORGE insight failed unexpectedly.',
+          },
+        };
+      }
+    }
   }
 
   return result;

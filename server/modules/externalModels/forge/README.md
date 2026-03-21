@@ -82,3 +82,10 @@ npm run forge:parity:report -- --json --out tmp/forge-parity-report.json
 
 - `formatForgeParitySnapshot(summary)` keeps the raw harness summary stable.
 - `formatForgeParityReportJson(report)` keeps the higher-level route/export contract stable.
+
+## Product-facing preview adoption
+
+- `GET /api/player-identity/player/:id?includeExternalForge=true&season=<year>[&week=<week|season>][&externalForgeMode=redraft|dynasty|bestball]` exposes the first narrow product-facing external FORGE adoption.
+- This is preview-only migration behavior: legacy FORGE remains the default source of truth everywhere else, including existing rankings and `/api/forge/*` routes.
+- The player-detail route keeps failures non-fatal by returning a stable `externalForgeInsight` envelope with `available=false` and typed error metadata when external FORGE is disabled, unavailable, times out, or returns malformed data.
+- The route reuses the existing external FORGE client -> adapter -> service stack through the player-detail enrichment orchestrator; it does not call the remote service directly from the route.
