@@ -1,5 +1,13 @@
 # Metric Matrix
 
+> [!WARNING]
+> **Classification:** `EXTRACT`.
+> **Work status:** Do not add net-new standalone analytics/model scope here.
+> **Allowed changes:** Bug fixes, cache/storage reliability, compatibility fixes, contract documentation, and extraction prep only.
+> **Long-term destination:** Preserve the route/service contract, then externalize compute and storage behind the adapter/orchestrator boundary.
+> **Dependency caveat:** Metric Matrix is self-contained and useful, but that is exactly why it should stop growing as an in-repo engine.
+> **Repo-wide doctrine:** See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` and `docs/architecture/LEGACY_MODULE_WORK_RULES.md`.
+
 Multi-axis player evaluation system that converts raw stats into normalized radar-chart vectors. Used for player comparison, similarity finding, tier analysis, and league ownership tracking.
 
 ## Files

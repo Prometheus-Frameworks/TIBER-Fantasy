@@ -271,3 +271,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation run:
   - `git diff --check` ✅
   - `npm run build` ✅ (existing duplicate class member warning remains in `server/olc/adjusters.ts`)
+
+### 2026-03-20 — Legacy module freeze/extraction notices
+- Added visible local notices for the highest-priority audit targets so contributors see freeze/extract guidance inside the module folders they are most likely to open.
+- Updated module docs for FORGE, Metric Matrix, Start/Sit, and OVR.
+- Added new local module notices for CATALYST, doctrine, and tiberMatrix.
+- Added FIRE extraction/freeze notices in both `server/modules/fantasyLab/README.md` and the top of `server/routes/fireRoutes.ts`.
+- Added `docs/architecture/LEGACY_MODULE_WORK_RULES.md` to convert the audit doctrine into practical contribution rules.
+- Validation:
+  - `git diff --check` ✅
+  - `npm run build` ✅ (existing duplicate class member warning remains in `server/olc/adjusters.ts`)
