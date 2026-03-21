@@ -76,6 +76,10 @@ ROLE_OPPORTUNITY_MODEL_BASE_URL=
 ROLE_OPPORTUNITY_MODEL_ENDPOINT_PATH=/api/role-opportunity
 ROLE_OPPORTUNITY_MODEL_TIMEOUT_MS=5000
 ROLE_OPPORTUNITY_MODEL_ENABLED=1
+FORGE_SERVICE_BASE_URL=
+FORGE_SERVICE_ENDPOINT_PATH=/v1/forge/evaluations
+FORGE_SERVICE_TIMEOUT_MS=5000
+FORGE_SERVICE_ENABLED=1
 ```
 
 ### Install & Run
@@ -141,6 +145,12 @@ The adapter pattern is intentionally small and repeatable:
 - **Integration route** provides one contained surface at `GET /api/integrations/role-opportunity/:playerId?season=2025&week=17`.
 
 This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
+
+FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
+- `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
+- `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.
+
+The compare response keeps each side isolated (`legacy`, `external`) and adds stable diff metadata (`scoreDelta`, `componentDeltas`, `confidenceDelta`, `parityStatus`, `notes`) so migration analysis can happen without switching live product behavior.
 
 **Doctrine note:** TIBER-Fantasy is the product shell and orchestration core. Standalone model brains should live outside this repo when practical and be consumed through adapters/orchestrators. Any in-repo legacy model stacks are temporary unless they have an explicit core justification. See `docs/architecture/TIBER_FANTASY_MODULE_CLASSIFICATION_AUDIT.md` for the current cleanup map.
 

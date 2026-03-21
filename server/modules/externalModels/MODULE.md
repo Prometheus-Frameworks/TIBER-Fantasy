@@ -17,7 +17,9 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 ## Next planned externalization target
 
 - FORGE is the next major legacy in-repo model target. The transition contract and staged migration plan live in `docs/architecture/FORGE_EXTERNALIZATION_TRANSITION_SPEC.md`.
-- That future integration should follow the same client -> adapter -> service pattern used by `roleOpportunity/`, while preserving TIBER-owned orchestration and route compatibility.
+- `forge/` now contains the first migration-safe external FORGE adapter stack plus a dual-run compare service.
+- This compare path is intentionally contained and does **not** replace existing `/api/forge/*` production behavior yet.
+- The integration follows the same client -> adapter -> service pattern used by `roleOpportunity/`, while preserving TIBER-owned orchestration and route compatibility.
 
 ## Pattern for future promoted labs
 
@@ -35,3 +37,10 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - The orchestrator currently supports role-opportunity as its first insight and returns a stable result object that can grow with future enrichments.
 - The route still controls opt-in query params and keeps the same non-fatal response semantics.
 - Enrichment failures are contained so the base player detail payload still succeeds.
+
+## Current FORGE migration tooling
+
+- `server/modules/externalModels/forge/forgeClient.ts` handles transport/config/timeout/error mapping for the standalone FORGE service.
+- `server/modules/externalModels/forge/forgeAdapter.ts` validates the external contract and maps it into a stable TIBER-facing evaluation type.
+- `server/modules/externalModels/forge/forgeCompareService.ts` dual-runs legacy and external FORGE side by side and computes stable diff metadata for migration analysis.
+- `POST /api/integrations/forge/compare` is the contained migration endpoint; it is not a production cutover path.
