@@ -207,3 +207,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/forge/MODULE.md`, `server/modules/catalyst/MODULE.md`, `server/modules/fantasyLab/README.md`, `server/routes/fireRoutes.ts`, `server/doctrine/MODULE.md`, `server/modules/metricMatrix/MODULE.md`, `server/modules/startSit/MODULE.md`, `server/modules/ovr/MODULE.md`, `server/modules/tiberMatrix/MODULE.md`, `docs/architecture/LEGACY_MODULE_WORK_RULES.md`
 - **Validation:** `git diff --check` passed; `npm run build` passed with the existing duplicate-class-member warning in `server/olc/adjusters.ts`.
 - **Notes:** This PR is documentation-only and intentionally does not extract, delete, or rewrite any legacy module runtime paths.
+
+### 2026-03-21 — Codex: FORGE externalization transition spec
+- **What changed:** Added a concrete FORGE externalization transition spec defining the future external service contract, TIBER/core responsibilities, and staged migration plan. Updated FORGE module docs to point contributors at the new spec, added an external-models note that FORGE is the next planned target, and refreshed the architecture doctrine summary.
+- **Files modified:** `docs/architecture/FORGE_EXTERNALIZATION_TRANSITION_SPEC.md`, `server/modules/forge/MODULE.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
+- **Validation:** Ran `git diff --check` and `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
+- **Notes:** This PR is documentation-only. It does not extract, delete, or rewrite runtime FORGE code; any unconfirmed FORGE consumers remain explicitly marked as identified/likely/unknown in the spec.
