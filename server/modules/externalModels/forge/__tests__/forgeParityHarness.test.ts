@@ -230,6 +230,13 @@ describe('ForgeParityHarness', () => {
         delta: 6.5,
         absoluteDelta: 6.5,
       },
+      results: [
+        expect.objectContaining({ fixtureId: 'fixture-close', parityStatus: 'close', scoreDelta: 1, confidenceDelta: 0.01, componentDeltas: { volume: 1, efficiency: 1, teamContext: 0, stability: 1 }, comparable: true }),
+        expect.objectContaining({ fixtureId: 'fixture-drift', parityStatus: 'drift', scoreDelta: 6.5, confidenceDelta: 0.08, componentDeltas: { volume: 7, efficiency: 2, teamContext: 1, stability: 5 }, comparable: true }),
+        expect.objectContaining({ fixtureId: 'fixture-throws', parityStatus: 'unavailable', compareError: 'compare exploded', confidenceDelta: null, componentDeltas: null }),
+        expect.objectContaining({ fixtureId: 'fixture-unavailable', parityStatus: 'unavailable', externalErrorCategory: 'upstream_unavailable', confidenceDelta: null, componentDeltas: null }),
+        expect.objectContaining({ fixtureId: 'fixture-not-comparable', parityStatus: 'not_comparable', comparable: false, confidenceDelta: null, componentDeltas: null }),
+      ],
       perFixture: [
         expect.objectContaining({ fixtureId: 'fixture-close', parityStatus: 'close', scoreDelta: 1, comparable: true }),
         expect.objectContaining({ fixtureId: 'fixture-drift', parityStatus: 'drift', scoreDelta: 6.5, comparable: true }),
@@ -241,148 +248,168 @@ describe('ForgeParityHarness', () => {
 
     expect(formatForgeParitySnapshot(summary)).toMatchInlineSnapshot(`
 "{
-  \"averageAbsoluteScoreDelta\": 3.75,
-  \"closeCount\": 1,
-  \"comparableCount\": 2,
-  \"driftCount\": 1,
-  \"notComparableCount\": 1,
-  \"perFixture\": [
+  "averageAbsoluteScoreDelta": 3.75,
+  "closeCount": 1,
+  "comparableCount": 2,
+  "driftCount": 1,
+  "notComparableCount": 1,
+  "results": [
     {
-      \"absoluteScoreDelta\": 1,
-      \"comparable\": true,
-      \"externalAvailable\": true,
-      \"externalStatus\": \"ok\",
-      \"fixtureId\": \"fixture-close\",
-      \"fixtureName\": \"Fixture close\",
-      \"fixtureNote\": \"close\",
-      \"legacyAvailable\": true,
-      \"legacyStatus\": \"ok\",
-      \"notes\": [
-        \"Within tolerance.\"
-      ],
-      \"parityStatus\": \"close\",
-      \"request\": {
-        \"includeRawCanonical\": false,
-        \"includeSourceMeta\": true,
-        \"mode\": \"redraft\",
-        \"playerId\": \"00-0036322\",
-        \"position\": \"WR\",
-        \"season\": 2025,
-        \"week\": \"season\"
+      "absoluteScoreDelta": 1,
+      "comparable": true,
+      "componentDeltas": {
+        "efficiency": 1,
+        "stability": 1,
+        "teamContext": 0,
+        "volume": 1
       },
-      \"scoreDelta\": 1
+      "confidenceDelta": 0.01,
+      "externalAvailable": true,
+      "externalStatus": "ok",
+      "fixtureId": "fixture-close",
+      "fixtureName": "Fixture close",
+      "fixtureNote": "close",
+      "legacyAvailable": true,
+      "legacyStatus": "ok",
+      "notes": [
+        "Within tolerance."
+      ],
+      "parityStatus": "close",
+      "request": {
+        "includeRawCanonical": false,
+        "includeSourceMeta": true,
+        "mode": "redraft",
+        "playerId": "00-0036322",
+        "position": "WR",
+        "season": 2025,
+        "week": "season"
+      },
+      "scoreDelta": 1
     },
     {
-      \"absoluteScoreDelta\": 6.5,
-      \"comparable\": true,
-      \"externalAvailable\": true,
-      \"externalStatus\": \"ok\",
-      \"fixtureId\": \"fixture-drift\",
-      \"fixtureName\": \"Fixture drift\",
-      \"fixtureNote\": \"drift\",
-      \"legacyAvailable\": true,
-      \"legacyStatus\": \"ok\",
-      \"notes\": [
-        \"Tier changed.\",
-        \"Alpha drift is 6.5 points.\"
-      ],
-      \"parityStatus\": \"drift\",
-      \"request\": {
-        \"includeRawCanonical\": false,
-        \"includeSourceMeta\": true,
-        \"mode\": \"bestball\",
-        \"playerId\": \"00-0033280\",
-        \"position\": \"RB\",
-        \"season\": 2025,
-        \"week\": \"season\"
+      "absoluteScoreDelta": 6.5,
+      "comparable": true,
+      "componentDeltas": {
+        "efficiency": 2,
+        "stability": 5,
+        "teamContext": 1,
+        "volume": 7
       },
-      \"scoreDelta\": 6.5
+      "confidenceDelta": 0.08,
+      "externalAvailable": true,
+      "externalStatus": "ok",
+      "fixtureId": "fixture-drift",
+      "fixtureName": "Fixture drift",
+      "fixtureNote": "drift",
+      "legacyAvailable": true,
+      "legacyStatus": "ok",
+      "notes": [
+        "Tier changed.",
+        "Alpha drift is 6.5 points."
+      ],
+      "parityStatus": "drift",
+      "request": {
+        "includeRawCanonical": false,
+        "includeSourceMeta": true,
+        "mode": "bestball",
+        "playerId": "00-0033280",
+        "position": "RB",
+        "season": 2025,
+        "week": "season"
+      },
+      "scoreDelta": 6.5
     },
     {
-      \"absoluteScoreDelta\": null,
-      \"comparable\": false,
-      \"compareError\": \"compare exploded\",
-      \"externalAvailable\": false,
-      \"externalStatus\": null,
-      \"fixtureId\": \"fixture-throws\",
-      \"fixtureName\": \"Fixture throws\",
-      \"fixtureNote\": \"throws\",
-      \"legacyAvailable\": false,
-      \"legacyStatus\": null,
-      \"notes\": [
-        \"Compare service threw unexpectedly; result recorded as unavailable for containment.\"
+      "absoluteScoreDelta": null,
+      "comparable": false,
+      "compareError": "compare exploded",
+      "componentDeltas": null,
+      "confidenceDelta": null,
+      "externalAvailable": false,
+      "externalStatus": null,
+      "fixtureId": "fixture-throws",
+      "fixtureName": "Fixture throws",
+      "fixtureNote": "throws",
+      "legacyAvailable": false,
+      "legacyStatus": null,
+      "notes": [
+        "Compare service threw unexpectedly; result recorded as unavailable for containment."
       ],
-      \"parityStatus\": \"unavailable\",
-      \"request\": {
-        \"includeRawCanonical\": false,
-        \"includeSourceMeta\": true,
-        \"mode\": \"redraft\",
-        \"playerId\": \"00-0037256\",
-        \"position\": \"RB\",
-        \"season\": 2025,
-        \"week\": \"season\"
+      "parityStatus": "unavailable",
+      "request": {
+        "includeRawCanonical": false,
+        "includeSourceMeta": true,
+        "mode": "redraft",
+        "playerId": "00-0037256",
+        "position": "RB",
+        "season": 2025,
+        "week": "season"
       },
-      \"scoreDelta\": null
+      "scoreDelta": null
     },
     {
-      \"absoluteScoreDelta\": null,
-      \"comparable\": false,
-      \"externalAvailable\": false,
-      \"externalErrorCategory\": \"upstream_unavailable\",
-      \"externalStatus\": null,
-      \"fixtureId\": \"fixture-unavailable\",
-      \"fixtureName\": \"Fixture unavailable\",
-      \"fixtureNote\": \"unavailable\",
-      \"legacyAvailable\": true,
-      \"legacyStatus\": \"ok\",
-      \"notes\": [
-        \"Only one FORGE implementation returned data for this request.\"
+      "absoluteScoreDelta": null,
+      "comparable": false,
+      "componentDeltas": null,
+      "confidenceDelta": null,
+      "externalAvailable": false,
+      "externalErrorCategory": "upstream_unavailable",
+      "externalStatus": null,
+      "fixtureId": "fixture-unavailable",
+      "fixtureName": "Fixture unavailable",
+      "fixtureNote": "unavailable",
+      "legacyAvailable": true,
+      "legacyStatus": "ok",
+      "notes": [
+        "Only one FORGE implementation returned data for this request."
       ],
-      \"parityStatus\": \"unavailable\",
-      \"request\": {
-        \"includeRawCanonical\": false,
-        \"includeSourceMeta\": true,
-        \"mode\": \"redraft\",
-        \"playerId\": \"00-0034791\",
-        \"position\": \"RB\",
-        \"season\": 2025,
-        \"week\": \"season\"
+      "parityStatus": "unavailable",
+      "request": {
+        "includeRawCanonical": false,
+        "includeSourceMeta": true,
+        "mode": "redraft",
+        "playerId": "00-0034791",
+        "position": "RB",
+        "season": 2025,
+        "week": "season"
       },
-      \"scoreDelta\": null
+      "scoreDelta": null
     },
     {
-      \"absoluteScoreDelta\": null,
-      \"comparable\": false,
-      \"externalAvailable\": true,
-      \"externalStatus\": \"ok\",
-      \"fixtureId\": \"fixture-not-comparable\",
-      \"fixtureName\": \"Fixture not comparable\",
-      \"fixtureNote\": \"not-comparable\",
-      \"legacyAvailable\": true,
-      \"legacyStatus\": \"ok\",
-      \"notes\": [
-        \"Legacy and external FORGE returned different positions, so parity is not comparable.\"
+      "absoluteScoreDelta": null,
+      "comparable": false,
+      "componentDeltas": null,
+      "confidenceDelta": null,
+      "externalAvailable": true,
+      "externalStatus": "ok",
+      "fixtureId": "fixture-not-comparable",
+      "fixtureName": "Fixture not comparable",
+      "fixtureNote": "not-comparable",
+      "legacyAvailable": true,
+      "legacyStatus": "ok",
+      "notes": [
+        "Legacy and external FORGE returned different positions, so parity is not comparable."
       ],
-      \"parityStatus\": \"not_comparable\",
-      \"request\": {
-        \"includeRawCanonical\": false,
-        \"includeSourceMeta\": true,
-        \"mode\": \"dynasty\",
-        \"playerId\": \"00-0039338\",
-        \"position\": \"TE\",
-        \"season\": 2025,
-        \"week\": \"season\"
+      "parityStatus": "not_comparable",
+      "request": {
+        "includeRawCanonical": false,
+        "includeSourceMeta": true,
+        "mode": "dynasty",
+        "playerId": "00-0039338",
+        "position": "TE",
+        "season": 2025,
+        "week": "season"
       },
-      \"scoreDelta\": null
+      "scoreDelta": null
     }
   ],
-  \"totalFixtures\": 5,
-  \"unavailableCount\": 2,
-  \"worstScoreDelta\": {
-    \"absoluteDelta\": 6.5,
-    \"delta\": 6.5,
-    \"fixtureId\": \"fixture-drift\",
-    \"fixtureName\": \"Fixture drift\"
+  "totalFixtures": 5,
+  "unavailableCount": 2,
+  "worstScoreDelta": {
+    "absoluteDelta": 6.5,
+    "delta": 6.5,
+    "fixtureId": "fixture-drift",
+    "fixtureName": "Fixture drift"
   }
 }"
 `);
@@ -399,6 +426,7 @@ describe('ForgeParityHarness', () => {
         comparable: true,
         scoreDelta: -4,
         absoluteScoreDelta: 4,
+        confidenceDelta: -0.044,
         componentDeltas: { volume: -2, efficiency: -1, teamContext: -3, stability: 0 },
         notes: ['debug note'],
         legacyAvailable: true,
@@ -417,6 +445,7 @@ describe('ForgeParityHarness', () => {
         comparable: true,
         scoreDelta: 2,
         absoluteScoreDelta: 2,
+        confidenceDelta: 0.02,
         componentDeltas: { volume: 1, efficiency: 0, teamContext: 1, stability: 0 },
         notes: ['close note'],
         legacyAvailable: true,
@@ -435,9 +464,12 @@ describe('ForgeParityHarness', () => {
       delta: -4,
       absoluteDelta: 4,
     });
+    expect(summary.results).toBe(summary.perFixture);
     expect(summary.perFixture[1]).toEqual(expect.objectContaining({
       fixtureId: 'drift-a',
       fixtureNote: 'debug drift',
+      confidenceDelta: -0.044,
+      componentDeltas: { volume: -2, efficiency: -1, teamContext: -3, stability: 0 },
       externalStatus: 'partial',
       notes: ['debug note'],
     }));
@@ -456,6 +488,8 @@ describe('ForgeParityHarness', () => {
       fixtureId: 'fixture-close',
       parityStatus: 'unavailable',
       compareError: 'External FORGE timed out.',
+      confidenceDelta: null,
+      componentDeltas: null,
       legacyAvailable: false,
       externalAvailable: false,
     }));

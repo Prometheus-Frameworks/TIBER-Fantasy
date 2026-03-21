@@ -13,6 +13,8 @@ This folder now includes a small deterministic parity pack for the compare-only 
 From the repo root:
 
 ```bash
+npm run forge:parity
+# or
 tsx server/modules/externalModels/forge/runForgeParityHarness.ts
 ```
 
@@ -23,7 +25,7 @@ The harness intentionally uses the existing compare path rather than a new produ
 - Run the harness before and after external FORGE changes.
 - Treat the output as a compact regression snapshot for parity drift.
 - Review `close`, `drift`, `unavailable`, and `not_comparable` counts along with the worst delta fixture.
-- Use the per-fixture notes to debug why parity moved.
+- Use the deterministic `results` array for per-fixture debug metadata such as `scoreDelta`, `confidenceDelta`, `componentDeltas`, availability, and notes.
 
 ## Deterministic output
 
