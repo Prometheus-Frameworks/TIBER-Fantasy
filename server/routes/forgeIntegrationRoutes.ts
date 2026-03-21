@@ -1,9 +1,10 @@
 import express from 'express';
 import { z } from 'zod';
 import { ForgeCompareService, forgeCompareService } from '../modules/externalModels/forge/forgeCompareService';
+import { ForgeMigrationReviewService, forgeMigrationReviewService } from '../modules/externalModels/forge/forgeMigrationReviewService';
 import { ForgeService, forgeService } from '../modules/externalModels/forge/forgeService';
 import { ForgeParityReportService, forgeParityReportService } from '../modules/externalModels/forge/forgeParityReportService';
-import { forgeComparisonRequestSchema } from '../modules/externalModels/forge/types';
+import { forgeComparisonRequestSchema, forgeMigrationReviewRequestSchema } from '../modules/externalModels/forge/types';
 
 const requestSchema = forgeComparisonRequestSchema.extend({
   includeRawCanonical: z.boolean().optional().default(false),
@@ -13,6 +14,7 @@ export function createForgeIntegrationRouter(
   compareService: Pick<ForgeCompareService, 'compare'> = forgeCompareService,
   service: Pick<ForgeService, 'getStatus'> = forgeService,
   parityReportService: Pick<ForgeParityReportService, 'generateReport'> = forgeParityReportService,
+  migrationReviewService: Pick<ForgeMigrationReviewService, 'generateReview'> = forgeMigrationReviewService,
 ) {
   const router = express.Router();
 
@@ -46,6 +48,39 @@ export function createForgeIntegrationRouter(
       return res.status(500).json({
         success: false,
         error: 'Unexpected FORGE parity report failure.',
+      });
+    }
+  });
+
+  router.get('/api/integrations/forge/review', async (req, res) => {
+    const parsed = forgeMigrationReviewRequestSchema.safeParse(req.query);
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid FORGE migration review request.',
+        details: parsed.error.flatten(),
+      });
+    }
+
+    try {
+      const review = await migrationReviewService.generateReview(parsed.data);
+
+      return res.json({
+        success: true,
+        data: review,
+        meta: {
+          integration: 'forge',
+          adapter: 'external-model-adapter-v1',
+          mode: 'migration_review',
+          fetchedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('[ForgeIntegrationRoutes] Unexpected migration review error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Unexpected FORGE migration review failure.',
       });
     }
   });

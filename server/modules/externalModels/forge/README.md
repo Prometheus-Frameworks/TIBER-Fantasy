@@ -1,12 +1,13 @@
-# External FORGE migration parity tooling
+# External FORGE migration tooling
 
-This folder includes deterministic migration-only parity tooling for the compare-only external FORGE rollout.
+This folder includes deterministic migration-only review/parity tooling for the compare-only external FORGE rollout.
 
 ## What is here
 
 - `fixtures/forgeParityFixtures.ts` — labeled migration fixtures with IDs, requests, and notes.
 - `forgeParityHarness.ts` — runs the existing compare service across the fixture pack and aggregates a stable summary.
 - `forgeParityReportService.ts` — wraps the harness in a stable report contract with generated-at and integration readiness metadata.
+- `forgeMigrationReviewService.ts` — samples players from the existing legacy FORGE batch source, reuses the compare service for each player, and aggregates a stable operator review payload.
 - `forgeParityReportExporter.ts` — renders the report for stdout or writes JSON for local inspection.
 - `runForgeParityHarness.ts` — optional dev entrypoint that prints deterministic harness snapshot output.
 - `runForgeParityReport.ts` — optional dev entrypoint that prints or exports the stable parity report contract.
@@ -14,8 +15,9 @@ This folder includes deterministic migration-only parity tooling for the compare
 ## Migration-only endpoint
 
 - `GET /api/integrations/forge/parity-report`
+- `GET /api/integrations/forge/review?position=WR&season=2025&week=17&limit=10&mode=redraft`
 
-This route is additive and migration-only. It does **not** replace legacy FORGE and does **not** change existing `/api/forge/*` production behavior.
+These routes are additive and migration-only. They do **not** replace legacy FORGE and do **not** change existing `/api/forge/*` production behavior.
 
 Example response shape:
 
@@ -55,6 +57,31 @@ Example response shape:
 ```
 
 If external FORGE is disabled or `FORGE_SERVICE_BASE_URL` is missing, the report still returns a deterministic contract. In that case `integration.harnessRan` is `false`, `integration.skippedReason` explains why, and each fixture result is marked `unavailable` with `config_error` metadata.
+
+### Review endpoint usage
+
+This endpoint is intended for operators doing migration review, not for end-user product flows.
+
+Query params:
+
+- `position` — required; one of `QB`, `RB`, `WR`, `TE`.
+- `season` — required numeric season.
+- `week` — optional; either `season` or a week number.
+- `limit` — optional; `1..25`, defaults to `10`.
+- `mode` — optional; `redraft`, `dynasty`, or `bestball`.
+
+Behavior:
+
+- Sampling is intentionally conservative: it reuses the existing legacy FORGE batch source (`runForgeEngineBatch`) instead of inventing a new player list.
+- Each sampled player reuses the existing compare service, so delta/parity logic stays centralized.
+- Per-player failures are contained inside `results[]`; one bad comparison does not fail the whole review response.
+- When external FORGE is disabled or missing config, the route returns a stable unavailable review contract with `integration.reviewRan=false` and `integration.skippedReason` populated.
+
+Example call:
+
+```bash
+curl \"http://localhost:5000/api/integrations/forge/review?position=WR&season=2025&week=17&limit=10&mode=redraft\"
+```
 
 ## How to run it
 

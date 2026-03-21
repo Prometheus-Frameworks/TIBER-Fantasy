@@ -332,3 +332,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Files modified:** `server/routes/playerIdentityRoutes.ts`, `server/modules/externalModels/playerDetailEnrichment/*`, `server/modules/externalModels/forge/playerDetailEnrichment.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `server/modules/externalModels/forge/__tests__/playerDetailEnrichment.test.ts`, `server/modules/externalModels/playerDetailEnrichment/__tests__/playerDetailEnrichmentOrchestrator.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `server/modules/externalModels/forge/README.md`, `replit.md`
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/playerDetailEnrichment/__tests__/playerDetailEnrichmentOrchestrator.test.ts server/modules/externalModels/forge/__tests__/playerDetailEnrichment.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/modules/externalModels/forge/__tests__/forgeCompareService.test.ts` ✅; `npm run build` ✅; `git diff --check` ✅
 - **Notes:** This stays migration-only and non-fatal. `includeExternalForge=true` remains external-only preview, while `includeForgeComparison=true` explicitly requests both sides for one player detail response.
+
+### 2026-03-21 — FORGE migration review endpoint for sampled comparisons
+- Added `forgeMigrationReviewService.ts` to sample offensive players from the existing legacy FORGE batch source, reuse the existing compare service per sampled player, aggregate stable summary metrics, and contain per-player errors instead of failing the whole review.
+- Added `GET /api/integrations/forge/review` with query validation for `position`, `season`, `week`, `limit`, `mode`, and additive metadata describing integration readiness / skipped-review states.
+- Added focused Jest coverage for stable review output, summary aggregation, partial failure containment, disabled integration behavior, and route-level validation.
+- Updated migration docs in `README.md`, `server/modules/externalModels/forge/README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` to describe the operator-only review surface and make clear it does not change production FORGE defaults.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/forge/__tests__/forgeMigrationReviewService.test.ts server/routes/__tests__/forgeIntegrationRoutes.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
+  - `curl -sv "http://127.0.0.1:5051/api/integrations/forge/review?position=WR&season=2025&week=17&limit=2&mode=redraft" -o /tmp/forge-review-body.json` ✅ (against a mocked local Express app wired to the router)
