@@ -219,3 +219,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/forge/*`, `server/routes/forgeIntegrationRoutes.ts`, `server/routes.ts`, `server/routes/__tests__/forgeIntegrationRoutes.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
 - **Validation:** Ran targeted Jest suites for the external FORGE adapter/service/compare route and ran `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** The integration point is intentionally narrow: single-player offensive FORGE E+G comparison only. Live `/api/forge/*` production behavior remains unchanged.
+
+### 2026-03-21 — Codex: FORGE parity fixture pack + snapshot harness
+- **What changed:** Added a committed FORGE parity fixture pack, a deterministic parity harness/snapshot formatter, focused harness tests, and brief migration docs for rerunning labeled compare fixtures without changing production FORGE traffic.
+- **Files modified:** `server/modules/externalModels/forge/fixtures/forgeParityFixtures.ts`, `server/modules/externalModels/forge/forgeParityHarness.ts`, `server/modules/externalModels/forge/runForgeParityHarness.ts`, `server/modules/externalModels/forge/__tests__/forgeParityFixtures.test.ts`, `server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts`, `server/modules/externalModels/forge/README.md`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
+- **Validation:** Focused Jest parity fixture/harness suites passed; `npm run build` passed with the existing duplicate-class-member warning in `server/olc/adjusters.ts`; `git diff --check` passed.
+- **Notes:** Harness intentionally reuses the existing compare service and preserves compare-only migration semantics; optional local runner is `tsx server/modules/externalModels/forge/runForgeParityHarness.ts`.

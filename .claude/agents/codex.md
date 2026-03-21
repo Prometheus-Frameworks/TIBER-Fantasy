@@ -293,3 +293,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Files modified:** `server/modules/externalModels/forge/*`, `server/routes/forgeIntegrationRoutes.ts`, `server/routes.ts`, `server/routes/__tests__/forgeIntegrationRoutes.test.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, `replit.md`
 - **Validation:** Ran targeted Jest suites for the external FORGE adapter/service/compare route and ran `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** The integration point is intentionally narrow: single-player offensive FORGE E+G comparison only. Live `/api/forge/*` production behavior remains unchanged.
+
+### 2026-03-21 — FORGE parity fixture pack + snapshot harness
+- Added committed fixture coverage for elite, stable, volatile, weak-opportunity, low-availability, dynasty, and best-ball FORGE compare cases.
+- Added `forgeParityHarness.ts` + `runForgeParityHarness.ts` for deterministic parity summaries/snapshot-style reporting without touching production `/api/forge/*` traffic.
+- Added focused Jest coverage for fixture stability, deterministic summary output, aggregation counts, and contained partial failures.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/modules/externalModels/forge/__tests__/forgeParityFixtures.test.ts server/modules/externalModels/forge/__tests__/forgeParityHarness.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate member warning in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
