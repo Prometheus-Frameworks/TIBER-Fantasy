@@ -39,6 +39,7 @@ describe('dataLabPromotedModules helpers', () => {
 
   it('builds team-research deep links and formats shared labels/provenance copy', () => {
     expect(buildPromotedModuleHref('team-research', { team: 'MIN', season: '2025' })).toBe('/tiber-data-lab/team-research?team=MIN&season=2025');
+    expect(buildPromotedModuleNavigationLabel('command-center')).toBe('Go to command center');
     expect(buildPromotedModuleNavigationLabel('player-research')).toBe('Go to player research');
     expect(buildPromotedModuleNavigationLabel('team-research')).toBe('Go to team research');
     expect(buildPromotedModuleNavigationLabel('age-curves')).toBe('Go to module');

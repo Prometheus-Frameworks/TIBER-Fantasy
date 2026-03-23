@@ -106,6 +106,21 @@ const modules = [
     badge: "NEW" as string | null,
   },
   {
+    id: "command-center",
+    title: "Data Lab Command Center",
+    subtitle: "Promoted Research Front Door",
+    description:
+      "Top-level read-only orchestration layer for triage, discovery, and quick navigation across the promoted Data Lab research system.",
+    whatItIsFor:
+      "Start here to see which promoted modules and players/teams deserve attention first without forcing a fake unified score.",
+    whenToUse:
+      "Use when you want the fastest front-door pass through the promoted lane before opening Player Research, Team Research, or any single lab.",
+    icon: Database,
+    path: "/tiber-data-lab/command-center",
+    color: "#111827",
+    badge: "PROMOTED" as string | null,
+  },
+  {
     id: "player-research",
     title: "Player Research Workspace",
     subtitle: "Cross-Model Synthesis",
@@ -307,8 +322,8 @@ export default function DataLabHub() {
           </h1>
         </div>
         <p className="text-gray-500 text-sm max-w-3xl">
-          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties player-centric synthesis, team-level offensive-environment synthesis, breakout validation,
-          role and opportunity context, age-curve framing, and scenario-based point outcomes into one operator-friendly product surface.
+          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now has a dedicated Command Center front door above player-centric synthesis, team-level offensive-environment synthesis, breakout validation,
+          role and opportunity context, age-curve framing, and scenario-based point outcomes.
         </p>
       </div>
 
@@ -348,9 +363,9 @@ export default function DataLabHub() {
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Promoted module system</div>
-            <h2 className="mt-1 text-xl font-semibold text-gray-900">Player and team synthesis with breakout, role, developmental, and scenario context</h2>
+            <h2 className="mt-1 text-xl font-semibold text-gray-900">Command Center first, then player/team synthesis with breakout, role, developmental, and scenario context</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-              These promoted workspaces and labs are read-only by design. Use Player Research for one-player synthesis, Team Research for one-team environment synthesis, Breakout Lab for candidate validation, Role &amp; Opportunity
+              These promoted workspaces and labs are read-only by design. Start with Command Center for triage, then use Player Research for one-player synthesis, Team Research for one-team environment synthesis, Breakout Lab for candidate validation, Role &amp; Opportunity
               for deployment context, ARC for developmental timing, and Point Scenario Lab for contingency-aware point outcomes. They are meant to be used together, not as isolated destinations.
             </p>
           </div>
