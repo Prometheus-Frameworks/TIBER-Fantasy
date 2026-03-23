@@ -1,3 +1,5 @@
+import { PromotedModuleOperatorDetails, appendPromotedModuleOperatorHints } from '@/lib/dataLabPromotedModules';
+
 export interface PointScenarioLabRow {
   scenarioId: string | null;
   scenarioName: string;
@@ -54,6 +56,7 @@ export interface PointScenarioLabApiError {
   success: false;
   error: string;
   code?: 'config_error' | 'not_found' | 'invalid_payload' | 'upstream_unavailable' | 'upstream_timeout';
+  operator?: PromotedModuleOperatorDetails;
 }
 
 export const POINT_SCENARIO_COLUMNS = [
@@ -178,13 +181,12 @@ export function getPointScenarioLabErrorMessage(error: PointScenarioLabApiError)
 }
 
 export function getPointScenarioStateHints(error: PointScenarioLabApiError | null): string[] {
-  if (!error) {
-    return [
+  const baseHints = !error
+    ? [
       'This lab is read only and exists to inspect scenario-based point outcomes, not to publish final weekly rankings inside TIBER-Fantasy.',
       'TIBER-Fantasy is only normalizing promoted Point-prediction-Model outputs for inspection and trustable review.',
-    ];
-  }
-
+    ]
+    : (() => {
   switch (error.code) {
     case 'config_error':
       return [
@@ -206,7 +208,10 @@ export function getPointScenarioStateHints(error: PointScenarioLabApiError | nul
         'Retry after the upstream point-scenario dependency is available again.',
         'This page should remain read only even when the source is degraded.',
       ];
-  }
+    }
+      })();
+
+  return appendPromotedModuleOperatorHints(baseHints, error?.operator);
 }
 
 export function filterPointScenarioRows(rows: PointScenarioLabRow[], filters: PointScenarioFilters = {}): PointScenarioLabRow[] {

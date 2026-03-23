@@ -4,6 +4,7 @@ import {
   SignalValidationService,
   signalValidationService,
 } from '../modules/externalModels/signalValidation/signalValidationService';
+import { buildPromotedModuleOperatorDetails } from '../modules/externalModels/promotedModuleOperator';
 import { SignalValidationIntegrationError } from '../modules/externalModels/signalValidation/types';
 
 const querySchema = z.object({
@@ -45,10 +46,17 @@ export function createDataLabBreakoutSignalsRouter(service: SignalValidationServ
       });
     } catch (error) {
       if (error instanceof SignalValidationIntegrationError) {
+        const status = service.getStatus();
         return res.status(error.status).json({
           success: false,
           error: error.message,
           code: error.code,
+          operator: buildPromotedModuleOperatorDetails({
+            moduleLabel: 'WR Breakout Lab',
+            dependencySummary: 'Depends on promoted Signal-Validation-Model WR exports being readable from the configured export directory.',
+            errorCode: error.code,
+            status,
+          }),
         });
       }
 

@@ -5,6 +5,14 @@ import { AgeCurveIntegrationError } from '../../modules/externalModels/ageCurves
 
 function buildService(overrides: Partial<any> = {}) {
   return {
+    getStatus: jest.fn().mockReturnValue({
+      readiness: 'ready',
+      configured: true,
+      enabled: true,
+      baseUrl: 'http://arc-model.test',
+      labEndpointPath: '/api/age-curves/lab',
+      exportsPath: '/exports/age_curve_lab.json',
+    }),
     getAgeCurveLab: jest.fn().mockResolvedValue({
       season: 2025,
       availableSeasons: [2025, 2024],
@@ -114,5 +122,10 @@ describe('data lab age curves routes', () => {
     expect(res.status).toBe(502);
     expect(res.body.success).toBe(false);
     expect(res.body.code).toBe('invalid_payload');
+    expect(res.body.operator).toEqual(
+      expect.objectContaining({
+        state: 'contract_error',
+      }),
+    );
   });
 });

@@ -1,3 +1,5 @@
+import { PromotedModuleOperatorDetails, appendPromotedModuleOperatorHints } from '@/lib/dataLabPromotedModules';
+
 export interface RoleOpportunityLabRow {
   playerId: string;
   playerName: string;
@@ -56,6 +58,7 @@ export interface RoleOpportunityLabApiError {
   success: false;
   error: string;
   code?: 'config_error' | 'not_found' | 'invalid_payload' | 'upstream_unavailable' | 'upstream_timeout' | 'ambiguous';
+  operator?: PromotedModuleOperatorDetails;
 }
 
 export const ROLE_OPPORTUNITY_COLUMNS = [
@@ -171,13 +174,12 @@ export function getRoleOpportunityLabErrorMessage(error: RoleOpportunityLabApiEr
 }
 
 export function getRoleOpportunityStateHints(error: RoleOpportunityLabApiError | null): string[] {
-  if (!error) {
-    return [
+  const baseHints = !error
+    ? [
       'This lab is read only and shows deployment and usage context promoted from an upstream source.',
       'TIBER-Fantasy is not recomputing role scores here; it is only normalizing the promoted payload for inspection.',
-    ];
-  }
-
+    ]
+    : (() => {
   switch (error.code) {
     case 'config_error':
       return [
@@ -199,7 +201,10 @@ export function getRoleOpportunityStateHints(error: RoleOpportunityLabApiError |
         'Retry after the upstream dependency is available again.',
         'This page should remain read only even when the source is degraded.',
       ];
-  }
+    }
+      })();
+
+  return appendPromotedModuleOperatorHints(baseHints, error?.operator);
 }
 
 export function filterRoleOpportunityRows(rows: RoleOpportunityLabRow[], filters: RoleOpportunityFilters = {}): RoleOpportunityLabRow[] {

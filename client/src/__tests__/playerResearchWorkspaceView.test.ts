@@ -186,7 +186,7 @@ describe('PlayerResearchWorkspaceView', () => {
         onSeasonChange: jest.fn(),
       }),
     );
-    expect(loadingHtml).toContain('Loading promoted player research workspace');
+    expect(loadingHtml).toContain('Loading Player Research Workspace');
 
     const emptyHtml = renderToStaticMarkup(
       React.createElement(PlayerResearchWorkspaceView, {
@@ -198,7 +198,7 @@ describe('PlayerResearchWorkspaceView', () => {
         onSeasonChange: jest.fn(),
       }),
     );
-    expect(emptyHtml).toContain('No promoted player match was found');
+    expect(emptyHtml).toContain('No promoted player match found');
 
     const errorHtml = renderToStaticMarkup(
       React.createElement(PlayerResearchWorkspaceView, {
@@ -210,6 +210,7 @@ describe('PlayerResearchWorkspaceView', () => {
         onSeasonChange: jest.fn(),
       }),
     );
+    expect(errorHtml).toContain('Player Research Workspace unavailable');
     expect(errorHtml).toContain('Workspace unavailable');
   });
 

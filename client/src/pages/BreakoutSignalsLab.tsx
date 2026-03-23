@@ -27,11 +27,11 @@ async function fetchBreakoutSignals(season?: string): Promise<BreakoutSignalsRes
 
 export default function BreakoutSignalsLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
-  const [season, setSeason] = useState<string>('');
   const initialPlayerContext = useMemo(
     () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
     [],
   );
+  const [season, setSeason] = useState<string>(initialPlayerContext.season ?? '');
 
   const query = useQuery<BreakoutSignalsResponse, BreakoutSignalsApiError>({
     queryKey: ['/api/data-lab/breakout-signals', season],
@@ -60,6 +60,7 @@ export default function BreakoutSignalsLab() {
       isLoading={query.isLoading}
       errorMessage={query.error ? getBreakoutSignalsErrorMessage(query.error) : null}
       errorCode={query.error?.code ?? null}
+      sourceExportDirectory={query.data?.data.source.exportDirectory ?? null}
       initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}
     />

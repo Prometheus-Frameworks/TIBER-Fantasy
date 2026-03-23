@@ -4,9 +4,9 @@ import { ArrowDown, ArrowLeft, ArrowUp, ChevronDown, ChevronUp, FlaskConical, Se
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
-import { DataLabPlayerCarryContext } from '@/lib/dataLabPromotedModules';
+import { PromotedModuleStateCard } from '@/components/data-lab/PromotedModuleStateCard';
+import { DataLabPlayerCarryContext, formatPromotedModuleProvenance } from '@/lib/dataLabPromotedModules';
 import {
   BREAKOUT_SIGNAL_COLUMNS,
   BreakoutRecipeSummary,
@@ -31,6 +31,7 @@ interface BreakoutSignalsViewProps {
   isLoading: boolean;
   errorMessage?: string | null;
   errorCode?: 'config_error' | 'not_found' | 'invalid_payload' | 'malformed_export' | 'upstream_unavailable' | null;
+  sourceExportDirectory?: string | null;
   initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
 }
@@ -82,39 +83,6 @@ function BestRecipeCard({ summary }: { summary: BreakoutRecipeSummary }) {
   );
 }
 
-function EmptyState({
-  title = 'WR Breakout Lab unavailable',
-  message,
-  hints,
-}: {
-  title?: string;
-  message: string;
-  hints?: string[];
-}) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-[#fafafa] px-6 py-14 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-        <FlaskConical className="h-5 w-5 text-[#e2640d]" />
-      </div>
-      <h2 className="mt-4 text-lg font-semibold text-gray-900">{title}</h2>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-gray-500">{message}</p>
-      {hints?.length ? (
-        <div className="mx-auto mt-5 max-w-2xl rounded-lg border border-gray-200 bg-white p-4 text-left">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Operator hints</div>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
-            {hints.map((hint) => (
-              <li key={hint} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#e2640d]" aria-hidden />
-                <span>{hint}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function FilterChip({
   active,
   onClick,
@@ -155,6 +123,7 @@ export function BreakoutSignalsView({
   isLoading,
   errorMessage,
   errorCode,
+  sourceExportDirectory,
   initialPlayerContext = null,
   onSeasonChange,
 }: BreakoutSignalsViewProps) {
@@ -174,6 +143,14 @@ export function BreakoutSignalsView({
   }, [filters, rows, searchQuery, sortState]);
 
   const stateHints = useMemo(() => getBreakoutSignalsStateHints(errorCode ? { success: false, error: errorMessage ?? '', code: errorCode } : null), [errorCode, errorMessage]);
+  const provenanceLabel = useMemo(
+    () => formatPromotedModuleProvenance({
+      provider: 'signal-validation-model',
+      mode: 'artifact',
+      location: sourceExportDirectory ?? null,
+    }),
+    [sourceExportDirectory],
+  );
 
   const hasActiveQuickFilter =
     filters.topN !== DEFAULT_BREAKOUT_FILTERS.topN
@@ -187,11 +164,15 @@ export function BreakoutSignalsView({
       return {
         playerId: expandedRow.playerId ?? null,
         playerName: expandedRow.playerName ?? null,
+        season,
       };
     }
 
     if (initialPlayerContext?.playerId || initialPlayerContext?.playerName) {
-      return initialPlayerContext;
+      return {
+        ...initialPlayerContext,
+        season: initialPlayerContext.season ?? season,
+      };
     }
 
     if (!searchQuery.trim()) {
@@ -203,14 +184,16 @@ export function BreakoutSignalsView({
       return {
         playerId: exactNameMatch.playerId ?? null,
         playerName: exactNameMatch.playerName ?? null,
+        season,
       };
     }
 
     return {
       playerId: null,
       playerName: searchQuery.trim(),
+      season,
     };
-  }, [expandedPlayer, initialPlayerContext, rows, searchQuery]);
+  }, [expandedPlayer, initialPlayerContext, rows, searchQuery, season]);
 
   const updateSort = (key: BreakoutSignalSortState['key']) => {
     setSortState((current) => {
@@ -267,7 +250,11 @@ export function BreakoutSignalsView({
             </div>
             <div className="rounded-md bg-white px-3 py-2">
               <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">System posture</div>
-              <div className="mt-1 text-gray-700">Promoted · read only</div>
+              <div className="mt-1 text-gray-700">Promoted · read-only model surface</div>
+            </div>
+            <div className="rounded-md bg-white px-3 py-2 md:col-span-2">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">Provenance</div>
+              <div className="mt-1 text-gray-700">{provenanceLabel}</div>
             </div>
           </div>
         </CardContent>
@@ -358,31 +345,49 @@ export function BreakoutSignalsView({
       </div>
 
       {isLoading ? (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-gray-200 bg-[#fafafa] p-4 text-sm text-gray-500">
-            Loading promoted Signal-Validation-Model exports for season {season}. TIBER is only reading the published snapshot and will not recompute scores here.
-          </div>
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-[420px] w-full rounded-xl" />
-        </div>
+        <PromotedModuleStateCard
+          icon={FlaskConical}
+          accentClassName="bg-[#fff7f1]"
+          accentTextClassName="text-[#e2640d]"
+          title="Loading WR Breakout Lab"
+          message={`Loading promoted Signal-Validation-Model exports for season ${season}. TIBER is only reading the published snapshot and will not recompute scores here.`}
+          mode="loading"
+        />
       ) : errorMessage ? (
-        <EmptyState message={errorMessage} hints={stateHints} />
+        <PromotedModuleStateCard
+          icon={FlaskConical}
+          accentClassName="bg-[#fff7f1]"
+          accentTextClassName="text-[#e2640d]"
+          title="WR Breakout Lab unavailable"
+          message={errorMessage}
+          hints={stateHints}
+          mode="error"
+        />
       ) : !bestRecipeSummary ? (
-        <EmptyState
+        <PromotedModuleStateCard
+          icon={FlaskConical}
+          accentClassName="bg-[#fff7f1]"
+          accentTextClassName="text-[#e2640d]"
+          title="WR Breakout Lab unavailable"
           message="The export loaded without a usable best-recipe summary, so TIBER is holding the module back. The table stays read-only and hidden until the promoted summary contract is valid again."
           hints={[
             'Check wr_best_recipe_summary.json in the promoted export package.',
             'TIBER is intentionally refusing to infer or synthesize a local recipe summary.',
           ]}
+          mode="error"
         />
       ) : rows.length === 0 ? (
-        <EmptyState
+        <PromotedModuleStateCard
+          icon={FlaskConical}
+          accentClassName="bg-[#fff7f1]"
+          accentTextClassName="text-[#e2640d]"
           title="WR Breakout Lab ready, but empty"
           message="The selected export is valid, but it currently contains no WR candidates to display. TIBER is preserving the read-only upstream result instead of generating placeholder cards."
           hints={[
             'Confirm the promoted CSV contains candidate rows for the selected season.',
             'If the export is intentionally empty, no local fallback or rescoring will run in this module.',
           ]}
+          mode="empty"
         />
       ) : (
         <div className="space-y-4">

@@ -28,11 +28,11 @@ async function fetchPointScenarioLab(season?: string): Promise<PointScenarioLabR
 
 export default function PointScenariosLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
-  const [season, setSeason] = useState('');
   const initialPlayerContext = useMemo(
     () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
     [],
   );
+  const [season, setSeason] = useState(initialPlayerContext.season ?? '');
 
   const query = useQuery<PointScenarioLabResponse, PointScenarioLabApiError>({
     queryKey: ['/api/data-lab/point-scenarios', season],
@@ -75,6 +75,7 @@ export default function PointScenariosLab() {
       error={query.error ? { ...query.error, error: getPointScenarioLabErrorMessage(query.error) } : null}
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
+      sourceLocation={query.data?.data.source.location ?? query.error?.operator?.configuredSource ?? null}
       defaultSelectedScenarioKey={defaultSelectedScenarioKey}
       initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}

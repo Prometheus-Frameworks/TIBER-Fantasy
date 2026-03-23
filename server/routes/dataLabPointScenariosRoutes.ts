@@ -1,5 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
+import { buildPromotedModuleOperatorDetails } from '../modules/externalModels/promotedModuleOperator';
 import { PointScenariosService, pointScenariosService } from '../modules/externalModels/pointScenarios/pointScenariosService';
 import { PointScenarioIntegrationError } from '../modules/externalModels/pointScenarios/types';
 
@@ -43,10 +44,17 @@ export function createDataLabPointScenariosRouter(service: PointScenariosService
       });
     } catch (error) {
       if (error instanceof PointScenarioIntegrationError) {
+        const status = service.getStatus();
         return res.status(error.status).json({
           success: false,
           error: error.message,
           code: error.code,
+          operator: buildPromotedModuleOperatorDetails({
+            moduleLabel: 'Point Scenario Lab',
+            dependencySummary: 'Depends on either Point-prediction-Model scenario payloads or a promoted point-scenario artifact path.',
+            errorCode: error.code,
+            status,
+          }),
         });
       }
 

@@ -27,11 +27,11 @@ async function fetchRoleOpportunityLab(season?: string): Promise<RoleOpportunity
 
 export default function RoleOpportunityLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
-  const [season, setSeason] = useState('');
   const initialPlayerContext = useMemo(
     () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
     [],
   );
+  const [season, setSeason] = useState(initialPlayerContext.season ?? '');
 
   const query = useQuery<RoleOpportunityLabResponse, RoleOpportunityLabApiError>({
     queryKey: ['/api/data-lab/role-opportunity', season],
@@ -64,6 +64,7 @@ export default function RoleOpportunityLab() {
       error={query.error ? { ...query.error, error: getRoleOpportunityLabErrorMessage(query.error) } : null}
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
+      sourceLocation={query.data?.data.source.location ?? query.error?.operator?.configuredSource ?? null}
       scopeLabel={scopeLabel}
       defaultExpandedPlayerId={initialPlayerContext.playerId ?? null}
       initialPlayerContext={initialPlayerContext}
