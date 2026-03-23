@@ -310,3 +310,10 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/components/data-lab/CoreResearchQuickLinks.tsx`, `client/src/components/data-lab/DataLabDiscoveryWidget.tsx`, `client/src/pages/PlayerPage.tsx`, `client/src/pages/TiberTiers.tsx`, `client/src/pages/Dashboard.tsx`, `client/src/__tests__/coreResearchQuickLinks.test.ts`, `client/src/__tests__/dataLabDiscoveryWidget.test.ts`, `README.md`, `replit.md`
 - **Validation:** Ran targeted Jest suites for the new quick-link/widget coverage, `git diff --check`, and `npm run build` (passes with the existing duplicate-class-member warning in `server/olc/adjusters.ts`).
 - **Notes:** This is intentionally an integration/discovery pass only — links reuse existing query-param conventions and the dashboard widget consumes Command Center outputs without recomputing or duplicating Data Lab model logic.
+
+
+### 2026-03-23 — Codex: Player-page inline Research Summary block
+- **What changed:** Added a compact read-only Research Summary block to `PlayerPage.tsx` that fetches the existing promoted Player Research workspace payload and shows a restrained subset of breakout, recipe, role/opportunity, age-curve, and point-scenario notes when available. Added explicit minimal CTA/empty behavior when no promoted summaries exist and a separate unavailable state when the promoted research system cannot be reached.
+- **Files modified:** `client/src/components/data-lab/PlayerResearchSummaryBlock.tsx`, `client/src/pages/PlayerPage.tsx`, `client/src/__tests__/playerResearchSummaryBlock.test.ts`, `README.md`, `replit.md`
+- **Validation:** Ran focused Jest coverage for the new summary block plus existing research-link behavior; ran `npm run build`; ran `git diff --check`.
+- **Notes:** The player page remains read only and does not recompute any model logic locally; it simply surfaces a few promoted/orchestrated Player Research outputs and links users into the full workspace.

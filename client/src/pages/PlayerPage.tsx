@@ -13,9 +13,11 @@ import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import CompareDrawerContent from '@/components/player/CompareDrawerContent';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
+import { PlayerResearchSummaryBlock } from '@/components/data-lab/PlayerResearchSummaryBlock';
 import type { CompareTarget } from '@/components/player/CompareDrawerContent';
 import { addRecentPlayer } from '@/lib/recentPlayers';
 import { computePulse, computeTrendDeltas, getTopDrivers, formatWeekRange, getDeltaArrow, getPulseColor, type WeekData } from '@/lib/pulseUtils';
+import type { PlayerResearchResponse } from '@/lib/playerResearch';
 
 const SECTION_NAV_ITEMS = [
   { id: 'overview', label: 'Overview' },
@@ -314,6 +316,26 @@ export default function PlayerPage() {
   const player = playerData?.data;
   const nflfastrId = player?.externalIds?.nfl_data_py || playerId;
   const [, navigate] = useLocation();
+
+  const { data: playerResearchData, isLoading: playerResearchLoading, error: playerResearchError } = useQuery<PlayerResearchResponse>({
+    queryKey: ['/api/data-lab/player-research', season, playerId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ season: String(season), playerId });
+      if (player?.fullName) {
+        params.set('playerName', player.fullName);
+      }
+
+      const res = await fetch(`/api/data-lab/player-research?${params.toString()}`);
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload.error || 'Failed to fetch player research');
+      }
+
+      return res.json();
+    },
+    enabled: !!playerId && !!player?.fullName,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Copy player key (GSIS ID)
   const copyPlayerKey = useCallback(async () => {
@@ -626,6 +648,15 @@ export default function PlayerPage() {
             </div>
           </div>
         </div>
+
+        <PlayerResearchSummaryBlock
+          season={String(season)}
+          playerId={playerId}
+          playerName={player.fullName}
+          data={playerResearchData?.data ?? null}
+          isLoading={playerResearchLoading}
+          errorMessage={playerResearchError instanceof Error ? playerResearchError.message : null}
+        />
 
         {/* Controls Row */}
         <div className="flex flex-wrap items-center gap-3">
