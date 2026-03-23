@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
+import { DataLabPlayerCarryContext } from '@/lib/dataLabPromotedModules';
 import {
   DEFAULT_ROLE_OPPORTUNITY_SORT,
   ROLE_OPPORTUNITY_COLUMNS,
@@ -30,6 +32,7 @@ interface RoleOpportunityViewProps {
   sourceMode?: 'api' | 'artifact' | null;
   scopeLabel?: string | null;
   defaultExpandedPlayerId?: string | null;
+  initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
 }
 
@@ -85,12 +88,14 @@ export function RoleOpportunityView({
   sourceMode,
   scopeLabel,
   defaultExpandedPlayerId = null,
+  initialPlayerContext = null,
   onSeasonChange,
 }: RoleOpportunityViewProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const initialSearch = initialPlayerContext?.playerName ?? initialPlayerContext?.playerId ?? '';
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [teamFilter, setTeamFilter] = useState('ALL');
   const [positionFilter, setPositionFilter] = useState('ALL');
-  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(defaultExpandedPlayerId);
+  const [expandedPlayerId, setExpandedPlayerId] = useState<string | null>(defaultExpandedPlayerId ?? initialPlayerContext?.playerId ?? null);
   const [sortState, setSortState] = useState<RoleOpportunitySortState>(DEFAULT_ROLE_OPPORTUNITY_SORT);
 
   const teams = useMemo(() => Array.from(new Set(rows.map((row) => row.team))).sort(), [rows]);
@@ -107,6 +112,37 @@ export function RoleOpportunityView({
   }, [positionFilter, rows, searchQuery, sortState, teamFilter]);
 
   const hints = useMemo(() => getRoleOpportunityStateHints(error ?? null), [error]);
+
+  const activePlayerContext = useMemo<DataLabPlayerCarryContext | null>(() => {
+    const expandedRow = rows.find((row) => row.playerId === expandedPlayerId);
+    if (expandedRow) {
+      return {
+        playerId: expandedRow.playerId,
+        playerName: expandedRow.playerName,
+      };
+    }
+
+    if (initialPlayerContext?.playerId || initialPlayerContext?.playerName) {
+      return initialPlayerContext;
+    }
+
+    if (!searchQuery.trim()) {
+      return null;
+    }
+
+    const exactNameMatch = rows.find((row) => row.playerName.toLowerCase() === searchQuery.trim().toLowerCase());
+    if (exactNameMatch) {
+      return {
+        playerId: exactNameMatch.playerId,
+        playerName: exactNameMatch.playerName,
+      };
+    }
+
+    return {
+      playerId: null,
+      playerName: searchQuery.trim(),
+    };
+  }, [expandedPlayerId, initialPlayerContext, rows, searchQuery]);
 
   const updateSort = (key: RoleOpportunitySortState['key']) => {
     setSortState((current) => {
@@ -137,11 +173,11 @@ export function RoleOpportunityView({
           <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: 'Instrument Sans, sans-serif' }}>
             Role &amp; Opportunity Lab
           </h1>
-          <Badge className="border-0 bg-[#0f766e]/10 text-[#0f766e]">TIBER Data promotion</Badge>
+          <Badge className="border-0 bg-gray-900 text-white">Promoted module</Badge>
           <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
         </div>
         <p className="max-w-3xl text-sm text-gray-500">
-          Deployment and usage context promoted into TIBER Data Lab for inspection. This module complements WR Breakout Lab by showing how players are being deployed, not by projecting or rescoring them locally.
+          Deployment and usage context promoted into TIBER Data Lab for inspection. This module is for understanding how a player is being used, not for projecting or rescoring them locally.
         </p>
       </div>
 
@@ -149,11 +185,11 @@ export function RoleOpportunityView({
         <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-              <Badge className="border-0 bg-[#0f766e] text-white">Inspectability first</Badge>
+              <Badge className="border-0 bg-[#0f766e] text-white">Usage and deployment</Badge>
               <span>Upstream → adapter → read-only product table</span>
             </div>
             <p className="max-w-3xl text-sm leading-6 text-gray-600">
-              Use this lab to inspect role, route involvement, and opportunity share context from the promoted upstream dataset. TIBER-Fantasy is acting as a trustable viewing surface, not a role-scoring engine.
+              <span className="font-semibold text-gray-700">When to use this:</span> Open this module when you need to explain whether snap share, routes, targets, and alignment actually support the breakout or dynasty story.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2 text-sm md:min-w-[280px] md:grid-cols-2">
@@ -168,6 +204,10 @@ export function RoleOpportunityView({
           </div>
         </CardContent>
       </Card>
+
+      <div className="mb-6">
+        <PromotedModuleSystemCard currentModuleId="role-opportunity" playerContext={activePlayerContext} />
+      </div>
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-4">
@@ -219,8 +259,15 @@ export function RoleOpportunityView({
           </div>
         </div>
 
-        <div className="text-xs text-gray-500">
-          Showing <span className="font-semibold text-gray-700">{filteredRows.length}</span> of <span className="font-semibold text-gray-700">{rows.length}</span> promoted rows.
+        <div className="flex flex-col items-start gap-2 text-xs text-gray-500 xl:items-end">
+          {activePlayerContext?.playerName ? (
+            <div className="rounded-md border border-[#0f766e]/20 bg-[#f0fdfa] px-3 py-2 text-[#0f766e]">
+              Carrying player context for <span className="font-semibold">{activePlayerContext.playerName}</span>.
+            </div>
+          ) : null}
+          <div>
+            Showing <span className="font-semibold text-gray-700">{filteredRows.length}</span> of <span className="font-semibold text-gray-700">{rows.length}</span> promoted rows.
+          </div>
         </div>
       </div>
 
@@ -289,6 +336,14 @@ export function RoleOpportunityView({
                     {expanded ? (
                       <tr className="border-t border-dashed border-gray-200 bg-[#fcfcfc]">
                         <td colSpan={10} className="px-6 py-5">
+                          <div className="mb-4">
+                            <PromotedModuleSystemCard
+                              currentModuleId="role-opportunity"
+                              playerContext={{ playerId: row.playerId, playerName: row.playerName }}
+                              heading="Related modules"
+                              description="Use this player carry-through to compare current deployment with breakout validation and ARC developmental timing."
+                            />
+                          </div>
                           <div className="grid gap-4 xl:grid-cols-4">
                             {detailSections.map((section) => (
                               <div key={section.id} className="rounded-lg border border-gray-200 bg-white p-4">

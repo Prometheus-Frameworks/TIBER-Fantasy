@@ -158,6 +158,8 @@ Role & Opportunity Lab is now the second promoted read-only Data Lab sub-model. 
 
 Age Curve / ARC Lab is now the third promoted read-only Data Lab sub-model. `server/modules/externalModels/ageCurves/` reads either an ARC compatibility endpoint or a stable exported artifact, normalizes developmental-context fields like age, career year, peer bucket, expected-vs-actual PPG, delta, trajectory label, and provenance, and powers `GET /api/data-lab/age-curves` plus the user-facing `/tiber-data-lab/age-curves` page. This module complements Breakout Lab and Role & Opportunity Lab by framing development context only; TIBER-Fantasy does **not** recompute ARC logic locally.
 
+The three promoted Data Lab modules are now intended to operate as one product lane inside the hub: Breakout Lab for signal validation, Role & Opportunity Lab for deployment context, and Age Curve / ARC Lab for developmental timing. The hub and each promoted module now include stable promoted/read-only framing, concise "what this module is for" plus "when to use this" guidance, and cross-module navigation that can carry `playerId` / `playerName` through deep links for faster operator workflows.
+
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
 - `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.

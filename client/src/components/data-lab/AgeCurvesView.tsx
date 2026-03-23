@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
+import { DataLabPlayerCarryContext } from '@/lib/dataLabPromotedModules';
 import {
   AGE_CURVE_COLUMNS,
   AgeCurveLabApiError,
@@ -30,6 +32,7 @@ interface AgeCurvesViewProps {
   sourceProvider?: string | null;
   sourceMode?: 'api' | 'artifact' | null;
   defaultExpandedPlayerKey?: string | null;
+  initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
 }
 
@@ -141,12 +144,14 @@ export function AgeCurvesView({
   sourceProvider,
   sourceMode,
   defaultExpandedPlayerKey = null,
+  initialPlayerContext = null,
   onSeasonChange,
 }: AgeCurvesViewProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const initialSearch = initialPlayerContext?.playerName ?? initialPlayerContext?.playerId ?? '';
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [teamFilter, setTeamFilter] = useState('ALL');
   const [positionFilter, setPositionFilter] = useState('ALL');
-  const [expandedPlayerKey, setExpandedPlayerKey] = useState<string | null>(defaultExpandedPlayerKey);
+  const [expandedPlayerKey, setExpandedPlayerKey] = useState<string | null>(defaultExpandedPlayerKey ?? initialPlayerContext?.playerId ?? null);
   const [sortState, setSortState] = useState<AgeCurveSortState>(DEFAULT_AGE_CURVE_SORT);
 
   const teams = useMemo(() => Array.from(new Set(rows.map((row) => row.team).filter(Boolean) as string[])).sort(), [rows]);
@@ -163,6 +168,37 @@ export function AgeCurvesView({
   }, [positionFilter, rows, searchQuery, sortState, teamFilter]);
 
   const hints = useMemo(() => getAgeCurveStateHints(error ?? null), [error]);
+
+  const activePlayerContext = useMemo<DataLabPlayerCarryContext | null>(() => {
+    const expandedRow = rows.find((row) => buildRowKey(row) === expandedPlayerKey || row.playerId === expandedPlayerKey);
+    if (expandedRow) {
+      return {
+        playerId: expandedRow.playerId ?? null,
+        playerName: expandedRow.playerName ?? null,
+      };
+    }
+
+    if (initialPlayerContext?.playerId || initialPlayerContext?.playerName) {
+      return initialPlayerContext;
+    }
+
+    if (!searchQuery.trim()) {
+      return null;
+    }
+
+    const exactNameMatch = rows.find((row) => row.playerName.toLowerCase() === searchQuery.trim().toLowerCase());
+    if (exactNameMatch) {
+      return {
+        playerId: exactNameMatch.playerId ?? null,
+        playerName: exactNameMatch.playerName ?? null,
+      };
+    }
+
+    return {
+      playerId: null,
+      playerName: searchQuery.trim(),
+    };
+  }, [expandedPlayerKey, initialPlayerContext, rows, searchQuery]);
 
   const updateSort = (key: AgeCurveSortState['key']) => {
     setSortState((current) => {
@@ -193,11 +229,11 @@ export function AgeCurvesView({
           <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: 'Instrument Sans, sans-serif' }}>
             Age Curve / ARC Lab
           </h1>
-          <Badge className="border-0 bg-[#7c3aed]/10 text-[#7c3aed]">Third promoted sub-model</Badge>
+          <Badge className="border-0 bg-gray-900 text-white">Promoted module</Badge>
           <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
         </div>
         <p className="max-w-3xl text-sm text-gray-500">
-          Developmental context promoted into TIBER Data Lab for inspection. This module complements Breakout Lab and Role &amp; Opportunity Lab by framing where a player sits on the age-and-career curve without predicting by itself.
+          Developmental context promoted into TIBER Data Lab for inspection. This module is for age-and-career-stage framing, not for predicting by itself.
         </p>
       </div>
 
@@ -209,7 +245,7 @@ export function AgeCurvesView({
               <span>Upstream ARC output → adapter → read-only product table</span>
             </div>
             <p className="max-w-3xl text-sm leading-6 text-gray-600">
-              Use this lab to compare age, career stage, peer bucket, and expected-vs-actual production. TIBER-Fantasy is acting as a trustable viewing surface for promoted ARC context, not a developmental scoring engine.
+              <span className="font-semibold text-gray-700">When to use this:</span> Open ARC when you need developmental timing and expected-vs-actual context to confirm or challenge what the breakout and role modules are saying.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-2 text-sm md:min-w-[280px] md:grid-cols-2">
@@ -224,6 +260,10 @@ export function AgeCurvesView({
           </div>
         </CardContent>
       </Card>
+
+      <div className="mb-6">
+        <PromotedModuleSystemCard currentModuleId="age-curves" playerContext={activePlayerContext} />
+      </div>
 
       <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-4">
@@ -275,8 +315,15 @@ export function AgeCurvesView({
           </div>
         </div>
 
-        <div className="text-xs text-gray-500">
-          Showing <span className="font-semibold text-gray-700">{filteredRows.length}</span> of <span className="font-semibold text-gray-700">{rows.length}</span> promoted rows.
+        <div className="flex flex-col items-start gap-2 text-xs text-gray-500 xl:items-end">
+          {activePlayerContext?.playerName ? (
+            <div className="rounded-md border border-[#7c3aed]/20 bg-[#faf5ff] px-3 py-2 text-[#7c3aed]">
+              Carrying player context for <span className="font-semibold">{activePlayerContext.playerName}</span>.
+            </div>
+          ) : null}
+          <div>
+            Showing <span className="font-semibold text-gray-700">{filteredRows.length}</span> of <span className="font-semibold text-gray-700">{rows.length}</span> promoted rows.
+          </div>
         </div>
       </div>
 
@@ -345,6 +392,14 @@ export function AgeCurvesView({
                     {expanded ? (
                       <tr className="border-t border-dashed border-gray-200 bg-[#fcfcfc]">
                         <td colSpan={9} className="px-6 py-5">
+                          <div className="mb-4">
+                            <PromotedModuleSystemCard
+                              currentModuleId="age-curves"
+                              playerContext={{ playerId: row.playerId ?? null, playerName: row.playerName }}
+                              heading="Related modules"
+                              description="Use this player carry-through to compare developmental timing with breakout validation and current deployment context."
+                            />
+                          </div>
                           <div className="mb-4 grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
                             <div className="grid gap-4 xl:grid-cols-3">
                               {detailSections.slice(0, 3).map((section) => (

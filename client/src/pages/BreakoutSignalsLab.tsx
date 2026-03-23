@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
+import { readDataLabPlayerCarryParams } from '@/lib/dataLabPromotedModules';
 import {
   BreakoutSignalsApiError,
   BreakoutSignalsResponse,
@@ -27,6 +28,10 @@ async function fetchBreakoutSignals(season?: string): Promise<BreakoutSignalsRes
 export default function BreakoutSignalsLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
   const [season, setSeason] = useState<string>('');
+  const initialPlayerContext = useMemo(
+    () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
+    [],
+  );
 
   const query = useQuery<BreakoutSignalsResponse, BreakoutSignalsApiError>({
     queryKey: ['/api/data-lab/breakout-signals', season],
@@ -55,6 +60,7 @@ export default function BreakoutSignalsLab() {
       isLoading={query.isLoading}
       errorMessage={query.error ? getBreakoutSignalsErrorMessage(query.error) : null}
       errorCode={query.error?.code ?? null}
+      initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}
     />
   );

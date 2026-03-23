@@ -121,7 +121,8 @@ describe('AgeCurvesView', () => {
     expect(html).toContain('Age Curve / ARC Lab');
     expect(html).toContain('Justin Jefferson');
     expect(html).toContain('Brock Bowers');
-    expect(html).toContain('Third promoted sub-model');
+    expect(html).toContain('Promoted module');
+    expect(html).toContain('Use alongside');
     expect(html).toContain('Showing');
   });
 
@@ -185,6 +186,30 @@ describe('AgeCurvesView', () => {
       'Full promoted payload',
     ]);
     expect(sections[1].fields.map((field) => field.label)).toContain('PPG delta');
+  });
+
+
+  it('renders related-module links with carried player context', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(AgeCurvesView, {
+        season: '2025',
+        availableSeasons: [2025],
+        rows,
+        isLoading: false,
+        error: null,
+        sourceProvider: 'arc-model',
+        sourceMode: 'artifact',
+        initialPlayerContext: {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+        },
+        onSeasonChange: jest.fn(),
+      }),
+    );
+
+    expect(html).toContain('Carrying player context for');
+    expect(html).toContain('/tiber-data-lab/breakout-signals?playerId=00-0036322&amp;playerName=Justin+Jefferson');
+    expect(html).toContain('/tiber-data-lab/role-opportunity?playerId=00-0036322&amp;playerName=Justin+Jefferson');
   });
 
   it('renders malformed and empty states with operator hints', () => {

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
+import { readDataLabPlayerCarryParams } from '@/lib/dataLabPromotedModules';
 import {
   RoleOpportunityLabApiError,
   RoleOpportunityLabResponse,
@@ -27,6 +28,10 @@ async function fetchRoleOpportunityLab(season?: string): Promise<RoleOpportunity
 export default function RoleOpportunityLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
   const [season, setSeason] = useState('');
+  const initialPlayerContext = useMemo(
+    () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
+    [],
+  );
 
   const query = useQuery<RoleOpportunityLabResponse, RoleOpportunityLabApiError>({
     queryKey: ['/api/data-lab/role-opportunity', season],
@@ -60,6 +65,8 @@ export default function RoleOpportunityLab() {
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
       scopeLabel={scopeLabel}
+      defaultExpandedPlayerId={initialPlayerContext.playerId ?? null}
+      initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}
     />
   );

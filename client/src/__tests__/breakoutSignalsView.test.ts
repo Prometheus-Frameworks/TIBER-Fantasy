@@ -132,10 +132,13 @@ describe('BreakoutSignalsView', () => {
     expect(html).toContain('Malik Nabers');
     expect(html).toContain('Second-Year Surge');
     expect(html).toContain('Validation 78%');
-    expect(html).toContain('Priority breakout');
+    expect(html).toContain('Promoted module');
     expect(html).toContain('This recipe comes from retrospective Signal-Validation-Model validation.');
     expect(html).toContain('Top 10');
     expect(html).toContain('High role signal');
+    expect(html).toContain('Use alongside');
+    expect(html).toContain('Role &amp; Opportunity Lab');
+    expect(html).toContain('Age Curve / ARC Lab');
   });
 
   it('keeps the breakout table column contract stable', () => {
@@ -217,6 +220,30 @@ describe('BreakoutSignalsView', () => {
       'Generated at',
       'Model version',
     ]);
+  });
+
+  it('renders related-module deep links with carried player context', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(BreakoutSignalsView, {
+        season: '2025',
+        availableSeasons: [2025],
+        rows,
+        bestRecipeSummary: summary,
+        isLoading: false,
+        errorMessage: null,
+        errorCode: null,
+        initialPlayerContext: {
+          playerId: '00-0042051',
+          playerName: 'Malik Nabers',
+        },
+        onSeasonChange: jest.fn(),
+      }),
+    );
+
+    expect(html).toContain('Carrying player context for');
+    expect(html).toContain('Malik Nabers');
+    expect(html).toContain('/tiber-data-lab/role-opportunity?playerId=00-0042051&amp;playerName=Malik+Nabers');
+    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0042051&amp;playerName=Malik+Nabers');
   });
 
   it('renders improved empty and malformed export states with operator hints', () => {

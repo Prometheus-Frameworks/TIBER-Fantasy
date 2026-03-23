@@ -140,8 +140,9 @@ describe('RoleOpportunityView', () => {
     expect(html).toContain('Role &amp; Opportunity Lab');
     expect(html).toContain('Justin Jefferson');
     expect(html).toContain('Brock Bowers');
-    expect(html).toContain('Read only');
+    expect(html).toContain('Promoted module');
     expect(html).toContain('Deployment and usage context');
+    expect(html).toContain('Use alongside');
     expect(html).toContain('Showing');
   });
 
@@ -207,6 +208,31 @@ describe('RoleOpportunityView', () => {
       'Full promoted payload',
     ]);
     expect(sections[1].fields.map((field) => field.label)).toContain('Route participation');
+  });
+
+
+  it('renders related-module links with carried player context', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(RoleOpportunityView, {
+        season: '2025',
+        availableSeasons: [2025],
+        rows,
+        isLoading: false,
+        error: null,
+        sourceProvider: 'tiber-data',
+        sourceMode: 'artifact',
+        scopeLabel: 'Week 17',
+        initialPlayerContext: {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+        },
+        onSeasonChange: jest.fn(),
+      }),
+    );
+
+    expect(html).toContain('Carrying player context for');
+    expect(html).toContain('/tiber-data-lab/breakout-signals?playerId=00-0036322&amp;playerName=Justin+Jefferson');
+    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0036322&amp;playerName=Justin+Jefferson');
   });
 
   it('renders malformed and empty states with operator hints', () => {
