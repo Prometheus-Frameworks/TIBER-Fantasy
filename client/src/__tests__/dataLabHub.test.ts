@@ -24,6 +24,7 @@ describe('DataLabHub', () => {
 
     expect(html).toContain('Promoted module system');
     expect(html).toContain('Breakout, role, developmental, and scenario context in one lane');
+    expect(html).toContain('Player Research Workspace');
     expect(html).toContain('WR Breakout Lab');
     expect(html).toContain('Role &amp; Opportunity Lab');
     expect(html).toContain('Age Curve / ARC Lab');

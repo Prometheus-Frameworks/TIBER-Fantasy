@@ -395,3 +395,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/pointScenarios/__tests__/pointScenariosAdapter.test.ts server/routes/__tests__/dataLabPointScenariosRoutes.test.ts client/src/__tests__/pointScenariosView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Player Research Workspace cross-model synthesis surface
+- **Branch:** current working branch
+- **Summary:** Added the read-only Player Research Workspace at `/tiber-data-lab/player-research` plus a new `playerResearch/` external-model orchestrator and `/api/data-lab/player-research` endpoint. The workspace aggregates promoted breakout, role, ARC, and point-scenario summaries for one player with search, deep-linking, partial-data handling, and direct link-outs to the deeper promoted labs.
+- **Key Files:**
+  - `server/modules/externalModels/playerResearch/playerResearchService.ts` — cross-model aggregation + normalization layer
+  - `server/routes/dataLabPlayerResearchRoutes.ts` — read-only API route for the workspace
+  - `client/src/pages/PlayerResearchLab.tsx` — route-level page wiring
+  - `client/src/components/data-lab/PlayerResearchWorkspaceView.tsx` — player-centric synthesis UI
+  - `client/src/lib/playerResearch.ts` — client contract, query helpers, and formatting/search utilities
+- **Validation:** Focused Jest suites passed for the new service, route, hub/module helpers, and workspace rendering; `npm run build` passed with the existing warning in `server/olc/adjusters.ts`.

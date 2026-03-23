@@ -167,6 +167,8 @@ Point Scenario Lab is now the fourth promoted read-only Data Lab sub-model. `ser
 
 The four promoted Data Lab modules are now intended to operate as one product lane inside the hub: Breakout Lab for signal validation, Role & Opportunity Lab for deployment context, Age Curve / ARC Lab for developmental timing, and Point Scenario Lab for contingency-aware point outcomes. The hub and each promoted module now include stable promoted/read-only framing, concise "what this module is for" plus "when to use this" guidance, and cross-module navigation that can carry `playerId` / `playerName` through deep links for faster operator workflows.
 
+Player Research Workspace is now the first cross-model synthesis surface in that lane. `server/modules/externalModels/playerResearch/` orchestrates the four promoted read-only adapters without recomputing any model logic, powers `GET /api/data-lab/player-research`, and backs the user-facing `/tiber-data-lab/player-research` page with player search, `playerId` deep-linking, partial-data handling, and direct link-outs to the underlying lab pages.
+
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
 - `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.

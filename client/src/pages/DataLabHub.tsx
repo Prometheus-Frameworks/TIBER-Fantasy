@@ -106,6 +106,21 @@ const modules = [
     badge: "NEW" as string | null,
   },
   {
+    id: "player-research",
+    title: "Player Research Workspace",
+    subtitle: "Cross-Model Synthesis",
+    description:
+      "Promoted player-centric research surface that aggregates the key read-only outputs from all promoted sub-models into one coherent view.",
+    whatItIsFor:
+      "Start with one player and inspect breakout, role, developmental, and scenario context together without recomputing any model logic inside TIBER.",
+    whenToUse:
+      "Use when you want the first cross-model synthesis pass before opening any one promoted lab in deeper detail.",
+    icon: Layers,
+    path: "/tiber-data-lab/player-research",
+    color: "#111827",
+    badge: "PROMOTED" as string | null,
+  },
+  {
     id: "breakout-signals",
     title: "WR Breakout Lab",
     subtitle: "Signal Validation Promotion",
@@ -277,7 +292,7 @@ export default function DataLabHub() {
           </h1>
         </div>
         <p className="text-gray-500 text-sm max-w-3xl">
-          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties breakout validation,
+          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties player-centric synthesis, breakout validation,
           role and opportunity context, age-curve framing, and scenario-based point outcomes into one operator-friendly product surface.
         </p>
       </div>

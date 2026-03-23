@@ -90,6 +90,7 @@ import { dataLabBreakoutSignalsRouter } from './routes/dataLabBreakoutSignalsRou
 import { dataLabRoleOpportunityRouter } from './routes/dataLabRoleOpportunityRoutes';
 import { dataLabAgeCurvesRouter } from './routes/dataLabAgeCurvesRoutes';
 import { dataLabPointScenariosRouter } from './routes/dataLabPointScenariosRoutes';
+import { dataLabPlayerResearchRouter } from './routes/dataLabPlayerResearchRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -231,6 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabRoleOpportunityRouter);
   app.use('/api/data-lab', dataLabAgeCurvesRouter);
   app.use('/api/data-lab', dataLabPointScenariosRouter);
+  app.use('/api/data-lab', dataLabPlayerResearchRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS
