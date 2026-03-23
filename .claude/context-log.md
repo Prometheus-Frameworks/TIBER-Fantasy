@@ -323,3 +323,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/components/data-lab/TeamResearchSummaryBlock.tsx`, `client/src/pages/SchedulePage.tsx`, `client/src/__tests__/teamResearchSummaryBlock.test.ts`, `README.md`, `replit.md`
 - **Validation:** Ran focused Jest coverage for the new summary block + existing team research link helpers, ran `npm run build`, and ran `git diff --check`.
 - **Notes:** The inline block intentionally stays lightweight and read only; the Schedule / SoS team table now acts as the main non-Data-Lab team-facing surface for promoted Team Research context.
+
+### 2026-03-23 — Codex: Tighten Team Research entry points on team surfaces
+- **What changed:** Extended the Schedule / SoS team surface so Team Research is reachable before and after team selection. Added a minimal inline Team Research entry CTA when no team is selected, added direct team-row Team Research links that carry season + team, and kept the selected-team inline Team Research Summary block as the read-only promoted intelligence surface.
+- **Files modified:** `client/src/pages/SchedulePage.tsx`, `client/src/components/data-lab/TeamResearchEntryCard.tsx`, `client/src/components/data-lab/TeamResearchInlineLink.tsx`, `client/src/__tests__/teamResearchEntryCard.test.ts`, `README.md`, `replit.md`
+- **Validation:** Ran the focused Team Research summary/CTA Jest suite and a production build.
+- **Notes:** This keeps core team pages lightweight: no new model promotions, no rescoring, and the full analysis still lives in Team Research Workspace.

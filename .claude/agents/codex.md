@@ -459,3 +459,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/teamResearchSummaryBlock.test.ts client/src/__tests__/coreResearchQuickLinks.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Team Research entry CTA tightening on Schedule / SoS
+- Added `TeamResearchEntryCard` so the Schedule / SoS team view still offers a Data Lab entry point before any team is selected.
+- Added `TeamResearchInlineLink` and wired team-row links so users can jump directly into the team-scoped Team Research Workspace with season + team preserved.
+- Kept the existing inline Team Research Summary block for the selected team and added focused CTA render tests plus docs updates.
+- Validation:
+  - `npm test -- client/src/__tests__/teamResearchSummaryBlock.test.ts client/src/__tests__/teamResearchEntryCard.test.ts`
+  - `npm run build`

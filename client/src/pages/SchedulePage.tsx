@@ -4,6 +4,8 @@ import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { Calendar, Users, TrendingUp, TrendingDown, ArrowUpDown, Filter } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TeamResearchSummaryBlock } from '@/components/data-lab/TeamResearchSummaryBlock';
+import { TeamResearchEntryCard } from '@/components/data-lab/TeamResearchEntryCard';
+import { TeamResearchInlineLink } from '@/components/data-lab/TeamResearchInlineLink';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -372,7 +374,12 @@ function TeamSosView({ season }: { season: number }) {
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2">
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <TeamLogo team={row.team} size={16} className="sm:w-5 sm:h-5" />
-                        <button type="button" className="text-left text-xs sm:text-sm font-medium text-white hover:text-violet-200" onClick={(event) => { event.stopPropagation(); setSelectedTeam(row.team); }}>{row.team}</button>
+                        <div className="flex flex-col items-start gap-0.5">
+                          <button type="button" className="text-left text-xs sm:text-sm font-medium text-white hover:text-violet-200" onClick={(event) => { event.stopPropagation(); setSelectedTeam(row.team); }}>{row.team}</button>
+                          <span onClick={(event) => event.stopPropagation()}>
+                            <TeamResearchInlineLink season={String(season)} team={row.team} compact />
+                          </span>
+                        </div>
                       </div>
                     </td>
                     {(['QB', 'RB', 'WR', 'TE'] as const).map(pos => {
@@ -405,7 +412,9 @@ function TeamSosView({ season }: { season: number }) {
           isLoading={teamResearchQuery.isLoading}
           errorMessage={teamResearchQuery.error instanceof Error ? teamResearchQuery.error.message : null}
         />
-      ) : null}
+      ) : (
+        <TeamResearchEntryCard season={String(season)} />
+      )}
 
       <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-500">
         <span className="flex items-center gap-1">
