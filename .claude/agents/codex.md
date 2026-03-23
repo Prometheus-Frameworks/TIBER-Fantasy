@@ -354,3 +354,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
   - `npm run typecheck` ❌ (repo-wide pre-existing TypeScript errors outside this PR)
+
+
+### 2026-03-23 — Codex: WR Breakout Lab polish pass
+- Added client-side sorting, search, and quick filters to the WR Breakout Lab without altering upstream scoring.
+- Reworked expanded detail rows into grouped read-only sections for ranking summary, signal components, breakout context, cohort/role context, and raw export metadata.
+- Improved best-recipe provenance copy plus loading/empty/error operator guidance.
+- Updated focused frontend tests and module docs.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/breakoutSignalsView.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅

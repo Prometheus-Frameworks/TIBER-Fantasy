@@ -148,7 +148,7 @@ The adapter pattern is intentionally small and repeatable:
 
 This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
 
-Signal-Validation-Model is now the first promoted read-only Data Lab module. `server/modules/externalModels/signalValidation/` reads exported `wr_player_signal_cards_{season}.csv` plus `wr_best_recipe_summary.json`, validates them at the edge, and powers `GET /api/data-lab/breakout-signals` plus the user-facing `/tiber-data-lab/breakout-signals` page. TIBER-Fantasy does **not** recompute breakout scores here; it only consumes promoted outputs and renders them with empty/loading/error guards.
+Signal-Validation-Model is now the first promoted read-only Data Lab module. `server/modules/externalModels/signalValidation/` reads exported `wr_player_signal_cards_{season}.csv` plus `wr_best_recipe_summary.json`, validates them at the edge, and powers `GET /api/data-lab/breakout-signals` plus the user-facing `/tiber-data-lab/breakout-signals` page. TIBER-Fantasy does **not** recompute breakout scores here; it only consumes promoted outputs and renders them with client-side sort/search/filter polish, grouped read-only detail sections, best-recipe provenance context, and explicit empty/loading/error guards.
 
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.

@@ -54,6 +54,7 @@ export default function BreakoutSignalsLab() {
       bestRecipeSummary={query.data?.data.bestRecipeSummary ?? null}
       isLoading={query.isLoading}
       errorMessage={query.error ? getBreakoutSignalsErrorMessage(query.error) : null}
+      errorCode={query.error?.code ?? null}
       onSeasonChange={setSeason}
     />
   );
