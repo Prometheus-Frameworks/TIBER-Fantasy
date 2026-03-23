@@ -1,5 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
+import { buildPromotedModuleOperatorDetails } from '../modules/externalModels/promotedModuleOperator';
 import { RoleOpportunityService, roleOpportunityService } from '../modules/externalModels/roleOpportunity/roleOpportunityService';
 import { RoleOpportunityIntegrationError } from '../modules/externalModels/roleOpportunity/types';
 
@@ -49,10 +50,17 @@ export function createDataLabRoleOpportunityRouter(service: RoleOpportunityServi
       });
     } catch (error) {
       if (error instanceof RoleOpportunityIntegrationError) {
+        const status = service.getStatus();
         return res.status(error.status).json({
           success: false,
           error: error.message,
           code: error.code,
+          operator: buildPromotedModuleOperatorDetails({
+            moduleLabel: 'Role & Opportunity Lab',
+            dependencySummary: 'Depends on either the Role-and-opportunity-model compatibility API or a promoted exported artifact path.',
+            errorCode: error.code,
+            status,
+          }),
         });
       }
 

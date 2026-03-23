@@ -5,6 +5,14 @@ import { RoleOpportunityIntegrationError } from '../../modules/externalModels/ro
 
 function buildService(overrides: Partial<any> = {}) {
   return {
+    getStatus: jest.fn().mockReturnValue({
+      readiness: 'ready',
+      configured: true,
+      enabled: true,
+      baseUrl: 'http://role-opportunity.test',
+      labEndpointPath: '/api/role-opportunity/lab',
+      exportsPath: '/compatibility/role_opportunity_lab',
+    }),
     getRoleOpportunityLab: jest.fn().mockResolvedValue({
       season: 2025,
       week: 17,
@@ -131,5 +139,10 @@ describe('data lab role opportunity routes', () => {
     expect(res.status).toBe(502);
     expect(res.body.success).toBe(false);
     expect(res.body.code).toBe('invalid_payload');
+    expect(res.body.operator).toEqual(
+      expect.objectContaining({
+        state: 'contract_error',
+      }),
+    );
   });
 });

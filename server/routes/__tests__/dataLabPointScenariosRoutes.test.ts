@@ -5,6 +5,14 @@ import { PointScenarioIntegrationError } from '../../modules/externalModels/poin
 
 function buildService(overrides: Partial<any> = {}) {
   return {
+    getStatus: jest.fn().mockReturnValue({
+      readiness: 'ready',
+      configured: true,
+      enabled: true,
+      baseUrl: 'http://point-scenarios.test',
+      labEndpointPath: '/api/point-scenarios/lab',
+      exportsPath: '/exports/point_scenario_lab.json',
+    }),
     getPointScenarioLab: jest.fn().mockResolvedValue({
       season: 2025,
       availableSeasons: [2025, 2024],
@@ -120,5 +128,10 @@ describe('data lab point scenarios routes', () => {
     expect(res.status).toBe(502);
     expect(res.body.success).toBe(false);
     expect(res.body.code).toBe('invalid_payload');
+    expect(res.body.operator).toEqual(
+      expect.objectContaining({
+        state: 'contract_error',
+      }),
+    );
   });
 });

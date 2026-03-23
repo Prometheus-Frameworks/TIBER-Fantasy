@@ -1,5 +1,6 @@
 import express from 'express';
 import { z } from 'zod';
+import { buildPromotedModuleOperatorDetails } from '../modules/externalModels/promotedModuleOperator';
 import { AgeCurvesService, ageCurvesService } from '../modules/externalModels/ageCurves/ageCurvesService';
 import { AgeCurveIntegrationError } from '../modules/externalModels/ageCurves/types';
 
@@ -43,10 +44,17 @@ export function createDataLabAgeCurvesRouter(service: AgeCurvesService = ageCurv
       });
     } catch (error) {
       if (error instanceof AgeCurveIntegrationError) {
+        const status = service.getStatus();
         return res.status(error.status).json({
           success: false,
           error: error.message,
           code: error.code,
+          operator: buildPromotedModuleOperatorDetails({
+            moduleLabel: 'Age Curve / ARC Lab',
+            dependencySummary: 'Depends on either ARC compatibility payloads or a promoted age-curve artifact path.',
+            errorCode: error.code,
+            status,
+          }),
         });
       }
 

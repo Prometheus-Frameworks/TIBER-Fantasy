@@ -1,3 +1,5 @@
+import { PromotedModuleOperatorDetails, appendPromotedModuleOperatorHints } from '@/lib/dataLabPromotedModules';
+
 export interface BreakoutSignalComponents {
   usage: number | null;
   efficiency: number | null;
@@ -59,6 +61,7 @@ export interface BreakoutSignalsApiError {
   success: false;
   error: string;
   code?: 'config_error' | 'not_found' | 'invalid_payload' | 'malformed_export' | 'upstream_unavailable';
+  operator?: PromotedModuleOperatorDetails;
 }
 
 export const BREAKOUT_SIGNAL_COLUMNS = [
@@ -253,7 +256,8 @@ export function getBreakoutSignalsErrorMessage(error?: BreakoutSignalsApiError |
 }
 
 export function getBreakoutSignalsStateHints(error?: BreakoutSignalsApiError | null): string[] {
-  switch (error?.code) {
+  const baseHints = (() => {
+    switch (error?.code) {
     case 'not_found':
       return [
         'Confirm the promoted season export exists in the configured Signal-Validation-Model export directory.',
@@ -281,7 +285,10 @@ export function getBreakoutSignalsStateHints(error?: BreakoutSignalsApiError | n
       return [
         'This module stays read-only: no local rescoring, no mutation, and no raw export editing happens in TIBER.',
       ];
-  }
+    }
+  })();
+
+  return appendPromotedModuleOperatorHints(baseHints, error?.operator);
 }
 
 function formatDetailLabel(field: string): string {

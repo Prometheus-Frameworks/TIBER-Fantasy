@@ -48,6 +48,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - `GET /api/data-lab/age-curves[?season=<year>]` is the third promoted read-only Data Lab sub-model. It returns normalized developmental-context rows for the Data Lab surface at `/tiber-data-lab/age-curves`, while preserving explicit missing, malformed, and empty upstream states.
 - `GET /api/data-lab/point-scenarios[?season=<year>]` is the fourth promoted read-only Data Lab sub-model. It returns normalized scenario-based point outcome rows for the Data Lab surface at `/tiber-data-lab/point-scenarios`, while preserving explicit missing, malformed, and empty upstream states.
 - `playerResearch/` is the first cross-model synthesis orchestrator for promoted labs. It composes the four promoted read-only services without recomputing their logic and powers `GET /api/data-lab/player-research[?season=<year>][&playerId=<gsis>][&playerName=<name>]` plus the player-centric Data Lab surface at `/tiber-data-lab/player-research`.
+- The promoted Data Lab lane now shares product hardening conventions: read-only model-surface copy, consistent loading/empty/error states, shared provenance wording, operator-visible upstream/config diagnostics, a lightweight hub help/status panel, and predictable `playerId` / `playerName` / season deep-link carry-through.
 
 ## Current FORGE migration tooling
 

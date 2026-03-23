@@ -23,11 +23,11 @@ async function fetchAgeCurvesLab(season?: string): Promise<AgeCurveLabResponse> 
 
 export default function AgeCurvesLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
-  const [season, setSeason] = useState('');
   const initialPlayerContext = useMemo(
     () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
     [],
   );
+  const [season, setSeason] = useState(initialPlayerContext.season ?? '');
 
   const query = useQuery<AgeCurveLabResponse, AgeCurveLabApiError>({
     queryKey: ['/api/data-lab/age-curves', season],
@@ -56,6 +56,7 @@ export default function AgeCurvesLab() {
       error={query.error ? { ...query.error, error: getAgeCurveLabErrorMessage(query.error) } : null}
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
+      sourceLocation={query.data?.data.source.location ?? query.error?.operator?.configuredSource ?? null}
       defaultExpandedPlayerKey={initialPlayerContext.playerId ?? null}
       initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}

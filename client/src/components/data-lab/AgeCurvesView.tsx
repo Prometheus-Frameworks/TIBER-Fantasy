@@ -5,9 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
-import { DataLabPlayerCarryContext } from '@/lib/dataLabPromotedModules';
+import { PromotedModuleStateCard } from '@/components/data-lab/PromotedModuleStateCard';
+import { DataLabPlayerCarryContext, formatPromotedModuleProvenance } from '@/lib/dataLabPromotedModules';
 import {
   AGE_CURVE_COLUMNS,
   AgeCurveLabApiError,
@@ -31,6 +31,7 @@ interface AgeCurvesViewProps {
   error?: AgeCurveLabApiError | null;
   sourceProvider?: string | null;
   sourceMode?: 'api' | 'artifact' | null;
+  sourceLocation?: string | null;
   defaultExpandedPlayerKey?: string | null;
   initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
@@ -38,31 +39,6 @@ interface AgeCurvesViewProps {
 
 function buildRowKey(row: AgeCurveLabRow) {
   return row.playerId ?? `${row.playerName}-${row.season ?? 'na'}-${row.team ?? 'na'}`;
-}
-
-function EmptyState({ title, message, hints }: { title: string; message: string; hints?: string[] }) {
-  return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-[#fafafa] px-6 py-14 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-        <Database className="h-5 w-5 text-[#7c3aed]" />
-      </div>
-      <h2 className="mt-4 text-lg font-semibold text-gray-900">{title}</h2>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-gray-500">{message}</p>
-      {hints?.length ? (
-        <div className="mx-auto mt-5 max-w-2xl rounded-lg border border-gray-200 bg-white p-4 text-left">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Operator hints</div>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
-            {hints.map((hint) => (
-              <li key={hint} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 rounded-full bg-[#7c3aed]" aria-hidden />
-                <span>{hint}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
-  );
 }
 
 function SortIcon({ active, direction }: { active: boolean; direction: AgeCurveSortState['direction'] }) {
@@ -143,6 +119,7 @@ export function AgeCurvesView({
   error,
   sourceProvider,
   sourceMode,
+  sourceLocation,
   defaultExpandedPlayerKey = null,
   initialPlayerContext = null,
   onSeasonChange,
@@ -168,6 +145,14 @@ export function AgeCurvesView({
   }, [positionFilter, rows, searchQuery, sortState, teamFilter]);
 
   const hints = useMemo(() => getAgeCurveStateHints(error ?? null), [error]);
+  const provenanceLabel = useMemo(
+    () => formatPromotedModuleProvenance({
+      provider: sourceProvider,
+      mode: sourceMode,
+      location: sourceLocation ?? null,
+    }),
+    [sourceLocation, sourceMode, sourceProvider],
+  );
 
   const activePlayerContext = useMemo<DataLabPlayerCarryContext | null>(() => {
     const expandedRow = rows.find((row) => buildRowKey(row) === expandedPlayerKey || row.playerId === expandedPlayerKey);
@@ -175,11 +160,15 @@ export function AgeCurvesView({
       return {
         playerId: expandedRow.playerId ?? null,
         playerName: expandedRow.playerName ?? null,
+        season,
       };
     }
 
     if (initialPlayerContext?.playerId || initialPlayerContext?.playerName) {
-      return initialPlayerContext;
+      return {
+        ...initialPlayerContext,
+        season: initialPlayerContext.season ?? season,
+      };
     }
 
     if (!searchQuery.trim()) {
@@ -191,14 +180,16 @@ export function AgeCurvesView({
       return {
         playerId: exactNameMatch.playerId ?? null,
         playerName: exactNameMatch.playerName ?? null,
+        season,
       };
     }
 
     return {
       playerId: null,
       playerName: searchQuery.trim(),
+      season,
     };
-  }, [expandedPlayerKey, initialPlayerContext, rows, searchQuery]);
+  }, [expandedPlayerKey, initialPlayerContext, rows, searchQuery, season]);
 
   const updateSort = (key: AgeCurveSortState['key']) => {
     setSortState((current) => {
@@ -254,8 +245,8 @@ export function AgeCurvesView({
               <div className="mt-1 text-gray-700">{season}</div>
             </div>
             <div className="rounded-md bg-white px-3 py-2">
-              <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">Source</div>
-              <div className="mt-1 text-gray-700">{sourceProvider ?? '—'}{sourceMode ? ` · ${sourceMode}` : ''}</div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">Provenance</div>
+              <div className="mt-1 text-gray-700">{provenanceLabel}</div>
             </div>
           </div>
         </CardContent>
@@ -328,15 +319,29 @@ export function AgeCurvesView({
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
+        <PromotedModuleStateCard
+          icon={Database}
+          accentClassName="bg-[#faf5ff]"
+          accentTextClassName="text-[#7c3aed]"
+          title="Loading Age Curve / ARC Lab"
+          message={`Loading promoted developmental-context output for season ${season}. TIBER is preserving the read-only ARC contract while the module initializes.`}
+          mode="loading"
+        />
       ) : error ? (
-        <EmptyState title="Age Curve Lab unavailable" message={error.error} hints={hints} />
+        <PromotedModuleStateCard
+          icon={Database}
+          accentClassName="bg-[#faf5ff]"
+          accentTextClassName="text-[#7c3aed]"
+          title="Age Curve Lab unavailable"
+          message={error.error}
+          hints={hints}
+          mode="error"
+        />
       ) : filteredRows.length === 0 ? (
-        <EmptyState
+        <PromotedModuleStateCard
+          icon={Database}
+          accentClassName="bg-[#faf5ff]"
+          accentTextClassName="text-[#7c3aed]"
           title={rows.length === 0 ? 'Age Curve Lab ready, but empty' : 'No rows match the active filters'}
           message={
             rows.length === 0
@@ -344,6 +349,7 @@ export function AgeCurvesView({
               : 'Try widening the player search, team filter, or position filter to inspect more promoted rows.'
           }
           hints={hints}
+          mode="empty"
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-gray-200">

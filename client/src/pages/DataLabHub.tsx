@@ -339,9 +339,48 @@ export default function DataLabHub() {
               for deployment context, ARC for developmental timing, and Point Scenario Lab for contingency-aware point outcomes. They are meant to be used together, not as isolated destinations.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge className="border-0 bg-gray-900 text-white">Promoted</Badge>
-            <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
+        <div className="flex flex-wrap gap-2">
+          <Badge className="border-0 bg-gray-900 text-white">Promoted</Badge>
+          <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
+        </div>
+      </div>
+
+        <div className="mb-5 rounded-2xl border border-gray-200 bg-[#fafafa] p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">System status &amp; help</div>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                Promoted modules are read-only model surfaces. TIBER-Fantasy renders exported or adapter-fed outputs, carries player and season context across modules, and keeps operator-visible distinctions between no-data states, upstream issues, and misconfigured dependencies.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white bg-white px-4 py-3 text-sm text-gray-600 shadow-sm">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Operator posture</div>
+              <div className="mt-2">No rescoring in product.</div>
+              <div>Deep links carry <span className="font-mono">playerId</span>, <span className="font-mono">playerName</span>, and season where available.</div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {PROMOTED_DATA_LAB_MODULES.map((module) => (
+              <div key={module.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold text-gray-900">{module.title}</div>
+                  <Link href={module.path} className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-900">
+                    Open
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-gray-600">{module.dependencySummary}</p>
+                <ul className="mt-3 space-y-1 text-sm text-gray-500">
+                  {module.dependencies.map((dependency) => (
+                    <li key={dependency} className="flex gap-2">
+                      <span className="mt-[9px] h-1.5 w-1.5 rounded-full bg-gray-300" aria-hidden />
+                      <span>{dependency}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
 

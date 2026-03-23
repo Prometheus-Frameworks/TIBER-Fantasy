@@ -5,6 +5,7 @@ import {
   DataLabPlayerCarryContext,
   PROMOTED_DATA_LAB_MODULES,
   PromotedDataLabModuleDefinition,
+  buildPromotedModuleNavigationLabel,
   buildPromotedModuleHref,
 } from '@/lib/dataLabPromotedModules';
 
@@ -59,7 +60,9 @@ export function PromotedModuleSystemCard({
             <div className="mt-3 space-y-2 text-sm text-gray-600">
               <p><span className="font-semibold text-gray-700">What it is for:</span> {module.whatItIsFor}</p>
               <p><span className="font-semibold text-gray-700">When to use:</span> {module.whenToUse}</p>
+              <p><span className="font-semibold text-gray-700">Dependency:</span> {module.dependencySummary}</p>
             </div>
+            <div className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">{buildPromotedModuleNavigationLabel(module.id)}</div>
           </Link>
         ))}
       </div>

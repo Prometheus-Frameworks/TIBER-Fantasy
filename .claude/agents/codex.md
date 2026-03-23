@@ -406,3 +406,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `client/src/components/data-lab/PlayerResearchWorkspaceView.tsx` — player-centric synthesis UI
   - `client/src/lib/playerResearch.ts` — client contract, query helpers, and formatting/search utilities
 - **Validation:** Focused Jest suites passed for the new service, route, hub/module helpers, and workspace rendering; `npm run build` passed with the existing warning in `server/olc/adjusters.ts`.
+
+### 2026-03-23 — Codex: Data Lab promoted-module stabilization pass
+- Standardized promoted-module UX patterns across Breakout, Role & Opportunity, Age Curve / ARC, Point Scenario, and Player Research with a shared state card, shared provenance/dependency copy, and normalized “go to module / go to player research” navigation language.
+- Preserved season carry-through across promoted deep links by threading `season` alongside `playerId` / `playerName` in promoted module context helpers and target pages.
+- Added additive operator-facing route diagnostics for promoted-module config/no-data/contract/upstream states via `promotedModuleOperator.ts`, then surfaced those diagnostics inside the client hint copy.
+- Added a lightweight Data Lab Hub status/help surface describing promoted modules as read-only model surfaces plus their main upstream dependencies.
+- Updated focused view/helper/route tests and refreshed docs in `README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md`.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/pointScenariosView.test.ts client/src/__tests__/breakoutSignalsView.test.ts client/src/__tests__/roleOpportunityView.test.ts client/src/__tests__/ageCurvesView.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts server/routes/__tests__/dataLabBreakoutSignalsRoutes.test.ts server/routes/__tests__/dataLabRoleOpportunityRoutes.test.ts server/routes/__tests__/dataLabAgeCurvesRoutes.test.ts server/routes/__tests__/dataLabPointScenariosRoutes.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅

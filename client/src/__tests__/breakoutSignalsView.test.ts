@@ -242,8 +242,9 @@ describe('BreakoutSignalsView', () => {
 
     expect(html).toContain('Carrying player context for');
     expect(html).toContain('Malik Nabers');
-    expect(html).toContain('/tiber-data-lab/role-opportunity?playerId=00-0042051&amp;playerName=Malik+Nabers');
-    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0042051&amp;playerName=Malik+Nabers');
+    expect(html).toContain('/tiber-data-lab/role-opportunity?playerId=00-0042051&amp;playerName=Malik+Nabers&amp;season=2025');
+    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0042051&amp;playerName=Malik+Nabers&amp;season=2025');
+    expect(html).toContain('Provenance');
   });
 
   it('renders improved empty and malformed export states with operator hints', () => {

@@ -5,6 +5,12 @@ import { SignalValidationIntegrationError } from '../../modules/externalModels/s
 
 function buildService(overrides: Partial<any> = {}) {
   return {
+    getStatus: jest.fn().mockReturnValue({
+      readiness: 'ready',
+      configured: true,
+      enabled: true,
+      exportsDir: '/tmp/signal-validation',
+    }),
     getWrBreakoutLab: jest.fn().mockResolvedValue({
       season: 2025,
       availableSeasons: [2025, 2024],
@@ -135,5 +141,36 @@ describe('data lab breakout signals routes', () => {
     expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
     expect(res.body.code).toBe('not_found');
+    expect(res.body.operator).toEqual(
+      expect.objectContaining({
+        state: 'no_data',
+      }),
+    );
+  });
+
+  it('surfaces config issues as operator-visible misconfiguration details', async () => {
+    const service = buildService({
+      getStatus: jest.fn().mockReturnValue({
+        readiness: 'not_ready',
+        configured: false,
+        enabled: true,
+        exportsDir: '/tmp/missing-signal-validation',
+      }),
+      getWrBreakoutLab: jest.fn().mockRejectedValue(
+        new SignalValidationIntegrationError('config_error', 'Signal Validation exports are disabled by configuration.', 503),
+      ),
+    });
+    const app = express();
+    app.use('/api/data-lab', createDataLabBreakoutSignalsRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/breakout-signals');
+
+    expect(res.status).toBe(503);
+    expect(res.body.operator).toEqual(
+      expect.objectContaining({
+        state: 'misconfigured',
+        configuredSource: '/tmp/missing-signal-validation',
+      }),
+    );
   });
 });

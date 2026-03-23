@@ -231,8 +231,9 @@ describe('RoleOpportunityView', () => {
     );
 
     expect(html).toContain('Carrying player context for');
-    expect(html).toContain('/tiber-data-lab/breakout-signals?playerId=00-0036322&amp;playerName=Justin+Jefferson');
-    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0036322&amp;playerName=Justin+Jefferson');
+    expect(html).toContain('/tiber-data-lab/breakout-signals?playerId=00-0036322&amp;playerName=Justin+Jefferson&amp;season=2025');
+    expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0036322&amp;playerName=Justin+Jefferson&amp;season=2025');
+    expect(html).toContain('Provenance');
   });
 
   it('renders malformed and empty states with operator hints', () => {

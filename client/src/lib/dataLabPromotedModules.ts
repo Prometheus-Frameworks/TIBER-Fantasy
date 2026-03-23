@@ -13,6 +13,16 @@ export interface PromotedDataLabModuleDefinition {
   whatItIsFor: string;
   whenToUse: string;
   alongside: string;
+  dependencySummary: string;
+  dependencies: string[];
+}
+
+export interface PromotedModuleOperatorDetails {
+  state: 'misconfigured' | 'no_data' | 'contract_error' | 'dependency_unavailable';
+  dependencySummary: string;
+  configuredSource: string | null;
+  recommendedAction: string;
+  readOnlyMessage: string;
 }
 
 export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
@@ -25,6 +35,8 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Inspect one player across all promoted read-only model outputs without opening four separate labs.',
     whenToUse: 'Use when you want the first cross-model synthesis pass before diving into any one lab in detail.',
     alongside: 'Best used as the hub for player-centric research, then followed by the deeper promoted lab pages as needed.',
+    dependencySummary: 'Depends on the four promoted lab adapters already being available for the selected player and season.',
+    dependencies: ['WR Breakout Lab adapter', 'Role & Opportunity Lab adapter', 'Age Curve / ARC adapter', 'Point Scenario Lab adapter'],
   },
   {
     id: 'breakout-signals',
@@ -35,6 +47,8 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Validate promoted WR breakout candidates, signal-card rankings, and recipe context without rescoring locally.',
     whenToUse: 'Use when you need a fast breakout screen before checking role or developmental context.',
     alongside: 'Best paired with Role & Opportunity for deployment context and ARC for developmental timing.',
+    dependencySummary: 'Depends on promoted Signal-Validation-Model WR exports being readable from the configured export directory.',
+    dependencies: ['wr_player_signal_cards_{season}.csv', 'wr_best_recipe_summary.json'],
   },
   {
     id: 'role-opportunity',
@@ -45,6 +59,8 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Inspect how a player is being deployed through role, route, target, air-yard, and snap-share context.',
     whenToUse: 'Use when you want to understand whether volume and alignment support the rest of the player case.',
     alongside: 'Best paired with Breakout Lab for signal strength and ARC for age/career-stage context.',
+    dependencySummary: 'Depends on either the Role-and-opportunity-model compatibility API or a promoted exported artifact path.',
+    dependencies: ['Role-and-opportunity-model API', 'ROLE_OPPORTUNITY_EXPORTS_PATH artifact fallback'],
   },
   {
     id: 'age-curves',
@@ -55,6 +71,8 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Frame a player by age, career stage, peer bucket, and expected-vs-actual production context.',
     whenToUse: 'Use when you need to pressure-test whether current production lines up with developmental timing.',
     alongside: 'Best paired with Breakout Lab for breakout validation and Role & Opportunity for current deployment.',
+    dependencySummary: 'Depends on either ARC compatibility payloads or a promoted age-curve artifact path.',
+    dependencies: ['ARC compatibility endpoint', 'AGE_CURVE_EXPORTS_PATH artifact fallback'],
   },
   {
     id: 'point-scenarios',
@@ -65,14 +83,22 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Inspect how promoted scenario assumptions move baseline point projections without rebuilding projection logic locally.',
     whenToUse: 'Use when you need contingency-aware point outcomes before making a final decision or ranking adjustment elsewhere.',
     alongside: 'Best paired with Breakout Lab for candidate validation, Role & Opportunity for deployment context, and ARC for developmental timing.',
+    dependencySummary: 'Depends on either Point-prediction-Model scenario payloads or a promoted point-scenario artifact path.',
+    dependencies: ['Point-prediction-Model API', 'POINT_SCENARIO_EXPORTS_PATH artifact fallback'],
   },
 ];
+
+export function getPromotedModuleDefinition(
+  moduleId: PromotedDataLabModuleDefinition['id'],
+): PromotedDataLabModuleDefinition | null {
+  return PROMOTED_DATA_LAB_MODULES.find((candidate) => candidate.id === moduleId) ?? null;
+}
 
 export function buildPromotedModuleHref(
   moduleId: PromotedDataLabModuleDefinition['id'],
   context?: DataLabPlayerCarryContext,
 ): string {
-  const module = PROMOTED_DATA_LAB_MODULES.find((candidate) => candidate.id === moduleId);
+  const module = getPromotedModuleDefinition(moduleId);
   if (!module) {
     return '/tiber-data-lab';
   }
@@ -106,4 +132,41 @@ export function readDataLabPlayerCarryParams(search: string): DataLabPlayerCarry
     playerName: playerName?.trim() || null,
     season: season?.trim() || null,
   };
+}
+
+export function buildPromotedModuleNavigationLabel(moduleId: PromotedDataLabModuleDefinition['id']): string {
+  return moduleId === 'player-research' ? 'Go to player research' : 'Go to module';
+}
+
+export function formatPromotedModuleProvenance(options: {
+  provider?: string | null;
+  mode?: 'api' | 'artifact' | null;
+  location?: string | null;
+}): string {
+  const parts = [options.provider ?? 'Unknown upstream'];
+
+  if (options.mode) {
+    parts.push(options.mode === 'artifact' ? 'artifact export' : 'upstream API');
+  }
+
+  if (options.location) {
+    parts.push(options.location);
+  }
+
+  return parts.join(' · ');
+}
+
+export function appendPromotedModuleOperatorHints(baseHints: string[], operator?: PromotedModuleOperatorDetails | null): string[] {
+  if (!operator) {
+    return baseHints;
+  }
+
+  const extraHints = [
+    operator.dependencySummary,
+    operator.configuredSource ? `Configured source: ${operator.configuredSource}` : null,
+    operator.recommendedAction,
+    operator.readOnlyMessage,
+  ].filter((hint): hint is string => Boolean(hint));
+
+  return Array.from(new Set([...baseHints, ...extraHints]));
 }

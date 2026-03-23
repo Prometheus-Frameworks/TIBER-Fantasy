@@ -33,6 +33,9 @@ describe('DataLabHub', () => {
     expect(html).toContain('When to use this');
     expect(html).toContain('Promoted');
     expect(html).toContain('Read only');
+    expect(html).toContain('System status &amp; help');
+    expect(html).toContain('read-only model surfaces');
+    expect(html).toContain('Signal-Validation-Model WR exports');
     expect(html).toContain('12,345');
   });
 });

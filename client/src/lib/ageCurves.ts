@@ -1,3 +1,5 @@
+import { PromotedModuleOperatorDetails, appendPromotedModuleOperatorHints } from '@/lib/dataLabPromotedModules';
+
 export interface AgeCurveLabRow {
   playerId: string | null;
   playerName: string;
@@ -48,6 +50,7 @@ export interface AgeCurveLabApiError {
   success: false;
   error: string;
   code?: 'config_error' | 'not_found' | 'invalid_payload' | 'upstream_unavailable' | 'upstream_timeout';
+  operator?: PromotedModuleOperatorDetails;
 }
 
 export const AGE_CURVE_COLUMNS = [
@@ -171,13 +174,12 @@ export function getAgeCurveLabErrorMessage(error: AgeCurveLabApiError): string {
 }
 
 export function getAgeCurveStateHints(error: AgeCurveLabApiError | null): string[] {
-  if (!error) {
-    return [
+  const baseHints = !error
+    ? [
       'This lab is read only and exists to explain developmental context, not to generate new predictions inside TIBER-Fantasy.',
       'TIBER-Fantasy is only normalizing promoted ARC outputs for inspection and trustable review.',
-    ];
-  }
-
+    ]
+    : (() => {
   switch (error.code) {
     case 'config_error':
       return [
@@ -199,7 +201,10 @@ export function getAgeCurveStateHints(error: AgeCurveLabApiError | null): string
         'Retry after the upstream ARC dependency is available again.',
         'This page should remain read only even when the source is degraded.',
       ];
-  }
+    }
+      })();
+
+  return appendPromotedModuleOperatorHints(baseHints, error?.operator);
 }
 
 export function filterAgeCurveRows(rows: AgeCurveLabRow[], filters: AgeCurveFilters = {}): AgeCurveLabRow[] {

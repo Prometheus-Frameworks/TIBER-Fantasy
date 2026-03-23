@@ -1,8 +1,10 @@
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
 import { Search, ArrowUpRight, AlertTriangle, CheckCircle2, CircleOff, Layers3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
+import { PromotedModuleStateCard } from '@/components/data-lab/PromotedModuleStateCard';
+import { buildPromotedModuleNavigationLabel } from '@/lib/dataLabPromotedModules';
 import {
   PlayerResearchResponse,
   PlayerResearchSearchEntry,
@@ -87,9 +89,11 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
 
 function SectionCard({
   section,
+  navigationLabel = 'Go to module',
   children,
 }: {
   section: PlayerResearchResponse['data']['sections'][keyof PlayerResearchResponse['data']['sections']];
+  navigationLabel?: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -110,7 +114,7 @@ function SectionCard({
           href={section.linkHref}
           className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:text-gray-900"
         >
-          Open full lab
+          {navigationLabel}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </a>
       </div>
@@ -255,11 +259,33 @@ export function PlayerResearchWorkspaceView({
       </div>
 
       {isLoading ? (
-        <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">Loading promoted player research workspace…</div>
+        <div className="mt-6">
+          <PromotedModuleStateCard
+            icon={Layers3}
+            accentClassName="bg-gray-100"
+            accentTextClassName="text-gray-700"
+            title="Loading Player Research Workspace"
+            message="Loading the promoted read-only player workspace and checking which promoted modules are available for the selected player."
+            mode="loading"
+          />
+        </div>
       ) : null}
 
       {errorMessage ? (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{errorMessage}</div>
+        <div className="mt-6">
+          <PromotedModuleStateCard
+            icon={AlertTriangle}
+            accentClassName="bg-red-50"
+            accentTextClassName="text-red-700"
+            title="Player Research Workspace unavailable"
+            message={errorMessage}
+            hints={[
+              'This workspace stays read only and depends on the promoted lab adapters being reachable.',
+              'Retry after the upstream promoted modules are healthy again.',
+            ]}
+            mode="error"
+          />
+        </div>
       ) : null}
 
       {data && !isLoading && !errorMessage ? (
@@ -281,14 +307,36 @@ export function PlayerResearchWorkspaceView({
           ) : null}
 
           {data.state === 'idle' ? (
-            <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
-              Search by player name or use a <span className="font-mono">playerId</span> deep link to inspect promoted outputs for a single player.
+            <div className="mt-6">
+              <PromotedModuleStateCard
+                icon={Layers3}
+                accentClassName="bg-gray-100"
+                accentTextClassName="text-gray-700"
+                title="Player Research Workspace ready"
+                message="Search by player name or use a playerId deep link to inspect promoted outputs for a single player."
+                hints={[
+                  'Deep-link supported via playerId, playerName, and season query params.',
+                  'This workspace does not recompute any of the underlying promoted models.',
+                ]}
+                mode="empty"
+              />
             </div>
           ) : null}
 
           {data.state === 'empty' ? (
-            <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600">
-              No promoted player match was found for that query in the selected season. Try another spelling or choose a suggestion from the promoted search index.
+            <div className="mt-6">
+              <PromotedModuleStateCard
+                icon={CircleOff}
+                accentClassName="bg-gray-100"
+                accentTextClassName="text-gray-700"
+                title="No promoted player match found"
+                message="No promoted player match was found for that query in the selected season. Try another spelling or choose a suggestion from the promoted search index."
+                hints={[
+                  'This is a no-data state for the selected query, not a local recomputation state.',
+                  'Try a GSIS playerId deep link when you need deterministic carry-through across modules.',
+                ]}
+                mode="empty"
+              />
             </div>
           ) : null}
 
@@ -305,7 +353,7 @@ export function PlayerResearchWorkspaceView({
 
           {data.selectedPlayer ? (
             <div className="mt-6 grid gap-5">
-              <SectionCard section={data.sections.breakoutSignals}>
+              <SectionCard section={data.sections.breakoutSignals} navigationLabel={buildPromotedModuleNavigationLabel('breakout-signals')}>
                 {data.sections.breakoutSignals.summary ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryStat label="Candidate rank" value={data.sections.breakoutSignals.summary.candidateRank != null ? String(data.sections.breakoutSignals.summary.candidateRank) : '—'} />
@@ -328,7 +376,7 @@ export function PlayerResearchWorkspaceView({
                 ) : null}
               </SectionCard>
 
-              <SectionCard section={data.sections.roleOpportunity}>
+              <SectionCard section={data.sections.roleOpportunity} navigationLabel={buildPromotedModuleNavigationLabel('role-opportunity')}>
                 {data.sections.roleOpportunity.summary ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryStat label="Primary role" value={data.sections.roleOpportunity.summary.primaryRole} />
@@ -353,7 +401,7 @@ export function PlayerResearchWorkspaceView({
                 ) : null}
               </SectionCard>
 
-              <SectionCard section={data.sections.ageCurves}>
+              <SectionCard section={data.sections.ageCurves} navigationLabel={buildPromotedModuleNavigationLabel('age-curves')}>
                 {data.sections.ageCurves.summary ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryStat label="Age" value={formatNumber(data.sections.ageCurves.summary.age, 1)} />
@@ -368,7 +416,7 @@ export function PlayerResearchWorkspaceView({
                 ) : null}
               </SectionCard>
 
-              <SectionCard section={data.sections.pointScenarios}>
+              <SectionCard section={data.sections.pointScenarios} navigationLabel={buildPromotedModuleNavigationLabel('point-scenarios')}>
                 {data.sections.pointScenarios.summary ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <SummaryStat label="Baseline projection" value={formatNumber(data.sections.pointScenarios.summary.baselineProjection, 1)} />
