@@ -23,8 +23,9 @@ describe('DataLabHub', () => {
     const html = renderToStaticMarkup(React.createElement(DataLabHub));
 
     expect(html).toContain('Promoted module system');
-    expect(html).toContain('Breakout, role, developmental, and scenario context in one lane');
+    expect(html).toContain('Player and team synthesis with breakout, role, developmental, and scenario context');
     expect(html).toContain('Player Research Workspace');
+    expect(html).toContain('Team Research Workspace');
     expect(html).toContain('WR Breakout Lab');
     expect(html).toContain('Role &amp; Opportunity Lab');
     expect(html).toContain('Age Curve / ARC Lab');

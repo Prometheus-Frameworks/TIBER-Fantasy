@@ -447,6 +447,7 @@ export function PlayerResearchWorkspaceView({
               playerContext={{
                 playerId: data.selectedPlayer?.playerId ?? data.requestedPlayerId,
                 playerName: data.selectedPlayer?.playerName ?? data.requestedPlayerName,
+                team: data.selectedPlayer?.team ?? null,
                 season: data.season != null ? String(data.season) : season,
               }}
               heading="Open deeper promoted labs"
