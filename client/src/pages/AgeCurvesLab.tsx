@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
+import { readDataLabPlayerCarryParams } from '@/lib/dataLabPromotedModules';
 import { AgeCurveLabApiError, AgeCurveLabResponse, getAgeCurveLabErrorMessage } from '@/lib/ageCurves';
 import { AgeCurvesView } from '@/components/data-lab/AgeCurvesView';
 
@@ -23,6 +24,10 @@ async function fetchAgeCurvesLab(season?: string): Promise<AgeCurveLabResponse> 
 export default function AgeCurvesLab() {
   const { season: currentSeason } = useCurrentNFLWeek();
   const [season, setSeason] = useState('');
+  const initialPlayerContext = useMemo(
+    () => readDataLabPlayerCarryParams(typeof window !== 'undefined' ? window.location.search : ''),
+    [],
+  );
 
   const query = useQuery<AgeCurveLabResponse, AgeCurveLabApiError>({
     queryKey: ['/api/data-lab/age-curves', season],
@@ -51,6 +56,8 @@ export default function AgeCurvesLab() {
       error={query.error ? { ...query.error, error: getAgeCurveLabErrorMessage(query.error) } : null}
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
+      defaultExpandedPlayerKey={initialPlayerContext.playerId ?? null}
+      initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}
     />
   );

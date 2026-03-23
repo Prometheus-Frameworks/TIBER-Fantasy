@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PROMOTED_DATA_LAB_MODULES } from "@/lib/dataLabPromotedModules";
 
 interface SnapshotHealth {
   status: string;
@@ -33,6 +34,8 @@ interface SnapshotHealth {
     seasonStaging: number;
   };
 }
+
+const promotedModuleIds = new Set(PROMOTED_DATA_LAB_MODULES.map((module) => module.id));
 
 const modules = [
   {
@@ -106,33 +109,45 @@ const modules = [
     title: "WR Breakout Lab",
     subtitle: "Signal Validation Promotion",
     description:
-      "Read-only Signal-Validation-Model exports: ranked WR signal cards, promoted breakout context, and the currently favored recipe summary.",
+      "Promoted signal-card rankings and recipe context from Breakout Lab exports, surfaced as a read-only operator review table.",
+    whatItIsFor:
+      "Validate promoted breakout candidates and recipe-level signal strength without rescoring anything inside TIBER.",
+    whenToUse:
+      "Use when you want a fast breakout screen before checking how stable the player's role or developmental timing looks.",
     icon: Target,
     path: "/tiber-data-lab/breakout-signals",
     color: "#f97316",
-    badge: "NEW" as string | null,
+    badge: "PROMOTED" as string | null,
   },
   {
     id: "role-opportunity",
     title: "Role & Opportunity Lab",
     subtitle: "Usage & Deployment Promotion",
     description:
-      "Read-only role, route, target, and opportunity context promoted from TIBER-Data compatibility surfaces or exported artifacts.",
+      "Promoted role, route, target, and snap-share context from TIBER-Data compatibility views or exported artifacts.",
+    whatItIsFor:
+      "Inspect current deployment and opportunity so breakout or dynasty takes are grounded in how the player is actually being used.",
+    whenToUse:
+      "Use when you need alignment, route, target, air-yard, and snap-share context to explain the player case.",
     icon: Network,
     path: "/tiber-data-lab/role-opportunity",
     color: "#0f766e",
-    badge: "NEW" as string | null,
+    badge: "PROMOTED" as string | null,
   },
   {
     id: "age-curves",
     title: "Age Curve / ARC Lab",
     subtitle: "Developmental Context Promotion",
     description:
-      "Read-only developmental context from promoted ARC outputs: age, career year, peer bucket, expected-vs-actual production, and trajectory framing.",
+      "Promoted age, career-stage, peer-bucket, and expected-vs-actual context from ARC outputs, surfaced read only.",
+    whatItIsFor:
+      "Frame where a player sits on the developmental curve without turning ARC into a local scoring engine.",
+    whenToUse:
+      "Use when you want developmental timing and expected-vs-actual context to support or challenge the current player thesis.",
     icon: TrendingUp,
     path: "/tiber-data-lab/age-curves",
     color: "#7c3aed",
-    badge: "NEW" as string | null,
+    badge: "PROMOTED" as string | null,
   },
 ];
 
@@ -144,30 +159,36 @@ function ModuleCard({
   stat?: string;
 }) {
   const Icon = module.icon;
+  const isPromotedModule = promotedModuleIds.has(module.id as (typeof PROMOTED_DATA_LAB_MODULES)[number]["id"]);
 
   return (
     <Link href={module.path}>
-      <Card className="group cursor-pointer border border-gray-200 hover:border-[#e2640d]/40 hover:shadow-md transition-all duration-200 bg-white">
+      <Card className="group cursor-pointer border border-gray-200 hover:border-[#e2640d]/40 hover:shadow-md transition-all duration-200 bg-white h-full">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div
               className="p-2.5 rounded-lg"
               style={{ backgroundColor: `${module.color}14` }}
             >
-              <Icon
-                className="h-5 w-5"
-                style={{ color: module.color }}
-              />
+              <Icon className="h-5 w-5" style={{ color: module.color }} />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               {module.badge && (
                 <Badge
                   variant="secondary"
-                  className="text-xs font-medium bg-[#e2640d]/10 text-[#e2640d] border-0"
+                  className={isPromotedModule
+                    ? "text-xs font-medium bg-gray-900 text-white border-0"
+                    : "text-xs font-medium bg-[#e2640d]/10 text-[#e2640d] border-0"
+                  }
                 >
                   {module.badge}
                 </Badge>
               )}
+              {isPromotedModule ? (
+                <Badge variant="secondary" className="text-xs font-medium bg-gray-100 text-gray-600 border-0">
+                  Read only
+                </Badge>
+              ) : null}
               <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-[#e2640d] group-hover:translate-x-0.5 transition-all" />
             </div>
           </div>
@@ -178,10 +199,26 @@ function ModuleCard({
             {module.subtitle}
           </p>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 flex h-full flex-col">
           <p className="text-sm text-gray-500 leading-relaxed">
             {module.description}
           </p>
+          {isPromotedModule ? (
+            <div className="mt-4 space-y-3 rounded-lg border border-gray-100 bg-[#fafafa] p-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  What this module is for
+                </div>
+                <p className="mt-1 text-sm leading-6 text-gray-600">{module.whatItIsFor}</p>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                  When to use this
+                </div>
+                <p className="mt-1 text-sm leading-6 text-gray-600">{module.whenToUse}</p>
+              </div>
+            </div>
+          ) : null}
           {stat && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <span className="text-xs font-mono text-gray-400">{stat}</span>
@@ -200,9 +237,11 @@ export default function DataLabHub() {
 
   const weekCount = health?.tableCounts?.snapshotPlayerWeek;
   const metaCount = health?.tableCounts?.snapshotMeta;
+  const promotedModules = modules.filter((module) => promotedModuleIds.has(module.id as (typeof PROMOTED_DATA_LAB_MODULES)[number]["id"]));
+  const coreModules = modules.filter((module) => !promotedModuleIds.has(module.id as (typeof PROMOTED_DATA_LAB_MODULES)[number]["id"]));
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
           <Link href="/" className="hover:text-[#e2640d] transition-colors">
@@ -221,15 +260,14 @@ export default function DataLabHub() {
             Tiber Data Lab
           </h1>
         </div>
-        <p className="text-gray-500 text-sm max-w-2xl">
-          Snapshot-based NFL data spine for reproducible analytics. Browse raw
-          metrics, personnel intelligence, role classifications, and situational
-          performance across all skill positions.
+        <p className="text-gray-500 text-sm max-w-3xl">
+          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties breakout validation,
+          role and opportunity context, and age-curve framing into one operator-friendly product surface.
         </p>
       </div>
 
       {health && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-[#fafafa] border border-gray-100 rounded-lg p-4">
             <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
               Snapshots
@@ -260,15 +298,48 @@ export default function DataLabHub() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {modules.map((mod) => (
-          <ModuleCard
-            key={mod.id}
-            module={mod}
-            stat={undefined}
-          />
-        ))}
-      </div>
+      <section className="mb-10">
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Promoted module system</div>
+            <h2 className="mt-1 text-xl font-semibold text-gray-900">Breakout, role, and developmental context in one lane</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+              These three promoted labs are read-only by design. Use Breakout Lab for candidate validation, Role &amp; Opportunity
+              for deployment context, and ARC for developmental timing. They are meant to be used together, not as isolated destinations.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge className="border-0 bg-gray-900 text-white">Promoted</Badge>
+            <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {promotedModules.map((mod) => (
+            <ModuleCard key={mod.id} module={mod} stat={undefined} />
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Core Data Lab surfaces</div>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900">Broader research modules</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
+            The rest of Data Lab remains available for deeper metric inspection, personnel context, and positional research outside the promoted module lane.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {coreModules.map((mod) => (
+            <ModuleCard
+              key={mod.id}
+              module={mod}
+              stat={undefined}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

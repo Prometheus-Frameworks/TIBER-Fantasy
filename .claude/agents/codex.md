@@ -376,3 +376,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
   - `curl -sS "http://127.0.0.1:5055/api/data-lab/age-curves?season=2025"` ✅ (against a mocked local Express mount wired to the router)
+
+### 2026-03-23 — Data Lab promoted-module cohesion pass
+- Reworked the Data Lab hub so Breakout, Role & Opportunity, and Age Curve / ARC Lab sit in a dedicated promoted-module system section with stable promoted/read-only badges plus concise "what this module is for" and "when to use this" copy.
+- Added reusable related-module framing for all three promoted lab pages and wired lightweight player carry-through using `playerId` / `playerName` query params.
+- Added focused frontend coverage for hub rendering, related-module links, and carry-through helpers while keeping scope product-only.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/breakoutSignalsView.test.ts client/src/__tests__/roleOpportunityView.test.ts client/src/__tests__/ageCurvesView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅

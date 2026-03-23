@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
+import { DataLabPlayerCarryContext } from '@/lib/dataLabPromotedModules';
 import {
   BREAKOUT_SIGNAL_COLUMNS,
   BreakoutRecipeSummary,
@@ -29,6 +31,7 @@ interface BreakoutSignalsViewProps {
   isLoading: boolean;
   errorMessage?: string | null;
   errorCode?: 'config_error' | 'not_found' | 'invalid_payload' | 'malformed_export' | 'upstream_unavailable' | null;
+  initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
 }
 
@@ -152,10 +155,12 @@ export function BreakoutSignalsView({
   isLoading,
   errorMessage,
   errorCode,
+  initialPlayerContext = null,
   onSeasonChange,
 }: BreakoutSignalsViewProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedPlayer, setExpandedPlayer] = useState<string | null>(null);
+  const initialSearch = initialPlayerContext?.playerName ?? initialPlayerContext?.playerId ?? '';
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [expandedPlayer, setExpandedPlayer] = useState<string | null>(initialPlayerContext?.playerId ?? null);
   const [sortState, setSortState] = useState<BreakoutSignalSortState>(DEFAULT_BREAKOUT_SORT);
   const [filters, setFilters] = useState<BreakoutSignalQuickFilters>(DEFAULT_BREAKOUT_FILTERS);
 
@@ -175,6 +180,37 @@ export function BreakoutSignalsView({
     || filters.breakoutOnly !== DEFAULT_BREAKOUT_FILTERS.breakoutOnly
     || filters.highRoleOnly !== DEFAULT_BREAKOUT_FILTERS.highRoleOnly
     || filters.highCohortOnly !== DEFAULT_BREAKOUT_FILTERS.highCohortOnly;
+
+  const activePlayerContext = useMemo<DataLabPlayerCarryContext | null>(() => {
+    const expandedRow = rows.find((row) => (row.playerId ?? row.playerName) === expandedPlayer || row.playerId === expandedPlayer);
+    if (expandedRow) {
+      return {
+        playerId: expandedRow.playerId ?? null,
+        playerName: expandedRow.playerName ?? null,
+      };
+    }
+
+    if (initialPlayerContext?.playerId || initialPlayerContext?.playerName) {
+      return initialPlayerContext;
+    }
+
+    if (!searchQuery.trim()) {
+      return null;
+    }
+
+    const exactNameMatch = rows.find((row) => row.playerName.toLowerCase() === searchQuery.trim().toLowerCase());
+    if (exactNameMatch) {
+      return {
+        playerId: exactNameMatch.playerId ?? null,
+        playerName: exactNameMatch.playerName ?? null,
+      };
+    }
+
+    return {
+      playerId: null,
+      playerName: searchQuery.trim(),
+    };
+  }, [expandedPlayer, initialPlayerContext, rows, searchQuery]);
 
   const updateSort = (key: BreakoutSignalSortState['key']) => {
     setSortState((current) => {
@@ -205,12 +241,40 @@ export function BreakoutSignalsView({
           <h1 className="text-2xl font-semibold text-gray-900" style={{ fontFamily: 'Instrument Sans, sans-serif' }}>
             WR Breakout Lab
           </h1>
-          <Badge className="border-0 bg-[#e2640d]/10 text-[#e2640d]">Signal Validation</Badge>
+          <Badge className="border-0 bg-gray-900 text-white">Promoted module</Badge>
           <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
         </div>
         <p className="max-w-3xl text-sm text-gray-500">
-          Promoted Signal-Validation-Model outputs rendered inside TIBER Data Lab. TIBER is displaying exported signal cards and recipe context, not recomputing scores.
+          Promoted Signal-Validation-Model outputs rendered inside TIBER Data Lab. This module is for validating breakout candidates and recipe context, not for recomputing scores.
         </p>
+      </div>
+
+      <Card className="mb-6 border border-[#e2640d]/15 bg-gradient-to-r from-[#fff7f1] to-white shadow-sm">
+        <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <Badge className="border-0 bg-[#e2640d] text-white">Breakout validation</Badge>
+              <span>Upstream export → adapter → read-only product table</span>
+            </div>
+            <p className="max-w-3xl text-sm leading-6 text-gray-600">
+              <span className="font-semibold text-gray-700">When to use this:</span> Start here when you need a concise breakout screen, then move to Role &amp; Opportunity for deployment context or ARC for developmental timing.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 text-sm md:min-w-[280px] md:grid-cols-2">
+            <div className="rounded-md bg-white px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">Season</div>
+              <div className="mt-1 text-gray-700">{season}</div>
+            </div>
+            <div className="rounded-md bg-white px-3 py-2">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-gray-400">System posture</div>
+              <div className="mt-1 text-gray-700">Promoted · read only</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mb-6">
+        <PromotedModuleSystemCard currentModuleId="breakout-signals" playerContext={activePlayerContext} />
       </div>
 
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -231,6 +295,11 @@ export function BreakoutSignalsView({
             <div className="rounded-md border border-gray-200 bg-[#fafafa] px-3 py-2 text-xs text-gray-500">
               <span className="font-semibold text-gray-700">Model contract:</span> Signal-Validation-Model export → TIBER adapter → Data Lab table
             </div>
+            {activePlayerContext?.playerName ? (
+              <div className="rounded-md border border-[#e2640d]/20 bg-[#fff7f1] px-3 py-2 text-xs text-[#9a4a12]">
+                Carrying player context for <span className="font-semibold">{activePlayerContext.playerName}</span> across related modules.
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <FilterChip
@@ -395,6 +464,14 @@ export function BreakoutSignalsView({
                                   <div className="mt-1 text-sm text-gray-500">Grouped for review so operators can scan ranking, breakout context, and raw metadata without a single undifferentiated field wall.</div>
                                 </div>
                                 <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read-only export detail</Badge>
+                              </div>
+                              <div className="mb-4">
+                                <PromotedModuleSystemCard
+                                  currentModuleId="breakout-signals"
+                                  playerContext={{ playerId: row.playerId ?? null, playerName: row.playerName }}
+                                  heading="Related modules"
+                                  description="Use this player carry-through to inspect whether deployment context or developmental timing supports the breakout case."
+                                />
                               </div>
                               <div className="grid gap-4 xl:grid-cols-2">
                                 {detailSections.map((section) => (
