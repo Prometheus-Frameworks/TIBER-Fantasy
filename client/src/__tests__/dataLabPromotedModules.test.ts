@@ -29,15 +29,18 @@ describe('dataLabPromotedModules helpers', () => {
   });
 
   it('parses player carry params from a query string', () => {
-    expect(readDataLabPlayerCarryParams('?playerId=00-0042051&playerName=Malik+Nabers&season=2025')).toEqual({
+    expect(readDataLabPlayerCarryParams('?playerId=00-0042051&playerName=Malik+Nabers&team=NYG&season=2025')).toEqual({
       playerId: '00-0042051',
       playerName: 'Malik Nabers',
+      team: 'NYG',
       season: '2025',
     });
   });
 
-  it('formats shared navigation labels and provenance copy', () => {
+  it('builds team-research deep links and formats shared labels/provenance copy', () => {
+    expect(buildPromotedModuleHref('team-research', { team: 'MIN', season: '2025' })).toBe('/tiber-data-lab/team-research?team=MIN&season=2025');
     expect(buildPromotedModuleNavigationLabel('player-research')).toBe('Go to player research');
+    expect(buildPromotedModuleNavigationLabel('team-research')).toBe('Go to team research');
     expect(buildPromotedModuleNavigationLabel('age-curves')).toBe('Go to module');
     expect(formatPromotedModuleProvenance({
       provider: 'arc-model',

@@ -121,6 +121,21 @@ const modules = [
     badge: "PROMOTED" as string | null,
   },
   {
+    id: "team-research",
+    title: "Team Research Workspace",
+    subtitle: "Offensive Environment Synthesis",
+    description:
+      "Promoted team-centric research surface that aggregates read-only outputs from the promoted sub-models into one offensive-environment view.",
+    whatItIsFor:
+      "Start with one team and inspect roster opportunity, breakout, developmental, and scenario context together without recomputing model logic inside TIBER.",
+    whenToUse:
+      "Use when you want the whole picture for one offensive environment before jumping into Player Research or any one promoted lab in deeper detail.",
+    icon: Users,
+    path: "/tiber-data-lab/team-research",
+    color: "#2563eb",
+    badge: "PROMOTED" as string | null,
+  },
+  {
     id: "breakout-signals",
     title: "WR Breakout Lab",
     subtitle: "Signal Validation Promotion",
@@ -292,7 +307,7 @@ export default function DataLabHub() {
           </h1>
         </div>
         <p className="text-gray-500 text-sm max-w-3xl">
-          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties player-centric synthesis, breakout validation,
+          Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties player-centric synthesis, team-level offensive-environment synthesis, breakout validation,
           role and opportunity context, age-curve framing, and scenario-based point outcomes into one operator-friendly product surface.
         </p>
       </div>
@@ -333,9 +348,9 @@ export default function DataLabHub() {
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Promoted module system</div>
-            <h2 className="mt-1 text-xl font-semibold text-gray-900">Breakout, role, developmental, and scenario context in one lane</h2>
+            <h2 className="mt-1 text-xl font-semibold text-gray-900">Player and team synthesis with breakout, role, developmental, and scenario context</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-              These four promoted labs are read-only by design. Use Breakout Lab for candidate validation, Role &amp; Opportunity
+              These promoted workspaces and labs are read-only by design. Use Player Research for one-player synthesis, Team Research for one-team environment synthesis, Breakout Lab for candidate validation, Role &amp; Opportunity
               for deployment context, ARC for developmental timing, and Point Scenario Lab for contingency-aware point outcomes. They are meant to be used together, not as isolated destinations.
             </p>
           </div>

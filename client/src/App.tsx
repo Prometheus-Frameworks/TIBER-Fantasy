@@ -39,6 +39,7 @@ import RoleOpportunityLab from "@/pages/RoleOpportunityLab";
 import AgeCurvesLab from "@/pages/AgeCurvesLab";
 import PointScenariosLab from "@/pages/PointScenariosLab";
 import PlayerResearchLab from "@/pages/PlayerResearchLab";
+import TeamResearchLab from "@/pages/TeamResearchLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
@@ -65,6 +66,7 @@ function Router() {
         <Route path="/tiber-data-lab/age-curves" component={AgeCurvesLab} />
         <Route path="/tiber-data-lab/point-scenarios" component={PointScenariosLab} />
         <Route path="/tiber-data-lab/player-research" component={PlayerResearchLab} />
+        <Route path="/tiber-data-lab/team-research" component={TeamResearchLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>

@@ -417,3 +417,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/pointScenariosView.test.ts client/src/__tests__/breakoutSignalsView.test.ts client/src/__tests__/roleOpportunityView.test.ts client/src/__tests__/ageCurvesView.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts server/routes/__tests__/dataLabBreakoutSignalsRoutes.test.ts server/routes/__tests__/dataLabRoleOpportunityRoutes.test.ts server/routes/__tests__/dataLabAgeCurvesRoutes.test.ts server/routes/__tests__/dataLabPointScenariosRoutes.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Codex: Team Research Workspace team-level synthesis surface
+- Added the read-only Team Research Workspace at `/tiber-data-lab/team-research` plus a new `teamResearch/` external-model orchestrator and `/api/data-lab/team-research` endpoint.
+- Aggregated promoted breakout, role, ARC, and point-scenario outputs by team with team search, `team` deep-linking, team identity/header context, key-player summaries, and direct link-outs back into Player Research.
+- Extended promoted-module navigation/docs so Team Research sits alongside Player Research and the four promoted labs with season/team carry-through.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/teamResearch/__tests__/teamResearchService.test.ts server/routes/__tests__/dataLabTeamResearchRoutes.test.ts client/src/__tests__/teamResearchWorkspaceView.test.ts client/src/__tests__/dataLabPromotedModules.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)

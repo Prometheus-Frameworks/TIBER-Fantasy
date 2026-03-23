@@ -23,7 +23,8 @@ export function PromotedModuleSystemCard({
   description = 'Jump between the promoted Data Lab modules to layer breakout, role, and developmental context without leaving the product system.',
 }: PromotedModuleSystemCardProps) {
   const relatedModules = PROMOTED_DATA_LAB_MODULES.filter((module) => module.id !== currentModuleId);
-  const hasCarryContext = Boolean(playerContext?.playerId || playerContext?.playerName);
+  const carryLabel = playerContext?.playerName ?? playerContext?.playerId ?? playerContext?.team ?? null;
+  const hasCarryContext = Boolean(carryLabel);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-[#fafafa] p-4 md:p-5">
@@ -37,7 +38,7 @@ export function PromotedModuleSystemCard({
           <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">Read only</Badge>
           {hasCarryContext ? (
             <Badge variant="secondary" className="border-0 bg-white text-gray-700">
-              Carrying {playerContext?.playerName ?? playerContext?.playerId}
+              Carrying {carryLabel}
             </Badge>
           ) : null}
         </div>
