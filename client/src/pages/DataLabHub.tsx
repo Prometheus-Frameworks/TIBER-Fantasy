@@ -11,6 +11,7 @@ import {
   Cpu,
   Clock,
   Network,
+  TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +121,17 @@ const modules = [
     icon: Network,
     path: "/tiber-data-lab/role-opportunity",
     color: "#0f766e",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "age-curves",
+    title: "Age Curve / ARC Lab",
+    subtitle: "Developmental Context Promotion",
+    description:
+      "Read-only developmental context from promoted ARC outputs: age, career year, peer bucket, expected-vs-actual production, and trajectory framing.",
+    icon: TrendingUp,
+    path: "/tiber-data-lab/age-curves",
+    color: "#7c3aed",
     badge: "NEW" as string | null,
   },
 ];

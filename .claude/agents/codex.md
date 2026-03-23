@@ -365,3 +365,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/breakoutSignalsView.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Codex: Age Curve / ARC Lab promotion
+- Added `server/modules/externalModels/ageCurves/` with a read-only client/adapter/service stack, README, and focused adapter tests for promoted ARC exports or compatibility payloads.
+- Added `GET /api/data-lab/age-curves[?season=<year>]` through `server/routes/dataLabAgeCurvesRoutes.ts`, mounted it in `server/routes.ts`, and covered ready/empty/malformed responses with focused route tests.
+- Added the new `/tiber-data-lab/age-curves` UI, including season/team/position/search controls, sortable developmental-context table columns, expandable detail/provenance sections, explicit loading/empty/error guards, and a lightweight expected-vs-actual comparison bar card.
+- Updated Data Lab discovery/docs in `client/src/pages/DataLabHub.tsx`, `client/src/lib/metricRegistry.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` to document the third promoted read-only sub-model and its no-recomputation posture.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/ageCurves/__tests__/ageCurvesAdapter.test.ts server/routes/__tests__/dataLabAgeCurvesRoutes.test.ts client/src/__tests__/ageCurvesView.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
+  - `curl -sS "http://127.0.0.1:5055/api/data-lab/age-curves?season=2025"` ✅ (against a mocked local Express mount wired to the router)

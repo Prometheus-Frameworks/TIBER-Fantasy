@@ -77,6 +77,8 @@ ROLE_OPPORTUNITY_MODEL_ENDPOINT_PATH=/api/role-opportunity
 ROLE_OPPORTUNITY_MODEL_TIMEOUT_MS=5000
 ROLE_OPPORTUNITY_MODEL_LAB_ENDPOINT_PATH=/api/role-opportunity/lab
 ROLE_OPPORTUNITY_EXPORTS_PATH=./data/role-opportunity/role_opportunity_lab.json
+AGE_CURVE_MODEL_LAB_ENDPOINT_PATH=/api/age-curves/lab
+AGE_CURVE_EXPORTS_PATH=./data/age-curves/age_curve_lab.json
 ROLE_OPPORTUNITY_MODEL_ENABLED=1
 FORGE_SERVICE_BASE_URL=
 FORGE_SERVICE_ENDPOINT_PATH=/v1/forge/evaluations
@@ -153,6 +155,8 @@ This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide
 Signal-Validation-Model is now the first promoted read-only Data Lab module. `server/modules/externalModels/signalValidation/` reads exported `wr_player_signal_cards_{season}.csv` plus `wr_best_recipe_summary.json`, validates them at the edge, and powers `GET /api/data-lab/breakout-signals` plus the user-facing `/tiber-data-lab/breakout-signals` page. TIBER-Fantasy does **not** recompute breakout scores here; it only consumes promoted outputs and renders them with client-side sort/search/filter polish, grouped read-only detail sections, best-recipe provenance context, and explicit empty/loading/error guards.
 
 Role & Opportunity Lab is now the second promoted read-only Data Lab sub-model. `server/modules/externalModels/roleOpportunity/` reads either a TIBER-Data compatibility endpoint or a stable exported artifact, normalizes player/role/usage fields into a frontend-safe contract, and powers `GET /api/data-lab/role-opportunity` plus the user-facing `/tiber-data-lab/role-opportunity` page. This module is intentionally complementary to WR Breakout Lab: it is a usage/deployment context surface, not a projection engine, and TIBER-Fantasy does **not** recompute role scoring logic locally.
+
+Age Curve / ARC Lab is now the third promoted read-only Data Lab sub-model. `server/modules/externalModels/ageCurves/` reads either an ARC compatibility endpoint or a stable exported artifact, normalizes developmental-context fields like age, career year, peer bucket, expected-vs-actual PPG, delta, trajectory label, and provenance, and powers `GET /api/data-lab/age-curves` plus the user-facing `/tiber-data-lab/age-curves` page. This module complements Breakout Lab and Role & Opportunity Lab by framing development context only; TIBER-Fantasy does **not** recompute ARC logic locally.
 
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
