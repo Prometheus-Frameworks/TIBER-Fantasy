@@ -317,3 +317,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/components/data-lab/PlayerResearchSummaryBlock.tsx`, `client/src/pages/PlayerPage.tsx`, `client/src/__tests__/playerResearchSummaryBlock.test.ts`, `README.md`, `replit.md`
 - **Validation:** Ran focused Jest coverage for the new summary block plus existing research-link behavior; ran `npm run build`; ran `git diff --check`.
 - **Notes:** The player page remains read only and does not recompute any model logic locally; it simply surfaces a few promoted/orchestrated Player Research outputs and links users into the full workspace.
+
+### 2026-03-23 — Codex: Schedule / SoS team summary surfacing Team Research
+- **What changed:** Added a compact read-only `TeamResearchSummaryBlock` driven by the existing Team Research workspace payload, wired it into the routed Schedule / SoS team surface so a selected team now shows lightweight offensive-context / role / breakout / scenario / developmental notes plus a stable CTA into `/tiber-data-lab/team-research`, and preserved distinct empty vs unavailable states without recomputing model logic locally.
+- **Files modified:** `client/src/components/data-lab/TeamResearchSummaryBlock.tsx`, `client/src/pages/SchedulePage.tsx`, `client/src/__tests__/teamResearchSummaryBlock.test.ts`, `README.md`, `replit.md`
+- **Validation:** Ran focused Jest coverage for the new summary block + existing team research link helpers, ran `npm run build`, and ran `git diff --check`.
+- **Notes:** The inline block intentionally stays lightweight and read only; the Schedule / SoS team table now acts as the main non-Data-Lab team-facing surface for promoted Team Research context.

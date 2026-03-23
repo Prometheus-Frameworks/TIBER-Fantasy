@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { Calendar, Users, TrendingUp, TrendingDown, ArrowUpDown, Filter } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TeamResearchSummaryBlock } from '@/components/data-lab/TeamResearchSummaryBlock';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -246,9 +247,21 @@ function PlayerSosView() {
   );
 }
 
-function TeamSosView() {
+async function fetchTeamResearchSummary(season: number, team: string) {
+  const params = new URLSearchParams({ season: String(season), team });
+  const response = await fetch(`/api/data-lab/team-research?${params.toString()}`);
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? 'Failed to load team research summary');
+  }
+
+  return payload as import('@/lib/teamResearch').TeamResearchResponse;
+}
+
+function TeamSosView({ season }: { season: number }) {
   const [window, setWindow] = useState<SosWindow>('ros');
-  const [sortTeam, setSortTeam] = useState<string | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<{ success: boolean; data: TeamPositionSos[] }>({
     queryKey: ['/api/forge/sos/team-position'],
@@ -281,11 +294,25 @@ function TeamSosView() {
     return row.sosPlayoffs;
   };
 
-  const windowLabels: Record<SosWindow, string> = {
-    ros: 'Rest of Season',
-    next3: 'Next 3 Weeks',
-    playoffs: 'Playoffs (15-17)',
-  };
+  const teamResearchQuery = useQuery({
+    queryKey: ['/api/data-lab/team-research', season, selectedTeam],
+    queryFn: () => fetchTeamResearchSummary(season, selectedTeam as string),
+    enabled: Boolean(selectedTeam),
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!teamGrid.length) {
+      if (selectedTeam !== null) {
+        setSelectedTeam(null);
+      }
+      return;
+    }
+
+    if (!selectedTeam || !teamGrid.some((row) => row.team === selectedTeam)) {
+      setSelectedTeam(teamGrid[0].team);
+    }
+  }, [selectedTeam, teamGrid]);
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -338,13 +365,14 @@ function TeamSosView() {
                 {teamGrid.map((row) => (
                   <tr 
                     key={row.team} 
-                    className="hover:bg-slate-700/30 transition-colors"
+                    className={`transition-colors ${selectedTeam === row.team ? 'bg-violet-500/10' : 'hover:bg-slate-700/30'}`}
                     data-testid={`row-team-${row.team}`}
+                    onClick={() => setSelectedTeam(row.team)}
                   >
                     <td className="px-2 sm:px-3 py-1.5 sm:py-2">
                       <div className="flex items-center gap-1.5 sm:gap-2">
                         <TeamLogo team={row.team} size={16} className="sm:w-5 sm:h-5" />
-                        <span className="text-xs sm:text-sm font-medium text-white">{row.team}</span>
+                        <button type="button" className="text-left text-xs sm:text-sm font-medium text-white hover:text-violet-200" onClick={(event) => { event.stopPropagation(); setSelectedTeam(row.team); }}>{row.team}</button>
                       </div>
                     </td>
                     {(['QB', 'RB', 'WR', 'TE'] as const).map(pos => {
@@ -368,6 +396,16 @@ function TeamSosView() {
           </div>
         </div>
       )}
+
+      {selectedTeam ? (
+        <TeamResearchSummaryBlock
+          season={String(season)}
+          team={selectedTeam}
+          data={teamResearchQuery.data?.data ?? null}
+          isLoading={teamResearchQuery.isLoading}
+          errorMessage={teamResearchQuery.error instanceof Error ? teamResearchQuery.error.message : null}
+        />
+      ) : null}
 
       <div className="flex flex-wrap gap-2 sm:gap-3 text-[10px] sm:text-xs text-slate-500">
         <span className="flex items-center gap-1">
@@ -626,7 +664,7 @@ export default function SchedulePage() {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamSosView />
+            <TeamSosView season={currentSeason} />
           </TabsContent>
 
           <TabsContent value="impact">

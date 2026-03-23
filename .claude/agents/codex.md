@@ -449,3 +449,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/playerResearchSummaryBlock.test.ts client/src/__tests__/coreResearchQuickLinks.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Codex: Team-page inline Team Research summary
+- Added `client/src/components/data-lab/TeamResearchSummaryBlock.tsx` to render a lightweight read-only inline Team Research strip from existing Team Research orchestration outputs.
+- Wired `client/src/pages/SchedulePage.tsx` so the routed Team SoS surface now selects a team from the grid and renders compact offensive-environment, role concentration, breakout, scenario, and developmental cues when promoted data exists.
+- Preserved trust posture with promoted/read-only wording, a stable CTA into `/tiber-data-lab/team-research`, and distinct empty vs unavailable handling.
+- Added focused coverage in `client/src/__tests__/teamResearchSummaryBlock.test.ts` and refreshed README/replit core-flow notes.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/teamResearchSummaryBlock.test.ts client/src/__tests__/coreResearchQuickLinks.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
