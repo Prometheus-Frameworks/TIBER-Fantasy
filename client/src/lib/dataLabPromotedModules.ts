@@ -1,10 +1,11 @@
 export interface DataLabPlayerCarryContext {
   playerId?: string | null;
   playerName?: string | null;
+  season?: string | null;
 }
 
 export interface PromotedDataLabModuleDefinition {
-  id: 'breakout-signals' | 'role-opportunity' | 'age-curves' | 'point-scenarios';
+  id: 'player-research' | 'breakout-signals' | 'role-opportunity' | 'age-curves' | 'point-scenarios';
   title: string;
   subtitle: string;
   path: string;
@@ -15,6 +16,16 @@ export interface PromotedDataLabModuleDefinition {
 }
 
 export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
+  {
+    id: 'player-research',
+    title: 'Player Research Workspace',
+    subtitle: 'Cross-model player synthesis',
+    path: '/tiber-data-lab/player-research',
+    color: '#111827',
+    whatItIsFor: 'Inspect one player across all promoted read-only model outputs without opening four separate labs.',
+    whenToUse: 'Use when you want the first cross-model synthesis pass before diving into any one lab in detail.',
+    alongside: 'Best used as the hub for player-centric research, then followed by the deeper promoted lab pages as needed.',
+  },
   {
     id: 'breakout-signals',
     title: 'WR Breakout Lab',
@@ -76,6 +87,10 @@ export function buildPromotedModuleHref(
     params.set('playerName', context.playerName);
   }
 
+  if (context?.season) {
+    params.set('season', context.season);
+  }
+
   const query = params.toString();
   return query ? `${module.path}?${query}` : module.path;
 }
@@ -84,9 +99,11 @@ export function readDataLabPlayerCarryParams(search: string): DataLabPlayerCarry
   const params = new URLSearchParams(search);
   const playerId = params.get('playerId');
   const playerName = params.get('playerName');
+  const season = params.get('season');
 
   return {
     playerId: playerId?.trim() || null,
     playerName: playerName?.trim() || null,
+    season: season?.trim() || null,
   };
 }
