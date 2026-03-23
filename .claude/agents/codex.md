@@ -437,3 +437,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `client/src/pages/Dashboard.tsx` — command-center-backed discovery widget
   - `client/src/__tests__/coreResearchQuickLinks.test.ts` / `client/src/__tests__/dataLabDiscoveryWidget.test.ts` — focused rendering + carry-through coverage
 - **Validation:** `npm test -- client/src/__tests__/coreResearchQuickLinks.test.ts client/src/__tests__/dataLabDiscoveryWidget.test.ts client/src/__tests__/dataLabPromotedModules.test.ts`, `git diff --check`, `npm run build`.
+
+
+### 2026-03-23 — Codex: Player-page inline Research Summary block
+- Added `client/src/components/data-lab/PlayerResearchSummaryBlock.tsx` to render a lightweight read-only inline research strip on player pages using existing Player Research orchestration outputs.
+- Wired `client/src/pages/PlayerPage.tsx` to fetch `GET /api/data-lab/player-research` for the viewed player/season and render compact breakout, recipe, role/opportunity, age-curve, and point-scenario notes only when promoted summaries are present.
+- Preserved trust posture with explicit promoted/read-only wording, a stable CTA into `/tiber-data-lab/player-research`, and separate empty vs unavailable behavior for missing summaries vs system trouble.
+- Added focused rendering coverage in `client/src/__tests__/playerResearchSummaryBlock.test.ts` for full, partial, CTA, and empty/unavailable states.
+- Updated `README.md` and `replit.md` so the core-flow documentation now mentions the new inline player-page Research Summary block.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/playerResearchSummaryBlock.test.ts client/src/__tests__/coreResearchQuickLinks.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
