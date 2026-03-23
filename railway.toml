@@ -1,8 +1,8 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm run build"
+buildCommand = "npm install && sh build.sh"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "node dist/index.mjs"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
