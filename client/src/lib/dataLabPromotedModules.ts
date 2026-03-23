@@ -4,7 +4,7 @@ export interface DataLabPlayerCarryContext {
 }
 
 export interface PromotedDataLabModuleDefinition {
-  id: 'breakout-signals' | 'role-opportunity' | 'age-curves';
+  id: 'breakout-signals' | 'role-opportunity' | 'age-curves' | 'point-scenarios';
   title: string;
   subtitle: string;
   path: string;
@@ -44,6 +44,16 @@ export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
     whatItIsFor: 'Frame a player by age, career stage, peer bucket, and expected-vs-actual production context.',
     whenToUse: 'Use when you need to pressure-test whether current production lines up with developmental timing.',
     alongside: 'Best paired with Breakout Lab for breakout validation and Role & Opportunity for current deployment.',
+  },
+  {
+    id: 'point-scenarios',
+    title: 'Point Scenario Lab',
+    subtitle: 'Scenario-based point context',
+    path: '/tiber-data-lab/point-scenarios',
+    color: '#2563eb',
+    whatItIsFor: 'Inspect how promoted scenario assumptions move baseline point projections without rebuilding projection logic locally.',
+    whenToUse: 'Use when you need contingency-aware point outcomes before making a final decision or ranking adjustment elsewhere.',
+    alongside: 'Best paired with Breakout Lab for candidate validation, Role & Opportunity for deployment context, and ARC for developmental timing.',
   },
 ];
 

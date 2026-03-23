@@ -12,6 +12,7 @@ import {
   Clock,
   Network,
   TrendingUp,
+  LineChart,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +150,21 @@ const modules = [
     color: "#7c3aed",
     badge: "PROMOTED" as string | null,
   },
+  {
+    id: "point-scenarios",
+    title: "Point Scenario Lab",
+    subtitle: "Scenario-Based Point Context",
+    description:
+      "Promoted baseline-versus-adjusted point outcomes from Point-prediction-Model, surfaced as a read-only scenario review table.",
+    whatItIsFor:
+      "Inspect how specific events or assumptions move a player's point outlook without rebuilding projection logic inside TIBER.",
+    whenToUse:
+      "Use when you need contingency-aware point outcomes before making a final call elsewhere in the workflow.",
+    icon: LineChart,
+    path: "/tiber-data-lab/point-scenarios",
+    color: "#2563eb",
+    badge: "PROMOTED" as string | null,
+  },
 ];
 
 function ModuleCard({
@@ -262,7 +278,7 @@ export default function DataLabHub() {
         </div>
         <p className="text-gray-500 text-sm max-w-3xl">
           Snapshot-based NFL data spine for reproducible analytics. The promoted module system now ties breakout validation,
-          role and opportunity context, and age-curve framing into one operator-friendly product surface.
+          role and opportunity context, age-curve framing, and scenario-based point outcomes into one operator-friendly product surface.
         </p>
       </div>
 
@@ -302,10 +318,10 @@ export default function DataLabHub() {
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Promoted module system</div>
-            <h2 className="mt-1 text-xl font-semibold text-gray-900">Breakout, role, and developmental context in one lane</h2>
+            <h2 className="mt-1 text-xl font-semibold text-gray-900">Breakout, role, developmental, and scenario context in one lane</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-500">
-              These three promoted labs are read-only by design. Use Breakout Lab for candidate validation, Role &amp; Opportunity
-              for deployment context, and ARC for developmental timing. They are meant to be used together, not as isolated destinations.
+              These four promoted labs are read-only by design. Use Breakout Lab for candidate validation, Role &amp; Opportunity
+              for deployment context, ARC for developmental timing, and Point Scenario Lab for contingency-aware point outcomes. They are meant to be used together, not as isolated destinations.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -314,7 +330,7 @@ export default function DataLabHub() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {promotedModules.map((mod) => (
             <ModuleCard key={mod.id} module={mod} stat={undefined} />
           ))}

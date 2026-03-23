@@ -385,3 +385,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/breakoutSignalsView.test.ts client/src/__tests__/roleOpportunityView.test.ts client/src/__tests__/ageCurvesView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-23 — Codex: Point Scenario Lab promotion
+- Added `server/modules/externalModels/pointScenarios/` with a read-only client/adapter/service stack, README, and focused adapter tests for promoted Point-prediction-Model scenario outputs or compatibility payloads.
+- Added `GET /api/data-lab/point-scenarios[?season=<year>]` through `server/routes/dataLabPointScenariosRoutes.ts`, mounted it in `server/routes.ts`, and covered ready/empty/malformed responses with focused route tests.
+- Added the new `/tiber-data-lab/point-scenarios` UI, including season/event-type/search controls, a scenario table, a read-only detail drawer for full scenario/explanation/provenance payloads, and related-module carry-through links back to Breakout, Role & Opportunity, and Age Curve / ARC Lab.
+- Updated Data Lab discovery/docs in `client/src/pages/DataLabHub.tsx`, `client/src/lib/dataLabPromotedModules.ts`, `client/src/lib/metricRegistry.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` to document the fourth promoted read-only sub-model and its scenario-analysis framing.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/pointScenarios/__tests__/pointScenariosAdapter.test.ts server/routes/__tests__/dataLabPointScenariosRoutes.test.ts client/src/__tests__/pointScenariosView.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/dataLabPromotedModules.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
