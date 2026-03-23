@@ -99,6 +99,17 @@ const modules = [
     color: "#e2640d",
     badge: "NEW" as string | null,
   },
+  {
+    id: "breakout-signals",
+    title: "WR Breakout Lab",
+    subtitle: "Signal Validation Promotion",
+    description:
+      "Read-only Signal-Validation-Model exports: ranked WR signal cards, promoted breakout context, and the currently favored recipe summary.",
+    icon: Target,
+    path: "/tiber-data-lab/breakout-signals",
+    color: "#f97316",
+    badge: "NEW" as string | null,
+  },
 ];
 
 function ModuleCard({

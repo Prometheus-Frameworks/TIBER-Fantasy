@@ -343,3 +343,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
   - `curl -sv "http://127.0.0.1:5051/api/integrations/forge/review?position=WR&season=2025&week=17&limit=2&mode=redraft" -o /tmp/forge-review-body.json` ✅ (against a mocked local Express app wired to the router)
+
+### 2026-03-23 — Codex: WR Breakout Lab Signal-Validation promotion
+- Added `server/modules/externalModels/signalValidation/` with a filesystem-backed client, CSV/JSON adapter, stable service interface, README, and focused adapter tests for promoted Signal-Validation-Model exports.
+- Added `GET /api/data-lab/breakout-signals[?season=<year>]` through `server/routes/dataLabBreakoutSignalsRoutes.ts`, mounted it in `server/routes.ts`, and covered ready/empty/not-found responses with focused route tests.
+- Added the new `/tiber-data-lab/breakout-signals` UI, including best-recipe badge/header, ranked WR signal table, season selector, guarded empty/loading/error states, and expandable full-field detail rows.
+- Updated Data Lab discovery/docs in `client/src/pages/DataLabHub.tsx`, `client/src/lib/metricRegistry.ts`, `README.md`, `server/modules/externalModels/MODULE.md`, and `replit.md` to clarify that TIBER-Fantasy consumes promoted Signal-Validation-Model outputs and does not recompute scores.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/signalValidation/__tests__/signalValidationAdapter.test.ts server/routes/__tests__/dataLabBreakoutSignalsRoutes.test.ts client/src/__tests__/breakoutSignalsView.test.ts` ✅
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+  - `git diff --check` ✅
+  - `npm run typecheck` ❌ (repo-wide pre-existing TypeScript errors outside this PR)
