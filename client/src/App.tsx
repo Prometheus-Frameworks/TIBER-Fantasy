@@ -35,6 +35,7 @@ import RushingLab from "@/pages/RushingLab";
 import QBLab from "@/pages/QBLab";
 import SituationalLab from "@/pages/SituationalLab";
 import BreakoutSignalsLab from "@/pages/BreakoutSignalsLab";
+import RoleOpportunityLab from "@/pages/RoleOpportunityLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
@@ -57,6 +58,7 @@ function Router() {
         <Route path="/tiber-data-lab/qb" component={QBLab} />
         <Route path="/tiber-data-lab/situational" component={SituationalLab} />
         <Route path="/tiber-data-lab/breakout-signals" component={BreakoutSignalsLab} />
+        <Route path="/tiber-data-lab/role-opportunity" component={RoleOpportunityLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>

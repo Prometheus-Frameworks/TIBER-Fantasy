@@ -12,8 +12,8 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 
 ## First integrations
 
-- `roleOpportunity/` wraps the `Role-and-opportunity-model` service and exposes a stable `TiberRoleOpportunityInsight` shape.
-- `signalValidation/` wraps read-only Signal-Validation-Model exports for the new WR Breakout Lab. It reads promoted `wr_player_signal_cards_{season}.csv` and `wr_best_recipe_summary.json` files, validates them, and exposes a stable TIBER-facing breakout-lab shape without reproducing any scoring logic in this repo.
+- `roleOpportunity/` wraps the `Role-and-opportunity-model` service for both single-player inspection and the promoted Role & Opportunity Lab. It now exposes a stable `TiberRoleOpportunityInsight` shape plus a normalized `TiberRoleOpportunityLab` dataset sourced from a compatibility endpoint or stable exported artifact.
+- `signalValidation/` wraps read-only Signal-Validation-Model exports for the WR Breakout Lab. It reads promoted `wr_player_signal_cards_{season}.csv` and `wr_best_recipe_summary.json` files, validates them, and exposes a stable TIBER-facing breakout-lab shape without reproducing any scoring logic in this repo.
 
 ## Next planned externalization target
 
@@ -42,6 +42,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - The route still controls opt-in query params and keeps the same non-fatal response semantics.
 - Enrichment failures are contained so the base player detail payload still succeeds.
 - `GET /api/data-lab/breakout-signals[?season=<year>]` is the first read-only product-facing Signal-Validation-Model promotion. It returns ranked WR signal cards plus best-recipe summary metadata for the Data Lab surface at `/tiber-data-lab/breakout-signals`.
+- `GET /api/data-lab/role-opportunity[?season=<year>][&week=<week>]` is the second promoted read-only Data Lab sub-model. It returns normalized role/deployment/opportunity rows for the Data Lab surface at `/tiber-data-lab/role-opportunity`, while preserving explicit missing, malformed, and empty upstream states.
 
 ## Current FORGE migration tooling
 
