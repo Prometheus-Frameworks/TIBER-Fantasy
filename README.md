@@ -75,6 +75,8 @@ SPORTSDATA_API_KEY=
 ROLE_OPPORTUNITY_MODEL_BASE_URL=
 ROLE_OPPORTUNITY_MODEL_ENDPOINT_PATH=/api/role-opportunity
 ROLE_OPPORTUNITY_MODEL_TIMEOUT_MS=5000
+ROLE_OPPORTUNITY_MODEL_LAB_ENDPOINT_PATH=/api/role-opportunity/lab
+ROLE_OPPORTUNITY_EXPORTS_PATH=./data/role-opportunity/role_opportunity_lab.json
 ROLE_OPPORTUNITY_MODEL_ENABLED=1
 FORGE_SERVICE_BASE_URL=
 FORGE_SERVICE_ENDPOINT_PATH=/v1/forge/evaluations
@@ -141,14 +143,16 @@ Player identity is unified across fantasy platforms via a `player_identity_map` 
 TIBER-Fantasy now routes promoted lab/model integrations through a dedicated adapter boundary under `server/modules/externalModels/`. The first live adapter wraps `Role-and-opportunity-model` and exposes a stable `TiberRoleOpportunityInsight` interface instead of leaking raw upstream payloads into core logic.
 
 The adapter pattern is intentionally small and repeatable:
-- **Client** handles base URL config, timeout control, and HTTP-to-internal error mapping.
-- **Adapter** validates the canonical payload at the edge and maps it into a TIBER-facing shape.
-- **Service** exposes a stable internal interface for routes and future enrichments.
-- **Integration route** provides one contained surface at `GET /api/integrations/role-opportunity/:playerId?season=2025&week=17`.
+- **Client** handles base URL config, timeout control, compatibility-endpoint reads, and artifact fallback.
+- **Adapter** validates canonical payloads at the edge and maps them into stable TIBER-facing shapes.
+- **Service** exposes stable internal interfaces for routes and future enrichments.
+- **Integration routes** now provide both a single-player inspection surface at `GET /api/integrations/role-opportunity/:playerId?season=2025&week=17` and a promoted read-only lab surface at `GET /api/data-lab/role-opportunity[?season=2025][&week=17]`.
 
 This prepares TIBER-Fantasy for future promoted labs without forcing a repo-wide rewrite. New model repos should plug into the same boundary instead of issuing ad hoc fetches from feature code.
 
 Signal-Validation-Model is now the first promoted read-only Data Lab module. `server/modules/externalModels/signalValidation/` reads exported `wr_player_signal_cards_{season}.csv` plus `wr_best_recipe_summary.json`, validates them at the edge, and powers `GET /api/data-lab/breakout-signals` plus the user-facing `/tiber-data-lab/breakout-signals` page. TIBER-Fantasy does **not** recompute breakout scores here; it only consumes promoted outputs and renders them with client-side sort/search/filter polish, grouped read-only detail sections, best-recipe provenance context, and explicit empty/loading/error guards.
+
+Role & Opportunity Lab is now the second promoted read-only Data Lab sub-model. `server/modules/externalModels/roleOpportunity/` reads either a TIBER-Data compatibility endpoint or a stable exported artifact, normalizes player/role/usage fields into a frontend-safe contract, and powers `GET /api/data-lab/role-opportunity` plus the user-facing `/tiber-data-lab/role-opportunity` page. This module is intentionally complementary to WR Breakout Lab: it is a usage/deployment context surface, not a projection engine, and TIBER-Fantasy does **not** recompute role scoring logic locally.
 
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.

@@ -87,6 +87,7 @@ import fireRoutes from './routes/fireRoutes';
 import { roleOpportunityIntegrationRouter } from './routes/roleOpportunityIntegrationRoutes';
 import { forgeIntegrationRouter } from './routes/forgeIntegrationRoutes';
 import { dataLabBreakoutSignalsRouter } from './routes/dataLabBreakoutSignalsRoutes';
+import { dataLabRoleOpportunityRouter } from './routes/dataLabRoleOpportunityRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -225,6 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(roleOpportunityIntegrationRouter);
   app.use(forgeIntegrationRouter);
   app.use('/api/data-lab', dataLabBreakoutSignalsRouter);
+  app.use('/api/data-lab', dataLabRoleOpportunityRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS

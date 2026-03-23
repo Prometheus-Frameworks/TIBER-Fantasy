@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Cpu,
   Clock,
+  Network,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,17 @@ const modules = [
     icon: Target,
     path: "/tiber-data-lab/breakout-signals",
     color: "#f97316",
+    badge: "NEW" as string | null,
+  },
+  {
+    id: "role-opportunity",
+    title: "Role & Opportunity Lab",
+    subtitle: "Usage & Deployment Promotion",
+    description:
+      "Read-only role, route, target, and opportunity context promoted from TIBER-Data compatibility surfaces or exported artifacts.",
+    icon: Network,
+    path: "/tiber-data-lab/role-opportunity",
+    color: "#0f766e",
     badge: "NEW" as string | null,
   },
 ];
