@@ -84,6 +84,7 @@ describe('pointScenariosAdapter', () => {
     });
     expect(result.rows[0].rawCanonical?.scenario_name).toBe('Target spike if WR2 sits');
     expect(result.rows[0].provenance.sourceMetadata).toEqual({ run_id: 'run-17' });
+    expect(result.rows[1].provenance.sourceMetadata).toEqual({ venue: 'outdoor' });
   });
 
   it('derives delta when the upstream payload omits it explicitly', () => {

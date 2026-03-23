@@ -100,8 +100,8 @@ function buildNotes(record: Record<string, unknown>): string[] {
 
 function buildProvenance(record: Record<string, unknown>, sourceRecord: Record<string, unknown>) {
   const provenanceRecord = toRecord(record.provenance);
-  const provenanceMetadata = toRecord(provenanceRecord.source_metadata);
-  const rowMetadata = toRecord(record.source_metadata);
+  const provenanceMetadata = toRecord(provenanceRecord.source_metadata ?? provenanceRecord.sourceMetadata);
+  const rowMetadata = toRecord(record.source_metadata ?? record.sourceMetadata);
   const metadata = Object.keys(provenanceMetadata).length ? provenanceMetadata : rowMetadata;
 
   return {
