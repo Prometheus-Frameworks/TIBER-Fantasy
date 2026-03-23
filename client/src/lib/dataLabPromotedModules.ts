@@ -6,7 +6,7 @@ export interface DataLabPlayerCarryContext {
 }
 
 export interface PromotedDataLabModuleDefinition {
-  id: 'player-research' | 'team-research' | 'breakout-signals' | 'role-opportunity' | 'age-curves' | 'point-scenarios';
+  id: 'command-center' | 'player-research' | 'team-research' | 'breakout-signals' | 'role-opportunity' | 'age-curves' | 'point-scenarios';
   title: string;
   subtitle: string;
   path: string;
@@ -27,6 +27,18 @@ export interface PromotedModuleOperatorDetails {
 }
 
 export const PROMOTED_DATA_LAB_MODULES: PromotedDataLabModuleDefinition[] = [
+  {
+    id: 'command-center',
+    title: 'Data Lab Command Center',
+    subtitle: 'Promoted research front door',
+    path: '/tiber-data-lab/command-center',
+    color: '#111827',
+    whatItIsFor: 'Start with the top promoted signals across modules before deciding which lab or workspace to inspect next.',
+    whenToUse: 'Use when you want the fastest triage view of what matters right now without opening every promoted surface manually.',
+    alongside: 'Best used before Player Research, Team Research, or any single promoted lab so you can choose the next click intentionally.',
+    dependencySummary: 'Depends on the four promoted read-only lab adapters and only synthesizes their exported outputs into one summary layer.',
+    dependencies: ['WR Breakout Lab adapter', 'Role & Opportunity Lab adapter', 'Age Curve / ARC adapter', 'Point Scenario Lab adapter'],
+  },
   {
     id: 'player-research',
     title: 'Player Research Workspace',
@@ -142,6 +154,9 @@ export function readDataLabPlayerCarryParams(search: string): DataLabPlayerCarry
 }
 
 export function buildPromotedModuleNavigationLabel(moduleId: PromotedDataLabModuleDefinition['id']): string {
+  if (moduleId === 'command-center') {
+    return 'Go to command center';
+  }
   if (moduleId === 'player-research') {
     return 'Go to player research';
   }
