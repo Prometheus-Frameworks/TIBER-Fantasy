@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Search } from "lucide-react";
 import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
+import { DataLabCommandCenterResponse } from "@/lib/dataLabCommandCenter";
+import { DataLabDiscoveryWidget } from "@/components/data-lab/DataLabDiscoveryWidget";
 
 interface LabPlayer {
   playerName: string;
@@ -130,6 +132,16 @@ export default function Dashboard() {
     tableCounts?: { snapshotPlayerSeason: number; snapshotPlayerWeek: number };
   }>({
     queryKey: ["/api/data-lab/health"],
+  });
+
+  const { data: commandCenterData, isLoading: isCommandCenterLoading } = useQuery<DataLabCommandCenterResponse>({
+    queryKey: ["/api/data-lab/command-center", season, "dashboard-widget"],
+    queryFn: async () => {
+      const res = await fetch(`/api/data-lab/command-center?season=${season}`);
+      if (!res.ok) throw new Error('Failed to fetch Data Lab Command Center');
+      return res.json();
+    },
+    retry: false,
   });
 
   const players = useMemo(() => {
@@ -322,37 +334,18 @@ export default function Dashboard() {
                 Insights
               </div>
             </div>
-            <div className="insight-card accent-left">
-              <div className="insight-header">
-                <span className="insight-tag breakout">Data Lab</span>
-                <span className="insight-time">Live</span>
-              </div>
-              <div className="insight-title">
-                {t1Count > 0
-                  ? `${t1Count} elite ${activeFilter}s identified across ${players.length} qualifying players`
-                  : `Evaluating ${players.length} ${activeFilter}s with 4+ games played`}
-              </div>
-              <div className="insight-body">
-                {topScorer
-                  ? `${topScorer.playerName} leads all ${activeFilter}s with ${Math.round(topScorer.totalFptsPpr)} PPR points (${(topScorer.totalFptsPpr / Math.max(topScorer.gamesPlayed, 1)).toFixed(1)} PPG). The position group averages ${avgPpg} PPG across ${players.length} qualifiers.`
-                  : `The Data Lab aggregation pipeline processes snap-level metrics across all ${activeFilter} players to surface fantasy-relevant efficiency and volume signals.`}
-              </div>
-              <div className="insight-source">Source: Data Lab Aggregation Pipeline</div>
-              <div className="insight-metrics">
-                <div>
-                  <div className="insight-metric-label">Pool Size</div>
-                  <div className="insight-metric-value">{players.length}</div>
-                </div>
-                <div>
-                  <div className="insight-metric-label">Avg PPG</div>
-                  <div className="insight-metric-value" style={{ color: "var(--ember)" }}>{avgPpg}</div>
-                </div>
-                <div>
-                  <div className="insight-metric-label">Scoring</div>
-                  <div className="insight-metric-value" style={{ fontSize: 12 }}>PPR</div>
-                </div>
-              </div>
-            </div>
+            <DataLabDiscoveryWidget
+              season={String(season)}
+              data={commandCenterData?.data ?? null}
+              isLoading={isCommandCenterLoading}
+              fallbackSummary={{
+                playersTracked: players.length,
+                avgPpg,
+                t1Count,
+                topScorerName: topScorer?.playerName ?? null,
+                topScorerPpg: topScorer ? topScorer.totalFptsPpr / Math.max(topScorer.gamesPlayed, 1) : null,
+              }}
+            />
           </div>
 
           <div>

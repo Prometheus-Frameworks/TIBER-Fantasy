@@ -425,3 +425,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/teamResearch/__tests__/teamResearchService.test.ts server/routes/__tests__/dataLabTeamResearchRoutes.test.ts client/src/__tests__/teamResearchWorkspaceView.test.ts client/src/__tests__/dataLabPromotedModules.test.ts client/src/__tests__/dataLabHub.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+
+### Unreleased — 2026-03-23: Core-flow Data Lab discovery hooks
+- **Branch:** current working branch
+- **Summary:** Surfaced lightweight promoted-research entry points in normal product flows by adding reusable Player Research / Team Research quick links to the player page and Tiers rankings table, plus a compact read-only dashboard widget that opens the Data Lab Command Center and highlights a few promoted priorities.
+- **Key Files:**
+  - `client/src/components/data-lab/CoreResearchQuickLinks.tsx` — shared read-only Player Research / Team Research / Command Center quick links
+  - `client/src/components/data-lab/DataLabDiscoveryWidget.tsx` — compact dashboard insight widget driven by Command Center data
+  - `client/src/pages/PlayerPage.tsx` — player-header research entry points
+  - `client/src/pages/TiberTiers.tsx` — rankings-row research entry points
+  - `client/src/pages/Dashboard.tsx` — command-center-backed discovery widget
+  - `client/src/__tests__/coreResearchQuickLinks.test.ts` / `client/src/__tests__/dataLabDiscoveryWidget.test.ts` — focused rendering + carry-through coverage
+- **Validation:** `npm test -- client/src/__tests__/coreResearchQuickLinks.test.ts client/src/__tests__/dataLabDiscoveryWidget.test.ts client/src/__tests__/dataLabPromotedModules.test.ts`, `git diff --check`, `npm run build`.

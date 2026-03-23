@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import CompareDrawerContent from '@/components/player/CompareDrawerContent';
+import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import type { CompareTarget } from '@/components/player/CompareDrawerContent';
 import { addRecentPlayer } from '@/lib/recentPlayers';
 import { computePulse, computeTrendDeltas, getTopDrivers, formatWeekRange, getDeltaArrow, getPulseColor, type WeekData } from '@/lib/pulseUtils';
@@ -594,6 +595,13 @@ export default function PlayerPage() {
                     </span>
                   )}
                 </p>
+                <CoreResearchQuickLinks
+                  season={String(season)}
+                  playerId={playerId}
+                  playerName={player.fullName}
+                  team={player.nflTeam ?? null}
+                  showCommandCenter
+                />
               </div>
               <div className="text-right flex-shrink-0">
                 <button
