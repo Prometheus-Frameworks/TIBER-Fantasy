@@ -19,5 +19,6 @@ By default the adapter reads from `./data/signal-validation`, or from `SIGNAL_VA
 ## Product behavior
 
 - Read-only only; no rescoring or mutation
-- Empty, malformed, and missing-export states are surfaced explicitly
+- Empty, malformed, and missing-export states are surfaced explicitly with operator-facing hints
+- The WR Breakout Lab adds client-side sort/search/filter controls plus grouped read-only detail sections for exported signal cards
 - TIBER-Fantasy displays promoted Signal-Validation-Model outputs and does not recompute breakout logic
