@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
+import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 
 type Position = 'QB' | 'RB' | 'WR' | 'TE';
 type SortDirection = 'asc' | 'desc';
@@ -184,6 +185,14 @@ export default function TiberTiers() {
                               <span className="text-xs text-slate-500">{player.nflTeam || 'FA'}</span>
                               <TrajectoryIcon trajectory={player.trajectory} />
                             </div>
+                            <CoreResearchQuickLinks
+                              season={String(season)}
+                              playerId={player.playerId}
+                              playerName={player.playerName}
+                              team={player.nflTeam ?? null}
+                              compact
+                              className="mt-2"
+                            />
                           </td>
                           <td className="py-3 px-3 text-center">
                             <Badge className={`${tierClass(player.tier)} border`}>{player.tier}</Badge>
