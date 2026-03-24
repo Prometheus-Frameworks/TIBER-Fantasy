@@ -122,6 +122,12 @@ npm run typecheck     # TypeScript type checking
 npm run lint          # ESLint
 ```
 
+### Production routing behavior
+
+- `GET /health` is the canonical machine-readable health endpoint (Railway probe target).
+- In production, `GET /` serves the frontend SPA shell when `dist/public/index.html` exists.
+- If static frontend assets are missing in production, `GET /` safely falls back to a small JSON status response.
+
 ---
 
 ## Data Sources

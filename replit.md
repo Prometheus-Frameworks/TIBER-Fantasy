@@ -61,6 +61,7 @@ The platform utilizes a 3-tier ELT architecture (Bronze → Silver → Gold laye
 - **Build Process**: `sh build.sh` compiles frontend via `vite build` and bundles server via esbuild.
 - **Runtime**: `node dist/index.mjs` for faster startup.
 - **Bootstrap (`server/bootstrap.mjs`):** A small file to quickly bind a port and serve basic routes while the main Express app loads.
+- **Production Routing Contract**: `GET /health` is the canonical machine-readable health probe. Production `GET /` serves the frontend SPA shell when `dist/public/index.html` is present; if frontend assets are missing, `/` returns a small JSON fallback response instead of a hard failure.
 
 ## External Dependencies
 - **MySportsFeeds API**: Injury reports and NFL roster automation.
