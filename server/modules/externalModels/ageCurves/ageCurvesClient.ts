@@ -143,8 +143,10 @@ export class AgeCurveClient {
 
     throw new AgeCurveIntegrationError(
       'not_found',
-      'No Age Curve Lab artifact was found for TIBER-Fantasy to promote. ' +
-        'Expected AGE_CURVE_PROMOTED_HANDOFF_PATH (or AGE_CURVE_EXPORTS_PATH) to point to a promoted ARC handoff JSON export.',
+      'No Age Curve / ARC artifact was found for TIBER-Fantasy to promote. ' +
+        `Checked AGE_CURVE_PROMOTED_HANDOFF_PATH (${process.env.AGE_CURVE_PROMOTED_HANDOFF_PATH ?? DEFAULT_PROMOTED_HANDOFF_PATH}) ` +
+        `and AGE_CURVE_EXPORTS_PATH (${process.env.AGE_CURVE_EXPORTS_PATH ?? DEFAULT_LEGACY_EXPORTS_PATH}). ` +
+        'Expected preferred filename: arc_promoted_handoff.json (legacy fallback: age_curve_lab.json).',
       404,
     );
   }

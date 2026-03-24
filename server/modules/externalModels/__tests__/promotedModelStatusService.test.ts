@@ -81,7 +81,7 @@ describe('PromotedModelStatusService breakout artifact readiness', () => {
       const breakout = report.statuses.find((status) => status.moduleId === 'breakout-signals');
 
       expect(breakout?.status).toBe('missing_export_artifact');
-      expect(breakout?.detail).toContain('No Signal Validation WR player signal card exports were found.');
+      expect(breakout?.detail).toContain('No Signal Validation WR player signal card exports were found in SIGNAL_VALIDATION_EXPORTS_DIR');
     } finally {
       await rm(exportsDir, { recursive: true, force: true });
     }
