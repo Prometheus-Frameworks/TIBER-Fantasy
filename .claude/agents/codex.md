@@ -468,3 +468,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/__tests__/teamResearchSummaryBlock.test.ts client/src/__tests__/coreResearchQuickLinks.test.ts` ✅
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
   - `git diff --check` ✅
+
+### 2026-03-24 — WR Breakout artifact handoff hardening + readiness tests
+- Added a dedicated operator runbook at `docs/runbooks/WR_BREAKOUT_SIGNAL_VALIDATION_HANDOFF.md` documenting the Signal-Validation export command, required file paths, copy/mount flow, season-token alignment, and `/api/data-lab/promoted-status` verification.
+- Updated the Signal Validation adapter client to return clearer season-mismatch not-found messaging with available export seasons and feature-season filename guidance.
+- Added focused readiness coverage in `server/modules/externalModels/__tests__/promotedModelStatusService.test.ts`:
+  - happy path: required breakout artifacts exist and status reports `ready`
+  - missing-artifact path: no exports present and status reports `missing_export_artifact`
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/__tests__/promotedModelStatusService.test.ts`
