@@ -7,7 +7,8 @@ This adapter powers the read-only Age Curve / ARC Lab in TIBER Data Lab.
 The adapter intentionally follows the same promoted external-model pattern as WR Breakout Lab and Role & Opportunity Lab:
 
 - Preferred upstream API compatibility endpoint at `AGE_CURVE_MODEL_BASE_URL + AGE_CURVE_MODEL_LAB_ENDPOINT_PATH`
-- Stable exported JSON artifact at `AGE_CURVE_EXPORTS_PATH` (defaults to `./data/age-curves/age_curve_lab.json`)
+- Stable promoted handoff JSON artifact at `AGE_CURVE_PROMOTED_HANDOFF_PATH` (preferred, defaults to `./data/age-curves/arc_promoted_handoff.json`)
+- Legacy exported JSON artifact at `AGE_CURVE_EXPORTS_PATH` (fallback, defaults to `./data/age-curves/age_curve_lab.json`)
 
 TIBER-Fantasy does **not** compute or backfill age-curve logic. It only reads promoted ARC outputs, validates them at the edge, and maps them into a stable UI contract.
 

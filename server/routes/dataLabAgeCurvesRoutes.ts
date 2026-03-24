@@ -51,7 +51,7 @@ export function createDataLabAgeCurvesRouter(service: AgeCurvesService = ageCurv
           code: error.code,
           operator: buildPromotedModuleOperatorDetails({
             moduleLabel: 'Age Curve / ARC Lab',
-            dependencySummary: 'Depends on either ARC compatibility payloads or a promoted age-curve artifact path.',
+            dependencySummary: 'Depends on either ARC compatibility payloads or a promoted ARC handoff artifact path (AGE_CURVE_PROMOTED_HANDOFF_PATH preferred).',
             errorCode: error.code,
             status,
           }),
