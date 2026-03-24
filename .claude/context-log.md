@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-03-24 — Codex: Production root now serves frontend SPA shell
+- **What changed:** Updated `server/index.ts` production root handling so `GET /` serves `dist/public/index.html` when available, retained `GET /health` JSON health checks, and added an explicit safe JSON fallback when static assets are missing. Added reusable `mountProductionFrontend` helper for production static + SPA fallback wiring.
+- **Files modified:** `server/index.ts`, `server/__tests__/productionRootRouting.test.ts`, `README.md`, `replit.md`, `.claude/context-log.md`, `.claude/agents/codex.md`
+- **Validation:** Ran focused Jest suite for production routing behavior and confirmed health JSON, root frontend serving, API route preservation, and SPA fallback behavior.
+- **Notes:** Change is routing-only; bootstrap path, API mounting, and DB/model logic remain untouched.
+
 ### 2026-02-22 — Replit Agent: QB FIRE Support + Snap% Fix + Column Cleanup
 - **What changed:** Added full QB support to Fantasy Lab FIRE system. Backend: extended FIRE API with QB per-game stats (passAtt/G, comp%, passY/G, passTD/G, INT/G, rushAtt/G, rushY/G, rushTD/G) computed from silver_player_weekly_stats rolling window. Frontend: added QB to position selector, built position-aware column system (QB-specific columns auto-swap, Conversion column hidden for QB since it's null). Fixed Snap% bug (was dividing by total player-snaps instead of team offensive plays; added `team_off_plays = MAX(snaps)` to `team_weekly_totals_mv`). Cleaned column labels (Opp→Opportunity, Conv→Conversion, FPG→Fantasy PPG, etc).
 - **Files modified:** `server/routes/fireRoutes.ts` (WeeklyPlayerStatRow extended, QB stats aggregation, FirePlayer.stats extended), `client/src/pages/FantasyLab.tsx` (Position type, column defs, position selector), `team_weekly_totals_mv` (added team_off_plays column), `replit.md`, `.claude/context-log.md`, `.claude/agents/replit-agent.md`, `server/modules/fantasyLab/README.md`

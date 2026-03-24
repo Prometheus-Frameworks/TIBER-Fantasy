@@ -9,6 +9,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ## Completed Tasks
 
+### Unreleased — 2026-03-24: Production root serves frontend + health endpoint contract
+- **Branch:** current working branch
+- **Summary:** Updated production Express routing so `/` now serves the frontend SPA shell when `dist/public/index.html` exists, while `/health` remains the canonical JSON health probe endpoint. Added an explicit production-safe JSON fallback when frontend assets are absent.
+- **Key Files:**
+  - `server/index.ts` — added `mountProductionFrontend`, root handler SPA-first behavior, and production static mount status logging
+  - `server/__tests__/productionRootRouting.test.ts` — focused coverage for health JSON, root SPA serving, API preservation, and non-API SPA fallback
+  - `README.md`, `replit.md` — deployment routing contract notes
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand server/__tests__/productionRootRouting.test.ts`
+
 ### PR #11 — 2026-02-15: Add NFL Personnel Grouping Visibility
 - **Branch:** `codex/add-nfl-personnel-grouping-visibility`
 - **Commit:** `62042440` (merged via `b75f5a13`)

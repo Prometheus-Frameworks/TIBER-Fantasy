@@ -9,6 +9,34 @@ const log = (...args: any[]) => console.log(...args);
 // Exported so bootstrap.mjs can use it as the request handler.
 export const app = express();
 
+type ProductionFrontendMountResult =
+  | { mounted: true; publicDir: string; indexHtml: string }
+  | { mounted: false; reason: "public_dir_missing" | "index_missing"; publicDir: string; indexHtml: string };
+
+export function mountProductionFrontend(appToMount: express.Express, publicDir: string): ProductionFrontendMountResult {
+  const indexHtml = path.join(publicDir, "index.html");
+
+  if (!fs.existsSync(publicDir)) {
+    return { mounted: false, reason: "public_dir_missing", publicDir, indexHtml };
+  }
+
+  if (!fs.existsSync(indexHtml)) {
+    return { mounted: false, reason: "index_missing", publicDir, indexHtml };
+  }
+
+  appToMount.use(express.static(publicDir));
+
+  // SPA fallback for non-API routes.
+  appToMount.use((req: Request, res: Response, next: NextFunction) => {
+    if ((req.method !== "GET" && req.method !== "HEAD") || req.originalUrl.startsWith("/api") || req.path === "/health") {
+      return next();
+    }
+    res.sendFile(indexHtml);
+  });
+
+  return { mounted: true, publicDir, indexHtml };
+}
+
 // ── Core middleware ────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -35,10 +63,14 @@ app.use((req, res, next) => {
 
 // ── Instant health routes — no dependencies, never hang ──────────────────────
 app.get("/health", (_req, res) => res.json({ ok: true, service: "TiberClaw" }));
-// In production / returns JSON (health check compatible).
+// In production / serves SPA shell when available; otherwise returns JSON fallback.
 // In dev the next() falls through to Vite which serves index.html.
 app.get("/", (req, res, next) => {
   if (process.env.NODE_ENV === "development") return next();
+  const indexHtml = path.resolve(process.cwd(), "dist", "public", "index.html");
+  if (fs.existsSync(indexHtml)) {
+    return res.sendFile(indexHtml);
+  }
   res.status(200).json({ status: "ok", service: "TiberClaw API", version: "1.0" });
 });
 
@@ -84,17 +116,11 @@ export async function initBackground(): Promise<void> {
   // Static assets (production only — dev uses Vite)
   if (process.env.NODE_ENV !== "development") {
     const publicDir = path.resolve(process.cwd(), "dist", "public");
-    if (fs.existsSync(publicDir)) {
-      app.use(express.static(publicDir));
-      const indexHtml = path.join(publicDir, "index.html");
-      if (fs.existsSync(indexHtml)) {
-        // Guard: never intercept /api routes — those fall through to Express 404
-        app.use((req: Request, res: Response, next: NextFunction) => {
-          if (req.originalUrl.startsWith("/api")) return next();
-          res.sendFile(indexHtml);
-        });
-      }
-      log(`🗂️  Static assets → ${publicDir}`);
+    const mountedFrontend = mountProductionFrontend(app, publicDir);
+    if (mountedFrontend.mounted) {
+      log(`🗂️  Static assets → ${mountedFrontend.publicDir}`);
+    } else {
+      log(`⚠️  Static frontend unavailable (${mountedFrontend.reason}) → root will return JSON health-style fallback`);
     }
   }
 
