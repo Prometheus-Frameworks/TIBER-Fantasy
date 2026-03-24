@@ -49,6 +49,19 @@ const navSections: NavSectionConfig[] = [
     ],
   },
   {
+    label: "Promoted Data Lab",
+    description: "Read-only promoted model integrations and operator command surfaces.",
+    items: [
+      { label: "Command Center", path: "/tiber-data-lab/command-center", badge: "PROMOTED" },
+      { label: "Player Research", path: "/tiber-data-lab/player-research" },
+      { label: "Team Research", path: "/tiber-data-lab/team-research" },
+      { label: "Breakout Signals", path: "/tiber-data-lab/breakout-signals" },
+      { label: "Role & Opportunity", path: "/tiber-data-lab/role-opportunity" },
+      { label: "Age Curves / ARC", path: "/tiber-data-lab/age-curves" },
+      { label: "Point Scenarios", path: "/tiber-data-lab/point-scenarios" },
+    ],
+  },
+  {
     label: "AI & Intelligence",
     description: "Assistants and signal scanners that think with you.",
     items: [

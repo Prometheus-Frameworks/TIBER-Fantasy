@@ -77,6 +77,7 @@ ROLE_OPPORTUNITY_MODEL_ENDPOINT_PATH=/api/role-opportunity
 ROLE_OPPORTUNITY_MODEL_TIMEOUT_MS=5000
 ROLE_OPPORTUNITY_MODEL_LAB_ENDPOINT_PATH=/api/role-opportunity/lab
 ROLE_OPPORTUNITY_EXPORTS_PATH=./data/role-opportunity/role_opportunity_lab.json
+AGE_CURVE_MODEL_BASE_URL=
 AGE_CURVE_MODEL_LAB_ENDPOINT_PATH=/api/age-curves/lab
 AGE_CURVE_EXPORTS_PATH=./data/age-curves/age_curve_lab.json
 POINT_SCENARIO_MODEL_BASE_URL=
@@ -84,6 +85,7 @@ POINT_SCENARIO_MODEL_LAB_ENDPOINT_PATH=/api/point-scenarios/lab
 POINT_SCENARIO_MODEL_TIMEOUT_MS=5000
 POINT_SCENARIO_EXPORTS_PATH=./data/point-scenarios/point_scenario_lab.json
 POINT_SCENARIO_MODEL_ENABLED=1
+AGE_CURVE_MODEL_ENABLED=1
 ROLE_OPPORTUNITY_MODEL_ENABLED=1
 FORGE_SERVICE_BASE_URL=
 FORGE_SERVICE_ENDPOINT_PATH=/v1/forge/evaluations
@@ -178,6 +180,8 @@ Player Research Workspace is now the first cross-model synthesis surface in that
 Team Research Workspace is now the team-level complement to Player Research. `server/modules/externalModels/teamResearch/` orchestrates the same four promoted read-only adapters plus canonical team metadata without recomputing any model logic, powers `GET /api/data-lab/team-research`, and backs the user-facing `/tiber-data-lab/team-research` page with team search, `team` deep-linking, team identity/header context, high-level offensive summaries, key-player tables, partial-data handling, and direct player link-outs back into Player Research.
 
 Data Lab Command Center is now the promoted lane's top-level front door. `server/modules/externalModels/dataLabCommandCenter/` orchestrates the same four promoted read-only adapters into a compact triage payload, powers `GET /api/data-lab/command-center`, and backs the user-facing `/tiber-data-lab/command-center` page with a lightweight module status strip, top-priority current signals, player/team quick links into deeper research surfaces, stable mixed available/unavailable section rendering, and explicit read-only / no-unified-score framing.
+
+For operator readiness checks, `GET /api/data-lab/promoted-status` now returns explicit per-module diagnostics across all promoted surfaces (`ready`, `missing_export_artifact`, `upstream_unavailable`, `disabled_by_env_config`, `empty_dataset`) plus dependency checks like configured artifact paths and API base URL presence. The Data Lab hub and Command Center render this panel directly so production users can see what is truly wired and usable before trusting any promoted workflow.
 Core product flows now surface lightweight Data Lab discovery hooks outside the lab itself: player-facing surfaces link into Player Research, player detail pages now carry a compact inline Research Summary block fed by promoted Player Research outputs, the Schedule / SoS team surface now includes a compact inline Team Research Summary block linked to the full Team Research Workspace, team labels can route into Team Research, and a compact read-only Command Center widget on the main dashboard gives users a low-friction way to enter the promoted research lane without turning core pages into Data Lab clones.
 
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:

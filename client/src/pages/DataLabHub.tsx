@@ -17,6 +17,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PROMOTED_DATA_LAB_MODULES } from "@/lib/dataLabPromotedModules";
+import { PromotedModelStatusPanel } from "@/components/data-lab/PromotedModelStatusPanel";
 
 interface SnapshotHealth {
   status: string;
@@ -359,6 +360,16 @@ export default function DataLabHub() {
         </div>
       )}
 
+      <section className="mb-8">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Promoted Data Lab front door</div>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900">Start with promoted read-only model integrations</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-gray-600">
+            The modules below are promoted integrations from external model repositories. TIBER-Fantasy does not recompute their model logic locally; it surfaces adapter-fed outputs, link paths, and diagnostics so operators can trust what is actually available in production.
+          </p>
+        </div>
+      </section>
+
       <section className="mb-10">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
@@ -414,7 +425,10 @@ export default function DataLabHub() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+
+        <PromotedModelStatusPanel />
+
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
           {promotedModules.map((mod) => (
             <ModuleCard key={mod.id} module={mod} stat={undefined} />
           ))}
