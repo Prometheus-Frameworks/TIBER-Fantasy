@@ -2,6 +2,7 @@ import { Link } from 'wouter';
 import { AlertTriangle, ArrowUpRight, CheckCircle2, ChevronRight, CircleOff, Layers3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PromotedModuleStateCard } from '@/components/data-lab/PromotedModuleStateCard';
+import { PromotedModelStatusPanel } from '@/components/data-lab/PromotedModelStatusPanel';
 import {
   DataLabCommandCenterResponse,
   formatNumber,
@@ -185,6 +186,10 @@ export function DataLabCommandCenterView({
             <SummaryStat label="Sections ready" value={String(Object.values(data.sections).filter((section) => section.state === 'ready').length)} />
             <SummaryStat label="Module strip" value={`${data.moduleStatuses.filter((module) => module.state === 'ready').length} ready`} />
             <SummaryStat label="Workspace state" value={getCommandCenterStateLabel(data.state)} />
+          </div>
+
+          <div className="mt-6">
+            <PromotedModelStatusPanel season={season} compact />
           </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
