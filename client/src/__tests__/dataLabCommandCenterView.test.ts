@@ -7,6 +7,10 @@ import {
   readDataLabCommandCenterQuery,
 } from '@/lib/dataLabCommandCenter';
 
+jest.mock('@/components/data-lab/PromotedModelStatusPanel', () => ({
+  PromotedModelStatusPanel: () => null,
+}));
+
 const data = {
   season: 2025,
   availableSeasons: [2025, 2024],
@@ -194,7 +198,8 @@ describe('DataLabCommandCenterView', () => {
 
   it('keeps query helpers stable', () => {
     expect(buildDataLabCommandCenterHref({ season: '2025' })).toBe('/tiber-data-lab/command-center?season=2025');
-    expect(readDataLabCommandCenterQuery('?season=2024', '2025')).toEqual({ season: '2024' });
+    expect(readDataLabCommandCenterQuery('?season=2024')).toEqual({ season: '2024', hasSeasonParam: true });
+    expect(readDataLabCommandCenterQuery('')).toEqual({ season: null, hasSeasonParam: false });
     expect(getCommandCenterStateLabel('partial')).toBe('Partial promoted coverage');
   });
 });

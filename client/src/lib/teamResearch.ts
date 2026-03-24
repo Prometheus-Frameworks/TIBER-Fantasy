@@ -158,7 +158,8 @@ export interface TeamResearchApiError {
 }
 
 export interface TeamResearchQueryState {
-  season: string;
+  season: string | null;
+  hasSeasonParam: boolean;
   team: string | null;
 }
 
@@ -180,11 +181,13 @@ export function buildTeamResearchHref(query: Partial<TeamResearchQueryState>): s
   return serialized ? `/tiber-data-lab/team-research?${serialized}` : '/tiber-data-lab/team-research';
 }
 
-export function readTeamResearchQuery(search: string, fallbackSeason: string): TeamResearchQueryState {
+export function readTeamResearchQuery(search: string): TeamResearchQueryState {
   const params = new URLSearchParams(search);
+  const season = params.get('season')?.trim() || null;
 
   return {
-    season: params.get('season')?.trim() || fallbackSeason,
+    season,
+    hasSeasonParam: season !== null,
     team: params.get('team')?.trim() || null,
   };
 }

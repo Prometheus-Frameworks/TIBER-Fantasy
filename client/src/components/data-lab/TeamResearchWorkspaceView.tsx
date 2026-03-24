@@ -189,7 +189,10 @@ export function TeamResearchWorkspaceView({ season, availableSeasons, data, isLo
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
-  const seasonOptions = availableSeasons.length > 0 ? availableSeasons : [Number(season)];
+  const seasonOptions = Array.from(new Set([...availableSeasons, Number(season)].filter((value) => Number.isFinite(value)))).sort((left, right) => right - left);
+  const selectedSeason = seasonOptions.includes(Number(season))
+    ? season
+    : (seasonOptions[0] != null ? String(seasonOptions[0]) : '');
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -251,7 +254,8 @@ export function TeamResearchWorkspaceView({ season, availableSeasons, data, isLo
 
           <label className="block">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Season</div>
-            <select value={season} onChange={(event) => onSeasonChange(event.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none">
+            <select value={selectedSeason} onChange={(event) => onSeasonChange(event.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none" disabled={seasonOptions.length === 0}>
+              {seasonOptions.length === 0 ? <option value="">No seasons available</option> : null}
               {seasonOptions.map((option) => (
                 <option key={option} value={String(option)}>{option}</option>
               ))}

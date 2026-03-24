@@ -95,7 +95,17 @@ export function DataLabCommandCenterView({
   errorMessage,
   onSeasonChange,
 }: DataLabCommandCenterViewProps) {
-  const seasonOptions = availableSeasons.length > 0 ? availableSeasons : [Number(season)];
+  const seasonOptions = Array.from(
+    new Set(
+      [
+        ...availableSeasons,
+        Number(season),
+      ].filter((value) => Number.isFinite(value)),
+    ),
+  ).sort((left, right) => right - left);
+  const selectedSeason = seasonOptions.includes(Number(season))
+    ? season
+    : (seasonOptions[0] != null ? String(seasonOptions[0]) : '');
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-8">
@@ -138,7 +148,8 @@ export function DataLabCommandCenterView({
         <div className="mt-6 grid gap-3 rounded-2xl border border-gray-200 bg-[#fafafa] p-4 lg:grid-cols-[180px,1fr]">
           <label className="block">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Season</div>
-            <select value={season} onChange={(event) => onSeasonChange(event.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none">
+            <select value={selectedSeason} onChange={(event) => onSeasonChange(event.target.value)} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none" disabled={seasonOptions.length === 0}>
+              {seasonOptions.length === 0 ? <option value="">No seasons available</option> : null}
               {seasonOptions.map((option) => (
                 <option key={option} value={String(option)}>{option}</option>
               ))}
@@ -189,7 +200,7 @@ export function DataLabCommandCenterView({
           </div>
 
           <div className="mt-6">
-            <PromotedModelStatusPanel season={season} compact />
+            <PromotedModelStatusPanel season={selectedSeason || undefined} compact />
           </div>
 
           <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
