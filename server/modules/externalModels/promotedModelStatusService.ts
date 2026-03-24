@@ -130,13 +130,34 @@ export class PromotedModelStatusService {
         }
 
         if (error.code === 'not_found') {
+          const availableSeasonMatch = error.message.match(/Available export seasons:\s*([0-9,\s]+)/i);
+          const availableSeasons = availableSeasonMatch
+            ? availableSeasonMatch[1]
+              .split(',')
+              .map((value) => Number(value.trim()))
+              .filter((value) => Number.isFinite(value))
+            : [];
+
+          if (season != null && availableSeasons.length > 0) {
+            return {
+              moduleId: 'breakout-signals',
+              title: 'WR Breakout Lab',
+              route: '/tiber-data-lab/breakout-signals',
+              status: 'available_other_seasons',
+              detail: `No promoted breakout rows for ${season}; healthy exports exist for ${availableSeasons.join(', ')}.`,
+              availableSeasons,
+              readOnly: true,
+              checks,
+            };
+          }
+
           return {
             moduleId: 'breakout-signals',
             title: 'WR Breakout Lab',
             route: '/tiber-data-lab/breakout-signals',
             status: 'missing_export_artifact',
             detail: error.message,
-            availableSeasons: [],
+            availableSeasons,
             readOnly: true,
             checks,
           };

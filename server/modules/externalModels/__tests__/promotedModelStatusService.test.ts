@@ -124,6 +124,38 @@ describe('PromotedModelStatusService breakout artifact readiness', () => {
       await rm(exportsDir, { recursive: true, force: true });
     }
   });
+
+  it('marks WR Breakout Lab as available_other_seasons when requested season is absent but other exports exist', async () => {
+    const exportsDir = await mkdtemp(path.join(os.tmpdir(), 'sv-breakout-other-season-'));
+
+    try {
+      await writeFile(
+        path.join(exportsDir, 'wr_player_signal_cards_2024.csv'),
+        'candidate_rank,final_signal_score,player_name,season\n1,92.4,Malik Nabers,2024\n',
+        'utf8',
+      );
+      await writeFile(
+        path.join(exportsDir, 'wr_best_recipe_summary.json'),
+        JSON.stringify({ best_recipe_name: 'Second-Year Surge', season: 2024, validation_score: 0.78 }),
+        'utf8',
+      );
+
+      const signalValidation = new SignalValidationService(new SignalValidationClient({ exportsDir, enabled: true }));
+      const service = new PromotedModelStatusService({
+        signalValidation,
+        ...buildAuxiliaryDeps(),
+      });
+
+      const report = await service.getStatusReport({ season: 2025 });
+      const breakout = report.statuses.find((status) => status.moduleId === 'breakout-signals');
+
+      expect(breakout?.status).toBe('available_other_seasons');
+      expect(breakout?.detail).toContain('healthy exports exist for 2024');
+      expect(breakout?.availableSeasons).toEqual([2024]);
+    } finally {
+      await rm(exportsDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('PromotedModelStatusService role-opportunity + ARC artifact readiness', () => {
