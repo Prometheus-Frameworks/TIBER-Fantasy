@@ -4,7 +4,8 @@ import { AgeCurveClientConfig, AgeCurveIntegrationError } from './types';
 
 const DEFAULT_LAB_ENDPOINT_PATH = '/api/age-curves/lab';
 const DEFAULT_TIMEOUT_MS = 5000;
-const DEFAULT_EXPORTS_PATH = path.join(process.cwd(), 'data', 'age-curves', 'age_curve_lab.json');
+const DEFAULT_PROMOTED_HANDOFF_PATH = path.join(process.cwd(), 'data', 'age-curves', 'arc_promoted_handoff.json');
+const DEFAULT_LEGACY_EXPORTS_PATH = path.join(process.cwd(), 'data', 'age-curves', 'age_curve_lab.json');
 
 export interface AgeCurveLabQuery {
   season?: number;
@@ -21,7 +22,11 @@ export class AgeCurveClient {
     this.baseUrl = config.baseUrl ?? process.env.AGE_CURVE_MODEL_BASE_URL;
     this.timeoutMs = config.timeoutMs ?? Number(process.env.AGE_CURVE_MODEL_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
     this.labEndpointPath = config.labEndpointPath ?? process.env.AGE_CURVE_MODEL_LAB_ENDPOINT_PATH ?? DEFAULT_LAB_ENDPOINT_PATH;
-    this.exportsPath = config.exportsPath ?? process.env.AGE_CURVE_EXPORTS_PATH ?? DEFAULT_EXPORTS_PATH;
+    this.exportsPath =
+      config.exportsPath
+      ?? process.env.AGE_CURVE_PROMOTED_HANDOFF_PATH
+      ?? process.env.AGE_CURVE_EXPORTS_PATH
+      ?? DEFAULT_PROMOTED_HANDOFF_PATH;
     this.enabled = config.enabled ?? process.env.AGE_CURVE_MODEL_ENABLED !== '0';
   }
 
@@ -106,28 +111,42 @@ export class AgeCurveClient {
   }
 
   private async readAgeCurveArtifact(query: AgeCurveLabQuery): Promise<unknown> {
-    try {
-      const raw = await fs.readFile(this.exportsPath, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      return this.filterArtifact(parsed, query);
-    } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
+    const candidates = Array.from(
+      new Set([
+        this.exportsPath,
+        process.env.AGE_CURVE_PROMOTED_HANDOFF_PATH,
+        process.env.AGE_CURVE_EXPORTS_PATH,
+        DEFAULT_PROMOTED_HANDOFF_PATH,
+        DEFAULT_LEGACY_EXPORTS_PATH,
+      ].filter((entry): entry is string => Boolean(entry))),
+    );
 
-      if (nodeError?.code === 'ENOENT') {
-        throw new AgeCurveIntegrationError(
-          'not_found',
-          'No Age Curve Lab artifact was found for TIBER-Fantasy to promote.',
-          404,
-          error,
-        );
+    for (const candidate of candidates) {
+      try {
+        const raw = await fs.readFile(candidate, 'utf8');
+        const parsed = JSON.parse(raw) as unknown;
+        return this.filterArtifact(parsed, query);
+      } catch (error) {
+        const nodeError = error as NodeJS.ErrnoException;
+
+        if (nodeError?.code === 'ENOENT') {
+          continue;
+        }
+
+        if (error instanceof SyntaxError) {
+          throw new AgeCurveIntegrationError('invalid_payload', 'Age Curve Lab artifact is not valid JSON.', 502, error);
+        }
+
+        throw new AgeCurveIntegrationError('upstream_unavailable', 'Unable to read the Age Curve Lab artifact.', 503, error);
       }
-
-      if (error instanceof SyntaxError) {
-        throw new AgeCurveIntegrationError('invalid_payload', 'Age Curve Lab artifact is not valid JSON.', 502, error);
-      }
-
-      throw new AgeCurveIntegrationError('upstream_unavailable', 'Unable to read the Age Curve Lab artifact.', 503, error);
     }
+
+    throw new AgeCurveIntegrationError(
+      'not_found',
+      'No Age Curve Lab artifact was found for TIBER-Fantasy to promote. ' +
+        'Expected AGE_CURVE_PROMOTED_HANDOFF_PATH (or AGE_CURVE_EXPORTS_PATH) to point to a promoted ARC handoff JSON export.',
+      404,
+    );
   }
 
   private filterArtifact(payload: unknown, query: AgeCurveLabQuery): unknown {

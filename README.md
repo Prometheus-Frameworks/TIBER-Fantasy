@@ -79,6 +79,7 @@ ROLE_OPPORTUNITY_MODEL_LAB_ENDPOINT_PATH=/api/role-opportunity/lab
 ROLE_OPPORTUNITY_EXPORTS_PATH=./data/role-opportunity/role_opportunity_lab.json
 AGE_CURVE_MODEL_BASE_URL=
 AGE_CURVE_MODEL_LAB_ENDPOINT_PATH=/api/age-curves/lab
+AGE_CURVE_PROMOTED_HANDOFF_PATH=./data/age-curves/arc_promoted_handoff.json
 AGE_CURVE_EXPORTS_PATH=./data/age-curves/age_curve_lab.json
 POINT_SCENARIO_MODEL_BASE_URL=
 POINT_SCENARIO_MODEL_LAB_ENDPOINT_PATH=/api/point-scenarios/lab
