@@ -82,4 +82,42 @@ describe('PromotedModelStatusService breakout artifact readiness', () => {
       await rm(exportsDir, { recursive: true, force: true });
     }
   });
+
+  it('distinguishes healthy other-season availability from true unavailable/missing states', async () => {
+    const exportsDir = await mkdtemp(path.join(os.tmpdir(), 'sv-other-season-'));
+
+    try {
+      await writeFile(
+        path.join(exportsDir, 'wr_player_signal_cards_2024.csv'),
+        'candidate_rank,final_signal_score,player_name,season\n1,92.4,Malik Nabers,2024\n',
+        'utf8',
+      );
+      await writeFile(
+        path.join(exportsDir, 'wr_best_recipe_summary.json'),
+        JSON.stringify({ best_recipe_name: 'Second-Year Surge', season: 2024, validation_score: 0.78 }),
+        'utf8',
+      );
+
+      const signalValidation = new SignalValidationService(new SignalValidationClient({ exportsDir, enabled: true }));
+      const service = new PromotedModelStatusService({
+        signalValidation,
+        ...buildAuxiliaryDeps(),
+        roleOpportunity: {
+          getStatus: jest.fn().mockReturnValue({ enabled: true, baseUrl: 'http://role.example', exportsPath: '/tmp/role.json' }),
+          getRoleOpportunityLab: jest.fn().mockResolvedValue({ season: 2025, availableSeasons: [2025], rows: [] }),
+        },
+      });
+
+      const report = await service.getStatusReport({ season: 2024 });
+      const breakout = report.statuses.find((status) => status.moduleId === 'breakout-signals');
+      const role = report.statuses.find((status) => status.moduleId === 'role-opportunity');
+
+      expect(breakout?.status).toBe('ready');
+      expect(role?.status).toBe('available_other_seasons');
+      expect(role?.detail).toContain('healthy rows exist for 2025');
+      expect(role?.availableSeasons).toEqual([2025]);
+    } finally {
+      await rm(exportsDir, { recursive: true, force: true });
+    }
+  });
 });

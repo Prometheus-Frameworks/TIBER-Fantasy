@@ -258,6 +258,53 @@ describe('DataLabCommandCenterService', () => {
     expect(workspace.warnings).toContain('Role & Opportunity Lab unavailable: Role feed offline');
   });
 
+  it('marks lanes as healthy for other seasons when selected season has no rows but alternate seasons exist', async () => {
+    const service = buildService({
+      signalValidation: {
+        getWrBreakoutLab: jest.fn().mockResolvedValue({
+          season: 2024,
+          availableSeasons: [2024],
+          rows: [
+            {
+              candidateRank: 1,
+              finalSignalScore: 93.1,
+              playerName: 'Garrett Wilson',
+              playerId: '00-0038128',
+              team: 'NYJ',
+              season: 2024,
+              bestRecipeName: 'Second-Year Surge',
+              breakoutLabelDefault: 'Priority breakout',
+              breakoutContext: 'Fixture breakout context',
+              components: { usage: 91, efficiency: 90, development: 89, stability: 86, cohort: 88, role: 92, penalty: 0 },
+              rawFields: {},
+            },
+          ],
+          bestRecipeSummary: null,
+          source: { provider: 'signal-validation-model', exportDirectory: '/exports/breakout' },
+        }),
+      },
+      roleOpportunity: {
+        getRoleOpportunityLab: jest.fn().mockResolvedValue({
+          season: 2025,
+          week: null,
+          seasonScopeMarker: 'season',
+          availableSeasons: [2025],
+          rows: [],
+          source: { provider: 'role-and-opportunity-model', location: '/exports/role', mode: 'artifact' },
+        }),
+      },
+    });
+
+    const workspace = await service.getCommandCenter({ season: 2024 });
+    const breakout = workspace.moduleStatuses.find((status) => status.moduleId === 'breakout-signals');
+    const role = workspace.moduleStatuses.find((status) => status.moduleId === 'role-opportunity');
+
+    expect(breakout?.state).toBe('ready');
+    expect(role?.state).toBe('other_seasons');
+    expect(role?.detail).toContain('available for 2025');
+    expect(workspace.sections.roleOpportunity.message).toContain('healthy, but promoted rows are available for 2025 instead of 2024');
+  });
+
   it('returns an error workspace when every promoted module is unavailable', async () => {
     const failureService = new DataLabCommandCenterService({
       signalValidation: { getWrBreakoutLab: jest.fn().mockRejectedValue(new Error('boom')) } as any,

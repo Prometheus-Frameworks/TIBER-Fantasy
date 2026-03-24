@@ -1,6 +1,6 @@
 export type CommandCenterWorkspaceState = 'ready' | 'partial' | 'empty' | 'error';
 export type CommandCenterSectionState = 'ready' | 'empty' | 'unavailable';
-export type CommandCenterModuleStatusState = 'ready' | 'empty' | 'unavailable';
+export type CommandCenterModuleStatusState = 'ready' | 'other_seasons' | 'empty' | 'unavailable';
 
 export interface CommandCenterQuery {
   season?: number;
@@ -12,6 +12,7 @@ export interface CommandCenterModuleStatus {
   href: string;
   state: CommandCenterModuleStatusState;
   detail: string;
+  availableSeasons: number[];
 }
 
 export interface CommandCenterPriorityLink {

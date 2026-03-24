@@ -12,6 +12,7 @@ import { PointScenarioIntegrationError } from './pointScenarios/types';
 
 export type PromotedOperationalState =
   | 'ready'
+  | 'available_other_seasons'
   | 'missing_export_artifact'
   | 'upstream_unavailable'
   | 'disabled_by_env_config'
@@ -23,6 +24,7 @@ export interface PromotedModelStatusRow {
   route: string;
   status: PromotedOperationalState;
   detail: string;
+  availableSeasons: number[];
   readOnly: true;
   checks: string[];
 }
@@ -54,6 +56,7 @@ function mergeStatus(details: PromotedModelStatusRow[]): PromotedOperationalStat
   if (statuses.has('upstream_unavailable')) return 'upstream_unavailable';
   if (statuses.has('disabled_by_env_config')) return 'disabled_by_env_config';
   if (statuses.has('missing_export_artifact')) return 'missing_export_artifact';
+  if (statuses.has('available_other_seasons')) return 'available_other_seasons';
   if (statuses.has('ready')) return 'ready';
   return 'empty_dataset';
 }
@@ -80,6 +83,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/breakout-signals',
         status: 'disabled_by_env_config',
         detail: 'Signal Validation exports are disabled by env/config.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -90,14 +94,19 @@ export class PromotedModelStatusService {
 
     try {
       const data = await this.deps.signalValidation!.getWrBreakoutLab(season, { includeRawCanonical: false });
+      const availableSeasons = data.availableSeasons ?? [];
+      const hasDifferentSeasonData = season != null && !availableSeasons.includes(season) && availableSeasons.length > 0;
       return {
         moduleId: 'breakout-signals',
         title: 'WR Breakout Lab',
         route: '/tiber-data-lab/breakout-signals',
-        status: data.rows.length > 0 ? 'ready' : 'empty_dataset',
+        status: data.rows.length > 0 ? 'ready' : hasDifferentSeasonData ? 'available_other_seasons' : 'empty_dataset',
         detail: data.rows.length > 0
           ? `Promoted breakout exports loaded with ${data.rows.length} rows.`
+          : hasDifferentSeasonData
+            ? `No promoted breakout rows for ${season}; healthy exports exist for ${availableSeasons.join(', ')}.`
           : 'Exports loaded but contain zero promoted breakout rows for this season.',
+        availableSeasons,
         readOnly: true,
         checks,
       };
@@ -110,6 +119,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/breakout-signals',
             status: 'disabled_by_env_config',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -122,6 +132,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/breakout-signals',
             status: 'missing_export_artifact',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -134,6 +145,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/breakout-signals',
         status: 'upstream_unavailable',
         detail: error instanceof Error ? error.message : 'Breakout integration unavailable.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -155,6 +167,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/role-opportunity',
         status: 'disabled_by_env_config',
         detail: 'Role & Opportunity integration is disabled by env/config.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -167,14 +180,19 @@ export class PromotedModelStatusService {
 
     try {
       const data = await this.deps.roleOpportunity!.getRoleOpportunityLab({ season }, { includeRawCanonical: false });
+      const availableSeasons = data.availableSeasons ?? [];
+      const hasDifferentSeasonData = season != null && !availableSeasons.includes(season) && availableSeasons.length > 0;
       return {
         moduleId: 'role-opportunity',
         title: 'Role & Opportunity Lab',
         route: '/tiber-data-lab/role-opportunity',
-        status: data.rows.length > 0 ? 'ready' : 'empty_dataset',
+        status: data.rows.length > 0 ? 'ready' : hasDifferentSeasonData ? 'available_other_seasons' : 'empty_dataset',
         detail: data.rows.length > 0
           ? `Promoted role/opportunity dataset loaded with ${data.rows.length} rows.`
+          : hasDifferentSeasonData
+            ? `No promoted role/opportunity rows for ${season}; healthy rows exist for ${availableSeasons.join(', ')}.`
           : 'Role & Opportunity source responded but returned zero promoted rows for this season.',
+        availableSeasons,
         readOnly: true,
         checks,
       };
@@ -187,6 +205,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/role-opportunity',
             status: 'disabled_by_env_config',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -199,6 +218,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/role-opportunity',
             status: status.baseUrl ? 'empty_dataset' : 'missing_export_artifact',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -211,6 +231,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/role-opportunity',
         status: 'upstream_unavailable',
         detail: error instanceof Error ? error.message : 'Role & Opportunity integration unavailable.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -228,6 +249,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/age-curves',
         status: 'disabled_by_env_config',
         detail: 'Age Curve integration is disabled by env/config.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -240,14 +262,19 @@ export class PromotedModelStatusService {
 
     try {
       const data = await this.deps.ageCurves!.getAgeCurveLab({ season }, { includeRawCanonical: false });
+      const availableSeasons = data.availableSeasons ?? [];
+      const hasDifferentSeasonData = season != null && !availableSeasons.includes(season) && availableSeasons.length > 0;
       return {
         moduleId: 'age-curves',
         title: 'Age Curve / ARC Lab',
         route: '/tiber-data-lab/age-curves',
-        status: data.rows.length > 0 ? 'ready' : 'empty_dataset',
+        status: data.rows.length > 0 ? 'ready' : hasDifferentSeasonData ? 'available_other_seasons' : 'empty_dataset',
         detail: data.rows.length > 0
           ? `Promoted ARC dataset loaded with ${data.rows.length} rows.`
+          : hasDifferentSeasonData
+            ? `No promoted ARC rows for ${season}; healthy rows exist for ${availableSeasons.join(', ')}.`
           : 'Age Curve source responded but returned zero promoted rows for this season.',
+        availableSeasons,
         readOnly: true,
         checks,
       };
@@ -260,6 +287,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/age-curves',
             status: 'disabled_by_env_config',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -272,6 +300,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/age-curves',
             status: status.baseUrl ? 'empty_dataset' : 'missing_export_artifact',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -284,6 +313,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/age-curves',
         status: 'upstream_unavailable',
         detail: error instanceof Error ? error.message : 'Age Curve integration unavailable.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -305,6 +335,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/point-scenarios',
         status: 'disabled_by_env_config',
         detail: 'Point Scenario integration is disabled by env/config.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -317,14 +348,19 @@ export class PromotedModelStatusService {
 
     try {
       const data = await this.deps.pointScenarios!.getPointScenarioLab({ season }, { includeRawCanonical: false });
+      const availableSeasons = data.availableSeasons ?? [];
+      const hasDifferentSeasonData = season != null && !availableSeasons.includes(season) && availableSeasons.length > 0;
       return {
         moduleId: 'point-scenarios',
         title: 'Point Scenario Lab',
         route: '/tiber-data-lab/point-scenarios',
-        status: data.rows.length > 0 ? 'ready' : 'empty_dataset',
+        status: data.rows.length > 0 ? 'ready' : hasDifferentSeasonData ? 'available_other_seasons' : 'empty_dataset',
         detail: data.rows.length > 0
           ? `Promoted scenario dataset loaded with ${data.rows.length} rows.`
+          : hasDifferentSeasonData
+            ? `No promoted scenario rows for ${season}; healthy rows exist for ${availableSeasons.join(', ')}.`
           : 'Point Scenario source responded but returned zero promoted rows for this season.',
+        availableSeasons,
         readOnly: true,
         checks,
       };
@@ -337,6 +373,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/point-scenarios',
             status: 'disabled_by_env_config',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -349,6 +386,7 @@ export class PromotedModelStatusService {
             route: '/tiber-data-lab/point-scenarios',
             status: status.baseUrl ? 'empty_dataset' : 'missing_export_artifact',
             detail: error.message,
+            availableSeasons: [],
             readOnly: true,
             checks,
           };
@@ -361,6 +399,7 @@ export class PromotedModelStatusService {
         route: '/tiber-data-lab/point-scenarios',
         status: 'upstream_unavailable',
         detail: error instanceof Error ? error.message : 'Point Scenario integration unavailable.',
+        availableSeasons: [],
         readOnly: true,
         checks,
       };
@@ -397,6 +436,7 @@ export class PromotedModelStatusService {
     }
 
     const workspaceChecks = ['Derived from breakout/role/age/point promoted adapters.'];
+    const knownAvailableSeasons = Array.from(new Set(coreStatuses.flatMap((status) => status.availableSeasons))).sort((a, b) => b - a);
     const playerResearchState = aggregateState === 'ready' ? 'ready' : aggregateState;
     const teamResearchState = aggregateState === 'ready' ? 'ready' : aggregateState;
 
@@ -409,6 +449,7 @@ export class PromotedModelStatusService {
           route: '/tiber-data-lab/command-center',
           status: commandCenterState,
           detail: commandCenterDetail,
+          availableSeasons: knownAvailableSeasons,
           readOnly: true as const,
           checks: workspaceChecks,
         },
@@ -418,6 +459,7 @@ export class PromotedModelStatusService {
           route: '/tiber-data-lab/player-research',
           status: playerResearchState,
           detail: 'Player Research depends on promoted breakout/role/ARC/scenario adapters and remains read-only.',
+          availableSeasons: knownAvailableSeasons,
           readOnly: true as const,
           checks: workspaceChecks,
         },
@@ -427,6 +469,7 @@ export class PromotedModelStatusService {
           route: '/tiber-data-lab/team-research',
           status: teamResearchState,
           detail: 'Team Research depends on promoted breakout/role/ARC/scenario adapters and remains read-only.',
+          availableSeasons: knownAvailableSeasons,
           readOnly: true as const,
           checks: workspaceChecks,
         },

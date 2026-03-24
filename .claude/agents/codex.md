@@ -485,3 +485,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added focused tests for: explicit season precedence, defaulting to latest breakout export season, and no-season available/unavailable behavior.
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts client/src/__tests__/dataLabDiscoveryWidget.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts client/src/__tests__/teamResearchWorkspaceView.test.ts` ✅
+
+### 2026-03-24 — Command Center lane-level season honesty UX
+- Added lane-level season honesty states for promoted Data Lab modules so Command Center module cards can now report `ready`, `other_seasons`, `empty`, or `unavailable` with explicit per-lane `availableSeasons` metadata.
+- Updated Command Center section-level fallback messaging so empty states now distinguish: no rows for selected season vs healthy rows existing for other seasons.
+- Extended promoted-status service/contracts with `available_other_seasons` and `availableSeasons`, then surfaced those signals in the promoted status panel to reduce false “broken” interpretation during season mismatch.
+- Added focused test coverage for:
+  - one lane ready in selected season while another lane is only healthy in a different season,
+  - distinction between healthy-but-different-season and missing artifact / unavailable failures.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/modules/externalModels/__tests__/promotedModelStatusService.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts server/routes/__tests__/dataLabPromotedStatusRoutes.test.ts` ✅

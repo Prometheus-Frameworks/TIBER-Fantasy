@@ -20,11 +20,12 @@ interface DataLabCommandCenterViewProps {
   onSeasonChange: (season: string) => void;
 }
 
-function statusTone(state: 'ready' | 'partial' | 'empty' | 'error' | 'unavailable') {
+function statusTone(state: 'ready' | 'partial' | 'other_seasons' | 'empty' | 'error' | 'unavailable') {
   switch (state) {
     case 'ready':
       return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     case 'partial':
+    case 'other_seasons':
       return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'error':
     case 'unavailable':
@@ -34,11 +35,12 @@ function statusTone(state: 'ready' | 'partial' | 'empty' | 'error' | 'unavailabl
   }
 }
 
-function statusIcon(state: 'ready' | 'partial' | 'empty' | 'error' | 'unavailable') {
+function statusIcon(state: 'ready' | 'partial' | 'other_seasons' | 'empty' | 'error' | 'unavailable') {
   switch (state) {
     case 'ready':
       return <CheckCircle2 className="h-4 w-4" />;
     case 'partial':
+    case 'other_seasons':
     case 'error':
     case 'unavailable':
       return <AlertTriangle className="h-4 w-4" />;
@@ -217,10 +219,15 @@ export function DataLabCommandCenterView({
                     <div className="text-sm font-semibold text-gray-900">{status.title}</div>
                     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(status.state)}`}>
                       {statusIcon(status.state)}
-                      {status.state}
+                      {status.state === 'other_seasons' ? 'Other seasons' : status.state}
                     </span>
                   </div>
                   <p className="mt-2 text-sm leading-6 text-gray-600">{status.detail}</p>
+                  {status.availableSeasons.length > 0 ? (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Available seasons: {status.availableSeasons.join(', ')}
+                    </p>
+                  ) : null}
                 </a>
               ))}
             </div>
