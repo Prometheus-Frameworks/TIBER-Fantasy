@@ -242,7 +242,8 @@ export class RoleOpportunityClient {
       if (nodeError?.code === 'ENOENT') {
         throw new RoleOpportunityIntegrationError(
           'not_found',
-          'No Role Opportunity Lab artifact was found for TIBER-Fantasy to promote.',
+          `No Role Opportunity Lab artifact was found at ROLE_OPPORTUNITY_EXPORTS_PATH (${this.exportsPath}). ` +
+            'Expected filename: role_opportunity_lab.json.',
           404,
           error,
         );

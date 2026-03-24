@@ -65,7 +65,8 @@ export class SignalValidationClient {
     if (!availableSeasons.length) {
       throw new SignalValidationIntegrationError(
         'not_found',
-        'No Signal Validation WR player signal card exports were found.',
+        `No Signal Validation WR player signal card exports were found in SIGNAL_VALIDATION_EXPORTS_DIR (${this.exportsDir}). ` +
+          `Expected files: ${WR_SIGNAL_FILE_PREFIX}{season}${WR_SIGNAL_FILE_SUFFIX} and ${WR_BEST_RECIPE_FILE}.`,
         404,
       );
     }
@@ -103,7 +104,8 @@ export class SignalValidationClient {
       if (nodeError.code === 'ENOENT') {
         throw new SignalValidationIntegrationError(
           'not_found',
-          `Signal Validation exports for season ${season} are incomplete. Expected ${WR_SIGNAL_FILE_PREFIX}${season}${WR_SIGNAL_FILE_SUFFIX} and ${WR_BEST_RECIPE_FILE}.`,
+          `Signal Validation exports for season ${season} are incomplete in SIGNAL_VALIDATION_EXPORTS_DIR (${this.exportsDir}). ` +
+            `Expected ${WR_SIGNAL_FILE_PREFIX}${season}${WR_SIGNAL_FILE_SUFFIX} and ${WR_BEST_RECIPE_FILE}.`,
           404,
           error,
         );

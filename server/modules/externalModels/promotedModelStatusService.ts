@@ -74,7 +74,11 @@ export class PromotedModelStatusService {
 
   private async inspectBreakout(season?: number): Promise<PromotedModelStatusRow> {
     const status = this.deps.signalValidation!.getStatus();
-    const checks = [`SIGNAL_VALIDATION_EXPORTS_ENABLED=${status.enabled ? '1' : '0'}`, `exportsDir=${status.exportsDir}`];
+    const checks = [
+      `SIGNAL_VALIDATION_EXPORTS_ENABLED=${status.enabled ? '1' : '0'}`,
+      `SIGNAL_VALIDATION_EXPORTS_DIR=${status.exportsDir}`,
+      'expectedFiles=wr_player_signal_cards_{season}.csv,wr_best_recipe_summary.json',
+    ];
 
     if (!status.enabled) {
       return {
@@ -156,8 +160,9 @@ export class PromotedModelStatusService {
     const status = this.deps.roleOpportunity!.getStatus();
     const checks = [
       `ROLE_OPPORTUNITY_MODEL_ENABLED=${status.enabled ? '1' : '0'}`,
-      `baseUrl=${status.baseUrl ?? '(none)'}`,
-      `exportsPath=${status.exportsPath}`,
+      `ROLE_OPPORTUNITY_MODEL_BASE_URL=${status.baseUrl ?? '(none)'}`,
+      `ROLE_OPPORTUNITY_EXPORTS_PATH=${status.exportsPath}`,
+      'expectedArtifact=role_opportunity_lab.json',
     ];
 
     if (!status.enabled) {
@@ -240,7 +245,13 @@ export class PromotedModelStatusService {
 
   private async inspectAgeCurves(season?: number): Promise<PromotedModelStatusRow> {
     const status = this.deps.ageCurves!.getStatus();
-    const checks = [`AGE_CURVE_MODEL_ENABLED=${status.enabled ? '1' : '0'}`, `baseUrl=${status.baseUrl ?? '(none)'}`, `exportsPath=${status.exportsPath}`];
+    const checks = [
+      `AGE_CURVE_MODEL_ENABLED=${status.enabled ? '1' : '0'}`,
+      `AGE_CURVE_MODEL_BASE_URL=${status.baseUrl ?? '(none)'}`,
+      `AGE_CURVE_PROMOTED_HANDOFF_PATH=${status.exportsPath}`,
+      `AGE_CURVE_EXPORTS_PATH=${process.env.AGE_CURVE_EXPORTS_PATH ?? '(unset)'}`,
+      'expectedArtifact=arc_promoted_handoff.json (legacy fallback: age_curve_lab.json)',
+    ];
 
     if (!status.enabled) {
       return {

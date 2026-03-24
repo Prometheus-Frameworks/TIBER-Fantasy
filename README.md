@@ -186,6 +186,22 @@ Data Lab Command Center is now the promoted lane's top-level front door. `server
 For operator readiness checks, `GET /api/data-lab/promoted-status` now returns explicit per-module diagnostics across all promoted surfaces (`ready`, `missing_export_artifact`, `upstream_unavailable`, `disabled_by_env_config`, `empty_dataset`) plus dependency checks like configured artifact paths and API base URL presence. The Data Lab hub and Command Center render this panel directly so production users can see what is truly wired and usable before trusting any promoted workflow.
 Core product flows now surface lightweight Data Lab discovery hooks outside the lab itself: player-facing surfaces link into Player Research, player detail pages now carry a compact inline Research Summary block fed by promoted Player Research outputs, the Schedule / SoS team surface now includes a compact inline Team Research Summary block linked to the full Team Research Workspace, team labels can route into Team Research, and a compact read-only Command Center widget on the main dashboard gives users a low-friction way to enter the promoted research lane without turning core pages into Data Lab clones.
 
+### Promoted lane operator verification (Breakout, Role & Opportunity, ARC)
+
+Use this quick check to confirm the three promoted lanes are live before relying on them:
+
+1. Configure the exact env vars + artifact contracts:
+   - **Breakout (Signal Validation):** `SIGNAL_VALIDATION_EXPORTS_ENABLED=1`, `SIGNAL_VALIDATION_EXPORTS_DIR=<dir>` containing `wr_player_signal_cards_{season}.csv` and `wr_best_recipe_summary.json`.
+   - **Role & Opportunity:** either `ROLE_OPPORTUNITY_MODEL_BASE_URL` (+ optional `ROLE_OPPORTUNITY_MODEL_LAB_ENDPOINT_PATH`) **or** `ROLE_OPPORTUNITY_EXPORTS_PATH=<file>` pointing to `role_opportunity_lab.json`.
+   - **ARC:** either `AGE_CURVE_MODEL_BASE_URL` (+ optional `AGE_CURVE_MODEL_LAB_ENDPOINT_PATH`) **or** `AGE_CURVE_PROMOTED_HANDOFF_PATH=<file>` pointing to `arc_promoted_handoff.json` (legacy fallback: `AGE_CURVE_EXPORTS_PATH=.../age_curve_lab.json`).
+2. Call status endpoint for your target season:
+   - `curl -sS "http://localhost:5000/api/data-lab/promoted-status?season=2025" | jq`
+3. Confirm each module row reports `status: "ready"`:
+   - `moduleId: "breakout-signals"`
+   - `moduleId: "role-opportunity"`
+   - `moduleId: "age-curves"`
+4. If any module is not ready, use that module’s `checks` + `detail` fields from the same response. They now report exact env var names, expected artifact filenames, and missing-artifact guidance.
+
 FORGE now has its first migration-safe external adapter under `server/modules/externalModels/forge/`, but it is **compare-only** in this PR. Production FORGE routes still use the in-repo legacy implementation by default. The new migration surface is:
 - `POST /api/integrations/forge/compare` — dual-runs legacy FORGE and external FORGE for the same single-player offensive E+G evaluation request.
 - `GET /api/integrations/forge/health` — reports external FORGE config/readiness state.
