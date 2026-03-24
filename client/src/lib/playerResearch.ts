@@ -133,7 +133,8 @@ export interface PlayerResearchApiError {
 }
 
 export interface PlayerResearchQueryState {
-  season: string;
+  season: string | null;
+  hasSeasonParam: boolean;
   playerId: string | null;
   playerName: string | null;
 }
@@ -177,11 +178,13 @@ export function buildPlayerResearchHref(query: Partial<PlayerResearchQueryState>
   return serialized ? `/tiber-data-lab/player-research?${serialized}` : '/tiber-data-lab/player-research';
 }
 
-export function readPlayerResearchQuery(search: string, fallbackSeason: string): PlayerResearchQueryState {
+export function readPlayerResearchQuery(search: string): PlayerResearchQueryState {
   const params = new URLSearchParams(search);
+  const season = params.get('season')?.trim() || null;
 
   return {
-    season: params.get('season')?.trim() || fallbackSeason,
+    season,
+    hasSeasonParam: season !== null,
     playerId: params.get('playerId')?.trim() || null,
     playerName: params.get('playerName')?.trim() || null,
   };

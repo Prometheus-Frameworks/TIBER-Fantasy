@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { TeamResearchApiError, TeamResearchResponse, readTeamResearchQuery } from '@/lib/teamResearch';
 import { TeamResearchWorkspaceView } from '@/components/data-lab/TeamResearchWorkspaceView';
 
-async function fetchTeamResearch(season: string, team?: string | null): Promise<TeamResearchResponse> {
+async function fetchTeamResearch(season?: string | null, team?: string | null): Promise<TeamResearchResponse> {
   const params = new URLSearchParams();
   if (season) {
     params.set('season', season);
@@ -24,8 +23,6 @@ async function fetchTeamResearch(season: string, team?: string | null): Promise<
 }
 
 export default function TeamResearchLab() {
-  const { season: currentSeason } = useCurrentNFLWeek();
-  const fallbackSeason = String(currentSeason);
   const [locationSearch, setLocationSearch] = useState(typeof window !== 'undefined' ? window.location.search : '');
 
   useEffect(() => {
@@ -34,21 +31,22 @@ export default function TeamResearchLab() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const queryState = useMemo(() => readTeamResearchQuery(locationSearch, fallbackSeason), [fallbackSeason, locationSearch]);
+  const queryState = useMemo(() => readTeamResearchQuery(locationSearch), [locationSearch]);
 
   const query = useQuery<TeamResearchResponse, TeamResearchApiError>({
-    queryKey: ['/api/data-lab/team-research', queryState.season, queryState.team],
+    queryKey: ['/api/data-lab/team-research', queryState.season ?? '__auto__', queryState.team],
     queryFn: () => fetchTeamResearch(queryState.season, queryState.team),
     retry: false,
   });
 
+  const selectedSeason = queryState.season ?? (query.data?.data.season != null ? String(query.data.data.season) : '');
   const availableSeasons = query.data?.data.availableSeasons?.length
     ? query.data.data.availableSeasons
-    : [Number(queryState.season)].filter((value) => Number.isFinite(value));
+    : [Number(selectedSeason)].filter((value) => Number.isFinite(value));
 
   return (
     <TeamResearchWorkspaceView
-      season={queryState.season}
+      season={selectedSeason}
       availableSeasons={availableSeasons}
       data={query.data?.data ?? null}
       isLoading={query.isLoading}

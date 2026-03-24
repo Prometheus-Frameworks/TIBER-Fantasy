@@ -146,6 +146,75 @@ function buildService(overrides: Partial<ConstructorParameters<typeof DataLabCom
 }
 
 describe('DataLabCommandCenterService', () => {
+  it('keeps an explicit season query as the selected season', async () => {
+    const service = buildService();
+
+    const workspace = await service.getCommandCenter({ season: 2025 });
+
+    expect(workspace.season).toBe(2025);
+  });
+
+  it('defaults to the latest available breakout export season when no season query is provided', async () => {
+    const service = buildService({
+      signalValidation: {
+        getWrBreakoutLab: jest.fn().mockResolvedValue({
+          season: 2024,
+          availableSeasons: [2024, 2023],
+          rows: [],
+          bestRecipeSummary: null,
+          source: { provider: 'signal-validation-model', exportDirectory: '/exports/breakout' },
+        }),
+      },
+      roleOpportunity: {
+        getRoleOpportunityLab: jest.fn().mockResolvedValue({
+          season: 2023,
+          week: null,
+          seasonScopeMarker: 'season',
+          availableSeasons: [2023],
+          rows: [],
+          source: { provider: 'role-and-opportunity-model', location: '/exports/role', mode: 'artifact' },
+        }),
+      },
+      ageCurves: {
+        getAgeCurveLab: jest.fn().mockResolvedValue({
+          season: 2023,
+          availableSeasons: [2023],
+          rows: [],
+          source: { provider: 'arc-model', location: '/exports/arc', mode: 'artifact' },
+        }),
+      },
+      pointScenarios: {
+        getPointScenarioLab: jest.fn().mockResolvedValue({
+          season: 2023,
+          availableSeasons: [2023],
+          rows: [],
+          source: { provider: 'point-prediction-model', location: '/exports/scenario', mode: 'artifact' },
+        }),
+      },
+    });
+
+    const workspace = await service.getCommandCenter();
+
+    expect(workspace.season).toBe(2024);
+  });
+
+  it('keeps honest unavailable states when no export seasons are available', async () => {
+    const failureService = new DataLabCommandCenterService({
+      signalValidation: {
+        getWrBreakoutLab: jest.fn().mockRejectedValue(new Error('No Signal Validation WR player signal card exports were found.')),
+      } as any,
+      roleOpportunity: { getRoleOpportunityLab: jest.fn().mockRejectedValue(new Error('role unavailable')) } as any,
+      ageCurves: { getAgeCurveLab: jest.fn().mockRejectedValue(new Error('age unavailable')) } as any,
+      pointScenarios: { getPointScenarioLab: jest.fn().mockRejectedValue(new Error('scenario unavailable')) } as any,
+    });
+
+    const workspace = await failureService.getCommandCenter();
+
+    expect(workspace.season).toBeNull();
+    expect(workspace.sections.breakoutCandidates.state).toBe('unavailable');
+    expect(workspace.sections.breakoutCandidates.message).toBe('All promoted upstream modules are currently unavailable.');
+  });
+
   it('orchestrates summary sections and generates quick links without recomputing model logic', async () => {
     const service = buildService();
 

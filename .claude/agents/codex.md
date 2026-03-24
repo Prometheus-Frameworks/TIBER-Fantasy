@@ -477,3 +477,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - missing-artifact path: no exports present and status reports `missing_export_artifact`
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/__tests__/promotedModelStatusService.test.ts`
+
+### 2026-03-24 — Promoted WR breakout season defaulting fix
+- Removed client-side hard fallback to current NFL season for promoted Data Lab surfaces that were forcing `season` into requests.
+- Updated Command Center, Player Research, Team Research, and Dashboard discovery flows to preserve explicit season params but otherwise defer to backend/export-driven season selection.
+- Hardened season-selector rendering for empty/no-season states without silently rewriting query-param input.
+- Added focused tests for: explicit season precedence, defaulting to latest breakout export season, and no-season available/unavailable behavior.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts client/src/__tests__/dataLabDiscoveryWidget.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts client/src/__tests__/teamResearchWorkspaceView.test.ts` ✅

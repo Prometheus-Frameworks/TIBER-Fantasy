@@ -218,9 +218,16 @@ describe('PlayerResearchWorkspaceView', () => {
     expect(buildPlayerResearchHref({ season: '2025', playerId: '00-0036322', playerName: 'Justin Jefferson' })).toBe(
       '/tiber-data-lab/player-research?season=2025&playerId=00-0036322&playerName=Justin+Jefferson',
     );
-    expect(readPlayerResearchQuery('?season=2024&playerId=00-0036322&playerName=Justin+Jefferson', '2025')).toEqual({
+    expect(readPlayerResearchQuery('?season=2024&playerId=00-0036322&playerName=Justin+Jefferson')).toEqual({
       season: '2024',
+      hasSeasonParam: true,
       playerId: '00-0036322',
+      playerName: 'Justin Jefferson',
+    });
+    expect(readPlayerResearchQuery('?playerName=Justin+Jefferson')).toEqual({
+      season: null,
+      hasSeasonParam: false,
+      playerId: null,
       playerName: 'Justin Jefferson',
     });
     expect(filterPlayerResearchSearchIndex(data.searchIndex, 'malik').map((entry) => entry.playerName)).toEqual(['Malik Nabers']);

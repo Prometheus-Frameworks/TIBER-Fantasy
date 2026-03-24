@@ -51,6 +51,17 @@ describe('data lab command center routes', () => {
     expect(service.getCommandCenter).toHaveBeenCalledWith({ season: 2025 });
   });
 
+  it('does not force a season when no season query param is provided', async () => {
+    const service = buildService();
+    const app = express();
+    app.use('/api/data-lab', createDataLabCommandCenterRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/command-center');
+
+    expect(res.status).toBe(200);
+    expect(service.getCommandCenter).toHaveBeenCalledWith({ season: undefined });
+  });
+
   it('returns a validation error for malformed query params', async () => {
     const service = buildService();
     const app = express();

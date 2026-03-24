@@ -135,9 +135,9 @@ export default function Dashboard() {
   });
 
   const { data: commandCenterData, isLoading: isCommandCenterLoading } = useQuery<DataLabCommandCenterResponse>({
-    queryKey: ["/api/data-lab/command-center", season, "dashboard-widget"],
+    queryKey: ["/api/data-lab/command-center", "dashboard-widget-default"],
     queryFn: async () => {
-      const res = await fetch(`/api/data-lab/command-center?season=${season}`);
+      const res = await fetch('/api/data-lab/command-center');
       if (!res.ok) throw new Error('Failed to fetch Data Lab Command Center');
       return res.json();
     },
@@ -334,10 +334,10 @@ export default function Dashboard() {
                 Insights
               </div>
             </div>
-            <DataLabDiscoveryWidget
-              season={String(season)}
-              data={commandCenterData?.data ?? null}
-              isLoading={isCommandCenterLoading}
+          <DataLabDiscoveryWidget
+            season={String(commandCenterData?.data.season ?? season)}
+            data={commandCenterData?.data ?? null}
+            isLoading={isCommandCenterLoading}
               fallbackSummary={{
                 playersTracked: players.length,
                 avgPpg,

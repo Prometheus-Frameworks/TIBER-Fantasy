@@ -239,7 +239,8 @@ describe('TeamResearchWorkspaceView', () => {
 
   it('keeps query-param and team-search helpers stable', () => {
     expect(buildTeamResearchHref({ season: '2025', team: 'MIN' })).toBe('/tiber-data-lab/team-research?season=2025&team=MIN');
-    expect(readTeamResearchQuery('?season=2024&team=SEA', '2025')).toEqual({ season: '2024', team: 'SEA' });
+    expect(readTeamResearchQuery('?season=2024&team=SEA')).toEqual({ season: '2024', hasSeasonParam: true, team: 'SEA' });
+    expect(readTeamResearchQuery('?team=SEA')).toEqual({ season: null, hasSeasonParam: false, team: 'SEA' });
     expect(filterTeamResearchSearchIndex(data.searchIndex, 'seattle').map((entry) => entry.team)).toEqual(['SEA']);
     expect(findTeamSearchEntry(data.searchIndex, 'Minnesota Vikings')?.team).toBe('MIN');
     expect(getTeamResearchStateLabel('partial')).toBe('Partial promoted coverage');

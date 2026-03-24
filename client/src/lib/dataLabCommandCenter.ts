@@ -150,13 +150,16 @@ export interface DataLabCommandCenterApiError {
 }
 
 export interface DataLabCommandCenterQueryState {
-  season: string;
+  season: string | null;
+  hasSeasonParam: boolean;
 }
 
-export function readDataLabCommandCenterQuery(search: string, fallbackSeason: string): DataLabCommandCenterQueryState {
+export function readDataLabCommandCenterQuery(search: string): DataLabCommandCenterQueryState {
   const params = new URLSearchParams(search);
+  const season = params.get('season')?.trim() || null;
   return {
-    season: params.get('season')?.trim() || fallbackSeason,
+    season,
+    hasSeasonParam: season !== null,
   };
 }
 
