@@ -96,7 +96,13 @@ function createSection<TItem>(title: string, description: string, moduleTitle: s
   };
 }
 
-function getModuleStatus(title: string, href: string, result: BreakoutResult | RoleResult | AgeResult | ScenarioResult, rowCount?: number): CommandCenterModuleStatus {
+function getModuleStatus(
+  title: string,
+  href: string,
+  result: BreakoutResult | RoleResult | AgeResult | ScenarioResult,
+  selectedSeason: number | null,
+  rowCount?: number,
+): CommandCenterModuleStatus {
   if (!result.ok) {
     return {
       moduleId: href.split('/').pop() as CommandCenterModuleStatus['moduleId'],
@@ -104,16 +110,33 @@ function getModuleStatus(title: string, href: string, result: BreakoutResult | R
       href,
       state: 'unavailable',
       detail: result.error.message,
+      availableSeasons: [],
     };
   }
 
+  const availableSeasons = sortSeasons(result.data.availableSeasons ?? []);
+  const hasCurrentSeason = selectedSeason != null && availableSeasons.includes(selectedSeason);
+  const hasOtherSeasons = availableSeasons.some((season) => season !== selectedSeason);
+
   if ((rowCount ?? 0) === 0) {
+    if (selectedSeason != null && !hasCurrentSeason && hasOtherSeasons) {
+      return {
+        moduleId: href.split('/').pop() as CommandCenterModuleStatus['moduleId'],
+        title,
+        href,
+        state: 'other_seasons',
+        detail: `${title} is healthy, but promoted rows are available for ${availableSeasons.join(', ')} instead of ${selectedSeason}.`,
+        availableSeasons,
+      };
+    }
+
     return {
       moduleId: href.split('/').pop() as CommandCenterModuleStatus['moduleId'],
       title,
       href,
       state: 'empty',
       detail: `${title} is connected, but there are no promoted rows for this season.`,
+      availableSeasons,
     };
   }
 
@@ -123,6 +146,7 @@ function getModuleStatus(title: string, href: string, result: BreakoutResult | R
     href,
     state: 'ready',
     detail: `${title} is ready with promoted read-only outputs for this season.`,
+    availableSeasons,
   };
 }
 
@@ -229,10 +253,10 @@ export class DataLabCommandCenterService {
     };
 
     workspace.moduleStatuses = [
-      getModuleStatus('WR Breakout Lab', '/tiber-data-lab/breakout-signals', breakoutResult, breakoutResult.ok ? breakoutResult.data.rows.length : 0),
-      getModuleStatus('Role & Opportunity Lab', '/tiber-data-lab/role-opportunity', roleResult, roleResult.ok ? roleResult.data.rows.length : 0),
-      getModuleStatus('Age Curve / ARC Lab', '/tiber-data-lab/age-curves', ageResult, ageResult.ok ? ageResult.data.rows.length : 0),
-      getModuleStatus('Point Scenario Lab', '/tiber-data-lab/point-scenarios', scenarioResult, scenarioResult.ok ? scenarioResult.data.rows.length : 0),
+      getModuleStatus('WR Breakout Lab', '/tiber-data-lab/breakout-signals', breakoutResult, season, breakoutResult.ok ? breakoutResult.data.rows.length : 0),
+      getModuleStatus('Role & Opportunity Lab', '/tiber-data-lab/role-opportunity', roleResult, season, roleResult.ok ? roleResult.data.rows.length : 0),
+      getModuleStatus('Age Curve / ARC Lab', '/tiber-data-lab/age-curves', ageResult, season, ageResult.ok ? ageResult.data.rows.length : 0),
+      getModuleStatus('Point Scenario Lab', '/tiber-data-lab/point-scenarios', scenarioResult, season, scenarioResult.ok ? scenarioResult.data.rows.length : 0),
     ];
 
     if (!breakoutResult.ok) workspace.warnings.push(`WR Breakout Lab unavailable: ${breakoutResult.error.message}`);
@@ -277,7 +301,9 @@ export class DataLabCommandCenterService {
     } else {
       workspace.sections.breakoutCandidates.state = breakoutResult.ok ? 'empty' : 'unavailable';
       workspace.sections.breakoutCandidates.message = breakoutResult.ok
-        ? 'WR Breakout Lab is ready, but there are no promoted breakout cards for this season.'
+        ? (season != null && !breakoutResult.data.availableSeasons.includes(season) && breakoutResult.data.availableSeasons.length > 0
+          ? `WR Breakout Lab is healthy, but promoted breakout cards are available for ${sortSeasons(breakoutResult.data.availableSeasons).join(', ')} instead of ${season}.`
+          : 'WR Breakout Lab is ready, but there are no promoted breakout cards for this season.')
         : breakoutResult.error.message;
     }
 
@@ -315,7 +341,9 @@ export class DataLabCommandCenterService {
     } else {
       workspace.sections.roleOpportunity.state = roleResult.ok ? 'empty' : 'unavailable';
       workspace.sections.roleOpportunity.message = roleResult.ok
-        ? 'Role & Opportunity Lab is ready, but there are no promoted role rows for this season.'
+        ? (season != null && !roleResult.data.availableSeasons.includes(season) && roleResult.data.availableSeasons.length > 0
+          ? `Role & Opportunity Lab is healthy, but promoted rows are available for ${sortSeasons(roleResult.data.availableSeasons).join(', ')} instead of ${season}.`
+          : 'Role & Opportunity Lab is ready, but there are no promoted role rows for this season.')
         : roleResult.error.message;
     }
 
@@ -372,7 +400,9 @@ export class DataLabCommandCenterService {
     } else {
       workspace.sections.ageCurves.state = ageResult.ok ? 'empty' : 'unavailable';
       workspace.sections.ageCurves.message = ageResult.ok
-        ? 'Age Curve / ARC Lab is ready, but there are no promoted ARC rows for this season.'
+        ? (season != null && !ageResult.data.availableSeasons.includes(season) && ageResult.data.availableSeasons.length > 0
+          ? `Age Curve / ARC Lab is healthy, but promoted ARC rows are available for ${sortSeasons(ageResult.data.availableSeasons).join(', ')} instead of ${season}.`
+          : 'Age Curve / ARC Lab is ready, but there are no promoted ARC rows for this season.')
         : ageResult.error.message;
     }
 
@@ -402,7 +432,9 @@ export class DataLabCommandCenterService {
     } else {
       workspace.sections.pointScenarios.state = scenarioResult.ok ? 'empty' : 'unavailable';
       workspace.sections.pointScenarios.message = scenarioResult.ok
-        ? 'Point Scenario Lab is ready, but there are no promoted scenario rows for this season.'
+        ? (season != null && !scenarioResult.data.availableSeasons.includes(season) && scenarioResult.data.availableSeasons.length > 0
+          ? `Point Scenario Lab is healthy, but promoted scenario rows are available for ${sortSeasons(scenarioResult.data.availableSeasons).join(', ')} instead of ${season}.`
+          : 'Point Scenario Lab is ready, but there are no promoted scenario rows for this season.')
         : scenarioResult.error.message;
     }
 

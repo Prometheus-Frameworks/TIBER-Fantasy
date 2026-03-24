@@ -81,6 +81,11 @@ export function PromotedModelStatusPanel({ season, compact = false }: { season?:
               </span>
             </div>
             <p className="mt-2 text-sm leading-6 text-gray-600">{status.detail}</p>
+            {status.availableSeasons.length > 0 ? (
+              <p className="mt-2 text-xs text-gray-500">
+                Available seasons: {status.availableSeasons.join(', ')}
+              </p>
+            ) : null}
             {!compact && status.checks.length > 0 ? (
               <ul className="mt-3 space-y-1 text-xs text-gray-500">
                 {status.checks.slice(0, 2).map((check) => (

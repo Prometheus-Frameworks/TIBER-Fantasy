@@ -1,5 +1,6 @@
 export type PromotedModelOperationalStatus =
   | 'ready'
+  | 'available_other_seasons'
   | 'missing_export_artifact'
   | 'upstream_unavailable'
   | 'disabled_by_env_config'
@@ -15,6 +16,7 @@ export interface PromotedModelStatusResponse {
       route: string;
       status: PromotedModelOperationalStatus;
       detail: string;
+      availableSeasons: number[];
       readOnly: true;
       checks: string[];
     }>;
@@ -38,6 +40,8 @@ export function getPromotedStatusTone(status: PromotedModelOperationalStatus): s
       return 'bg-emerald-50 border-emerald-200 text-emerald-700';
     case 'empty_dataset':
       return 'bg-amber-50 border-amber-200 text-amber-700';
+    case 'available_other_seasons':
+      return 'bg-blue-50 border-blue-200 text-blue-700';
     case 'disabled_by_env_config':
       return 'bg-slate-100 border-slate-200 text-slate-700';
     case 'missing_export_artifact':
@@ -53,6 +57,8 @@ export function getPromotedStatusLabel(status: PromotedModelOperationalStatus): 
       return 'Ready';
     case 'missing_export_artifact':
       return 'Missing export artifact';
+    case 'available_other_seasons':
+      return 'Available other season(s)';
     case 'upstream_unavailable':
       return 'Upstream unavailable';
     case 'disabled_by_env_config':

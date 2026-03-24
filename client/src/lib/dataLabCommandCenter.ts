@@ -1,6 +1,6 @@
 export type CommandCenterWorkspaceState = 'ready' | 'partial' | 'empty' | 'error';
 export type CommandCenterSectionState = 'ready' | 'empty' | 'unavailable';
-export type CommandCenterModuleStatusState = 'ready' | 'empty' | 'unavailable';
+export type CommandCenterModuleStatusState = 'ready' | 'other_seasons' | 'empty' | 'unavailable';
 
 export interface DataLabCommandCenterResponse {
   success: true;
@@ -19,6 +19,7 @@ export interface DataLabCommandCenterResponse {
       href: string;
       state: CommandCenterModuleStatusState;
       detail: string;
+      availableSeasons: number[];
     }>;
     priorities: Array<{
       id: string;

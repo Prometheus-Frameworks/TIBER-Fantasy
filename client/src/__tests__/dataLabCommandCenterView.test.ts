@@ -21,10 +21,10 @@ const data = {
     posture: 'Fixture posture. No unified score.',
   },
   moduleStatuses: [
-    { moduleId: 'breakout-signals' as const, title: 'WR Breakout Lab', href: '/tiber-data-lab/breakout-signals', state: 'ready' as const, detail: 'Ready' },
-    { moduleId: 'role-opportunity' as const, title: 'Role & Opportunity Lab', href: '/tiber-data-lab/role-opportunity', state: 'unavailable' as const, detail: 'Unavailable' },
-    { moduleId: 'age-curves' as const, title: 'Age Curve / ARC Lab', href: '/tiber-data-lab/age-curves', state: 'empty' as const, detail: 'Empty' },
-    { moduleId: 'point-scenarios' as const, title: 'Point Scenario Lab', href: '/tiber-data-lab/point-scenarios', state: 'ready' as const, detail: 'Ready' },
+    { moduleId: 'breakout-signals' as const, title: 'WR Breakout Lab', href: '/tiber-data-lab/breakout-signals', state: 'ready' as const, detail: 'Ready', availableSeasons: [2025, 2024] },
+    { moduleId: 'role-opportunity' as const, title: 'Role & Opportunity Lab', href: '/tiber-data-lab/role-opportunity', state: 'unavailable' as const, detail: 'Unavailable', availableSeasons: [] },
+    { moduleId: 'age-curves' as const, title: 'Age Curve / ARC Lab', href: '/tiber-data-lab/age-curves', state: 'other_seasons' as const, detail: 'Healthy for 2024', availableSeasons: [2024] },
+    { moduleId: 'point-scenarios' as const, title: 'Point Scenario Lab', href: '/tiber-data-lab/point-scenarios', state: 'ready' as const, detail: 'Ready', availableSeasons: [2025] },
   ],
   priorities: [
     {
@@ -168,6 +168,8 @@ describe('DataLabCommandCenterView', () => {
     expect(html).toContain('/tiber-data-lab/team-research?season=2025&amp;team=MIN');
     expect(html).toContain('Role unavailable');
     expect(html).toContain('No ARC rows');
+    expect(html).toContain('Other seasons');
+    expect(html).toContain('Available seasons: 2024');
   });
 
   it('renders loading and error states without losing the shell', () => {
