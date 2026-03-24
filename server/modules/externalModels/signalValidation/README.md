@@ -9,6 +9,11 @@ This adapter powers the read-only WR Breakout Lab in TIBER Data Lab.
 
 By default the adapter reads from `./data/signal-validation`, or from `SIGNAL_VALIDATION_EXPORTS_DIR` when set.
 
+### Season token note
+
+The CSV filename season token is used as the lookup key. If a route requests `season=2025`, this adapter expects `wr_player_signal_cards_2025.csv`.
+When upstream exports are keyed by feature season, operators must align the exported filename token with the season query used in TIBER-Fantasy.
+
 ## Contract
 
 - Client: filesystem/export discovery and read errors

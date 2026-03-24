@@ -329,3 +329,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/components/data-lab/TeamResearchSummaryBlock.tsx`, `client/src/pages/SchedulePage.tsx`, `client/src/__tests__/teamResearchSummaryBlock.test.ts`, `README.md`, `replit.md`
 - **Validation:** Ran focused Jest coverage for the new summary block + existing team research link helpers, ran `npm run build`, and ran `git diff --check`.
 - **Notes:** The inline block intentionally stays lightweight and read only; the Schedule / SoS team table now acts as the main non-Data-Lab team-facing surface for promoted Team Research context.
+
+### 2026-03-24 — Codex: WR Breakout artifact handoff hardening + readiness tests
+- **What changed:** Added a dedicated runbook for Signal-Validation-Model → TIBER-Fantasy WR Breakout artifact handoff with exact export/copy/verification steps, clarified season-token behavior in the Signal Validation adapter docs, and tightened not-found messaging to surface available export seasons plus feature-season filename expectations. Added focused promoted-status tests that exercise real filesystem-backed breakout artifacts for both ready and missing-artifact outcomes.
+- **Files modified:** `server/modules/externalModels/signalValidation/signalValidationClient.ts`, `server/modules/externalModels/__tests__/promotedModelStatusService.test.ts`, `server/modules/externalModels/signalValidation/README.md`, `docs/runbooks/WR_BREAKOUT_SIGNAL_VALIDATION_HANDOFF.md`, `README.md`, `.claude/context-log.md`, `.claude/agents/codex.md`
+- **Validation:** Ran focused Jest suite for promoted model status service breakout artifact readiness scenarios.
+- **Notes:** Path remains artifact-based and read-only; no breakout rescoring logic was added to TIBER-Fantasy.
