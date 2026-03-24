@@ -1,0 +1,345 @@
+{
+  "season": 2025,
+  "week": 4,
+  "season_scope_marker": "season=2025;week=4",
+  "available_seasons": [
+    2025
+  ],
+  "rows": [
+    {
+      "player_id": "wr-crowded-001",
+      "player_name": "Vale Q",
+      "team": "Cinder Wolves",
+      "position": "WR",
+      "season": 2025,
+      "week": 4,
+      "primary_role": "rotational_receiver",
+      "role_tags": [
+        "rotational",
+        "position:wr",
+        "flag:crowded-target-tree",
+        "flag:environment-volatility"
+      ],
+      "route_participation": 63,
+      "target_share": 15,
+      "air_yard_share": 17,
+      "snap_share": null,
+      "usage_rate": null,
+      "confidence_score": 0.349,
+      "confidence_tier": "low",
+      "source_name": "role-and-opportunity-model",
+      "source_type": "deterministic_model",
+      "model_version": "0.1.0",
+      "generated_at": "2025-01-01T00:00:00.000Z",
+      "insights": [
+        "Vale Q has a less secure receiving role in Cinder Wolves's current ecosystem.",
+        "Competition for targets creates a thinner margin for reliable weekly volume.",
+        "Vale Q profiles as a ROTATIONAL with 15% target share and 63% route participation.",
+        "Cinder Wolves limits role upside because the passing environment and target ecosystem are less supportive.",
+        "Role stability is pressured by competition, health, or uncertainty in how targets will be distributed."
+      ],
+      "raw_fields": {
+        "scenario_id": "crowded-room",
+        "scenario_name": "Crowded ambiguous room",
+        "profile": {
+          "playerId": "wr-crowded-001",
+          "playerName": "Vale Q",
+          "position": "WR",
+          "targetShare": 15,
+          "airYardShare": 17,
+          "routeParticipation": 63,
+          "slotRate": 41,
+          "inlineRate": 0,
+          "wideRate": 59,
+          "redZoneTargetShare": 11,
+          "firstReadShare": 14,
+          "averageDepthOfTarget": 11.9,
+          "explosiveTargetRate": 9,
+          "personnelVersatility": 52,
+          "competitionForRole": 78,
+          "injuryRisk": 31,
+          "vacatedTargetsAvailable": 19
+        },
+        "context": {
+          "teamId": "TM-CRW",
+          "teamName": "Cinder Wolves",
+          "passRateOverExpected": -4,
+          "neutralPassRate": 50,
+          "redZonePassRate": 47,
+          "paceIndex": 49,
+          "quarterbackStability": 53,
+          "playCallerContinuity": 46,
+          "targetCompetitionIndex": 76,
+          "receiverRoomCertainty": 38,
+          "vacatedTargetShare": 16
+        },
+        "evaluation": {
+          "role_archetype": "ROTATIONAL",
+          "scores": {
+            "roleValue": 23.9,
+            "opportunityQuality": 45.7,
+            "roleStability": 47.2,
+            "vacatedOpportunity": 21.3
+          },
+          "verdict": "weak",
+          "flags": [
+            "crowded-target-tree",
+            "environment-volatility"
+          ]
+        }
+      }
+    },
+    {
+      "player_id": "wr-slot-001",
+      "player_name": "Harbor Z",
+      "team": "Harbor Hawks",
+      "position": "WR",
+      "season": 2025,
+      "week": 4,
+      "primary_role": "slot_receiver",
+      "role_tags": [
+        "slot",
+        "position:wr",
+        "flag:stable-role"
+      ],
+      "route_participation": 86,
+      "target_share": 23,
+      "air_yard_share": 19,
+      "snap_share": null,
+      "usage_rate": null,
+      "confidence_score": 0.563,
+      "confidence_tier": "medium",
+      "source_name": "role-and-opportunity-model",
+      "source_type": "deterministic_model",
+      "model_version": "0.1.0",
+      "generated_at": "2025-01-01T00:00:00.000Z",
+      "insights": [
+        "Harbor Z has a less secure receiving role in Harbor Hawks's current ecosystem.",
+        "Harbor Z profiles as a SLOT with 23% target share and 86% route participation.",
+        "Harbor Hawks limits role upside because the passing environment and target ecosystem are less supportive.",
+        "The role looks stable thanks to dependable participation and relatively contained competition inside the room."
+      ],
+      "raw_fields": {
+        "scenario_id": "slot-wr",
+        "scenario_name": "Slot-heavy WR chain mover",
+        "profile": {
+          "playerId": "wr-slot-001",
+          "playerName": "Harbor Z",
+          "position": "WR",
+          "targetShare": 23,
+          "airYardShare": 19,
+          "routeParticipation": 86,
+          "slotRate": 72,
+          "inlineRate": 0,
+          "wideRate": 28,
+          "redZoneTargetShare": 18,
+          "firstReadShare": 24,
+          "averageDepthOfTarget": 8.4,
+          "explosiveTargetRate": 11,
+          "personnelVersatility": 61,
+          "competitionForRole": 38,
+          "injuryRisk": 24,
+          "vacatedTargetsAvailable": 34
+        },
+        "context": {
+          "teamId": "TM-SLT",
+          "teamName": "Harbor Hawks",
+          "passRateOverExpected": 4,
+          "neutralPassRate": 59,
+          "redZonePassRate": 56,
+          "paceIndex": 61,
+          "quarterbackStability": 72,
+          "playCallerContinuity": 67,
+          "targetCompetitionIndex": 48,
+          "receiverRoomCertainty": 70,
+          "vacatedTargetShare": 27
+        },
+        "evaluation": {
+          "role_archetype": "SLOT",
+          "scores": {
+            "roleValue": 48.7,
+            "opportunityQuality": 60.6,
+            "roleStability": 73,
+            "vacatedOpportunity": 34.3
+          },
+          "verdict": "mixed",
+          "flags": [
+            "stable-role"
+          ]
+        }
+      }
+    },
+    {
+      "player_id": "wr-alpha-001",
+      "player_name": "Atlas X",
+      "team": "Metro Meteors",
+      "position": "WR",
+      "season": 2025,
+      "week": 4,
+      "primary_role": "alpha_receiver",
+      "role_tags": [
+        "wr1",
+        "position:wr",
+        "flag:stable-role",
+        "flag:featured-usage"
+      ],
+      "route_participation": 93,
+      "target_share": 31,
+      "air_yard_share": 38,
+      "snap_share": null,
+      "usage_rate": null,
+      "confidence_score": 0.695,
+      "confidence_tier": "medium",
+      "source_name": "role-and-opportunity-model",
+      "source_type": "deterministic_model",
+      "model_version": "0.1.0",
+      "generated_at": "2025-01-01T00:00:00.000Z",
+      "insights": [
+        "Atlas X looks dependable with a solid role profile and enough weekly stability to trust.",
+        "Atlas X profiles as a WR1 with 31% target share and 93% route participation.",
+        "Metro Meteors offers a favorable passing environment through neutral pass rate, red-zone usage, and quarterback continuity.",
+        "The role looks stable thanks to dependable participation and relatively contained competition inside the room."
+      ],
+      "raw_fields": {
+        "scenario_id": "alpha-wr",
+        "scenario_name": "Alpha WR centerpiece",
+        "profile": {
+          "playerId": "wr-alpha-001",
+          "playerName": "Atlas X",
+          "position": "WR",
+          "targetShare": 31,
+          "airYardShare": 38,
+          "routeParticipation": 93,
+          "slotRate": 24,
+          "inlineRate": 0,
+          "wideRate": 76,
+          "redZoneTargetShare": 29,
+          "firstReadShare": 33,
+          "averageDepthOfTarget": 13.8,
+          "explosiveTargetRate": 18,
+          "personnelVersatility": 72,
+          "competitionForRole": 25,
+          "injuryRisk": 22,
+          "vacatedTargetsAvailable": 58
+        },
+        "context": {
+          "teamId": "TM-ALP",
+          "teamName": "Metro Meteors",
+          "passRateOverExpected": 7,
+          "neutralPassRate": 62,
+          "redZonePassRate": 60,
+          "paceIndex": 66,
+          "quarterbackStability": 84,
+          "playCallerContinuity": 81,
+          "targetCompetitionIndex": 34,
+          "receiverRoomCertainty": 79,
+          "vacatedTargetShare": 41
+        },
+        "evaluation": {
+          "role_archetype": "WR1",
+          "scores": {
+            "roleValue": 66.4,
+            "opportunityQuality": 67.8,
+            "roleStability": 82.6,
+            "vacatedOpportunity": 53.5
+          },
+          "verdict": "solid",
+          "flags": [
+            "stable-role",
+            "featured-usage"
+          ]
+        }
+      }
+    },
+    {
+      "player_id": "te-primary-001",
+      "player_name": "Summit Y",
+      "team": "Summit Stallions",
+      "position": "TE",
+      "season": 2025,
+      "week": 4,
+      "primary_role": "primary_tight_end",
+      "role_tags": [
+        "te1",
+        "position:te",
+        "flag:stable-role",
+        "flag:featured-usage"
+      ],
+      "route_participation": 82,
+      "target_share": 24,
+      "air_yard_share": 23,
+      "snap_share": null,
+      "usage_rate": null,
+      "confidence_score": 0.637,
+      "confidence_tier": "medium",
+      "source_name": "role-and-opportunity-model",
+      "source_type": "deterministic_model",
+      "model_version": "0.1.0",
+      "generated_at": "2025-01-01T00:00:00.000Z",
+      "insights": [
+        "Summit Y has a less secure receiving role in Summit Stallions's current ecosystem.",
+        "Summit Y profiles as a TE1 with 24% target share and 82% route participation.",
+        "Summit Stallions limits role upside because the passing environment and target ecosystem are less supportive.",
+        "The role looks stable thanks to dependable participation and relatively contained competition inside the room."
+      ],
+      "raw_fields": {
+        "scenario_id": "te-primary",
+        "scenario_name": "Primary receiving TE",
+        "profile": {
+          "playerId": "te-primary-001",
+          "playerName": "Summit Y",
+          "position": "TE",
+          "targetShare": 24,
+          "airYardShare": 23,
+          "routeParticipation": 82,
+          "slotRate": 34,
+          "inlineRate": 51,
+          "wideRate": 15,
+          "redZoneTargetShare": 26,
+          "firstReadShare": 22,
+          "averageDepthOfTarget": 10.1,
+          "explosiveTargetRate": 12,
+          "personnelVersatility": 84,
+          "competitionForRole": 29,
+          "injuryRisk": 28,
+          "vacatedTargetsAvailable": 46
+        },
+        "context": {
+          "teamId": "TM-TEN",
+          "teamName": "Summit Stallions",
+          "passRateOverExpected": 2,
+          "neutralPassRate": 57,
+          "redZonePassRate": 58,
+          "paceIndex": 58,
+          "quarterbackStability": 78,
+          "playCallerContinuity": 74,
+          "targetCompetitionIndex": 41,
+          "receiverRoomCertainty": 77,
+          "vacatedTargetShare": 31
+        },
+        "evaluation": {
+          "role_archetype": "TE1",
+          "scores": {
+            "roleValue": 61.3,
+            "opportunityQuality": 62.6,
+            "roleStability": 76.4,
+            "vacatedOpportunity": 44.6
+          },
+          "verdict": "solid",
+          "flags": [
+            "stable-role",
+            "featured-usage"
+          ]
+        }
+      }
+    }
+  ],
+  "source": {
+    "name": "role-and-opportunity-model",
+    "type": "deterministic_export",
+    "model_version": "0.1.0",
+    "generated_at": "2025-01-01T00:00:00.000Z",
+    "artifact_path": "./data/role-opportunity/role_opportunity_lab.json",
+    "deterministic": true
+  }
+}
