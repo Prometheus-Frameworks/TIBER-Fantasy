@@ -85,13 +85,15 @@ export class SignalValidationIntegrationError extends Error {
   readonly code: SignalValidationErrorCode;
   readonly status: number;
   readonly cause?: unknown;
+  readonly availableSeasons?: number[];
 
-  constructor(code: SignalValidationErrorCode, message: string, status: number, cause?: unknown) {
+  constructor(code: SignalValidationErrorCode, message: string, status: number, cause?: unknown, availableSeasons?: number[]) {
     super(message);
     this.name = 'SignalValidationIntegrationError';
     this.code = code;
     this.status = status;
     this.cause = cause;
+    this.availableSeasons = availableSeasons;
   }
 }
 
