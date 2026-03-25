@@ -80,6 +80,8 @@ export class SignalValidationClient {
         `Signal Validation exports for season ${season} were not found. Available export seasons: ${availableList}. ` +
           'The WR export filename uses the feature season token (wr_player_signal_cards_{feature_season}.csv).',
         404,
+        undefined,
+        availableSeasons,
       );
     }
 

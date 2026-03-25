@@ -130,13 +130,7 @@ export class PromotedModelStatusService {
         }
 
         if (error.code === 'not_found') {
-          const availableSeasonMatch = error.message.match(/Available export seasons:\s*([0-9,\s]+)/i);
-          const availableSeasons = availableSeasonMatch
-            ? availableSeasonMatch[1]
-              .split(',')
-              .map((value) => Number(value.trim()))
-              .filter((value) => Number.isFinite(value))
-            : [];
+          const availableSeasons = error.availableSeasons ?? [];
 
           if (season != null && availableSeasons.length > 0) {
             return {
