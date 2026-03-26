@@ -94,6 +94,8 @@ FORGE_SERVICE_TIMEOUT_MS=5000
 FORGE_SERVICE_ENABLED=1
 SIGNAL_VALIDATION_EXPORTS_DIR=./data/signal-validation
 SIGNAL_VALIDATION_EXPORTS_ENABLED=1
+ROOKIE_PROMOTED_ARTIFACT_PATH=./data/rookies/2026_rookie_grades_v2.json
+ROOKIE_PROMOTED_MODEL_ENABLED=1
 ```
 
 ### Install & Run
@@ -141,6 +143,18 @@ npm run lint          # ESLint
 | MySportsFeeds | Injury reports, roster automation |
 | nflverse / nflFastR | Play-by-play data, schedules |
 | nfl_data_py | Weekly stats, depth charts, snap counts |
+
+---
+
+## Promoted Rookie Board integration
+
+TIBER-Fantasy now consumes a promoted rookie artifact as a **read-only producer handoff** (no runtime dependency on TIBER-Rookies routes): artifact load → contract validation/mapping → `/api/rookies/:season` → product page at `/rookies`.
+
+- Backend ingestion/mapping lives in `server/modules/externalModels/rookies/`.
+- Product visibility is on `/rookies` and linked from main navigation.
+- Missing or invalid artifacts render a clean unavailable state on both API and UI surfaces.
+
+See `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md` for operator handoff details.
 
 ---
 
