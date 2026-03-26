@@ -506,3 +506,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `client/src/pages/RookieBoard.tsx`
   - `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts`; `npm run build`.
+
+### 2026-03-26 — Codex: Rookie promoted alpha/tier mapping integrity hotfix
+- **Summary:** Fixed promoted rookie composite-field drop-off by expanding adapter mapping aliases to support nested/camelCase producer contracts (`scores.*`, `score.*`, `composite.*`) and alternate row containers (`board.players`, `rookies`), restoring API-level availability of Rookie Alpha, tier, rank, and component scores.
+- **Key Files:**
+  - `server/modules/externalModels/rookies/rookieArtifactAdapter.ts`
+  - `server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts`
+  - `server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts` ✅

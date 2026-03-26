@@ -352,3 +352,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/rookies/*`, `server/routes/rookiesPromotedRoutes.ts`, `server/routes.ts`, `client/src/pages/RookieBoard.tsx`, `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`, `README.md`, `replit.md`.
 - **Validation:** Ran focused Jest suites for rookie adapter + rookie route, and ran `npm run build` successfully.
 - **Notes:** Deployment path is artifact-only (no runtime dependency on TIBER-Rookies routes). Configure `ROOKIE_PROMOTED_ARTIFACT_PATH` for promoted handoff source in production.
+
+### 2026-03-26 — Codex: Rookie promoted composite mapping fix for alpha/tier blanks
+- **What changed:** Hardened the rookie artifact adapter to read composite promoted fields from nested/camelCase score contracts (`scores.rookieAlpha`, `scores.rookieTier`, `scores.rank`, nested component scores), plus additional row containers (`board.players`, `rookies`) so promoted alpha/tier fields no longer drop at the adapter boundary.
+- **Files modified:** `server/modules/externalModels/rookies/rookieArtifactAdapter.ts`, `server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts`, `server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts`.
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts`.
+- **Notes:** Fix is centralized in adapter/service mapping so `/api/rookies/:season`, `/rookies`, and CSV export all consume the same corrected fields.
