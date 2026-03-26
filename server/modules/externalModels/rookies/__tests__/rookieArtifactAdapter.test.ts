@@ -20,6 +20,8 @@ describe('rookie artifact adapter', () => {
             tiber_ras_v2: 9.11,
             production_score: 72.4,
             profile_summary: 'Explosive separator',
+            rookie_tier: 'T1',
+            rookie_rank: 3,
           },
         ],
       },
@@ -33,8 +35,30 @@ describe('rookie artifact adapter', () => {
         player_name: 'Test Rookie',
         position: 'WR',
         rookie_alpha: 85,
+        rookie_tier: 'T1',
+        rookie_rank: 3,
         tiber_ras_v2: 9.11,
         profile_summary: 'Explosive separator',
+      }),
+    );
+  });
+
+  it('maps tier from alternative field name', () => {
+    const mapped = mapRookieArtifactToFantasySurface(
+      {
+        meta: { season: 2026 },
+        players: [
+          { name: 'Alt Tier Rookie', pos: 'RB', tier: 'T2', rank: 5 },
+        ],
+      },
+      '/tmp/alt.json',
+    );
+
+    expect(mapped.players[0]).toEqual(
+      expect.objectContaining({
+        player_name: 'Alt Tier Rookie',
+        rookie_tier: 'T2',
+        rookie_rank: 5,
       }),
     );
   });
