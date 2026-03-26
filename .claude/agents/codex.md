@@ -495,3 +495,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - distinction between healthy-but-different-season and missing artifact / unavailable failures.
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/modules/externalModels/__tests__/promotedModelStatusService.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts server/routes/__tests__/dataLabPromotedStatusRoutes.test.ts` ✅
+### 2026-03-26 — Codex: Promoted rookie artifact integration + product route hardening
+- **Branch:** current working branch
+- **Summary:** Implemented a dedicated promoted rookie artifact consumer boundary (`server/modules/externalModels/rookies/`) and rewired `/api/rookies/:season` + `/rookies` to render model-backed rookie content from a producer artifact instead of the legacy in-repo DB table query. Added consumer-side contract checks, deterministic field mapping, graceful missing/invalid artifact behavior, and UI-visible promoted model metadata + summary snippets.
+- **Key Files:**
+  - `server/modules/externalModels/rookies/rookieArtifactClient.ts`
+  - `server/modules/externalModels/rookies/rookieArtifactAdapter.ts`
+  - `server/modules/externalModels/rookies/rookieArtifactService.ts`
+  - `server/routes/rookiesPromotedRoutes.ts`
+  - `client/src/pages/RookieBoard.tsx`
+  - `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts`; `npm run build`.

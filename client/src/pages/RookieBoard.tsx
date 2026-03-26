@@ -34,12 +34,21 @@ interface RookiePlayer {
   rookie_tier: string | null;
   athleticism_score: number | null;
   draft_capital_score: number | null;
+  profile_summary: string | null;
+  identity_note: string | null;
+  board_summary: string | null;
 }
 
 interface RookieApiResponse {
   season: number;
   position: string;
   count: number;
+  model?: {
+    name: string;
+    version: string | null;
+    promotedAt: string | null;
+    generatedAt: string | null;
+  };
   players: RookiePlayer[];
 }
 
@@ -174,6 +183,11 @@ function PlayerDrawer({ player, onClose }: { player: RookiePlayer; onClose: () =
               <span>{player.school ?? '—'}</span>
               {player.proj_round && <span className="text-slate-500">· Projected R{player.proj_round}</span>}
             </div>
+            {(player.profile_summary || player.identity_note || player.board_summary) && (
+              <p className="text-xs text-slate-500 mt-2 max-w-sm">
+                {player.profile_summary ?? player.identity_note ?? player.board_summary}
+              </p>
+            )}
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors p-1">
             <X className="h-5 w-5" />
@@ -354,13 +368,16 @@ export default function RookieBoard() {
   const [sortBy, setSortBy] = useState<SortField>('rookie_alpha');
   const [selected, setSelected] = useState<RookiePlayer | null>(null);
 
-  const { data, isLoading } = useQuery<RookieApiResponse>({
+  const { data, isLoading, isError, error } = useQuery<RookieApiResponse>({
     queryKey: ['/api/rookies/2026', position, sortBy],
     queryFn: async () => {
       const params = new URLSearchParams({ sort_by: sortBy });
       if (position !== 'ALL') params.set('position', position);
       const res = await fetch(`/api/rookies/2026?${params}`);
-      if (!res.ok) throw new Error('Failed to fetch rookies');
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error ?? 'Failed to fetch rookies');
+      }
       return res.json();
     },
   });
@@ -478,6 +495,12 @@ export default function RookieBoard() {
           <p className="text-sm text-slate-400">
             {players.length} prospects · Click any row to see full profile
           </p>
+          {data?.model && (
+            <p className="text-xs text-slate-500 mt-1">
+              Powered by {data.model.name}
+              {data.model.version ? ` (${data.model.version})` : ''}.
+            </p>
+          )}
         </div>
         <div className="text-right text-xs text-slate-500">
           <div className="flex items-center gap-1 justify-end">
@@ -589,6 +612,14 @@ export default function RookieBoard() {
                     ))}
                   </tr>
                 ))
+              ) : isError ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                    <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm text-slate-400 mb-1">Rookie data is currently unavailable.</p>
+                    <p className="text-xs text-slate-600">{error instanceof Error ? error.message : 'Artifact missing or invalid.'}</p>
+                  </td>
+                </tr>
               ) : players.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
@@ -609,7 +640,14 @@ export default function RookieBoard() {
                   >
                     <td className="px-4 py-3 text-slate-500 text-xs tabular-nums">{p.rank}</td>
                     <td className="px-4 py-3">
-                      <span className="text-white font-medium text-sm">{p.player_name}</span>
+                      <div className="space-y-0.5">
+                        <span className="text-white font-medium text-sm block">{p.player_name}</span>
+                        {(p.profile_summary || p.identity_note || p.board_summary) && (
+                          <span className="text-[11px] text-slate-500 line-clamp-1">
+                            {p.profile_summary ?? p.identity_note ?? p.board_summary}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold border ${POS_COLORS[p.position] ?? 'bg-slate-800 text-slate-300 border-slate-700'}`}>
