@@ -66,4 +66,44 @@ describe('rookie artifact adapter', () => {
   it('fails when artifact contract is missing season or rows', () => {
     expect(() => mapRookieArtifactToFantasySurface({ meta: {}, players: [] }, '/tmp/bad.json')).toThrow(RookieIntegrationError);
   });
+
+  it('maps nested promoted score/tier fields from producer score objects', () => {
+    const mapped = mapRookieArtifactToFantasySurface(
+      {
+        meta: { season: 2026, model_name: 'Rookie Alpha Nested' },
+        board: {
+          players: [
+            {
+              playerName: 'Nested Rookie',
+              position: 'RB',
+              scores: {
+                rookieAlpha: 77.8,
+                rookieTier: 'T2',
+                rank: 12,
+                components: {
+                  athleticismScore: 89,
+                  productionScore: 68.4,
+                  draftCapitalScore: 78,
+                },
+              },
+            },
+          ],
+        },
+      },
+      '/tmp/promoted_nested_rookie.json',
+    );
+
+    expect(mapped.players[0]).toEqual(
+      expect.objectContaining({
+        player_name: 'Nested Rookie',
+        position: 'RB',
+        rookie_alpha: 78,
+        rookie_tier: 'T2',
+        rookie_rank: 12,
+        athleticism_score: 89,
+        production_score: 68.4,
+        draft_capital_score: 78,
+      }),
+    );
+  });
 });

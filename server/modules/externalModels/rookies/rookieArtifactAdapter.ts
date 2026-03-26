@@ -4,9 +4,17 @@ function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
+function getPathValue(record: Record<string, unknown>, key: string): unknown {
+  if (!key.includes('.')) return record[key];
+  return key.split('.').reduce<unknown>((current, segment) => {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return undefined;
+    return (current as Record<string, unknown>)[segment];
+  }, record);
+}
+
 function pickString(record: Record<string, unknown>, keys: readonly string[]): string | null {
   for (const key of keys) {
-    const value = record[key];
+    const value = getPathValue(record, key);
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return null;
@@ -14,7 +22,7 @@ function pickString(record: Record<string, unknown>, keys: readonly string[]): s
 
 function pickNumber(record: Record<string, unknown>, keys: readonly string[]): number | null {
   for (const key of keys) {
-    const value = record[key];
+    const value = getPathValue(record, key);
     if (typeof value === 'number' && Number.isFinite(value)) return value;
     if (typeof value === 'string' && value.trim()) {
       const parsed = Number(value);
@@ -31,16 +39,49 @@ function normalizeRow(row: unknown): Record<string, unknown> {
     name: pickString(record, ['name', 'player_name', 'playerName']) ?? '',
     pos: pickString(record, ['pos', 'position']) ?? '',
     school: pickString(record, ['school', 'college']),
-    tiber_rookie_alpha: pickNumber(record, ['tiber_rookie_alpha', 'rookie_alpha', 'rookie_grade']),
+    tiber_rookie_alpha: pickNumber(record, [
+      'tiber_rookie_alpha',
+      'rookie_alpha',
+      'rookieAlpha',
+      'rookie_grade',
+      'scores.rookie_alpha',
+      'scores.rookieAlpha',
+      'score.rookie_alpha',
+      'score.rookieAlpha',
+      'score.alpha',
+      'composite.rookie_alpha',
+      'composite.rookieAlpha',
+    ]),
     tiber_ras: pickNumber(record, ['tiber_ras', 'tiber_ras_v1', 'ras']),
     tiber_ras_v2: pickNumber(record, ['tiber_ras_v2']),
     proj_round: pickNumber(record, ['proj_round', 'projected_round', 'projection_round']),
-    production_score: pickNumber(record, ['production_score']),
-    dominator_rating: pickNumber(record, ['dominator_rating']),
+    production_score: pickNumber(record, [
+      'production_score',
+      'productionScore',
+      'component_scores.production_score',
+      'componentScores.productionScore',
+      'scores.components.production_score',
+      'scores.components.productionScore',
+    ]),
+    dominator_rating: pickNumber(record, ['dominator_rating', 'dominatorRating']),
     college_target_share: pickNumber(record, ['college_target_share', 'target_share']),
     college_ypc: pickNumber(record, ['college_ypc', 'ypc']),
-    draft_capital_score: pickNumber(record, ['draft_capital_score']),
-    athleticism_score: pickNumber(record, ['athleticism_score']),
+    draft_capital_score: pickNumber(record, [
+      'draft_capital_score',
+      'draftCapitalScore',
+      'component_scores.draft_capital_score',
+      'componentScores.draftCapitalScore',
+      'scores.components.draft_capital_score',
+      'scores.components.draftCapitalScore',
+    ]),
+    athleticism_score: pickNumber(record, [
+      'athleticism_score',
+      'athleticismScore',
+      'component_scores.athleticism_score',
+      'componentScores.athleticismScore',
+      'scores.components.athleticism_score',
+      'scores.components.athleticismScore',
+    ]),
     ht: pickNumber(record, ['ht', 'height_inches']),
     wt: pickNumber(record, ['wt', 'weight_lbs']),
     forty: pickNumber(record, ['forty', 'forty_yard_dash']),
@@ -52,9 +93,26 @@ function normalizeRow(row: unknown): Record<string, unknown> {
     profile_summary: pickString(record, ['profile_summary', 'summary']),
     identity_note: pickString(record, ['identity_note', 'player_identity_note']),
     board_summary: pickString(record, ['board_summary']),
-    rookie_tier: pickString(record, ['rookie_tier', 'tier']),
+    rookie_tier: pickString(record, [
+      'rookie_tier',
+      'rookieTier',
+      'tier',
+      'scores.rookie_tier',
+      'scores.rookieTier',
+      'score.tier',
+      'composite.tier',
+    ]),
     player_id: pickString(record, ['player_id', 'playerId', 'gsis_id']),
-    rookie_rank: pickNumber(record, ['rookie_rank', 'rank']),
+    rookie_rank: pickNumber(record, [
+      'rookie_rank',
+      'rookieRank',
+      'rank',
+      'class_rank',
+      'classRank',
+      'scores.rank',
+      'score.rank',
+      'composite.rank',
+    ]),
   };
 }
 
@@ -66,6 +124,10 @@ function normalizeArtifact(payload: unknown): RookieArtifact {
       ? root.rows
       : Array.isArray(root.data)
         ? root.data
+        : Array.isArray(toRecord(root.board).players)
+          ? (toRecord(root.board).players as unknown[])
+          : Array.isArray(root.rookies)
+            ? root.rookies
         : [];
 
   const meta = toRecord(root.meta);
