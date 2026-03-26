@@ -1,47 +1,45 @@
-import { z } from 'zod';
+export interface RookieArtifactRow {
+  name: string;
+  pos: string;
+  player_id?: string | null;
+  school?: string | null;
+  proj_round?: number | null;
+  rookie_rank?: number | null;
+  tiber_rookie_alpha?: number | null;
+  rookie_tier?: string | null;
+  tiber_ras?: number | null;
+  tiber_ras_v2?: number | null;
+  production_score?: number | null;
+  dominator_rating?: number | null;
+  college_target_share?: number | null;
+  college_ypc?: number | null;
+  draft_capital_score?: number | null;
+  athleticism_score?: number | null;
+  ht?: number | null;
+  wt?: number | null;
+  forty?: number | null;
+  ten?: number | null;
+  vert?: number | null;
+  broad?: number | null;
+  cone?: number | null;
+  shuttle?: number | null;
+  profile_summary?: string | null;
+  identity_note?: string | null;
+  board_summary?: string | null;
+  [key: string]: unknown;
+}
 
-export const rookieArtifactRowSchema = z.object({
-  name: z.string().min(1),
-  pos: z.string().min(1),
-  player_id: z.string().min(1).nullable().optional(),
-  school: z.string().min(1).nullable().optional(),
-  proj_round: z.number().int().min(1).max(10).nullable().optional(),
-  rookie_rank: z.number().int().positive().nullable().optional(),
-  tiber_rookie_alpha: z.number().finite().nullable().optional(),
-  rookie_tier: z.string().min(1).nullable().optional(),
-  tiber_ras: z.number().finite().nullable().optional(),
-  tiber_ras_v2: z.number().finite().nullable().optional(),
-  production_score: z.number().finite().nullable().optional(),
-  dominator_rating: z.number().finite().nullable().optional(),
-  college_target_share: z.number().finite().nullable().optional(),
-  college_ypc: z.number().finite().nullable().optional(),
-  draft_capital_score: z.number().finite().nullable().optional(),
-  athleticism_score: z.number().finite().nullable().optional(),
-  ht: z.number().finite().nullable().optional(),
-  wt: z.number().finite().nullable().optional(),
-  forty: z.number().finite().nullable().optional(),
-  ten: z.number().finite().nullable().optional(),
-  vert: z.number().finite().nullable().optional(),
-  broad: z.number().finite().nullable().optional(),
-  cone: z.number().finite().nullable().optional(),
-  shuttle: z.number().finite().nullable().optional(),
-  profile_summary: z.string().nullable().optional(),
-  identity_note: z.string().nullable().optional(),
-  board_summary: z.string().nullable().optional(),
-}).passthrough();
-
-export const rookieArtifactSchema = z.object({
-  meta: z.object({
-    season: z.number().int().min(2000).max(2100).nullable().optional(),
-    model_name: z.string().optional(),
-    model_version: z.string().optional(),
-    promoted_at: z.string().optional(),
-    generated_at: z.string().optional(),
-  }).passthrough(),
-  players: z.array(rookieArtifactRowSchema).min(1),
-}).passthrough();
-
-export type RookieArtifact = z.infer<typeof rookieArtifactSchema>;
+export interface RookieArtifact {
+  meta: {
+    season: number | null;
+    model_name?: string | null;
+    model_version?: string | null;
+    promoted_at?: string | null;
+    generated_at?: string | null;
+    [key: string]: unknown;
+  };
+  players: RookieArtifactRow[];
+}
 
 export type RookieSortField =
   | 'tiber_ras_v1'

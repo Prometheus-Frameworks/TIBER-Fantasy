@@ -24,12 +24,13 @@ export function createRookiesPromotedRouter(service: RookieArtifactService = roo
 
     try {
       const board = await service.getRookieBoard({ season, sortBy, position });
+      const { sourcePath: _sp, ...modelForClient } = board.model;
       return res.json({
         season: board.season,
         sort_by: sortBy,
         position: position?.toUpperCase() ?? 'ALL',
         count: board.count,
-        model: board.model,
+        model: modelForClient,
         players: board.players,
       });
     } catch (error) {
