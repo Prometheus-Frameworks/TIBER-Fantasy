@@ -394,9 +394,12 @@ export default function RookieBoard() {
 
     // Draft Capital Score mapping: R1=100, R2=78, R3=56, R4=34, R5=18, R6=10
     // When Proj Round is unknown, Draft Capital Score defaults to 50 (position median).
+    const modelLine = data?.model
+      ? `# Source: ${data.model.name}${data.model.version ? ` (${data.model.version})` : ''} — promoted TIBER-Rookies artifact`
+      : '# Source: Promoted TIBER-Rookies artifact';
     const meta = [
       ['# TIBER 2026 Rookie Board Export'],
-      ['# Source: FORGE-R Phase 3 composite (Athleticism 35% · Production 45% · Draft Capital 20%)'],
+      [modelLine],
       ['# Draft Capital Score: R1=100 R2=78 R3=56 R4=34 R5=18 R6=10; null proj round → 50 (position median)'],
       ['# Null policy: School/Proj Round → "Unknown"; numeric fields → blank = not yet available'],
       [],
