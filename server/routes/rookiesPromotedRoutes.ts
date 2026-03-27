@@ -30,23 +30,37 @@ export function createRookiesPromotedRouter(service: RookieArtifactService = roo
         sort_by: sortBy,
         position: position?.toUpperCase() ?? 'ALL',
         count: board.count,
+        promoted_artifact_backed: true,
         model: modelForClient,
         players: board.players,
       });
     } catch (error) {
       if (error instanceof RookieIntegrationError) {
+        const guidance =
+          error.code === 'not_found'
+            ? 'Set ROOKIE_PROMOTED_ARTIFACT_PATH to the validated promoted TIBER-Rookies export before deploying.'
+            : error.code === 'config_error'
+              ? 'Set ROOKIE_PROMOTED_MODEL_ENABLED=1 and point ROOKIE_PROMOTED_ARTIFACT_PATH at a promoted artifact JSON file.'
+              : error.code === 'invalid_payload'
+                ? 'Artifact is present but does not match the promoted contract. Re-promote a validated artifact for this season.'
+                : error.code === 'upstream_unavailable'
+                  ? 'Consumer failed while loading promoted artifact. Check file readability and server logs.'
+                  : undefined;
         return res.status(error.status).json({
           error: error.message,
           code: error.code,
           season,
-          guidance:
-            error.code === 'not_found'
-              ? 'Set ROOKIE_PROMOTED_ARTIFACT_PATH to the validated promoted TIBER-Rookies export before deploying.'
-              : undefined,
+          promoted_artifact_backed: false,
+          guidance,
         });
       }
 
-      return res.status(500).json({ error: 'Failed to load promoted rookie board.' });
+      return res.status(500).json({
+        error: 'Failed to load promoted rookie board.',
+        code: 'upstream_unavailable',
+        season,
+        promoted_artifact_backed: false,
+      });
     }
   });
 

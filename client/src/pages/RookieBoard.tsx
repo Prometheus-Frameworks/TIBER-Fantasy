@@ -16,6 +16,7 @@ interface RookiePlayer {
   position: string;
   school: string | null;
   proj_round: number | null;
+  rookie_rank: number | null;
   height_inches: number | null;
   weight_lbs: number | null;
   forty_yard_dash: number | null;
@@ -43,6 +44,7 @@ interface RookieApiResponse {
   season: number;
   position: string;
   count: number;
+  promoted_artifact_backed?: boolean;
   model?: {
     name: string;
     version: string | null;
@@ -50,6 +52,12 @@ interface RookieApiResponse {
     generatedAt: string | null;
   };
   players: RookiePlayer[];
+}
+
+class RookieBoardFetchError extends Error {
+  code?: string;
+  guidance?: string;
+  status?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -62,6 +70,18 @@ function toNum(v: number | string | null | undefined): number | null {
 function fmtN(v: number | string | null | undefined, d = 2): string {
   const n = toNum(v);
   return n === null ? '—' : n.toFixed(d);
+}
+
+function fmtMeasure(v: number | string | null | undefined, suffix: string, d = 2): string {
+  const n = toNum(v);
+  return n === null ? '—' : `${n.toFixed(d)}${suffix}`;
+}
+
+function fmtDate(v: string | null | undefined): string | null {
+  if (!v) return null;
+  const parsed = new Date(v);
+  if (Number.isNaN(parsed.getTime())) return v;
+  return parsed.toLocaleString();
 }
 
 function heightFt(inches: number | null | undefined): string {
@@ -184,9 +204,11 @@ function PlayerDrawer({ player, onClose }: { player: RookiePlayer; onClose: () =
               {player.proj_round && <span className="text-slate-500">· Projected R{player.proj_round}</span>}
             </div>
             {(player.profile_summary || player.identity_note || player.board_summary) && (
-              <p className="text-xs text-slate-500 mt-2 max-w-sm">
-                {player.profile_summary ?? player.identity_note ?? player.board_summary}
-              </p>
+              <div className="text-xs text-slate-500 mt-2 max-w-sm space-y-1">
+                {player.profile_summary && <p><span className="text-slate-400">Profile:</span> {player.profile_summary}</p>}
+                {player.identity_note && <p><span className="text-slate-400">Context:</span> {player.identity_note}</p>}
+                {player.board_summary && <p><span className="text-slate-400">Board:</span> {player.board_summary}</p>}
+              </div>
             )}
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors p-1">
@@ -273,27 +295,27 @@ function PlayerDrawer({ player, onClose }: { player: RookiePlayer; onClose: () =
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">40-yd</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.forty_yard_dash)}s</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.forty_yard_dash, 's')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">10-yd</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.ten_yard_split)}s</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.ten_yard_split, 's')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Vertical</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.vertical_jump, 1)}"</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.vertical_jump, '"', 1)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Broad</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.broad_jump, 0)}"</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.broad_jump, '"', 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">3-Cone</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.three_cone)}s</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.three_cone, 's')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Shuttle</span>
-                  <span className="font-mono text-slate-300">{fmtN(player.short_shuttle)}s</span>
+                  <span className="font-mono text-slate-300">{fmtMeasure(player.short_shuttle, 's')}</span>
                 </div>
               </div>
             </div>
@@ -376,7 +398,11 @@ export default function RookieBoard() {
       const res = await fetch(`/api/rookies/2026?${params}`);
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        throw new Error(payload?.error ?? 'Failed to fetch rookies');
+        const fetchError = new RookieBoardFetchError(payload?.error ?? 'Failed to fetch rookies');
+        fetchError.code = payload?.code;
+        fetchError.guidance = payload?.guidance;
+        fetchError.status = res.status;
+        throw fetchError;
       }
       return res.json();
     },
@@ -498,12 +524,19 @@ export default function RookieBoard() {
           <p className="text-sm text-slate-400">
             {players.length} prospects · Click any row to see full profile
           </p>
-          {data?.model && (
-            <p className="text-xs text-slate-500 mt-1">
-              Powered by {data.model.name}
-              {data.model.version ? ` (${data.model.version})` : ''}.
-            </p>
-          )}
+          <div className="flex flex-wrap gap-2 mt-2 text-xs">
+            <span className="px-2 py-1 rounded border border-emerald-800/60 bg-emerald-950/30 text-emerald-300">
+              Promoted artifact-backed
+            </span>
+            {data?.model && (
+              <span className="px-2 py-1 rounded border border-slate-700 bg-slate-900/70 text-slate-300">
+                {data.model.name}{data.model.version ? ` (${data.model.version})` : ''}
+              </span>
+            )}
+            <span className="px-2 py-1 rounded border border-slate-700 bg-slate-900/70 text-slate-400">
+              Season {data?.season ?? 2026}
+            </span>
+          </div>
         </div>
         <div className="text-right text-xs text-slate-500">
           <div className="flex items-center gap-1 justify-end">
@@ -513,6 +546,13 @@ export default function RookieBoard() {
           <div className="text-slate-600 mt-0.5">Alpha = RAS 35% · Prod 45% · DC 20%</div>
         </div>
       </div>
+      {data?.model && (
+        <div className="rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+          {fmtDate(data.model.promotedAt) && <span><span className="text-slate-500">Promoted:</span> {fmtDate(data.model.promotedAt)}</span>}
+          {fmtDate(data.model.generatedAt) && <span><span className="text-slate-500">Generated:</span> {fmtDate(data.model.generatedAt)}</span>}
+          <span><span className="text-slate-500">Source:</span> artifact import only (no live producer calls)</span>
+        </div>
+      )}
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
@@ -559,6 +599,7 @@ export default function RookieBoard() {
             <thead>
               <tr className="border-b border-slate-800 bg-slate-900/60">
                 <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide w-10">#</th>
+                <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide w-14">M#</th>
                 <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">Player</th>
                 <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide">Pos</th>
                 <th className="px-4 py-3 text-left text-xs text-slate-500 font-semibold uppercase tracking-wide hidden md:table-cell">School</th>
@@ -617,15 +658,21 @@ export default function RookieBoard() {
                 ))
               ) : isError ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     <p className="text-sm text-slate-400 mb-1">Rookie data is currently unavailable.</p>
                     <p className="text-xs text-slate-600">{error instanceof Error ? error.message : 'Artifact missing or invalid.'}</p>
+                    {error instanceof RookieBoardFetchError && error.code && (
+                      <p className="text-xs text-slate-500 mt-1">Code: {error.code} {error.status ? `(${error.status})` : ''}</p>
+                    )}
+                    {error instanceof RookieBoardFetchError && error.guidance && (
+                      <p className="text-xs text-amber-400 mt-2 max-w-2xl mx-auto">{error.guidance}</p>
+                    )}
                   </td>
                 </tr>
               ) : players.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={11} className="px-4 py-12 text-center text-slate-500">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
                     No prospects found
                   </td>
@@ -642,6 +689,7 @@ export default function RookieBoard() {
                     } ${selected?.player_name === p.player_name ? 'bg-slate-800/50 ring-1 ring-inset ring-[#e2640d]/30' : ''}`}
                   >
                     <td className="px-4 py-3 text-slate-500 text-xs tabular-nums">{p.rank}</td>
+                    <td className="px-4 py-3 text-slate-500 text-xs tabular-nums">{p.rookie_rank ?? '—'}</td>
                     <td className="px-4 py-3">
                       <div className="space-y-0.5">
                         <span className="text-white font-medium text-sm block">{p.player_name}</span>
