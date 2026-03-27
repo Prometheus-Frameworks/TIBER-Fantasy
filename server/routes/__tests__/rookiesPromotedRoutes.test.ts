@@ -68,6 +68,7 @@ describe('promoted rookies routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.count).toBe(1);
     expect(res.body.model.name).toBe('Rookie Alpha');
+    expect(res.body.promoted_artifact_backed).toBe(true);
     expect(service.getRookieBoard).toHaveBeenCalledWith({ season: 2026, sortBy: 'rookie_alpha', position: 'WR' });
   });
 
@@ -86,5 +87,23 @@ describe('promoted rookies routes', () => {
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('not_found');
     expect(res.body.guidance).toContain('ROOKIE_PROMOTED_ARTIFACT_PATH');
+    expect(res.body.promoted_artifact_backed).toBe(false);
+  });
+
+  it('returns operator guidance when integration is disabled', async () => {
+    const service = {
+      getRookieBoard: jest
+        .fn()
+        .mockRejectedValue(new RookieIntegrationError('config_error', 'integration disabled', 503)),
+    };
+
+    const app = express();
+    app.use('/api/rookies', createRookiesPromotedRouter(service as any));
+
+    const res = await call(app, '/api/rookies/2026');
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('config_error');
+    expect(res.body.guidance).toContain('ROOKIE_PROMOTED_MODEL_ENABLED=1');
   });
 });
