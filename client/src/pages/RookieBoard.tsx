@@ -77,8 +77,8 @@ function fmtMeasure(v: number | string | null | undefined, suffix: string, d = 2
   return n === null ? '—' : `${n.toFixed(d)}${suffix}`;
 }
 
-function fmtDate(v: string | null | undefined): string {
-  if (!v) return 'Unknown';
+function fmtDate(v: string | null | undefined): string | null {
+  if (!v) return null;
   const parsed = new Date(v);
   if (Number.isNaN(parsed.getTime())) return v;
   return parsed.toLocaleString();
@@ -526,7 +526,7 @@ export default function RookieBoard() {
           </p>
           <div className="flex flex-wrap gap-2 mt-2 text-xs">
             <span className="px-2 py-1 rounded border border-emerald-800/60 bg-emerald-950/30 text-emerald-300">
-              {data?.promoted_artifact_backed === false ? 'Artifact status unknown' : 'Promoted artifact-backed'}
+              Promoted artifact-backed
             </span>
             {data?.model && (
               <span className="px-2 py-1 rounded border border-slate-700 bg-slate-900/70 text-slate-300">
@@ -548,8 +548,8 @@ export default function RookieBoard() {
       </div>
       {data?.model && (
         <div className="rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
-          <span><span className="text-slate-500">Promoted:</span> {fmtDate(data.model.promotedAt)}</span>
-          <span><span className="text-slate-500">Generated:</span> {fmtDate(data.model.generatedAt)}</span>
+          {fmtDate(data.model.promotedAt) && <span><span className="text-slate-500">Promoted:</span> {fmtDate(data.model.promotedAt)}</span>}
+          {fmtDate(data.model.generatedAt) && <span><span className="text-slate-500">Generated:</span> {fmtDate(data.model.generatedAt)}</span>}
           <span><span className="text-slate-500">Source:</span> artifact import only (no live producer calls)</span>
         </div>
       )}

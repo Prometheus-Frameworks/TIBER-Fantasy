@@ -106,4 +106,38 @@ describe('promoted rookies routes', () => {
     expect(res.body.code).toBe('config_error');
     expect(res.body.guidance).toContain('ROOKIE_PROMOTED_MODEL_ENABLED=1');
   });
+
+  it('returns operator guidance when artifact payload is invalid', async () => {
+    const service = {
+      getRookieBoard: jest
+        .fn()
+        .mockRejectedValue(new RookieIntegrationError('invalid_payload', 'contract mismatch', 502)),
+    };
+
+    const app = express();
+    app.use('/api/rookies', createRookiesPromotedRouter(service as any));
+
+    const res = await call(app, '/api/rookies/2026');
+
+    expect(res.status).toBe(502);
+    expect(res.body.code).toBe('invalid_payload');
+    expect(res.body.promoted_artifact_backed).toBe(false);
+    expect(res.body.guidance).toContain('Re-promote a validated artifact');
+  });
+
+  it('returns upstream_unavailable code on unexpected errors', async () => {
+    const service = {
+      getRookieBoard: jest.fn().mockRejectedValue(new Error('unexpected crash')),
+    };
+
+    const app = express();
+    app.use('/api/rookies', createRookiesPromotedRouter(service as any));
+
+    const res = await call(app, '/api/rookies/2026');
+
+    expect(res.status).toBe(500);
+    expect(res.body.code).toBe('upstream_unavailable');
+    expect(res.body.promoted_artifact_backed).toBe(false);
+    expect(res.body.season).toBe(2026);
+  });
 });
