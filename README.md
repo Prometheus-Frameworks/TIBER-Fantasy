@@ -156,6 +156,18 @@ TIBER-Fantasy now consumes a promoted rookie artifact as a **read-only producer 
 
 See `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md` for operator handoff details.
 
+### 2026 Rookie Alpha coverage snapshot (pre-draft v0)
+
+- Canonical 2026 rookie inputs now include **90 aligned players** across:
+  - `data/raw/2026_combine_results.json`
+  - `data/processed/2026_college_production.json`
+  - `data/processed/2026_draft_capital_proxy.json`
+- Promoted artifact outputs are generated at:
+  - `exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.json`
+  - `exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.csv`
+  - `exports/promoted/rookie-alpha/2026_manifest.json`
+- These pre-draft inputs remain partly proxy-based (especially projected draft capital and incomplete combine/pro-day coverage for some players); no narrative/scouting blurbs are fabricated in the promoted payload.
+
 ---
 
 ## Architecture

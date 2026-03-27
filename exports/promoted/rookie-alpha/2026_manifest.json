@@ -1,0 +1,21 @@
+{
+  "season": 2026,
+  "generated_at": "2026-03-27T01:18:39.026Z",
+  "source_datasets": {
+    "combine_input_rows": 90,
+    "production_input_rows": 90,
+    "grades_input_rows": 90
+  },
+  "join_integrity": {
+    "joined_rows": 90,
+    "excluded_rows": 0,
+    "excluded": []
+  },
+  "outputs": {
+    "promoted_json": "exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.json",
+    "promoted_csv": "exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.csv",
+    "canonical_combine": "data/raw/2026_combine_results.json",
+    "canonical_production": "data/processed/2026_college_production.json",
+    "canonical_draft_capital": "data/processed/2026_draft_capital_proxy.json"
+  }
+}

@@ -1,0 +1,906 @@
+{
+  "season": 2026,
+  "generated_at": "2026-03-27T01:18:39.021Z",
+  "players": [
+    {
+      "player_id": "r2026-qb-carson-beck",
+      "player_name": "Carson Beck",
+      "position": "QB",
+      "school": "Miami (FL)",
+      "production_score": 80.5,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-jordyn-tyson",
+      "player_name": "Jordyn Tyson",
+      "position": "WR",
+      "school": "Arizona State",
+      "production_score": 91.2,
+      "dominator_rating": 32.23,
+      "college_target_share": 32.15,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-jeff-caldwell",
+      "player_name": "Jeff Caldwell",
+      "position": "WR",
+      "school": "Cincinnati",
+      "production_score": 92.1,
+      "dominator_rating": 33.25,
+      "college_target_share": 32.98,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-eli-stowers",
+      "player_name": "Eli Stowers",
+      "position": "TE",
+      "school": "Vanderbilt",
+      "production_score": 87.6,
+      "dominator_rating": 24.03,
+      "college_target_share": 24.03,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-jeremiyah-love",
+      "player_name": "Jeremiyah Love",
+      "position": "RB",
+      "school": "Notre Dame",
+      "production_score": 70.7,
+      "dominator_rating": 30.66,
+      "college_target_share": null,
+      "college_ypc": 7.3
+    },
+    {
+      "player_id": "r2026-wr-chris-bell",
+      "player_name": "Chris Bell",
+      "position": "WR",
+      "school": "Louisville",
+      "production_score": 65.9,
+      "dominator_rating": 19.5,
+      "college_target_share": 19.72,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-fernando-mendoza",
+      "player_name": "Fernando Mendoza",
+      "position": "QB",
+      "school": "Indiana",
+      "production_score": 47.2,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-ted-hurst",
+      "player_name": "Ted Hurst",
+      "position": "WR",
+      "school": "Georgia State",
+      "production_score": 86.3,
+      "dominator_rating": 29.67,
+      "college_target_share": 29.98,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-tanner-koziol",
+      "player_name": "Tanner Koziol",
+      "position": "TE",
+      "school": "Houston",
+      "production_score": 93.8,
+      "dominator_rating": 44.13,
+      "college_target_share": 43.89,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-mike-washington-jr",
+      "player_name": "Mike Washington Jr.",
+      "position": "RB",
+      "school": "Arkansas",
+      "production_score": null,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-skyler-bell",
+      "player_name": "Skyler Bell",
+      "position": "WR",
+      "school": "UConn",
+      "production_score": 87.1,
+      "dominator_rating": 30.23,
+      "college_target_share": 30.67,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-denzel-boston",
+      "player_name": "Denzel Boston",
+      "position": "WR",
+      "school": "Washington",
+      "production_score": 60.9,
+      "dominator_rating": 21.32,
+      "college_target_share": 21.49,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-sam-roush",
+      "player_name": "Sam Roush",
+      "position": "TE",
+      "school": "Stanford",
+      "production_score": 68.7,
+      "dominator_rating": 14.51,
+      "college_target_share": 14.55,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-jack-endries",
+      "player_name": "Jack Endries",
+      "position": "TE",
+      "school": "Texas",
+      "production_score": 75.6,
+      "dominator_rating": 11.97,
+      "college_target_share": 12.13,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-drew-allar",
+      "player_name": "Drew Allar",
+      "position": "QB",
+      "school": "Penn State",
+      "production_score": 50,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-john-michael-gyllenborg",
+      "player_name": "John Michael Gyllenborg",
+      "position": "TE",
+      "school": "Wyoming",
+      "production_score": 71.4,
+      "dominator_rating": 13.5,
+      "college_target_share": 13.48,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-nicholas-singleton",
+      "player_name": "Nicholas Singleton",
+      "position": "RB",
+      "school": "Penn State",
+      "production_score": 52.9,
+      "dominator_rating": 25.95,
+      "college_target_share": null,
+      "college_ypc": 6.4
+    },
+    {
+      "player_id": "r2026-wr-malachi-fields",
+      "player_name": "Malachi Fields",
+      "position": "WR",
+      "school": "Notre Dame",
+      "production_score": 65.3,
+      "dominator_rating": 19.92,
+      "college_target_share": 19.91,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-eric-rivers",
+      "player_name": "Eric Rivers",
+      "position": "WR",
+      "school": "Georgia Tech",
+      "production_score": 95.8,
+      "dominator_rating": 38.01,
+      "college_target_share": 37.79,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-bryce-lance",
+      "player_name": "Bryce Lance",
+      "position": "WR",
+      "school": "North Dakota State",
+      "production_score": 57.1,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-j-michael-sturdivant",
+      "player_name": "J. Michael Sturdivant",
+      "position": "WR",
+      "school": "Florida",
+      "production_score": null,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-antonio-williams",
+      "player_name": "Antonio Williams",
+      "position": "WR",
+      "school": "Clemson",
+      "production_score": 55.3,
+      "dominator_rating": 19.23,
+      "college_target_share": 19.47,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-caleb-douglas",
+      "player_name": "Caleb Douglas",
+      "position": "WR",
+      "school": "Texas Tech",
+      "production_score": 69.9,
+      "dominator_rating": 19.24,
+      "college_target_share": 19.47,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-chase-roberts",
+      "player_name": "Chase Roberts",
+      "position": "WR",
+      "school": null,
+      "production_score": 66,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-josh-cameron",
+      "player_name": "Josh Cameron",
+      "position": "WR",
+      "school": "Baylor",
+      "production_score": 56.7,
+      "dominator_rating": 18.67,
+      "college_target_share": 18.93,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-taylen-green",
+      "player_name": "Taylen Green",
+      "position": "QB",
+      "school": "Arkansas",
+      "production_score": 50,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-demond-claiborne",
+      "player_name": "Demond Claiborne",
+      "position": "RB",
+      "school": "Wake Forest",
+      "production_score": 75,
+      "dominator_rating": 68.1,
+      "college_target_share": null,
+      "college_ypc": 4.7
+    },
+    {
+      "player_id": "r2026-te-michael-trigg",
+      "player_name": "Michael Trigg",
+      "position": "TE",
+      "school": "Baylor",
+      "production_score": 66.9,
+      "dominator_rating": 11.33,
+      "college_target_share": 11.48,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-kenyon-sadiq",
+      "player_name": "Kenyon Sadiq",
+      "position": "TE",
+      "school": "Oregon",
+      "production_score": 36.9,
+      "dominator_rating": 6.14,
+      "college_target_share": 6.21,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-germie-bernard",
+      "player_name": "Germie Bernard",
+      "position": "WR",
+      "school": "Alabama",
+      "production_score": 51,
+      "dominator_rating": 20.32,
+      "college_target_share": 20.44,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-adam-randall",
+      "player_name": "Adam Randall",
+      "position": "RB",
+      "school": null,
+      "production_score": null,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-cade-klubnik",
+      "player_name": "Cade Klubnik",
+      "position": "QB",
+      "school": "Clemson",
+      "production_score": 80.6,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-garrett-nussmeier",
+      "player_name": "Garrett Nussmeier",
+      "position": "QB",
+      "school": "LSU",
+      "production_score": 75,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-rahsul-faison",
+      "player_name": "Rahsul Faison",
+      "position": "RB",
+      "school": "South Carolina",
+      "production_score": 73.6,
+      "dominator_rating": 45.42,
+      "college_target_share": null,
+      "college_ypc": 5.9
+    },
+    {
+      "player_id": "r2026-wr-kevin-coleman-jr",
+      "player_name": "Kevin Coleman Jr.",
+      "position": "WR",
+      "school": "Missouri",
+      "production_score": 73.1,
+      "dominator_rating": 26.71,
+      "college_target_share": 26.79,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-max-klare",
+      "player_name": "Max Klare",
+      "position": "TE",
+      "school": "Ohio State",
+      "production_score": 61.5,
+      "dominator_rating": 12.61,
+      "college_target_share": 12.74,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-cj-donaldson",
+      "player_name": "CJ Donaldson",
+      "position": "RB",
+      "school": "Ohio State",
+      "production_score": 25.7,
+      "dominator_rating": 24.86,
+      "college_target_share": null,
+      "college_ypc": 4.7
+    },
+    {
+      "player_id": "r2026-qb-sawyer-robertson",
+      "player_name": "Sawyer Robertson",
+      "position": "QB",
+      "school": "Baylor",
+      "production_score": 55.6,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-seth-mcgowan",
+      "player_name": "Seth McGowan",
+      "position": "RB",
+      "school": "Kentucky",
+      "production_score": 52.1,
+      "dominator_rating": 44.85,
+      "college_target_share": null,
+      "college_ypc": 5.3
+    },
+    {
+      "player_id": "r2026-rb-jonah-coleman",
+      "player_name": "Jonah Coleman",
+      "position": "RB",
+      "school": "Washington",
+      "production_score": 72.9,
+      "dominator_rating": 61.12,
+      "college_target_share": null,
+      "college_ypc": 5.7
+    },
+    {
+      "player_id": "r2026-wr-carnell-tate",
+      "player_name": "Carnell Tate",
+      "position": "WR",
+      "school": "Ohio State",
+      "production_score": 37.6,
+      "dominator_rating": 12.31,
+      "college_target_share": 12.48,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-omar-cooper-jr",
+      "player_name": "Omar Cooper Jr.",
+      "position": "WR",
+      "school": "Indiana",
+      "production_score": 47.6,
+      "dominator_rating": 15.48,
+      "college_target_share": 15.57,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-vinny-anthony-ii",
+      "player_name": "Vinny Anthony II",
+      "position": "WR",
+      "school": "Wisconsin",
+      "production_score": 66.3,
+      "dominator_rating": 25.79,
+      "college_target_share": 26.02,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-jakobi-lane",
+      "player_name": "Ja'Kobi Lane",
+      "position": "WR",
+      "school": "USC",
+      "production_score": 31.2,
+      "dominator_rating": 9.53,
+      "college_target_share": 9.64,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-reggie-virgil",
+      "player_name": "Reggie Virgil",
+      "position": "WR",
+      "school": "Texas Tech",
+      "production_score": 65.3,
+      "dominator_rating": 18.29,
+      "college_target_share": 18.28,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-kaytron-allen",
+      "player_name": "Kaytron Allen",
+      "position": "RB",
+      "school": "Penn State",
+      "production_score": 29.3,
+      "dominator_rating": 24.68,
+      "college_target_share": null,
+      "college_ypc": 4.7
+    },
+    {
+      "player_id": "r2026-te-rj-maryland",
+      "player_name": "RJ Maryland",
+      "position": "TE",
+      "school": "SMU",
+      "production_score": 54.4,
+      "dominator_rating": 9.05,
+      "college_target_share": 9.03,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-jam-miller",
+      "player_name": "Jam Miller",
+      "position": "RB",
+      "school": "Alabama",
+      "production_score": null,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-makai-lemon",
+      "player_name": "Makai Lemon",
+      "position": "WR",
+      "school": "USC",
+      "production_score": 55.1,
+      "dominator_rating": 16.96,
+      "college_target_share": 17.15,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-matthew-hibner",
+      "player_name": "Matthew Hibner",
+      "position": "TE",
+      "school": "SMU",
+      "production_score": 53.3,
+      "dominator_rating": 8.58,
+      "college_target_share": 8.51,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-bauer-sharp",
+      "player_name": "Bauer Sharp",
+      "position": "TE",
+      "school": "LSU",
+      "production_score": 48.8,
+      "dominator_rating": 7.61,
+      "college_target_share": 7.69,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-chris-brazzell-ii",
+      "player_name": "Chris Brazzell II",
+      "position": "WR",
+      "school": "Tennessee",
+      "production_score": 24.7,
+      "dominator_rating": 9.15,
+      "college_target_share": 9.25,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-deion-burks",
+      "player_name": "Deion Burks",
+      "position": "WR",
+      "school": "Oklahoma",
+      "production_score": 34.3,
+      "dominator_rating": 10.67,
+      "college_target_share": 10.59,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-dezhaun-stribling",
+      "player_name": "De'Zhaun Stribling",
+      "position": "WR",
+      "school": "Ole Miss",
+      "production_score": 40.5,
+      "dominator_rating": 14.38,
+      "college_target_share": 14.49,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-jalen-walthall",
+      "player_name": "Jalen Walthall",
+      "position": "WR",
+      "school": "Incarnate Word",
+      "production_score": 55.4,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-leveon-moss",
+      "player_name": "Le'Veon Moss",
+      "position": "RB",
+      "school": "Texas A&M",
+      "production_score": 49.3,
+      "dominator_rating": 29.28,
+      "college_target_share": null,
+      "college_ypc": 6.1
+    },
+    {
+      "player_id": "r2026-rb-robert-henry-jr",
+      "player_name": "Robert Henry Jr.",
+      "position": "RB",
+      "school": "UTSA",
+      "production_score": 49.3,
+      "dominator_rating": 33.41,
+      "college_target_share": null,
+      "college_ypc": 5.7
+    },
+    {
+      "player_id": "r2026-wr-dillon-bell",
+      "player_name": "Dillon Bell",
+      "position": "WR",
+      "school": "Georgia",
+      "production_score": 23.5,
+      "dominator_rating": 9.24,
+      "college_target_share": 9.3,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-eli-raridon",
+      "player_name": "Eli Raridon",
+      "position": "TE",
+      "school": "Notre Dame",
+      "production_score": 10,
+      "dominator_rating": 1.68,
+      "college_target_share": 1.7,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-haynes-king",
+      "player_name": "Haynes King",
+      "position": "QB",
+      "school": "Georgia Tech",
+      "production_score": 30.6,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-oscar-delp",
+      "player_name": "Oscar Delp",
+      "position": "TE",
+      "school": "Georgia",
+      "production_score": 28.8,
+      "dominator_rating": 5.78,
+      "college_target_share": 5.85,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-jadarian-price",
+      "player_name": "Jadarian Price",
+      "position": "RB",
+      "school": "Notre Dame",
+      "production_score": 27.8,
+      "dominator_rating": 19.15,
+      "college_target_share": null,
+      "college_ypc": 7.2
+    },
+    {
+      "player_id": "r2026-qb-luke-altmyer",
+      "player_name": "Luke Altmyer",
+      "position": "QB",
+      "school": "Illinois",
+      "production_score": 44.4,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-marlin-klein",
+      "player_name": "Marlin Klein",
+      "position": "TE",
+      "school": "Michigan",
+      "production_score": 28.1,
+      "dominator_rating": 5.96,
+      "college_target_share": 6.02,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-aaron-anderson",
+      "player_name": "Aaron Anderson",
+      "position": "WR",
+      "school": "LSU",
+      "production_score": 56.2,
+      "dominator_rating": 16.42,
+      "college_target_share": 16.6,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-josh-cuevas",
+      "player_name": "Josh Cuevas",
+      "position": "TE",
+      "school": "Alabama",
+      "production_score": 36.2,
+      "dominator_rating": 6.87,
+      "college_target_share": 6.93,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-miles-kitselman",
+      "player_name": "Miles Kitselman",
+      "position": "TE",
+      "school": "Tennessee",
+      "production_score": 43.5,
+      "dominator_rating": 10.24,
+      "college_target_share": 10.3,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-harrison-wallace-iii",
+      "player_name": "Harrison Wallace III",
+      "position": "WR",
+      "school": "Ole Miss",
+      "production_score": 50.6,
+      "dominator_rating": 14.24,
+      "college_target_share": 14.25,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-zachariah-branch",
+      "player_name": "Zachariah Branch",
+      "position": "WR",
+      "school": "Georgia",
+      "production_score": 38.5,
+      "dominator_rating": 12.82,
+      "college_target_share": 12.96,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-colbie-young",
+      "player_name": "Colbie Young",
+      "position": "WR",
+      "school": "Georgia",
+      "production_score": 9.2,
+      "dominator_rating": 3.75,
+      "college_target_share": 3.79,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-cole-payton",
+      "player_name": "Cole Payton",
+      "position": "QB",
+      "school": "North Dakota State",
+      "production_score": 0,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-eli-heidenreich",
+      "player_name": "Eli Heidenreich",
+      "position": "RB",
+      "school": "Navy",
+      "production_score": 19.3,
+      "dominator_rating": 12.58,
+      "college_target_share": null,
+      "college_ypc": 7.4
+    },
+    {
+      "player_id": "r2026-rb-emmett-johnson",
+      "player_name": "Emmett Johnson",
+      "position": "RB",
+      "school": "Nebraska",
+      "production_score": 27.9,
+      "dominator_rating": 30.1,
+      "college_target_share": null,
+      "college_ypc": 5.2
+    },
+    {
+      "player_id": "r2026-qb-jalon-daniels",
+      "player_name": "Jalon Daniels",
+      "position": "QB",
+      "school": "Kansas",
+      "production_score": 27.8,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-rb-roman-hemby",
+      "player_name": "Roman Hemby",
+      "position": "RB",
+      "school": "Indiana",
+      "production_score": 20,
+      "dominator_rating": 27.84,
+      "college_target_share": null,
+      "college_ypc": 4.5
+    },
+    {
+      "player_id": "r2026-te-will-kacmarek",
+      "player_name": "Will Kacmarek",
+      "position": "TE",
+      "school": "Ohio State",
+      "production_score": 5,
+      "dominator_rating": 0.91,
+      "college_target_share": 0.93,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-zavion-thomas",
+      "player_name": "Zavion Thomas",
+      "position": "WR",
+      "school": null,
+      "production_score": 15.4,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-khalil-dinkins",
+      "player_name": "Khalil Dinkins",
+      "position": "TE",
+      "school": "Penn State",
+      "production_score": 20,
+      "dominator_rating": 2.38,
+      "college_target_share": 2.41,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-kendrick-law",
+      "player_name": "Kendrick Law",
+      "position": "WR",
+      "school": "Kentucky",
+      "production_score": 5.5,
+      "dominator_rating": 3.7,
+      "college_target_share": 3.74,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-brenen-thompson",
+      "player_name": "Brenen Thompson",
+      "position": "WR",
+      "school": "Mississippi State",
+      "production_score": 22.4,
+      "dominator_rating": 8.04,
+      "college_target_share": 8.01,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-dallen-bentley",
+      "player_name": "Dallen Bentley",
+      "position": "TE",
+      "school": "Utah",
+      "production_score": 0,
+      "dominator_rating": 0.62,
+      "college_target_share": 0.63,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-malik-benson",
+      "player_name": "Malik Benson",
+      "position": "WR",
+      "school": "Oregon",
+      "production_score": 20.3,
+      "dominator_rating": 7.86,
+      "college_target_share": 7.95,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-barion-brown",
+      "player_name": "Barion Brown",
+      "position": "WR",
+      "school": "LSU",
+      "production_score": 19.9,
+      "dominator_rating": 8.75,
+      "college_target_share": 8.81,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-riley-nowakowski",
+      "player_name": "Riley Nowakowski",
+      "position": "TE",
+      "school": "Indiana",
+      "production_score": 15,
+      "dominator_rating": 2.15,
+      "college_target_share": 2.18,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-te-jaren-kanak",
+      "player_name": "Jaren Kanak",
+      "position": "TE",
+      "school": "Oklahoma",
+      "production_score": 0,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-qb-ty-simpson",
+      "player_name": "Ty Simpson",
+      "position": "QB",
+      "school": "Alabama",
+      "production_score": 5.5,
+      "dominator_rating": null,
+      "college_target_share": null,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-emmanuel-henderson-jr",
+      "player_name": "Emmanuel Henderson Jr.",
+      "position": "WR",
+      "school": "Kansas",
+      "production_score": 8.1,
+      "dominator_rating": 4.31,
+      "college_target_share": 4.37,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-chris-hilton-jr",
+      "player_name": "Chris Hilton Jr.",
+      "position": "WR",
+      "school": "LSU",
+      "production_score": 10.8,
+      "dominator_rating": 3.21,
+      "college_target_share": 3.17,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-caullin-lacy",
+      "player_name": "Caullin Lacy",
+      "position": "WR",
+      "school": "Louisville",
+      "production_score": 13.7,
+      "dominator_rating": 5.16,
+      "college_target_share": 5.21,
+      "college_ypc": null
+    },
+    {
+      "player_id": "r2026-wr-kaden-wetjen",
+      "player_name": "Kaden Wetjen",
+      "position": "WR",
+      "school": "Iowa",
+      "production_score": 0,
+      "dominator_rating": 1.91,
+      "college_target_share": 1.93,
+      "college_ypc": null
+    }
+  ]
+}

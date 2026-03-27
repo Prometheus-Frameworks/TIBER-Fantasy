@@ -104,6 +104,21 @@ For TIBER-Fantasy `/rookies`, healthy-enough means all of the following are true
 3. `/rookies` shows honest provenance metadata (artifact-backed + season + model/promotion timestamps when present).
 4. Artifact failure states produce explicit operator-friendly messages with no crash and no fabricated player content.
 
+## 2026 producer coverage notes (expanded board)
+
+- Current 2026 pre-draft producer board coverage is **90 players** after deterministic join alignment across combine, college production, and draft-capital proxy inputs.
+- Canonical input files:
+  - `data/raw/2026_combine_results.json`
+  - `data/processed/2026_college_production.json`
+  - `data/processed/2026_draft_capital_proxy.json`
+- Promoted outputs:
+  - `exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.json`
+  - `exports/promoted/rookie-alpha/2026_rookie_alpha_predraft_v0.csv`
+  - `exports/promoted/rookie-alpha/2026_manifest.json`
+- Validation helper:
+  - `npx tsx scripts/rookies/validate2026PromotedArtifact.ts`
+- Caveat: draft capital remains a proxy signal (`proj_round` mapping), and some athletic testing fields are still null where no verified measurement exists.
+
 ## Next expansion path
 
 - Add `player_id` link-outs from `/rookies` into deeper player research views when promoted identity coverage is complete.
