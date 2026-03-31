@@ -18,7 +18,7 @@ type NavSectionConfig = {
 const navSections: NavSectionConfig[] = [
   {
     label: "Core Product",
-    description: "Daily decision surfaces for most users.",
+    description: "Start here for rankings, rookies, and weekly planning.",
     items: [
       { label: "Tiers", path: "/tiers" },
       { label: "Rookie Board", path: "/rookies", badge: "2026" },
@@ -27,7 +27,7 @@ const navSections: NavSectionConfig[] = [
   },
   {
     label: "Research",
-    description: "Cross-model orchestration and promoted research workflows.",
+    description: "Go deeper with player and team research workflows.",
     items: [
       { label: "Research Command Center", path: "/tiber-data-lab/command-center", badge: "PRIMARY" },
       { label: "Player Research", path: "/tiber-data-lab/player-research" },
@@ -37,7 +37,7 @@ const navSections: NavSectionConfig[] = [
   },
   {
     label: "Model Labs",
-    description: "Specialist model and lab surfaces.",
+    description: "Specialist tools for deeper analysis.",
     items: [
       { label: "Breakout Signals", path: "/tiber-data-lab/breakout-signals" },
       { label: "Role & Opportunity", path: "/tiber-data-lab/role-opportunity" },
@@ -51,7 +51,7 @@ const navSections: NavSectionConfig[] = [
   },
   {
     label: "Agent & Intelligence",
-    description: "Agent-facing and intelligence ingestion surfaces.",
+    description: "Assistant-style tools and live intelligence views.",
     items: [
       { label: "TiberClaw", path: "/tiberclaw", badge: "AGENT" },
       { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
@@ -60,7 +60,7 @@ const navSections: NavSectionConfig[] = [
   },
   {
     label: "System & Builder",
-    description: "Admin, diagnostics, and internal tooling.",
+    description: "Admin, diagnostics, and internal tools.",
     items: [
       { label: "FORGE Hub", path: "/admin/forge-hub" },
       { label: "FORGE Engine", path: "/forge" },

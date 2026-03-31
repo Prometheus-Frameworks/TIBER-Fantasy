@@ -112,25 +112,25 @@ function getVolume(p: LabPlayer): number | null {
 const entryLanes = [
   {
     title: "Rankings",
-    description: "FORGE-powered player decision surface for weekly and dynasty calls.",
+    description: "Set lineups and make trade calls with updated tiers and player context.",
     href: "/tiers",
     cta: "Open Tiers",
   },
   {
     title: "Rookie Board",
-    description: "Promoted rookie model handoff board for draft and valuation context.",
+    description: "Check rookie grades, tiers, and valuation context for draft and dynasty moves.",
     href: "/rookies",
     cta: "Open Rookie Board",
   },
   {
     title: "Research",
-    description: "Command Center plus player/team orchestration workspaces.",
+    description: "Start in Command Center, then drill into player and team research workspaces.",
     href: "/tiber-data-lab/command-center",
     cta: "Open Command Center",
   },
   {
     title: "Agent/API",
-    description: "TiberClaw and intelligence interfaces for agent-facing workflows.",
+    description: "Use TiberClaw and intelligence tools when you need assistant-style workflows.",
     href: "/tiberclaw",
     cta: "Open TiberClaw",
   },
@@ -188,10 +188,10 @@ export default function Dashboard() {
     <>
       <div className="tiber-hero">
         <div className="hero-title">TIBER</div>
-        <div className="hero-sub">Product Shell · Research Orchestration · Model Surface Gateway</div>
+        <div className="hero-sub">Fantasy decisions, research workflows, and agent tools in one place</div>
         <div className="hero-value-prop">
-          TIBER-Fantasy is the platform shell for fantasy decisions and promoted research orchestration.
-          Use this front door to choose your lane: rankings, rookies, research command, or agent-facing intelligence.
+          TIBER helps you move from question to decision quickly. Start with rankings or rookies, open research when you
+          need deeper context, and use agent tools for faster exploration.
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export default function Dashboard() {
           <div className="status-card">
             <div className="status-label">Season Context</div>
             <div className="status-value">{season}</div>
-            <div className="status-sub">Current shell default season</div>
+            <div className="status-sub">Current default season across tools</div>
           </div>
           <div className="status-card">
             <div className="status-label">Players Tracked</div>
@@ -236,7 +236,7 @@ export default function Dashboard() {
               {t1Count}
               {t1Count > 0 && <span className="status-delta delta-up">Top tier</span>}
             </div>
-            <div className="status-sub">PPG-tiered players in current filter</div>
+            <div className="status-sub">Top PPG tier in this position view</div>
           </div>
           <div className="status-card">
             <div className="status-label">Data Pipeline</div>
@@ -244,7 +244,7 @@ export default function Dashboard() {
               {healthData?.status === "healthy" ? "Healthy" : "Active"}
             </div>
             <div className="status-sub">
-              {healthData?.tableCounts ? `${healthData.tableCounts.snapshotPlayerSeason.toLocaleString()} season records` : "Processing"}
+              {healthData?.tableCounts ? `${healthData.tableCounts.snapshotPlayerSeason.toLocaleString()} season records` : "Loading latest snapshot"}
             </div>
           </div>
         </div>
@@ -252,7 +252,7 @@ export default function Dashboard() {
         <div className="section-header">
           <div className="section-title">
             <span className="section-dot" />
-            Research Signal Feed
+            Research Snapshot
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <Link href="/tiber-data-lab/command-center" className="tool-btn" style={{ fontSize: 11, padding: "4px 10px", minHeight: "auto", minWidth: "auto", textDecoration: "none" }}>
@@ -276,7 +276,7 @@ export default function Dashboard() {
         <div className="section-header">
           <div className="section-title">
             <span className="section-dot" />
-            Live Player Snapshot — {activeFilter}
+            Player Snapshot — {activeFilter}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {["WR", "RB", "QB", "TE"].map((pos) => (
@@ -388,7 +388,7 @@ export default function Dashboard() {
         <div className="section-header">
           <div className="section-title">
             <span className="section-dot" />
-            System Access
+            Tools & Access
           </div>
         </div>
         <div className="insight-card" style={{ marginBottom: 32 }}>
@@ -396,21 +396,21 @@ export default function Dashboard() {
             <span className="service-dot on" />
             <span className="service-name">TiberClaw</span>
             <span className="service-status">
-              Agent-facing surface · <Link href="/tiberclaw">open</Link>
+              Assistant workspace · <Link href="/tiberclaw">open</Link>
             </span>
           </div>
           <div className="service-row">
             <span className="service-dot on" />
             <span className="service-name">X Intelligence</span>
             <span className="service-status">
-              Signal scanner · <Link href="/x-intel">open</Link>
+              Live signal feed · <Link href="/x-intel">open</Link>
             </span>
           </div>
           <div className="service-row">
             <span className="service-dot pending" />
             <span className="service-name">Legacy Chat</span>
             <span className="service-status">
-              Older assistant surface · <Link href="/legacy-chat">open</Link>
+              Older assistant experience · <Link href="/legacy-chat">open</Link>
             </span>
           </div>
           <div className="service-row">
