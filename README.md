@@ -4,6 +4,8 @@
 
 Tiber Fantasy provides real-time player evaluations, FORGE-powered rankings, and decision support tools for dynasty, redraft, and best ball leagues. Skill positions only — QB, RB, WR, TE.
 
+**Product shell note (March 2026):** The visible shell now prioritizes a clearer front door and IA lanes (Core Product, Research, Model Labs, Agent/API, System/Builder) so the UI better matches the repo's orchestration-first architecture direction.
+
 ---
 
 ## Features
