@@ -17,68 +17,57 @@ type NavSectionConfig = {
 
 const navSections: NavSectionConfig[] = [
   {
-    label: "Platform",
+    label: "Core Product",
+    description: "Daily decision surfaces for most users.",
     items: [
-      { label: "TiberClaw", path: "/tiberclaw", badge: "↗" },
-    ],
-  },
-  {
-    label: "Core Decisions",
-    description: "Your main paths for rankings, scouting, and day-to-day calls.",
-    items: [
-      { label: "FORGE Tiers", path: "/tiers" },
+      { label: "Tiers", path: "/tiers" },
       { label: "Rookie Board", path: "/rookies", badge: "2026" },
-      { label: "Fantasy Lab", path: "/fantasy-lab" },
-    ],
-  },
-  {
-    label: "Player & Prospect Evaluation",
-    description: "Deep FORGE breakdowns and experimental labs.",
-    items: [
-      { label: "FORGE Workbench", path: "/forge-workbench" },
-      { label: "CATALYST Lab", path: "/catalyst-lab", badge: "NEW" },
-      { label: "IDP Lab", path: "/idp-lab" },
-    ],
-  },
-  {
-    label: "Analytics & Research",
-    description: "Schedules, raw views, and advanced data tools.",
-    items: [
       { label: "Schedule & Matchups", path: "/schedule" },
-      { label: "Data Lab", path: "/tiber-data-lab" },
     ],
   },
   {
-    label: "Promoted Data Lab",
-    description: "Read-only promoted model integrations and operator command surfaces.",
+    label: "Research",
+    description: "Cross-model orchestration and promoted research workflows.",
     items: [
-      { label: "Command Center", path: "/tiber-data-lab/command-center", badge: "PROMOTED" },
+      { label: "Research Command Center", path: "/tiber-data-lab/command-center", badge: "PRIMARY" },
       { label: "Player Research", path: "/tiber-data-lab/player-research" },
       { label: "Team Research", path: "/tiber-data-lab/team-research" },
+      { label: "Data Lab Hub", path: "/tiber-data-lab" },
+    ],
+  },
+  {
+    label: "Model Labs",
+    description: "Specialist model and lab surfaces.",
+    items: [
       { label: "Breakout Signals", path: "/tiber-data-lab/breakout-signals" },
       { label: "Role & Opportunity", path: "/tiber-data-lab/role-opportunity" },
       { label: "Age Curves / ARC", path: "/tiber-data-lab/age-curves" },
       { label: "Point Scenarios", path: "/tiber-data-lab/point-scenarios" },
+      { label: "FORGE Workbench", path: "/forge-workbench" },
+      { label: "Fantasy Lab", path: "/fantasy-lab" },
+      { label: "IDP Lab", path: "/idp-lab" },
+      { label: "CATALYST Lab", path: "/catalyst-lab" },
     ],
   },
   {
-    label: "AI & Intelligence",
-    description: "Assistants and signal scanners that think with you.",
+    label: "Agent & Intelligence",
+    description: "Agent-facing and intelligence ingestion surfaces.",
     items: [
-      { label: "Tiber Chat", path: "/legacy-chat", badge: "β" },
+      { label: "TiberClaw", path: "/tiberclaw", badge: "AGENT" },
       { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
+      { label: "Legacy Chat", path: "/legacy-chat", badge: "LEGACY" },
     ],
   },
   {
-    label: "FORGE & System",
-    description: "Engine internals and builder tools. Most users can ignore this.",
+    label: "System & Builder",
+    description: "Admin, diagnostics, and internal tooling.",
     items: [
       { label: "FORGE Hub", path: "/admin/forge-hub" },
       { label: "FORGE Engine", path: "/forge" },
       { label: "FORGE Inspector", path: "/forge/inspect" },
       { label: "Quality Sentinel", path: "/sentinel" },
-      { label: "Metrics Dictionary", path: "/metrics-dictionary" },
       { label: "Architecture", path: "/architecture" },
+      { label: "Metrics Dictionary", path: "/metrics-dictionary" },
       { label: "API Lexicon", path: "/admin/api-lexicon" },
     ],
   },
@@ -167,7 +156,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           className={`nav-item ${location === "/" ? "active" : ""}`}
           onClick={onNavigate}
         >
-          Dashboard
+          Home
         </Link>
         {navSections.map((section) => (
           <NavSection
@@ -202,17 +191,17 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [mobileOpen]);
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
       <nav className="tiber-sidebar tiber-sidebar-desktop">
         <SidebarContents />
       </nav>
 
-      {/* ── Mobile topbar ── */}
       <div className="tiber-mobile-topbar">
         <button
           className="tiber-hamburger"
@@ -227,7 +216,6 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
         </Link>
       </div>
 
-      {/* ── Mobile drawer overlay ── */}
       {mobileOpen && (
         <div
           className="tiber-drawer-overlay"
@@ -235,7 +223,6 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* ── Mobile drawer ── */}
       <nav className={`tiber-sidebar tiber-sidebar-mobile ${mobileOpen ? "open" : ""}`}>
         <button
           className="tiber-drawer-close"
@@ -247,9 +234,7 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
         <SidebarContents onNavigate={() => setMobileOpen(false)} />
       </nav>
 
-      <main className="tiber-main">
-        {children}
-      </main>
+      <main className="tiber-main">{children}</main>
     </>
   );
 }

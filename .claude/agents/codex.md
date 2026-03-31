@@ -514,3 +514,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts`
   - `server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts`
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts` ✅
+
+### 2026-03-31 — Product shell IA realignment phase-1 pass
+- Added `docs/architecture/TIBER_PRODUCT_SHELL_REALIGNMENT_PLAN.md` with architecture-aligned diagnosis, complete mounted-route classification table, vocabulary cleanup recommendations, and a minimal implementation scope.
+- Refactored `client/src/components/TiberLayout.tsx` navigation into clearer product-layer sections and demoted legacy/internal surfaces out of primary emphasis while preserving access.
+- Refactored `client/src/pages/Dashboard.tsx` into a real front door: lane cards (Rankings, Rookie Board, Research, Agent/API), research signal feed, and a retained but demoted data-backed live snapshot table.
+- Added a brief README shell-positioning note.
+- Validation:
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
