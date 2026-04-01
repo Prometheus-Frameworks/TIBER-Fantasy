@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Search } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
 import { useCurrentNFLWeek } from "@/hooks/useCurrentNFLWeek";
 import { DataLabCommandCenterResponse } from "@/lib/dataLabCommandCenter";
 import { DataLabDiscoveryWidget } from "@/components/data-lab/DataLabDiscoveryWidget";
@@ -112,25 +112,30 @@ function getVolume(p: LabPlayer): number | null {
 const entryLanes = [
   {
     title: "Rankings",
-    description: "Set lineups and make trade calls with updated tiers and player context.",
+    kicker: "Weekly Decisions",
+    description: "Set lineups and trade calls with tiers built for active roster decisions.",
     href: "/tiers",
     cta: "Open Tiers",
   },
   {
     title: "Rookie Board",
-    description: "Check rookie grades, tiers, and valuation context for draft and dynasty moves.",
+    kicker: "Dynasty Intake",
+    description: "Review rookie grades, tiers, and valuation context for draft and dynasty planning.",
     href: "/rookies",
     cta: "Open Rookie Board",
   },
   {
-    title: "Research",
-    description: "Start in Command Center, then drill into player and team research workspaces.",
+    title: "Research Command",
+    kicker: "Primary Lane",
+    description: "Open Command Center first, then branch into player and team research workspaces.",
     href: "/tiber-data-lab/command-center",
     cta: "Open Command Center",
+    featured: true,
   },
   {
     title: "Agent/API",
-    description: "Use TiberClaw and intelligence tools when you need assistant-style workflows.",
+    kicker: "Assistant Workflows",
+    description: "Use TiberClaw and intelligence tools for faster assisted exploration when needed.",
     href: "/tiberclaw",
     cta: "Open TiberClaw",
   },
@@ -187,33 +192,33 @@ export default function Dashboard() {
   return (
     <>
       <div className="tiber-hero">
-        <div className="hero-title">TIBER</div>
-        <div className="hero-sub">Fantasy decisions, research workflows, and agent tools in one place</div>
+        <div className="hero-kicker">TIBER Fantasy Intelligence</div>
+        <div className="hero-title">Decision Front Door</div>
+        <div className="hero-sub">Sharper weekly calls, deeper research, one operating surface.</div>
         <div className="hero-value-prop">
-          TIBER helps you move from question to decision quickly. Start with rankings or rookies, open research when you
-          need deeper context, and use agent tools for faster exploration.
+          Start with rankings and rookie context, then move directly into the research lane when you need stronger
+          evidence before making a move.
+        </div>
+        <div className="hero-actions">
+          <Link href="/tiber-data-lab/command-center" className="tool-btn active" style={{ textDecoration: "none" }}>
+            Open Command Center
+          </Link>
+          <Link href="/tiers" className="tool-btn" style={{ textDecoration: "none" }}>
+            Open Rankings
+          </Link>
         </div>
       </div>
 
       <div className="tiber-content stagger-children">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 12,
-            marginBottom: 14,
-          }}
-        >
+        <div className="entry-lanes-grid">
           {entryLanes.map((lane) => (
-            <div key={lane.title} className="insight-card" style={{ marginBottom: 0 }}>
-              <div className="status-label" style={{ marginBottom: 8 }}>
-                {lane.title}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>
-                {lane.description}
-              </div>
-              <Link href={lane.href} className="tool-btn" style={{ textDecoration: "none", minHeight: "auto", minWidth: "auto", padding: "5px 10px", fontSize: 11 }}>
+            <div key={lane.title} className={`insight-card entry-lane-card ${lane.featured ? "featured" : ""}`} style={{ marginBottom: 0 }}>
+              <div className="entry-lane-kicker">{lane.kicker}</div>
+              <div className="entry-lane-title">{lane.title}</div>
+              <div className="entry-lane-description">{lane.description}</div>
+              <Link href={lane.href} className="tool-btn entry-lane-cta" style={{ textDecoration: "none" }}>
                 {lane.cta}
+                <ArrowUpRight size={12} />
               </Link>
             </div>
           ))}
@@ -249,29 +254,31 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="section-header">
-          <div className="section-title">
-            <span className="section-dot" />
-            Research Snapshot
+        <section className="research-emphasis-block">
+          <div className="section-header">
+            <div className="section-title">
+              <span className="section-dot" />
+              Research / Command Center
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <Link href="/tiber-data-lab/command-center" className="tool-btn" style={{ fontSize: 11, padding: "4px 10px", minHeight: "auto", minWidth: "auto", textDecoration: "none" }}>
+                Full Command Center
+              </Link>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <Link href="/tiber-data-lab/command-center" className="tool-btn" style={{ fontSize: 11, padding: "4px 10px", minHeight: "auto", minWidth: "auto", textDecoration: "none" }}>
-              Full Command Center
-            </Link>
-          </div>
-        </div>
-        <DataLabDiscoveryWidget
-          season={String(commandCenterData?.data.season ?? season)}
-          data={commandCenterData?.data ?? null}
-          isLoading={isCommandCenterLoading}
-          fallbackSummary={{
-            playersTracked: players.length,
-            avgPpg,
-            t1Count,
-            topScorerName: topScorer?.playerName ?? null,
-            topScorerPpg: topScorer ? topScorer.totalFptsPpr / Math.max(topScorer.gamesPlayed, 1) : null,
-          }}
-        />
+          <DataLabDiscoveryWidget
+            season={String(commandCenterData?.data.season ?? season)}
+            data={commandCenterData?.data ?? null}
+            isLoading={isCommandCenterLoading}
+            fallbackSummary={{
+              playersTracked: players.length,
+              avgPpg,
+              t1Count,
+              topScorerName: topScorer?.playerName ?? null,
+              topScorerPpg: topScorer ? topScorer.totalFptsPpr / Math.max(topScorer.gamesPlayed, 1) : null,
+            }}
+          />
+        </section>
 
         <div className="section-header">
           <div className="section-title">
