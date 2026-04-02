@@ -540,3 +540,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
   - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: Rankings v2 definition audit/spec
+- Added `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md` as a spec-first architecture/product definition for Rankings v2.
+- Audited ranking-related surfaces across:
+  - `client/src/pages/TiberTiers.tsx`
+  - frontend route wiring/navigation (`client/src/App.tsx`, `Dashboard.tsx`, `ForgeHub.tsx`)
+  - backend ranking endpoints (`/api/forge/tiers`, `/api/rankings*`, `/api/power/*`, `/api/rankings/otc-final`, `/api/admin/*-rankings-sandbox`, deprecated `/api/tiber/rankings`)
+  - Team State read-only consumer boundary for v2 input-policy framing.
+- Produced explicit status taxonomy and keep/replace/hide/fold recommendations, plus phased “first honest rebuild” path and deferrals.
+- Validation:
+  - repo audit commands (`rg`, `sed`) only; no code-path or model rebuild performed.

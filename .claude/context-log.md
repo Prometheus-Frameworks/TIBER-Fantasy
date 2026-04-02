@@ -376,3 +376,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/teamState/teamStateClient.ts`, `server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts`, `server/routes/__tests__/dataLabTeamStateRoutes.test.ts`
 - **Validation:** Ran focused Jest suites for Team State client + route, and `npm run build` (passes with pre-existing duplicate class member warning in `server/olc/adjusters.ts`).
 - **Notes:** Route shape and scope are unchanged; this patch is trust-hardening only.
+
+### 2026-04-02 — Codex: Rankings v2 definition audit/spec
+- **What changed:** Added a spec-first architecture doc defining what “Rankings” should mean in TIBER now, with a blunt current-state diagnosis, ranking surface inventory (canonical vs legacy vs experimental/internal), allowed input layers, explanation spine, phased rebuild path, and explicit deferrals.
+- **Files modified:** `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md`
+- **Validation:** Audited current frontend routes/pages and backend endpoints in repo via targeted `rg`/`sed` inspection; no runtime logic changes were made.
+- **Notes:** This PR intentionally does not rebuild ranking logic/models/UI. It defines the contract and migration framing so follow-up implementation can be scoped honestly.
