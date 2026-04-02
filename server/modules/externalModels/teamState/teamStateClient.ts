@@ -21,6 +21,74 @@ const SEASON_FILE_PATTERNS = [
   (season: number) => `${TEAM_STATE_ARTIFACT_NAME}_${season}_full.json`,
 ];
 
+const REQUIRED_TOP_LEVEL_KEYS = ['generatedAt', 'artifact', 'source', 'definitions', 'teams'] as const;
+const REQUIRED_SOURCE_KEYS = ['provider', 'season', 'throughWeek', 'seasonType', 'gamesIncluded', 'notes'] as const;
+const REQUIRED_TEAM_KEYS = ['team', 'sample', 'features', 'stability'] as const;
+const REQUIRED_SAMPLE_KEYS = ['games', 'plays', 'neutralPlays', 'earlyDownPlays', 'redZonePlays', 'drives'] as const;
+const REQUIRED_FEATURE_KEYS = [
+  'neutralPassRate',
+  'earlyDownPassRate',
+  'earlyDownSuccessRate',
+  'redZonePassRate',
+  'redZoneTdEfficiency',
+  'explosivePlayRate',
+  'driveSustainRate',
+  'paceSecondsPerPlay',
+] as const;
+const REQUIRED_STABILITY_KEYS = ['sampleFlag', 'confidenceBand', 'notes'] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value != null && !Array.isArray(value);
+}
+
+function hasKeys(record: Record<string, unknown>, keys: readonly string[]): boolean {
+  return keys.every((key) => key in record);
+}
+
+function isValidTeamStateArtifact(payload: unknown): payload is Record<string, unknown> {
+  if (!isRecord(payload)) {
+    return false;
+  }
+
+  if (!hasKeys(payload, REQUIRED_TOP_LEVEL_KEYS)) {
+    return false;
+  }
+
+  if (payload.artifact !== TEAM_STATE_ARTIFACT_NAME) {
+    return false;
+  }
+
+  const source = payload.source;
+  if (!isRecord(source) || !hasKeys(source, REQUIRED_SOURCE_KEYS)) {
+    return false;
+  }
+
+  const teams = payload.teams;
+  if (!Array.isArray(teams)) {
+    return false;
+  }
+
+  return teams.every((row) => {
+    if (!isRecord(row) || !hasKeys(row, REQUIRED_TEAM_KEYS)) {
+      return false;
+    }
+
+    if (!isRecord(row.sample) || !hasKeys(row.sample, REQUIRED_SAMPLE_KEYS)) {
+      return false;
+    }
+
+    if (!isRecord(row.features) || !hasKeys(row.features, REQUIRED_FEATURE_KEYS)) {
+      return false;
+    }
+
+    if (!isRecord(row.stability) || !hasKeys(row.stability, REQUIRED_STABILITY_KEYS)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
 export class TeamStateClient {
   private readonly exportsDir: string;
   private readonly enabled: boolean;
@@ -49,12 +117,24 @@ export class TeamStateClient {
       const raw = await fs.readFile(filePath, 'utf8');
       const parsed = JSON.parse(raw) as unknown;
 
+      if (!isValidTeamStateArtifact(parsed)) {
+        throw new TeamStateIntegrationError(
+          'invalid_payload',
+          'Team State artifact is valid JSON but does not match the required tiber_team_state_v0_1 contract shape.',
+          502,
+        );
+      }
+
       return {
         season: query.season,
         throughWeek: this.resolveThroughWeekFromPath(filePath),
         data: parsed,
       };
     } catch (error) {
+      if (error instanceof TeamStateIntegrationError) {
+        throw error;
+      }
+
       if (error instanceof SyntaxError) {
         throw new TeamStateIntegrationError('invalid_payload', 'Team State artifact JSON is invalid.', 502, error);
       }

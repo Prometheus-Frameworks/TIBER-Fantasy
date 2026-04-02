@@ -531,3 +531,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
   - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: PR116 trust-gap follow-up (Team State contract validation)
+- Hardened `server/modules/externalModels/teamState/teamStateClient.ts` to validate parsed JSON against required `tiber_team_state_v0_1` artifact shape before returning success.
+- Added nested required-key checks for top-level payload, `source`, `teams[]`, `sample`, `features`, and `stability`; parseable-but-contract-invalid artifacts now throw `TeamStateIntegrationError('invalid_payload', ...)`.
+- Updated Team State route tests to use a real contract-shaped success payload and added a stable invalid-payload route assertion.
+- Added dedicated adapter coverage in `server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts` for valid artifact acceptance and parseable-contract-invalid rejection.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
