@@ -16,6 +16,7 @@ This module is the boundary between TIBER-Fantasy core logic and promoted lab/mo
 - `signalValidation/` wraps read-only Signal-Validation-Model exports for the WR Breakout Lab. It reads promoted `wr_player_signal_cards_{season}.csv` and `wr_best_recipe_summary.json` files, validates them, and exposes a stable TIBER-facing breakout-lab shape without reproducing any scoring logic in this repo.
 - `ageCurves/` wraps read-only ARC / age-curve compatibility payloads or stable exported artifacts for the Age Curve / ARC Lab. It normalizes developmental-context fields and exposes a stable TIBER-facing age-curve dataset without reproducing any ARC logic in this repo.
 - `pointScenarios/` wraps read-only Point-prediction-Model scenario outputs or stable exported artifacts for the Point Scenario Lab. It normalizes scenario names/IDs, player identity, baseline-vs-adjusted projections, delta, confidence, event type, explanation text, and provenance without reproducing any scenario logic in this repo.
+- `teamState/` wraps read-only `tiber_team_state_v0_1` JSON artifacts produced in TIBER-Data for boundary inspection. It resolves season/optional through-week artifacts and exposes stable error mapping without reproducing Team State computations in this repo.
 
 ## Next planned externalization target
 
