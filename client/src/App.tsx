@@ -53,6 +53,7 @@ function Router() {
     <TiberLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
         <Route path="/tiers" component={TiberTiers} />
         <Route path="/rookies" component={RookieBoard} />
         <Route path="/tiber-data-lab" component={DataLabHub} />
@@ -77,6 +78,7 @@ function Router() {
         <Route path="/player/:playerId" component={PlayerPage} />
         <Route path="/forge" component={ForgeLanding} />
         <Route path="/forge/inspect" component={ForgeTransparency} />
+        {/* CANONICAL alias: preserve legacy /rankings links while routing public traffic to /tiers. */}
         <Route path="/rankings">
           {() => <Redirect to="/tiers" />}
         </Route>
@@ -97,6 +99,7 @@ function Router() {
         <Route path="/admin/rag-status" component={RagStatus} />
         <Route path="/admin/forge-lab" component={ForgeLab} />
         <Route path="/admin/forge-simulation" component={ForgeSimulation} />
+        {/* INTERNAL_ONLY: admin ranking formula sandboxes, not public rankings contract surfaces. */}
         <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
         <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
         <Route path="/dev/forge">

@@ -69,6 +69,9 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
 }
 
 export default function TiberTiers() {
+  // Rankings surface status: CANONICAL (current public rankings UI).
+  // Rankings v2 migration note: future public ranking payloads should align to
+  // server/contracts/rankingsV2.ts even while this page still reads /api/forge/tiers.
   const [position, setPosition] = useState<Position>('WR');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const { currentWeek, season } = useCurrentNFLWeek();

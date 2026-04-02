@@ -2587,6 +2587,10 @@ function generatePlainEnglishSummary(
   return summary;
 }
 
+// Rankings surface status: CANONICAL (current public API backing /tiers).
+// Migration note: keep payload stable for existing clients; future public route wiring
+// should map this lane into the Rankings v2 canonical contract scaffold
+// (server/contracts/rankingsV2.ts) without changing ranking math in this phase.
 router.get('/tiers', async (req: Request, res: Response) => {
   try {
     const season = parseInt(req.query.season as string) || 2025;

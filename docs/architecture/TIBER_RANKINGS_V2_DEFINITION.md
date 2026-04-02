@@ -223,3 +223,13 @@ Intentionally out of scope for first Rankings v2 rebuild:
 4. wire one weekly canonical route behind the current `/tiers` UI path without changing ranking math yet.
 
 This keeps the next step small, honest, and directly executable.
+
+---
+
+## Implementation anchor (contract scaffold)
+
+As of **2026-04-02**, the canonical public Rankings v2 contract scaffold lives at:
+
+- `server/contracts/rankingsV2.ts`
+
+This is the in-repo source of truth for the v2 public response shape (`mode`, `lens`, `horizon`, `asOf`, `sourceStack`, `items`, `trust`) and item-level explanation/trust envelopes. It is intentionally scaffold-first and allows nullable/optional fields where current producers are not yet fully wired.
