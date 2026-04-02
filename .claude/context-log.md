@@ -382,3 +382,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md`
 - **Validation:** Audited current frontend routes/pages and backend endpoints in repo via targeted `rg`/`sed` inspection; no runtime logic changes were made.
 - **Notes:** This PR intentionally does not rebuild ranking logic/models/UI. It defines the contract and migration framing so follow-up implementation can be scoped honestly.
+
+### 2026-04-02 — Codex: Rankings v2 canonical contract scaffold + surface status labeling
+- **What changed:** Added a new canonical Rankings v2 contract scaffold module at `server/contracts/rankingsV2.ts` with explicit top-level response fields, item shape, explanation envelope, and trust envelope (including confidence/freshness/sample/stability notes). Added migration/status notes on current public rankings surfaces (`/tiers`, `/rankings` alias, `/api/forge/tiers`) and labeled key non-canonical lanes in `server/routes.ts` (`/api/rankings*`, `/api/power/*`, deprecated `/api/tiber`, admin ranking sandboxes). Fixed dead admin ranking links in ForgeHub from unmounted `/rankings/*` paths to canonical `/tiers`.
+- **Files modified:** `server/contracts/rankingsV2.ts`, `server/modules/forge/routes.ts`, `server/routes.ts`, `client/src/App.tsx`, `client/src/pages/TiberTiers.tsx`, `client/src/pages/admin/ForgeHub.tsx`, `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md`.
+- **Validation:** Ran `npm run build` successfully (existing known warning remains in `server/olc/adjusters.ts` duplicate class member).
+- **Notes:** Intentionally did not change ranking math or rebuild the public rankings UI; next likely PR is wiring one visible Weekly canonical route payload to the new contract.

@@ -709,7 +709,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // TIBER Final Rankings - Authoritative endpoint combining consensus + TIBER adjustments
+  // LEGACY: historical "final rankings" lane with sample-data fallback behavior.
+  // Not the canonical public Rankings v2 contract surface.
   app.get('/api/rankings/otc-final', async (req: Request, res: Response) => {
     try {
       console.log(`📊 [TIBER Final Rankings] Endpoint called with query:`, req.query);
@@ -1042,8 +1043,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // 🎯 DATABASE-DRIVEN RANKINGS FROM NFLFASTR 2025 DATA
-  // Uses real 2025 play-by-play data from Silver Layer (EPA-based rankings)
+  // LEGACY: generic rankings API lane (EPA/usage composite). Keep for compatibility only.
+  // Public canonical surface remains /tiers while Rankings v2 contract adoption is staged.
   app.get('/api/rankings', rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const position = req.query.position ? (req.query.position as string).toUpperCase() : null;
@@ -1316,7 +1317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // API Client compatible endpoints
+  // LEGACY: API-client compatibility lane for /api/rankings* variants.
   app.get('/api/redraft/rankings', async (req: Request, res: Response) => {
     try {
       const pos = req.query.pos as string;
@@ -1449,6 +1450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ⚡ NEUTRAL ALIAS: Rankings stats endpoints (Nord-safe) - MUST BE BEFORE :position/:mode
+  // LEGACY alias: rankings namespace wrapper over power lane semantics.
   app.get('/api/rankings/stats/:type', async (req: Request, res: Response) => {
     console.log(`✅ [NEUTRAL ALIAS] Processing ${req.params.type} rankings request`);
     
@@ -2869,7 +2871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/ovr', ovrRouter);
   console.log('📊 OVR (Madden-style 1-99) rating system mounted at /api/ovr/*');
 
-  // TIBER - Tactical Index for Breakout Efficiency and Regression
+  // LEGACY: deprecated TIBER v1 rankings lane; keep mounted for migration compatibility only.
   app.use('/api/tiber', tiberRouter);
   console.log('🎯 TIBER v1 MVP mounted at /api/tiber/*');
 
@@ -4980,6 +4982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Power Rankings - Direct database integration
   
+  // INTERNAL_ONLY operational health endpoint for experimental power lane.
   app.get('/api/power/health', async (req: Request, res: Response) => {
     try {
       const stats = await db.execute(sql`
@@ -5097,6 +5100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error('[start-sit-quick] Failed to load quick routes:', error);
   }
 
+  // EXPERIMENTAL: /api/power/* is not canonical public rankings output.
   app.get('/api/power/:type', async (req: Request, res: Response) => {
     const { type } = req.params;
     const { season = 2025, week = 1 } = req.query;
@@ -5293,6 +5297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // EXPERIMENTAL metadata lane (power history), separate from canonical rankings contract.
   app.get('/api/power/player/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { season = 2025 } = req.query;
@@ -5949,6 +5954,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   /**
+   * INTERNAL_ONLY: admin sandbox ranking lane for experimentation only.
+   * Not a canonical public rankings contract surface.
+   *
    * GET /api/admin/wr-rankings-sandbox - WR Rankings Algorithm Test Sandbox
    * Alpha composite score (0-100) blends volume (45%), total fantasy points (35%), and efficiency (20%)
    * PLUS 8 advanced metrics: weighted volume, boom/bust, talent, stability, role delta, RZ dom, energy

@@ -551,3 +551,16 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Produced explicit status taxonomy and keep/replace/hide/fold recommendations, plus phased “first honest rebuild” path and deferrals.
 - Validation:
   - repo audit commands (`rg`, `sed`) only; no code-path or model rebuild performed.
+
+### 2026-04-02 — Rankings v2 canonical contract scaffold + surface taxonomy pass
+- Added `server/contracts/rankingsV2.ts` as the canonical Rankings v2 public contract scaffold with stable top-level response fields, item-level explanation spine, and trust envelope.
+- Added concise in-code status labeling comments for key ranking lanes:
+  - Canonical current `/tiers` + `/api/forge/tiers`
+  - Legacy `/api/rankings*` and `/api/rankings/otc-final`
+  - Experimental/internal `/api/power/*`
+  - Internal-only admin ranking sandboxes
+  - Legacy/deprecated `/api/tiber`
+- Fixed dead ForgeHub ranking shortcuts by replacing unmounted `/rankings/wr|rb|te|qb` links with canonical `/tiers` links.
+- Added an implementation-anchor note in `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md` pointing to the new contract file.
+- Validation:
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts` remains)
