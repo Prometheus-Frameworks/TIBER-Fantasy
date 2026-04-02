@@ -364,3 +364,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `docs/architecture/TIBER_PRODUCT_SHELL_REALIGNMENT_PLAN.md`, `client/src/components/TiberLayout.tsx`, `client/src/pages/Dashboard.tsx`, `README.md`.
 - **Validation:** Ran `npm run build` (passes; existing pre-existing warning remains in `server/olc/adjusters.ts` duplicate class member).
 - **Notes:** No backend football/model logic changes; no route removals; deep-link compatibility preserved by keeping all existing routes mounted.
+
+### 2026-04-02 — Codex: Team State read-only artifact consumer route
+- **What changed:** Added a thin external-model adapter stack for `tiber_team_state_v0_1` artifacts (`teamStateClient` + `teamStateService` + types/docs) and mounted a new read-only route `GET /api/data-lab/team-state` with required `season` plus optional `throughWeek`. The route returns a stable `ok` envelope and explicit stable error codes for missing/invalid/unavailable artifacts without any Team State recomputation in TIBER-Fantasy.
+- **Files modified:** `server/modules/externalModels/teamState/*`, `server/routes/dataLabTeamStateRoutes.ts`, `server/routes/__tests__/dataLabTeamStateRoutes.test.ts`, `server/routes.ts`, `server/modules/externalModels/MODULE.md`
+- **Validation:** Ran focused Jest route tests for success + missing artifact + invalid request; ran `npm run build` (passes with pre-existing duplicate class member warning in `server/olc/adjusters.ts`).
+- **Notes:** Artifact resolution is configurable via `TEAM_STATE_EXPORTS_DIR` and supports season files plus optional through-week filename variants.

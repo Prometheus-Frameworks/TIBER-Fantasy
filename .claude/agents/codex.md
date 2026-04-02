@@ -522,3 +522,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added a brief README shell-positioning note.
 - Validation:
   - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: Team State artifact consumer boundary + route
+- Added `server/modules/externalModels/teamState/` with a read-only artifact client/service/types stack for `tiber_team_state_v0_1`.
+- Added `GET /api/data-lab/team-state` via `server/routes/dataLabTeamStateRoutes.ts`, supporting `season` (required) and `throughWeek` (optional) with stable `ok`/`error` envelopes and explicit team-state error codes.
+- Wired route registration in `server/routes.ts` and documented the new adapter in `server/modules/externalModels/MODULE.md` and `teamState/README.md`.
+- Added focused route coverage in `server/routes/__tests__/dataLabTeamStateRoutes.test.ts` for ready, not-found, and invalid-request paths.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
