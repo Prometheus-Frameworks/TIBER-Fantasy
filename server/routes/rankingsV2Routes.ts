@@ -8,6 +8,7 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
+const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -90,6 +91,7 @@ export function createRankingsV2Router(): Router {
 
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
       const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();
+      const isCacheEmpty = cache.players.length === 0;
 
       const items = cache.players.map((row: any, idx: number) => mapForgeCacheRowToRankingsV2Item(row, idx + 1, derivedAsOf));
 
@@ -104,22 +106,34 @@ export function createRankingsV2Router(): Router {
             layer: 'forge' as const,
             source: 'api/forge/tiers cache (forge_grade_cache)',
             asOf: toIso(cache.computedAt),
-            notes: `season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
+            notes: isCacheEmpty
+              ? `status=${CACHE_EMPTY_STATUS}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`
+              : `season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
           },
           {
             layer: 'confidence_stability' as const,
             source: 'forge cache confidence + trajectory metadata',
             asOf: toIso(cache.computedAt),
-            notes: cache.computedAt ? 'Freshness derived from cache computedAt.' : 'No cache timestamp; using current server time as asOf fallback.',
+            notes: isCacheEmpty
+              ? 'FORGE grades not yet computed for this filter; operator action available.'
+              : cache.computedAt
+                ? 'Freshness derived from cache computedAt.'
+                : 'No cache timestamp; using current server time as asOf fallback.',
           },
         ],
         items,
         trust: {
           confidence: null,
           asOf: toIso(cache.computedAt),
-          freshnessNote: cache.computedAt ? 'Freshness based on forge cache computedAt.' : 'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
-          sampleNote: null,
-          stabilityNote: null,
+          freshnessNote: isCacheEmpty
+            ? 'FORGE grades are not computed yet for this week/filter.'
+            : cache.computedAt
+              ? 'Freshness based on forge cache computedAt.'
+              : 'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
+          sampleNote: isCacheEmpty
+            ? 'Run POST /api/forge/compute-grades to generate cache rows, then refresh /tiers.'
+            : null,
+          stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
       };
 

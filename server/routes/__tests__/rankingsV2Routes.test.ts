@@ -70,4 +70,25 @@ describe('GET /api/rankings/v2/weekly', () => {
     expect(firstItem.explanation.pillarNotes.length).toBeGreaterThan(0);
     expect(firstItem.trust.confidence).toBe(86);
   });
+
+  it('preserves cache-empty operator guidance in trust/source metadata', async () => {
+    mockedGetGradesFromCache.mockResolvedValueOnce({
+      season: 2025,
+      asOfWeek: 17,
+      position: 'WR',
+      version: 'v1',
+      computedAt: null,
+      players: [],
+    } as any);
+
+    const app = express();
+    app.use('/api/rankings/v2', createRankingsV2Router());
+
+    const res = await request(app).get('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=17');
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.trust.stabilityNote).toBe('forge_cache_empty_uncomputed');
+    expect(res.body.trust.sampleNote).toContain('/api/forge/compute-grades');
+    expect(String(res.body.sourceStack[0].notes)).toContain('forge_cache_empty_uncomputed');
+  });
 });

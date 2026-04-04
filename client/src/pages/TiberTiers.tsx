@@ -14,6 +14,10 @@ type SortDirection = 'asc' | 'desc';
 interface TiersApiResponse {
   asOf: string;
   sourceStack: Array<{ asOf?: string | null }>;
+  trust?: {
+    sampleNote?: string | null;
+    stabilityNote?: string | null;
+  } | null;
   items: RankingsV2Item[];
 }
 
@@ -59,6 +63,8 @@ export default function TiberTiers() {
     list.sort((a, b) => (sortDirection === 'desc' ? b.alpha - a.alpha : a.alpha - b.alpha));
     return list;
   }, [data?.items, sortDirection]);
+
+  const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
 
   return (
     <TooltipProvider>
@@ -118,6 +124,13 @@ export default function TiberTiers() {
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-10 text-center text-slate-400">Loading FORGE tiers...</div>
+            ) : isCacheUncomputed ? (
+              <div className="p-10 text-center">
+                <div className="text-lg font-semibold text-amber-300 mb-2">FORGE grades are being computed...</div>
+                <p className="text-slate-400 text-sm">
+                  {data?.trust?.sampleNote ?? 'Please run POST /api/forge/compute-grades and refresh this page.'}
+                </p>
+              </div>
             ) : players.length === 0 ? (
               <div className="p-10 text-center text-slate-400">No rankings available yet for this filter.</div>
             ) : (
