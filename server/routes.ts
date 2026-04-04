@@ -96,6 +96,7 @@ import { dataLabCommandCenterRouter } from './routes/dataLabCommandCenterRoutes'
 import { dataLabPromotedStatusRouter } from './routes/dataLabPromotedStatusRoutes';
 import { dataLabTeamStateRouter } from './routes/dataLabTeamStateRoutes';
 import { rookiesPromotedRouter } from './routes/rookiesPromotedRoutes';
+import { createRankingsV2Router } from './routes/rankingsV2Routes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -243,6 +244,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabPromotedStatusRouter);
   app.use('/api/data-lab', dataLabTeamStateRouter);
   app.use('/api/rookies', rookiesPromotedRouter);
+  app.use('/api/rankings/v2', createRankingsV2Router());
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS

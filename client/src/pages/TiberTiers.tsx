@@ -7,48 +7,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
+import { mapRankingsV2ItemsToTiersPlayers, Position, RankingsV2Item } from './tiberTiersV2Mapper';
 
-type Position = 'QB' | 'RB' | 'WR' | 'TE';
 type SortDirection = 'asc' | 'desc';
 
-interface TiersApiPlayer {
-  playerId: string;
-  playerName: string;
-  position: Position;
-  nflTeam?: string | null;
-  rank: number;
-  alpha: number;
-  rawAlpha?: number | null;
-  tier: 'T1' | 'T2' | 'T3' | 'T4' | 'T5';
-  tierNumeric: number;
-  subscores: {
-    volume?: number | null;
-    efficiency?: number | null;
-    teamContext?: number | null;
-    stability?: number | null;
-    dynastyContext?: number | null;
-  };
-  trajectory?: 'rising' | 'flat' | 'declining' | null;
-  confidence?: number | null;
-  gamesPlayed?: number | null;
-  footballLensIssues?: string[] | null;
-  lensAdjustment?: number | null;
-  productionStats?: {
-    targets?: number | null;
-    touches?: number | null;
-  };
-}
-
 interface TiersApiResponse {
-  season: number;
-  asOfWeek: number;
-  position: Position | 'ALL';
-  computedAt?: string;
-  version?: string;
-  count: number;
-  fallback?: boolean;
-  message?: string;
-  players: TiersApiPlayer[];
+  asOf: string;
+  sourceStack: Array<{ asOf?: string | null }>;
+  items: RankingsV2Item[];
 }
 
 function tierClass(tier: string) {
@@ -71,28 +37,28 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
 export default function TiberTiers() {
   // Rankings surface status: CANONICAL (current public rankings UI).
   // Rankings v2 migration note: future public ranking payloads should align to
-  // server/contracts/rankingsV2.ts even while this page still reads /api/forge/tiers.
+  // server/contracts/rankingsV2.ts through /api/rankings/v2/weekly.
   const [position, setPosition] = useState<Position>('WR');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const { currentWeek, season } = useCurrentNFLWeek();
   const asOfWeek = currentWeek || 17;
 
   const { data, isLoading, refetch, isFetching } = useQuery<TiersApiResponse>({
-    queryKey: ['/api/forge/tiers', season, position, asOfWeek],
+    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
     queryFn: async () => {
-      const url = `/api/forge/tiers?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
+      const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch FORGE tiers cache');
+      if (!res.ok) throw new Error('Failed to fetch weekly rankings');
       return res.json();
     },
     staleTime: 60_000,
   });
 
   const players = useMemo(() => {
-    const list = [...(data?.players ?? [])];
+    const list = mapRankingsV2ItemsToTiersPlayers(data?.items ?? []);
     list.sort((a, b) => (sortDirection === 'desc' ? b.alpha - a.alpha : a.alpha - b.alpha));
     return list;
-  }, [data?.players, sortDirection]);
+  }, [data?.items, sortDirection]);
 
   return (
     <TooltipProvider>
@@ -146,18 +112,14 @@ export default function TiberTiers() {
           <div className="text-xs text-slate-400 flex items-center gap-2 mb-4">
             <Info className="h-3.5 w-3.5" />
             <span>{players.length} players</span>
-            {data?.computedAt && <span>• computed {new Date(data.computedAt).toLocaleString()}</span>}
-            {data?.version && <span>• {data.version}</span>}
+            {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
           </div>
 
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-10 text-center text-slate-400">Loading FORGE tiers...</div>
-            ) : data?.fallback ? (
-              <div className="p-10 text-center">
-                <div className="text-lg font-semibold text-amber-300 mb-2">FORGE grades are being computed...</div>
-                <p className="text-slate-400 text-sm">{data.message ?? 'Please run POST /api/forge/compute-grades and refresh this page.'}</p>
-              </div>
+            ) : players.length === 0 ? (
+              <div className="p-10 text-center text-slate-400">No rankings available yet for this filter.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[920px]" data-testid="tiers-table">
