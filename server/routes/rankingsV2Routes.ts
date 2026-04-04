@@ -42,7 +42,12 @@ function buildPillarNotes(row: any): RankingsV2PillarNote[] {
 export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso: string): RankingsV2Item {
   const confidence = toNumberOrNull(row.confidence);
   const gamesPlayed = toNumberOrNull(row.gamesPlayed);
-  const trajectory = typeof row.trajectory === 'string' ? row.trajectory : null;
+  const trajectory =
+    row.trajectory === 'rising' || row.trajectory === 'flat' || row.trajectory === 'declining' ? row.trajectory : null;
+  const footballLensIssues = Array.isArray(row.footballLensIssues)
+    ? row.footballLensIssues.filter((issue: unknown): issue is string => typeof issue === 'string')
+    : null;
+  const lensAdjustment = toNumberOrNull(row.lensAdjustment);
 
   return {
     rank,
@@ -69,6 +74,20 @@ export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso
       freshnessNote: 'Backed by FORGE grade cache.',
       sampleNote: gamesPlayed === null ? null : `Games played: ${gamesPlayed}.`,
       stabilityNote: trajectory ? `Trajectory: ${trajectory}.` : null,
+    },
+    // Transitional /tiers consumer support (phase-1): explicit typed fields while v2 explanation surface matures.
+    uiMeta: {
+      subscores: {
+        volume: toNumberOrNull(row.volumeScore),
+        efficiency: toNumberOrNull(row.efficiencyScore),
+        teamContext: toNumberOrNull(row.teamContextScore),
+        stability: toNumberOrNull(row.stabilityScore),
+      },
+      confidence,
+      gamesPlayed,
+      trajectory,
+      footballLensIssues,
+      lensAdjustment,
     },
   };
 }

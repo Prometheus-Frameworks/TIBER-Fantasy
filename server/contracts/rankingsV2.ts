@@ -87,6 +87,23 @@ export const rankingsV2TrustSchema = z.object({
 });
 export type RankingsV2Trust = z.infer<typeof rankingsV2TrustSchema>;
 
+export const rankingsV2ItemUiMetaSchema = z.object({
+  subscores: z
+    .object({
+      volume: z.number().nullable().optional(),
+      efficiency: z.number().nullable().optional(),
+      teamContext: z.number().nullable().optional(),
+      stability: z.number().nullable().optional(),
+    })
+    .default({}),
+  confidence: z.number().min(0).max(100).nullable().optional(),
+  gamesPlayed: z.number().nullable().optional(),
+  trajectory: z.enum(['rising', 'flat', 'declining']).nullable().optional(),
+  footballLensIssues: z.array(z.string()).nullable().optional(),
+  lensAdjustment: z.number().nullable().optional(),
+});
+export type RankingsV2ItemUiMeta = z.infer<typeof rankingsV2ItemUiMetaSchema>;
+
 export const rankingsV2ItemSchema = z.object({
   rank: z.number().int().positive(),
   playerId: z.string(),
@@ -98,6 +115,7 @@ export const rankingsV2ItemSchema = z.object({
   value: z.number().nullable().optional(),
   explanation: rankingsV2ItemExplanationSchema,
   trust: rankingsV2TrustSchema,
+  uiMeta: rankingsV2ItemUiMetaSchema.optional(),
 });
 export type RankingsV2Item = z.infer<typeof rankingsV2ItemSchema>;
 
@@ -112,4 +130,3 @@ export const rankingsV2ResponseSchema = z.object({
   trust: rankingsV2TrustSchema,
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;
-
