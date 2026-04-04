@@ -45,27 +45,19 @@ export interface RankingsV2Item {
     sampleNote?: string | null;
     stabilityNote?: string | null;
   } | null;
-}
-
-function parsePillarValue(item: RankingsV2Item, pillar: string): number | null {
-  const note = item.explanation?.pillarNotes?.find((p) => p.pillar === pillar)?.note;
-  if (!note) return null;
-  const numeric = Number(note);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function parseGamesPlayed(sampleNote?: string | null): number | null {
-  if (!sampleNote) return null;
-  const match = sampleNote.match(/(\d+)/);
-  return match ? Number(match[1]) : null;
-}
-
-function parseTrajectory(stabilityNote?: string | null): 'rising' | 'flat' | 'declining' | null {
-  if (!stabilityNote) return null;
-  if (stabilityNote.includes('rising')) return 'rising';
-  if (stabilityNote.includes('declining')) return 'declining';
-  if (stabilityNote.includes('flat')) return 'flat';
-  return null;
+  uiMeta?: {
+    subscores?: {
+      volume?: number | null;
+      efficiency?: number | null;
+      teamContext?: number | null;
+      stability?: number | null;
+    } | null;
+    confidence?: number | null;
+    gamesPlayed?: number | null;
+    trajectory?: 'rising' | 'flat' | 'declining' | null;
+    footballLensIssues?: string[] | null;
+    lensAdjustment?: number | null;
+  } | null;
 }
 
 function asTier(tier?: string | null): 'T1' | 'T2' | 'T3' | 'T4' | 'T5' {
@@ -87,16 +79,16 @@ export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): Tiers
       tier,
       tierNumeric: Number(tier.slice(1)),
       subscores: {
-        volume: parsePillarValue(item, 'volume'),
-        efficiency: parsePillarValue(item, 'efficiency'),
-        teamContext: parsePillarValue(item, 'team_context'),
-        stability: parsePillarValue(item, 'stability'),
+        volume: item.uiMeta?.subscores?.volume ?? null,
+        efficiency: item.uiMeta?.subscores?.efficiency ?? null,
+        teamContext: item.uiMeta?.subscores?.teamContext ?? null,
+        stability: item.uiMeta?.subscores?.stability ?? null,
       },
-      trajectory: parseTrajectory(item.trust?.stabilityNote),
-      confidence: item.trust?.confidence ?? null,
-      gamesPlayed: parseGamesPlayed(item.trust?.sampleNote),
-      footballLensIssues: [],
-      lensAdjustment: null,
+      trajectory: item.uiMeta?.trajectory ?? null,
+      confidence: item.uiMeta?.confidence ?? item.trust?.confidence ?? null,
+      gamesPlayed: item.uiMeta?.gamesPlayed ?? null,
+      footballLensIssues: item.uiMeta?.footballLensIssues ?? [],
+      lensAdjustment: item.uiMeta?.lensAdjustment ?? null,
       productionStats: {},
     };
   });

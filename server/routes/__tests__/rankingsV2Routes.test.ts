@@ -69,6 +69,17 @@ describe('GET /api/rankings/v2/weekly', () => {
     });
     expect(firstItem.explanation.pillarNotes.length).toBeGreaterThan(0);
     expect(firstItem.trust.confidence).toBe(86);
+    expect(firstItem.uiMeta).toMatchObject({
+      subscores: {
+        volume: 88,
+        efficiency: 85,
+        teamContext: 79,
+        stability: 82,
+      },
+      confidence: 86,
+      gamesPlayed: 16,
+      trajectory: 'rising',
+    });
   });
 
   it('preserves cache-empty operator guidance in trust/source metadata', async () => {
