@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import {
   RANKINGS_V2_CONTRACT_VERSION,
   rankingsV2ResponseSchema,
+  RankingsV2ExplanationPillar,
   RankingsV2Item,
   RankingsV2PillarNote,
+  RankingsV2RiskSignal,
 } from '../contracts/rankingsV2';
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 
@@ -39,6 +41,31 @@ function buildPillarNotes(row: any): RankingsV2PillarNote[] {
     .filter((note): note is RankingsV2PillarNote => note !== null);
 }
 
+function buildExplanationPillars(row: any): RankingsV2ExplanationPillar[] {
+  const pillars: Array<{ id: RankingsV2ExplanationPillar['id']; value: unknown }> = [
+    { id: 'volume', value: row.volumeScore },
+    { id: 'efficiency', value: row.efficiencyScore },
+    { id: 'teamContext', value: row.teamContextScore },
+    { id: 'stability', value: row.stabilityScore },
+  ];
+
+  return pillars.map(({ id, value }) => ({
+    id,
+    value: toNumberOrNull(value),
+    impact: 'neutral',
+  }));
+}
+
+function buildRiskSignals(row: any): RankingsV2RiskSignal[] {
+  if (!Array.isArray(row.footballLensIssues)) return [];
+  return row.footballLensIssues
+    .filter((issue: unknown): issue is string => typeof issue === 'string' && issue.trim().length > 0)
+    .map((message) => ({
+      type: 'football_lens_issue',
+      message,
+    }));
+}
+
 export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso: string): RankingsV2Item {
   const confidence = toNumberOrNull(row.confidence);
   const gamesPlayed = toNumberOrNull(row.gamesPlayed);
@@ -63,6 +90,8 @@ export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso
         typeof row.tier === 'string' && typeof row.alpha === 'number'
           ? `Tier ${row.tier} based on current FORGE alpha (${row.alpha.toFixed(1)}).`
           : null,
+      pillars: buildExplanationPillars(row),
+      riskSignals: buildRiskSignals(row),
       pillarNotes: buildPillarNotes(row),
       contextAdjustments: [],
       fragilityNotes: [],
