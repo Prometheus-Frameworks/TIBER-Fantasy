@@ -61,6 +61,23 @@ export const rankingsV2PillarNoteSchema = z.object({
 });
 export type RankingsV2PillarNote = z.infer<typeof rankingsV2PillarNoteSchema>;
 
+export const rankingsV2ExplanationPillarIdSchema = z.enum(['volume', 'efficiency', 'teamContext', 'stability']);
+export type RankingsV2ExplanationPillarId = z.infer<typeof rankingsV2ExplanationPillarIdSchema>;
+
+export const rankingsV2ExplanationPillarSchema = z.object({
+  id: rankingsV2ExplanationPillarIdSchema,
+  value: z.number().nullable().optional(),
+  impact: z.enum(['up', 'down', 'neutral']).nullable().optional(),
+  note: z.string().nullable().optional(),
+});
+export type RankingsV2ExplanationPillar = z.infer<typeof rankingsV2ExplanationPillarSchema>;
+
+export const rankingsV2RiskSignalSchema = z.object({
+  type: z.literal('football_lens_issue'),
+  message: z.string(),
+});
+export type RankingsV2RiskSignal = z.infer<typeof rankingsV2RiskSignalSchema>;
+
 export const rankingsV2ContextAdjustmentSchema = z.object({
   label: z.string(),
   direction: z.enum(['up', 'down', 'neutral']).nullable().optional(),
@@ -71,6 +88,9 @@ export type RankingsV2ContextAdjustment = z.infer<typeof rankingsV2ContextAdjust
 
 export const rankingsV2ItemExplanationSchema = z.object({
   placementSummary: z.string().nullable().optional(),
+  // First phase-2 implementation step: typed pillar/risk structure lives under explanation.
+  pillars: z.array(rankingsV2ExplanationPillarSchema).default([]),
+  riskSignals: z.array(rankingsV2RiskSignalSchema).default([]),
   pillarNotes: z.array(rankingsV2PillarNoteSchema).default([]),
   contextAdjustments: z.array(rankingsV2ContextAdjustmentSchema).default([]),
   fragilityNotes: z.array(z.string()).default([]),
