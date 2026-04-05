@@ -96,6 +96,7 @@ export function createRankingsV2Router(): Router {
   const router = Router();
 
   // CANONICAL public weekly Rankings v2 surface for /tiers and future public consumers.
+  // Explanation evolution guardrail: docs/architecture/TIBER_RANKINGS_V2_EXPLANATION_SURFACE.md
   router.get('/weekly', async (req: Request, res: Response) => {
     try {
       const season = parseInt(req.query.season as string, 10) || 2025;
