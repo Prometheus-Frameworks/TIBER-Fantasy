@@ -87,6 +87,8 @@ export const rankingsV2TrustSchema = z.object({
 });
 export type RankingsV2Trust = z.infer<typeof rankingsV2TrustSchema>;
 
+// Phase-1 transitional bridge for /tiers-style consumers.
+// Phase-2 explanation-surface policy: see docs/architecture/TIBER_RANKINGS_V2_EXPLANATION_SURFACE.md
 export const rankingsV2ItemUiMetaSchema = z.object({
   subscores: z
     .object({
