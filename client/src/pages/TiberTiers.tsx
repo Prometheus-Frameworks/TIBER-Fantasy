@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
-import { mapRankingsV2ItemsToTiersPlayers, Position, RankingsV2Item } from './tiberTiersV2Mapper';
+import { Position, RankingsV2Item } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -59,10 +59,17 @@ export default function TiberTiers() {
   });
 
   const players = useMemo(() => {
-    const list = mapRankingsV2ItemsToTiersPlayers(data?.items ?? []);
-    list.sort((a, b) => (sortDirection === 'desc' ? b.alpha - a.alpha : a.alpha - b.alpha));
+    const list = [...(data?.items ?? [])];
+    list.sort((a, b) => {
+      const left = a.score ?? 0;
+      const right = b.score ?? 0;
+      return sortDirection === 'desc' ? right - left : left - right;
+    });
     return list;
   }, [data?.items, sortDirection]);
+
+  const getPillarNote = (item: RankingsV2Item, pillar: string) =>
+    item.explanation.pillarNotes.find((note) => note.pillar === pillar)?.note ?? null;
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
 
@@ -135,23 +142,26 @@ export default function TiberTiers() {
               <div className="p-10 text-center text-slate-400">No rankings available yet for this filter.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px]" data-testid="tiers-table">
+                <table className="w-full min-w-[1200px]" data-testid="tiers-table">
                   <thead className="bg-[#0a0e1a] text-xs text-slate-500 uppercase">
                     <tr>
                       <th className="py-3 px-3 text-center">#</th>
                       <th className="py-3 px-3 text-left">Player</th>
-                      <th className="py-3 px-3 text-center">Tier</th>
-                      <th className="py-3 px-3 text-center">Alpha</th>
-                      <th className="py-3 px-3 text-center">Pillars (V / E / C / S)</th>
-                      <th className="py-3 px-3 text-center">Vol</th>
-                      <th className="py-3 px-3 text-center">Confidence</th>
-                      <th className="py-3 px-3 text-center">Issues</th>
-                      <th className="py-3 px-3 text-center">GP</th>
+                      <th className="py-3 px-3 text-center">Team</th>
+                      <th className="py-3 px-3 text-center">Pos</th>
+                      <th className="py-3 px-3 text-center">Expected</th>
+                      <th className="py-3 px-3 text-center">VORP</th>
+                      <th className="py-3 px-3 text-center">Floor</th>
+                      <th className="py-3 px-3 text-center">Ceiling</th>
+                      <th className="py-3 px-3 text-center">Confidence Band</th>
+                      <th className="py-3 px-3 text-left">Weekly Outlook</th>
                     </tr>
                   </thead>
                   <tbody>
                     {players.map((player, idx) => {
-                      const vol = player.position === 'RB' ? player.productionStats?.touches : player.productionStats?.targets;
+                      const confidenceBand = player.tier ?? getPillarNote(player, 'confidence_band');
+                      const floor = getPillarNote(player, 'floor');
+                      const ceiling = getPillarNote(player, 'ceiling');
                       return (
                         <tr key={player.playerId} className="border-t border-gray-800 hover:bg-slate-900/25">
                           <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
@@ -160,49 +170,27 @@ export default function TiberTiers() {
                               <Link href={`/player/${player.playerId}`} className="text-white hover:text-purple-400 text-sm font-medium">
                                 {player.playerName}
                               </Link>
-                              <span className="text-xs text-slate-500">{player.nflTeam || 'FA'}</span>
-                              <TrajectoryIcon trajectory={player.trajectory} />
+                              <TrajectoryIcon trajectory={player.uiMeta?.trajectory} />
                             </div>
                             <CoreResearchQuickLinks
                               season={String(season)}
                               playerId={player.playerId}
                               playerName={player.playerName}
-                              team={player.nflTeam ?? null}
+                              team={player.team ?? null}
                               compact
                               className="mt-2"
                             />
                           </td>
+                          <td className="py-3 px-3 text-center text-slate-300">{player.team ?? 'FA'}</td>
+                          <td className="py-3 px-3 text-center text-slate-300">{player.position ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-100">{player.score?.toFixed(1) ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-100">{player.value?.toFixed(1) ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300">{floor ?? '-'}</td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300">{ceiling ?? '-'}</td>
                           <td className="py-3 px-3 text-center">
-                            <Badge className={`${tierClass(player.tier)} border`}>{player.tier}</Badge>
+                            {confidenceBand ? <Badge className={`${tierClass(confidenceBand)} border`}>{confidenceBand}</Badge> : <span className="text-slate-600">-</span>}
                           </td>
-                          <td className="py-3 px-3 text-center font-mono font-semibold" title="Alpha Score">{player.alpha.toFixed(1)}</td>
-                          <td className="py-3 px-3 text-center text-xs font-mono text-slate-300" title="Volume / Efficiency / Team Context / Stability">
-                            {(player.subscores.volume ?? 0).toFixed(0)} / {(player.subscores.efficiency ?? 0).toFixed(0)} / {(player.subscores.teamContext ?? 0).toFixed(0)} / {(player.subscores.stability ?? 0).toFixed(0)}
-                          </td>
-                          <td className="py-3 px-3 text-center font-mono text-blue-300" title={player.position === 'RB' ? 'Total Touches' : 'Total Targets'}>{vol ?? '-'}</td>
-                          <td className="py-3 px-3 text-center font-mono" title="Confidence Score">{player.confidence?.toFixed(0) ?? '-'}</td>
-                          <td className="py-3 px-3 text-center" title="Football Lens Issues">
-                            {player.footballLensIssues?.length ? (
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-900/50 border border-amber-700/60 text-amber-300 text-xs">
-                                    <AlertTriangle className="h-3 w-3" />
-                                    {player.footballLensIssues.length}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-sm bg-slate-800 border-slate-700">
-                                  <div className="text-xs space-y-1">
-                                    {player.footballLensIssues.map((issue) => (
-                                      <div key={`${player.playerId}-${issue}`} className="text-slate-200">{issue}</div>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <span className="text-slate-600">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3 text-center text-slate-400" title="Games Played">{player.gamesPlayed ?? '-'}</td>
+                          <td className="py-3 px-3 text-left text-xs text-slate-300">{player.explanation.placementSummary ?? '—'}</td>
                         </tr>
                       );
                     })}

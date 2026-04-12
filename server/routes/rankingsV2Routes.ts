@@ -8,6 +8,8 @@ import {
   RankingsV2RiskSignal,
 } from '../contracts/rankingsV2';
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
+import { scoringService } from '../modules/externalModels/scoring/scoringService';
+import { toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
@@ -121,6 +123,52 @@ export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso
   };
 }
 
+function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string): RankingsV2Item {
+  const confidenceBand = typeof row.confidenceBand === 'string' ? row.confidenceBand : null;
+  const weeklyOutlook = typeof row.weeklyOutlook === 'string' ? row.weeklyOutlook : null;
+  const floor = toNumberOrNull(row.floor);
+  const ceiling = toNumberOrNull(row.ceiling);
+
+  return {
+    rank: Number(row.rank),
+    playerId: String(row.playerId ?? ''),
+    playerName: String(row.playerName ?? 'Unknown Player'),
+    position: typeof row.position === 'string' ? row.position : null,
+    team: typeof row.team === 'string' ? row.team : null,
+    tier: confidenceBand,
+    score: toNumberOrNull(row.expectedPoints),
+    value: toNumberOrNull(row.vorp),
+    explanation: {
+      placementSummary: weeklyOutlook,
+      pillars: [],
+      riskSignals: [],
+      pillarNotes: [
+        floor != null ? { pillar: 'floor', note: floor.toFixed(1), impact: 'neutral' as const } : null,
+        ceiling != null ? { pillar: 'ceiling', note: ceiling.toFixed(1), impact: 'neutral' as const } : null,
+        confidenceBand ? { pillar: 'confidence_band', note: confidenceBand, impact: 'neutral' as const } : null,
+      ].filter((note): note is RankingsV2PillarNote => note !== null),
+      contextAdjustments: [],
+      fragilityNotes: [],
+      sustainabilityNotes: [],
+    },
+    trust: {
+      confidence: null,
+      asOf: asOfIso,
+      freshnessNote: 'Backed by Point-prediction-Model weekly rankings.',
+      sampleNote: null,
+      stabilityNote: null,
+    },
+    uiMeta: {
+      subscores: {},
+      confidence: null,
+      gamesPlayed: null,
+      trajectory: null,
+      footballLensIssues: null,
+      lensAdjustment: null,
+    },
+  };
+}
+
 export function createRankingsV2Router(): Router {
   const router = Router();
 
@@ -136,6 +184,49 @@ export function createRankingsV2Router(): Router {
 
       if (!['QB', 'RB', 'WR', 'TE', 'ALL'].includes(position)) {
         return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
+      }
+
+      const scoringRankings = await scoringService.getWeeklyRankings({
+        leagueContext: toLeagueContextInput({
+          season,
+          week: asOfWeek,
+        }),
+        position: position === 'ALL' ? undefined : position,
+        limit,
+      });
+
+      if (scoringRankings.ok) {
+        const scoringAsOf = scoringRankings.data.asOf ?? new Date().toISOString();
+        const payload = {
+          contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+          mode: 'weekly' as const,
+          lens: 'lineup_decision' as const,
+          horizon: 'week' as const,
+          asOf: scoringAsOf,
+          sourceStack: [
+            {
+              layer: 'promoted_artifact' as const,
+              source: 'point-prediction-model /api/tiber/weekly/rankings',
+              asOf: scoringAsOf,
+              notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}`,
+            },
+          ],
+          items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
+          trust: {
+            confidence: null,
+            asOf: scoringAsOf,
+            freshnessNote: 'Weekly rankings served from the scoring service.',
+            sampleNote: null,
+            stabilityNote: null,
+          },
+        };
+
+        const parsed = rankingsV2ResponseSchema.safeParse(payload);
+        if (parsed.success) {
+          return res.json(parsed.data);
+        }
+      } else {
+        console.warn(`[RankingsV2/Routes] scoring fallback engaged (${scoringRankings.code}): ${scoringRankings.message}`);
       }
 
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);

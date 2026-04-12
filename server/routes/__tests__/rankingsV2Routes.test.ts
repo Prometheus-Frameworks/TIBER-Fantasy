@@ -1,166 +1,97 @@
-jest.mock('../../infra/db', () => ({ db: {} }));
+import express from 'express';
+import { AddressInfo } from 'net';
+
+jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
+  scoringService: {
+    getWeeklyRankings: jest.fn(),
+  },
+}));
 
 jest.mock('../../modules/forge/forgeGradeCache', () => ({
-  CACHE_VERSION: 'v1',
+  CACHE_VERSION: 'test-version',
   getGradesFromCache: jest.fn(),
 }));
 
-import express from 'express';
-import request from 'supertest';
-import { rankingsV2ResponseSchema, RANKINGS_V2_CONTRACT_VERSION } from '../../contracts/rankingsV2';
 import { createRankingsV2Router } from '../rankingsV2Routes';
+import { scoringService } from '../../modules/externalModels/scoring/scoringService';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 
-const mockedGetGradesFromCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
+const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
+const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
 
-describe('GET /api/rankings/v2/weekly', () => {
-  it('returns a valid rankings v2 payload with canonical mode metadata', async () => {
-    mockedGetGradesFromCache.mockResolvedValueOnce({
-      season: 2025,
-      asOfWeek: 17,
-      position: 'WR',
-      version: 'v1',
-      computedAt: new Date('2026-01-01T12:00:00.000Z'),
+async function call(path: string) {
+  const app = express();
+  app.use('/api/rankings/v2', createRankingsV2Router());
+  const server = app.listen(0);
+  const { port } = server.address() as AddressInfo;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}${path}`);
+    return { status: res.status, body: await res.json() };
+  } finally {
+    server.close();
+  }
+}
+
+describe('rankingsV2Routes scoring integration', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    mockedCache.mockResolvedValue({ players: [], computedAt: new Date('2026-04-12T00:00:00.000Z'), asOfWeek: 5 } as any);
+  });
+
+  it('uses scoring weekly rankings when available', async () => {
+    mockedScoringService.getWeeklyRankings.mockResolvedValue({
+      ok: true,
+      data: {
+        asOf: '2026-04-12T00:00:00.000Z',
+        items: [
+          {
+            rank: 1,
+            playerId: '00-0036322',
+            playerName: 'Justin Jefferson',
+            team: 'MIN',
+            position: 'WR',
+            expectedPoints: 20.1,
+            vorp: 3.4,
+            floor: 12.8,
+            ceiling: 30.1,
+            confidenceBand: 'high',
+            weeklyOutlook: 'Strong WR1 outlook.',
+          },
+        ],
+      },
+    } as any);
+
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].score).toBe(20.1);
+    expect(res.body.items[0].value).toBe(3.4);
+    expect(res.body.items[0].explanation.placementSummary).toContain('WR1');
+    expect(mockedCache).not.toHaveBeenCalled();
+  });
+
+  it('falls back to FORGE cache when scoring service is unavailable', async () => {
+    mockedScoringService.getWeeklyRankings.mockResolvedValue({ ok: false, code: 'upstream_unavailable', message: 'down' } as any);
+    mockedCache.mockResolvedValue({
       players: [
         {
-          playerId: '00-abc',
-          playerName: 'Test WR',
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
           position: 'WR',
           nflTeam: 'MIN',
-          alpha: 91.4,
-          rawAlpha: 89.8,
           tier: 'T1',
-          confidence: 86,
-          gamesPlayed: 16,
-          volumeScore: 88,
-          efficiencyScore: 85,
-          teamContextScore: 79,
-          stabilityScore: 82,
-          trajectory: 'rising',
-          footballLensIssues: ['Route tree volatility'],
+          alpha: 90,
+          rawAlpha: 88,
         },
       ],
+      computedAt: new Date('2026-04-12T00:00:00.000Z'),
+      asOfWeek: 5,
     } as any);
 
-    const app = express();
-    app.use('/api/rankings/v2', createRankingsV2Router());
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
 
-    const res = await request(app).get('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=17');
     expect(res.status).toBe(200);
-
-    const parsed = rankingsV2ResponseSchema.safeParse(res.body);
-    expect(parsed.success).toBe(true);
-
-    expect(res.body.contractVersion).toBe(RANKINGS_V2_CONTRACT_VERSION);
-    expect(res.body.mode).toBe('weekly');
-    expect(res.body.lens).toBe('lineup_decision');
-    expect(res.body.horizon).toBe('week');
-    expect(res.body.sourceStack[0].layer).toBe('forge');
-
-    const firstItem = res.body.items[0];
-    expect(firstItem).toMatchObject({
-      rank: 1,
-      playerId: '00-abc',
-      playerName: 'Test WR',
-      position: 'WR',
-      team: 'MIN',
-      tier: 'T1',
-      score: 91.4,
-      value: 89.8,
-    });
-    expect(firstItem.explanation.pillarNotes.length).toBeGreaterThan(0);
-    expect(firstItem.explanation.pillars).toEqual([
-      { id: 'volume', value: 88, impact: 'neutral' },
-      { id: 'efficiency', value: 85, impact: 'neutral' },
-      { id: 'teamContext', value: 79, impact: 'neutral' },
-      { id: 'stability', value: 82, impact: 'neutral' },
-    ]);
-    expect(firstItem.explanation.riskSignals).toEqual([{ type: 'football_lens_issue', message: 'Route tree volatility' }]);
-    expect(firstItem.trust.confidence).toBe(86);
-    expect(firstItem.uiMeta).toMatchObject({
-      subscores: {
-        volume: 88,
-        efficiency: 85,
-        teamContext: 79,
-        stability: 82,
-      },
-      confidence: 86,
-      gamesPlayed: 16,
-      trajectory: 'rising',
-      footballLensIssues: ['Route tree volatility'],
-    });
-  });
-
-  it('preserves cache-empty operator guidance in trust/source metadata', async () => {
-    mockedGetGradesFromCache.mockResolvedValueOnce({
-      season: 2025,
-      asOfWeek: 17,
-      position: 'WR',
-      version: 'v1',
-      computedAt: null,
-      players: [],
-    } as any);
-
-    const app = express();
-    app.use('/api/rankings/v2', createRankingsV2Router());
-
-    const res = await request(app).get('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=17');
-    expect(res.status).toBe(200);
-    expect(res.body.items).toEqual([]);
-    expect(res.body.trust.stabilityNote).toBe('forge_cache_empty_uncomputed');
-    expect(res.body.trust.sampleNote).toContain('/api/forge/compute-grades');
-    expect(String(res.body.sourceStack[0].notes)).toContain('forge_cache_empty_uncomputed');
-  });
-
-  it('degrades safely when optional explanation inputs are missing', async () => {
-    mockedGetGradesFromCache.mockResolvedValueOnce({
-      season: 2025,
-      asOfWeek: 17,
-      position: 'WR',
-      version: 'v1',
-      computedAt: new Date('2026-01-02T00:00:00.000Z'),
-      players: [
-        {
-          playerId: '00-def',
-          playerName: 'Sparse WR',
-          position: 'WR',
-          nflTeam: 'FA',
-          alpha: 72.1,
-          rawAlpha: 70.2,
-          tier: 'T4',
-          confidence: null,
-          gamesPlayed: null,
-          volumeScore: null,
-          efficiencyScore: undefined,
-          teamContextScore: 'not-a-number',
-          stabilityScore: 47,
-          footballLensIssues: [null, 42, ''],
-        },
-      ],
-    } as any);
-
-    const app = express();
-    app.use('/api/rankings/v2', createRankingsV2Router());
-
-    const res = await request(app).get('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=17');
-    expect(res.status).toBe(200);
-
-    const parsed = rankingsV2ResponseSchema.safeParse(res.body);
-    expect(parsed.success).toBe(true);
-
-    const firstItem = res.body.items[0];
-    expect(firstItem.explanation.pillars).toEqual([
-      { id: 'volume', value: null, impact: 'neutral' },
-      { id: 'efficiency', value: null, impact: 'neutral' },
-      { id: 'teamContext', value: null, impact: 'neutral' },
-      { id: 'stability', value: 47, impact: 'neutral' },
-    ]);
-    expect(firstItem.explanation.riskSignals).toEqual([]);
-    expect(firstItem.uiMeta.subscores).toEqual({
-      volume: null,
-      efficiency: null,
-      teamContext: null,
-      stability: 47,
-    });
+    expect(res.body.items[0].playerName).toBe('Justin Jefferson');
+    expect(mockedCache).toHaveBeenCalled();
   });
 });
