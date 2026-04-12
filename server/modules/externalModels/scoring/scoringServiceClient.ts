@@ -162,12 +162,18 @@ export class ScoringServiceClient {
     const source = (envelope.view && typeof envelope.view === 'object' ? envelope.view : envelope) as Record<string, unknown>;
     return scoringWeeklyCompareSchema.parse({
       asOf: asStringOrNull(source.asOf ?? source.generatedAt),
-      verdict: asStringOrNull(source.verdict),
-      playerA: asStringOrNull(source.player_a ?? source.playerA),
-      playerB: asStringOrNull(source.player_b ?? source.playerB),
-      expectedPointsDelta: toNumberOrNull(source.expectedPointsDelta ?? source.expected_points_delta ?? (source.deltas as any)?.expected_points),
-      vorpDelta: toNumberOrNull(source.vorpDelta ?? source.vorp_delta ?? (source.deltas as any)?.vorp),
-      recommendation: asStringOrNull(source.recommendation ?? source.summary),
+      view: {
+        verdict: asStringOrNull(source.verdict),
+        playerA: asStringOrNull(source.player_a ?? source.playerA),
+        playerB: asStringOrNull(source.player_b ?? source.playerB),
+        deltas: {
+          expectedPoints: toNumberOrNull(
+            source.expectedPointsDelta ?? source.expected_points_delta ?? (source.deltas as any)?.expected_points,
+          ),
+          vorp: toNumberOrNull(source.vorpDelta ?? source.vorp_delta ?? (source.deltas as any)?.vorp),
+        },
+        recommendation: asStringOrNull(source.recommendation ?? source.summary),
+      },
     });
   }
 

@@ -73,7 +73,7 @@ describe('ScoringServiceClient', () => {
   it('fails with config_error when base url is missing', async () => {
     const client = new ScoringServiceClient({ baseUrl: '' });
     await expect(
-      client.getWeeklyRankings({ leagueContext: { season: 2025, week: 3 } }),
+      client.getWeeklyRankings({ leagueContext: { season: 2025, week: 3 }, players: [] }),
     ).rejects.toMatchObject<ScoringServiceIntegrationError>({ code: 'config_error' });
   });
 

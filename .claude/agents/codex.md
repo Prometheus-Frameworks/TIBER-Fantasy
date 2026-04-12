@@ -592,3 +592,17 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
   - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 semantic mapper-depth follow-up
+- Implemented real scoring-input mapping from TIBER data (`weekly_stats`, `player_usage`) so scoring requests now include meaningful opportunity/stat signals:
+  - `games_sampled`, `routes_pg`, `targets_pg`, `carries_pg`, `fantasy_points_ppr_pg`, `snap_share`, `target_share`, `volatility_index`.
+- Added async mapper functions:
+  - `buildScoringPlayerInputFromData(...)` for player-page weekly/ROS scoring calls.
+  - `buildRankingsScoringInputs(...)` for rankings scoring payload construction.
+  - `hasMeaningfulScoringInputs(...)` for gating scoring preference.
+- Updated Rankings v2 route to **not** prefer scoring when mapped inputs are too thin; falls back to FORGE in that case.
+- Updated compare normalization to preserve structured view model (`verdict`, `playerA`, `playerB`, nested `deltas`) instead of flattening.
+- Extended tests to assert scoring calls now carry real mapped fields and to prove rankings skips scoring preference when inputs are not meaningful.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)

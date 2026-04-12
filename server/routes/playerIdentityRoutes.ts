@@ -13,7 +13,7 @@ import { eq, and, desc, sql } from 'drizzle-orm';
 import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
 import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
-import { toLeagueContextInput, toScoringPlayerInput } from '../modules/externalModels/scoring/scoringRequestMappers';
+import { buildScoringPlayerInputFromData, toLeagueContextInput, toScoringPlayerInput } from '../modules/externalModels/scoring/scoringRequestMappers';
 
 const includeRoleOpportunityValues = new Set(['1', 'true']);
 const includeExternalForgeValues = new Set(['1', 'true']);
@@ -141,7 +141,18 @@ router.get('/player/:id', async (req: Request, res: Response) => {
         season: req.query.season != null ? Number(req.query.season) : undefined,
         week: req.query.week != null ? Number(req.query.week) : undefined,
       });
-      const playerInput = toScoringPlayerInput(player);
+      const throughWeek = Number.isInteger(Number(req.query.week)) ? Number(req.query.week) : 18;
+      const playerInput =
+        Number.isInteger(Number(req.query.season))
+          ? await buildScoringPlayerInputFromData({
+              playerId: player.canonicalId,
+              playerName: player.fullName,
+              position: player.position,
+              team: player.nflTeam,
+              season: Number(req.query.season),
+              throughWeek,
+            })
+          : toScoringPlayerInput(player);
 
       const weekly = includeScoringWeekly
         ? await scoringService.getWeeklyPlayerCard({ leagueContext, player: playerInput })

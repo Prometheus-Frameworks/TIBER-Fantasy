@@ -23,15 +23,33 @@ jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
     getRosPlayerCard: jest.fn(),
   },
 }));
+jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
+  toLeagueContextInput: jest.fn((input) => ({ season: input.season, week: input.week, scoringFormat: 'ppr', teams: 12 })),
+  toScoringPlayerInput: jest.fn((player) => ({ player_id: player.canonicalId, player_name: player.fullName })),
+  buildScoringPlayerInputFromData: jest.fn().mockResolvedValue({
+    player_id: '00-0036322',
+    player_name: 'Justin Jefferson',
+    team: 'MIN',
+    position: 'WR',
+    games_sampled: 4,
+    routes_pg: 36.5,
+    targets_pg: 9.5,
+    carries_pg: 0.4,
+    fantasy_points_ppr_pg: 19.1,
+    snap_share: 0.89,
+  }),
+}));
 
 import router from '../playerIdentityRoutes';
 import { playerIdentityService } from '../../services/PlayerIdentityService';
 import { orchestratePlayerDetailEnrichment } from '../../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
 import { scoringService } from '../../modules/externalModels/scoring/scoringService';
+import { buildScoringPlayerInputFromData } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
 const mockedPlayerIdentityService = playerIdentityService as jest.Mocked<typeof playerIdentityService>;
 const mockedOrchestratePlayerDetailEnrichment = orchestratePlayerDetailEnrichment as jest.MockedFunction<typeof orchestratePlayerDetailEnrichment>;
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
+const mockedBuildScoringPlayerInputFromData = buildScoringPlayerInputFromData as jest.MockedFunction<typeof buildScoringPlayerInputFromData>;
 
 async function call(path: string) {
   const app = express();
@@ -99,6 +117,16 @@ describe('playerIdentityRoutes player detail enrichment', () => {
     expect(res.body.data.scoring.ros.ok).toBe(false);
     expect(mockedScoringService.getWeeklyPlayerCard).toHaveBeenCalled();
     expect(mockedScoringService.getRosPlayerCard).toHaveBeenCalled();
+    expect(mockedBuildScoringPlayerInputFromData).toHaveBeenCalled();
+    expect(mockedScoringService.getWeeklyPlayerCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        player: expect.objectContaining({
+          games_sampled: 4,
+          routes_pg: 36.5,
+          targets_pg: 9.5,
+        }),
+      }),
+    );
   });
 
   it('validates scoring weekly query requirements', async () => {

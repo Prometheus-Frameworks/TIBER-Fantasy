@@ -9,7 +9,7 @@ import {
 } from '../contracts/rankingsV2';
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
-import { toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
+import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
@@ -187,55 +187,63 @@ export function createRankingsV2Router(): Router {
       }
 
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
-      const cachePlayersForScoring = cache.players.map((row: any) => ({
-        player_id: String(row.playerId ?? ''),
-        player_name: String(row.playerName ?? ''),
-        team: typeof row.nflTeam === 'string' ? row.nflTeam : null,
-        position: typeof row.position === 'string' ? row.position : null,
-      }));
-
-      const scoringRankings = await scoringService.getWeeklyRankings({
-        leagueContext: toLeagueContextInput({
-          season,
-          week: asOfWeek,
-          scoringFormat: 'ppr',
-          teams: 12,
-        }),
-        players: cachePlayersForScoring,
+      const scoringInputs = await buildRankingsScoringInputs({
+        season,
+        throughWeek: asOfWeek ?? 18,
+        position,
+        limit,
       });
+      const meaningfulInputCount = scoringInputs.filter(hasMeaningfulScoringInputs).length;
+      const hasMeaningfulCoverage = meaningfulInputCount >= Math.max(10, Math.floor(scoringInputs.length * 0.6));
 
-      if (scoringRankings.ok) {
-        const scoringAsOf = scoringRankings.data.asOf ?? new Date().toISOString();
-        const payload = {
-          contractVersion: RANKINGS_V2_CONTRACT_VERSION,
-          mode: 'weekly' as const,
-          lens: 'lineup_decision' as const,
-          horizon: 'week' as const,
-          asOf: scoringAsOf,
-          sourceStack: [
-            {
-              layer: 'promoted_artifact' as const,
-              source: 'point-prediction-model /api/tiber/weekly/rankings',
-              asOf: scoringAsOf,
-              notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}`,
-            },
-          ],
-          items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
-          trust: {
-            confidence: null,
+      if (hasMeaningfulCoverage) {
+        const scoringRankings = await scoringService.getWeeklyRankings({
+          leagueContext: toLeagueContextInput({
+            season,
+            week: asOfWeek,
+            scoringFormat: 'ppr',
+            teams: 12,
+          }),
+          players: scoringInputs,
+        });
+
+        if (scoringRankings.ok) {
+          const scoringAsOf = scoringRankings.data.asOf ?? new Date().toISOString();
+          const payload = {
+            contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+            mode: 'weekly' as const,
+            lens: 'lineup_decision' as const,
+            horizon: 'week' as const,
             asOf: scoringAsOf,
-            freshnessNote: 'Weekly rankings served from the scoring service.',
-            sampleNote: null,
-            stabilityNote: null,
-          },
-        };
+            sourceStack: [
+              {
+                layer: 'promoted_artifact' as const,
+                source: 'point-prediction-model /api/tiber/weekly/rankings',
+                asOf: scoringAsOf,
+                notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
+              },
+            ],
+            items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
+            trust: {
+              confidence: null,
+              asOf: scoringAsOf,
+              freshnessNote: 'Weekly rankings served from the scoring service.',
+              sampleNote: null,
+              stabilityNote: null,
+            },
+          };
 
-        const parsed = rankingsV2ResponseSchema.safeParse(payload);
-        if (parsed.success) {
-          return res.json(parsed.data);
+          const parsed = rankingsV2ResponseSchema.safeParse(payload);
+          if (parsed.success) {
+            return res.json(parsed.data);
+          }
+        } else {
+          console.warn(`[RankingsV2/Routes] scoring fallback engaged (${scoringRankings.code}): ${scoringRankings.message}`);
         }
       } else {
-        console.warn(`[RankingsV2/Routes] scoring fallback engaged (${scoringRankings.code}): ${scoringRankings.message}`);
+        console.info(
+          `[RankingsV2/Routes] skipping scoring preference due to limited scoring inputs (${meaningfulInputCount}/${scoringInputs.length}).`,
+        );
       }
 
       const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();

@@ -47,12 +47,16 @@ export const scoringRosPlayerCardSchema = scoringWeeklyPlayerCardSchema.extend({
 
 export const scoringWeeklyCompareSchema = z.object({
   asOf: z.string().datetime().nullable().optional(),
-  verdict: nullableString,
-  playerA: nullableString,
-  playerB: nullableString,
-  expectedPointsDelta: nullableNumber,
-  vorpDelta: nullableNumber,
-  recommendation: nullableString,
+  view: z.object({
+    verdict: nullableString,
+    playerA: nullableString,
+    playerB: nullableString,
+    deltas: z.object({
+      expectedPoints: nullableNumber,
+      vorp: nullableNumber,
+    }),
+    recommendation: nullableString,
+  }),
 });
 
 export type ScoringWeeklyPlayerCard = z.infer<typeof scoringWeeklyPlayerCardSchema>;
@@ -98,6 +102,14 @@ export interface ScoringPlayerInput {
   player_name?: string;
   team?: string | null;
   position?: string | null;
+  games_sampled?: number | null;
+  snap_share?: number | null;
+  routes_pg?: number | null;
+  targets_pg?: number | null;
+  carries_pg?: number | null;
+  target_share?: number | null;
+  fantasy_points_ppr_pg?: number | null;
+  volatility_index?: number | null;
 }
 
 export interface ScoringWeeklyPlayerCardRequest {

@@ -11,13 +11,21 @@ jest.mock('../../modules/forge/forgeGradeCache', () => ({
   CACHE_VERSION: 'test-version',
   getGradesFromCache: jest.fn(),
 }));
+jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
+  toLeagueContextInput: jest.fn((input) => ({ season: input.season, week: input.week, scoringFormat: 'ppr', teams: 12 })),
+  buildRankingsScoringInputs: jest.fn(),
+  hasMeaningfulScoringInputs: jest.fn(),
+}));
 
 import { createRankingsV2Router } from '../rankingsV2Routes';
 import { scoringService } from '../../modules/externalModels/scoring/scoringService';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
+import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
+const mockedBuildRankingsScoringInputs = buildRankingsScoringInputs as jest.MockedFunction<typeof buildRankingsScoringInputs>;
+const mockedHasMeaningfulScoringInputs = hasMeaningfulScoringInputs as jest.MockedFunction<typeof hasMeaningfulScoringInputs>;
 
 async function call(path: string) {
   const app = express();
@@ -36,6 +44,19 @@ describe('rankingsV2Routes scoring integration', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     mockedCache.mockResolvedValue({ players: [], computedAt: new Date('2026-04-12T00:00:00.000Z'), asOfWeek: 5 } as any);
+    mockedBuildRankingsScoringInputs.mockResolvedValue([
+      ...Array.from({ length: 12 }).map((_, idx) => ({
+        player_id: `00-0036${idx}`,
+        player_name: `Player ${idx}`,
+        position: 'WR',
+        team: 'MIN',
+        games_sampled: 5,
+        routes_pg: 39,
+        targets_pg: 10,
+        fantasy_points_ppr_pg: 19.5,
+      })),
+    ]);
+    mockedHasMeaningfulScoringInputs.mockReturnValue(true);
   });
 
   it('uses scoring weekly rankings when available', async () => {
@@ -68,6 +89,17 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.items[0].value).toBe(3.4);
     expect(res.body.items[0].explanation.placementSummary).toContain('WR1');
     expect(mockedCache).toHaveBeenCalled();
+    expect(mockedScoringService.getWeeklyRankings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        players: expect.arrayContaining([
+          expect.objectContaining({
+            games_sampled: 5,
+            routes_pg: 39,
+            targets_pg: 10,
+          }),
+        ]),
+      }),
+    );
   });
 
   it('falls back to FORGE cache when scoring service is unavailable', async () => {
@@ -93,5 +125,23 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
     expect(mockedCache).toHaveBeenCalled();
+  });
+
+  it('does not prefer scoring rankings when mapped inputs are not meaningful', async () => {
+    mockedBuildRankingsScoringInputs.mockResolvedValue([
+      { player_id: '00-1', player_name: 'Thin Input WR', position: 'WR', team: 'FA', games_sampled: 1 } as any,
+    ]);
+    mockedHasMeaningfulScoringInputs.mockReturnValue(false);
+    mockedCache.mockResolvedValue({
+      players: [{ playerId: '00-1', playerName: 'Thin Input WR', position: 'WR', nflTeam: 'FA', tier: 'T5', alpha: 12, rawAlpha: 10 }],
+      computedAt: new Date('2026-04-12T00:00:00.000Z'),
+      asOfWeek: 5,
+    } as any);
+
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].playerName).toBe('Thin Input WR');
+    expect(mockedScoringService.getWeeklyRankings).not.toHaveBeenCalled();
   });
 });
