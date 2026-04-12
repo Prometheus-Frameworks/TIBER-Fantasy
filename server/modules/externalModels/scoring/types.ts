@@ -47,8 +47,9 @@ export const scoringRosPlayerCardSchema = scoringWeeklyPlayerCardSchema.extend({
 
 export const scoringWeeklyCompareSchema = z.object({
   asOf: z.string().datetime().nullable().optional(),
-  leftPlayerId: z.string().nullable().optional(),
-  rightPlayerId: z.string().nullable().optional(),
+  verdict: nullableString,
+  playerA: nullableString,
+  playerB: nullableString,
   expectedPointsDelta: nullableNumber,
   vorpDelta: nullableNumber,
   recommendation: nullableString,
@@ -93,27 +94,27 @@ export interface ScoringLeagueContextInput {
 }
 
 export interface ScoringPlayerInput {
-  playerId: string;
-  playerName?: string;
+  player_id: string;
+  player_name?: string;
   team?: string | null;
   position?: string | null;
 }
 
 export interface ScoringWeeklyPlayerCardRequest {
-  leagueContext: ScoringLeagueContextInput;
+  leagueContext: ScoringLeagueContextInput & Record<string, unknown>;
   player: ScoringPlayerInput;
+  remainingWeeks?: number;
 }
 
 export interface ScoringWeeklyRankingsRequest {
-  leagueContext: ScoringLeagueContextInput;
-  position?: string;
-  limit?: number;
+  leagueContext: ScoringLeagueContextInput & Record<string, unknown>;
+  players: ScoringPlayerInput[];
 }
 
 export interface ScoringWeeklyCompareRequest {
-  leagueContext: ScoringLeagueContextInput;
-  leftPlayer: ScoringPlayerInput;
-  rightPlayer: ScoringPlayerInput;
+  leagueContext: ScoringLeagueContextInput & Record<string, unknown>;
+  playerA: ScoringPlayerInput;
+  playerB: ScoringPlayerInput;
 }
 
 export type ScoringResult<T> =

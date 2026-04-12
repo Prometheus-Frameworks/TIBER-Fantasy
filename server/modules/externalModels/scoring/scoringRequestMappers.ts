@@ -9,8 +9,8 @@ interface TiberPlayerLike {
 
 export function toScoringPlayerInput(player: TiberPlayerLike): ScoringPlayerInput {
   return {
-    playerId: player.canonicalId,
-    playerName: player.fullName,
+    player_id: player.canonicalId,
+    player_name: player.fullName,
     team: player.nflTeam,
     position: player.position,
   };

@@ -147,7 +147,11 @@ router.get('/player/:id', async (req: Request, res: Response) => {
         ? await scoringService.getWeeklyPlayerCard({ leagueContext, player: playerInput })
         : null;
       const ros = includeScoringRos
-        ? await scoringService.getRosPlayerCard({ leagueContext, player: playerInput })
+        ? await scoringService.getRosPlayerCard({
+            leagueContext,
+            player: playerInput,
+            remainingWeeks: Number.isInteger(Number(req.query.week)) ? Math.max(0, 18 - Number(req.query.week)) : 18,
+          })
         : null;
 
       scoring = {

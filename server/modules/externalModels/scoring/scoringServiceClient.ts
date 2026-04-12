@@ -17,6 +17,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 5000;
 
 function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -78,13 +79,41 @@ function normalizeRankings(payload: unknown): ScoringWeeklyRankings {
   };
 }
 
+function parseTimeoutMs(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_TIMEOUT_MS;
+  return Math.round(parsed);
+}
+
+function unwrapServiceEnvelope(payload: unknown): Record<string, unknown> {
+  const root = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+  const ok = root.ok;
+  if (ok !== true) {
+    throw new ScoringServiceIntegrationError('invalid_payload', 'Scoring service returned a non-ok envelope.', 502);
+  }
+  const data = root.data;
+  if (!data || typeof data !== 'object') {
+    throw new ScoringServiceIntegrationError('invalid_payload', 'Scoring service envelope missing data payload.', 502);
+  }
+  return data as Record<string, unknown>;
+}
+
+function toUpstreamLeagueContext(context: Record<string, unknown>) {
+  return {
+    season: context.season,
+    week: context.week,
+    scoring_format: context.scoringFormat ?? context.scoring_format ?? 'ppr',
+    num_teams: context.teams ?? context.num_teams ?? 12,
+  };
+}
+
 export class ScoringServiceClient {
   private readonly baseUrl?: string;
   private readonly timeoutMs: number;
 
   constructor(config: ScoringServiceClientConfig = {}) {
     this.baseUrl = config.baseUrl ?? process.env.SCORING_SERVICE_BASE_URL;
-    this.timeoutMs = config.timeoutMs ?? Number(process.env.SCORING_SERVICE_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
+    this.timeoutMs = parseTimeoutMs(config.timeoutMs ?? process.env.SCORING_SERVICE_TIMEOUT_MS);
   }
 
   getConfig() {
@@ -96,30 +125,49 @@ export class ScoringServiceClient {
   }
 
   async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringWeeklyPlayerCard> {
-    const payload = await this.postJson('/api/tiber/weekly/player-card', request);
-    return scoringWeeklyPlayerCardSchema.parse(normalizePlayerCard(payload));
+    const payload = await this.postJson('/api/tiber/weekly/player-card', {
+      players: [request.player],
+      league_context: toUpstreamLeagueContext(request.leagueContext),
+    });
+    const envelope = unwrapServiceEnvelope(payload);
+    return scoringWeeklyPlayerCardSchema.parse(normalizePlayerCard(envelope.card));
   }
 
   async getWeeklyRankings(request: ScoringWeeklyRankingsRequest): Promise<ScoringWeeklyRankings> {
-    const payload = await this.postJson('/api/tiber/weekly/rankings', request);
-    return scoringWeeklyRankingsSchema.parse(normalizeRankings(payload));
+    const payload = await this.postJson('/api/tiber/weekly/rankings', {
+      players: request.players,
+      league_context: toUpstreamLeagueContext(request.leagueContext),
+    });
+    const envelope = unwrapServiceEnvelope(payload);
+    return scoringWeeklyRankingsSchema.parse(normalizeRankings(envelope.view));
   }
 
   async getRosPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringRosPlayerCard> {
-    const payload = await this.postJson('/api/tiber/ros/player-card', request);
-    return scoringRosPlayerCardSchema.parse(normalizePlayerCard(payload));
+    const payload = await this.postJson('/api/tiber/ros/player-card', {
+      players: [request.player],
+      league_context: toUpstreamLeagueContext(request.leagueContext),
+      remaining_weeks: request.remainingWeeks,
+    });
+    const envelope = unwrapServiceEnvelope(payload);
+    return scoringRosPlayerCardSchema.parse(normalizePlayerCard(envelope.card));
   }
 
   async getWeeklyCompare(request: ScoringWeeklyCompareRequest): Promise<ScoringWeeklyCompare> {
-    const payload = await this.postJson('/api/tiber/weekly/compare', request);
-    const source = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+    const payload = await this.postJson('/api/tiber/weekly/compare', {
+      player_a: request.playerA,
+      player_b: request.playerB,
+      league_context: toUpstreamLeagueContext(request.leagueContext),
+    });
+    const envelope = unwrapServiceEnvelope(payload);
+    const source = (envelope.view && typeof envelope.view === 'object' ? envelope.view : envelope) as Record<string, unknown>;
     return scoringWeeklyCompareSchema.parse({
       asOf: asStringOrNull(source.asOf ?? source.generatedAt),
-      leftPlayerId: asStringOrNull(source.leftPlayerId ?? source.left_player_id),
-      rightPlayerId: asStringOrNull(source.rightPlayerId ?? source.right_player_id),
-      expectedPointsDelta: toNumberOrNull(source.expectedPointsDelta ?? source.expected_points_delta),
-      vorpDelta: toNumberOrNull(source.vorpDelta ?? source.vorp_delta),
-      recommendation: asStringOrNull(source.recommendation),
+      verdict: asStringOrNull(source.verdict),
+      playerA: asStringOrNull(source.player_a ?? source.playerA),
+      playerB: asStringOrNull(source.player_b ?? source.playerB),
+      expectedPointsDelta: toNumberOrNull(source.expectedPointsDelta ?? source.expected_points_delta ?? (source.deltas as any)?.expected_points),
+      vorpDelta: toNumberOrNull(source.vorpDelta ?? source.vorp_delta ?? (source.deltas as any)?.vorp),
+      recommendation: asStringOrNull(source.recommendation ?? source.summary),
     });
   }
 

@@ -579,3 +579,16 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
   - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 follow-up wire-contract fixes
+- Addressed PR feedback on scoring-service wire compatibility:
+  - request bodies now match live upstream contract (`players`, `league_context`, ROS `remaining_weeks`, compare `player_a`/`player_b`)
+  - response parsing now unwraps service envelope (`ok` + `data`) and reads route payload layers (`data.card`, `data.view`)
+- Hardened client conversions:
+  - null/empty numeric fields remain `null` instead of coercing to `0`
+  - invalid timeout config now falls back to default timeout
+- Updated rankings integration to provide `players` array input to scoring rankings (from existing cache seed set) while retaining graceful FORGE fallback.
+- Updated focused tests to validate against envelope + contract-correct request shapes.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)

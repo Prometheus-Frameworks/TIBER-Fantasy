@@ -186,13 +186,22 @@ export function createRankingsV2Router(): Router {
         return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
       }
 
+      const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
+      const cachePlayersForScoring = cache.players.map((row: any) => ({
+        player_id: String(row.playerId ?? ''),
+        player_name: String(row.playerName ?? ''),
+        team: typeof row.nflTeam === 'string' ? row.nflTeam : null,
+        position: typeof row.position === 'string' ? row.position : null,
+      }));
+
       const scoringRankings = await scoringService.getWeeklyRankings({
         leagueContext: toLeagueContextInput({
           season,
           week: asOfWeek,
+          scoringFormat: 'ppr',
+          teams: 12,
         }),
-        position: position === 'ALL' ? undefined : position,
-        limit,
+        players: cachePlayersForScoring,
       });
 
       if (scoringRankings.ok) {
@@ -229,7 +238,6 @@ export function createRankingsV2Router(): Router {
         console.warn(`[RankingsV2/Routes] scoring fallback engaged (${scoringRankings.code}): ${scoringRankings.message}`);
       }
 
-      const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
       const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();
       const isCacheEmpty = cache.players.length === 0;
 

@@ -67,7 +67,7 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.items[0].score).toBe(20.1);
     expect(res.body.items[0].value).toBe(3.4);
     expect(res.body.items[0].explanation.placementSummary).toContain('WR1');
-    expect(mockedCache).not.toHaveBeenCalled();
+    expect(mockedCache).toHaveBeenCalled();
   });
 
   it('falls back to FORGE cache when scoring service is unavailable', async () => {
