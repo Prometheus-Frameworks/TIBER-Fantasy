@@ -17,13 +17,39 @@ jest.mock('../../services/PlayerIdentityService', () => ({
 jest.mock('../../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator', () => ({
   orchestratePlayerDetailEnrichment: jest.fn(),
 }));
+jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
+  scoringService: {
+    getWeeklyPlayerCard: jest.fn(),
+    getRosPlayerCard: jest.fn(),
+  },
+}));
+jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
+  toLeagueContextInput: jest.fn((input) => ({ season: input.season, week: input.week, scoringFormat: 'ppr', teams: 12 })),
+  toScoringPlayerInput: jest.fn((player) => ({ player_id: player.canonicalId, player_name: player.fullName })),
+  buildScoringPlayerInputFromData: jest.fn().mockResolvedValue({
+    player_id: '00-0036322',
+    player_name: 'Justin Jefferson',
+    team: 'MIN',
+    position: 'WR',
+    games_sampled: 4,
+    routes_pg: 36.5,
+    targets_pg: 9.5,
+    carries_pg: 0.4,
+    fantasy_points_ppr_pg: 19.1,
+    snap_share: 0.89,
+  }),
+}));
 
 import router from '../playerIdentityRoutes';
 import { playerIdentityService } from '../../services/PlayerIdentityService';
 import { orchestratePlayerDetailEnrichment } from '../../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
+import { scoringService } from '../../modules/externalModels/scoring/scoringService';
+import { buildScoringPlayerInputFromData } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
 const mockedPlayerIdentityService = playerIdentityService as jest.Mocked<typeof playerIdentityService>;
 const mockedOrchestratePlayerDetailEnrichment = orchestratePlayerDetailEnrichment as jest.MockedFunction<typeof orchestratePlayerDetailEnrichment>;
+const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
+const mockedBuildScoringPlayerInputFromData = buildScoringPlayerInputFromData as jest.MockedFunction<typeof buildScoringPlayerInputFromData>;
 
 async function call(path: string) {
   const app = express();
@@ -46,6 +72,28 @@ describe('playerIdentityRoutes player detail enrichment', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedOrchestratePlayerDetailEnrichment.mockResolvedValue({});
+    mockedScoringService.getWeeklyPlayerCard.mockResolvedValue({
+      ok: true,
+      data: {
+        playerId: '00-0036322',
+        playerName: 'Justin Jefferson',
+        team: 'MIN',
+        position: 'WR',
+        expectedPoints: 19.4,
+        vorp: 2.9,
+        floor: 12.1,
+        median: 17.8,
+        ceiling: 28.3,
+        confidence: 'high',
+        volatility: 'medium',
+        fragility: 'low',
+        weeklyOutlook: 'Strong WR1 profile.',
+        roleSummary: 'Primary perimeter alpha.',
+        valueSummary: 'Start with confidence.',
+        roleNotes: ['Dominant route share'],
+      },
+    } as any);
+    mockedScoringService.getRosPlayerCard.mockResolvedValue({ ok: false, code: 'config_error', message: 'not configured' } as any);
     mockedPlayerIdentityService.getByAnyId.mockResolvedValue({
       canonicalId: '00-0036322',
       fullName: 'Justin Jefferson',
@@ -58,6 +106,33 @@ describe('playerIdentityRoutes player detail enrichment', () => {
       isActive: true,
       lastVerified: new Date('2026-03-20T00:00:00.000Z'),
     } as any);
+  });
+
+  it('returns scoring payloads when includeScoringWeekly/includeScoringRos are requested', async () => {
+    const res = await call('/player/00-0036322?includeScoringWeekly=true&includeScoringRos=true&season=2025&week=4');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.scoring.weekly.ok).toBe(true);
+    expect(res.body.data.scoring.weekly.data.expectedPoints).toBe(19.4);
+    expect(res.body.data.scoring.ros.ok).toBe(false);
+    expect(mockedScoringService.getWeeklyPlayerCard).toHaveBeenCalled();
+    expect(mockedScoringService.getRosPlayerCard).toHaveBeenCalled();
+    expect(mockedBuildScoringPlayerInputFromData).toHaveBeenCalled();
+    expect(mockedScoringService.getWeeklyPlayerCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        player: expect.objectContaining({
+          games_sampled: 4,
+          routes_pg: 36.5,
+          targets_pg: 9.5,
+        }),
+      }),
+    );
+  });
+
+  it('validates scoring weekly query requirements', async () => {
+    const res = await call('/player/00-0036322?includeScoringWeekly=true');
+    expect(res.status).toBe(400);
+    expect(res.body.message).toContain('includeScoringWeekly');
   });
 
   it('returns the normal player payload when enrichment is not requested', async () => {

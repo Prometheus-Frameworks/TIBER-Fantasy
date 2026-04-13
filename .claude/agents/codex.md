@@ -564,3 +564,45 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added an implementation-anchor note in `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md` pointing to the new contract file.
 - Validation:
   - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts` remains)
+
+### 2026-04-12 — Codex: Live scoring-service integration (player + rankings)
+- Added `server/modules/externalModels/scoring/` with typed contracts, request mappers, and a thin resilient client/service for:
+  - `POST /api/tiber/weekly/player-card`
+  - `POST /api/tiber/weekly/rankings`
+  - `POST /api/tiber/ros/player-card`
+  - `POST /api/tiber/weekly/compare`
+- Wired player detail route (`/api/player-identity/player/:id`) to optionally hydrate scoring via `includeScoringWeekly=true` and `includeScoringRos=true`, with safe non-fatal result envelopes.
+- Wired Rankings v2 weekly route (`/api/rankings/v2/weekly`) to consume scoring rankings first and gracefully fall back to FORGE cache when scoring is missing/unavailable.
+- Added player-page UI surface `ScoringSnapshotCard` and integrated it into `PlayerPage` to render expected points, VORP, floor/median/ceiling, confidence/volatility/fragility tags, weekly outlook, role summary, value summary, and role notes.
+- Updated `TiberTiers` table to render scoring-driven rankings columns (rank, player/team/pos, expected, VORP, floor, ceiling, confidence band, weekly outlook).
+- Added focused tests for scoring client handling, player-route integration path, rankings-route integration path, and scoring-unavailable UI state.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 follow-up wire-contract fixes
+- Addressed PR feedback on scoring-service wire compatibility:
+  - request bodies now match live upstream contract (`players`, `league_context`, ROS `remaining_weeks`, compare `player_a`/`player_b`)
+  - response parsing now unwraps service envelope (`ok` + `data`) and reads route payload layers (`data.card`, `data.view`)
+- Hardened client conversions:
+  - null/empty numeric fields remain `null` instead of coercing to `0`
+  - invalid timeout config now falls back to default timeout
+- Updated rankings integration to provide `players` array input to scoring rankings (from existing cache seed set) while retaining graceful FORGE fallback.
+- Updated focused tests to validate against envelope + contract-correct request shapes.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 semantic mapper-depth follow-up
+- Implemented real scoring-input mapping from TIBER data (`weekly_stats`, `player_usage`) so scoring requests now include meaningful opportunity/stat signals:
+  - `games_sampled`, `routes_pg`, `targets_pg`, `carries_pg`, `fantasy_points_ppr_pg`, `snap_share`, `target_share`, `volatility_index`.
+- Added async mapper functions:
+  - `buildScoringPlayerInputFromData(...)` for player-page weekly/ROS scoring calls.
+  - `buildRankingsScoringInputs(...)` for rankings scoring payload construction.
+  - `hasMeaningfulScoringInputs(...)` for gating scoring preference.
+- Updated Rankings v2 route to **not** prefer scoring when mapped inputs are too thin; falls back to FORGE in that case.
+- Updated compare normalization to preserve structured view model (`verdict`, `playerA`, `playerB`, nested `deltas`) instead of flattening.
+- Extended tests to assert scoring calls now carry real mapped fields and to prove rankings skips scoring preference when inputs are not meaningful.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)

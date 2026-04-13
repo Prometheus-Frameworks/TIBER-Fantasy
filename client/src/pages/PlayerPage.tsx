@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import MetricMatrixCard from '@/components/metricMatrix/MetricMatrixCard';
 import TiberScoreCard from '@/components/tiber/TiberScoreCard';
 import CompareDrawerContent from '@/components/player/CompareDrawerContent';
+import { ScoringSnapshotCard, type PlayerCardSnapshot } from '@/components/player/ScoringSnapshotCard';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import { PlayerResearchSummaryBlock } from '@/components/data-lab/PlayerResearchSummaryBlock';
 import type { CompareTarget } from '@/components/player/CompareDrawerContent';
@@ -43,6 +44,10 @@ interface PlayerIdentity {
     };
     isActive: boolean;
     lastVerified: string;
+    scoring?: {
+      weekly?: { ok: true; data: PlayerCardSnapshot } | { ok: false; code: string; message: string } | null;
+      ros?: { ok: true; data: PlayerCardSnapshot } | { ok: false; code: string; message: string } | null;
+    };
   };
 }
 
@@ -304,9 +309,11 @@ export default function PlayerPage() {
   const hasDataForWeek = availableWeeks.includes(effectiveWeek);
 
   const { data: playerData, isLoading: identityLoading, isError: identityError } = useQuery<PlayerIdentity>({
-    queryKey: ['/api/player-identity/player', playerId],
+    queryKey: ['/api/player-identity/player', playerId, season, effectiveWeek],
     queryFn: async () => {
-      const res = await fetch(`/api/player-identity/player/${playerId}`);
+      const res = await fetch(
+        `/api/player-identity/player/${playerId}?includeScoringWeekly=true&includeScoringRos=true&season=${season}&week=${effectiveWeek}`,
+      );
       if (!res.ok) throw new Error('Player not found');
       return res.json();
     },
@@ -657,6 +664,8 @@ export default function PlayerPage() {
           isLoading={playerResearchLoading}
           errorMessage={playerResearchError instanceof Error ? playerResearchError.message : null}
         />
+
+        <ScoringSnapshotCard weekly={player.scoring?.weekly} ros={player.scoring?.ros} />
 
         {/* Controls Row */}
         <div className="flex flex-wrap items-center gap-3">
@@ -1579,4 +1588,3 @@ export default function PlayerPage() {
     </div>
   );
 }
-

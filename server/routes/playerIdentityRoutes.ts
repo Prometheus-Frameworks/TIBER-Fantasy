@@ -12,11 +12,15 @@ import { db } from '../infra/db';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { datadiveSnapshotPlayerWeek, datadiveSnapshotMeta } from '@shared/schema';
 import { orchestratePlayerDetailEnrichment } from '../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator';
+import { scoringService } from '../modules/externalModels/scoring/scoringService';
+import { buildScoringPlayerInputFromData, toLeagueContextInput, toScoringPlayerInput } from '../modules/externalModels/scoring/scoringRequestMappers';
 
 const includeRoleOpportunityValues = new Set(['1', 'true']);
 const includeExternalForgeValues = new Set(['1', 'true']);
 const includeForgeComparisonValues = new Set(['1', 'true']);
 const includeSelectedForgeValues = new Set(['1', 'true']);
+const includeScoringWeeklyValues = new Set(['1', 'true']);
+const includeScoringRosValues = new Set(['1', 'true']);
 
 const router = Router();
 
@@ -76,6 +80,8 @@ router.get('/player/:id', async (req: Request, res: Response) => {
     const includeExternalForge = includeExternalForgeValues.has(String(req.query.includeExternalForge ?? '').toLowerCase());
     const includeForgeComparison = includeForgeComparisonValues.has(String(req.query.includeForgeComparison ?? '').toLowerCase());
     const includeSelectedForge = includeSelectedForgeValues.has(String(req.query.includeSelectedForge ?? '').toLowerCase());
+    const includeScoringWeekly = includeScoringWeeklyValues.has(String(req.query.includeScoringWeekly ?? '').toLowerCase());
+    const includeScoringRos = includeScoringRosValues.has(String(req.query.includeScoringRos ?? '').toLowerCase());
     
     if (!id) {
       return res.status(400).json({
@@ -92,6 +98,17 @@ router.get('/player/:id', async (req: Request, res: Response) => {
         return res.status(400).json({
           success: false,
           message: 'season and week are required when includeRoleOpportunity=true'
+        });
+      }
+    }
+
+    if (includeScoringWeekly) {
+      const season = Number(req.query.season);
+      const week = Number(req.query.week);
+      if (!Number.isInteger(season) || !Number.isInteger(week)) {
+        return res.status(400).json({
+          success: false,
+          message: 'season and week are required when includeScoringWeekly=true'
         });
       }
     }
@@ -118,11 +135,48 @@ router.get('/player/:id', async (req: Request, res: Response) => {
       forgeSourceMode: typeof req.query.forgeSourceMode === 'string' ? req.query.forgeSourceMode : undefined,
     });
 
+    let scoring: Record<string, unknown> | undefined;
+    if (includeScoringWeekly || includeScoringRos) {
+      const leagueContext = toLeagueContextInput({
+        season: req.query.season != null ? Number(req.query.season) : undefined,
+        week: req.query.week != null ? Number(req.query.week) : undefined,
+      });
+      const throughWeek = Number.isInteger(Number(req.query.week)) ? Number(req.query.week) : 18;
+      const playerInput =
+        Number.isInteger(Number(req.query.season))
+          ? await buildScoringPlayerInputFromData({
+              playerId: player.canonicalId,
+              playerName: player.fullName,
+              position: player.position,
+              team: player.nflTeam,
+              season: Number(req.query.season),
+              throughWeek,
+            })
+          : toScoringPlayerInput(player);
+
+      const weekly = includeScoringWeekly
+        ? await scoringService.getWeeklyPlayerCard({ leagueContext, player: playerInput })
+        : null;
+      const ros = includeScoringRos
+        ? await scoringService.getRosPlayerCard({
+            leagueContext,
+            player: playerInput,
+            remainingWeeks: Number.isInteger(Number(req.query.week)) ? Math.max(0, 18 - Number(req.query.week)) : 18,
+          })
+        : null;
+
+      scoring = {
+        weekly,
+        ros,
+      };
+    }
+
     res.json({
       success: true,
       data: {
         ...player,
         ...enrichment,
+        ...(scoring ? { scoring } : {}),
       }
     });
   } catch (error) {
