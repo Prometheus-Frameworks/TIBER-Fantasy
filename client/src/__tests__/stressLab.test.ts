@@ -4,8 +4,8 @@ import StressLab from '@/pages/StressLab';
 import { buildMockOperatorSignalNoteArtifact } from '@/lib/stressLab';
 
 describe('Stress Lab v0 mock artifact builder', () => {
-  it('builds deterministic operator_signal_note_v0 artifacts with conservative heuristics and guardrails', () => {
-    const note = 'NFC North WR note: EPA/Play is improving, Catchable Target quality is up, Red Zone route usage and target share need verification.';
+  it('builds deterministic operator_signal_note_v0 artifacts with contract-aligned metrics and guardrails', () => {
+    const note = '2026 NFC North WR note: EPA/Play is improving, Catchable Target quality is up, Red Zone route usage and target share need verification.';
     const first = buildMockOperatorSignalNoteArtifact(note);
     const second = buildMockOperatorSignalNoteArtifact(note);
 
@@ -13,12 +13,37 @@ describe('Stress Lab v0 mock artifact builder', () => {
     expect(first.source_type).toBe('operator_entered_note');
     expect(first.raw_note).toBe(note);
     expect(first.reasoning_status).toBe('requires_followup');
-    expect(first.detected_metrics.map((metric) => metric.metric_id)).toEqual([
-      'epa_per_play',
-      'catchable_target_rate',
-      'route_participation',
-      'target_share',
+    expect(first.detected_metrics).toEqual([
+      expect.objectContaining({
+        metric: 'epa_per_play',
+        value: null,
+        unit: null,
+        confidence: 'heuristic',
+        sample_filter: 'operator_note_keyword_match',
+      }),
+      expect.objectContaining({
+        metric: 'catchable_target_rate',
+        value: null,
+        unit: null,
+        confidence: 'heuristic',
+        sample_filter: 'operator_note_keyword_match',
+      }),
+      expect.objectContaining({
+        metric: 'route_participation',
+        value: null,
+        unit: null,
+        confidence: 'heuristic',
+        sample_filter: 'operator_note_keyword_match',
+      }),
+      expect.objectContaining({
+        metric: 'target_share',
+        value: null,
+        unit: null,
+        confidence: 'heuristic',
+        sample_filter: 'operator_note_keyword_match',
+      }),
     ]);
+    expect(first.detected_metrics[0]).toHaveProperty('context', expect.stringContaining('Matched cue: EPA/Play.'));
     expect(first.signal_tags).toEqual([
       'epa_context_signal',
       'target_quality_signal',
@@ -32,7 +57,10 @@ describe('Stress Lab v0 mock artifact builder', () => {
       {
         label: 'NFC North',
         entity_type: 'division',
-        extraction_confidence: 'heuristic',
+      },
+      {
+        label: '2026',
+        entity_type: 'season',
       },
     ]);
     expect(first.do_not_apply).toContain('Do not mutate rankings from this note alone.');
@@ -40,6 +68,13 @@ describe('Stress Lab v0 mock artifact builder', () => {
     expect(first.do_not_apply).toContain('Do not fabricate missing context.');
     expect(first.uncertainty).toContain('Automated parsing is not implemented in v0.');
     expect(first.uncertainty).toContain('Source verification is required before downstream application.');
+  });
+
+  it('does not emit non-contract entity types for unresolved context', () => {
+    const artifact = buildMockOperatorSignalNoteArtifact('Division strength matters here, but the note does not name a specific division.');
+
+    expect(artifact.entities).toEqual([]);
+    expect(artifact.uncertainty).toContain('Division context was mentioned, but no contract-supported division entity was resolved by v0 heuristics.');
   });
 
   it('renders the read-only reasoning sandbox stance', () => {

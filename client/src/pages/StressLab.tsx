@@ -35,11 +35,9 @@ function ListPanel({ title, items, emptyLabel }: { title: string; items: string[
 
 function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   const metricLabels = artifact.detected_metrics.map(
-    (metric) => `${metric.metric_id} (${metric.extraction_confidence}; matched “${metric.matched_text}”)`,
+    (metric) => `${metric.metric} (${metric.confidence}; ${metric.context}; sample filter: ${metric.sample_filter})`,
   );
-  const entityLabels = artifact.entities.map(
-    (entity) => `${entity.label} · ${entity.entity_type} · ${entity.extraction_confidence}`,
-  );
+  const entityLabels = artifact.entities.map((entity) => `${entity.label} · ${entity.entity_type}`);
   const rawJson = useMemo(() => JSON.stringify(artifact, null, 2), [artifact]);
 
   return (
