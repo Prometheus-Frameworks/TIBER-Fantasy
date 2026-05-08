@@ -52,6 +52,54 @@ const METRIC_HEURISTICS: Array<{
   tag: string;
 }> = [
   {
+    pattern: /\bteamstate\b/i,
+    metric: "teamstate_context",
+    matchedText: "teamstate",
+    context:
+      "Operator note mentions teamstate context; no teamstate value is parsed in v0.",
+    tag: "teamstate_context",
+  },
+  {
+    pattern: /offensive\s+environment/i,
+    metric: "offensive_environment",
+    matchedText: "offensive environment",
+    context:
+      "Operator note mentions offensive environment context; no environment score is parsed in v0.",
+    tag: "offensive_environment_signal",
+  },
+  {
+    pattern: /draft\s+capital|first\s+round|premium\s+picks/i,
+    metric: "draft_capital_context",
+    matchedText: "draft capital / first round / premium picks",
+    context:
+      "Operator note mentions draft capital context; no draft asset value is parsed in v0.",
+    tag: "draft_capital_signal",
+  },
+  {
+    pattern: /\binsulation\b/i,
+    metric: "player_insulation",
+    matchedText: "insulation",
+    context:
+      "Operator note mentions player insulation context; no protection value is parsed in v0.",
+    tag: "player_insulation_signal",
+  },
+  {
+    pattern: /regime\s+volatility/i,
+    metric: "regime_volatility",
+    matchedText: "regime volatility",
+    context:
+      "Operator note mentions regime volatility; no risk value is parsed in v0.",
+    tag: "regime_volatility_risk",
+  },
+  {
+    pattern: /unknown\s+offensive\s+efficiency|offensive\s+efficiency/i,
+    metric: "offensive_efficiency",
+    matchedText: "unknown offensive efficiency",
+    context:
+      "Operator note mentions offensive efficiency uncertainty; no efficiency value is parsed in v0.",
+    tag: "offensive_efficiency_uncertainty",
+  },
+  {
     pattern: /EPA\s*\/\s*Play/i,
     metric: "epa_per_play",
     matchedText: "EPA/Play",
@@ -94,10 +142,33 @@ const TAG_HEURISTICS: Array<{
     pattern: /\bdivision\b|\b[AN]FC\s+North\b/i,
     tag: "division_strength_context",
   },
+  { pattern: /extended|extension/i, tag: "contract_extension_signal" },
+  { pattern: /\bsigned\b/i, tag: "free_agent_or_qb_change_signal" },
+  { pattern: /traded|\btrade\b/i, tag: "trade_context_signal" },
+  {
+    pattern: /organizational\s+coherence/i,
+    tag: "organizational_coherence_signal",
+  },
+  { pattern: /environment\s+rebound/i, tag: "environment_rebound_candidate" },
+  {
+    pattern: /defensive\s+talent\s+teardown|\bteardown\b/i,
+    tag: "defensive_teardown_risk",
+  },
 ];
 
 const DIVISION_PATTERNS = [/\bNFC\s+North\b/i, /\bAFC\s+North\b/i];
 const SEASON_PATTERN = /\b20\d{2}\b/;
+const TEAM_PATTERNS = [/\bNew\s+York\s+Jets\b/i, /\bJets\b/i];
+const PLAYER_PATTERNS = [
+  /\bBreece\s+Hall\b/i,
+  /\bGarrett\s+Wilson\b/i,
+  /\bGeno\s+Smith\b/i,
+  /\bT[’']?Vondre\s+Sweat\b/i,
+  /\bSauce\s+Gardner\b/i,
+  /\bQuinnen\s+Williams\b/i,
+];
+const TRANSACTION_OR_TEAMSTATE_PATTERN =
+  /extended|extension|\bsigned\b|traded|\btrade\b|draft\s+capital|first\s+round|premium\s+picks|\bteamstate\b/i;
 
 function stableHash(value: string): number {
   let hash = 2166136261;
@@ -120,28 +191,70 @@ function uniqueValues(values: string[]): string[] {
   return Array.from(new Set(values));
 }
 
+function addEntity(
+  entities: OperatorSignalNoteEntity[],
+  label: string,
+  entityType: OperatorSignalNoteEntity["entity_type"],
+): void {
+  if (
+    !entities.some(
+      (entity) =>
+        entity.entity_type === entityType &&
+        entity.label.toLocaleLowerCase() === label.toLocaleLowerCase(),
+    )
+  ) {
+    entities.push({
+      label,
+      entity_type: entityType,
+    });
+  }
+}
+
 function detectEntities(note: string): OperatorSignalNoteEntity[] {
   const entities: OperatorSignalNoteEntity[] = [];
+
+  for (const pattern of TEAM_PATTERNS) {
+    const match = note.match(pattern);
+    if (match?.[0]) {
+      addEntity(entities, match[0], "team");
+    }
+  }
+
+  for (const pattern of PLAYER_PATTERNS) {
+    const match = note.match(pattern);
+    if (match?.[0]) {
+      addEntity(entities, match[0], "player");
+    }
+  }
 
   for (const pattern of DIVISION_PATTERNS) {
     const match = note.match(pattern);
     if (match?.[0]) {
-      entities.push({
-        label: match[0],
-        entity_type: "division",
-      });
+      addEntity(entities, match[0], "division");
     }
   }
 
   const seasonMatch = note.match(SEASON_PATTERN);
   if (seasonMatch?.[0]) {
-    entities.push({
-      label: seasonMatch[0],
-      entity_type: "season",
-    });
+    addEntity(entities, seasonMatch[0], "season");
   }
 
   return entities;
+}
+
+function buildRequiredFollowups(note: string): string[] {
+  const followups = [...DEFAULT_FOLLOWUPS];
+
+  if (TRANSACTION_OR_TEAMSTATE_PATTERN.test(note)) {
+    followups.push(
+      "Verify transactions against governed source metadata.",
+      "Check whether Teamstate has current offensive environment data for the referenced team.",
+      "Check whether downstream fantasy modules already represent QB/environment changes.",
+      "Preserve this as hypothesis scaffolding until source truth and season window are verified.",
+    );
+  }
+
+  return followups;
 }
 
 function buildUncertainty(
@@ -156,6 +269,24 @@ function buildUncertainty(
   ) {
     uncertainty.push(
       "Division context was mentioned, but no contract-supported division entity was resolved by v0 heuristics.",
+    );
+  }
+
+  if (entities.some((entity) => entity.entity_type === "player")) {
+    uncertainty.push(
+      "Player names were detected heuristically but canonical IDs were not resolved in v0.",
+    );
+  }
+
+  if (entities.some((entity) => entity.entity_type === "team")) {
+    uncertainty.push(
+      "Team was detected heuristically; canonical team ID resolution is not implemented in v0.",
+    );
+  }
+
+  if (TRANSACTION_OR_TEAMSTATE_PATTERN.test(note)) {
+    uncertainty.push(
+      "Transaction claims require source verification before downstream use.",
     );
   }
 
@@ -226,14 +357,21 @@ export function buildMockOperatorSignalNoteArtifact(
   const matchedMetricHeuristics = METRIC_HEURISTICS.filter((heuristic) =>
     heuristic.pattern.test(normalizedNote),
   );
-  const detectedMetrics = matchedMetricHeuristics.map((heuristic) => ({
-    metric: heuristic.metric,
-    value: null,
-    unit: null,
-    context: `${heuristic.context} Matched cue: ${heuristic.matchedText}.`,
-    confidence: "heuristic" as const,
-    sample_filter: "operator_note_keyword_match",
-  }));
+  const detectedMetrics = Array.from(
+    new Map(
+      matchedMetricHeuristics.map((heuristic) => [
+        heuristic.metric,
+        {
+          metric: heuristic.metric,
+          value: null,
+          unit: null,
+          context: `${heuristic.context} Matched cue: ${heuristic.matchedText}.`,
+          confidence: "heuristic" as const,
+          sample_filter: "operator_note_keyword_match",
+        },
+      ]),
+    ).values(),
+  );
   const signalTags = uniqueValues([
     ...matchedMetricHeuristics.map((heuristic) => heuristic.tag),
     ...TAG_HEURISTICS.filter((heuristic) =>
@@ -256,7 +394,7 @@ export function buildMockOperatorSignalNoteArtifact(
     detected_metrics: detectedMetrics,
     signal_tags: signalTags,
     reasoning_status: "requires_followup",
-    required_followups: DEFAULT_FOLLOWUPS,
+    required_followups: buildRequiredFollowups(normalizedNote),
     do_not_apply: DEFAULT_DO_NOT_APPLY,
     uncertainty: buildUncertainty(normalizedNote, entities),
     interpretation_summary: interpretationSummary,
