@@ -3,19 +3,33 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import DataLabHub from '@/pages/DataLabHub';
 
 jest.mock('@tanstack/react-query', () => ({
-  useQuery: jest.fn(() => ({
-    data: {
-      status: 'healthy',
-      latestSnapshot: null,
-      tableCounts: {
-        snapshotMeta: 4,
-        snapshotPlayerWeek: 12345,
-        snapshotPlayerSeason: 0,
-        weekStaging: 0,
-        seasonStaging: 0,
+  useQuery: jest.fn((options) => {
+    if (options?.queryKey?.[0] === '/api/data-lab/promoted-status') {
+      return {
+        data: {
+          data: {
+            statuses: [],
+          },
+        },
+        isLoading: false,
+        error: null,
+      };
+    }
+
+    return {
+      data: {
+        status: 'healthy',
+        latestSnapshot: null,
+        tableCounts: {
+          snapshotMeta: 4,
+          snapshotPlayerWeek: 12345,
+          snapshotPlayerSeason: 0,
+          weekStaging: 0,
+          seasonStaging: 0,
+        },
       },
-    },
-  })),
+    };
+  }),
 }));
 
 describe('DataLabHub', () => {
@@ -31,6 +45,8 @@ describe('DataLabHub', () => {
     expect(html).toContain('Role &amp; Opportunity Lab');
     expect(html).toContain('Age Curve / ARC Lab');
     expect(html).toContain('Point Scenario Lab');
+    expect(html).toContain('TIBER Stress Lab');
+    expect(html).toContain('Reasoning Sandbox');
     expect(html).toContain('What this module is for');
     expect(html).toContain('When to use this');
     expect(html).toContain('Promoted');

@@ -41,6 +41,7 @@ import PointScenariosLab from "@/pages/PointScenariosLab";
 import PlayerResearchLab from "@/pages/PlayerResearchLab";
 import TeamResearchLab from "@/pages/TeamResearchLab";
 import DataLabCommandCenterLab from "@/pages/DataLabCommandCenterLab";
+import StressLab from "@/pages/StressLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
@@ -70,6 +71,7 @@ function Router() {
         <Route path="/tiber-data-lab/player-research" component={PlayerResearchLab} />
         <Route path="/tiber-data-lab/team-research" component={TeamResearchLab} />
         <Route path="/tiber-data-lab/command-center" component={DataLabCommandCenterLab} />
+        <Route path="/stress-lab" component={StressLab} />
         <Route path="/personnel">
           {() => <Redirect to="/tiber-data-lab/personnel" />}
         </Route>
