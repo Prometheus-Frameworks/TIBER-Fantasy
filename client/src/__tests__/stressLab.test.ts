@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import StressLab from "@/pages/StressLab";
 import {
   buildMockOperatorSignalNoteArtifact,
+  buildSuggestedTiberHandoffs,
   serializeOperatorSignalNoteArtifactToCsv,
 } from "@/lib/stressLab";
 
@@ -171,6 +172,51 @@ describe("Stress Lab v0 mock artifact builder", () => {
         ["player", "team", "division", "season"].includes(entity.entity_type),
       ),
     ).toBe(true);
+  });
+
+  it("suggests repo handoffs for the Jets operator note", () => {
+    const artifact = buildMockOperatorSignalNoteArtifact(
+      "New York Jets 2026 teamstate note:\nJets extended Breece Hall, traded for T’Vondre Sweat, added draft capital from Sauce Gardner/Quinnen Williams trades, signed Geno Smith, and invested premium picks into EDGE/WR. Hypothesis: organizational coherence and offensive environment are improving. Garrett Wilson may be an environment rebound candidate if Geno stabilizes QB play. Breece Hall gains insulation from extension. Risks: defensive talent teardown, new regime volatility, and unknown offensive efficiency.",
+    );
+
+    const handoffs = buildSuggestedTiberHandoffs(artifact);
+
+    expect(handoffs.map((handoff) => handoff.repo)).toEqual(
+      expect.arrayContaining([
+        "TIBER-Data",
+        "TIBER-Teamstate",
+        "TIBER-FORGE",
+        "TIBER-Fantasy / Stress Lab",
+      ]),
+    );
+    expect(handoffs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repo: "TIBER-Data",
+          status: "suggested only",
+          next_check:
+            "Verify entities and transactions against governed TIBER-Data artifacts before downstream interpretation.",
+        }),
+      ]),
+    );
+  });
+
+  it("suggests Role & Opportunity for role, route, and red-zone notes", () => {
+    const artifact = buildMockOperatorSignalNoteArtifact(
+      "2026 player note: Red Zone route role and target share need usage review before any downstream interpretation.",
+    );
+
+    const handoffs = buildSuggestedTiberHandoffs(artifact);
+
+    expect(handoffs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repo: "Role & Opportunity",
+          domain: "usage/role signal",
+          status: "suggested only",
+        }),
+      ]),
+    );
   });
 
   it("does not emit non-contract entity types for unresolved context", () => {

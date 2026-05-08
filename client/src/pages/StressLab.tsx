@@ -15,8 +15,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   buildMockOperatorSignalNoteArtifact,
+  buildSuggestedTiberHandoffs,
   serializeOperatorSignalNoteArtifactToCsv,
   type OperatorSignalNoteV0,
+  type SuggestedTiberHandoff,
 } from "@/lib/stressLab";
 
 const SAMPLE_NOTE =
@@ -78,6 +80,75 @@ function ListPanel({
   );
 }
 
+function SuggestedHandoffsPanel({
+  handoffs,
+}: {
+  handoffs: SuggestedTiberHandoff[];
+}) {
+  return (
+    <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-semibold text-gray-900">
+          Suggested TIBER handoffs
+        </CardTitle>
+        <p className="text-xs leading-5 text-gray-500">
+          Read-only v0 routing scaffolding. These suggestions do not call repo
+          APIs, mutate projections, or apply rankings.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-0">
+        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-3 text-sm text-orange-950">
+          <div className="font-semibold">Current repo boundary model</div>
+          <ul className="mt-2 space-y-1 leading-6">
+            <li>TIBER-Data = truth/contracts</li>
+            <li>TIBER-Teamstate = team interpretation</li>
+            <li>TIBER-FORGE = fantasy signal/scoring</li>
+            <li>Role &amp; Opportunity = usage/role signal</li>
+            <li>TIBER-Fantasy = user-facing inspection/synthesis</li>
+          </ul>
+        </div>
+        <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-2">
+          {handoffs.map((handoff) => (
+            <div
+              key={`${handoff.repo}-${handoff.domain}`}
+              className="min-w-0 rounded-2xl border border-gray-200 bg-[#fafafa] p-3 sm:p-4"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="break-words text-sm font-semibold text-gray-900">
+                    {handoff.repo}
+                  </div>
+                  <div className="mt-0.5 text-xs text-gray-500">
+                    {handoff.domain}
+                  </div>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className="w-fit border-0 bg-gray-200 text-gray-700"
+                >
+                  {handoff.status}
+                </Badge>
+              </div>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Why it matters
+              </div>
+              <p className="mt-1 break-words text-sm leading-6 text-gray-600">
+                {handoff.reason}
+              </p>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Next check
+              </div>
+              <p className="mt-1 break-words text-sm leading-6 text-gray-600">
+                {handoff.next_check}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
   const metricLabels = artifact.detected_metrics.map(
@@ -88,6 +159,10 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
     (entity) => `${entity.label} · ${entity.entity_type}`,
   );
   const rawJson = useMemo(() => JSON.stringify(artifact, null, 2), [artifact]);
+  const handoffs = useMemo(
+    () => buildSuggestedTiberHandoffs(artifact),
+    [artifact],
+  );
 
   async function copyJson() {
     try {
@@ -236,6 +311,8 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
           </p>
         </CardContent>
       </Card>
+
+      <SuggestedHandoffsPanel handoffs={handoffs} />
 
       <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-2">
         <ListPanel
