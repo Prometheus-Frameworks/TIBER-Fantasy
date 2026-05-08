@@ -85,6 +85,94 @@ describe("Stress Lab v0 mock artifact builder", () => {
     );
   });
 
+  it("extracts conservative teamstate, transaction, and fantasy-context cues from a Jets operator note", () => {
+    const note =
+      "New York Jets 2026 teamstate note:\nJets extended Breece Hall, traded for T’Vondre Sweat, added draft capital from Sauce Gardner/Quinnen Williams trades, signed Geno Smith, and invested premium picks into EDGE/WR. Hypothesis: organizational coherence and offensive environment are improving. Garrett Wilson may be an environment rebound candidate if Geno stabilizes QB play. Breece Hall gains insulation from extension. Risks: defensive talent teardown, new regime volatility, and unknown offensive efficiency.";
+
+    const artifact = buildMockOperatorSignalNoteArtifact(note);
+    const entityLabelsByType = (entityType: string) =>
+      artifact.entities
+        .filter((entity) => entity.entity_type === entityType)
+        .map((entity) => entity.label);
+
+    expect(entityLabelsByType("team")).toEqual(
+      expect.arrayContaining(["New York Jets", "Jets"]),
+    );
+    expect(entityLabelsByType("player")).toEqual(
+      expect.arrayContaining([
+        "Breece Hall",
+        "Garrett Wilson",
+        "Geno Smith",
+        "T’Vondre Sweat",
+        "Sauce Gardner",
+        "Quinnen Williams",
+      ]),
+    );
+    expect(artifact.entities).toContainEqual({
+      label: "2026",
+      entity_type: "season",
+    });
+    expect(artifact.signal_tags).toEqual(
+      expect.arrayContaining([
+        "teamstate_context",
+        "contract_extension_signal",
+        "trade_context_signal",
+        "draft_capital_signal",
+        "offensive_environment_signal",
+        "environment_rebound_candidate",
+        "player_insulation_signal",
+        "defensive_teardown_risk",
+        "regime_volatility_risk",
+      ]),
+    );
+    expect(artifact.detected_metrics.map((metric) => metric.metric)).toEqual(
+      expect.arrayContaining([
+        "teamstate_context",
+        "offensive_environment",
+        "draft_capital_context",
+        "player_insulation",
+        "regime_volatility",
+        "offensive_efficiency",
+      ]),
+    );
+    expect(artifact.detected_metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metric: "teamstate_context",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+      ]),
+    );
+    expect(artifact.required_followups).toEqual(
+      expect.arrayContaining([
+        "Verify transactions against governed source metadata.",
+        "Check whether Teamstate has current offensive environment data for the referenced team.",
+        "Check whether downstream fantasy modules already represent QB/environment changes.",
+        "Preserve this as hypothesis scaffolding until source truth and season window are verified.",
+      ]),
+    );
+    expect(artifact.uncertainty).toEqual(
+      expect.arrayContaining([
+        "Player names were detected heuristically but canonical IDs were not resolved in v0.",
+        "Team was detected heuristically; canonical team ID resolution is not implemented in v0.",
+        "Transaction claims require source verification before downstream use.",
+      ]),
+    );
+    expect(artifact.do_not_apply).toEqual([
+      "Do not mutate rankings from this note alone.",
+      "Do not treat operator notes as verified source truth.",
+      "Do not fabricate missing context.",
+    ]);
+    expect(
+      artifact.entities.every((entity) =>
+        ["player", "team", "division", "season"].includes(entity.entity_type),
+      ),
+    ).toBe(true);
+  });
+
   it("does not emit non-contract entity types for unresolved context", () => {
     const artifact = buildMockOperatorSignalNoteArtifact(
       "Division strength matters here, but the note does not name a specific division.",
