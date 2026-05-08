@@ -13,6 +13,7 @@ import {
   Network,
   TrendingUp,
   LineChart,
+  Beaker,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -105,6 +106,22 @@ const modules = [
     path: "/tiber-data-lab/situational",
     color: "#e2640d",
     badge: "NEW" as string | null,
+  },
+
+  {
+    id: "stress-lab",
+    title: "TIBER Stress Lab",
+    subtitle: "Reasoning Sandbox",
+    description:
+      "Read-only v0 scaffold for pasting operator football notes and inspecting a mocked operator_signal_note_v0 hypothesis artifact.",
+    whatItIsFor:
+      "Use this diagnostic surface to see what TIBER can preserve, what conservative heuristics can flag, and which follow-ups are required before any downstream application.",
+    whenToUse:
+      "Use when reviewing operator notes for reasoning integrity. This page generates hypotheses, not truth, and does not change rankings.",
+    icon: Beaker,
+    path: "/stress-lab",
+    color: "#e2640d",
+    badge: "V0" as string | null,
   },
   {
     id: "command-center",

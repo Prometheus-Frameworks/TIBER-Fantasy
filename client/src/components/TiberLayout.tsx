@@ -33,6 +33,7 @@ const navSections: NavSectionConfig[] = [
       { label: "Player Research", path: "/tiber-data-lab/player-research" },
       { label: "Team Research", path: "/tiber-data-lab/team-research" },
       { label: "Data Lab Hub", path: "/tiber-data-lab" },
+      { label: "Stress Lab", path: "/stress-lab", badge: "V0" },
     ],
   },
   {
