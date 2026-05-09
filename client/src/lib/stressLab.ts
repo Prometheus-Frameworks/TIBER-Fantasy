@@ -12,6 +12,14 @@ export type OperatorSignalNoteMetric = {
   sample_filter: string;
 };
 
+export type SuggestedTiberHandoff = {
+  repo: string;
+  domain: string;
+  reason: string;
+  status: "suggested only";
+  next_check: string;
+};
+
 export type OperatorSignalNoteV0 = {
   note_id: string;
   source_type: "operator_entered_note";
@@ -257,6 +265,42 @@ function buildRequiredFollowups(note: string): string[] {
   return followups;
 }
 
+const TIBER_DATA_SIGNAL_TAGS = new Set([
+  "contract_extension_signal",
+  "free_agent_or_qb_change_signal",
+  "trade_context_signal",
+  "draft_capital_signal",
+]);
+
+const TIBER_TEAMSTATE_SIGNAL_TAGS = new Set([
+  "teamstate_context",
+  "offensive_environment_signal",
+  "regime_volatility_risk",
+  "defensive_teardown_risk",
+  "organizational_coherence_signal",
+]);
+
+const TIBER_FORGE_SIGNAL_TAGS = new Set([
+  "player_insulation_signal",
+  "offensive_environment_signal",
+  "environment_rebound_candidate",
+  "offensive_efficiency_uncertainty",
+]);
+
+const ROLE_OPPORTUNITY_SIGNAL_TAGS = new Set([
+  "route_role_signal",
+  "usage_signal",
+  "target_quality_signal",
+  "red_zone_context",
+]);
+
+function hasAnySignalTag(
+  artifact: OperatorSignalNoteV0,
+  signalTags: Set<string>,
+): boolean {
+  return artifact.signal_tags.some((tag) => signalTags.has(tag));
+}
+
 function buildUncertainty(
   note: string,
   entities: OperatorSignalNoteEntity[],
@@ -303,6 +347,86 @@ function csvEscape(value: string): string {
 
 function flattenValues(values: string[]): string {
   return values.join("|");
+}
+
+export function buildSuggestedTiberHandoffs(
+  artifact: OperatorSignalNoteV0,
+): SuggestedTiberHandoff[] {
+  const handoffs: SuggestedTiberHandoff[] = [];
+  const addHandoff = (handoff: Omit<SuggestedTiberHandoff, "status">) => {
+    handoffs.push({
+      ...handoff,
+      status: "suggested only",
+    });
+  };
+
+  if (
+    artifact.entities.some((entity) =>
+      ["player", "team", "season"].includes(entity.entity_type),
+    ) ||
+    hasAnySignalTag(artifact, TIBER_DATA_SIGNAL_TAGS) ||
+    /source verification|source metadata|roster|identity/i.test(
+      artifact.raw_note,
+    )
+  ) {
+    addHandoff({
+      repo: "TIBER-Data",
+      domain: "truth/contracts",
+      reason:
+        "Canonical player/team IDs, roster truth, transaction source refs, temporal validity, and contract verification.",
+      next_check:
+        "Verify entities and transactions against governed TIBER-Data artifacts before downstream interpretation.",
+    });
+  }
+
+  if (hasAnySignalTag(artifact, TIBER_TEAMSTATE_SIGNAL_TAGS)) {
+    addHandoff({
+      repo: "TIBER-Teamstate",
+      domain: "team interpretation",
+      reason:
+        "Team-environment interpretation from source-backed TIBER-Data roster/transaction truth.",
+      next_check:
+        "Inspect whether Teamstate has current environment context for the referenced team and season window.",
+    });
+  }
+
+  if (hasAnySignalTag(artifact, TIBER_FORGE_SIGNAL_TAGS)) {
+    addHandoff({
+      repo: "TIBER-FORGE",
+      domain: "fantasy signal/scoring",
+      reason:
+        "Fantasy signal/scoring impact once source truth and team context are verified.",
+      next_check:
+        "Inspect whether FORGE already accounts for the relevant environment or insulation signal before changing any score.",
+    });
+  }
+
+  if (hasAnySignalTag(artifact, ROLE_OPPORTUNITY_SIGNAL_TAGS)) {
+    addHandoff({
+      repo: "Role & Opportunity",
+      domain: "usage/role signal",
+      reason:
+        "Player usage, role, route, target quality, and opportunity-context evaluation.",
+      next_check:
+        "Inspect whether role/opportunity artifacts contain matching player-season usage context.",
+    });
+  }
+
+  if (
+    artifact.signal_tags.includes("operator_hypothesis") ||
+    artifact.note_id
+  ) {
+    addHandoff({
+      repo: "TIBER-Fantasy / Stress Lab",
+      domain: "user-facing inspection/synthesis",
+      reason:
+        "Preserve hypothesis, uncertainty, guardrails, and operator-facing review/export loop.",
+      next_check:
+        "Export artifact for review and decide whether a follow-up contract or promoted lane is needed.",
+    });
+  }
+
+  return handoffs;
 }
 
 export function serializeOperatorSignalNoteArtifactToCsv(
