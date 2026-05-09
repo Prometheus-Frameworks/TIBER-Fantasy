@@ -12,12 +12,21 @@ export type OperatorSignalNoteMetric = {
   sample_filter: string;
 };
 
+export type TiberHandoffClaimClassification =
+  | "truth_claim"
+  | "team_interpretation"
+  | "fantasy_implication"
+  | "usage_role_signal"
+  | "operator_hypothesis";
+
 export type SuggestedTiberHandoff = {
   repo: string;
   domain: string;
   reason: string;
   status: "suggested only";
   next_check: string;
+  required_artifact_types: string[];
+  claim_classification: TiberHandoffClaimClassification;
 };
 
 export type OperatorSignalNoteV0 = {
@@ -34,6 +43,38 @@ export type OperatorSignalNoteV0 = {
   uncertainty: string[];
   interpretation_summary: string;
 };
+
+const TIBER_DATA_REQUIRED_ARTIFACT_TYPES = [
+  "roster_snapshot_v0",
+  "transaction_source_ref_v0",
+  "canonical_player_identity_v0",
+  "canonical_team_identity_v0",
+];
+
+const TIBER_TEAMSTATE_REQUIRED_ARTIFACT_TYPES = [
+  "team_environment_snapshot_v0",
+  "roster_continuity_signal_v0",
+  "qb_transition_context_v0",
+  "regime_volatility_context_v0",
+];
+
+const TIBER_FORGE_REQUIRED_ARTIFACT_TYPES = [
+  "player_fantasy_signal_snapshot_v0",
+  "insulation_adjustment_signal_v0",
+  "offensive_environment_adjustment_v0",
+];
+
+const ROLE_OPPORTUNITY_REQUIRED_ARTIFACT_TYPES = [
+  "role_opportunity_snapshot_v0",
+  "route_participation_signal_v0",
+  "target_quality_context_v0",
+  "red_zone_usage_context_v0",
+];
+
+const TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES = [
+  "operator_signal_note_v0",
+  "stress_lab_review_export_v0",
+];
 
 const DEFAULT_DO_NOT_APPLY = [
   "Do not mutate rankings from this note alone.",
@@ -372,6 +413,8 @@ export function buildSuggestedTiberHandoffs(
     addHandoff({
       repo: "TIBER-Data",
       domain: "truth/contracts",
+      claim_classification: "truth_claim",
+      required_artifact_types: TIBER_DATA_REQUIRED_ARTIFACT_TYPES,
       reason:
         "Canonical player/team IDs, roster truth, transaction source refs, temporal validity, and contract verification.",
       next_check:
@@ -383,6 +426,8 @@ export function buildSuggestedTiberHandoffs(
     addHandoff({
       repo: "TIBER-Teamstate",
       domain: "team interpretation",
+      claim_classification: "team_interpretation",
+      required_artifact_types: TIBER_TEAMSTATE_REQUIRED_ARTIFACT_TYPES,
       reason:
         "Team-environment interpretation from source-backed TIBER-Data roster/transaction truth.",
       next_check:
@@ -394,6 +439,8 @@ export function buildSuggestedTiberHandoffs(
     addHandoff({
       repo: "TIBER-FORGE",
       domain: "fantasy signal/scoring",
+      claim_classification: "fantasy_implication",
+      required_artifact_types: TIBER_FORGE_REQUIRED_ARTIFACT_TYPES,
       reason:
         "Fantasy signal/scoring impact once source truth and team context are verified.",
       next_check:
@@ -405,6 +452,8 @@ export function buildSuggestedTiberHandoffs(
     addHandoff({
       repo: "Role & Opportunity",
       domain: "usage/role signal",
+      claim_classification: "usage_role_signal",
+      required_artifact_types: ROLE_OPPORTUNITY_REQUIRED_ARTIFACT_TYPES,
       reason:
         "Player usage, role, route, target quality, and opportunity-context evaluation.",
       next_check:
@@ -419,6 +468,8 @@ export function buildSuggestedTiberHandoffs(
     addHandoff({
       repo: "TIBER-Fantasy / Stress Lab",
       domain: "user-facing inspection/synthesis",
+      claim_classification: "operator_hypothesis",
+      required_artifact_types: TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES,
       reason:
         "Preserve hypothesis, uncertainty, guardrails, and operator-facing review/export loop.",
       next_check:
