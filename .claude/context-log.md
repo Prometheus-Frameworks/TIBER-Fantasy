@@ -418,3 +418,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `docs/stress-lab-capability-matrix.md`, `README.md`
 - **Validation:** Documentation-only change; ran `git diff --check`.
 - **Notes:** No backend calls, runtime logic, UI changes, ranking/projection mutation, or artifact ingestion were added.
+
+### 2026-05-10 — Codex: TIBER Observatory UI reset
+- **What changed:** Repositioned the default app experience around a smaller TIBER Observatory surface, using the existing Stress Lab note-inspection logic as the primary read-only operator workflow. Simplified primary navigation and added explicit online-system status and repo-boundary awareness panels without fake metrics or placeholder modules.
+- **Files modified:** `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `client/src/pages/StressLab.tsx`, `client/src/__tests__/stressLab.test.ts`
+- **Validation:** `npm run test -- client/src/__tests__/stressLab.test.ts` passed; `npm run build` passed with existing duplicate `applyAdjusters` warning; `npm run typecheck` still fails on pre-existing unrelated repo-wide TypeScript errors; Vite route smoke checks returned 200 for `/`, `/observatory`, `/tiers`, `/rookies`, `/metrics-dictionary`, and `/architecture`.
+- **Notes:** Compatibility routes remain registered; unfinished/experimental surfaces were removed from primary navigation rather than deleted.

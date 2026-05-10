@@ -53,7 +53,9 @@ function Router() {
   return (
     <TiberLayout>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/" component={StressLab} />
+        <Route path="/observatory" component={StressLab} />
+        <Route path="/dashboard" component={Dashboard} />
         {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
         <Route path="/tiers" component={TiberTiers} />
         <Route path="/rookies" component={RookieBoard} />

@@ -17,59 +17,19 @@ type NavSectionConfig = {
 
 const navSections: NavSectionConfig[] = [
   {
-    label: "Core Product",
-    description: "Start here for rankings, rookies, and weekly planning.",
+    label: "Primary",
+    description: "Inspectable systems only.",
     items: [
-      { label: "Tiers", path: "/tiers" },
+      { label: "Rankings", path: "/tiers", badge: "LIVE" },
       { label: "Rookie Board", path: "/rookies", badge: "2026" },
-      { label: "Schedule & Matchups", path: "/schedule" },
     ],
   },
   {
-    label: "Research",
-    description: "Go deeper with player and team research workflows.",
+    label: "Reference",
+    description: "Architecture and capability docs.",
     items: [
-      { label: "Research Command Center", path: "/tiber-data-lab/command-center", badge: "PRIMARY" },
-      { label: "Player Research", path: "/tiber-data-lab/player-research" },
-      { label: "Team Research", path: "/tiber-data-lab/team-research" },
-      { label: "Data Lab Hub", path: "/tiber-data-lab" },
-      { label: "Stress Lab", path: "/stress-lab", badge: "V0" },
-    ],
-  },
-  {
-    label: "Model Labs",
-    description: "Specialist tools for deeper analysis.",
-    items: [
-      { label: "Breakout Signals", path: "/tiber-data-lab/breakout-signals" },
-      { label: "Role & Opportunity", path: "/tiber-data-lab/role-opportunity" },
-      { label: "Age Curves / ARC", path: "/tiber-data-lab/age-curves" },
-      { label: "Point Scenarios", path: "/tiber-data-lab/point-scenarios" },
-      { label: "FORGE Workbench", path: "/forge-workbench" },
-      { label: "Fantasy Lab", path: "/fantasy-lab" },
-      { label: "IDP Lab", path: "/idp-lab" },
-      { label: "CATALYST Lab", path: "/catalyst-lab" },
-    ],
-  },
-  {
-    label: "Agent & Intelligence",
-    description: "Assistant-style tools and live intelligence views.",
-    items: [
-      { label: "TiberClaw", path: "/tiberclaw", badge: "AGENT" },
-      { label: "X Intelligence", path: "/x-intel", badge: "GROK" },
-      { label: "Legacy Chat", path: "/legacy-chat", badge: "LEGACY" },
-    ],
-  },
-  {
-    label: "System & Builder",
-    description: "Admin, diagnostics, and internal tools.",
-    items: [
-      { label: "FORGE Hub", path: "/admin/forge-hub" },
-      { label: "FORGE Engine", path: "/forge" },
-      { label: "FORGE Inspector", path: "/forge/inspect" },
-      { label: "Quality Sentinel", path: "/sentinel" },
-      { label: "Architecture", path: "/architecture" },
       { label: "Metrics Dictionary", path: "/metrics-dictionary" },
-      { label: "API Lexicon", path: "/admin/api-lexicon" },
+      { label: "Architecture", path: "/architecture" },
     ],
   },
 ];
@@ -146,7 +106,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
             minWidth: "auto",
           }}
         >
-          <span className="logo-text">TIBER</span>
+          <span className="logo-text">TIBER Observatory</span>
           <span className="logo-dot" />
         </Link>
       </div>
@@ -157,7 +117,7 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           className={`nav-item ${location === "/" ? "active" : ""}`}
           onClick={onNavigate}
         >
-          Home
+          Observatory
         </Link>
         {navSections.map((section) => (
           <NavSection
@@ -173,8 +133,8 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
       <div className="sidebar-footer">
         <div className="user-pill">
           <div>
-            <div className="user-name">Tiber User</div>
-            <div className="user-league">Dynasty · Analytics</div>
+            <div className="user-name">Operator surface</div>
+            <div className="user-league">Read-only inspection</div>
           </div>
         </div>
       </div>
@@ -212,7 +172,7 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
           <Menu size={20} />
         </button>
         <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span className="logo-text">TIBER</span>
+          <span className="logo-text">TIBER Observatory</span>
           <span className="logo-dot" />
         </Link>
       </div>
