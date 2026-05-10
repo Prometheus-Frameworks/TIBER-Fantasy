@@ -625,3 +625,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added real-system status cards and repo-boundary awareness copy emphasizing read-only routing, uncertainty, and upstream ownership.
 - Reduced primary navigation to Observatory, live Rankings, Rookie Board, and reference docs while preserving hidden compatibility routes.
 - Validation: `npm run test -- client/src/__tests__/stressLab.test.ts` ✅; `npm run build` ✅ with existing duplicate class-member warning; `npm run typecheck` ⚠️ pre-existing unrelated errors; Vite route smoke checks ✅.
+
+### 2026-05-10 — Observatory on/off split heuristic extraction
+- Added deterministic on/off EPA split heuristics for 49ers/Vikings examples, including conservative team/player aliases, metric scaffolds, signal tags, followups, and uncertainty guardrails.
+- Updated handoff labeling to TIBER-Fantasy / Observatory and added artifact scaffolds for on/off, team efficiency, offensive environment, and player fantasy signals.
+- Validation:
+  - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo
+  - `git diff --check` ✅
