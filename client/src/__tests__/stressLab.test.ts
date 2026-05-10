@@ -399,16 +399,15 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(csv.endsWith("\n")).toBe(true);
   });
 
-  it("renders the read-only reasoning sandbox stance", () => {
+  it("renders the read-only Observatory stance", () => {
     const html = renderToStaticMarkup(React.createElement(StressLab));
 
-    expect(html).toContain("TIBER Stress Lab");
-    expect(html).toContain("operator_signal_note_v0");
-    expect(html).toContain("Operator notes generate hypotheses, not truth.");
-    expect(html).toContain(
-      "Stress Lab is for testing reasoning integrity, not changing rankings.",
-    );
-    expect(html).toContain("No mutation path");
+    expect(html).toContain("TIBER Observatory");
+    expect(html).toContain("Operator-facing inspection and routing surface");
+    expect(html).toContain("Online systems");
+    expect(html).toContain("TIBER-Data");
+    expect(html).toContain("Repo boundary awareness");
+    expect(html).toContain("Read-only control surface");
     expect(html).toContain("Inspect note");
   });
 });
