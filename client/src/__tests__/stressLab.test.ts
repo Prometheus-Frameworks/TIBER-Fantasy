@@ -174,6 +174,150 @@ describe("Stress Lab v0 mock artifact builder", () => {
     ).toBe(true);
   });
 
+  it("extracts fantasy RB role, usage, market, and insulation cues from an RJ Harvey dynasty note", () => {
+    const note =
+      "Dynasty note:\nRJ Harvey may become one of the biggest ADP swing players of the offseason if Denver gives him real receiving work early. Efficiency profile and explosive traits are interesting, but pass protection and role stability still feel fragile. If Sean Payton trusts him on third downs, FORGE may need to treat him differently than a normal committee RB. Need to compare projected role opportunity, receiving usage, offensive environment, and insulation risk against current dynasty market price.";
+
+    const artifact = buildMockOperatorSignalNoteArtifact(note);
+    const handoffs = buildSuggestedTiberHandoffs(artifact);
+    const entityLabelsByType = (entityType: string) =>
+      artifact.entities
+        .filter((entity) => entity.entity_type === entityType)
+        .map((entity) => entity.label);
+    const detectedMetricNames = artifact.detected_metrics.map(
+      (metric) => metric.metric,
+    );
+
+    expect(entityLabelsByType("player")).toEqual(
+      expect.arrayContaining(["RJ Harvey"]),
+    );
+    expect(entityLabelsByType("team")).toEqual(
+      expect.arrayContaining(["Denver"]),
+    );
+    expect(artifact.entities).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Sean Payton",
+        }),
+      ]),
+    );
+    expect(
+      artifact.entities.every((entity) =>
+        ["player", "team", "division", "season"].includes(entity.entity_type),
+      ),
+    ).toBe(true);
+    expect(artifact.signal_tags).toEqual(
+      expect.arrayContaining([
+        "dynasty_context",
+        "adp_market_signal",
+        "receiving_usage_signal",
+        "receiving_role_context",
+        "pass_protection_risk",
+        "explosive_traits_signal",
+        "role_stability_risk",
+        "third_down_role_context",
+        "committee_rb_context",
+        "forge_model_reference",
+        "dynasty_market_price_context",
+        "rb_role_competition_context",
+        "coaching_trust_context",
+      ]),
+    );
+    expect(detectedMetricNames).toEqual(
+      expect.arrayContaining([
+        "adp_market_context",
+        "receiving_usage",
+        "pass_protection",
+        "explosive_traits",
+        "role_stability",
+        "third_down_role",
+        "committee_context",
+        "dynasty_market_price",
+        "forge_model_context",
+        "coaching_trust",
+        "rb_role_competition",
+      ]),
+    );
+    expect(artifact.detected_metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metric: "receiving_usage",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+        expect.objectContaining({
+          metric: "pass_protection",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+      ]),
+    );
+    expect(handoffs.map((handoff) => handoff.repo)).toEqual(
+      expect.arrayContaining([
+        "TIBER-Data",
+        "Role & Opportunity",
+        "TIBER-Teamstate",
+        "TIBER-FORGE",
+        "TIBER-Fantasy / Observatory",
+      ]),
+    );
+    expect(handoffs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repo: "Role & Opportunity",
+          required_artifact_types: expect.arrayContaining([
+            "rb_receiving_role_snapshot_v0",
+            "third_down_usage_context_v0",
+            "backfield_committee_context_v0",
+            "role_opportunity_snapshot_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-FORGE",
+          required_artifact_types: expect.arrayContaining([
+            "rb_insulation_risk_signal_v0",
+            "dynasty_market_delta_context_v0",
+            "player_fantasy_signal_snapshot_v0",
+            "offensive_environment_adjustment_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Teamstate",
+          required_artifact_types: expect.arrayContaining([
+            "coaching_tendency_context_v0",
+            "offensive_environment_snapshot_v0",
+            "team_backfield_context_v0",
+          ]),
+        }),
+      ]),
+    );
+    expect(artifact.required_followups).toEqual(
+      expect.arrayContaining([
+        "Resolve player, team, and game context against canonical TIBER-Data identifiers.",
+        "Check Role & Opportunity for receiving usage and third-down role.",
+        "Check whether Teamstate has current offensive environment data for the referenced team.",
+        "Check FORGE for insulation risk and dynasty market delta.",
+        "Preserve ADP/market notes as market context, not source truth.",
+      ]),
+    );
+    expect(artifact.uncertainty).toEqual(
+      expect.arrayContaining([
+        "ADP/market price can be source-sensitive and time-sensitive.",
+        "Receiving role claims require role/opportunity artifact verification.",
+        "Pass protection and coaching trust are context-heavy and are not inferred from the note alone.",
+      ]),
+    );
+    expect(artifact.do_not_apply).toEqual([
+      "Do not mutate rankings from this note alone.",
+      "Do not treat operator notes as verified source truth.",
+      "Do not fabricate missing context.",
+    ]);
+  });
+
   it("extracts player/team on-off EPA split context without applying ranking mutations", () => {
     const note =
       "San Francisco 49ers [2025]\n" +

@@ -430,3 +430,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/lib/stressLab.ts`, `client/src/__tests__/stressLab.test.ts`
 - **Validation:** `npm run test -- client/src/__tests__/stressLab.test.ts` passed; `npm run typecheck` still fails on pre-existing unrelated repository-wide TypeScript errors; `git diff --check` passed.
 - **Notes:** Numeric values remain `null` in v0; counterintuitive negative deltas are preserved as context-required rather than player blame or ranking mutation.
+
+### 2026-05-10 — Codex: Observatory RB role/market heuristic extraction
+- **What changed:** Added deterministic v0 Observatory heuristics for RJ Harvey/Denver dynasty RB notes, including role/receiving/third-down/committee/market/FORGE/coaching-trust cues, RB-oriented artifact scaffolds, followups, and uncertainty guardrails without emitting unsupported coach entities.
+- **Files modified:** `client/src/lib/stressLab.ts`, `client/src/__tests__/stressLab.test.ts`.
+- **Validation:** `npm test -- --runTestsByPath client/src/__tests__/stressLab.test.ts` passed; `npm run typecheck` still fails on pre-existing unrelated repository TypeScript errors.
+- **Notes:** ADP/market price remains hypothesis context only; role and coaching-trust claims require upstream TIBER-Data, Role & Opportunity, Teamstate, and FORGE verification before downstream use.
