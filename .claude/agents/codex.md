@@ -606,3 +606,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
   - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-05-10 — Codex: Stress Lab followup routing precision
+- Split broad transaction/teamstate followup detection into explicit transaction cues and Teamstate environment cues.
+- Added regression coverage proving rookie/prospect notes keep rookie followups while excluding unrelated transaction and QB/environment guidance, and Jets teamstate notes retain those followups.
+- Validation:
+  - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ (fails on pre-existing unrelated TypeScript errors in broader repo)
+  - `git diff --check` ✅
