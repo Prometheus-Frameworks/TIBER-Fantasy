@@ -614,3 +614,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
   - `npm run typecheck` ⚠️ (fails on pre-existing unrelated TypeScript errors in broader repo)
   - `git diff --check` ✅
+
+### 2026-05-10 — Stress Lab capability matrix docs
+- Added `docs/stress-lab-capability-matrix.md` as a read-only inventory of Stress Lab capabilities, routing coverage, limitations, failure modes, future artifact targets, ownership boundaries, known gaps, and design philosophy.
+- Added a lightweight README link from the Stress Lab feature blurb.
+- Validation: `git diff --check`.

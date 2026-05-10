@@ -412,3 +412,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/lib/stressLab.ts`, `client/src/__tests__/stressLab.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`
 - **Validation:** Ran focused Stress Lab Jest coverage successfully. Ran `npm run typecheck`, which still fails on pre-existing unrelated TypeScript errors across other modules.
 - **Notes:** Patch remains deterministic, read-only, heuristic-based, and does not call backend/LLM services or mutate rankings/projections.
+
+### 2026-05-10 — Codex: Stress Lab capability matrix docs
+- **What changed:** Added a lightweight Stress Lab Capability Matrix covering supported signal categories, routing coverage, limitations, future artifact targets, known failure modes, repo/domain ownership boundaries, and design philosophy. Added a README feature link to the matrix.
+- **Files modified:** `docs/stress-lab-capability-matrix.md`, `README.md`
+- **Validation:** Documentation-only change; ran `git diff --check`.
+- **Notes:** No backend calls, runtime logic, UI changes, ranking/projection mutation, or artifact ingestion were added.

@@ -26,6 +26,9 @@ Weekly analytics dashboard surfacing actionable insights:
 - Trust indicators and red flags (TD-spike detection, volume/efficiency mismatches)
 - Player watchlist with custom tracking
 
+### Stress Lab
+Read-only operator note inspection for deterministic football reasoning governance. Stress Lab preserves uncertainty, suggests owner-domain follow-ups, and keeps known capability gaps inspectable without mutating rankings or projections. See `docs/stress-lab-capability-matrix.md` for the current capability matrix.
+
 ### QB FIRE — Opportunity-Role Intelligence
 Expected Fantasy Points (xFP) model for quarterbacks built on opportunity-role pipelines. Identifies QBs outperforming or underperforming their role-based ceiling.
 
