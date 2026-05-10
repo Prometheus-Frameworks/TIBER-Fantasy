@@ -95,6 +95,10 @@ function SuggestedHandoffsPanel({
           Read-only v0 routing scaffolding. These suggestions do not call repo
           APIs, mutate projections, or apply rankings.
         </p>
+        <p className="text-xs leading-5 text-gray-500">
+          Artifact names are planning scaffolds unless already defined in
+          TIBER-Data.
+        </p>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
         <div className="rounded-2xl border border-orange-100 bg-orange-50 p-3 text-sm text-orange-950">
@@ -129,6 +133,25 @@ function SuggestedHandoffsPanel({
                   {handoff.status}
                 </Badge>
               </div>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Claim class
+              </div>
+              <div className="mt-1 break-all font-mono text-xs text-gray-700">
+                {handoff.claim_classification}
+              </div>
+              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                Likely required artifacts
+              </div>
+              <ul className="mt-1 flex flex-wrap gap-2">
+                {handoff.required_artifact_types.map((artifactType) => (
+                  <li
+                    key={artifactType}
+                    className="rounded-full border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] text-gray-700"
+                  >
+                    {artifactType}
+                  </li>
+                ))}
+              </ul>
               <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
                 Why it matters
               </div>

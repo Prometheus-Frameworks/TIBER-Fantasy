@@ -194,8 +194,33 @@ describe("Stress Lab v0 mock artifact builder", () => {
         expect.objectContaining({
           repo: "TIBER-Data",
           status: "suggested only",
+          claim_classification: "truth_claim",
+          required_artifact_types: expect.arrayContaining([
+            "roster_snapshot_v0",
+          ]),
           next_check:
             "Verify entities and transactions against governed TIBER-Data artifacts before downstream interpretation.",
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Teamstate",
+          claim_classification: "team_interpretation",
+          required_artifact_types: expect.arrayContaining([
+            "team_environment_snapshot_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-FORGE",
+          claim_classification: "fantasy_implication",
+          required_artifact_types: expect.arrayContaining([
+            "insulation_adjustment_signal_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Fantasy / Stress Lab",
+          claim_classification: "operator_hypothesis",
+          required_artifact_types: expect.arrayContaining([
+            "operator_signal_note_v0",
+          ]),
         }),
       ]),
     );
@@ -214,6 +239,11 @@ describe("Stress Lab v0 mock artifact builder", () => {
           repo: "Role & Opportunity",
           domain: "usage/role signal",
           status: "suggested only",
+          claim_classification: "usage_role_signal",
+          required_artifact_types: expect.arrayContaining([
+            "route_participation_signal_v0",
+            "red_zone_usage_context_v0",
+          ]),
         }),
       ]),
     );
