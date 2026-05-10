@@ -633,3 +633,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
   - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo
   - `git diff --check` ✅
+
+### 2026-05-10 — Observatory RB role/market heuristic extraction
+- Added deterministic v0 Stress Lab/Observatory heuristic coverage for the RJ Harvey dynasty RB operator note: RJ Harvey/Denver detection, fantasy RB role/receiving/third-down/committee/market/FORGE/coaching-trust tags and metric scaffolds, conservative handoff artifact requirements, followups, and uncertainty guardrails.
+- Kept Sean Payton as a cue only via tags/metrics because the current entity contract supports only player/team/division/season.
+- Validation:
+  - `npm test -- --runTestsByPath client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo

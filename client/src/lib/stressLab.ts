@@ -59,12 +59,16 @@ const TIBER_TEAMSTATE_REQUIRED_ARTIFACT_TYPES = [
   "roster_continuity_signal_v0",
   "qb_transition_context_v0",
   "regime_volatility_context_v0",
+  "coaching_tendency_context_v0",
+  "team_backfield_context_v0",
 ];
 
 const TIBER_FORGE_REQUIRED_ARTIFACT_TYPES = [
   "player_fantasy_signal_snapshot_v0",
   "insulation_adjustment_signal_v0",
   "offensive_environment_adjustment_v0",
+  "rb_insulation_risk_signal_v0",
+  "dynasty_market_delta_context_v0",
 ];
 
 const ROLE_OPPORTUNITY_REQUIRED_ARTIFACT_TYPES = [
@@ -72,6 +76,9 @@ const ROLE_OPPORTUNITY_REQUIRED_ARTIFACT_TYPES = [
   "route_participation_signal_v0",
   "target_quality_context_v0",
   "red_zone_usage_context_v0",
+  "rb_receiving_role_snapshot_v0",
+  "third_down_usage_context_v0",
+  "backfield_committee_context_v0",
 ];
 
 const TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES = [
@@ -112,6 +119,110 @@ const METRIC_HEURISTICS: Array<{
   context: string;
   tag: string;
 }> = [
+  {
+    pattern: /\bADP\b/i,
+    metric: "adp_market_context",
+    matchedText: "ADP",
+    context:
+      "Operator note mentions ADP market context; no ADP value or source is parsed in v0.",
+    tag: "adp_market_signal",
+  },
+  {
+    pattern: /market\s+price|dynasty\s+market/i,
+    metric: "dynasty_market_price",
+    matchedText: "market price / dynasty market",
+    context:
+      "Operator note mentions dynasty market price context; no market value or source is parsed in v0.",
+    tag: "dynasty_market_price_context",
+  },
+  {
+    pattern: /\bdynasty\b/i,
+    metric: "dynasty_market_price",
+    matchedText: "dynasty",
+    context:
+      "Operator note mentions dynasty context; no dynasty market value is parsed or applied in v0.",
+    tag: "dynasty_context",
+  },
+  {
+    pattern: /receiving\s+(?:work|usage)/i,
+    metric: "receiving_usage",
+    matchedText: "receiving work / receiving usage",
+    context:
+      "Operator note mentions RB receiving usage context; no usage value is parsed in v0.",
+    tag: "receiving_usage_signal",
+  },
+  {
+    pattern: /receiving\s+(?:role|work|usage)/i,
+    metric: "receiving_usage",
+    matchedText: "receiving role / work / usage",
+    context:
+      "Operator note mentions receiving role context; no role value is parsed in v0.",
+    tag: "receiving_role_context",
+  },
+  {
+    pattern: /pass\s+protection/i,
+    metric: "pass_protection",
+    matchedText: "pass protection",
+    context:
+      "Operator note mentions pass protection risk; no pass-protection grade is parsed in v0.",
+    tag: "pass_protection_risk",
+  },
+  {
+    pattern: /explosive\s+traits/i,
+    metric: "explosive_traits",
+    matchedText: "explosive traits",
+    context:
+      "Operator note mentions explosive traits; no trait score is parsed in v0.",
+    tag: "explosive_traits_signal",
+  },
+  {
+    pattern: /role\s+stability/i,
+    metric: "role_stability",
+    matchedText: "role stability",
+    context:
+      "Operator note mentions role stability risk; no stability value is parsed in v0.",
+    tag: "role_stability_risk",
+  },
+  {
+    pattern: /third[-\s]?downs?|3rd\s+downs?/i,
+    metric: "third_down_role",
+    matchedText: "third downs / third-downs / 3rd downs",
+    context:
+      "Operator note mentions third-down role context; no usage value is parsed in v0.",
+    tag: "third_down_role_context",
+  },
+  {
+    pattern: /committee\s+(?:RB|back)|RB\s+room|backfield|committee/i,
+    metric: "committee_context",
+    matchedText: "committee RB / RB room / backfield / committee",
+    context:
+      "Operator note mentions RB role competition or committee context; no depth-chart value is parsed in v0.",
+    tag: "committee_rb_context",
+  },
+  {
+    pattern: /committee\s+(?:RB|back)|RB\s+room|backfield|committee/i,
+    metric: "rb_role_competition",
+    matchedText: "committee RB / RB room / backfield / committee",
+    context:
+      "Operator note mentions RB role competition context; no role-share value is parsed in v0.",
+    tag: "rb_role_competition_context",
+  },
+  {
+    pattern: /\bFORGE\b/i,
+    metric: "forge_model_context",
+    matchedText: "FORGE",
+    context:
+      "Operator note references FORGE model context; no FORGE output is queried or parsed in v0.",
+    tag: "forge_model_reference",
+  },
+  {
+    pattern: /Sean\s+Payton|\bcoach\b|trust/i,
+    metric: "coaching_trust",
+    matchedText: "Sean Payton / coach / trust",
+    context:
+      "Operator note mentions coaching trust context; no coach entity or trust value is emitted in v0.",
+    tag: "coaching_trust_context",
+  },
   {
     pattern: /\brookie\b/i,
     metric: "rookie_model_context",
@@ -334,6 +445,7 @@ const TAG_HEURISTICS: Array<{
 const DIVISION_PATTERNS = [/\bNFC\s+North\b/i, /\bAFC\s+North\b/i];
 const SEASON_PATTERN = /\b20\d{2}\b/;
 const TEAM_PATTERNS = [
+  /\bDenver\b/i,
   /\bNew\s+York\s+Jets\b/i,
   /\bJets\b/i,
   /\bSan\s+Francisco\s+49ers\b/i,
@@ -342,6 +454,7 @@ const TEAM_PATTERNS = [
   /\bVikings\b/i,
 ];
 const PLAYER_PATTERNS = [
+  /\bRJ\s+Harvey\b/i,
   /\bBreece\s+Hall\b/i,
   /\bGarrett\s+Wilson\b/i,
   /\bGeno\s+Smith\b/i,
@@ -359,7 +472,7 @@ const TRANSACTION_CUE_PATTERN =
   /\btraded\b|\btrade\b|\bsigned\b|\bextension\b|\bextended\b|\bacquired\b|free\s+agent/i;
 
 const TEAMSTATE_ENVIRONMENT_PATTERN =
-  /offensive\s+environment|\bteamstate\b|regime\s+volatility|organizational\s+coherence|defensive(?:\s+talent)?\s+teardown|qb\s+change|environment\s+rebound|EPA\s*\/\s*Play|on\/?off|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:/i;
+  /offensive\s+environment|\bteamstate\b|regime\s+volatility|organizational\s+coherence|defensive(?:\s+talent)?\s+teardown|qb\s+change|environment\s+rebound|Sean\s+Payton|\bcoach\b|coaching|backfield|RB\s+room|EPA\s*\/\s*Play|on\/?off|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:/i;
 
 const ON_OFF_SPLIT_PATTERN =
   /on\/?off|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:/i;
@@ -456,6 +569,20 @@ function buildRequiredFollowups(note: string): string[] {
     );
   }
 
+  if (/receiving\s+(?:work|usage|role)|third[-\s]?downs?|3rd\s+downs?|committee\s+(?:RB|back)|RB\s+room|backfield|role\s+opportunity/i.test(note)) {
+    followups.push(
+      "Check Role & Opportunity for receiving usage and third-down role.",
+      "Preserve RB role claims as hypotheses until role/opportunity artifacts verify them.",
+    );
+  }
+
+  if (/\bADP\b|market\s+price|dynasty\s+market|pass\s+protection|Sean\s+Payton|\bcoach\b|trust/i.test(note)) {
+    followups.push(
+      "Check FORGE for insulation risk and dynasty market delta.",
+      "Preserve ADP/market notes as market context, not source truth.",
+    );
+  }
+
   if (ON_OFF_SPLIT_PATTERN.test(note)) {
     followups.push(
       "Verify on/off split source and sample window.",
@@ -496,6 +623,9 @@ const TIBER_DATA_SIGNAL_TAGS = new Set([
 const TIBER_TEAMSTATE_SIGNAL_TAGS = new Set([
   "teamstate_context",
   "offensive_environment_signal",
+  "coaching_trust_context",
+  "rb_role_competition_context",
+  "committee_rb_context",
   "regime_volatility_risk",
   "defensive_teardown_risk",
   "organizational_coherence_signal",
@@ -507,6 +637,13 @@ const TIBER_TEAMSTATE_SIGNAL_TAGS = new Set([
 const TIBER_FORGE_SIGNAL_TAGS = new Set([
   "player_insulation_signal",
   "offensive_environment_signal",
+  "adp_market_signal",
+  "dynasty_market_price_context",
+  "dynasty_context",
+  "pass_protection_risk",
+  "role_stability_risk",
+  "forge_model_reference",
+  "rb_role_competition_context",
   "environment_rebound_candidate",
   "offensive_efficiency_uncertainty",
   "epa_on_off_signal",
@@ -518,6 +655,11 @@ const TIBER_FORGE_SIGNAL_TAGS = new Set([
 const ROLE_OPPORTUNITY_SIGNAL_TAGS = new Set([
   "route_role_signal",
   "usage_signal",
+  "receiving_usage_signal",
+  "receiving_role_context",
+  "third_down_role_context",
+  "committee_rb_context",
+  "rb_role_competition_context",
   "target_quality_signal",
   "red_zone_context",
 ]);
@@ -597,6 +739,24 @@ function buildUncertainty(
   if (TRANSACTION_CUE_PATTERN.test(note)) {
     uncertainty.push(
       "Transaction claims require source verification before downstream use.",
+    );
+  }
+
+  if (/\bADP\b|market\s+price|dynasty\s+market/i.test(note)) {
+    uncertainty.push(
+      "ADP/market price can be source-sensitive and time-sensitive.",
+    );
+  }
+
+  if (/receiving\s+(?:work|usage|role)|third[-\s]?downs?|3rd\s+downs?/i.test(note)) {
+    uncertainty.push(
+      "Receiving role claims require role/opportunity artifact verification.",
+    );
+  }
+
+  if (/pass\s+protection|Sean\s+Payton|\bcoach\b|trust/i.test(note)) {
+    uncertainty.push(
+      "Pass protection and coaching trust are context-heavy and are not inferred from the note alone.",
     );
   }
 
