@@ -174,6 +174,130 @@ describe("Stress Lab v0 mock artifact builder", () => {
     ).toBe(true);
   });
 
+  it("extracts player/team on-off EPA split context without applying ranking mutations", () => {
+    const note =
+      "San Francisco 49ers [2025]\n" +
+      "w/ CMC on the field: 0.157 EPA/Play\n" +
+      "w/out CMC: 0.061\n" +
+      "Delta: +157%\n\n" +
+      "Minnesota Vikings [2025]\n" +
+      "w/ Justin Jefferson on the field: -0.009 EPA/Play\n" +
+      "w/out Jefferson: 0.081\n" +
+      "Delta: -111%";
+
+    const artifact = buildMockOperatorSignalNoteArtifact(note);
+    const handoffs = buildSuggestedTiberHandoffs(artifact);
+    const labelsByType = (entityType: string) =>
+      artifact.entities
+        .filter((entity) => entity.entity_type === entityType)
+        .map((entity) => entity.label);
+    const detectedMetricNames = artifact.detected_metrics.map(
+      (metric) => metric.metric,
+    );
+
+    expect(labelsByType("team")).toEqual(
+      expect.arrayContaining([
+        "San Francisco 49ers",
+        "49ers",
+        "Minnesota Vikings",
+        "Vikings",
+      ]),
+    );
+    expect(labelsByType("player")).toEqual(
+      expect.arrayContaining(["CMC", "Justin Jefferson"]),
+    );
+    expect(detectedMetricNames).toEqual(
+      expect.arrayContaining([
+        "epa_per_play",
+        "on_field_epa_per_play",
+        "off_field_epa_per_play",
+        "efficiency_delta_percentage",
+        "on_off_split_context",
+      ]),
+    );
+    expect(artifact.detected_metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metric: "on_field_epa_per_play",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+        expect.objectContaining({
+          metric: "efficiency_delta_percentage",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+      ]),
+    );
+    expect(artifact.signal_tags).toEqual(
+      expect.arrayContaining([
+        "on_off_split_context",
+        "epa_on_off_signal",
+        "player_on_field_context",
+        "player_off_field_context",
+        "team_efficiency_context",
+        "efficiency_delta_signal",
+        "counterintuitive_split_context",
+      ]),
+    );
+    expect(artifact.required_followups).toEqual(
+      expect.arrayContaining([
+        "Verify on/off split source and sample window.",
+        "Resolve player/team IDs through TIBER-Data.",
+        "Check whether Teamstate has team efficiency context for the referenced season.",
+        "Check whether FORGE already accounts for player environment dependency.",
+        "Preserve counterintuitive splits as context-required, not automatic player blame.",
+      ]),
+    );
+    expect(artifact.uncertainty).toEqual(
+      expect.arrayContaining([
+        "On/off splits may be sample-size sensitive and require source-window verification.",
+        "Negative on/off deltas require context before interpretation and are not automatic player blame.",
+        "CMC alias detected heuristically; canonical player ID is not resolved in v0.",
+      ]),
+    );
+    expect(handoffs.map((handoff) => handoff.repo)).toEqual(
+      expect.arrayContaining([
+        "TIBER-Data",
+        "TIBER-Teamstate",
+        "TIBER-FORGE",
+        "TIBER-Fantasy / Observatory",
+      ]),
+    );
+    expect(handoffs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repo: "TIBER-Teamstate",
+          required_artifact_types: expect.arrayContaining([
+            "team_efficiency_context_v0",
+            "offensive_environment_snapshot_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-FORGE",
+          required_artifact_types: expect.arrayContaining([
+            "player_fantasy_signal_snapshot_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Fantasy / Observatory",
+          required_artifact_types: expect.arrayContaining([
+            "player_on_off_split_snapshot_v0",
+          ]),
+        }),
+      ]),
+    );
+    expect(artifact.do_not_apply).toEqual([
+      "Do not mutate rankings from this note alone.",
+      "Do not treat operator notes as verified source truth.",
+      "Do not fabricate missing context.",
+    ]);
+  });
+
   it("routes rookie/prospect notes toward TIBER-Rookies while preserving identity and hypothesis guardrails", () => {
     const note =
       "Rookie note:\nTetairoa McMillan has elite prospect capital and strong early career target-earning profile, but I want to compare him against Luther Burden and Travis Hunter using the rookie model. Check draft capital, production profile, landing spot, team environment, and early role opportunity before making dynasty ranking movement.";
@@ -249,7 +373,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
       expect.arrayContaining([
         "TIBER-Rookies",
         "TIBER-Data",
-        "TIBER-Fantasy / Stress Lab",
+        "TIBER-Fantasy / Observatory",
       ]),
     );
     expect(handoffs).toEqual(
@@ -274,7 +398,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
           ]),
         }),
         expect.objectContaining({
-          repo: "TIBER-Fantasy / Stress Lab",
+          repo: "TIBER-Fantasy / Observatory",
           claim_classification: "operator_hypothesis",
           required_artifact_types: expect.arrayContaining([
             "operator_signal_note_v0",
@@ -296,7 +420,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
         "TIBER-Data",
         "TIBER-Teamstate",
         "TIBER-FORGE",
-        "TIBER-Fantasy / Stress Lab",
+        "TIBER-Fantasy / Observatory",
       ]),
     );
     expect(artifact.required_followups).toEqual(
@@ -333,7 +457,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
           ]),
         }),
         expect.objectContaining({
-          repo: "TIBER-Fantasy / Stress Lab",
+          repo: "TIBER-Fantasy / Observatory",
           claim_classification: "operator_hypothesis",
           required_artifact_types: expect.arrayContaining([
             "operator_signal_note_v0",

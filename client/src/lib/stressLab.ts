@@ -54,6 +54,8 @@ const TIBER_DATA_REQUIRED_ARTIFACT_TYPES = [
 
 const TIBER_TEAMSTATE_REQUIRED_ARTIFACT_TYPES = [
   "team_environment_snapshot_v0",
+  "team_efficiency_context_v0",
+  "offensive_environment_snapshot_v0",
   "roster_continuity_signal_v0",
   "qb_transition_context_v0",
   "regime_volatility_context_v0",
@@ -75,6 +77,7 @@ const ROLE_OPPORTUNITY_REQUIRED_ARTIFACT_TYPES = [
 const TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES = [
   "operator_signal_note_v0",
   "stress_lab_review_export_v0",
+  "player_on_off_split_snapshot_v0",
 ];
 
 const TIBER_ROOKIES_REQUIRED_ARTIFACT_TYPES = [
@@ -222,6 +225,38 @@ const METRIC_HEURISTICS: Array<{
     tag: "epa_context_signal",
   },
   {
+    pattern: /\bw\/?\s+[^\n:]+\s+on\s+the\s+field\s*:\s*[-+]?\d*\.?\d+\s+EPA\s*\/\s*Play/i,
+    metric: "on_field_epa_per_play",
+    matchedText: "with player on the field EPA/Play",
+    context:
+      "Operator note mentions on-field EPA/Play in an on/off split; no numeric value is parsed in v0.",
+    tag: "player_on_field_context",
+  },
+  {
+    pattern: /\bw\/?out\s+[^\n:]+\s*:\s*[-+]?\d*\.?\d+/i,
+    metric: "off_field_epa_per_play",
+    matchedText: "without player EPA/Play",
+    context:
+      "Operator note mentions off-field EPA/Play in an on/off split; no numeric value is parsed in v0.",
+    tag: "player_off_field_context",
+  },
+  {
+    pattern: /\bDelta\s*:\s*[-+]?\d+(?:\.\d+)?%/i,
+    metric: "efficiency_delta_percentage",
+    matchedText: "Delta percentage",
+    context:
+      "Operator note mentions an on/off efficiency delta percentage; no numeric value is parsed in v0.",
+    tag: "efficiency_delta_signal",
+  },
+  {
+    pattern: /\bon\/?off\b|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+/i,
+    metric: "on_off_split_context",
+    matchedText: "on/off split context",
+    context:
+      "Operator note appears to describe a player/team on-off efficiency split; no split value is parsed in v0.",
+    tag: "on_off_split_context",
+  },
+  {
     pattern: /Catchable\s+Target|catchable/i,
     metric: "catchable_target_rate",
     matchedText: "catchable target",
@@ -269,15 +304,50 @@ const TAG_HEURISTICS: Array<{
     pattern: /defensive\s+talent\s+teardown|\bteardown\b/i,
     tag: "defensive_teardown_risk",
   },
+  {
+    pattern: /\bDelta\s*:\s*-|worse\s+with\s+[^.\n]+\s+on\s+the\s+field|worse\s+when\s+[^.\n]+\s+(?:is\s+)?on/i,
+    tag: "counterintuitive_split_context",
+  },
+  {
+    pattern: /EPA\s*\/\s*Play[\s\S]*(?:\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:)|(?:\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:)[\s\S]*EPA\s*\/\s*Play/i,
+    tag: "team_efficiency_context",
+  },
+  {
+    pattern: /EPA\s*\/\s*Play[\s\S]*(?:\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:)|(?:\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:)[\s\S]*EPA\s*\/\s*Play/i,
+    tag: "epa_on_off_signal",
+  },
+
+  {
+    pattern: /\bw\/?\s+[^\n:]+\s+on\s+the\s+field/i,
+    tag: "player_on_field_context",
+  },
+  {
+    pattern: /\bw\/?out\s+[^\n:]+/i,
+    tag: "player_off_field_context",
+  },
+  {
+    pattern: /\bDelta\s*:/i,
+    tag: "efficiency_delta_signal",
+  },
 ];
 
 const DIVISION_PATTERNS = [/\bNFC\s+North\b/i, /\bAFC\s+North\b/i];
 const SEASON_PATTERN = /\b20\d{2}\b/;
-const TEAM_PATTERNS = [/\bNew\s+York\s+Jets\b/i, /\bJets\b/i];
+const TEAM_PATTERNS = [
+  /\bNew\s+York\s+Jets\b/i,
+  /\bJets\b/i,
+  /\bSan\s+Francisco\s+49ers\b/i,
+  /\b49ers\b/i,
+  /\bMinnesota\s+Vikings\b/i,
+  /\bVikings\b/i,
+];
 const PLAYER_PATTERNS = [
   /\bBreece\s+Hall\b/i,
   /\bGarrett\s+Wilson\b/i,
   /\bGeno\s+Smith\b/i,
+  /\bCMC\b/i,
+  /\bChristian\s+McCaffrey\b/i,
+  /\bJustin\s+Jefferson\b/i,
   /\bTetairoa\s+McMillan\b/i,
   /\bLuther\s+Burden\b/i,
   /\bTravis\s+Hunter\b/i,
@@ -289,7 +359,13 @@ const TRANSACTION_CUE_PATTERN =
   /\btraded\b|\btrade\b|\bsigned\b|\bextension\b|\bextended\b|\bacquired\b|free\s+agent/i;
 
 const TEAMSTATE_ENVIRONMENT_PATTERN =
-  /offensive\s+environment|\bteamstate\b|regime\s+volatility|organizational\s+coherence|defensive(?:\s+talent)?\s+teardown|qb\s+change|environment\s+rebound/i;
+  /offensive\s+environment|\bteamstate\b|regime\s+volatility|organizational\s+coherence|defensive(?:\s+talent)?\s+teardown|qb\s+change|environment\s+rebound|EPA\s*\/\s*Play|on\/?off|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:/i;
+
+const ON_OFF_SPLIT_PATTERN =
+  /on\/?off|\bw\/?\s+[^\n:]+\s+on\s+the\s+field|\bw\/?out\s+[^\n:]+|\bDelta\s*:/i;
+
+const COUNTERINTUITIVE_SPLIT_PATTERN =
+  /\bDelta\s*:\s*-|worse\s+with\s+[^.\n]+\s+on\s+the\s+field|worse\s+when\s+[^.\n]+\s+(?:is\s+)?on/i;
 
 const ROOKIE_CUE_PATTERN =
   /\brookie\b|prospect\s+capital|production\s+profile|landing\s+spot|team\s+environment|early\s+role|role\s+opportunity|dynasty\s+ranking|rookie\s+model/i;
@@ -380,6 +456,16 @@ function buildRequiredFollowups(note: string): string[] {
     );
   }
 
+  if (ON_OFF_SPLIT_PATTERN.test(note)) {
+    followups.push(
+      "Verify on/off split source and sample window.",
+      "Resolve player/team IDs through TIBER-Data.",
+      "Check whether Teamstate has team efficiency context for the referenced season.",
+      "Check whether FORGE already accounts for player environment dependency.",
+      "Preserve counterintuitive splits as context-required, not automatic player blame.",
+    );
+  }
+
   if (
     TRANSACTION_CUE_PATTERN.test(note) ||
     TEAMSTATE_ENVIRONMENT_PATTERN.test(note)
@@ -413,6 +499,9 @@ const TIBER_TEAMSTATE_SIGNAL_TAGS = new Set([
   "regime_volatility_risk",
   "defensive_teardown_risk",
   "organizational_coherence_signal",
+  "team_efficiency_context",
+  "epa_on_off_signal",
+  "on_off_split_context",
 ]);
 
 const TIBER_FORGE_SIGNAL_TAGS = new Set([
@@ -420,6 +509,10 @@ const TIBER_FORGE_SIGNAL_TAGS = new Set([
   "offensive_environment_signal",
   "environment_rebound_candidate",
   "offensive_efficiency_uncertainty",
+  "epa_on_off_signal",
+  "efficiency_delta_signal",
+  "counterintuitive_split_context",
+  "team_efficiency_context",
 ]);
 
 const ROLE_OPPORTUNITY_SIGNAL_TAGS = new Set([
@@ -480,6 +573,24 @@ function buildUncertainty(
   if (entities.some((entity) => entity.entity_type === "team")) {
     uncertainty.push(
       "Team was detected heuristically; canonical team ID resolution is not implemented in v0.",
+    );
+  }
+
+  if (ON_OFF_SPLIT_PATTERN.test(note)) {
+    uncertainty.push(
+      "On/off splits may be sample-size sensitive and require source-window verification.",
+    );
+  }
+
+  if (COUNTERINTUITIVE_SPLIT_PATTERN.test(note)) {
+    uncertainty.push(
+      "Negative on/off deltas require context before interpretation and are not automatic player blame.",
+    );
+  }
+
+  if (/\bCMC\b/i.test(note)) {
+    uncertainty.push(
+      "CMC alias detected heuristically; canonical player ID is not resolved in v0.",
     );
   }
 
@@ -593,7 +704,7 @@ export function buildSuggestedTiberHandoffs(
     artifact.note_id
   ) {
     addHandoff({
-      repo: "TIBER-Fantasy / Stress Lab",
+      repo: "TIBER-Fantasy / Observatory",
       domain: "user-facing inspection/synthesis",
       claim_classification: "operator_hypothesis",
       required_artifact_types: TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES,

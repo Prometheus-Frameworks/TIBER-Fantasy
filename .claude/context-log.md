@@ -424,3 +424,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `client/src/pages/StressLab.tsx`, `client/src/__tests__/stressLab.test.ts`
 - **Validation:** `npm run test -- client/src/__tests__/stressLab.test.ts` passed; `npm run build` passed with existing duplicate `applyAdjusters` warning; `npm run typecheck` still fails on pre-existing unrelated repo-wide TypeScript errors; Vite route smoke checks returned 200 for `/`, `/observatory`, `/tiers`, `/rookies`, `/metrics-dictionary`, and `/architecture`.
 - **Notes:** Compatibility routes remain registered; unfinished/experimental surfaces were removed from primary navigation rather than deleted.
+
+### 2026-05-10 — Codex: Observatory on/off split heuristic extraction
+- **What changed:** Added deterministic v0 awareness for player/team on-off EPA split notes, including conservative 49ers/Vikings and CMC/Christian McCaffrey/Justin Jefferson entity detection, on/off metric scaffolds, signal tags, followups, uncertainty language, and Observatory handoff labeling.
+- **Files modified:** `client/src/lib/stressLab.ts`, `client/src/__tests__/stressLab.test.ts`
+- **Validation:** `npm run test -- client/src/__tests__/stressLab.test.ts` passed; `npm run typecheck` still fails on pre-existing unrelated repository-wide TypeScript errors; `git diff --check` passed.
+- **Notes:** Numeric values remain `null` in v0; counterintuitive negative deltas are preserved as context-required rather than player blame or ranking mutation.
