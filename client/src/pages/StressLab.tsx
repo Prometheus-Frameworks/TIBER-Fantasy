@@ -107,6 +107,7 @@ function SuggestedHandoffsPanel({
             <li>TIBER-Data = truth/contracts</li>
             <li>TIBER-Teamstate = team interpretation</li>
             <li>TIBER-FORGE = fantasy signal/scoring</li>
+            <li>TIBER-Rookies = rookie/prospect evaluation</li>
             <li>Role &amp; Opportunity = usage/role signal</li>
             <li>TIBER-Fantasy = user-facing inspection/synthesis</li>
           </ul>

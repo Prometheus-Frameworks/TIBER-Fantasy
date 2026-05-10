@@ -174,6 +174,107 @@ describe("Stress Lab v0 mock artifact builder", () => {
     ).toBe(true);
   });
 
+  it("routes rookie/prospect notes toward TIBER-Rookies while preserving identity and hypothesis guardrails", () => {
+    const note =
+      "Rookie note:\nTetairoa McMillan has elite prospect capital and strong early career target-earning profile, but I want to compare him against Luther Burden and Travis Hunter using the rookie model. Check draft capital, production profile, landing spot, team environment, and early role opportunity before making dynasty ranking movement.";
+
+    const artifact = buildMockOperatorSignalNoteArtifact(note);
+    const handoffs = buildSuggestedTiberHandoffs(artifact);
+    const playerLabels = artifact.entities
+      .filter((entity) => entity.entity_type === "player")
+      .map((entity) => entity.label);
+    const detectedMetricNames = artifact.detected_metrics.map(
+      (metric) => metric.metric,
+    );
+
+    expect(playerLabels).toEqual(
+      expect.arrayContaining([
+        "Tetairoa McMillan",
+        "Luther Burden",
+        "Travis Hunter",
+      ]),
+    );
+    expect(artifact.signal_tags).toEqual(
+      expect.arrayContaining([
+        "rookie_context",
+        "rookie_model_reference",
+        "prospect_capital_signal",
+        "production_profile_signal",
+        "landing_spot_context",
+        "early_role_opportunity_signal",
+        "dynasty_ranking_movement_request",
+      ]),
+    );
+    expect(detectedMetricNames).toEqual(
+      expect.arrayContaining([
+        "rookie_model_context",
+        "prospect_capital",
+        "production_profile",
+        "landing_spot_context",
+        "early_role_opportunity",
+        "dynasty_ranking_context",
+      ]),
+    );
+    expect(artifact.detected_metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metric: "rookie_model_context",
+          value: null,
+          unit: null,
+          confidence: "heuristic",
+          sample_filter: "operator_note_keyword_match",
+        }),
+      ]),
+    );
+    expect(artifact.required_followups).toEqual(
+      expect.arrayContaining([
+        "Check TIBER-Rookies for source-backed rookie model outputs.",
+        "Resolve rookie player identities through TIBER-Data before comparison.",
+        "Treat dynasty ranking movement as downstream interpretation, not raw rookie truth.",
+      ]),
+    );
+    expect(artifact.uncertainty).toContain(
+      "Rookie player names were detected heuristically but canonical IDs/model artifact links were not resolved in v0.",
+    );
+    expect(handoffs.map((handoff) => handoff.repo)).toEqual(
+      expect.arrayContaining([
+        "TIBER-Rookies",
+        "TIBER-Data",
+        "TIBER-Fantasy / Stress Lab",
+      ]),
+    );
+    expect(handoffs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          repo: "TIBER-Rookies",
+          domain: "rookie/prospect evaluation",
+          claim_classification: "rookie_model_implication",
+          required_artifact_types: expect.arrayContaining([
+            "rookie_alpha_snapshot_v0",
+            "rookie_prospect_profile_v0",
+            "rookie_draft_capital_context_v0",
+            "rookie_production_profile_v0",
+            "rookie_landing_spot_context_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Data",
+          claim_classification: "truth_claim",
+          required_artifact_types: expect.arrayContaining([
+            "canonical_player_identity_v0",
+          ]),
+        }),
+        expect.objectContaining({
+          repo: "TIBER-Fantasy / Stress Lab",
+          claim_classification: "operator_hypothesis",
+          required_artifact_types: expect.arrayContaining([
+            "operator_signal_note_v0",
+          ]),
+        }),
+      ]),
+    );
+  });
+
   it("suggests repo handoffs for the Jets operator note", () => {
     const artifact = buildMockOperatorSignalNoteArtifact(
       "New York Jets 2026 teamstate note:\nJets extended Breece Hall, traded for T’Vondre Sweat, added draft capital from Sauce Gardner/Quinnen Williams trades, signed Geno Smith, and invested premium picks into EDGE/WR. Hypothesis: organizational coherence and offensive environment are improving. Garrett Wilson may be an environment rebound candidate if Geno stabilizes QB play. Breece Hall gains insulation from extension. Risks: defensive talent teardown, new regime volatility, and unknown offensive efficiency.",

@@ -17,6 +17,7 @@ export type TiberHandoffClaimClassification =
   | "team_interpretation"
   | "fantasy_implication"
   | "usage_role_signal"
+  | "rookie_model_implication"
   | "operator_hypothesis";
 
 export type SuggestedTiberHandoff = {
@@ -76,6 +77,14 @@ const TIBER_FANTASY_REQUIRED_ARTIFACT_TYPES = [
   "stress_lab_review_export_v0",
 ];
 
+const TIBER_ROOKIES_REQUIRED_ARTIFACT_TYPES = [
+  "rookie_alpha_snapshot_v0",
+  "rookie_prospect_profile_v0",
+  "rookie_draft_capital_context_v0",
+  "rookie_production_profile_v0",
+  "rookie_landing_spot_context_v0",
+];
+
 const DEFAULT_DO_NOT_APPLY = [
   "Do not mutate rankings from this note alone.",
   "Do not treat operator notes as verified source truth.",
@@ -100,6 +109,62 @@ const METRIC_HEURISTICS: Array<{
   context: string;
   tag: string;
 }> = [
+  {
+    pattern: /\brookie\b/i,
+    metric: "rookie_model_context",
+    matchedText: "rookie",
+    context:
+      "Operator note mentions rookie context; no rookie model value is parsed in v0.",
+    tag: "rookie_context",
+  },
+  {
+    pattern: /prospect\s+capital|draft\s+capital/i,
+    metric: "prospect_capital",
+    matchedText: "prospect capital / draft capital",
+    context:
+      "Operator note mentions prospect or draft capital context; no capital value is parsed in v0.",
+    tag: "prospect_capital_signal",
+  },
+  {
+    pattern: /production\s+profile/i,
+    metric: "production_profile",
+    matchedText: "production profile",
+    context:
+      "Operator note mentions production profile context; no production value is parsed in v0.",
+    tag: "production_profile_signal",
+  },
+  {
+    pattern: /landing\s+spot/i,
+    metric: "landing_spot_context",
+    matchedText: "landing spot",
+    context:
+      "Operator note mentions landing spot context; no landing spot value is parsed in v0.",
+    tag: "landing_spot_context",
+  },
+  {
+    pattern: /early\s+role|role\s+opportunity/i,
+    metric: "early_role_opportunity",
+    matchedText: "early role / role opportunity",
+    context:
+      "Operator note mentions early role opportunity context; no role value is parsed in v0.",
+    tag: "early_role_opportunity_signal",
+  },
+  {
+    pattern: /dynasty\s+ranking/i,
+    metric: "dynasty_ranking_context",
+    matchedText: "dynasty ranking",
+    context:
+      "Operator note mentions dynasty ranking context; no ranking movement is parsed or applied in v0.",
+    tag: "dynasty_ranking_movement_request",
+  },
+  {
+    pattern: /rookie\s+model/i,
+    metric: "rookie_model_context",
+    matchedText: "rookie model",
+    context:
+      "Operator note references the rookie model; no model output is queried or parsed in v0.",
+    tag: "rookie_model_reference",
+  },
   {
     pattern: /\bteamstate\b/i,
     metric: "teamstate_context",
@@ -199,6 +264,7 @@ const TAG_HEURISTICS: Array<{
     tag: "organizational_coherence_signal",
   },
   { pattern: /environment\s+rebound/i, tag: "environment_rebound_candidate" },
+  { pattern: /team\s+environment/i, tag: "team_environment_signal" },
   {
     pattern: /defensive\s+talent\s+teardown|\bteardown\b/i,
     tag: "defensive_teardown_risk",
@@ -212,12 +278,18 @@ const PLAYER_PATTERNS = [
   /\bBreece\s+Hall\b/i,
   /\bGarrett\s+Wilson\b/i,
   /\bGeno\s+Smith\b/i,
+  /\bTetairoa\s+McMillan\b/i,
+  /\bLuther\s+Burden\b/i,
+  /\bTravis\s+Hunter\b/i,
   /\bT[’']?Vondre\s+Sweat\b/i,
   /\bSauce\s+Gardner\b/i,
   /\bQuinnen\s+Williams\b/i,
 ];
 const TRANSACTION_OR_TEAMSTATE_PATTERN =
   /extended|extension|\bsigned\b|traded|\btrade\b|draft\s+capital|first\s+round|premium\s+picks|\bteamstate\b/i;
+
+const ROOKIE_CUE_PATTERN =
+  /\brookie\b|prospect\s+capital|production\s+profile|landing\s+spot|team\s+environment|early\s+role|role\s+opportunity|dynasty\s+ranking|rookie\s+model/i;
 
 function stableHash(value: string): number {
   let hash = 2166136261;
@@ -303,6 +375,14 @@ function buildRequiredFollowups(note: string): string[] {
     );
   }
 
+  if (ROOKIE_CUE_PATTERN.test(note)) {
+    followups.push(
+      "Check TIBER-Rookies for source-backed rookie model outputs.",
+      "Resolve rookie player identities through TIBER-Data before comparison.",
+      "Treat dynasty ranking movement as downstream interpretation, not raw rookie truth.",
+    );
+  }
+
   return followups;
 }
 
@@ -335,6 +415,17 @@ const ROLE_OPPORTUNITY_SIGNAL_TAGS = new Set([
   "red_zone_context",
 ]);
 
+const TIBER_ROOKIES_SIGNAL_TAGS = new Set([
+  "rookie_context",
+  "prospect_capital_signal",
+  "production_profile_signal",
+  "landing_spot_context",
+  "team_environment_signal",
+  "early_role_opportunity_signal",
+  "dynasty_ranking_movement_request",
+  "rookie_model_reference",
+]);
+
 function hasAnySignalTag(
   artifact: OperatorSignalNoteV0,
   signalTags: Set<string>,
@@ -360,6 +451,15 @@ function buildUncertainty(
   if (entities.some((entity) => entity.entity_type === "player")) {
     uncertainty.push(
       "Player names were detected heuristically but canonical IDs were not resolved in v0.",
+    );
+  }
+
+  if (
+    ROOKIE_CUE_PATTERN.test(note) &&
+    entities.some((entity) => entity.entity_type === "player")
+  ) {
+    uncertainty.push(
+      "Rookie player names were detected heuristically but canonical IDs/model artifact links were not resolved in v0.",
     );
   }
 
@@ -445,6 +545,19 @@ export function buildSuggestedTiberHandoffs(
         "Fantasy signal/scoring impact once source truth and team context are verified.",
       next_check:
         "Inspect whether FORGE already accounts for the relevant environment or insulation signal before changing any score.",
+    });
+  }
+
+  if (hasAnySignalTag(artifact, TIBER_ROOKIES_SIGNAL_TAGS)) {
+    addHandoff({
+      repo: "TIBER-Rookies",
+      domain: "rookie/prospect evaluation",
+      claim_classification: "rookie_model_implication",
+      required_artifact_types: TIBER_ROOKIES_REQUIRED_ARTIFACT_TYPES,
+      reason:
+        "Rookie prospect evaluation, draft capital, production profile, landing spot, and model comparison belong in TIBER-Rookies before downstream dynasty interpretation.",
+      next_check:
+        "Inspect whether TIBER-Rookies has source-backed prospect/model artifacts for the referenced players before any dynasty ranking movement.",
     });
   }
 
