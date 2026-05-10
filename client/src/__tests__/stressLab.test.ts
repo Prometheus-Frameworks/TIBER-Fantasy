@@ -233,6 +233,15 @@ describe("Stress Lab v0 mock artifact builder", () => {
         "Treat dynasty ranking movement as downstream interpretation, not raw rookie truth.",
       ]),
     );
+    expect(artifact.required_followups).not.toContain(
+      "Verify transactions against governed source metadata.",
+    );
+    expect(artifact.required_followups).not.toContain(
+      "Check whether Teamstate has current offensive environment data for the referenced team.",
+    );
+    expect(artifact.required_followups).not.toContain(
+      "Check whether downstream fantasy modules already represent QB/environment changes.",
+    );
     expect(artifact.uncertainty).toContain(
       "Rookie player names were detected heuristically but canonical IDs/model artifact links were not resolved in v0.",
     );
@@ -288,6 +297,13 @@ describe("Stress Lab v0 mock artifact builder", () => {
         "TIBER-Teamstate",
         "TIBER-FORGE",
         "TIBER-Fantasy / Stress Lab",
+      ]),
+    );
+    expect(artifact.required_followups).toEqual(
+      expect.arrayContaining([
+        "Verify transactions against governed source metadata.",
+        "Check whether Teamstate has current offensive environment data for the referenced team.",
+        "Check whether downstream fantasy modules already represent QB/environment changes.",
       ]),
     );
     expect(handoffs).toEqual(

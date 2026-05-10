@@ -406,3 +406,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/scoring/scoringRequestMappers.ts`, `server/modules/externalModels/scoring/types.ts`, `server/modules/externalModels/scoring/scoringServiceClient.ts`, `server/routes/playerIdentityRoutes.ts`, `server/routes/rankingsV2Routes.ts`, `server/routes/__tests__/playerIdentityRoutes.test.ts`, `server/routes/__tests__/rankingsV2Routes.test.ts`, `server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts`.
 - **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts`; `npm run build`.
 - **Notes:** Compare normalization now preserves structured compare view (`verdict`, `playerA`, `playerB`, nested deltas) instead of flattening into reduced scalar-only fields.
+
+### 2026-05-10 — Codex: Stress Lab followup routing precision
+- **What changed:** Split Stress Lab followup routing into focused transaction and Teamstate environment cue patterns so rookie/prospect notes with draft-capital language no longer inherit unrelated transaction or QB/environment followups.
+- **Files modified:** `client/src/lib/stressLab.ts`, `client/src/__tests__/stressLab.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`
+- **Validation:** Ran focused Stress Lab Jest coverage successfully. Ran `npm run typecheck`, which still fails on pre-existing unrelated TypeScript errors across other modules.
+- **Notes:** Patch remains deterministic, read-only, heuristic-based, and does not call backend/LLM services or mutate rankings/projections.

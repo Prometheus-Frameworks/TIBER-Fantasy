@@ -285,8 +285,11 @@ const PLAYER_PATTERNS = [
   /\bSauce\s+Gardner\b/i,
   /\bQuinnen\s+Williams\b/i,
 ];
-const TRANSACTION_OR_TEAMSTATE_PATTERN =
-  /extended|extension|\bsigned\b|traded|\btrade\b|draft\s+capital|first\s+round|premium\s+picks|\bteamstate\b/i;
+const TRANSACTION_CUE_PATTERN =
+  /\btraded\b|\btrade\b|\bsigned\b|\bextension\b|\bextended\b|\bacquired\b|free\s+agent/i;
+
+const TEAMSTATE_ENVIRONMENT_PATTERN =
+  /offensive\s+environment|\bteamstate\b|regime\s+volatility|organizational\s+coherence|defensive(?:\s+talent)?\s+teardown|qb\s+change|environment\s+rebound/i;
 
 const ROOKIE_CUE_PATTERN =
   /\brookie\b|prospect\s+capital|production\s+profile|landing\s+spot|team\s+environment|early\s+role|role\s+opportunity|dynasty\s+ranking|rookie\s+model/i;
@@ -366,11 +369,22 @@ function detectEntities(note: string): OperatorSignalNoteEntity[] {
 function buildRequiredFollowups(note: string): string[] {
   const followups = [...DEFAULT_FOLLOWUPS];
 
-  if (TRANSACTION_OR_TEAMSTATE_PATTERN.test(note)) {
+  if (TRANSACTION_CUE_PATTERN.test(note)) {
+    followups.push("Verify transactions against governed source metadata.");
+  }
+
+  if (TEAMSTATE_ENVIRONMENT_PATTERN.test(note)) {
     followups.push(
-      "Verify transactions against governed source metadata.",
       "Check whether Teamstate has current offensive environment data for the referenced team.",
       "Check whether downstream fantasy modules already represent QB/environment changes.",
+    );
+  }
+
+  if (
+    TRANSACTION_CUE_PATTERN.test(note) ||
+    TEAMSTATE_ENVIRONMENT_PATTERN.test(note)
+  ) {
+    followups.push(
       "Preserve this as hypothesis scaffolding until source truth and season window are verified.",
     );
   }
@@ -469,7 +483,7 @@ function buildUncertainty(
     );
   }
 
-  if (TRANSACTION_OR_TEAMSTATE_PATTERN.test(note)) {
+  if (TRANSACTION_CUE_PATTERN.test(note)) {
     uncertainty.push(
       "Transaction claims require source verification before downstream use.",
     );
