@@ -130,6 +130,25 @@ describe('PlayerOwnershipService', () => {
     expect(unknown.warnings[0]).toContain('No player ownership match');
   });
 
+  it('does not treat null player names as fuzzy matches', async () => {
+    const { service, tempDir } = await createService(
+      buildArtifact([buildPlayer({ player_id: 'missing-player-name', player_name: null })]),
+      { eventsDir: null },
+    );
+    tempDirs.push(tempDir);
+
+    const insight = await service.getPlayerOwnershipInsight({ query: 'Random Player', includeEvents: false });
+
+    expect(insight).toEqual(
+      expect.objectContaining({
+        available: true,
+        matched: false,
+        matchType: 'none',
+      }),
+    );
+    expect(insight.warnings[0]).toContain('No player ownership match');
+  });
+
   it('returns unavailable states for missing and malformed artifacts instead of throwing', async () => {
     const missingService = new PlayerOwnershipService(
       new PlayerOwnershipClient({

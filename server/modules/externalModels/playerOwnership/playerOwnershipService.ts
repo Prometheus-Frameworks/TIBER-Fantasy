@@ -108,7 +108,7 @@ function resolveMatch(rows: CanonicalPlayerOwnershipRow[], query: PlayerOwnershi
       const fuzzy = chooseUnique(
         rows.filter((row) => {
           const rowKey = normalizePlayerOwnershipToken(row.player_name);
-          return rowKey.includes(queryNameKey) || queryNameKey.includes(rowKey);
+          return rowKey.length >= 3 && (rowKey.includes(queryNameKey) || queryNameKey.includes(rowKey));
         }),
         'fuzzy',
       );
