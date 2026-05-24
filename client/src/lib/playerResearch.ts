@@ -1,5 +1,6 @@
 export type PlayerResearchSectionState = 'idle' | 'ready' | 'not_available' | 'error';
 export type PlayerResearchWorkspaceState = 'idle' | 'ready' | 'partial' | 'empty' | 'error';
+export type PlayerOwnershipMatchType = 'player_id' | 'exact_name' | 'normalized_name' | 'fuzzy' | 'none';
 
 export interface PlayerResearchSearchEntry {
   playerId: string | null;
@@ -42,8 +43,28 @@ export interface PlayerResearchResponse {
       playerName: string;
       team: string | null;
       position: string | null;
-      matchStrategy: 'player_id' | 'exact_name' | 'normalized_name' | null;
+      matchStrategy: 'player_id' | 'exact_name' | 'normalized_name' | 'fuzzy' | null;
     } | null;
+    ownershipTruth: {
+      available: boolean;
+      matched: boolean;
+      matchType: PlayerOwnershipMatchType;
+      playerId: string | null;
+      playerName: string | null;
+      position: string | null;
+      footballLevel: string | null;
+      currentTeamId: string | null;
+      currentTeamAbbr: string | null;
+      currentTeamName: string | null;
+      ownershipStatus: string | null;
+      validFrom: string | null;
+      validTo: string | null;
+      lastVerifiedAt: string | null;
+      confidence: string | null;
+      sourceRefs: Array<Record<string, unknown>>;
+      recentEvents: Array<Record<string, unknown>>;
+      warnings: string[];
+    };
     searchIndex: PlayerResearchSearchEntry[];
     framing: {
       title: string;

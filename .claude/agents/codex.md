@@ -640,3 +640,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Validation:
   - `npm test -- --runTestsByPath client/src/__tests__/stressLab.test.ts` ✅
   - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo
+
+### 2026-05-24 — TIBER-Data player ownership consumer for Player Research
+- Added `server/modules/externalModels/playerOwnership/` with client/adapter/service boundaries for read-only `player_ownership_v0` latest-state artifacts and optional event JSONL lookup.
+- Mounted `GET /api/data-lab/player-ownership` and wired ownership truth into Player Research response/UI so roster-truth context appears before fantasy model interpretation.
+- Covered known player, unknown player, malformed/missing artifact, duplicate/ambiguous name, missing events directory, and route validation behavior.
+- Validation:
+  - Focused Jest suites for ownership service/route, Player Research service/route, and Player Research UI/summary block: passed
+  - Live `tsx` smoke against sibling TIBER-Data artifact for Tee Higgins: passed
+  - `npm run typecheck`: still fails on pre-existing repo-wide errors outside the touched ownership/Player Research files
+  - `npm run build`: blocked by Windows/esbuild entry-path/access resolution before application code bundling

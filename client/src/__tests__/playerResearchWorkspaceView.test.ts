@@ -22,6 +22,33 @@ const data = {
     position: 'WR',
     matchStrategy: 'player_id' as const,
   },
+  ownershipTruth: {
+    available: true,
+    matched: true,
+    matchType: 'player_id' as const,
+    playerId: '00-0036322',
+    playerName: 'Justin Jefferson',
+    position: 'WR',
+    footballLevel: 'NFL',
+    currentTeamId: 'nfl-min',
+    currentTeamAbbr: 'MIN',
+    currentTeamName: 'Minnesota Vikings',
+    ownershipStatus: 'active_roster',
+    validFrom: '2025-03-01T00:00:00.000Z',
+    validTo: null,
+    lastVerifiedAt: '2026-05-23T13:00:00.000Z',
+    confidence: 'source_verified',
+    sourceRefs: [{ source_name: 'tiber-data-fixture' }],
+    recentEvents: [
+      {
+        event_type: 'team_change',
+        from_team_abbr: 'NYJ',
+        to_team_abbr: 'MIN',
+        effective_date: '2025-03-01',
+      },
+    ],
+    warnings: [],
+  },
   searchIndex: [
     {
       playerId: '00-0036322',
@@ -165,6 +192,8 @@ describe('PlayerResearchWorkspaceView', () => {
     expect(html).toContain('Player Research Workspace');
     expect(html).toContain('first true cross-model synthesis surface');
     expect(html).toContain('Justin Jefferson');
+    expect(html).toContain('Roster truth');
+    expect(html).toContain('Minnesota Vikings');
     expect(html).toContain('Breakout Signals summary');
     expect(html).toContain('Role &amp; Opportunity summary');
     expect(html).toContain('Age Curve / ARC summary');
@@ -192,7 +221,23 @@ describe('PlayerResearchWorkspaceView', () => {
       React.createElement(PlayerResearchWorkspaceView, {
         season: '2025',
         availableSeasons: [2025],
-        data: { ...data, state: 'empty', selectedPlayer: null, requestedPlayerId: null, requestedPlayerName: 'Unknown Player' },
+        data: {
+          ...data,
+          state: 'empty',
+          selectedPlayer: null,
+          requestedPlayerId: null,
+          requestedPlayerName: 'Unknown Player',
+          ownershipTruth: {
+            ...data.ownershipTruth,
+            matched: false,
+            matchType: 'none',
+            playerId: null,
+            playerName: null,
+            currentTeamAbbr: null,
+            currentTeamName: null,
+            warnings: ['No player ownership match found.'],
+          },
+        },
         isLoading: false,
         errorMessage: null,
         onSeasonChange: jest.fn(),

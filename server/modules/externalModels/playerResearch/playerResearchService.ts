@@ -2,6 +2,8 @@ import { AgeCurveIntegrationError, TiberAgeCurveLab } from '../ageCurves/types';
 import { AgeCurvesService, ageCurvesService } from '../ageCurves/ageCurvesService';
 import { PointScenarioIntegrationError, TiberPointScenarioLab } from '../pointScenarios/types';
 import { PointScenariosService, pointScenariosService } from '../pointScenarios/pointScenariosService';
+import { PlayerOwnershipService, playerOwnershipService } from '../playerOwnership/playerOwnershipService';
+import { TiberPlayerOwnershipInsight } from '../playerOwnership/types';
 import { RoleOpportunityIntegrationError, TiberRoleOpportunityLab } from '../roleOpportunity/types';
 import { RoleOpportunityService, roleOpportunityService } from '../roleOpportunity/roleOpportunityService';
 import { SignalValidationIntegrationError, TiberWrBreakoutLab } from '../signalValidation/types';
@@ -84,7 +86,7 @@ function createBaseSection<TSummary>(
 }
 
 function sortSeasons(values: number[]): number[] {
-  return [...new Set(values.filter((value) => Number.isFinite(value)))].sort((left, right) => right - left);
+  return Array.from(new Set(values.filter((value) => Number.isFinite(value)))).sort((left, right) => right - left);
 }
 
 type BreakoutResult = { ok: true; data: TiberWrBreakoutLab } | { ok: false; error: SignalValidationIntegrationError };
@@ -97,6 +99,30 @@ interface PlayerResearchServiceDeps {
   roleOpportunity?: Pick<RoleOpportunityService, 'getRoleOpportunityLab'>;
   ageCurves?: Pick<AgeCurvesService, 'getAgeCurveLab'>;
   pointScenarios?: Pick<PointScenariosService, 'getPointScenarioLab'>;
+  playerOwnership?: Pick<PlayerOwnershipService, 'getPlayerOwnershipInsight'>;
+}
+
+function createIdleOwnershipTruth(): TiberPlayerOwnershipInsight {
+  return {
+    available: false,
+    matched: false,
+    matchType: 'none',
+    playerId: null,
+    playerName: null,
+    position: null,
+    footballLevel: null,
+    currentTeamId: null,
+    currentTeamAbbr: null,
+    currentTeamName: null,
+    ownershipStatus: null,
+    validFrom: null,
+    validTo: null,
+    lastVerifiedAt: null,
+    confidence: null,
+    sourceRefs: [],
+    recentEvents: [],
+    warnings: [],
+  };
 }
 
 export class PlayerResearchService {
@@ -106,6 +132,7 @@ export class PlayerResearchService {
       roleOpportunity: roleOpportunityService,
       ageCurves: ageCurvesService,
       pointScenarios: pointScenariosService,
+      playerOwnership: playerOwnershipService,
     },
   ) {}
 
@@ -161,6 +188,28 @@ export class PlayerResearchService {
     }
   }
 
+  private async getOwnershipTruth(query: PlayerResearchQuery): Promise<TiberPlayerOwnershipInsight> {
+    const playerId = query.playerId?.trim() || null;
+    const playerName = query.playerName?.trim() || null;
+
+    if (!playerId && !playerName) {
+      return createIdleOwnershipTruth();
+    }
+
+    try {
+      return await this.deps.playerOwnership!.getPlayerOwnershipInsight({
+        playerId,
+        query: playerName,
+        eventLimit: 5,
+      });
+    } catch (error) {
+      return {
+        ...createIdleOwnershipTruth(),
+        warnings: ['Player ownership truth lookup failed unexpectedly.'],
+      };
+    }
+  }
+
   async getPlayerResearchWorkspace(query: PlayerResearchQuery = {}): Promise<PlayerResearchWorkspace> {
     const requestedPlayerId = query.playerId?.trim() || null;
     const requestedPlayerName = query.playerName?.trim() || null;
@@ -177,13 +226,14 @@ export class PlayerResearchService {
       requestedPlayerId,
       requestedPlayerName,
       selectedPlayer: null,
+      ownershipTruth: createIdleOwnershipTruth(),
       searchIndex: [],
       framing: {
         title: 'Player Research Workspace',
         description:
-          'This player-centric research workspace aggregates promoted read-only outputs from Breakout Signals, Role & Opportunity, Age Curve / ARC, and Point Scenarios so you can inspect one player in one place.',
+          'This player-centric research workspace starts with TIBER-Data roster truth, then aggregates promoted read-only outputs from Breakout Signals, Role & Opportunity, Age Curve / ARC, and Point Scenarios so you can inspect one player in one place.',
         provenanceNote:
-          'TIBER-Fantasy is orchestrating and normalizing promoted model outputs here. It is not recomputing breakout, role, ARC, or point-scenario logic locally.',
+          'TIBER-Fantasy is orchestrating and normalizing promoted ownership/model outputs here. It is not recomputing roster truth, breakout, role, ARC, or point-scenario logic locally.',
       },
       warnings: [],
       sections: {
@@ -214,12 +264,18 @@ export class PlayerResearchService {
       },
     };
 
-    const [breakoutResult, roleResult, ageResult, scenarioResult] = await Promise.all([
+    const [breakoutResult, roleResult, ageResult, scenarioResult, ownershipTruth] = await Promise.all([
       this.getBreakout(query.season),
       this.getRoleOpportunity(query.season),
       this.getAgeCurves(query.season),
       this.getPointScenarios(query.season),
+      this.getOwnershipTruth(query),
     ]);
+
+    workspace.ownershipTruth = ownershipTruth;
+    if ((requestedPlayerId || requestedPlayerName) && ownershipTruth.warnings.length > 0) {
+      workspace.warnings.push(...ownershipTruth.warnings);
+    }
 
     workspace.availableSeasons = sortSeasons([
       ...(breakoutResult.ok ? breakoutResult.data.availableSeasons : []),
@@ -296,7 +352,7 @@ export class PlayerResearchService {
       workspace.warnings.push(`Point Scenarios unavailable: ${scenarioResult.error.message}`);
     }
 
-    workspace.searchIndex = [...searchEntries.values()].sort((left, right) => left.playerName.localeCompare(right.playerName));
+    workspace.searchIndex = Array.from(searchEntries.values()).sort((left, right) => left.playerName.localeCompare(right.playerName));
 
     const resolveSelectedPlayer = (): PlayerResearchResolvedPlayer | null => {
       if (!requestedPlayerId && !requestedPlayerName) {
@@ -342,6 +398,16 @@ export class PlayerResearchService {
         }
       }
 
+      if (workspace.ownershipTruth.available && workspace.ownershipTruth.matched) {
+        return {
+          playerId: workspace.ownershipTruth.playerId,
+          playerName: workspace.ownershipTruth.playerName ?? requestedPlayerName ?? requestedPlayerId ?? 'Unknown player',
+          team: workspace.ownershipTruth.currentTeamAbbr,
+          position: workspace.ownershipTruth.position,
+          matchStrategy: workspace.ownershipTruth.matchType === 'none' ? null : workspace.ownershipTruth.matchType,
+        };
+      }
+
       return null;
     };
 
@@ -355,9 +421,10 @@ export class PlayerResearchService {
 
     const hasAnySuccessfulDataset = breakoutResult.ok || roleResult.ok || ageResult.ok || scenarioResult.ok;
     const hasAnyDatasetError = !breakoutResult.ok || !roleResult.ok || !ageResult.ok || !scenarioResult.ok;
+    const hasOwnershipTruth = workspace.ownershipTruth.available && workspace.ownershipTruth.matched;
 
     if (!hasAnySuccessfulDataset) {
-      workspace.state = 'error';
+      workspace.state = hasOwnershipTruth ? 'partial' : 'error';
       workspace.sections.breakoutSignals.state = 'error';
       workspace.sections.breakoutSignals.message = breakoutResult.ok ? null : breakoutResult.error.message;
       workspace.sections.breakoutSignals.error = breakoutResult.ok ? null : { code: breakoutResult.error.code, message: breakoutResult.error.message };
@@ -487,7 +554,7 @@ export class PlayerResearchService {
       const rows = scenarioResult.data.rows.filter(playerMatch);
       if (rows.length > 0) {
         const bestRow = [...rows].sort((left, right) => (right.delta ?? Number.NEGATIVE_INFINITY) - (left.delta ?? Number.NEGATIVE_INFINITY))[0];
-        const notes = [...new Set(rows.flatMap((row) => row.notes))];
+        const notes = Array.from(new Set(rows.flatMap((row) => row.notes)));
         workspace.sections.pointScenarios.state = 'ready';
         workspace.sections.pointScenarios.summary = {
           baselineProjection: bestRow.baselineProjection,
@@ -516,8 +583,10 @@ export class PlayerResearchService {
     const readyCount = sectionStates.filter((state) => state === 'ready').length;
     const errorCount = sectionStates.filter((state) => state === 'error').length;
 
-    if (readyCount === 0 && errorCount > 0) {
+    if (readyCount === 0 && errorCount > 0 && !hasOwnershipTruth) {
       workspace.state = 'error';
+    } else if (readyCount === 0 && hasOwnershipTruth) {
+      workspace.state = 'partial';
     } else if (readyCount === 0) {
       workspace.state = 'empty';
     } else if (hasAnyDatasetError || sectionStates.some((state) => state === 'not_available')) {
@@ -526,8 +595,9 @@ export class PlayerResearchService {
       workspace.state = 'ready';
     }
 
-    if (workspace.selectedPlayer) {
-      workspace.warnings = workspace.warnings.map((warning) => `${warning} See ${buildPlayerResearchHref(workspace.selectedPlayer, workspace.season)} for this player-centric workspace.`);
+    const selectedPlayer = workspace.selectedPlayer;
+    if (selectedPlayer) {
+      workspace.warnings = workspace.warnings.map((warning) => `${warning} See ${buildPlayerResearchHref(selectedPlayer, workspace.season)} for this player-centric workspace.`);
     }
 
     return workspace;

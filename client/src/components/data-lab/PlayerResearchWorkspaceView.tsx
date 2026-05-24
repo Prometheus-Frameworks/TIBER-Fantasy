@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Search, ArrowUpRight, AlertTriangle, CheckCircle2, CircleOff, Layers3 } from 'lucide-react';
+import { Search, ArrowUpRight, AlertTriangle, CheckCircle2, CircleOff, Layers3, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { PromotedModuleSystemCard } from '@/components/data-lab/PromotedModuleSystemCard';
 import { PromotedModuleStateCard } from '@/components/data-lab/PromotedModuleStateCard';
@@ -84,6 +84,116 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">{label}</div>
       <div className="mt-2 text-sm font-semibold text-gray-900">{value}</div>
     </div>
+  );
+}
+
+function formatOwnershipValue(value: string | null | undefined): string {
+  return value?.trim() || '---';
+}
+
+function formatDateTimeLabel(value: string | null | undefined): string {
+  if (!value) {
+    return '---';
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getRecordString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function OwnershipTruthCard({ ownership }: { ownership: PlayerResearchResponse['data']['ownershipTruth'] }) {
+  const firstSource = ownership.sourceRefs[0] ?? null;
+  const sourceName = firstSource ? getRecordString(firstSource, 'source_name') : null;
+  const statusLabel = ownership.available
+    ? ownership.matched
+      ? 'Roster truth matched'
+      : 'Player not recognized'
+    : 'Ownership unavailable';
+  const statusState: 'ready' | 'not_available' | 'error' = ownership.available
+    ? ownership.matched
+      ? 'ready'
+      : 'not_available'
+    : 'error';
+
+  return (
+    <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Roster truth</h2>
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(statusState)}`}>
+              {statusIcon(statusState)}
+              {statusLabel}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            Read-only TIBER-Data ownership context. This identifies the player, team, level, status, verification time, and provenance before any fantasy interpretation.
+          </p>
+        </div>
+      </div>
+
+      {ownership.matched ? (
+        <>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <SummaryStat label="Canonical ID" value={formatOwnershipValue(ownership.playerId)} />
+            <SummaryStat label="Position / level" value={[ownership.position, ownership.footballLevel].filter(Boolean).join(' / ') || '---'} />
+            <SummaryStat label="Current team" value={[ownership.currentTeamAbbr, ownership.currentTeamName].filter(Boolean).join(' / ') || '---'} />
+            <SummaryStat label="Status" value={formatOwnershipValue(ownership.ownershipStatus)} />
+            <SummaryStat label="Verified" value={formatDateTimeLabel(ownership.lastVerifiedAt)} />
+            <SummaryStat label="Confidence" value={formatOwnershipValue(ownership.confidence)} />
+            <SummaryStat label="Valid from" value={formatDateTimeLabel(ownership.validFrom)} />
+            <SummaryStat label="Source" value={sourceName ?? '---'} />
+          </div>
+
+          {ownership.recentEvents.length > 0 ? (
+            <div className="mt-4 rounded-lg border border-gray-100 bg-[#fafafa] p-3 text-sm text-gray-600">
+              <div className="font-semibold text-gray-900">Recent ownership events</div>
+              <div className="mt-2 grid gap-2 md:grid-cols-2">
+                {ownership.recentEvents.slice(0, 4).map((event, index) => {
+                  const eventType = getRecordString(event, 'event_type') ?? 'ownership_event';
+                  const effectiveDate = getRecordString(event, 'effective_date');
+                  const fromTeam = getRecordString(event, 'from_team_abbr') ?? getRecordString(event, 'from_team_name');
+                  const toTeam = getRecordString(event, 'to_team_abbr') ?? getRecordString(event, 'to_team_name');
+
+                  return (
+                    <div key={`${eventType}-${effectiveDate ?? index}`} className="rounded-lg border border-gray-100 bg-white p-3">
+                      <div className="text-xs font-semibold uppercase text-gray-500">{eventType.replace(/_/g, ' ')}</div>
+                      <div className="mt-1 text-sm text-gray-700">
+                        {[fromTeam, toTeam].filter(Boolean).join(' -> ') || 'No team change recorded'}
+                      </div>
+                      <div className="mt-1 text-xs text-gray-500">{effectiveDate ?? 'No effective date'}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <p className="mt-4 text-sm text-gray-600">
+          {ownership.available
+            ? 'The ownership artifact is readable, but it did not recognize this player query.'
+            : 'The ownership artifact is missing, disabled, or malformed, so roster truth cannot be shown for this query.'}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -309,6 +419,10 @@ export function PlayerResearchWorkspaceView({
               {data.selectedPlayer.position ? ` · ${data.selectedPlayer.position}` : ''}
               . Match strategy: <span className="font-semibold text-gray-900">{data.selectedPlayer.matchStrategy ?? 'n/a'}</span>.
             </div>
+          ) : null}
+
+          {data.selectedPlayer || data.requestedPlayerId || data.requestedPlayerName ? (
+            <OwnershipTruthCard ownership={data.ownershipTruth} />
           ) : null}
 
           {data.state === 'idle' ? (
