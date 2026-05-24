@@ -91,6 +91,7 @@ import { dataLabRoleOpportunityRouter } from './routes/dataLabRoleOpportunityRou
 import { dataLabAgeCurvesRouter } from './routes/dataLabAgeCurvesRoutes';
 import { dataLabPointScenariosRouter } from './routes/dataLabPointScenariosRoutes';
 import { dataLabPlayerResearchRouter } from './routes/dataLabPlayerResearchRoutes';
+import { dataLabPlayerOwnershipRouter } from './routes/dataLabPlayerOwnershipRoutes';
 import { dataLabTeamResearchRouter } from './routes/dataLabTeamResearchRoutes';
 import { dataLabCommandCenterRouter } from './routes/dataLabCommandCenterRoutes';
 import { dataLabPromotedStatusRouter } from './routes/dataLabPromotedStatusRoutes';
@@ -238,6 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabRoleOpportunityRouter);
   app.use('/api/data-lab', dataLabAgeCurvesRouter);
   app.use('/api/data-lab', dataLabPointScenariosRouter);
+  app.use('/api/data-lab', dataLabPlayerOwnershipRouter);
   app.use('/api/data-lab', dataLabPlayerResearchRouter);
   app.use('/api/data-lab', dataLabTeamResearchRouter);
   app.use('/api/data-lab', dataLabCommandCenterRouter);

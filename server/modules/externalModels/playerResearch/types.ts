@@ -1,11 +1,12 @@
 import { TiberAgeCurveLabRow } from '../ageCurves/types';
 import { TiberPointScenarioLabRow } from '../pointScenarios/types';
+import { TiberPlayerOwnershipInsight } from '../playerOwnership/types';
 import { TiberRoleOpportunityLabRow } from '../roleOpportunity/types';
 import { TiberWrBreakoutSignalRow } from '../signalValidation/types';
 
 export type PlayerResearchSectionState = 'idle' | 'ready' | 'not_available' | 'error';
 export type PlayerResearchWorkspaceState = 'idle' | 'ready' | 'partial' | 'empty' | 'error';
-export type PlayerResearchMatchStrategy = 'player_id' | 'exact_name' | 'normalized_name' | null;
+export type PlayerResearchMatchStrategy = 'player_id' | 'exact_name' | 'normalized_name' | 'fuzzy' | null;
 
 export interface PlayerResearchQuery {
   season?: number;
@@ -112,6 +113,7 @@ export interface PlayerResearchWorkspace {
   requestedPlayerId: string | null;
   requestedPlayerName: string | null;
   selectedPlayer: PlayerResearchResolvedPlayer | null;
+  ownershipTruth: TiberPlayerOwnershipInsight;
   searchIndex: PlayerResearchSearchEntry[];
   framing: {
     title: string;

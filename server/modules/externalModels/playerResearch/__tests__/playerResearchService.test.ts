@@ -166,6 +166,55 @@ function buildService(overrides: Partial<any> = {}) {
         },
       }),
     },
+    playerOwnership: {
+      getPlayerOwnershipInsight: jest.fn().mockImplementation(async ({ playerId, query }: { playerId?: string | null; query?: string | null }) => {
+        const isJustin = playerId === '00-0036322' || query === 'Justin Jefferson';
+
+        if (!isJustin) {
+          return {
+            available: true,
+            matched: false,
+            matchType: 'none',
+            playerId: null,
+            playerName: null,
+            position: null,
+            footballLevel: null,
+            currentTeamId: null,
+            currentTeamAbbr: null,
+            currentTeamName: null,
+            ownershipStatus: null,
+            validFrom: null,
+            validTo: null,
+            lastVerifiedAt: null,
+            confidence: null,
+            sourceRefs: [],
+            recentEvents: [],
+            warnings: ['No player ownership match found.'],
+          };
+        }
+
+        return {
+          available: true,
+          matched: true,
+          matchType: playerId ? 'player_id' : 'exact_name',
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+          position: 'WR',
+          footballLevel: 'NFL',
+          currentTeamId: 'nfl-min',
+          currentTeamAbbr: 'MIN',
+          currentTeamName: 'Minnesota Vikings',
+          ownershipStatus: 'active_roster',
+          validFrom: '2025-03-01T00:00:00.000Z',
+          validTo: null,
+          lastVerifiedAt: '2026-05-23T13:00:00.000Z',
+          confidence: 'source_verified',
+          sourceRefs: [],
+          recentEvents: [],
+          warnings: [],
+        };
+      }),
+    },
     ...overrides,
   });
 }
@@ -206,6 +255,13 @@ describe('PlayerResearchService', () => {
       expect.objectContaining({
         baselineProjection: 18.4,
         scenarioCount: 1,
+      }),
+    );
+    expect(workspace.ownershipTruth).toEqual(
+      expect.objectContaining({
+        available: true,
+        matched: true,
+        currentTeamAbbr: 'MIN',
       }),
     );
     expect(workspace.framing.provenanceNote).toContain('not recomputing');
