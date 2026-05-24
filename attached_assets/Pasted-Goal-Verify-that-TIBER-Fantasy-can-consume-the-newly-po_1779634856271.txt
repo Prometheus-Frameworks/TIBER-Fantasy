@@ -1,0 +1,106 @@
+Goal
+
+Verify that TIBER-Fantasy can consume the newly populated TIBER-Data player_ownership_v0 artifact and return useful roster-truth coverage for the 26-player dynasty roster smoke test.
+
+This is the first end-to-end usability check for the original question: can TIBER begin helping with a real fantasy roster?
+
+Background
+
+TIBER-Data now has a populated ownership artifact for the 26-player dynasty roster smoke test. TIBER-Fantasy has a read-only player ownership consumer and GET /api/data-lab/player-ownership endpoint.
+
+The next step is to prove the downstream surface can recognize the full roster and preserve confidence/warning semantics:
+
+source_verified draft rows should remain source-verified.
+stale nflreadpy roster-snapshot rows should surface as provisional/stale-current-roster warnings.
+unmatched/ambiguous cases should remain explicit.
+TIBER-Fantasy should not invent or override ownership truth.
+Smoke-test roster
+
+Jalen Hurts
+Geno Smith
+Michael Penix
+Garrett Nussmeier
+Omarion Hampton
+Chris Rodriguez
+Jonah Coleman
+Joe Mixon
+Tank Bigsby
+Eli Heidenreich
+Mike Washington
+Seth McGowan
+Christian Watson
+Ladd McConkey
+Tet McMillan
+Jordyn Tyson
+Khalil Shakir
+Tory Horton
+Keon Coleman
+Jaylin Noel
+Kyle Williams
+Romeo Doubs
+Antonio Williams
+Colston Loveland
+Dallas Goedert
+Juwan Johnson
+Scope
+
+Add a narrow roster-block ownership smoke test in TIBER-Fantasy.
+
+This issue may include:
+
+A test fixture containing the 26-player roster block.
+A script/test/helper that runs each name through the player ownership service or route.
+A generated or committed smoke-test report if that fits existing repo conventions.
+Tests proving the expected match coverage and confidence handling.
+Expected result
+
+After consuming the latest TIBER-Data artifact from the sibling repo path, TIBER-Fantasy should report:
+
+26 total players tested
+26 matched
+0 unmatched
+0 ambiguous
+7 source_verified ownership rows from 2026 draft results
+19 provisional ownership rows from stale-but-source-backed nflreadpy roster snapshots
+warnings/notes preserved for stale current-roster freshness where present
+If the local environment cannot access the sibling TIBER-Data artifact, the test/report should clearly state artifact unavailable rather than fabricating success.
+
+Suggested report path
+
+docs/reports/dynasty-roster-ownership-smoke-test-2026-05-24.md
+The report should include a per-player table:
+
+input name
+matched player ID
+canonical player name
+position
+football level
+current team
+ownership status
+confidence
+source summary
+last verified timestamp
+warnings
+Out of scope
+
+Do not add roster valuation.
+Do not add trade advice.
+Do not add Teamstate interpretation.
+Do not add Role/Opportunity interpretation.
+Do not add FORGE grades.
+Do not mutate TIBER-Data artifacts.
+Do not patch missing ownership inside TIBER-Fantasy.
+Do not hide provisional/stale warnings.
+
+Acceptance criteria
+
+TIBER-Fantasy can run a roster-block ownership lookup against the TIBER-Data ownership artifact.
+The output preserves confidence semantics from TIBER-Data.
+The smoke test/report distinguishes source-verified, provisional, unmatched, and ambiguous rows.
+Missing artifact behavior is explicit and non-fabricated.
+No fantasy interpretation is added in this issue.
+Validation expectation
+
+Run targeted tests for the ownership service/route and any new roster smoke-test helper.
+
+If repo-wide typecheck or build still fails from pre-existing issues, document that separately and confirm no new ownership-related failures were introduced.
