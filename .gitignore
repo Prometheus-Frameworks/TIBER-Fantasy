@@ -46,3 +46,6 @@ backup_*.sql
 
 # TIBER Cowork plugin local config (contains API key)
 tiber-cowork-plugin/plugin-config.json
+
+# test coverage artifacts
+coverage/

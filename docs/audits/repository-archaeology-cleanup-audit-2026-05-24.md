@@ -149,6 +149,8 @@ Positive boundary patterns already present:
 
 ## Suggested Follow-Up PRs
 
+> Update (2026-05-24): Follow-up cleanup PR removed tracked `coverage/` generated artifacts and added `coverage/` to `.gitignore` to prevent reintroduction.
+
 Keep these small. Do not combine them into one cleanup megachange.
 
 1. Generated artifacts PR
