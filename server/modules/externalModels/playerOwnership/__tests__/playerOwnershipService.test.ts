@@ -216,7 +216,7 @@ describe('PlayerOwnershipService', () => {
       {
         eventsDir: null,
         aliasesArtifact: {
-          contract_version: 'player_ownership_aliases_v0',
+          artifact: 'player_ownership_aliases_v0',
           generated_at: '2026-05-24T00:00:00.000Z',
           aliases: [
             {
@@ -263,5 +263,33 @@ describe('PlayerOwnershipService', () => {
     expect(malformedAlias.matched).toBe(false);
     expect(malformedAlias.aliasApplied).toBe(false);
     expect(malformedAlias.warnings.join(' ')).toContain('player_ownership_aliases_v0');
+  });
+
+  it('accepts alias artifact payload shaped like upstream promoted export', async () => {
+    const { service, tempDir } = await createService(
+      buildArtifact([buildPlayer({ player_id: '00-0040124', player_name: 'Tetairoa McMillan' })]),
+      {
+        eventsDir: null,
+        aliasesArtifact: {
+          artifact: 'player_ownership_aliases_v0',
+          generated_at: '2026-05-24T00:00:00.000Z',
+          aliases: [
+            {
+              alias: 'Tet McMillan',
+              canonical_player_name: 'Tetairoa McMillan',
+              player_id: '00-0040124',
+              alias_type: 'known_nickname',
+              source: 'player_ownership_source_builder_2026_05_24',
+            },
+          ],
+        },
+      },
+    );
+    tempDirs.push(tempDir);
+
+    const insight = await service.getPlayerOwnershipInsight({ query: 'Tet McMillan', includeEvents: false });
+    expect(insight.matched).toBe(true);
+    expect(insight.aliasApplied).toBe(true);
+    expect(insight.playerName).toBe('Tetairoa McMillan');
   });
 });

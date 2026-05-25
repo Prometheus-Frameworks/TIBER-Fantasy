@@ -153,7 +153,7 @@ describe('Dynasty Roster Ownership Smoke Test — 2026-05-24', () => {
         buildArtifact(players),
         null,
         {
-          contract_version: 'player_ownership_aliases_v0',
+          artifact: 'player_ownership_aliases_v0',
           generated_at: '2026-05-24T00:00:00.000Z',
           aliases: [
             {

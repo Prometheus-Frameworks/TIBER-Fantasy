@@ -87,7 +87,7 @@ export const canonicalPlayerOwnershipAliasRowSchema = z.object({
 });
 
 export const canonicalPlayerOwnershipAliasArtifactSchema = z.object({
-  contract_version: z.literal(PLAYER_OWNERSHIP_ALIAS_CONTRACT_VERSION),
+  artifact: z.literal(PLAYER_OWNERSHIP_ALIAS_CONTRACT_VERSION),
   generated_at: z.string().datetime(),
   aliases: z.array(canonicalPlayerOwnershipAliasRowSchema),
 });
