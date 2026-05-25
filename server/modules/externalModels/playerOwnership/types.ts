@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const PLAYER_OWNERSHIP_CONTRACT_VERSION = 'player_ownership_v0';
 export const PLAYER_OWNERSHIP_EVENT_CONTRACT_VERSION = 'player_ownership_change_event_v0';
+export const PLAYER_OWNERSHIP_ALIAS_CONTRACT_VERSION = 'player_ownership_aliases_v0';
 
 const nullableStringSchema = z.string().min(1).nullable();
 
@@ -77,9 +78,25 @@ export const canonicalPlayerOwnershipEventSchema = z.object({
   source_refs: z.array(playerOwnershipSourceRefSchema).min(1),
 });
 
+export const canonicalPlayerOwnershipAliasRowSchema = z.object({
+  alias: z.string().min(1),
+  canonical_player_name: z.string().min(1),
+  player_id: z.string().min(1),
+  alias_type: z.string().min(1),
+  source: z.string().min(1),
+});
+
+export const canonicalPlayerOwnershipAliasArtifactSchema = z.object({
+  contract_version: z.literal(PLAYER_OWNERSHIP_ALIAS_CONTRACT_VERSION),
+  generated_at: z.string().datetime(),
+  aliases: z.array(canonicalPlayerOwnershipAliasRowSchema),
+});
+
 export type CanonicalPlayerOwnershipArtifact = z.infer<typeof canonicalPlayerOwnershipArtifactSchema>;
 export type CanonicalPlayerOwnershipRow = z.infer<typeof canonicalPlayerOwnershipRowSchema>;
 export type CanonicalPlayerOwnershipEvent = z.infer<typeof canonicalPlayerOwnershipEventSchema>;
+export type CanonicalPlayerOwnershipAliasArtifact = z.infer<typeof canonicalPlayerOwnershipAliasArtifactSchema>;
+export type CanonicalPlayerOwnershipAliasRow = z.infer<typeof canonicalPlayerOwnershipAliasRowSchema>;
 
 export type PlayerOwnershipMatchType = 'player_id' | 'exact_name' | 'normalized_name' | 'fuzzy' | 'none';
 
@@ -102,6 +119,14 @@ export interface TiberPlayerOwnershipInsight {
   sourceRefs: Array<Record<string, unknown>>;
   recentEvents: Array<Record<string, unknown>>;
   warnings: string[];
+  aliasApplied: boolean;
+  alias: {
+    inputAlias: string;
+    canonicalPlayerName: string;
+    playerId: string;
+    aliasType: string;
+    source: string;
+  } | null;
 }
 
 export interface PlayerOwnershipLookupQuery {
@@ -134,6 +159,7 @@ export class PlayerOwnershipIntegrationError extends Error {
 
 export interface PlayerOwnershipClientConfig {
   latestArtifactPath?: string;
+  aliasesArtifactPath?: string;
   eventsDir?: string | null;
   enabled?: boolean;
 }

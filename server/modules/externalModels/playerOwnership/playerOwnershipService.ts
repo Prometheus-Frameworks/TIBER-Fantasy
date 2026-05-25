@@ -1,5 +1,6 @@
 import { PlayerOwnershipClient } from './playerOwnershipClient';
 import {
+  CanonicalPlayerOwnershipAliasRow,
   CanonicalPlayerOwnershipRow,
   PlayerOwnershipIntegrationError,
   PlayerOwnershipLookupQuery,
@@ -28,6 +29,8 @@ function emptyInsight(overrides: Partial<TiberPlayerOwnershipInsight> = {}): Tib
     sourceRefs: [],
     recentEvents: [],
     warnings: [],
+    aliasApplied: false,
+    alias: null,
     ...overrides,
   };
 }
@@ -154,6 +157,23 @@ export class PlayerOwnershipService {
 
   async getPlayerOwnershipInsight(query: PlayerOwnershipLookupQuery = {}): Promise<TiberPlayerOwnershipInsight> {
     let artifactRows: CanonicalPlayerOwnershipRow[] = [];
+    let aliasApplied = false;
+    let alias: CanonicalPlayerOwnershipAliasRow | null = null;
+    const aliasWarnings: string[] = [];
+    const lookupQuery: PlayerOwnershipLookupQuery = { ...query };
+
+    if (query.query?.trim()) {
+      const aliasResult = await this.client.lookupAlias(query.query);
+      aliasWarnings.push(...aliasResult.warnings);
+      alias = aliasResult.alias;
+      if (alias) {
+        lookupQuery.query = alias.canonical_player_name;
+        if (!lookupQuery.playerId) {
+          lookupQuery.playerId = alias.player_id;
+        }
+        aliasApplied = true;
+      }
+    }
 
     try {
       const artifact = await this.client.readLatestArtifact();
@@ -162,24 +182,34 @@ export class PlayerOwnershipService {
       if (error instanceof PlayerOwnershipIntegrationError) {
         return emptyInsight({
           available: false,
-          warnings: [`Player ownership artifact unavailable: ${error.message}`],
+          warnings: [...aliasWarnings, `Player ownership artifact unavailable: ${error.message}`],
         });
       }
 
       return emptyInsight({
         available: false,
-        warnings: ['Player ownership artifact unavailable due to an unexpected read failure.'],
+        warnings: [...aliasWarnings, 'Player ownership artifact unavailable due to an unexpected read failure.'],
       });
     }
 
-    const match = resolveMatch(artifactRows, query);
+    const match = resolveMatch(artifactRows, lookupQuery);
 
     if (!match.row) {
       return emptyInsight({
         available: true,
         matched: false,
         matchType: match.matchType,
-        warnings: match.warnings,
+        warnings: [...aliasWarnings, ...match.warnings],
+        aliasApplied,
+        alias: alias
+          ? {
+              inputAlias: query.query?.trim() ?? alias.alias,
+              canonicalPlayerName: alias.canonical_player_name,
+              playerId: alias.player_id,
+              aliasType: alias.alias_type,
+              source: alias.source,
+            }
+          : null,
       });
     }
 
@@ -210,6 +240,16 @@ export class PlayerOwnershipService {
       sourceRefs: match.row.source_refs.map((sourceRef) => ({ ...sourceRef })),
       recentEvents: eventResult.events.map((event) => ({ ...event })),
       warnings: [...match.warnings, ...eventResult.warnings],
+      aliasApplied,
+      alias: alias
+        ? {
+            inputAlias: query.query?.trim() ?? alias.alias,
+            canonicalPlayerName: alias.canonical_player_name,
+            playerId: alias.player_id,
+            aliasType: alias.alias_type,
+            source: alias.source,
+          }
+        : null,
     };
   }
 }

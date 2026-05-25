@@ -62,7 +62,10 @@ function buildEvent(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function createService(payload: unknown, options: { events?: unknown[]; eventsDir?: string | null } = {}) {
+async function createService(
+  payload: unknown,
+  options: { events?: unknown[]; eventsDir?: string | null; aliasesArtifact?: unknown } = {},
+) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'player-ownership-'));
   const artifactPath = path.join(tempDir, 'player_ownership_latest.json');
   await fs.writeFile(artifactPath, JSON.stringify(payload), 'utf8');
@@ -78,7 +81,21 @@ async function createService(payload: unknown, options: { events?: unknown[]; ev
     );
   }
 
-  const service = new PlayerOwnershipService(new PlayerOwnershipClient({ latestArtifactPath: artifactPath, eventsDir }));
+  if (options.aliasesArtifact) {
+    await fs.writeFile(
+      path.join(tempDir, 'player_ownership_aliases.json'),
+      JSON.stringify(options.aliasesArtifact),
+      'utf8',
+    );
+  }
+
+  const service = new PlayerOwnershipService(
+    new PlayerOwnershipClient({
+      latestArtifactPath: artifactPath,
+      aliasesArtifactPath: path.join(tempDir, 'player_ownership_aliases.json'),
+      eventsDir,
+    }),
+  );
   return { service, tempDir, artifactPath };
 }
 
@@ -127,7 +144,7 @@ describe('PlayerOwnershipService', () => {
         matchType: 'none',
       }),
     );
-    expect(unknown.warnings[0]).toContain('No player ownership match');
+    expect(unknown.warnings.join(' ')).toContain('No player ownership match');
   });
 
   it('does not treat null player names as fuzzy matches', async () => {
@@ -146,7 +163,7 @@ describe('PlayerOwnershipService', () => {
         matchType: 'none',
       }),
     );
-    expect(insight.warnings[0]).toContain('No player ownership match');
+    expect(insight.warnings.join(' ')).toContain('No player ownership match');
   });
 
   it('returns unavailable states for missing and malformed artifacts instead of throwing', async () => {
@@ -186,10 +203,65 @@ describe('PlayerOwnershipService', () => {
     const ambiguous = await service.getPlayerOwnershipInsight({ query: 'Alex Smith' });
     expect(ambiguous.available).toBe(true);
     expect(ambiguous.matched).toBe(false);
-    expect(ambiguous.warnings[0]).toContain('Ambiguous player ownership match');
+    expect(ambiguous.warnings.join(' ')).toContain('Ambiguous player ownership match');
 
     const matched = await service.getPlayerOwnershipInsight({ playerId: 'wr-alpha-smith' });
     expect(matched.matched).toBe(true);
     expect(matched.warnings[0]).toContain('events directory');
+  });
+
+  it('resolves alias query via alias artifact and preserves alias provenance metadata', async () => {
+    const { service, tempDir } = await createService(
+      buildArtifact([buildPlayer({ player_id: '00-0040124', player_name: 'Tetairoa McMillan' })]),
+      {
+        eventsDir: null,
+        aliasesArtifact: {
+          contract_version: 'player_ownership_aliases_v0',
+          generated_at: '2026-05-24T00:00:00.000Z',
+          aliases: [
+            {
+              alias: 'Tet McMillan',
+              canonical_player_name: 'Tetairoa McMillan',
+              player_id: '00-0040124',
+              alias_type: 'known_nickname',
+              source: 'player_ownership_source_builder_2026_05_24',
+            },
+          ],
+        },
+      },
+    );
+    tempDirs.push(tempDir);
+
+    const insight = await service.getPlayerOwnershipInsight({ query: 'Tet McMillan', includeEvents: false });
+    expect(insight.matched).toBe(true);
+    expect(insight.playerName).toBe('Tetairoa McMillan');
+    expect(insight.playerId).toBe('00-0040124');
+    expect(insight.aliasApplied).toBe(true);
+    expect(insight.alias).toEqual(
+      expect.objectContaining({
+        inputAlias: 'Tet McMillan',
+        canonicalPlayerName: 'Tetairoa McMillan',
+        playerId: '00-0040124',
+      }),
+    );
+  });
+
+  it('degrades cleanly when alias artifact is missing or malformed', async () => {
+    const { service, tempDir } = await createService(
+      buildArtifact([buildPlayer({ player_id: '00-0040124', player_name: 'Tetairoa McMillan' })]),
+      { eventsDir: null },
+    );
+    tempDirs.push(tempDir);
+
+    const missingAlias = await service.getPlayerOwnershipInsight({ query: 'Tet McMillan', includeEvents: false });
+    expect(missingAlias.matched).toBe(false);
+    expect(missingAlias.aliasApplied).toBe(false);
+    expect(missingAlias.warnings.join(' ')).toContain('aliases unavailable');
+
+    await fs.writeFile(path.join(tempDir, 'player_ownership_aliases.json'), '{"bad":true}', 'utf8');
+    const malformedAlias = await service.getPlayerOwnershipInsight({ query: 'Tet McMillan', includeEvents: false });
+    expect(malformedAlias.matched).toBe(false);
+    expect(malformedAlias.aliasApplied).toBe(false);
+    expect(malformedAlias.warnings.join(' ')).toContain('player_ownership_aliases_v0');
   });
 });
