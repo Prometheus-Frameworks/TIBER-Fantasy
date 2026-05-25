@@ -23,11 +23,18 @@ function buildArtifact(players: unknown[]) {
   };
 }
 
-async function createService(payload: unknown, eventsDir: string | null = null) {
+async function createService(payload: unknown, eventsDir: string | null = null, aliasesArtifact?: unknown) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'dynasty-smoke-'));
   const artifactPath = path.join(tempDir, 'player_ownership_latest.json');
   await fs.writeFile(artifactPath, JSON.stringify(payload), 'utf8');
-  const client = new PlayerOwnershipClient({ latestArtifactPath: artifactPath, eventsDir });
+  if (aliasesArtifact) {
+    await fs.writeFile(path.join(tempDir, 'player_ownership_aliases.json'), JSON.stringify(aliasesArtifact), 'utf8');
+  }
+  const client = new PlayerOwnershipClient({
+    latestArtifactPath: artifactPath,
+    aliasesArtifactPath: path.join(tempDir, 'player_ownership_aliases.json'),
+    eventsDir,
+  });
   const service = new PlayerOwnershipService(client);
   return { service, tempDir };
 }
@@ -110,6 +117,70 @@ describe('Dynasty Roster Ownership Smoke Test — 2026-05-24', () => {
   });
 
   describe('runDynastyRosterSmokeTest — confidence semantics with fixture artifact', () => {
+    it('reaches 26/26 with alias artifact and resolves Tet McMillan to canonical ownership identity', async () => {
+      const players = DYNASTY_ROSTER_SMOKE_2026.filter((name) => name !== 'Tet McMillan').map((name, idx) => ({
+        player_id: `fixture-${idx + 1}`,
+        player_name: name,
+        position: 'WR',
+        football_level: 'NFL',
+        current_team_id: 'nfl-x',
+        current_team_abbr: 'CAR',
+        current_team_name: 'Carolina Panthers',
+        ownership_status: 'active_roster',
+        valid_from: '2026-01-01T00:00:00.000Z',
+        valid_to: null,
+        last_verified_at: '2026-05-24T00:00:00.000Z',
+        confidence: idx < 7 ? 'source_verified' : 'provisional',
+        source_refs: [SOURCE_REF],
+      }));
+      players.push({
+        player_id: '00-0040124',
+        player_name: 'Tetairoa McMillan',
+        position: 'WR',
+        football_level: 'NFL',
+        current_team_id: 'nfl-car',
+        current_team_abbr: 'CAR',
+        current_team_name: 'Carolina Panthers',
+        ownership_status: 'active_roster',
+        valid_from: '2026-01-01T00:00:00.000Z',
+        valid_to: null,
+        last_verified_at: '2026-05-24T00:00:00.000Z',
+        confidence: 'provisional',
+        source_refs: [SOURCE_REF],
+      });
+
+      const { service, tempDir } = await createService(
+        buildArtifact(players),
+        null,
+        {
+          artifact: 'player_ownership_aliases_v0',
+          generated_at: '2026-05-24T00:00:00.000Z',
+          aliases: [
+            {
+              alias: 'Tet McMillan',
+              canonical_player_name: 'Tetairoa McMillan',
+              player_id: '00-0040124',
+              alias_type: 'known_nickname',
+              source: 'player_ownership_source_builder_2026_05_24',
+            },
+          ],
+        },
+      );
+      tempDirs.push(tempDir);
+
+      const report = await runDynastyRosterSmokeTest(DYNASTY_ROSTER_SMOKE_2026, service);
+      expect(report.totalMatched).toBe(26);
+      expect(report.totalUnmatched).toBe(0);
+      expect(report.totalAmbiguous).toBe(0);
+      expect(report.totalUnavailable).toBe(0);
+      expect(report.byConfidence).toEqual({ source_verified: 7, provisional: 19 });
+      const tet = report.players.find((p) => p.inputName === 'Tet McMillan');
+      expect(tet).toBeDefined();
+      expect(tet?.canonicalName).toBe('Tetairoa McMillan');
+      expect(tet?.playerId).toBe('00-0040124');
+      expect(tet?.aliasApplied).toBe(true);
+      expect(tet?.confidence).toBe('provisional');
+    });
     it('preserves source_verified confidence for draft-backed rows', async () => {
       const { service, tempDir } = await createService(
         buildArtifact([
@@ -212,7 +283,7 @@ describe('Dynasty Roster Ownership Smoke Test — 2026-05-24', () => {
       expect(unmatched!.matched).toBe(false);
       expect(unmatched!.available).toBe(true);
       expect(unmatched!.confidence).toBeNull();
-      expect(unmatched!.warnings[0]).toMatch(/No player ownership match/i);
+      expect(unmatched!.warnings.join(' ')).toMatch(/No player ownership match/i);
     });
 
     it('does not mutate TIBER-Data rows or add TIBER-Fantasy-invented fields', async () => {

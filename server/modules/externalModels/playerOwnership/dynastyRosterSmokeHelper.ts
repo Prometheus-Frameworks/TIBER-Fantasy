@@ -15,6 +15,8 @@ export interface SmokeTestPlayerResult {
   sourceSummary: string | null;
   lastVerifiedAt: string | null;
   warnings: string[];
+  aliasApplied: boolean;
+  aliasCanonicalName: string | null;
 }
 
 export interface SmokeTestReport {
@@ -73,6 +75,8 @@ export async function runDynastyRosterSmokeTest(
       sourceSummary,
       lastVerifiedAt: insight.lastVerifiedAt,
       warnings: insight.warnings,
+      aliasApplied: insight.aliasApplied,
+      aliasCanonicalName: insight.alias?.canonicalPlayerName ?? null,
     });
   }
 
@@ -146,14 +150,14 @@ export function formatSmokeReportMarkdown(report: SmokeTestReport, issueRef = '#
 
   lines.push('## Per-Player Results');
   lines.push('');
-  lines.push('| Input Name | Match | Player ID | Canonical Name | Pos | Level | Team | Ownership Status | Confidence | Source | Last Verified | Warnings |');
-  lines.push('|------------|-------|-----------|---------------|-----|-------|------|-----------------|-----------|--------|--------------|----------|');
+  lines.push('| Input Name | Match | Player ID | Canonical Name | Alias Applied | Pos | Level | Team | Ownership Status | Confidence | Source | Last Verified | Warnings |');
+  lines.push('|------------|-------|-----------|---------------|---------------|-----|-------|------|-----------------|-----------|--------|--------------|----------|');
 
   for (const p of report.players) {
     const matchStatus = !p.available ? '⚠ artifact unavailable' : p.ambiguous ? '⚠ ambiguous' : p.matched ? '✓ matched' : '✗ unmatched';
     const warningText = p.warnings.length > 0 ? p.warnings.join(' / ') : '—';
     lines.push(
-      `| ${p.inputName} | ${matchStatus} | ${p.playerId ?? '—'} | ${p.canonicalName ?? '—'} | ${p.position ?? '—'} | ${p.footballLevel ?? '—'} | ${p.currentTeam ?? '—'} | ${p.ownershipStatus ?? '—'} | ${p.confidence ?? '—'} | ${p.sourceSummary ?? '—'} | ${p.lastVerifiedAt ?? '—'} | ${warningText} |`,
+      `| ${p.inputName} | ${matchStatus} | ${p.playerId ?? '—'} | ${p.canonicalName ?? '—'} | ${p.aliasApplied ? `yes → ${p.aliasCanonicalName ?? p.canonicalName ?? '—'}` : 'no'} | ${p.position ?? '—'} | ${p.footballLevel ?? '—'} | ${p.currentTeam ?? '—'} | ${p.ownershipStatus ?? '—'} | ${p.confidence ?? '—'} | ${p.sourceSummary ?? '—'} | ${p.lastVerifiedAt ?? '—'} | ${warningText} |`,
     );
   }
 

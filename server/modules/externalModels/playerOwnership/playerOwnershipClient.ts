@@ -1,6 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import {
+  CanonicalPlayerOwnershipAliasArtifact,
+  CanonicalPlayerOwnershipAliasRow,
   CanonicalPlayerOwnershipArtifact,
   CanonicalPlayerOwnershipEvent,
   PlayerOwnershipClientConfig,
@@ -8,6 +10,7 @@ import {
 } from './types';
 import {
   normalizePlayerOwnershipToken,
+  parsePlayerOwnershipAliasesArtifact,
   parsePlayerOwnershipArtifact,
   parsePlayerOwnershipEvent,
 } from './playerOwnershipAdapter';
@@ -30,6 +33,15 @@ const DEFAULT_EVENTS_DIR = path.join(
   'player_ownership',
   'events',
 );
+const DEFAULT_ALIASES_ARTIFACT_PATH = path.join(
+  process.cwd(),
+  '..',
+  'TIBER-Data',
+  'exports',
+  'promoted',
+  'player_ownership',
+  'player_ownership_aliases.json',
+);
 const EVENT_FILE_PATTERN = /^player_ownership_events_\d{4}\.jsonl$/;
 
 export interface PlayerOwnershipEventLookup {
@@ -46,6 +58,7 @@ export interface PlayerOwnershipEventLookupResult {
 export class PlayerOwnershipClient {
   private readonly latestArtifactPath: string;
   private readonly eventsDir: string | null;
+  private readonly aliasesArtifactPath: string;
   private readonly enabled: boolean;
 
   constructor(config: PlayerOwnershipClientConfig = {}) {
@@ -57,6 +70,10 @@ export class PlayerOwnershipClient {
       config.eventsDir === undefined
         ? process.env.PLAYER_OWNERSHIP_EVENTS_DIR ?? DEFAULT_EVENTS_DIR
         : config.eventsDir;
+    this.aliasesArtifactPath =
+      config.aliasesArtifactPath ??
+      process.env.PLAYER_OWNERSHIP_ALIASES_ARTIFACT_PATH ??
+      DEFAULT_ALIASES_ARTIFACT_PATH;
     this.enabled = config.enabled ?? process.env.PLAYER_OWNERSHIP_ENABLED !== '0';
   }
 
@@ -65,6 +82,7 @@ export class PlayerOwnershipClient {
       enabled: this.enabled,
       configured: Boolean(this.latestArtifactPath),
       latestArtifactPath: this.latestArtifactPath,
+      aliasesArtifactPath: this.aliasesArtifactPath,
       eventsDir: this.eventsDir,
     };
   }
@@ -111,6 +129,55 @@ export class PlayerOwnershipClient {
         503,
         error,
       );
+    }
+  }
+
+  async readAliasesArtifact(): Promise<CanonicalPlayerOwnershipAliasArtifact> {
+    const raw = await fs.readFile(this.aliasesArtifactPath, 'utf8');
+    return parsePlayerOwnershipAliasesArtifact(JSON.parse(raw) as unknown);
+  }
+
+  async lookupAlias(query: string | null | undefined): Promise<{ alias: CanonicalPlayerOwnershipAliasRow | null; warnings: string[] }> {
+    const warnings: string[] = [];
+    const queryKey = normalizePlayerOwnershipToken(query);
+    if (!this.enabled || !queryKey) {
+      return { alias: null, warnings };
+    }
+
+    try {
+      const aliasesArtifact = await this.readAliasesArtifact();
+      const matches = aliasesArtifact.aliases.filter(
+        (entry) => normalizePlayerOwnershipToken(entry.alias) === queryKey,
+      );
+
+      if (matches.length === 1) {
+        return { alias: matches[0], warnings };
+      }
+      if (matches.length > 1) {
+        warnings.push(`Ambiguous alias mapping for query "${query}".`);
+      }
+      return { alias: null, warnings };
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+      if (nodeError?.code === 'ENOENT') {
+        warnings.push(
+          `Player ownership aliases unavailable: no alias artifact found at PLAYER_OWNERSHIP_ALIASES_ARTIFACT_PATH (${this.aliasesArtifactPath}).`,
+        );
+        return { alias: null, warnings };
+      }
+
+      if (error instanceof SyntaxError) {
+        warnings.push('Player ownership aliases unavailable: alias artifact is not valid JSON.');
+        return { alias: null, warnings };
+      }
+
+      if (error instanceof PlayerOwnershipIntegrationError) {
+        warnings.push(`Player ownership aliases unavailable: ${error.message}`);
+        return { alias: null, warnings };
+      }
+
+      warnings.push('Player ownership aliases unavailable due to unexpected read failure.');
+      return { alias: null, warnings };
     }
   }
 

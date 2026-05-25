@@ -1,7 +1,11 @@
 import { ZodError } from 'zod';
 import {
+  CanonicalPlayerOwnershipAliasArtifact,
+  CanonicalPlayerOwnershipAliasRow,
   CanonicalPlayerOwnershipArtifact,
   CanonicalPlayerOwnershipEvent,
+  canonicalPlayerOwnershipAliasArtifactSchema,
+  canonicalPlayerOwnershipAliasRowSchema,
   PlayerOwnershipIntegrationError,
   canonicalPlayerOwnershipArtifactSchema,
   canonicalPlayerOwnershipEventSchema,
@@ -31,6 +35,32 @@ export function parsePlayerOwnershipEvent(payload: unknown): CanonicalPlayerOwne
     throw new PlayerOwnershipIntegrationError(
       'invalid_payload',
       'Player ownership event row does not match the player_ownership_change_event_v0 contract.',
+      502,
+      error instanceof ZodError ? error.flatten() : error,
+    );
+  }
+}
+
+export function parsePlayerOwnershipAliasesArtifact(payload: unknown): CanonicalPlayerOwnershipAliasArtifact {
+  try {
+    return canonicalPlayerOwnershipAliasArtifactSchema.parse(payload);
+  } catch (error) {
+    throw new PlayerOwnershipIntegrationError(
+      'invalid_payload',
+      'Player ownership alias artifact does not match the player_ownership_aliases_v0 contract.',
+      502,
+      error instanceof ZodError ? error.flatten() : error,
+    );
+  }
+}
+
+export function parsePlayerOwnershipAliasRow(payload: unknown): CanonicalPlayerOwnershipAliasRow {
+  try {
+    return canonicalPlayerOwnershipAliasRowSchema.parse(payload);
+  } catch (error) {
+    throw new PlayerOwnershipIntegrationError(
+      'invalid_payload',
+      'Player ownership alias row does not match the player_ownership_aliases_v0 contract.',
       502,
       error instanceof ZodError ? error.flatten() : error,
     );
