@@ -4,23 +4,22 @@ import path from 'path';
 export type TeamEnvironmentLaneTier = string | null;
 
 export interface TeamEnvironmentProfile {
-  team: {
-    abbreviation: string;
-    name?: string | null;
-  };
+  teamId: string;
+  teamAbbr: string;
+  season: number;
+  generatedAt: string;
+  sourceSnapshotAt: string;
+  marketTier: TeamEnvironmentLaneTier;
   offenseTier: TeamEnvironmentLaneTier;
   passEnvironmentTier: TeamEnvironmentLaneTier;
   paceTier: TeamEnvironmentLaneTier;
   volatilityTier: TeamEnvironmentLaneTier;
-  marketTier?: TeamEnvironmentLaneTier;
+  signals: unknown;
   warnings: string[];
-  signals?: unknown;
 }
 
 export interface TeamEnvironmentProfilesArtifact {
-  artifact: string;
-  generatedAt?: string;
-  season?: number;
+  artifact: 'team_environment_profiles_v0';
   profiles: TeamEnvironmentProfile[];
 }
 
@@ -61,10 +60,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isValidArtifact(value: unknown): value is TeamEnvironmentProfilesArtifact {
   if (!isRecord(value)) return false;
+  if (value.artifact !== 'team_environment_profiles_v0') return false;
   if (!Array.isArray(value.profiles)) return false;
   return value.profiles.every((profile) => {
     if (!isRecord(profile)) return false;
-    if (!isRecord(profile.team) || typeof profile.team.abbreviation !== 'string') return false;
+    if (typeof profile.teamId !== 'string') return false;
+    if (typeof profile.teamAbbr !== 'string') return false;
+    if (typeof profile.season !== 'number') return false;
+    if (typeof profile.generatedAt !== 'string') return false;
+    if (typeof profile.sourceSnapshotAt !== 'string') return false;
+    if (!Array.isArray(profile.warnings)) return false;
     return true;
   });
 }

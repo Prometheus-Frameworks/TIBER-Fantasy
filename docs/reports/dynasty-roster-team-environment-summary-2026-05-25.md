@@ -3,7 +3,7 @@
 - Roster players tested: 26
 - Players with ownership match: 0
 - Players with team environment profile: 0
-- Players missing team environment profile: 26
+- Players missing team environment profile: 0
 
 > Teamstate environment artifact is missing.
 

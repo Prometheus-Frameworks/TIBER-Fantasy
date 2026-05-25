@@ -11,26 +11,43 @@ const ownershipBase: SmokeTestReport = {
 };
 
 describe('buildDynastyRosterTeamEnvironmentSummary', () => {
-  it('joins by team and preserves unknown tiers', () => {
+  it('joins by teamAbbr and preserves unknown tiers from attached profiles', () => {
     const result = buildDynastyRosterTeamEnvironmentSummary(ownershipBase, {
       artifact: 'team_environment_profiles_v0',
       profiles: [
-        { team: { abbreviation: 'BUF' }, offenseTier: 'elite', passEnvironmentTier: 'pass_heavy', paceTier: null, volatilityTier: 'stable', warnings: ['pace unknown'] },
+        {
+          teamId: 'nfl-buf',
+          teamAbbr: 'BUF',
+          season: 2026,
+          generatedAt: '2026-05-25T00:00:00.000Z',
+          sourceSnapshotAt: '2026-05-25T00:00:00.000Z',
+          marketTier: null,
+          offenseTier: 'elite',
+          passEnvironmentTier: 'pass_heavy',
+          paceTier: null,
+          volatilityTier: 'stable',
+          signals: {},
+          warnings: ['pace unknown'],
+        },
       ],
     });
     expect(result.playersWithTeamEnvironmentProfile).toBe(1);
     expect(result.playersMissingTeamEnvironmentProfile).toBe(1);
     expect(result.offenseTierExposure.elite).toBe(1);
-    expect(result.paceExposure.unknown).toBe(1);
+    expect(result.offenseTierExposure.unknown).toBe(1);
+    expect(result.paceExposure.unknown).toBe(2);
     expect(result.players[0].teamstateWarnings).toContain('pace unknown');
     expect(result.players[1].joinStatus).toBe('team_environment_missing');
   });
 
-  it('handles missing artifact without fabrication', () => {
+  it('counts missing artifact rows as unknown exposure without fabrication', () => {
     const result = buildDynastyRosterTeamEnvironmentSummary(ownershipBase, null);
     expect(result.playersWithTeamEnvironmentProfile).toBe(0);
     expect(result.playersMissingTeamEnvironmentProfile).toBe(2);
     expect(result.players.every((p) => p.joinStatus === 'team_environment_unavailable')).toBe(true);
-    expect(result.players.every((p) => p.offenseTier === 'unknown')).toBe(true);
+    expect(result.offenseTierExposure.unknown).toBe(2);
+    expect(result.passEnvironmentExposure.unknown).toBe(2);
+    expect(result.paceExposure.unknown).toBe(2);
+    expect(result.volatilityExposure.unknown).toBe(2);
   });
 });
