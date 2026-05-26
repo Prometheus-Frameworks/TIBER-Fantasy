@@ -19,7 +19,16 @@ describe('buildDynastyRosterTeamEnvironmentSummary', () => {
     expect(out.passEnvironmentExposure.unknown).toBe(2);
     expect(out.paceExposure.unknown).toBe(2);
     expect(out.volatilityExposure.unknown).toBe(2);
+    expect(out.playersMissingTeamEnvironmentProfile).toBe(2);
     expect(out.players.every((p) => p.joinStatus === 'team_environment_unavailable')).toBe(true);
+  });
+
+  it('matched row with no team increments missing count and unknown exposure', () => {
+    const smoke = { ...smokeBase, totalTested: 1, totalMatched: 1, players: [{ inputName: 'A', matched: true, currentTeam: null }] };
+    const out = buildDynastyRosterTeamEnvironmentSummary(smoke as any, { profiles: [profile as any] });
+    expect(out.players[0].joinStatus).toBe('no_team_on_ownership');
+    expect(out.playersMissingTeamEnvironmentProfile).toBe(1);
+    expect(out.offenseTierExposure.unknown).toBe(1);
   });
 
   it('missing team profile increments unknown by 1 with team_environment_missing', () => {
@@ -43,5 +52,13 @@ describe('buildDynastyRosterTeamEnvironmentSummary', () => {
     const out = buildDynastyRosterTeamEnvironmentSummary(smoke as any, { profiles: [profile as any] });
     expect(out.players[0].joinStatus).toBe('ownership_unmatched');
     expect(Object.keys(out.offenseTierExposure)).toHaveLength(0);
+    expect(out.playersMissingTeamEnvironmentProfile).toBe(0);
+  });
+
+  it('joins case-insensitively on team abbreviation', () => {
+    const smoke = { ...smokeBase, totalTested: 1, totalMatched: 1, players: [{ inputName: 'A', matched: true, currentTeam: 'buf' }] };
+    const out = buildDynastyRosterTeamEnvironmentSummary(smoke as any, { profiles: [profile as any] });
+    expect(out.players[0].joinStatus).toBe('attached');
+    expect(out.playersWithTeamEnvironmentProfile).toBe(1);
   });
 });

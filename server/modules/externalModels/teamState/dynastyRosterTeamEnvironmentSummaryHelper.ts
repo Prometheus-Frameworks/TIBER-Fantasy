@@ -46,7 +46,7 @@ export function buildDynastyRosterTeamEnvironmentSummary(
   smoke: SmokeTestReport,
   profilesArtifact: { profiles: TeamEnvironmentProfileV0[] } | null,
 ): DynastyRosterTeamEnvironmentSummary {
-  const profileByAbbr = new Map((profilesArtifact?.profiles ?? []).map((p) => [p.teamAbbr, p]));
+  const profileByAbbr = new Map((profilesArtifact?.profiles ?? []).map((p) => [p.teamAbbr.toUpperCase(), p]));
   const offenseTierExposure: Record<string, number> = {};
   const passEnvironmentExposure: Record<string, number> = {};
   const paceExposure: Record<string, number> = {};
@@ -61,16 +61,18 @@ export function buildDynastyRosterTeamEnvironmentSummary(
     }
 
     if (!p.currentTeam) {
+      missing += 1;
       inc(offenseTierExposure, 'unknown'); inc(passEnvironmentExposure, 'unknown'); inc(paceExposure, 'unknown'); inc(volatilityExposure, 'unknown');
       return { inputName: p.inputName, canonicalPlayerName: p.canonicalName, position: p.position, team: null, ownershipConfidence: p.confidence, offenseTier: 'unknown', passEnvironmentTier: 'unknown', paceTier: 'unknown', volatilityTier: 'unknown', teamstateWarnings: [], joinStatus: 'no_team_on_ownership' };
     }
 
     if (!profilesArtifact) {
+      missing += 1;
       inc(offenseTierExposure, 'unknown'); inc(passEnvironmentExposure, 'unknown'); inc(paceExposure, 'unknown'); inc(volatilityExposure, 'unknown');
       return { inputName: p.inputName, canonicalPlayerName: p.canonicalName, position: p.position, team: p.currentTeam, ownershipConfidence: p.confidence, offenseTier: 'unknown', passEnvironmentTier: 'unknown', paceTier: 'unknown', volatilityTier: 'unknown', teamstateWarnings: [], joinStatus: 'team_environment_unavailable' };
     }
 
-    const profile = profileByAbbr.get(p.currentTeam);
+    const profile = profileByAbbr.get(p.currentTeam.toUpperCase());
     if (!profile) {
       missing += 1;
       inc(offenseTierExposure, 'unknown'); inc(passEnvironmentExposure, 'unknown'); inc(paceExposure, 'unknown'); inc(volatilityExposure, 'unknown');
