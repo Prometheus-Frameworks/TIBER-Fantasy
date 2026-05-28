@@ -8,6 +8,15 @@ Tiber Fantasy is a free, open-source NFL fantasy football analytics platform. It
 
 **Core Philosophy**: No paywalls. Information should be accessible.
 
+
+## Product Doctrine
+
+- Do not frame TIBER as an autopilot fantasy manager.
+- Preserve human final decision authority.
+- Prefer explanations, confidence, uncertainty, and decision tradeoffs over bare answers.
+- New model integrations should improve user understanding, not just produce verdicts.
+- If a feature prepares a lineup/trade/waiver action, it must keep user approval as the default boundary.
+
 ## Commands
 
 ```bash
