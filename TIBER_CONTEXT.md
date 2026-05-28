@@ -12,6 +12,9 @@ Tiber Fantasy is a free, independent fantasy football analytics platform. It pro
 
 **Core philosophy:** Sophisticated analytics tools that normally cost money should be free and accessible to everyone.
 
+
+**Human-in-the-loop doctrine:** TIBER-Fantasy is a decision cockpit, not an autopilot manager. The product should surface evidence, explain signals, and make uncertainty visible so users can make better decisions themselves. TIBER can recommend and simulate, but final roster/trade/waiver decisions remain with the human manager.
+
 **Primary focus:** Dynasty leagues, skill positions (QB, RB, WR, TE). The platform also includes a DST Streamer tool for weekly defense streaming recommendations as a utility feature, though defensive players are not part of the core grading or ranking systems.
 
 ---
