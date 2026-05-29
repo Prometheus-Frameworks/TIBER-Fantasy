@@ -4,7 +4,7 @@
 
 Tiber Fantasy provides real-time player evaluations, FORGE-powered rankings, and decision support tools for dynasty, redraft, and best ball leagues. Skill positions only — QB, RB, WR, TE.
 
-TIBER-Fantasy is a decision cockpit, not an autopilot manager. It helps users understand evidence, uncertainty, and tradeoffs so they can make sharper fantasy football decisions themselves. The system can recommend, explain, and simulate, but the human manager owns the final call.
+TIBER-Fantasy is a decision cockpit, not a delegated roster manager. It helps users understand evidence, uncertainty, and tradeoffs so they can make sharper fantasy football decisions themselves. The system can recommend, explain, and simulate, but the human manager owns the final call.
 
 **Product shell note (March 2026):** The visible shell now uses clearer product-facing language across Home and navigation so new users can quickly understand where to start and what each lane is for.
 

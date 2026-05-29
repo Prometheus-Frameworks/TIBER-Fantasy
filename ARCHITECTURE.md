@@ -8,6 +8,12 @@
 
 ---
 
+## Product Doctrine for Agents
+
+TIBER-Fantasy is a grounded fantasy football decision-support product, not a lore, consciousness, or autonomous-manager project. Keep active docs, API notes, and UI copy anchored to football evidence, user education, and agent governance. The product prepares the decision; the human fantasy manager owns the final click. Historical philosophical framing may be preserved only when clearly archived/non-operational and must not be treated as model evidence or operating instructions.
+
+---
+
 ## 1. Quick Start for Agents
 
 1. Read this file for orientation.

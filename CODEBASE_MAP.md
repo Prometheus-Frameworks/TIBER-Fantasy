@@ -462,7 +462,7 @@ MODULE.md: none
 | server/scripts/seedPatternChunks.ts | Pattern chunk seeding for RAG |
 | server/lib/format-detector.ts | Chat format detection |
 | server/lib/responsePostProcessors.ts | Chat response post-processing |
-| server/services/river-detection.ts | River layer consciousness detection |
+| server/services/river-detection.ts | Pattern-explanation layer detection |
 | server/backups/system-prompt-backup-pre-three-layer.ts | System prompt backup |
 | shared/models/chat.ts | Chat data models |
 | client/src/pages/ChatHomepage.tsx | Chat homepage (legacy chat UI) |

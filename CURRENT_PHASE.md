@@ -4,6 +4,11 @@ Phase Name: Feature Consolidation & Validation
 Last Updated: February 21, 2026
 Previous Phase: Stabilization & Governance (completed Feb 17, 2026)
 
+
+## Active Documentation Doctrine
+
+Active operating docs should describe TIBER-Fantasy as a fantasy football product/orchestration shell that consumes promoted, read-only upstream outputs. Use grounded product language: recommendations, explanations, uncertainty, validation, readiness, and human-in-the-loop decisions. Do not use archived philosophical framing as architecture, model evidence, or agent instructions.
+
 ## What Shipped This Phase
 
 The following features were intentionally built during late-Stabilization and are now live:
