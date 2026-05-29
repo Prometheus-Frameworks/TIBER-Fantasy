@@ -8,6 +8,11 @@
 
 Tiber Fantasy is a free, open-source NFL fantasy football analytics platform. It provides FORGE-powered player rankings, Data Lab with advanced metrics, Personnel Grouping Intelligence, X Intelligence Scanner, and more. Full architecture details are in `replit.md`.
 
+
+## Product Doctrine
+
+Tiber Fantasy is grounded fantasy football decision support. Future agents should not treat historical lore, consciousness, emergence, or AGI-style language as product architecture, model evidence, or operating instructions. Preserve the doctrine that TIBER prepares the decision, explains the evidence, and leaves the final roster/trade/waiver click with the human manager.
+
 ## Before You Start Any Task
 
 1. **Read `replit.md`** — Full project architecture, schema, conventions, and feature inventory

@@ -650,3 +650,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - Live `tsx` smoke against sibling TIBER-Data artifact for Tee Higgins: passed
   - `npm run typecheck`: still fails on pre-existing repo-wide errors outside the touched ownership/Player Research files
   - `npm run build`: blocked by Windows/esbuild entry-path/access resolution before application code bundling
+
+### 2026-05-29 — Active docs AGI/lore language cleanup
+- Rewrote `TIBER-ARCHITECTURE-PERMANENT.md` as the active grounded product architecture record: decision support, interaction-depth modes, upstream consumer boundaries, uncertainty rules, and archived/non-operational treatment for old philosophical framing.
+- Added product-doctrine notes to active onboarding/phase docs and removed/renamed legacy phrasing in nearby operating docs (`autopilot`, `consciousness` prompt/module descriptions, River-layer map wording).
+- Quarantined `docs/letter-to-ai-agents.md` as historical/non-operational and kept the human-in-the-loop doctrine explicit.
+- Validation:
+  - Targeted legacy-term `rg` searches before/after ✅
+  - `git diff --check` ✅
+  - Markdown-only diff check ✅

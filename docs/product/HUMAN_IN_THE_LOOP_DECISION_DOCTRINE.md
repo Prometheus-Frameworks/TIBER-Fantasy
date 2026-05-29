@@ -55,4 +55,4 @@ This doctrine aligns with TIBER-Fantasy as a product shell and orchestration lay
 - Consumes promoted/read-only upstream artifacts.
 - Preserves provenance and readiness visibility.
 - Avoids local recomputation of upstream model logic.
-- Emphasizes explainable decision support over autopilot behavior.
+- Emphasizes explainable decision support over delegated roster-manager behavior.

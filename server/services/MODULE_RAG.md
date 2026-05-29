@@ -1,12 +1,12 @@
 # RAG Chat System
 
-AI-powered fantasy football chat using Google Gemini for embeddings and generation, with optional Grok (via OpenRouter) as an alternative LLM. Includes knowledge base retrieval, 3-layer consciousness system, and memory integration.
+AI-powered fantasy football chat using Google Gemini for embeddings and generation, with optional Grok (via OpenRouter) as an alternative LLM. Includes knowledge base retrieval, interaction-depth routing, and memory integration.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `server/services/geminiEmbeddings.ts` | Core service. Embedding generation (Gemini `text-embedding-004`, 768-dim), chat generation (`callGeminiTiber`, `callGrokTiber`, `callTiberChat`), query mode detection (trade/waivers/start_sit/generic), 3-layer consciousness prompt, context sanitization, pressure lexicon guard |
+| `server/services/geminiEmbeddings.ts` | Core service. Embedding generation (Gemini `text-embedding-004`, 768-dim), chat generation (`callGeminiTiber`, `callGrokTiber`, `callTiberChat`), query mode detection (trade/waivers/start_sit/generic), interaction-depth prompt, context sanitization, pressure lexicon guard |
 | `server/routes/ragRoutes.ts` | Chat API routes for conversation management |
 | `client/src/pages/ChatHomepage.tsx` | Frontend chat page at `/legacy-chat` |
 | `knowledge/core/` | Core knowledge base (tiber-brain-os-v1, waiver-wisdom-vorp-context) |
@@ -27,7 +27,7 @@ User Query
     ↓
 [6] Context Sanitization — remove banned metrics from retrieved context
     ↓
-[7] Prompt Assembly — 3-layer consciousness system prompt + Brain OS v1 rules
+[7] Prompt Assembly — interaction-depth system prompt + Brain OS v1 rules
     ↓
 [8] Generation — callTiberChat(systemPrompt, userMessage, provider)
     - provider='gemini': Gemini 2.0 Flash
