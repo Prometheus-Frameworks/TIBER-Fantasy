@@ -10,25 +10,32 @@ const validArtifact = {
   metadata: {
     provenanceStatus: 'fixture_scaffold',
     inputSources: ['team_week_raw_v0.tampa_bay_temporal.sample.json'],
+    coverage: {
+      teamCount: 1,
+      teams: ['TB'],
+      seasons: [2025],
+      weeks: [1, 2, 3, 4, 5, 6, 7, 8],
+      latestWeek: 8,
+      isFullLeague: false,
+    },
   },
-  coverage: {
-    teams: ['TB'],
-    seasons: [2025],
-    weeks: [1, 2, 3, 4, 5, 6, 7, 8],
-    latestWeek: 8,
-    isFullLeague: false,
-  },
-  movements: [
+  teams: [
     {
-      team: 'TB',
+      teamId: 'nfl-tb',
+      teamAbbr: 'TB',
       season: 2025,
+      weeksCovered: [1, 2, 3, 4, 5, 6, 7, 8],
       earlyWindow: { weeks: [1, 2, 3, 4], offensiveEnvironmentScore: 0.61 },
       lateWindow: { weeks: [5, 6, 7, 8], offensiveEnvironmentScore: 0.42 },
       deltas: { offensiveEnvironmentScore: -0.19, pressureRate: 0.08 },
-      offenseDirection: 'declining',
-      pressureDirection: 'worsening',
-      passEnvironmentDirection: 'more_pass_heavy',
-      verdict: 'offensive_environment_declining_pressure_worsening',
+      movement: {
+        offenseDirection: 'declining',
+        passEnvironmentDirection: 'more_pass_heavy',
+        paceDirection: 'stable',
+        pressureDirection: 'worsening',
+        volatilityDirection: 'more_volatile',
+        verdict: 'offensive_environment_declining_pressure_worsening',
+      },
       warnings: ['fixture/synthetic Teamstate movement artifact; do not treat as governed production truth'],
     },
   ],
@@ -49,7 +56,7 @@ describe('TeamEnvironmentMovementService', () => {
     return new TeamEnvironmentMovementService(new TeamEnvironmentMovementClient(artifactPath));
   }
 
-  it('reads a valid movement artifact and preserves provenance and coverage', async () => {
+  it('reads the Teamstate-shaped movement artifact and preserves provenance and coverage', async () => {
     const artifactPath = path.join(tmpDir, 'team_environment_movement_v0.json');
     await writeFile(artifactPath, JSON.stringify(validArtifact));
 
@@ -58,8 +65,20 @@ describe('TeamEnvironmentMovementService', () => {
     expect(result.artifactAvailable).toBe(true);
     expect(result.provenanceStatus).toBe('fixture_scaffold');
     expect(result.inputSources).toEqual(['team_week_raw_v0.tampa_bay_temporal.sample.json']);
-    expect(result.coverage).toEqual(expect.objectContaining({ latestWeek: 8, isFullLeague: false, teams: ['TB'] }));
-    expect(result.teams[0]).toEqual(expect.objectContaining({ team: 'TB', verdict: 'offensive_environment_declining_pressure_worsening' }));
+    expect(result.coverage).toEqual(expect.objectContaining({ teamCount: 1, latestWeek: 8, isFullLeague: false, teams: ['TB'] }));
+    expect(result.teams[0]).toEqual(expect.objectContaining({
+      team: 'TB',
+      teamId: 'nfl-tb',
+      teamAbbr: 'TB',
+      weeksCovered: [1, 2, 3, 4, 5, 6, 7, 8],
+      offenseDirection: 'declining',
+      pressureDirection: 'worsening',
+      passEnvironmentDirection: 'more_pass_heavy',
+      paceDirection: 'stable',
+      volatilityDirection: 'more_volatile',
+      verdict: 'offensive_environment_declining_pressure_worsening',
+    }));
+    expect(result.teams[0].raw).toEqual(validArtifact.teams[0]);
     expect(result.warnings).toContain('fixture/synthetic Teamstate movement artifact; do not treat as governed production truth');
   });
 
@@ -86,7 +105,7 @@ describe('TeamEnvironmentMovementService', () => {
 
   it('fails closed for malformed movement entries', async () => {
     const artifactPath = path.join(tmpDir, 'malformed.json');
-    await writeFile(artifactPath, JSON.stringify({ ...validArtifact, movements: [{ offenseDirection: 'declining' }] }));
+    await writeFile(artifactPath, JSON.stringify({ ...validArtifact, teams: [{ movement: { offenseDirection: 'declining' } }] }));
 
     const result = await serviceFor(artifactPath).getMovement();
 
@@ -95,14 +114,21 @@ describe('TeamEnvironmentMovementService', () => {
     expect(result.errors[0].code).toBe('invalid_payload');
   });
 
-  it('looks up a team movement entry by abbreviation', async () => {
+  it('looks up a Teamstate-shaped TB movement entry by abbreviation', async () => {
     const artifactPath = path.join(tmpDir, 'team_environment_movement_v0.json');
     await writeFile(artifactPath, JSON.stringify(validArtifact));
 
     const result = await serviceFor(artifactPath).getMovement('tb');
 
     expect(result.artifactAvailable).toBe(true);
-    expect(result.selectedTeam).toEqual(expect.objectContaining({ team: 'TB', offenseDirection: 'declining', pressureDirection: 'worsening' }));
+    expect(result.provenanceStatus).toBe('fixture_scaffold');
+    expect(result.coverage?.teams).toEqual(['TB']);
+    expect(result.selectedTeam).toEqual(expect.objectContaining({
+      team: 'TB',
+      offenseDirection: 'declining',
+      pressureDirection: 'worsening',
+      verdict: 'offensive_environment_declining_pressure_worsening',
+    }));
     expect(result.teams).toEqual([]);
   });
 });

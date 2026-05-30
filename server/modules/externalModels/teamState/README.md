@@ -47,5 +47,5 @@ Safety constraints:
 
 - The artifact literal must equal `team_environment_movement_v0`; wrong or malformed artifacts fail closed.
 - Missing artifacts return an explicit unavailable state and never fabricate movement context.
-- `metadata.provenanceStatus`, `metadata.inputSources`, coverage fields, warnings, early/late windows, deltas, directions, and verdicts are preserved for inspection.
+- `metadata.provenanceStatus`, `metadata.inputSources`, metadata.coverage fields, warnings, weeksCovered, early/late windows, deltas, movement directions, and verdicts are preserved for inspection.
 - Fixture/scaffold provenance is surfaced conservatively and is not used for FORGE scoring, rankings, projections, trade evaluation, or roster advice.

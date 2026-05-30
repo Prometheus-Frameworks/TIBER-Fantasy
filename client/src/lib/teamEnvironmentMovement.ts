@@ -9,13 +9,18 @@ export interface TeamEnvironmentMovementCoverage {
 
 export interface TeamEnvironmentMovementEntry {
   team: string;
+  teamId: string | null;
+  teamAbbr: string;
   season: number | null;
+  weeksCovered: number[];
   earlyWindow: Record<string, unknown> | null;
   lateWindow: Record<string, unknown> | null;
   deltas: Record<string, unknown> | null;
   offenseDirection: string | null;
   pressureDirection: string | null;
   passEnvironmentDirection: string | null;
+  paceDirection: string | null;
+  volatilityDirection: string | null;
   verdict: string | null;
   warnings: string[];
   raw: Record<string, unknown>;
@@ -55,6 +60,8 @@ export function buildTeamEnvironmentMovementSummary(entry: TeamEnvironmentMoveme
     entry.offenseDirection ? `offensive environment ${humanizeDirection(entry.offenseDirection)}` : null,
     entry.pressureDirection ? `pressure ${humanizeDirection(entry.pressureDirection)}` : null,
     entry.passEnvironmentDirection ? `pass environment ${humanizeDirection(entry.passEnvironmentDirection)}` : null,
+    entry.paceDirection ? `pace ${humanizeDirection(entry.paceDirection)}` : null,
+    entry.volatilityDirection ? `volatility ${humanizeDirection(entry.volatilityDirection)}` : null,
   ].filter(Boolean);
 
   return `${entry.team}: ${details.length ? details.join(', ') : 'movement context available'}`;

@@ -30,6 +30,7 @@ export class TeamEnvironmentMovementIntegrationError extends Error {
 export interface TeamEnvironmentMovementMetadata {
   provenanceStatus: string | null;
   inputSources: unknown[];
+  coverage?: unknown;
   [key: string]: unknown;
 }
 
@@ -44,13 +45,18 @@ export interface TeamEnvironmentMovementCoverage {
 
 export interface TeamEnvironmentMovementEntry {
   team: string;
+  teamId: string | null;
+  teamAbbr: string;
   season: number | null;
+  weeksCovered: number[];
   earlyWindow: Record<string, unknown> | null;
   lateWindow: Record<string, unknown> | null;
   deltas: Record<string, unknown> | null;
   offenseDirection: string | null;
   pressureDirection: string | null;
   passEnvironmentDirection: string | null;
+  paceDirection: string | null;
+  volatilityDirection: string | null;
   verdict: string | null;
   warnings: string[];
   raw: Record<string, unknown>;
@@ -83,8 +89,12 @@ function asRecordOrNull(value: unknown): Record<string, unknown> | null {
 }
 
 function normalizeTeam(value: Record<string, unknown>): string | null {
-  const candidate = value.team ?? value.teamAbbr ?? value.teamAbbreviation;
+  const candidate = value.teamAbbr ?? value.team ?? value.teamAbbreviation;
   return typeof candidate === 'string' && candidate.trim() ? candidate.trim().toUpperCase() : null;
+}
+
+function stringOrNull(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 function normalizeMovementEntry(value: unknown): TeamEnvironmentMovementEntry | null {
@@ -93,24 +103,30 @@ function normalizeMovementEntry(value: unknown): TeamEnvironmentMovementEntry | 
   const team = normalizeTeam(value);
   if (!team) return null;
 
+  const movement = asRecordOrNull(value.movement) ?? value;
+
   return {
     team,
+    teamId: stringOrNull(value.teamId),
+    teamAbbr: team,
     season: typeof value.season === 'number' && Number.isFinite(value.season) ? value.season : null,
+    weeksCovered: asNumberArray(value.weeksCovered),
     earlyWindow: asRecordOrNull(value.earlyWindow ?? value.early ?? value.baselineWindow),
     lateWindow: asRecordOrNull(value.lateWindow ?? value.late ?? value.currentWindow),
     deltas: asRecordOrNull(value.deltas ?? value.delta),
-    offenseDirection: typeof value.offenseDirection === 'string' ? value.offenseDirection : null,
-    pressureDirection: typeof value.pressureDirection === 'string' ? value.pressureDirection : null,
-    passEnvironmentDirection: typeof value.passEnvironmentDirection === 'string' ? value.passEnvironmentDirection : null,
-    verdict: typeof value.verdict === 'string' ? value.verdict : null,
+    offenseDirection: stringOrNull(movement.offenseDirection),
+    pressureDirection: stringOrNull(movement.pressureDirection),
+    passEnvironmentDirection: stringOrNull(movement.passEnvironmentDirection),
+    paceDirection: stringOrNull(movement.paceDirection),
+    volatilityDirection: stringOrNull(movement.volatilityDirection),
+    verdict: stringOrNull(movement.verdict),
     warnings: asStringArray(value.warnings),
     raw: value,
   };
 }
 
 function getMovementArray(value: Record<string, unknown>): unknown[] | null {
-  const candidate = value.movements ?? value.teamMovements ?? value.teams;
-  return Array.isArray(candidate) ? candidate : null;
+  return Array.isArray(value.teams) ? value.teams : null;
 }
 
 function normalizeMetadata(value: unknown): TeamEnvironmentMovementMetadata {
@@ -149,7 +165,7 @@ export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironm
 
   const movementArray = getMovementArray(raw);
   if (!movementArray) {
-    throw new TeamEnvironmentMovementIntegrationError('invalid_payload', 'Team Environment Movement artifact must include a movements array.', 502);
+    throw new TeamEnvironmentMovementIntegrationError('invalid_payload', 'Team Environment Movement artifact must include a teams array.', 502);
   }
 
   const movements = movementArray.map(normalizeMovementEntry);
@@ -165,7 +181,7 @@ export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironm
     artifact: TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME,
     generatedAt: typeof raw.generatedAt === 'string' ? raw.generatedAt : null,
     metadata: normalizeMetadata(raw.metadata),
-    coverage: normalizeCoverage(raw.coverage),
+    coverage: normalizeCoverage(isRecord(raw.metadata) ? raw.metadata.coverage : null),
     movements: movements as TeamEnvironmentMovementEntry[],
   };
 }
