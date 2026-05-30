@@ -29,3 +29,23 @@ If `throughWeek` is not provided and a season-level file is missing, the client 
 
 - No Team State metric computation here.
 - No score recomputation, ranking redesign, caching layer, or UI coupling.
+
+## Team Environment Movement artifact
+
+TIBER-Fantasy also exposes a read-only consumer for the TIBER-Teamstate `team_environment_movement_v0` artifact.
+
+Configured with:
+
+- `TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_PATH` (default: `../TIBER-Teamstate/output/team_environment_movement_v0.json`)
+
+Routes:
+
+- `GET /api/data-lab/team-environment-movement`
+- `GET /api/data-lab/team-environment-movement/:teamAbbr`
+
+Safety constraints:
+
+- The artifact literal must equal `team_environment_movement_v0`; wrong or malformed artifacts fail closed.
+- Missing artifacts return an explicit unavailable state and never fabricate movement context.
+- `metadata.provenanceStatus`, `metadata.inputSources`, coverage fields, warnings, early/late windows, deltas, directions, and verdicts are preserved for inspection.
+- Fixture/scaffold provenance is surfaced conservatively and is not used for FORGE scoring, rankings, projections, trade evaluation, or roster advice.

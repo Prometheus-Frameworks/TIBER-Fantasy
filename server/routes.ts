@@ -96,6 +96,7 @@ import { dataLabTeamResearchRouter } from './routes/dataLabTeamResearchRoutes';
 import { dataLabCommandCenterRouter } from './routes/dataLabCommandCenterRoutes';
 import { dataLabPromotedStatusRouter } from './routes/dataLabPromotedStatusRoutes';
 import { dataLabTeamStateRouter } from './routes/dataLabTeamStateRoutes';
+import { dataLabTeamEnvironmentMovementRouter } from './routes/dataLabTeamEnvironmentMovementRoutes';
 import { rookiesPromotedRouter } from './routes/rookiesPromotedRoutes';
 import { createRankingsV2Router } from './routes/rankingsV2Routes';
 import consensusRoutes from './consensus';
@@ -245,6 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabCommandCenterRouter);
   app.use('/api/data-lab', dataLabPromotedStatusRouter);
   app.use('/api/data-lab', dataLabTeamStateRouter);
+  app.use('/api/data-lab', dataLabTeamEnvironmentMovementRouter);
   app.use('/api/rookies', rookiesPromotedRouter);
   app.use('/api/rankings/v2', createRankingsV2Router());
 
