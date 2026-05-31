@@ -547,7 +547,7 @@ export default function RookieBoard() {
         </div>
       </div>
       {data?.model && (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+        <div className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
           {fmtDate(data.model.promotedAt) && <span><span className="text-slate-500">Promoted:</span> {fmtDate(data.model.promotedAt)}</span>}
           {fmtDate(data.model.generatedAt) && <span><span className="text-slate-500">Generated:</span> {fmtDate(data.model.generatedAt)}</span>}
           <span><span className="text-slate-500">Source:</span> artifact import only (no live producer calls)</span>

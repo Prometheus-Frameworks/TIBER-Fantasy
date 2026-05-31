@@ -37,17 +37,17 @@ export interface PromotedModelStatusApiError {
 export function getPromotedStatusTone(status: PromotedModelOperationalStatus): string {
   switch (status) {
     case 'ready':
-      return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+      return 'bg-emerald-900/30 border-emerald-700/50 text-emerald-400';
     case 'empty_dataset':
-      return 'bg-amber-50 border-amber-200 text-amber-700';
+      return 'bg-amber-900/30 border-amber-700/50 text-amber-400';
     case 'available_other_seasons':
-      return 'bg-blue-50 border-blue-200 text-blue-700';
+      return 'bg-blue-900/30 border-blue-700/50 text-blue-400';
     case 'disabled_by_env_config':
-      return 'bg-slate-100 border-slate-200 text-slate-700';
+      return 'bg-slate-800 border-slate-600/50 text-slate-400';
     case 'missing_export_artifact':
-      return 'bg-orange-50 border-orange-200 text-orange-700';
+      return 'bg-orange-900/30 border-orange-700/50 text-orange-400';
     default:
-      return 'bg-red-50 border-red-200 text-red-700';
+      return 'bg-red-900/30 border-red-700/50 text-red-400';
   }
 }
 

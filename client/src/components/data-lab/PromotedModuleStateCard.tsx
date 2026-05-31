@@ -22,34 +22,34 @@ export function PromotedModuleStateCard({
   mode,
 }: PromotedModuleStateCardProps) {
   return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-[#fafafa] px-6 py-10 text-center">
-      <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm ${accentClassName}`}>
+    <div className="rounded-xl border border-dashed border-slate-700/60 bg-slate-800/30 px-6 py-10 text-center">
+      <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 ${accentClassName}`}>
         <Icon className={`h-5 w-5 ${accentTextClassName}`} />
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-        <Badge className="border-0 bg-gray-900 text-white">Promoted module system</Badge>
-        <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">
+        <Badge className="border-0 bg-slate-700 text-slate-200">Promoted module system</Badge>
+        <Badge variant="secondary" className="border-0 bg-slate-700/60 text-slate-400">
           Read-only model surface
         </Badge>
-        <Badge variant="secondary" className="border-0 bg-white text-gray-600">
+        <Badge variant="secondary" className="border-0 bg-slate-800 text-slate-400">
           {mode === 'loading' ? 'Loading state' : mode === 'error' ? 'Operator-visible issue' : 'Empty state'}
         </Badge>
       </div>
-      <h2 className="mt-4 text-lg font-semibold text-gray-900">{title}</h2>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-gray-500">{message}</p>
+      <h2 className="mt-4 text-lg font-semibold text-slate-100">{title}</h2>
+      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-400">{message}</p>
       {mode === 'loading' ? (
         <div className="mx-auto mt-5 max-w-3xl space-y-3">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full bg-slate-700/50" />
+          <Skeleton className="h-10 w-full bg-slate-700/50" />
+          <Skeleton className="h-10 w-full bg-slate-700/50" />
         </div>
       ) : null}
       {hints.length > 0 ? (
-        <div className="mx-auto mt-5 max-w-2xl rounded-lg border border-gray-200 bg-white p-4 text-left">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+        <div className="mx-auto mt-5 max-w-2xl rounded-xl border border-slate-700/40 bg-slate-800 p-4 text-left">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Operator hints
           </div>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
             {hints.map((hint) => (
               <li key={hint} className="flex gap-2">
                 <span className={`mt-[7px] h-1.5 w-1.5 rounded-full ${accentClassName}`} aria-hidden />

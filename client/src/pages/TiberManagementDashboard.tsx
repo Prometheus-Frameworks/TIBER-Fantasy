@@ -278,22 +278,7 @@ export default function TiberManagementDashboard() {
       : 'uncertain';
 
   return (
-    <div className="tmd-shell">
-      <header className="tmd-topbar">
-        <div className="tmd-topbar-brand">
-          <span className="tmd-topbar-logo">TIBER</span>
-          <span className="tmd-topbar-divider" />
-          <span className="tmd-topbar-title">Management</span>
-        </div>
-        <nav className="tmd-topbar-nav">
-          <Link href="/" className="tmd-topbar-back">← Observatory</Link>
-          <Link href="/tiber-data-lab/command-center" className="tmd-topbar-link">Command Center</Link>
-          <Link href="/tiers" className="tmd-topbar-link">Rankings</Link>
-          <Link href="/rookies" className="tmd-topbar-link">Rookies</Link>
-        </nav>
-      </header>
-
-      <div className="tmd-page">
+    <div className="tmd-page">
       <section className="tmd-hero">
         <div>
           <div className="tmd-eyebrow">TIBER Management Dashboard</div>
@@ -545,7 +530,6 @@ export default function TiberManagementDashboard() {
           </div>
         </article>
       </section>
-      </div>
     </div>
   );
 }

@@ -33,6 +33,7 @@
   --font-serif: 'Newsreader', Georgia, serif;
 
   --sidebar-width: 212px;
+  --topbar-height: 52px;
 
   --background: #ffffff;
   --foreground: #0a0a0a;
@@ -57,8 +58,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--tmd-bg, #07080a);
+  color: var(--tmd-text, #e2e4e8);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -92,9 +93,69 @@ html, body {
   100%{background-position:-200% 0} 
 }
 
+/* ===== UNIVERSAL TOPBAR ===== */
+.tiber-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-height, 52px);
+  background: rgba(7, 8, 10, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 201;
+}
+
+.tiber-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tiber-topbar-logo-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.tiber-topbar-logo {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--tmd-ember, #e2640d);
+}
+
+.tiber-topbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--tmd-border-strong, rgba(255,255,255,0.12));
+  flex-shrink: 0;
+}
+
+.tiber-topbar-section {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  letter-spacing: 0.02em;
+}
+
+.tiber-topbar-quicknav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiber-topbar-ham {
+  display: none;
+}
+
 /* ===== LAYOUT ===== */
 .tiber-main {
   margin-left: var(--sidebar-width);
+  padding-top: var(--topbar-height, 52px);
   min-height: 100vh;
 }
 
@@ -106,10 +167,12 @@ html, body {
 /* ===== SIDEBAR ===== */
 .tiber-sidebar {
   position: fixed;
-  left: 0; top: 0; bottom: 0;
+  left: 0;
+  top: var(--topbar-height, 52px);
+  bottom: 0;
   width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  background: var(--tmd-bg, #07080a);
+  border-right: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -127,6 +190,7 @@ html, body {
   font-weight: 700;
   letter-spacing: 3px;
   text-transform: uppercase;
+  color: var(--tmd-text, #e2e4e8);
 }
 
 .logo-dot {
@@ -152,7 +216,7 @@ html, body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: #8a8a8a;
+  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
   padding: 20px 8px 6px;
 }
 
@@ -165,7 +229,7 @@ html, body {
   cursor: pointer;
   transition: all 0.15s ease;
   font-size: 13px;
-  color: #6a6a6a;
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
   font-weight: 450;
   text-decoration: none;
   min-height: auto;
@@ -173,30 +237,30 @@ html, body {
 }
 
 .nav-item:hover {
-  background: #efefef;
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--tmd-text, #e2e4e8);
 }
 
 .nav-item.active {
-  background: var(--ember-dim);
-  color: var(--ember);
+  background: var(--tmd-ember-dim, rgba(226,100,13,0.12));
+  color: var(--tmd-ember, #e2640d);
   font-weight: 550;
 }
 
 .nav-badge {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--text-tertiary);
+  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
 }
 
-.nav-item.active .nav-badge { color: var(--ember); }
+.nav-item.active .nav-badge { color: var(--tmd-ember, #e2640d); }
 
 .sidebar-charter {
   padding: 12px 16px;
   margin: 8px 10px;
   border-radius: var(--radius-xs);
-  background: var(--ember-warm);
-  border-left: 2px solid var(--ember);
+  background: var(--tmd-ember-glow, rgba(226,100,13,0.08));
+  border-left: 2px solid var(--tmd-ember, #e2640d);
 }
 
 .charter-label {
@@ -204,7 +268,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: var(--ember);
+  color: var(--tmd-ember, #e2640d);
   margin-bottom: 4px;
 }
 
@@ -212,14 +276,14 @@ html, body {
   font-size: 11.5px;
   font-family: var(--font-serif);
   font-style: italic;
-  color: var(--text-secondary);
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
   line-height: 1.45;
 }
 
 .sidebar-footer {
   padding: 16px;
-  border-top: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
+  background: transparent;
 }
 
 .user-pill {
@@ -232,9 +296,9 @@ html, body {
   transition: background 0.15s;
 }
 
-.user-pill:hover { background: var(--bg-tertiary); }
-.user-name { font-size: 13px; font-weight: 500; }
-.user-league { font-size: 11px; color: var(--text-tertiary); }
+.user-pill:hover { background: rgba(255, 255, 255, 0.05); }
+.user-name { font-size: 13px; font-weight: 500; color: var(--tmd-text-muted, rgba(226,228,232,0.45)); }
+.user-league { font-size: 11px; color: var(--tmd-text-dim, rgba(226,228,232,0.28)); }
 
 /* ===== HERO ===== */
 .tiber-hero {
@@ -949,13 +1013,13 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
   padding: 4px;
   border-radius: 4px;
   line-height: 0;
   transition: color 0.15s;
 }
-.tiber-hamburger:hover { color: var(--ember); }
+.tiber-hamburger:hover { color: var(--tmd-ember, #e2640d); }
 
 @media (max-width: 768px) {
   /* Hide desktop sidebar */
@@ -966,24 +1030,14 @@ html, body {
   .tiber-drawer-overlay { display: block; }
   .tiber-drawer-close { display: block; }
 
-  /* Mobile topbar */
-  .tiber-mobile-topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 52px;
-    padding: 0 16px;
-    background: var(--bg-primary);
-    border-bottom: 1px solid var(--border);
-    z-index: 100;
-  }
+  /* Show hamburger, hide desktop quicknav in universal topbar */
+  .tiber-topbar-ham { display: flex; }
+  .tiber-topbar-quicknav { display: none; }
 
-  /* Push content below topbar */
+  /* Push content below topbar only, no sidebar offset on mobile */
   .tiber-main {
     margin-left: 0;
-    padding-top: 52px;
+    padding-top: var(--topbar-height, 52px);
   }
 
   .tiber-content { padding: 16px; }
@@ -1055,77 +1109,13 @@ html, body {
   }
 }
 
-/* ===== LEGACY DARK→LIGHT OVERRIDES ===== */
-.tiber-main [class*="bg-[#0a0e1a]"] { background: var(--bg-primary) !important; }
-.tiber-main [class*="bg-[#141824]"] { background: var(--bg-primary) !important; }
-.tiber-main [class*="bg-slate-800"] { background: var(--bg-secondary) !important; }
-.tiber-main [class*="bg-slate-700"] { background: var(--bg-tertiary) !important; }
-.tiber-main [class*="bg-gray-900"] { background: var(--bg-secondary) !important; }
-.tiber-main [class*="bg-gray-800"] { background: var(--bg-secondary) !important; }
-
-.tiber-main [class*="border-slate-700"],
-.tiber-main [class*="border-slate-800"],
-.tiber-main [class*="border-slate-600"],
-.tiber-main [class*="border-gray-700"],
-.tiber-main [class*="border-gray-800"] {
-  border-color: var(--border) !important;
-}
-
-.tiber-main [class*="text-white"] { color: var(--text-primary) !important; }
-.tiber-main [class*="text-slate-300"],
-.tiber-main [class*="text-slate-200"],
-.tiber-main [class*="text-gray-300"],
-.tiber-main [class*="text-gray-200"] { color: var(--text-secondary) !important; }
-.tiber-main [class*="text-slate-400"],
-.tiber-main [class*="text-slate-500"],
-.tiber-main [class*="text-gray-400"],
-.tiber-main [class*="text-gray-500"] { color: var(--text-tertiary) !important; }
-
-.tiber-main [class*="bg-green-900"],
-.tiber-main [class*="bg-emerald-900"] { background: var(--green-dim) !important; }
-.tiber-main [class*="bg-red-900"] { background: var(--red-dim) !important; }
-.tiber-main [class*="bg-orange-900"] { background: var(--ember-dim) !important; }
-.tiber-main [class*="bg-yellow-900"] { background: rgba(202,138,4,0.08) !important; }
-.tiber-main [class*="bg-purple-900"],
-.tiber-main [class*="bg-blue-900"] { background: rgba(79,70,229,0.08) !important; }
-
-.tiber-main [class*="text-green-400"],
-.tiber-main [class*="text-green-300"],
-.tiber-main [class*="text-emerald-400"],
-.tiber-main [class*="text-emerald-300"] { color: var(--green) !important; }
-.tiber-main [class*="text-red-400"],
-.tiber-main [class*="text-red-300"] { color: var(--red) !important; }
-.tiber-main [class*="text-orange-400"],
-.tiber-main [class*="text-orange-300"] { color: var(--ember) !important; }
-.tiber-main [class*="text-yellow-400"],
-.tiber-main [class*="text-yellow-300"] { color: var(--yellow) !important; }
-.tiber-main [class*="text-purple-400"],
-.tiber-main [class*="text-purple-300"],
-.tiber-main [class*="text-blue-400"],
-.tiber-main [class*="text-blue-300"] { color: #4f46e5 !important; }
-
-.tiber-main [class*="hover:bg-slate-800"]:hover,
-.tiber-main [class*="hover:bg-slate-700"]:hover { background: var(--bg-tertiary) !important; }
-
-.tiber-main [class*="placeholder:text-gray-500"]::placeholder,
-.tiber-main [class*="placeholder:text-slate-500"]::placeholder { color: var(--text-tertiary) !important; }
-
-.tiber-main [class*="bg-gradient-to"] { background: none !important; }
 
 .tiber-main .min-h-screen { min-height: auto !important; }
 
 .tiber-main input,
 .tiber-main select,
 .tiber-main textarea {
-  color: var(--text-primary);
-}
-
-.tiber-main [class*="bg-[#141824]"] input,
-.tiber-main [class*="bg-[#0a0e1a]"] input,
-.tiber-main [class*="bg-slate-800"] input {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
-  color: var(--text-primary) !important;
+  color: var(--tmd-text, #e2e4e8);
 }
 
 .tiber-main button[class*="bg-purple"],
@@ -1147,16 +1137,16 @@ html, body {
 }
 
 .tiber-main h1, .tiber-main h2, .tiber-main h3, .tiber-main h4 {
-  color: var(--text-primary);
+  color: var(--tmd-text, #e2e4e8);
   font-family: var(--font-sans);
 }
 
 .tiber-main table thead {
-  background: var(--bg-secondary);
+  background: var(--tmd-surface, #0d0e11);
 }
 
 .tiber-main table thead th {
-  color: var(--text-tertiary);
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1164,11 +1154,11 @@ html, body {
 }
 
 .tiber-main table tbody tr {
-  border-color: var(--border);
+  border-color: var(--tmd-border, rgba(255,255,255,0.07));
 }
 
 .tiber-main table tbody td {
-  border-color: var(--border);
+  border-color: var(--tmd-border, rgba(255,255,255,0.07));
 }
 
 .tiber-main [data-radix-popper-content-wrapper] [class*="bg-slate"],
