@@ -448,3 +448,15 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `TIBER-ARCHITECTURE-PERMANENT.md`, `ARCHITECTURE.md`, `CURRENT_PHASE.md`, `README.md`, `.claude/AGENTS.md`, `TIBER_CONTEXT.md`, `CODEBASE_MAP.md`, `server/services/MODULE_RAG.md`, `docs/product/HUMAN_IN_THE_LOOP_DECISION_DOCTRINE.md`, `docs/letter-to-ai-agents.md`
 - **Validation:** Ran targeted legacy-term searches before/after, verified remaining active-doc hits are quarantine/negative-instruction context, ran `git diff --check`, and confirmed only Markdown files changed.
 - **Notes:** Docs-only; no runtime code, APIs, or schemas changed.
+
+### 2026-05-30 — Codex: TIBER Management Dashboard shell
+- **What changed:** Added the first Management Dashboard product shell with active Sleeper league sync/context entry, no-team empty states, roster snapshot placeholders, diagnosis placeholders, model signal readiness cards, action queue, and links into promoted research surfaces.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `client/src/index.css`, `server/routes/__tests__/leagueSyncRoutes.test.ts`, `replit.md`.
+- **Validation:** `npx vite build` passed; `npm run build` passed with existing duplicate class-member warning; targeted league route tests passed with `--coverage=false`; `npm run typecheck` still fails on pre-existing repo-wide TypeScript noise outside the touched files; dev screenshot was blocked because `DATABASE_URL` is not set.
+- **Notes:** The dashboard consumes existing league sync/context/dashboard APIs only. Teamstate movement is displayed as read-only context and is intentionally not wired into scoring, rankings, projections, trade advice, or roster diagnosis.
+
+### 2026-05-31 — Codex: Management Teamstate readiness truth patch
+- **What changed:** Replaced the Management Dashboard's hardcoded Teamstate Movement readiness with a focused read-only query to `GET /api/data-lab/team-environment-movement`. The card now reports ready only for an available artifact with usable movement rows and otherwise surfaces unavailable, provenance, warning, or error details without feeding Teamstate into diagnosis or advice.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/lib/teamEnvironmentMovement.ts`, `client/src/__tests__/teamEnvironmentMovement.test.ts`, `client/src/index.css`, `.claude/context-log.md`, `.claude/agents/codex.md`, `replit.md`.
+- **Validation:** `npx vite build` passed; `npm run build` passed with the existing duplicate class-member warning; focused Teamstate helper/API and league route Jest suites passed with `--coverage=false`; `git diff --check` passed; `npm run typecheck` still fails on pre-existing repo-wide TypeScript errors outside touched files and no touched-file errors were present.
+- **Notes:** Teamstate movement remains a read-only visibility surface only. It is not wired into roster diagnosis, scoring, rankings, projections, trade logic, or player truth.
