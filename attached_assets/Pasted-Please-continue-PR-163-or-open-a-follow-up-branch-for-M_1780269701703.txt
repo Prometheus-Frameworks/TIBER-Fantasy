@@ -1,0 +1,160 @@
+Please continue PR #163 or open a follow-up branch for Management Dashboard product polish.
+
+The current unified dark shell is a good direction, and Management is much closer visually. But the Management page still reads too much like an internal scaffold/status board instead of a user-facing roster management cockpit.
+
+Observed current Management copy/state:
+
+* “No active team context is available yet…”
+* Roster Snapshot unavailable
+* TIBER Diagnosis unavailable
+* Teamstate Movement unavailable due missing artifact
+* Several sections say things like “will not invent,” “placeholder-ready,” “endpoint-only,” “does not create fantasy advice,” etc.
+
+This is honest, but too internal. We need the dashboard to feel more like a product.
+
+Goal:
+
+Make /management feel like:
+
+Connect your fantasy team
+→ choose league/team
+→ see roster readiness
+→ inspect model signals
+→ continue into research
+
+Not like:
+
+Here are all the things not wired yet
+
+Requested changes:
+
+1. Rewrite Management copy for user-facing clarity.
+
+Keep the governance truth, but move defensive/internal language into smaller secondary text.
+
+Examples:
+
+Instead of:
+“Active league/team is unavailable. TIBER will not invent a roster, team name, readiness state, or diagnosis.”
+
+Use:
+“Connect a Sleeper league to unlock roster-specific context.”
+Secondary small text:
+“No roster diagnosis is generated until synced data is available.”
+
+Instead of:
+“Roster details are not loaded. This section is placeholder-ready…”
+
+Use:
+“Roster snapshot appears after team sync.”
+
+Instead of:
+“Endpoint-only context”
+
+Use:
+“Available for inspection” or “Advanced inspection only.”
+
+2. Make active team setup the dominant first task.
+
+The top of the page should clearly prioritize:
+
+* Sleeper league ID input
+* Sync team
+* Select league
+* Select team
+* Set active team
+
+If active context is missing, the rest of the page should visually support that journey instead of feeling like a wall of unavailable modules.
+
+3. Rebalance unavailable states.
+
+Unavailable is correct, but it should be quieter.
+
+Use:
+
+* “Connect team first”
+* “Needs synced roster”
+* “Not connected yet”
+* “Inspection only”
+
+Avoid repeatedly saying:
+
+* fabricate
+* invent
+* backend contracts
+* model contracts
+* endpoint-only
+* placeholder-ready
+* fantasy advice
+
+Those are internal governance phrases. Keep them in tooltips, small notes, or docs, not primary product copy.
+
+4. Model Signals should explain usefulness, not implementation.
+
+For each model card, prefer:
+
+* What this helps the user understand
+* Whether it is ready for this roster
+* Where to inspect deeper
+
+Examples:
+
+Teamstate Movement:
+“Shows whether a player’s team environment is improving, declining, or unstable.”
+State if unavailable:
+“Team environment artifact is not available in this deployment.”
+
+Role & Opportunity:
+“Helps explain how player usage is changing.”
+State:
+“Research surface ready.”
+
+FORGE:
+“Ranking/valuation context.”
+State:
+“Needs active roster before team-level diagnosis.”
+
+5. Action Queue should be dynamic.
+
+If no active team:
+
+* Sync league
+* Select team
+* Set active team
+* Review roster snapshot
+* Inspect research surfaces
+
+If active team exists later:
+
+* Review roster diagnosis
+* Inspect weakest position group
+* Check Teamstate risks
+* Review ROP context
+* Open trade/research workflow
+
+For now, implement the no-active-team version cleanly.
+
+6. Do not change backend/model behavior.
+
+Out of scope:
+
+* No FORGE scoring changes
+* No rankings math changes
+* No backend contracts
+* No fake roster data
+* No fake readiness
+* No projection/trade/waiver changes
+
+7. Keep Management as the visual source of truth.
+
+The dark theme, cards, ember accents, and topbar are good. Keep that direction.
+
+Acceptance criteria:
+
+* /management feels like a user-facing product cockpit, not an internal scaffold.
+* Missing active context points the user clearly toward team sync.
+* Unavailable states are honest but not overwhelming.
+* Copy is cleaner and less defensive.
+* Model cards explain user value in plain language.
+* No fake data or fake diagnosis is introduced.
+* No backend/model/scoring behavior changes.

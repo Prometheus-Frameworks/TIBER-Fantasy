@@ -2611,6 +2611,13 @@ html, body {
   border: 1px solid var(--tmd-border);
 }
 
+.tmd-empty-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--tmd-text-dim);
+}
+
 .tmd-context-list {
   display: grid;
   gap: 8px;

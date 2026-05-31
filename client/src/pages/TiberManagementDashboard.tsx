@@ -58,11 +58,12 @@ type LeagueDashboardResponse = {
   teams?: LeagueDashboardTeam[];
 };
 
-type ModelSignalStatus = 'ready' | 'unavailable' | 'not wired';
+type ModelSignalStatus = 'ready' | 'unavailable' | 'inspection only';
 
 type ModelSignalCard = {
   title: string;
   status: ModelSignalStatus;
+  statusLabel: string;
   explanation: string;
   href: string;
   linkLabel: string;
@@ -74,11 +75,11 @@ const DEFAULT_USER_ID = 'default_user';
 const positionGroups = ['QB', 'RB', 'WR', 'TE'] as const;
 
 function displayLeagueName(league?: League | null) {
-  return league?.leagueName ?? league?.league_name ?? 'League unavailable';
+  return league?.leagueName ?? league?.league_name ?? 'Unknown league';
 }
 
 function displayTeamName(team?: LeagueTeam | null) {
-  return team?.displayName ?? team?.display_name ?? 'Team unavailable';
+  return team?.displayName ?? team?.display_name ?? 'Unknown team';
 }
 
 function getLeagueIdForTeam(team?: LeagueTeam | null) {
@@ -218,74 +219,90 @@ export default function TiberManagementDashboard() {
 
   const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateQuery.data);
   const teamstateDetails = teamstateQuery.isError
-    ? ['Teamstate endpoint could not be reached. No movement context was fabricated.']
+    ? ['Team environment movement data could not be reached in this deployment.']
     : getTeamEnvironmentMovementReadinessDetails(teamstateQuery.data);
 
   const modelSignals: ModelSignalCard[] = [
     {
       title: 'Teamstate Movement',
       status: teamstateReady ? 'ready' : 'unavailable',
+      statusLabel: teamstateReady ? 'Ready' : 'Not connected',
       explanation: teamstateQuery.isLoading
-        ? 'Checking the read-only Teamstate movement artifact before reporting availability.'
+        ? 'Checking team environment movement data…'
         : teamstateReady
-          ? 'Read-only team environment movement is available for context inspection. It is not used for scoring or roster advice here.'
-          : 'Read-only team environment movement is unavailable. No Teamstate context is used for scoring, diagnosis, or roster advice.',
+          ? 'Shows whether player team environments are improving, declining, or at risk. Useful context before making roster moves.'
+          : 'Team environment data is not available in this deployment.',
       href: '/tiber-data-lab/team-research',
       linkLabel: 'Open Team Research',
-      provenance: 'Reads /api/data-lab/team-environment-movement as visibility-only context; the team-specific /:teamAbbr endpoint remains available for follow-up inspection.',
+      provenance: 'Read-only team environment inspection. Does not affect scoring or roster analysis.',
       details: teamstateDetails,
     },
     {
       title: 'Role & Opportunity',
       status: 'ready',
-      explanation: 'Promoted role/deployment context can help explain how players are being used before you make roster decisions.',
+      statusLabel: 'Research surface ready',
+      explanation: "Helps explain how a player's usage and deployment is changing week to week. Useful before positional decisions.",
       href: '/tiber-data-lab/role-opportunity',
       linkLabel: 'Open Role Lab',
-      provenance: 'Read-only Data Lab adapter; TIBER-Fantasy does not recompute upstream model logic.',
+      provenance: 'Read-only research surface. Inspect before making positional decisions.',
     },
     {
       title: 'FORGE',
       status: hasDashboardTotals ? 'ready' : 'unavailable',
+      statusLabel: hasDashboardTotals ? 'Roster context available' : 'Connect team first',
       explanation: hasDashboardTotals
-        ? 'League dashboard totals are available for roster inspection, but this shell does not turn them into final advice.'
-        : 'FORGE roster totals need an active synced league and available model rows before diagnosis can be trusted.',
+        ? 'FORGE roster totals are available for your league. Inspect positional alpha scores and compare players.'
+        : 'Sync a league and set an active team to unlock FORGE roster context.',
       href: '/forge',
       linkLabel: 'Open FORGE',
-      provenance: 'Existing FORGE surfaces remain separate; no ranking, grading, or scoring changes were added.',
+      provenance: 'Rankings and scoring are unchanged. Inspection only.',
     },
     {
-      title: 'Rookies / Player Ownership',
-      status: 'not wired',
-      explanation: 'Rookie Board is available as research, but roster-specific ownership synthesis is not wired into this shell yet.',
+      title: 'Rookies',
+      status: 'inspection only',
+      statusLabel: 'Inspection only',
+      explanation: 'Browse the Rookie Board for prospect context. Useful when evaluating trade targets or dynasty adds.',
       href: '/rookies',
       linkLabel: 'Open Rookie Board',
-      provenance: 'Read-only promoted/board surfaces; ownership remains research context, not a generated transaction recommendation.',
+      provenance: 'Read-only promoted board. Research context, not roster advice.',
     },
     {
       title: 'Point Scenarios',
       status: 'ready',
-      explanation: 'Scenario context can be inspected for what-if outcomes after you identify a player or weak position group.',
+      statusLabel: 'Research surface ready',
+      explanation: 'Explore what-if scoring outcomes for specific players or situations.',
       href: '/tiber-data-lab/point-scenarios',
       linkLabel: 'Open Scenarios',
-      provenance: 'Read-only scenario adapter; this dashboard does not author or recalculate projections.',
+      provenance: 'Read-only scenario inspection. No projections are recalculated here.',
     },
   ];
 
-  const diagnosisState = !activeTeam
-    ? 'needs active team'
-    : !hasRosterData
-      ? 'needs model data'
-      : 'uncertain';
+  const actionSteps = activeTeam
+    ? [
+        'Review roster snapshot',
+        'Check your weakest position group',
+        'Inspect team environment risks',
+        'Review role & opportunity context',
+        'Open research command center',
+      ]
+    : [
+        'Enter your Sleeper league ID',
+        'Sync your league',
+        'Select a league',
+        'Select your team',
+        'Set active team',
+        'Explore research surfaces',
+      ];
 
   return (
     <div className="tmd-page">
       <section className="tmd-hero">
         <div>
           <div className="tmd-eyebrow">TIBER Management Dashboard</div>
-          <h1>Start here: sync your team, inspect context, then research the next move.</h1>
+          <h1>Connect your team, inspect signals, then research your next move.</h1>
           <p>
-            This is the first roster-management shell for TIBER-Fantasy. It connects existing sync, context, FORGE,
-            and Data Lab surfaces without creating new fantasy advice or model contracts.
+            Your roster management cockpit. Sync a Sleeper league to unlock roster-specific context,
+            then use research surfaces to understand what your roster needs.
           </p>
         </div>
         <Link href="/tiber-data-lab/command-center" className="tmd-hero-link">
@@ -298,7 +315,7 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Connect your fantasy team</h2>
-              <p>Sync a Sleeper league, then choose the league/team context TIBER should inspect.</p>
+              <p>Sync a Sleeper league, then choose which team TIBER should inspect.</p>
             </div>
             <span className="tmd-pill">Sleeper beta</span>
           </div>
@@ -322,11 +339,11 @@ export default function TiberManagementDashboard() {
 
           {syncMutation.isError && (
             <div className="tmd-callout tmd-callout-warn">
-              Existing league-sync route rejected the sync. Confirm the Sleeper league ID and try again.
+              Sync failed. Confirm your Sleeper league ID and try again.
             </div>
           )}
           {syncMutation.isSuccess && (
-            <div className="tmd-callout tmd-callout-ok">League sync completed. Pick an active team if it was not selected automatically.</div>
+            <div className="tmd-callout tmd-callout-ok">League synced. Select your team below to set the active context.</div>
           )}
 
           <div className="tmd-selector-grid">
@@ -367,8 +384,8 @@ export default function TiberManagementDashboard() {
 
           {!activeTeam && (
             <div className="tmd-empty-state">
-              No active team context is available yet. Use the existing /api/league-sync/sync and /api/league-context flow above,
-              or continue into research surfaces without roster-specific diagnosis.
+              Connect a Sleeper league to unlock roster-specific context.
+              <span className="tmd-empty-sub">Research surfaces are available now without a roster connection.</span>
             </div>
           )}
         </article>
@@ -377,15 +394,15 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Active Context</h2>
-              <p>The dashboard only shows synced context returned by existing league context APIs.</p>
+              <p>Current league and team selection.</p>
             </div>
             <span className={`tmd-status ${activeTeam ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
-              {activeTeam ? 'ready' : 'unavailable'}
+              {activeTeam ? 'Connected' : 'Not connected'}
             </span>
           </div>
 
           {contextQuery.isLoading ? (
-            <div className="tmd-empty-state">Loading active league context…</div>
+            <div className="tmd-empty-state">Loading…</div>
           ) : activeLeague && activeTeam ? (
             <div className="tmd-context-list">
               <div><span>League</span><strong>{displayLeagueName(activeLeague)}</strong></div>
@@ -395,7 +412,7 @@ export default function TiberManagementDashboard() {
             </div>
           ) : (
             <div className="tmd-empty-state">
-              Active league/team is unavailable. TIBER will not invent a roster, team name, readiness state, or diagnosis.
+              Connect a team above to see your active context here.
             </div>
           )}
         </article>
@@ -406,10 +423,10 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Roster Snapshot</h2>
-              <p>Position group readiness for QB/RB/WR/TE.</p>
+              <p>Position group readiness for QB / RB / WR / TE.</p>
             </div>
             <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
-              {hasRosterData ? 'ready' : 'unavailable'}
+              {hasRosterData ? 'Ready' : 'Needs synced roster'}
             </span>
           </div>
 
@@ -432,7 +449,7 @@ export default function TiberManagementDashboard() {
 
           {!hasRosterData && (
             <div className="tmd-empty-state">
-              Roster details are not loaded. This section is placeholder-ready and will use existing league-dashboard data when available.
+              Roster snapshot appears after team sync.
             </div>
           )}
         </article>
@@ -441,25 +458,33 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>TIBER Diagnosis</h2>
-              <p>High-level management framing, not final transaction advice.</p>
+              <p>High-level roster framing to guide your next research step.</p>
             </div>
             <span className={`tmd-status ${hasRosterData ? 'tmd-status-not-wired' : 'tmd-status-unavailable'}`}>
-              {diagnosisState}
+              {hasRosterData ? 'Under inspection' : 'Connect team first'}
             </span>
           </div>
 
           <div className="tmd-diagnosis-band">
             <span>Team state</span>
-            <strong>{hasRosterData ? 'Uncertain' : 'Needs model data'}</strong>
+            <strong>{hasRosterData ? 'Under inspection' : 'Connect team first'}</strong>
           </div>
           <div className="tmd-diagnosis-list">
             <div>
               <h3>Roster strengths</h3>
-              <p>{hasRosterData ? 'Strength synthesis is not wired yet; inspect FORGE totals and research surfaces below.' : 'Unavailable until an active roster has model-backed data.'}</p>
+              <p>
+                {hasRosterData
+                  ? 'Inspect FORGE totals and research surfaces to identify your positional strengths.'
+                  : 'Available after roster sync.'}
+              </p>
             </div>
             <div>
               <h3>Roster weaknesses</h3>
-              <p>{hasRosterData ? 'Weakness synthesis is not wired yet; start with the lowest-confidence position group.' : 'Unavailable until roster gap analysis is connected.'}</p>
+              <p>
+                {hasRosterData
+                  ? 'Start with the lowest-confidence position group in FORGE, then use Player Research for deeper context.'
+                  : 'Available after roster sync.'}
+              </p>
             </div>
           </div>
         </article>
@@ -469,7 +494,7 @@ export default function TiberManagementDashboard() {
         <div className="tmd-card-header">
           <div>
             <h2>Model Signals</h2>
-            <p>Readiness map for model context that can support management decisions later.</p>
+            <p>What each research surface can tell you about your roster.</p>
           </div>
           <ShieldCheck size={20} />
         </div>
@@ -478,7 +503,9 @@ export default function TiberManagementDashboard() {
             <article className="tmd-signal-card" key={signal.title}>
               <div className="tmd-signal-topline">
                 <h3>{signal.title}</h3>
-                <span className={`tmd-status ${statusClass(signal.status)}`}>{statusIcon(signal.status)}{signal.status}</span>
+                <span className={`tmd-status ${statusClass(signal.status)}`}>
+                  {statusIcon(signal.status)}{signal.statusLabel}
+                </span>
               </div>
               <p>{signal.explanation}</p>
               <div className="tmd-provenance">{signal.provenance}</div>
@@ -500,23 +527,21 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Action Queue</h2>
-              <p>What to do after opening TIBER.</p>
+              <p>{activeTeam ? 'What to do next with your connected team.' : 'Steps to get started.'}</p>
             </div>
           </div>
           <ol className="tmd-action-list">
-            <li><span>1</span> Sync team</li>
-            <li><span>2</span> Review roster diagnosis</li>
-            <li><span>3</span> Inspect weak position group</li>
-            <li><span>4</span> Review team environment risks</li>
-            <li><span>5</span> Open research command center</li>
+            {actionSteps.map((step, index) => (
+              <li key={step}><span>{index + 1}</span>{step}</li>
+            ))}
           </ol>
         </article>
 
         <article className="tmd-card">
           <div className="tmd-card-header">
             <div>
-              <h2>Deep Links</h2>
-              <p>Jump to the live surfaces this shell points toward.</p>
+              <h2>Research Surfaces</h2>
+              <p>Jump to any research surface — no active roster required.</p>
             </div>
           </div>
           <div className="tmd-link-grid">
@@ -526,7 +551,7 @@ export default function TiberManagementDashboard() {
             <Link href="/tiber-data-lab/role-opportunity">Role & Opportunity</Link>
             <Link href="/forge">FORGE</Link>
             <Link href="/forge-workbench">FORGE Workbench</Link>
-            <Link href="/tiber-data-lab/team-research">Teamstate movement <span>endpoint-only context</span></Link>
+            <Link href="/tiber-data-lab/team-research">Team Environment</Link>
           </div>
         </article>
       </section>
