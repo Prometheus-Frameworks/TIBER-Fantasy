@@ -29,16 +29,16 @@ interface PlayerResearchWorkspaceViewProps {
 function statusTone(state: PlayerResearchResponse['data']['state'] | 'ready' | 'not_available' | 'error' | 'idle') {
   switch (state) {
     case 'ready':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      return 'bg-emerald-900/30 text-emerald-400 border-emerald-700/50';
     case 'partial':
-      return 'bg-amber-50 text-amber-700 border-amber-200';
+      return 'bg-amber-900/30 text-amber-400 border-amber-700/50';
     case 'not_available':
     case 'empty':
-      return 'bg-gray-100 text-gray-700 border-gray-200';
+      return 'bg-slate-800 text-slate-400 border-slate-600/50';
     case 'error':
-      return 'bg-red-50 text-red-700 border-red-200';
+      return 'bg-red-900/30 text-red-400 border-red-700/50';
     default:
-      return 'bg-gray-100 text-gray-600 border-gray-200';
+      return 'bg-slate-800 text-slate-400 border-slate-600/50';
   }
 }
 
@@ -68,7 +68,7 @@ function SearchSuggestions({ entries, season }: { entries: PlayerResearchSearchE
         <Link
           key={`${entry.playerId ?? entry.playerName}`}
           href={buildPlayerResearchHref({ season, playerId: entry.playerId, playerName: entry.playerName })}
-          className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+          className="rounded-full border border-slate-600/50 bg-slate-800/40 px-3 py-1.5 text-xs font-medium text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200"
         >
           {entry.playerName}
           {entry.team ? ` · ${entry.team}` : ''}
@@ -80,9 +80,9 @@ function SearchSuggestions({ entries, season }: { entries: PlayerResearchSearchE
 
 function SummaryStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-gray-100 bg-[#fafafa] p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">{label}</div>
-      <div className="mt-2 text-sm font-semibold text-gray-900">{value}</div>
+    <div className="rounded-xl border border-slate-700/50 bg-slate-800 p-3">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
+      <div className="mt-2 text-sm font-semibold text-slate-100">{value}</div>
     </div>
   );
 }
@@ -130,20 +130,20 @@ function OwnershipTruthCard({ ownership }: { ownership: PlayerResearchResponse['
     : 'error';
 
   return (
-    <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section className="mt-6 rounded-2xl border border-slate-700/40 bg-[#111827] p-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-white">
+            <div className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-700 text-slate-200">
               <ShieldCheck className="h-4 w-4" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Roster truth</h2>
+            <h2 className="text-lg font-semibold text-slate-100">Roster truth</h2>
             <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(statusState)}`}>
               {statusIcon(statusState)}
               {statusLabel}
             </span>
           </div>
-          <p className="mt-2 text-sm leading-6 text-gray-600">
+          <p className="mt-2 text-sm leading-6 text-slate-400">
             Read-only TIBER-Data ownership context. This identifies the player, team, level, status, verification time, and provenance before any fantasy interpretation.
           </p>
         </div>
@@ -163,8 +163,8 @@ function OwnershipTruthCard({ ownership }: { ownership: PlayerResearchResponse['
           </div>
 
           {ownership.recentEvents.length > 0 ? (
-            <div className="mt-4 rounded-lg border border-gray-100 bg-[#fafafa] p-3 text-sm text-gray-600">
-              <div className="font-semibold text-gray-900">Recent ownership events</div>
+            <div className="mt-4 rounded-xl border border-slate-700/30 bg-slate-800 p-3 text-sm text-slate-400">
+              <div className="font-semibold text-slate-100">Recent ownership events</div>
               <div className="mt-2 grid gap-2 md:grid-cols-2">
                 {ownership.recentEvents.slice(0, 4).map((event, index) => {
                   const eventType = getRecordString(event, 'event_type') ?? 'ownership_event';
@@ -173,12 +173,12 @@ function OwnershipTruthCard({ ownership }: { ownership: PlayerResearchResponse['
                   const toTeam = getRecordString(event, 'to_team_abbr') ?? getRecordString(event, 'to_team_name');
 
                   return (
-                    <div key={`${eventType}-${effectiveDate ?? index}`} className="rounded-lg border border-gray-100 bg-white p-3">
-                      <div className="text-xs font-semibold uppercase text-gray-500">{eventType.replace(/_/g, ' ')}</div>
-                      <div className="mt-1 text-sm text-gray-700">
-                        {[fromTeam, toTeam].filter(Boolean).join(' -> ') || 'No team change recorded'}
+                    <div key={`${eventType}-${effectiveDate ?? index}`} className="rounded-xl border border-slate-700/30 bg-slate-800 p-3">
+                      <div className="text-xs font-semibold uppercase text-slate-500">{eventType.replace(/_/g, ' ')}</div>
+                      <div className="mt-1 text-sm text-slate-300">
+                        {[fromTeam, toTeam].filter(Boolean).join(' → ') || 'No team change recorded'}
                       </div>
-                      <div className="mt-1 text-xs text-gray-500">{effectiveDate ?? 'No effective date'}</div>
+                      <div className="mt-1 text-xs text-slate-500">{effectiveDate ?? 'No effective date'}</div>
                     </div>
                   );
                 })}
@@ -187,7 +187,7 @@ function OwnershipTruthCard({ ownership }: { ownership: PlayerResearchResponse['
           ) : null}
         </>
       ) : (
-        <p className="mt-4 text-sm text-gray-600">
+        <p className="mt-4 text-sm text-slate-400">
           {ownership.available
             ? 'The ownership artifact is readable, but it did not recognize this player query.'
             : 'The ownership artifact is missing, disabled, or malformed, so roster truth cannot be shown for this query.'}
@@ -207,30 +207,30 @@ function SectionCard({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-slate-700/40 bg-[#111827] p-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900">{section.title}</h2>
+            <h2 className="text-lg font-semibold text-slate-100">{section.title}</h2>
             <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(section.state)}`}>
               {statusIcon(section.state)}
               {section.state === 'ready' ? 'Available' : section.state === 'not_available' ? 'Not available' : section.state === 'error' ? 'Error' : 'Idle'}
             </span>
           </div>
-          <p className="mt-2 text-sm leading-6 text-gray-600">{section.description}</p>
-          <p className="mt-2 text-xs leading-5 text-gray-500">{section.provenanceNote}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{section.description}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-500">{section.provenanceNote}</p>
         </div>
         <a
           href={section.linkHref}
-          className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:text-gray-900"
+          className="inline-flex items-center gap-1 rounded-full border border-slate-600/50 px-3 py-1.5 text-xs font-semibold text-slate-400 transition-colors hover:border-slate-500 hover:text-slate-200"
         >
           {navigationLabel}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </a>
       </div>
 
-      {section.message ? <p className="mt-4 text-sm text-gray-600">{section.message}</p> : null}
-      {section.error ? <p className="mt-2 text-sm text-red-600">{section.error.message}</p> : null}
+      {section.message ? <p className="mt-4 text-sm text-slate-400">{section.message}</p> : null}
+      {section.error ? <p className="mt-2 text-sm text-red-400">{section.error.message}</p> : null}
       {children}
     </section>
   );
@@ -281,20 +281,20 @@ export function PlayerResearchWorkspaceView({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
+      <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
         <Link href="/tiber-data-lab" className="transition-colors hover:text-[#e2640d]">
           Data Lab
         </Link>
         <span>/</span>
-        <span className="font-medium text-gray-600">Player Research Workspace</span>
+        <span className="font-medium text-slate-300">Player Research Workspace</span>
       </div>
 
-      <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-700/40 bg-[#111827] p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-0 bg-gray-900 text-white">Promoted module system</Badge>
-              <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-700">Read only</Badge>
+              <Badge className="border-0 bg-slate-700 text-slate-200">Promoted module system</Badge>
+              <Badge variant="secondary" className="border-0 bg-slate-700/60 text-slate-400">Read only</Badge>
               {data ? (
                 <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${statusTone(data.state)}`}>
                   {statusIcon(data.state)}
@@ -302,18 +302,18 @@ export function PlayerResearchWorkspaceView({
                 </span>
               ) : null}
             </div>
-            <h1 className="mt-4 text-3xl font-semibold text-gray-900">Player Research Workspace</h1>
-            <p className="mt-3 text-sm leading-7 text-gray-600">
+            <h1 className="mt-4 text-3xl font-semibold text-slate-100">Player Research Workspace</h1>
+            <p className="mt-3 text-sm leading-7 text-slate-400">
               {data?.framing.description ?? 'Inspect promoted read-only outputs for one player in one place.'}
             </p>
-            <p className="mt-2 text-sm leading-7 text-gray-500">
+            <p className="mt-2 text-sm leading-7 text-slate-500">
               {data?.framing.provenanceNote ??
                 'TIBER-Fantasy orchestrates and normalizes promoted model outputs here without recomputing the underlying models locally.'}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-[#fafafa] p-4 text-sm text-gray-600 md:max-w-sm">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Why this exists</div>
+          <div className="rounded-2xl border border-slate-700/40 bg-slate-800/40 p-4 text-sm text-slate-400 md:max-w-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Why this exists</div>
             <p className="mt-2 leading-6">
               This is the first true cross-model synthesis surface in TIBER Data Lab: a player-centric workspace built from promoted,
               read-only model outputs.
@@ -321,16 +321,16 @@ export function PlayerResearchWorkspaceView({
           </div>
         </div>
 
-        <form onSubmit={submitSearch} className="mt-6 grid gap-3 rounded-2xl border border-gray-200 bg-[#fafafa] p-4 lg:grid-cols-[minmax(0,1fr),180px,auto]">
+        <form onSubmit={submitSearch} className="mt-6 grid gap-3 rounded-2xl border border-slate-700/40 bg-slate-800/40 p-4 lg:grid-cols-[minmax(0,1fr),180px,auto]">
           <label className="block">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Player search by name</div>
-            <div className="mt-2 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-              <Search className="h-4 w-4 text-gray-400" />
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Player search by name</div>
+            <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-600/50 bg-slate-800 px-3 py-2">
+              <Search className="h-4 w-4 text-slate-500" />
               <input
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search a promoted player…"
-                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+                className="w-full border-0 bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none"
                 list="player-research-search-index"
               />
             </div>
@@ -342,11 +342,11 @@ export function PlayerResearchWorkspaceView({
           </label>
 
           <label className="block">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">Season</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Season</div>
             <select
               value={selectedSeason}
               onChange={(event) => onSeasonChange(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none"
+              className="mt-2 w-full rounded-xl border border-slate-600/50 bg-slate-800 px-3 py-2 text-sm text-slate-200 outline-none"
               disabled={seasonOptions.length === 0}
             >
               {seasonOptions.length === 0 ? <option value="">No seasons available</option> : null}
@@ -359,14 +359,14 @@ export function PlayerResearchWorkspaceView({
           <div className="flex items-end">
             <button
               type="submit"
-              className="inline-flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-[#e2640d] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#c8540a]"
             >
               Open workspace
             </button>
           </div>
         </form>
 
-        <div className="mt-3 text-xs text-gray-500">
+        <div className="mt-3 text-xs text-slate-500">
           Deep-link supported via <span className="font-mono">playerId</span> and <span className="font-mono">playerName</span> query params.
         </div>
 
@@ -377,8 +377,8 @@ export function PlayerResearchWorkspaceView({
         <div className="mt-6">
           <PromotedModuleStateCard
             icon={Layers3}
-            accentClassName="bg-gray-100"
-            accentTextClassName="text-gray-700"
+            accentClassName="bg-slate-700"
+            accentTextClassName="text-slate-400"
             title="Loading Player Research Workspace"
             message="Loading the promoted read-only player workspace and checking which promoted modules are available for the selected player."
             mode="loading"
@@ -390,8 +390,8 @@ export function PlayerResearchWorkspaceView({
         <div className="mt-6">
           <PromotedModuleStateCard
             icon={AlertTriangle}
-            accentClassName="bg-red-50"
-            accentTextClassName="text-red-700"
+            accentClassName="bg-red-900/30"
+            accentTextClassName="text-red-400"
             title="Player Research Workspace unavailable"
             message={errorMessage}
             hints={[
@@ -413,11 +413,11 @@ export function PlayerResearchWorkspaceView({
           </div>
 
           {data.selectedPlayer ? (
-            <div className="mt-4 rounded-2xl border border-gray-200 bg-[#fafafa] p-4 text-sm text-gray-600">
-              Researching <span className="font-semibold text-gray-900">{data.selectedPlayer.playerName}</span>
+            <div className="mt-4 rounded-2xl border border-slate-700/40 bg-slate-800/40 p-4 text-sm text-slate-400">
+              Researching <span className="font-semibold text-slate-100">{data.selectedPlayer.playerName}</span>
               {data.selectedPlayer.team ? ` · ${data.selectedPlayer.team}` : ''}
               {data.selectedPlayer.position ? ` · ${data.selectedPlayer.position}` : ''}
-              . Match strategy: <span className="font-semibold text-gray-900">{data.selectedPlayer.matchStrategy ?? 'n/a'}</span>.
+              . Match strategy: <span className="font-semibold text-slate-100">{data.selectedPlayer.matchStrategy ?? 'n/a'}</span>.
             </div>
           ) : null}
 
@@ -429,8 +429,8 @@ export function PlayerResearchWorkspaceView({
             <div className="mt-6">
               <PromotedModuleStateCard
                 icon={Layers3}
-                accentClassName="bg-gray-100"
-                accentTextClassName="text-gray-700"
+                accentClassName="bg-slate-700"
+                accentTextClassName="text-slate-400"
                 title="Player Research Workspace ready"
                 message="Search by player name or use a playerId deep link to inspect promoted outputs for a single player."
                 hints={[
@@ -446,8 +446,8 @@ export function PlayerResearchWorkspaceView({
             <div className="mt-6">
               <PromotedModuleStateCard
                 icon={CircleOff}
-                accentClassName="bg-gray-100"
-                accentTextClassName="text-gray-700"
+                accentClassName="bg-slate-700"
+                accentTextClassName="text-slate-400"
                 title="No promoted player match found"
                 message="No promoted player match was found for that query in the selected season. Try another spelling or choose a suggestion from the promoted search index."
                 hints={[
@@ -460,9 +460,9 @@ export function PlayerResearchWorkspaceView({
           ) : null}
 
           {data.warnings.length > 0 ? (
-            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-              <div className="text-sm font-semibold text-amber-800">Workspace warnings</div>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-700">
+            <div className="mt-6 rounded-2xl border border-amber-700/40 bg-amber-900/20 p-5">
+              <div className="text-sm font-semibold text-amber-400">Workspace warnings</div>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-400">
                 {data.warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}
@@ -479,13 +479,13 @@ export function PlayerResearchWorkspaceView({
                     <SummaryStat label="Signal score" value={formatNumber(data.sections.breakoutSignals.summary.finalSignalScore, 1)} />
                     <SummaryStat label="Best recipe" value={data.sections.breakoutSignals.summary.bestRecipeName ?? '—'} />
                     <SummaryStat label="Label" value={data.sections.breakoutSignals.summary.breakoutLabel ?? '—'} />
-                    <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-gray-100 bg-[#fafafa] p-3 text-sm text-gray-600">
-                      <div className="font-semibold text-gray-900">Component summary</div>
+                    <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-slate-700/30 bg-slate-800 p-3 text-sm text-slate-400">
+                      <div className="font-semibold text-slate-100">Component summary</div>
                       <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                         {data.sections.breakoutSignals.summary.componentSummary.map((component) => (
-                          <div key={component.label} className="rounded-lg border border-gray-100 bg-white p-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">{component.label}</div>
-                            <div className="mt-2 text-sm font-semibold text-gray-900">{formatNumber(component.value, 1)}</div>
+                          <div key={component.label} className="rounded-xl border border-slate-700/30 bg-slate-900 p-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{component.label}</div>
+                            <div className="mt-2 text-sm font-semibold text-slate-100">{formatNumber(component.value, 1)}</div>
                           </div>
                         ))}
                       </div>
@@ -507,8 +507,8 @@ export function PlayerResearchWorkspaceView({
                     <SummaryStat label="Confidence" value={data.sections.roleOpportunity.summary.confidenceScore != null ? `${formatPercent(data.sections.roleOpportunity.summary.confidenceScore)} · ${data.sections.roleOpportunity.summary.confidenceTier ?? '—'}` : '—'} />
                     <SummaryStat label="Source" value={data.sections.roleOpportunity.summary.source.modelVersion ?? '—'} />
                     {data.sections.roleOpportunity.summary.insights.length > 0 ? (
-                      <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-gray-100 bg-[#fafafa] p-3 text-sm text-gray-600">
-                        <div className="font-semibold text-gray-900">Usage notes</div>
+                      <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-slate-700/30 bg-slate-800 p-3 text-sm text-slate-400">
+                        <div className="font-semibold text-slate-100">Usage notes</div>
                         <ul className="mt-2 list-disc space-y-1 pl-5">
                           {data.sections.roleOpportunity.summary.insights.map((insight) => (
                             <li key={insight}>{insight}</li>
@@ -545,8 +545,8 @@ export function PlayerResearchWorkspaceView({
                     <SummaryStat label="Scenario count" value={String(data.sections.pointScenarios.summary.scenarioCount)} />
                     <SummaryStat label="Top scenarios" value={data.sections.pointScenarios.summary.topScenarioNames.join(', ') || '—'} />
                     {data.sections.pointScenarios.summary.notes.length > 0 ? (
-                      <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-gray-100 bg-[#fafafa] p-3 text-sm text-gray-600">
-                        <div className="font-semibold text-gray-900">Scenario notes</div>
+                      <div className="md:col-span-2 xl:col-span-4 rounded-xl border border-slate-700/30 bg-slate-800 p-3 text-sm text-slate-400">
+                        <div className="font-semibold text-slate-100">Scenario notes</div>
                         <ul className="mt-2 list-disc space-y-1 pl-5">
                           {data.sections.pointScenarios.summary.notes.map((note) => (
                             <li key={note}>{note}</li>

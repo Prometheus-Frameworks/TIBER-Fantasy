@@ -115,7 +115,7 @@ export default function TiberTiers() {
 
             <button
               onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-slate-900 text-slate-300 border border-slate-700"
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-900 text-slate-300 border border-slate-700"
               data-testid="toggle-sort-alpha"
             >
               Alpha {sortDirection === 'desc' ? '↓' : '↑'}
