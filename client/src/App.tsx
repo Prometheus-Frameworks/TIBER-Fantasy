@@ -41,6 +41,7 @@ import PointScenariosLab from "@/pages/PointScenariosLab";
 import PlayerResearchLab from "@/pages/PlayerResearchLab";
 import TeamResearchLab from "@/pages/TeamResearchLab";
 import DataLabCommandCenterLab from "@/pages/DataLabCommandCenterLab";
+import TiberManagementDashboard from "@/pages/TiberManagementDashboard";
 import StressLab from "@/pages/StressLab";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
@@ -56,6 +57,8 @@ function Router() {
         <Route path="/" component={StressLab} />
         <Route path="/observatory" component={StressLab} />
         <Route path="/dashboard" component={Dashboard} />
+        <Route path="/management" component={TiberManagementDashboard} />
+        <Route path="/team-management" component={TiberManagementDashboard} />
         {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
         <Route path="/tiers" component={TiberTiers} />
         <Route path="/rookies" component={RookieBoard} />

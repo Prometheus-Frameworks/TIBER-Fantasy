@@ -21,6 +21,7 @@ const mockSleeperClient = {
   getLeague: jest.fn(),
   getLeagueUsers: jest.fn(),
   getLeagueRosters: jest.fn(),
+  getTradedPicks: jest.fn(),
 };
 
 const mockScoringFormat = jest.fn();
@@ -76,6 +77,7 @@ describe("league sync routes", () => {
     mockSleeperClient.getLeagueRosters.mockResolvedValue([
       { roster_id: 1, owner_id: "u1" },
     ]);
+    mockSleeperClient.getTradedPicks.mockResolvedValue([]);
 
     mockScoringFormat.mockReturnValue("ppr");
 

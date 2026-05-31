@@ -448,3 +448,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `TIBER-ARCHITECTURE-PERMANENT.md`, `ARCHITECTURE.md`, `CURRENT_PHASE.md`, `README.md`, `.claude/AGENTS.md`, `TIBER_CONTEXT.md`, `CODEBASE_MAP.md`, `server/services/MODULE_RAG.md`, `docs/product/HUMAN_IN_THE_LOOP_DECISION_DOCTRINE.md`, `docs/letter-to-ai-agents.md`
 - **Validation:** Ran targeted legacy-term searches before/after, verified remaining active-doc hits are quarantine/negative-instruction context, ran `git diff --check`, and confirmed only Markdown files changed.
 - **Notes:** Docs-only; no runtime code, APIs, or schemas changed.
+
+### 2026-05-30 — Codex: TIBER Management Dashboard shell
+- **What changed:** Added the first Management Dashboard product shell with active Sleeper league sync/context entry, no-team empty states, roster snapshot placeholders, diagnosis placeholders, model signal readiness cards, action queue, and links into promoted research surfaces.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `client/src/index.css`, `server/routes/__tests__/leagueSyncRoutes.test.ts`, `replit.md`.
+- **Validation:** `npx vite build` passed; `npm run build` passed with existing duplicate class-member warning; targeted league route tests passed with `--coverage=false`; `npm run typecheck` still fails on pre-existing repo-wide TypeScript noise outside the touched files; dev screenshot was blocked because `DATABASE_URL` is not set.
+- **Notes:** The dashboard consumes existing league sync/context/dashboard APIs only. Teamstate movement is displayed as read-only context and is intentionally not wired into scoring, rankings, projections, trade advice, or roster diagnosis.
