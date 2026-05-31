@@ -1,1 +1,0 @@
-- [rounded-lg CSS override trap](rounded-lg-css-override-trap.md) — `.tiber-main .rounded-lg[class*="border"][class*="bg-"]` forces bg to white; always use `rounded-xl`+ for custom dark cards.

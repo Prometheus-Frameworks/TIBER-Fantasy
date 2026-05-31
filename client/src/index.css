@@ -1222,7 +1222,12 @@ html, body {
   --tw-ring-color: var(--ember) !important;
 }
 
-/* shadcn Card overrides */
+/* shadcn Card overrides — normalises Card bg/border/text to the dark theme.
+   WARNING: the second selector is intentionally broad. Any element inside
+   .tiber-main with BOTH a border-* class AND a bg-* class on a rounded-lg
+   element will also be caught and forced to --bg-primary (white in light mode).
+   Use rounded-xl or larger for custom dark panels to avoid this rule.
+   See docs/dev/dark-shell-ui-notes.md for the full trap description. */
 .tiber-main [class*="CardContent"],
 .tiber-main .rounded-lg[class*="border"][class*="bg-"] {
   background: var(--bg-primary) !important;
