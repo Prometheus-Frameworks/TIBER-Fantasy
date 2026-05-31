@@ -73,3 +73,29 @@ export function getTeamEnvironmentMovementProvenanceWarning(provenanceStatus: st
   }
   return null;
 }
+
+export function hasUsableTeamEnvironmentMovementContext(response: TeamEnvironmentMovementResponse | null | undefined): boolean {
+  return Boolean(
+    response?.ok
+    && response.artifactAvailable
+    && ((response.teams?.length ?? 0) > 0 || response.selectedTeam),
+  );
+}
+
+export function getTeamEnvironmentMovementReadinessDetails(response: TeamEnvironmentMovementResponse | null | undefined): string[] {
+  if (!response) return [];
+
+  const details = new Set<string>();
+  const provenanceWarning = getTeamEnvironmentMovementProvenanceWarning(response.provenanceStatus);
+
+  if (response.provenanceStatus) details.add(`Provenance status: ${response.provenanceStatus}.`);
+  if (provenanceWarning) details.add(provenanceWarning);
+  for (const warning of response.warnings ?? []) details.add(warning);
+  for (const error of response.errors ?? []) details.add(error.message);
+
+  if (response.artifactAvailable && !hasUsableTeamEnvironmentMovementContext(response)) {
+    details.add('Teamstate artifact is present, but no usable movement rows are available.');
+  }
+
+  return Array.from(details);
+}

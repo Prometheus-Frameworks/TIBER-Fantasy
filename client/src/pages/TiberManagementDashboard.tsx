@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import {
+  type TeamEnvironmentMovementResponse,
+  getTeamEnvironmentMovementReadinessDetails,
+  hasUsableTeamEnvironmentMovementContext,
+} from '@/lib/teamEnvironmentMovement';
 
 type LeagueTeam = {
   id: string;
@@ -62,6 +67,7 @@ type ModelSignalCard = {
   href: string;
   linkLabel: string;
   provenance: string;
+  details?: string[];
 };
 
 const DEFAULT_USER_ID = 'default_user';
@@ -145,6 +151,15 @@ export default function TiberManagementDashboard() {
     queryKey: [`/api/league-sync/leagues?user_id=${DEFAULT_USER_ID}`],
   });
 
+  const teamstateQuery = useQuery<TeamEnvironmentMovementResponse, Error>({
+    queryKey: ['/api/data-lab/team-environment-movement'],
+    queryFn: async () => {
+      const response = await fetch('/api/data-lab/team-environment-movement');
+      return response.json() as Promise<TeamEnvironmentMovementResponse>;
+    },
+    retry: false,
+  });
+
   const activeLeague = contextQuery.data?.activeLeague ?? null;
   const activeTeam = contextQuery.data?.activeTeam ?? null;
   const activeLeagueId = activeLeague?.id ?? getLeagueIdForTeam(activeTeam);
@@ -201,14 +216,24 @@ export default function TiberManagementDashboard() {
     return league?.teams ?? [];
   }, [leaguesQuery.data?.leagues, selectedLeagueId]);
 
+  const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateQuery.data);
+  const teamstateDetails = teamstateQuery.isError
+    ? ['Teamstate endpoint could not be reached. No movement context was fabricated.']
+    : getTeamEnvironmentMovementReadinessDetails(teamstateQuery.data);
+
   const modelSignals: ModelSignalCard[] = [
     {
       title: 'Teamstate Movement',
-      status: 'ready',
-      explanation: 'Read-only team environment movement is available for context inspection. It is not used for scoring or roster advice here.',
+      status: teamstateReady ? 'ready' : 'unavailable',
+      explanation: teamstateQuery.isLoading
+        ? 'Checking the read-only Teamstate movement artifact before reporting availability.'
+        : teamstateReady
+          ? 'Read-only team environment movement is available for context inspection. It is not used for scoring or roster advice here.'
+          : 'Read-only team environment movement is unavailable. No Teamstate context is used for scoring, diagnosis, or roster advice.',
       href: '/tiber-data-lab/team-research',
       linkLabel: 'Open Team Research',
-      provenance: 'Consumes /api/data-lab/team-environment-movement and /:teamAbbr as visibility-only context.',
+      provenance: 'Reads /api/data-lab/team-environment-movement as visibility-only context; the team-specific /:teamAbbr endpoint remains available for follow-up inspection.',
+      details: teamstateDetails,
     },
     {
       title: 'Role & Opportunity',
@@ -457,6 +482,11 @@ export default function TiberManagementDashboard() {
               </div>
               <p>{signal.explanation}</p>
               <div className="tmd-provenance">{signal.provenance}</div>
+              {signal.details?.length ? (
+                <ul className="tmd-signal-details">
+                  {signal.details.map((detail) => <li key={detail}>{detail}</li>)}
+                </ul>
+              ) : null}
               <ExternalOrInternalLink href={signal.href} className="tmd-deep-link">
                 {signal.linkLabel} <ExternalLink size={13} />
               </ExternalOrInternalLink>

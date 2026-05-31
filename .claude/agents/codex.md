@@ -665,3 +665,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Promoted a primary nav `Management` entry and wired dashboard sections for sync, active context, roster snapshot, diagnosis, model signals, action queue, and deep links.
 - Preserved upstream boundaries: no new model contracts, no scoring/ranking/trade/projection changes, and Teamstate movement remains read-only context only.
 - Validation: `npx vite build` ✅; `npm run build` ✅ with existing duplicate class-member warning; targeted league route tests with `--coverage=false` ✅; `npm run typecheck` ⚠️ existing repo-wide errors; screenshot blocked by missing `DATABASE_URL`.
+
+### 2026-05-31 — Management Teamstate readiness truth patch
+- Replaced hardcoded Teamstate Movement `ready` state with a focused live read of `/api/data-lab/team-environment-movement`.
+- Added conservative readiness helpers and focused tests: ready requires `ok`, `artifactAvailable`, and usable movement context; missing, malformed/error, and present-but-empty states remain unavailable and inspectable.
+- Rendered provenance status, upstream warnings, and returned error copy in the read-only model card without using Teamstate in diagnosis or advice.
+- Validation: focused Teamstate helper/API and league route Jest suites ✅; `npx vite build` ✅; `npm run build` ✅ with existing warning; `git diff --check` ✅; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files.
