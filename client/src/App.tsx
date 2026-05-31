@@ -52,72 +52,80 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <TiberLayout>
-      <Switch>
-        <Route path="/" component={StressLab} />
-        <Route path="/observatory" component={StressLab} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/management" component={TiberManagementDashboard} />
-        <Route path="/team-management" component={TiberManagementDashboard} />
-        {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
-        <Route path="/tiers" component={TiberTiers} />
-        <Route path="/rookies" component={RookieBoard} />
-        <Route path="/tiber-data-lab" component={DataLabHub} />
-        <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
-        <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />
-        <Route path="/tiber-data-lab/receiving" component={ReceivingLab} />
-        <Route path="/tiber-data-lab/rushing" component={RushingLab} />
-        <Route path="/tiber-data-lab/qb" component={QBLab} />
-        <Route path="/tiber-data-lab/situational" component={SituationalLab} />
-        <Route path="/tiber-data-lab/breakout-signals" component={BreakoutSignalsLab} />
-        <Route path="/tiber-data-lab/role-opportunity" component={RoleOpportunityLab} />
-        <Route path="/tiber-data-lab/age-curves" component={AgeCurvesLab} />
-        <Route path="/tiber-data-lab/point-scenarios" component={PointScenariosLab} />
-        <Route path="/tiber-data-lab/player-research" component={PlayerResearchLab} />
-        <Route path="/tiber-data-lab/team-research" component={TeamResearchLab} />
-        <Route path="/tiber-data-lab/command-center" component={DataLabCommandCenterLab} />
-        <Route path="/stress-lab" component={StressLab} />
-        <Route path="/personnel">
-          {() => <Redirect to="/tiber-data-lab/personnel" />}
-        </Route>
-        <Route path="/schedule" component={SchedulePage} />
-        <Route path="/legacy-chat" component={ChatHomepage} />
-        <Route path="/player/:playerId" component={PlayerPage} />
-        <Route path="/forge" component={ForgeLanding} />
-        <Route path="/forge/inspect" component={ForgeTransparency} />
-        {/* CANONICAL alias: preserve legacy /rankings links while routing public traffic to /tiers. */}
-        <Route path="/rankings">
-          {() => <Redirect to="/tiers" />}
-        </Route>
-        <Route path="/x-intel" component={XIntelligence} />
-        <Route path="/architecture" component={Architecture} />
-        <Route path="/metrics-dictionary" component={MetricsDictionary} />
-        <Route path="/forge-workbench" component={ForgeWorkbench} />
-        <Route path="/fantasy-lab" component={FantasyLab} />
-        <Route path="/idp-lab" component={IdpLab} />
-        <Route path="/catalyst-lab" component={CatalystLab} />
-        <Route path="/tiberclaw" component={TiberClawPage} />
-        <Route path="/sentinel" component={SentinelDashboard} />
-        <Route path="/admin/forge-hub" component={ForgeHub} />
-        <Route path="/admin/player-mapping" component={PlayerMapping} />
-        <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
-        <Route path="/admin/player-research" component={PlayerResearch} />
-        <Route path="/admin/api-lexicon" component={ApiLexicon} />
-        <Route path="/admin/rag-status" component={RagStatus} />
-        <Route path="/admin/forge-lab" component={ForgeLab} />
-        <Route path="/admin/forge-simulation" component={ForgeSimulation} />
-        {/* INTERNAL_ONLY: admin ranking formula sandboxes, not public rankings contract surfaces. */}
-        <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
-        <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
-        <Route path="/dev/forge">
-          {() => <Redirect to="/admin/forge-lab" />}
-        </Route>
-        <Route path="/admin">
-          {() => <Redirect to="/admin/forge-hub" />}
-        </Route>
-        <Route component={NotFound} />
-      </Switch>
-    </TiberLayout>
+    <Switch>
+      {/* Management routes render as full-screen Command Deck, outside TiberLayout */}
+      <Route path="/management" component={TiberManagementDashboard} />
+      <Route path="/team-management" component={TiberManagementDashboard} />
+      {/* All other routes use the standard TiberLayout sidebar */}
+      <Route>
+        {() => (
+          <TiberLayout>
+            <Switch>
+              <Route path="/" component={StressLab} />
+              <Route path="/observatory" component={StressLab} />
+              <Route path="/dashboard" component={Dashboard} />
+              {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
+              <Route path="/tiers" component={TiberTiers} />
+              <Route path="/rookies" component={RookieBoard} />
+              <Route path="/tiber-data-lab" component={DataLabHub} />
+              <Route path="/tiber-data-lab/personnel" component={PersonnelUsage} />
+              <Route path="/tiber-data-lab/role-banks" component={RoleContextRankings} />
+              <Route path="/tiber-data-lab/receiving" component={ReceivingLab} />
+              <Route path="/tiber-data-lab/rushing" component={RushingLab} />
+              <Route path="/tiber-data-lab/qb" component={QBLab} />
+              <Route path="/tiber-data-lab/situational" component={SituationalLab} />
+              <Route path="/tiber-data-lab/breakout-signals" component={BreakoutSignalsLab} />
+              <Route path="/tiber-data-lab/role-opportunity" component={RoleOpportunityLab} />
+              <Route path="/tiber-data-lab/age-curves" component={AgeCurvesLab} />
+              <Route path="/tiber-data-lab/point-scenarios" component={PointScenariosLab} />
+              <Route path="/tiber-data-lab/player-research" component={PlayerResearchLab} />
+              <Route path="/tiber-data-lab/team-research" component={TeamResearchLab} />
+              <Route path="/tiber-data-lab/command-center" component={DataLabCommandCenterLab} />
+              <Route path="/stress-lab" component={StressLab} />
+              <Route path="/personnel">
+                {() => <Redirect to="/tiber-data-lab/personnel" />}
+              </Route>
+              <Route path="/schedule" component={SchedulePage} />
+              <Route path="/legacy-chat" component={ChatHomepage} />
+              <Route path="/player/:playerId" component={PlayerPage} />
+              <Route path="/forge" component={ForgeLanding} />
+              <Route path="/forge/inspect" component={ForgeTransparency} />
+              {/* CANONICAL alias: preserve legacy /rankings links while routing public traffic to /tiers. */}
+              <Route path="/rankings">
+                {() => <Redirect to="/tiers" />}
+              </Route>
+              <Route path="/x-intel" component={XIntelligence} />
+              <Route path="/architecture" component={Architecture} />
+              <Route path="/metrics-dictionary" component={MetricsDictionary} />
+              <Route path="/forge-workbench" component={ForgeWorkbench} />
+              <Route path="/fantasy-lab" component={FantasyLab} />
+              <Route path="/idp-lab" component={IdpLab} />
+              <Route path="/catalyst-lab" component={CatalystLab} />
+              <Route path="/tiberclaw" component={TiberClawPage} />
+              <Route path="/sentinel" component={SentinelDashboard} />
+              <Route path="/admin/forge-hub" component={ForgeHub} />
+              <Route path="/admin/player-mapping" component={PlayerMapping} />
+              <Route path="/admin/player-mapping-test" component={PlayerMappingTest} />
+              <Route path="/admin/player-research" component={PlayerResearch} />
+              <Route path="/admin/api-lexicon" component={ApiLexicon} />
+              <Route path="/admin/rag-status" component={RagStatus} />
+              <Route path="/admin/forge-lab" component={ForgeLab} />
+              <Route path="/admin/forge-simulation" component={ForgeSimulation} />
+              {/* INTERNAL_ONLY: admin ranking formula sandboxes, not public rankings contract surfaces. */}
+              <Route path="/admin/wr-rankings-sandbox" component={WRRankingsSandbox} />
+              <Route path="/admin/qb-rankings-sandbox" component={QBRankingsSandbox} />
+              <Route path="/dev/forge">
+                {() => <Redirect to="/admin/forge-lab" />}
+              </Route>
+              <Route path="/admin">
+                {() => <Redirect to="/admin/forge-hub" />}
+              </Route>
+              <Route component={NotFound} />
+            </Switch>
+          </TiberLayout>
+        )}
+      </Route>
+    </Switch>
   );
 }
 
