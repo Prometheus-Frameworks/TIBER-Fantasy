@@ -33,6 +33,7 @@
   --font-serif: 'Newsreader', Georgia, serif;
 
   --sidebar-width: 212px;
+  --topbar-height: 52px;
 
   --background: #ffffff;
   --foreground: #0a0a0a;
@@ -92,9 +93,69 @@ html, body {
   100%{background-position:-200% 0} 
 }
 
+/* ===== UNIVERSAL TOPBAR ===== */
+.tiber-topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-height, 52px);
+  background: rgba(7, 8, 10, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 201;
+}
+
+.tiber-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tiber-topbar-logo-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.tiber-topbar-logo {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--tmd-ember, #e2640d);
+}
+
+.tiber-topbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--tmd-border-strong, rgba(255,255,255,0.12));
+  flex-shrink: 0;
+}
+
+.tiber-topbar-section {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  letter-spacing: 0.02em;
+}
+
+.tiber-topbar-quicknav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tiber-topbar-ham {
+  display: none;
+}
+
 /* ===== LAYOUT ===== */
 .tiber-main {
   margin-left: var(--sidebar-width);
+  padding-top: var(--topbar-height, 52px);
   min-height: 100vh;
 }
 
@@ -106,7 +167,9 @@ html, body {
 /* ===== SIDEBAR ===== */
 .tiber-sidebar {
   position: fixed;
-  left: 0; top: 0; bottom: 0;
+  left: 0;
+  top: var(--topbar-height, 52px);
+  bottom: 0;
   width: var(--sidebar-width);
   background: var(--tmd-bg, #07080a);
   border-right: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
@@ -950,13 +1013,13 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
   padding: 4px;
   border-radius: 4px;
   line-height: 0;
   transition: color 0.15s;
 }
-.tiber-hamburger:hover { color: var(--ember); }
+.tiber-hamburger:hover { color: var(--tmd-ember, #e2640d); }
 
 @media (max-width: 768px) {
   /* Hide desktop sidebar */
@@ -967,24 +1030,14 @@ html, body {
   .tiber-drawer-overlay { display: block; }
   .tiber-drawer-close { display: block; }
 
-  /* Mobile topbar */
-  .tiber-mobile-topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 52px;
-    padding: 0 16px;
-    background: var(--tmd-bg, #07080a);
-    border-bottom: 1px solid var(--tmd-border, rgba(255,255,255,0.07));
-    z-index: 100;
-  }
+  /* Show hamburger, hide desktop quicknav in universal topbar */
+  .tiber-topbar-ham { display: flex; }
+  .tiber-topbar-quicknav { display: none; }
 
-  /* Push content below topbar */
+  /* Push content below topbar only, no sidebar offset on mobile */
   .tiber-main {
     margin-left: 0;
-    padding-top: 52px;
+    padding-top: var(--topbar-height, 52px);
   }
 
   .tiber-content { padding: 16px; }

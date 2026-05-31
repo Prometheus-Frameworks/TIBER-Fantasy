@@ -53,14 +53,13 @@ import NotFound from "@/pages/not-found";
 function Router() {
   return (
     <Switch>
-      {/* Management routes render as full-screen Command Deck, outside TiberLayout */}
-      <Route path="/management" component={TiberManagementDashboard} />
-      <Route path="/team-management" component={TiberManagementDashboard} />
-      {/* All other routes use the standard TiberLayout sidebar */}
+      {/* All routes share the unified dark TiberLayout shell */}
       <Route>
         {() => (
           <TiberLayout>
             <Switch>
+              <Route path="/management" component={TiberManagementDashboard} />
+              <Route path="/team-management" component={TiberManagementDashboard} />
               <Route path="/" component={StressLab} />
               <Route path="/observatory" component={StressLab} />
               <Route path="/dashboard" component={Dashboard} />

@@ -35,6 +35,28 @@ const navSections: NavSectionConfig[] = [
   },
 ];
 
+function getSection(location: string): string {
+  if (location === "/" || location.startsWith("/observatory") || location.startsWith("/stress-lab")) return "Observatory";
+  if (location.startsWith("/management") || location.startsWith("/team-management")) return "Management";
+  if (location.startsWith("/tiers") || location.startsWith("/rankings")) return "Rankings";
+  if (location.startsWith("/rookies")) return "Rookies";
+  if (location.startsWith("/tiber-data-lab/command-center")) return "Command Center";
+  if (location.startsWith("/tiber-data-lab/player-research")) return "Player Research";
+  if (location.startsWith("/tiber-data-lab/team-research")) return "Team Research";
+  if (location.startsWith("/tiber-data-lab")) return "Data Lab";
+  if (location.startsWith("/forge-workbench")) return "FORGE Workbench";
+  if (location.startsWith("/forge")) return "FORGE";
+  if (location.startsWith("/catalyst")) return "CATALYST";
+  if (location.startsWith("/player/")) return "Player";
+  if (location.startsWith("/admin")) return "Admin";
+  if (location.startsWith("/schedule")) return "Schedule";
+  if (location.startsWith("/metrics-dictionary")) return "Metrics";
+  if (location.startsWith("/architecture")) return "Architecture";
+  if (location.startsWith("/sentinel")) return "Sentinel";
+  if (location.startsWith("/tiberclaw")) return "TiberClaw";
+  return "TIBER";
+}
+
 function NavSection({
   label,
   description,
@@ -160,23 +182,31 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
 
   return (
     <>
+      <header className="tiber-topbar">
+        <div className="tiber-topbar-brand">
+          <button
+            className="tiber-hamburger tiber-topbar-ham"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+          >
+            <Menu size={18} />
+          </button>
+          <Link href="/" className="tiber-topbar-logo-link">
+            <span className="tiber-topbar-logo">TIBER</span>
+          </Link>
+          <span className="tiber-topbar-sep" />
+          <span className="tiber-topbar-section">{getSection(location)}</span>
+        </div>
+        <nav className="tiber-topbar-quicknav">
+          <Link href="/tiber-data-lab/command-center" className="tmd-topbar-link">Command Center</Link>
+          <Link href="/tiers" className="tmd-topbar-link">Rankings</Link>
+          <Link href="/rookies" className="tmd-topbar-link">Rookies</Link>
+        </nav>
+      </header>
+
       <nav className="tiber-sidebar tiber-sidebar-desktop">
         <SidebarContents />
       </nav>
-
-      <div className="tiber-mobile-topbar">
-        <button
-          className="tiber-hamburger"
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation"
-        >
-          <Menu size={20} />
-        </button>
-        <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span className="logo-text">TIBER Observatory</span>
-          <span className="logo-dot" />
-        </Link>
-      </div>
 
       {mobileOpen && (
         <div
