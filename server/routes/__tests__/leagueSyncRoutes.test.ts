@@ -161,4 +161,100 @@ describe("league sync routes", () => {
     expect(mockStorage.setUserLeagueContext).toHaveBeenCalledWith({ userId: "default_user", leagueId: "l1", teamId: "t1" });
     expect(res.body.preference.activeLeagueId || res.body.preference.active_league_id).toBe("l1");
   });
+
+  describe("GET /api/league-sync/picks", () => {
+    beforeEach(() => {
+      (mockStorage as any).getLeagueFuturePicks = jest.fn();
+    });
+
+    it("returns 400 when league_id is missing", async () => {
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user");
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toMatch(/league_id/i);
+    });
+
+    it("returns 404 when league not found for user", async () => {
+      mockStorage.getLeaguesWithTeams.mockResolvedValueOnce([]);
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=unknown");
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns available=false and empty picks array when no picks exist", async () => {
+      (mockStorage as any).getLeagueFuturePicks.mockResolvedValue([]);
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=l1");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.available).toBe(false);
+      expect(res.body.picks).toEqual([]);
+      expect(res.body.leagueId).toBe("l1");
+    });
+
+    it("returns available=true and normalized picks when picks exist", async () => {
+      (mockStorage as any).getLeagueFuturePicks.mockResolvedValue([
+        { id: "p1", season: 2025, round: 1, original_roster_id: "r1", current_roster_id: "r2", source: "trade" },
+        { id: "p2", season: 2025, round: 2, original_roster_id: "r3", current_roster_id: "r4", source: "original" },
+      ]);
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=l1");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.available).toBe(true);
+      expect(res.body.picks).toHaveLength(2);
+      expect(res.body.picks[0].season).toBe(2025);
+      expect(res.body.picks[0].round).toBe(1);
+      expect(res.body.picks[0].originalRosterId).toBe("r1");
+      expect(res.body.picks[0].currentRosterId).toBe("r2");
+      expect(res.body.picks[0].source).toBe("trade");
+    });
+
+    it("handles camelCase row properties from ORM", async () => {
+      (mockStorage as any).getLeagueFuturePicks.mockResolvedValue([
+        { id: "p3", season: 2026, round: 3, originalRosterId: "r5", currentRosterId: "r6", source: "original" },
+      ]);
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=l1");
+
+      expect(res.status).toBe(200);
+      expect(res.body.picks[0].originalRosterId).toBe("r5");
+      expect(res.body.picks[0].currentRosterId).toBe("r6");
+    });
+
+    it("filters picks to active team's external roster when team_id is provided", async () => {
+      (mockStorage as any).getLeagueFuturePicks.mockResolvedValue([
+        { id: "p10", season: 2025, round: 1, original_roster_id: "r1", current_roster_id: "1", source: "trade" },
+        { id: "p11", season: 2025, round: 2, original_roster_id: "r2", current_roster_id: "2", source: "original" },
+      ]);
+      const app = buildApp();
+      // Team "t1" has external_roster_id "1" (from the mock storage setup above)
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=l1&team_id=t1");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      // Only picks where currentRosterId === team externalRosterId "1" should appear
+      expect(res.body.picks.every((p: any) => p.currentRosterId === "1")).toBe(true);
+      expect(res.body.teamRosterId).toBe("1");
+    });
+
+    it("returns all picks league-wide when no team_id is provided", async () => {
+      (mockStorage as any).getLeagueFuturePicks.mockResolvedValue([
+        { id: "p20", season: 2025, round: 1, original_roster_id: "r1", current_roster_id: "1", source: "trade" },
+        { id: "p21", season: 2025, round: 2, original_roster_id: "r2", current_roster_id: "2", source: "original" },
+      ]);
+      const app = buildApp();
+      const res = await call(app, 'GET', "/api/league-sync/picks?user_id=default_user&league_id=l1");
+
+      expect(res.status).toBe(200);
+      expect(res.body.picks).toHaveLength(2);
+      expect(res.body.teamRosterId).toBeNull();
+    });
+  });
 });

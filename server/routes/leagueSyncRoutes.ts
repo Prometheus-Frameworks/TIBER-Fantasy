@@ -68,6 +68,30 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         deps.sleeperClient.getTradedPicks(externalLeagueId).catch(() => []),
       ]);
 
+      if (!league) {
+        return res.status(404).json({
+          success: false,
+          error: `Sleeper league not found for ID "${externalLeagueId}". Check that this is a league ID, not a user ID or invite URL.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
+      if (!users || users.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Sleeper league found, but users could not be loaded. The league may be private or not yet started.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
+      if (!rosters || rosters.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Sleeper league found, but rosters could not be loaded. The league may not have been drafted yet.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
       const scoringFormat = deps.deriveSleeperScoringFormat(league.scoring_settings);
       const season = Number(league.season) || null;
       const rosterByOwner = new Map(rosters.map((roster) => [String(roster.owner_id), roster]));
@@ -148,10 +172,13 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         requestId: logger.requestId,
       });
     } catch (error) {
+      const requestId = (req.headers['x-request-id'] as string) || `err-${Date.now()}`;
       console.error('❌ [Sleeper League Sync] Failed:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Failed to sync Sleeper league',
+        requestId,
+        externalLeagueId: req.body?.league_id_external || req.body?.sleeper_league_id || undefined,
       });
     }
   }
@@ -247,6 +274,52 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
     } catch (error) {
       console.error('❌ [League Context] Failed to update context:', error);
       res.status(500).json({ success: false, error: (error as Error).message || 'Failed to update league context' });
+    }
+  });
+
+  router.get('/api/league-sync/picks', async (req, res) => {
+    try {
+      const { user_id = 'default_user', league_id, team_id } = req.query;
+      if (!league_id) {
+        return res.status(400).json({ success: false, error: 'league_id is required' });
+      }
+      // Verify league belongs to user
+      const leagues = await deps.storage.getLeaguesWithTeams(user_id as string);
+      const league = leagues.find((l) => l.id === (league_id as string));
+      if (!league) {
+        return res.status(404).json({ success: false, error: 'League not found for this user' });
+      }
+      const allPicks = await deps.storage.getLeagueFuturePicks(league_id as string);
+
+      // Determine active team's external roster ID for ownership filtering
+      let externalRosterId: string | null = null;
+      if (team_id) {
+        const team = (league.teams ?? []).find((t: any) => (t.id ?? t.team_id) === (team_id as string));
+        if (team) {
+          externalRosterId = (team as any).external_roster_id ?? (team as any).externalRosterId ?? null;
+        }
+      }
+
+      // Normalize raw DB rows (snake_case from db.execute)
+      const normalized = allPicks.map((p: any) => ({
+        id: p.id,
+        season: p.season,
+        round: p.round,
+        originalRosterId: p.original_roster_id ?? p.originalRosterId ?? null,
+        currentRosterId: p.current_roster_id ?? p.currentRosterId ?? null,
+        source: p.source ?? 'original',
+      }));
+
+      // Filter to active team's owned picks when team_id is provided
+      const picks = externalRosterId
+        ? normalized.filter((p) => p.currentRosterId === externalRosterId)
+        : normalized;
+
+      const available = picks.length > 0;
+      res.json({ success: true, available, picks, leagueId: league_id, teamRosterId: externalRosterId });
+    } catch (error) {
+      console.error('❌ [League Picks] Failed to fetch picks:', error);
+      res.status(500).json({ success: false, error: (error as Error).message || 'Failed to fetch picks' });
     }
   });
 

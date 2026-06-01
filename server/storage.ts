@@ -3058,8 +3058,11 @@ export class DatabaseStorage implements IStorage {
     const leagueIdsArray = `{${leagueIds.map(id => `"${id}"`).join(',')}}`;
     const teamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ANY(${leagueIdsArray}::varchar[])`)).rows as LeagueTeam[];
     const teamsByLeague = teamsResult.reduce<Record<string, LeagueTeam[]>>((acc, team) => {
-      if (!acc[team.leagueId]) acc[team.leagueId] = [];
-      acc[team.leagueId].push(team);
+      // db.execute returns raw snake_case columns; leagueId (camelCase) is undefined on raw rows
+      const key = (team as any).league_id ?? team.leagueId;
+      if (!key) return acc;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(team);
       return acc;
     }, {} as Record<string, LeagueTeam[]>);
 

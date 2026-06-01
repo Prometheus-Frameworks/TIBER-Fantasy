@@ -17,7 +17,9 @@ type LeagueDashboardPlayer = {
   sleeperId?: string | null;
   name: string;
   pos: string;
+  nflTeam?: string | null;
   alpha: number | null;
+  tier?: number | null;
   missingReason?: string | null;
 };
 
@@ -391,13 +393,16 @@ export async function computeLeagueDashboard(
           week: effectiveWeek,
         });
       }
+      const tierFinal = alphaEntry?.row?.tierFinal ?? null;
       return {
         rosterKey,
         canonicalId,
         sleeperId,
         name: identity?.fullName ?? sleeperId,
         pos,
+        nflTeam: identity?.nflTeam ?? null,
         alpha,
+        tier: typeof tierFinal === 'number' ? tierFinal : null,
         missingReason: alpha === null ? (!canonicalId ? 'unmapped_sleeper_id' : !alphaEntry ? 'missing_forge_row' : 'alpha_null') : null,
       };
     });
