@@ -2623,6 +2623,14 @@ html, body {
   color: var(--tmd-text-dim);
 }
 
+.tmd-selector-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--tmd-text-dim);
+  font-weight: 400;
+}
+
 .tmd-context-list {
   display: grid;
   gap: 8px;

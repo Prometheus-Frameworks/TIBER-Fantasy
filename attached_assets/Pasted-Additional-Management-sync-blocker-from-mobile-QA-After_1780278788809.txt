@@ -1,0 +1,112 @@
+Additional Management sync blocker from mobile QA:
+
+After selecting an old saved league from the “Synced league” dropdown, the Team dropdown still does not populate. So the blocker is not only new sync failure. Old saved leagues are visible, but they either have no usable teams[] or the shape does not match what the Management UI expects.
+
+Current frontend logic in TiberManagementDashboard.tsx:
+
+const selectableTeams = useMemo(() => {
+  const league = leaguesQuery.data?.leagues?.find((item) => item.id === selectedLeagueId);
+  return league?.teams ?? [];
+}, [leaguesQuery.data?.leagues, selectedLeagueId]);
+
+The Team dropdown then maps:
+
+{selectableTeams.map((team) => (
+  <option key={team.id} value={team.id}>{displayTeamName(team)}</option>
+))}
+
+Observed behavior:
+
+* Saved leagues show:
+    * Test Dynasty League
+    * Morts FF
+    * Fifa Ballerz Dynasty
+    * Fifa Ballerz Dynasty duplicate
+* Selecting a saved league does not make teams selectable.
+* Therefore the selected league likely has empty/missing teams[], or team rows are missing id, or selectedLeagueId does not match the persisted league id shape.
+* New sync also fails with only generic copy.
+
+Please update the focused fix to cover both problems:
+
+1. Add saved-league team integrity handling.
+
+When a saved league is selected:
+
+* If league.teams is missing or empty, show a clear callout:
+    “This saved league has no teams loaded. Re-sync the Sleeper league ID to rebuild team context.”
+* Disable “Set active team” with that reason.
+* Do not silently show an empty Team dropdown.
+
+2. Improve Team dropdown unavailable states.
+
+Use different helper copy for:
+
+* no league selected
+* league selected but teams missing
+* teams loading
+* teams available
+
+3. Add debug/details UI for selected saved league.
+
+For mobile QA, show small secondary details when a saved league is selected:
+
+* league id
+* external league id if present
+* team count
+* season
+* platform
+
+This can be small and tucked under the dropdown. No need for a big panel.
+
+4. Backend /api/league-sync/leagues should guarantee teams shape if possible.
+
+Review GET /api/league-sync/leagues.
+
+It should return each league with:
+
+teams: Array<{
+  id: string;
+  displayName?: string;
+  display_name?: string;
+  externalRosterId?: string | null;
+  external_roster_id?: string | null;
+}>
+
+If the DB has no teams for a league, return teams: [] explicitly and optionally include:
+
+teamCount: 0
+needsResync: true
+
+5. On successful new sync, auto-select or surface the returned league/teams.
+
+After POST /api/league-sync/sync succeeds:
+
+* refresh saved leagues
+* if response includes league.id, set selectedLeagueId to it
+* if response includes activeTeam or suggestedTeamId, select it or make it obvious
+* if response includes teams, the Team dropdown should become usable immediately
+
+6. Keep old saved leagues visible, but label them accurately.
+
+Rename “Synced league” to “Saved leagues”.
+
+Add helper text:
+“Saved leagues may come from earlier syncs. Re-sync if teams are missing.”
+
+7. Do not fake a team.
+
+Out of scope:
+
+* no fake teams
+* no fake roster snapshot
+* no model/score/ranking changes
+* no FORGE changes
+* no DB migration unless absolutely required
+
+Acceptance criteria:
+
+* If a saved league has teams, selecting it populates the Team dropdown.
+* If a saved league has no teams, UI says so clearly.
+* New sync failure shows the real backend error.
+* Successful new sync refreshes leagues and makes team selection possible.
+* Mobile QA can see why team selection is blocked.

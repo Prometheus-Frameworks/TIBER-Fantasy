@@ -181,11 +181,17 @@ export default function TiberManagementDashboard() {
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/league-sync/sync', {
-        user_id: DEFAULT_USER_ID,
-        league_id_external: sleeperLeagueId.trim(),
+      const response = await fetch('/api/league-sync/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: DEFAULT_USER_ID, league_id_external: sleeperLeagueId.trim() }),
       });
-      return response.json();
+      const data = await response.json().catch(() => ({})) as { success?: boolean; error?: string; requestId?: string };
+      if (!response.ok || data.success === false) {
+        const msg = data.error || `Request failed (HTTP ${response.status})`;
+        throw Object.assign(new Error(msg), { requestId: data.requestId });
+      }
+      return data;
     },
     onSuccess: async () => {
       setSleeperLeagueId('');
@@ -339,7 +345,8 @@ export default function TiberManagementDashboard() {
 
           {syncMutation.isError && (
             <div className="tmd-callout tmd-callout-warn">
-              Sync failed. Confirm your Sleeper league ID and try again.
+              Sync failed: {(syncMutation.error as Error)?.message || 'Confirm your Sleeper league ID and try again.'}
+              <span className="tmd-empty-sub">Check that this is a Sleeper league ID, not a user ID or invite URL.</span>
             </div>
           )}
           {syncMutation.isSuccess && (
@@ -348,7 +355,7 @@ export default function TiberManagementDashboard() {
 
           <div className="tmd-selector-grid">
             <label>
-              Synced league
+              Saved leagues
               <select
                 value={selectedLeagueId}
                 onChange={(event) => {
@@ -361,6 +368,7 @@ export default function TiberManagementDashboard() {
                   <option key={league.id} value={league.id}>{displayLeagueName(league)}</option>
                 ))}
               </select>
+              <span className="tmd-selector-hint">Previously synced leagues remain available even if a new sync fails.</span>
             </label>
             <label>
               Team

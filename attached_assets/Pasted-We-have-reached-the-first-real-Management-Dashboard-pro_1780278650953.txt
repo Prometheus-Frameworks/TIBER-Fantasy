@@ -1,0 +1,105 @@
+We have reached the first real Management Dashboard product blocker: Sleeper league sync failure is too opaque.
+
+Observed on mobile:
+
+* User entered Sleeper league ID: 1312120170558267392
+* Pressed “Sync team”
+* UI returned: “Sync failed. Confirm your Sleeper league ID and try again.”
+* Existing old synced leagues still appear in the “Synced league” dropdown:
+    * Test Dynasty League
+    * Morts FF
+    * Fifa Ballerz Dynasty
+    * Fifa Ballerz Dynasty duplicate
+* Team dropdown remains unavailable until a league is selected.
+
+Interpretation:
+
+The saved league list is working because GET /api/league-sync/leagues?user_id=default_user is returning old persisted league records.
+
+The new sync attempt is failing through POST /api/league-sync/sync, but the frontend hides the real backend error. This makes mobile/operator QA impossible.
+
+Please create a focused fix for the sync failure surface.
+
+Scope:
+
+1. Improve frontend sync error display in TiberManagementDashboard.tsx.
+
+When POST /api/league-sync/sync fails, show the actual returned backend error if present.
+
+Current generic copy:
+“Sync failed. Confirm your Sleeper league ID and try again.”
+
+Better:
+“Sync failed: ”
+
+Also show a short helper note:
+“Check that this is a Sleeper league ID, not a user ID or invite URL.”
+
+2. Preserve the old saved leagues, but label them clearly.
+
+The dropdown should make it clear these are already saved leagues, not proof that the current sync succeeded.
+
+Suggested label:
+“Saved leagues”
+
+If possible, add small text:
+“Previously synced leagues remain available even if a new sync fails.”
+
+3. Add request/debug visibility.
+
+The backend already sets requestId on success. For failure, please also return a usable error payload from /api/league-sync/sync with:
+
+{
+  success: false,
+  error: string,
+  requestId?: string,
+  externalLeagueId?: string
+}
+
+Do not expose stack traces to the user.
+
+4. Harden backend Sleeper sync error handling.
+
+In server/routes/leagueSyncRoutes.ts, check whether these return valid data before using them:
+
+* getLeague(externalLeagueId)
+* getLeagueUsers(externalLeagueId)
+* getLeagueRosters(externalLeagueId)
+
+If league is missing/null, return a clear 404/400-style error:
+
+“Sleeper league not found for ID .”
+
+If users or rosters are missing/empty, return a clear error:
+
+“Sleeper league found, but users/rosters could not be loaded.”
+
+Do not let null values throw later as vague 500s.
+
+5. Add a lightweight diagnostic endpoint or log is optional, not required.
+
+Minimum useful fix is:
+
+* better backend error
+* frontend displays backend error
+* no fake sync state
+
+6. Do not change model logic.
+
+Out of scope:
+
+* No FORGE scoring changes
+* No roster diagnosis generation
+* No league-dashboard rewrite
+* No ownership/model artifact changes
+* No fake roster data
+* No automatic team guessing beyond existing logic
+
+Acceptance criteria:
+
+* Invalid/missing Sleeper league ID produces a clear user-facing error.
+* Backend returns structured sync failure payload.
+* Frontend displays the backend error instead of only generic copy.
+* Previously synced leagues remain visible but are clearly labeled as saved leagues.
+* The UI does not imply the failed league was synced.
+* No backend/model/scoring behavior changes.

@@ -68,6 +68,30 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         deps.sleeperClient.getTradedPicks(externalLeagueId).catch(() => []),
       ]);
 
+      if (!league) {
+        return res.status(404).json({
+          success: false,
+          error: `Sleeper league not found for ID "${externalLeagueId}". Check that this is a league ID, not a user ID or invite URL.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
+      if (!users || users.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Sleeper league found, but users could not be loaded. The league may be private or not yet started.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
+      if (!rosters || rosters.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Sleeper league found, but rosters could not be loaded. The league may not have been drafted yet.`,
+          externalLeagueId: String(externalLeagueId),
+        });
+      }
+
       const scoringFormat = deps.deriveSleeperScoringFormat(league.scoring_settings);
       const season = Number(league.season) || null;
       const rosterByOwner = new Map(rosters.map((roster) => [String(roster.owner_id), roster]));
@@ -148,10 +172,13 @@ export function createLeagueSyncRouter(deps: LeagueSyncDeps = defaultDeps) {
         requestId: logger.requestId,
       });
     } catch (error) {
+      const requestId = (req.headers['x-request-id'] as string) || `err-${Date.now()}`;
       console.error('❌ [Sleeper League Sync] Failed:', error);
       res.status(500).json({
         success: false,
         error: (error as Error).message || 'Failed to sync Sleeper league',
+        requestId,
+        externalLeagueId: req.body?.league_id_external || req.body?.sleeper_league_id || undefined,
       });
     }
   }
