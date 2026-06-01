@@ -1222,7 +1222,12 @@ html, body {
   --tw-ring-color: var(--ember) !important;
 }
 
-/* shadcn Card overrides */
+/* shadcn Card overrides — normalises Card bg/border/text to the dark theme.
+   WARNING: the second selector is intentionally broad. Any element inside
+   .tiber-main with BOTH a border-* class AND a bg-* class on a rounded-lg
+   element will also be caught and forced to --bg-primary (white in light mode).
+   Use rounded-xl or larger for custom dark panels to avoid this rule.
+   See docs/dev/dark-shell-ui-notes.md for the full trap description. */
 .tiber-main [class*="CardContent"],
 .tiber-main .rounded-lg[class*="border"][class*="bg-"] {
   background: var(--bg-primary) !important;
@@ -2611,6 +2616,36 @@ html, body {
   border: 1px solid var(--tmd-border);
 }
 
+.tmd-empty-sub {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--tmd-text-dim);
+}
+
+.tmd-selector-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--tmd-text-dim);
+  font-weight: 400;
+}
+
+.tmd-league-debug {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--tmd-border);
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--tmd-text-dim);
+  line-height: 1.5;
+}
+
 .tmd-context-list {
   display: grid;
   gap: 8px;
@@ -2689,6 +2724,245 @@ html, body {
   color: var(--tmd-text-muted);
   font-size: 11px;
   line-height: 1.4;
+}
+
+/* Player Value Table */
+.tmd-position-grid-summary {
+  margin-bottom: 18px;
+}
+
+.tmd-position-card-total {
+  border-color: var(--tmd-ember) !important;
+  background: rgba(226, 100, 13, 0.06) !important;
+}
+
+.tmd-player-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tmd-player-group {
+  border: 1px solid var(--tmd-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tmd-player-group-header {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--tmd-border);
+  padding: 7px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--tmd-ember);
+}
+
+.tmd-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--tmd-border);
+  transition: background 0.1s;
+}
+
+.tmd-player-row:last-child {
+  border-bottom: none;
+}
+
+.tmd-player-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tmd-player-row-unmatched {
+  opacity: 0.65;
+}
+
+.tmd-player-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tmd-player-name > span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tmd-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tmd-player-team {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--tmd-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+
+.tmd-player-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tmd-player-pos {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tmd-text-muted);
+  letter-spacing: 0.06em;
+  min-width: 26px;
+  text-align: right;
+}
+
+.tmd-player-starter {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--tmd-ember);
+  background: rgba(226, 100, 13, 0.1);
+  border: 1px solid rgba(226, 100, 13, 0.3);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.tmd-player-alpha {
+  min-width: 72px;
+  text-align: right;
+}
+
+.tmd-player-alpha strong {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tmd-text);
+  letter-spacing: -0.5px;
+}
+
+.tmd-player-unmatched-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--tmd-text-muted);
+  text-align: right;
+}
+
+.tmd-player-unmatched-reason {
+  display: block;
+  font-size: 9px;
+  color: var(--tmd-text-muted);
+  font-style: italic;
+  text-align: right;
+}
+
+.tmd-player-alpha-matched {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.tmd-player-alpha-unmatched {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.tmd-player-matched-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #4ade80;
+  text-transform: uppercase;
+}
+
+.tmd-player-tier {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  border-radius: 3px;
+  padding: 1px 4px;
+  border: 1px solid;
+}
+
+.tmd-player-tier-1 { color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08); }
+.tmd-player-tier-2 { color: #60a5fa; border-color: rgba(96, 165, 250, 0.4); background: rgba(96, 165, 250, 0.08); }
+.tmd-player-tier-3 { color: #a3a3a3; border-color: rgba(163, 163, 163, 0.3); background: rgba(163, 163, 163, 0.06); }
+.tmd-player-tier-4 { color: #6b7280; border-color: rgba(107, 114, 128, 0.3); background: rgba(107, 114, 128, 0.05); }
+
+/* Draft Picks */
+.tmd-picks-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tmd-picks-season {
+  border: 1px solid var(--tmd-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tmd-picks-season-label {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--tmd-border);
+  padding: 7px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--tmd-ember);
+}
+
+.tmd-picks-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.tmd-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--tmd-border);
+}
+
+.tmd-pick-row:last-child {
+  border-bottom: none;
+}
+
+.tmd-pick-round {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tmd-text);
+  min-width: 40px;
+}
+
+.tmd-pick-source {
+  font-size: 12px;
+  color: var(--tmd-text-muted);
+}
+
+.tmd-empty-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--tmd-text-muted);
+  margin-top: 6px;
+  font-style: italic;
 }
 
 .tmd-diagnosis-list {
@@ -2897,4 +3171,129 @@ html, body {
 
 .tmd-signal-details li:last-child {
   border-bottom: none;
+}
+
+/* ===== TEAM DIRECTION CARD ===== */
+.tmd-dir-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid;
+}
+
+.tmd-dir-contender {
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.35);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.tmd-dir-rebuild {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.tmd-dir-retool {
+  color: #ca8a04;
+  border-color: rgba(202, 138, 4, 0.35);
+  background: rgba(202, 138, 4, 0.08);
+}
+
+.tmd-dir-uncertain {
+  color: rgba(226, 228, 232, 0.45);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tmd-dir-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tmd-dir-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.tmd-dir-hero.tmd-dir-contender {
+  background: rgba(22, 163, 74, 0.06);
+}
+
+.tmd-dir-hero.tmd-dir-rebuild {
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.tmd-dir-hero.tmd-dir-retool {
+  background: rgba(202, 138, 4, 0.06);
+}
+
+.tmd-dir-hero.tmd-dir-uncertain {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tmd-dir-hero-label {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.3px;
+}
+
+.tmd-dir-confidence {
+  font-size: 12px;
+  margin-top: 2px;
+  opacity: 0.65;
+}
+
+.tmd-dir-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tmd-dir-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+}
+
+.tmd-dir-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tmd-dir-list li {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tmd-dir-list-blockers li {
+  border-color: rgba(202, 138, 4, 0.15);
+  background: rgba(202, 138, 4, 0.04);
+  color: rgba(202, 138, 4, 0.85);
+}
+
+.tmd-dir-coverage {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  padding-top: 4px;
 }

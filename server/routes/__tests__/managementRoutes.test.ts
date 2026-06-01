@@ -1,0 +1,300 @@
+import express from 'express';
+import request from 'supertest';
+import { createManagementRouter } from '../managementRoutes';
+import { classifyTeamDirection, type ClassifierOptions } from '../../services/teamDirectionClassifier';
+
+function buildApp(overrides: Parameters<typeof createManagementRouter>[0]) {
+  const app = express();
+  app.use(express.json());
+  app.use(createManagementRouter(overrides));
+  return app;
+}
+
+const baseTeam = { id: 'team-1', displayName: 'Test Team', externalRosterId: 'roster-1' };
+const baseLeague = { id: 'league-1', leagueName: 'Test League', teams: [baseTeam] };
+const baseContext = { preference: null, activeLeague: baseLeague, activeTeam: baseTeam };
+
+function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string }[]) {
+  return players.map((p, i) => ({
+    rosterKey: `k${i}`,
+    pos: p.pos,
+    alpha: p.alpha,
+    missingReason: p.missingReason ?? (p.alpha === null ? 'missing_forge_row' : undefined),
+  }));
+}
+
+describe('classifyTeamDirection (pure unit tests)', () => {
+  test('returns uncertain when roster is empty', () => {
+    const result = classifyTeamDirection([], []);
+    expect(result.direction).toBe('uncertain');
+    expect(result.confidence).toBe('low');
+    expect(result.blockers.length).toBeGreaterThan(0);
+    expect(result.coverage.total).toBe(0);
+    expect(result.coverage.matched).toBe(0);
+  });
+
+  test('returns uncertain when coverage < 50%', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: null },
+      { pos: 'WR', alpha: null },
+      { pos: 'RB', alpha: null },
+      { pos: 'WR', alpha: 65 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('uncertain');
+    expect(result.coverage.matched).toBe(1);
+    expect(result.coverage.total).toBe(4);
+    expect(result.blockers.some((b) => b.includes('50%'))).toBe(true);
+  });
+
+  test('returns contender with high average alpha and strong QB', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'TE', alpha: 60 },
+      { pos: 'RB', alpha: 62 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('contender');
+    expect(['medium', 'high']).toContain(result.confidence);
+    expect(result.reasons.length).toBeGreaterThan(0);
+  });
+
+  test('returns rebuild with low average alpha and many picks', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 30 },
+      { pos: 'RB', alpha: 28 },
+      { pos: 'WR', alpha: 35 },
+      { pos: 'WR', alpha: 22 },
+      { pos: 'TE', alpha: 38 },
+      { pos: 'RB', alpha: 25 },
+    ]);
+    const picks = [
+      { season: 2026, round: 1, source: 'trade' },
+      { season: 2026, round: 2, source: 'original' },
+      { season: 2027, round: 1, source: 'trade' },
+    ];
+    const result = classifyTeamDirection(roster, picks);
+    expect(result.direction).toBe('rebuild');
+    expect(result.reasons.some((r) => r.includes('below') || r.includes('rebuild') || r.includes('Below'))).toBe(true);
+  });
+
+  test('returns retool for mixed signal roster', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 48 },
+      { pos: 'RB', alpha: 55 },
+      { pos: 'WR', alpha: 52 },
+      { pos: 'WR', alpha: 45 },
+      { pos: 'TE', alpha: 50 },
+      { pos: 'RB', alpha: 47 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('retool');
+  });
+
+  test('coverage block appears when unmatched players exist above 50% threshold', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 65 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 60 },
+      { pos: 'TE', alpha: null, missingReason: 'missing_forge_row' },
+      { pos: 'RB', alpha: null, missingReason: 'unmapped_sleeper_id' },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).not.toBe('uncertain');
+    expect(result.blockers.some((b) => b.includes('missing FORGE') || b.includes('coverage'))).toBe(true);
+  });
+
+  test('result always has required shape', () => {
+    const result = classifyTeamDirection([], []);
+    expect(result).toHaveProperty('direction');
+    expect(result).toHaveProperty('confidence');
+    expect(Array.isArray(result.reasons)).toBe(true);
+    expect(Array.isArray(result.blockers)).toBe(true);
+    expect(result.coverage).toHaveProperty('matched');
+    expect(result.coverage).toHaveProperty('total');
+    expect(result.coverage).toHaveProperty('rate');
+  });
+
+  test('contender with null QB adds blocker instead of silently passing in 1QB', () => {
+    const roster = rosterOf([
+      { pos: 'RB', alpha: 72 },
+      { pos: 'WR', alpha: 68 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'WR', alpha: 62 },
+      { pos: 'TE', alpha: 60 },
+      { pos: 'RB', alpha: 70 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    // Strong avg alpha should pass the contender gate in 1QB when no QB veto
+    expect(result.direction).toBe('contender');
+    // Must include a QB blocker acknowledging missing QB data
+    expect(result.blockers.some((b) => b.toLowerCase().includes('qb'))).toBe(true);
+  });
+
+  test('Superflex: null QB data forces out of contender even with high avg alpha', () => {
+    const roster = rosterOf([
+      { pos: 'RB', alpha: 72 },
+      { pos: 'WR', alpha: 70 },
+      { pos: 'WR', alpha: 68 },
+      { pos: 'TE', alpha: 65 },
+      { pos: 'RB', alpha: 62 },
+      { pos: 'WR', alpha: 60 },
+    ]);
+    const result = classifyTeamDirection(roster, [], { superflex: true });
+    // Without QB data in Superflex, should NOT classify as contender
+    expect(result.direction).not.toBe('contender');
+    expect(result.blockers.some((b) => b.toLowerCase().includes('qb'))).toBe(true);
+  });
+
+  test('Superflex: weak QB alpha (< 58) blocks contender classification', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 45 },
+      { pos: 'RB', alpha: 72 },
+      { pos: 'WR', alpha: 70 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'TE', alpha: 62 },
+      { pos: 'RB', alpha: 60 },
+    ]);
+    const result = classifyTeamDirection(roster, [], { superflex: true });
+    expect(result.direction).not.toBe('contender');
+    expect(result.blockers.some((b) => b.toLowerCase().includes('qb'))).toBe(true);
+  });
+
+  test('Superflex: strong QB depth with high avg alpha classifies as contender', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 72 },
+      { pos: 'QB', alpha: 62 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 70 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'TE', alpha: 60 },
+    ]);
+    const result = classifyTeamDirection(roster, [], { superflex: true });
+    expect(result.direction).toBe('contender');
+    expect(result.reasons.some((r) => r.toLowerCase().includes('qb'))).toBe(true);
+  });
+
+  test('WR/TE depth: weak WR corps on otherwise-contender roster adds WR blocker', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 68 },
+      { pos: 'RB', alpha: 72 },
+      { pos: 'WR', alpha: 38 },
+      { pos: 'WR', alpha: 35 },
+      { pos: 'TE', alpha: 62 },
+      { pos: 'RB', alpha: 65 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    if (result.direction === 'contender' || result.direction === 'retool') {
+      expect(result.blockers.some((b) => b.toLowerCase().includes('wr') || b.toLowerCase().includes('receiver'))).toBe(true);
+    }
+  });
+
+  test('strong WR depth appears in contender reasons', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 65 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 68 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'TE', alpha: 62 },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('contender');
+    // Either WR depth is in reasons or TE is mentioned
+    const allText = [...result.reasons, ...result.blockers].join(' ').toLowerCase();
+    expect(allText.includes('wr') || allText.includes('te') || allText.includes('receiver')).toBe(true);
+  });
+});
+
+describe('GET /api/management/team-direction (endpoint)', () => {
+  const goodRoster = rosterOf([
+    { pos: 'QB', alpha: 70 },
+    { pos: 'RB', alpha: 68 },
+    { pos: 'WR', alpha: 72 },
+    { pos: 'WR', alpha: 65 },
+    { pos: 'TE', alpha: 60 },
+    { pos: 'RB', alpha: 62 },
+  ]);
+
+  function makeDeps(overrides: {
+    context?: Partial<typeof baseContext>;
+    roster?: typeof goodRoster;
+    picks?: any[];
+  } = {}) {
+    const context = { ...baseContext, ...overrides.context } as typeof baseContext;
+    const roster = overrides.roster ?? goodRoster;
+    const picks = overrides.picks ?? [];
+    return {
+      storage: {
+        getUserLeagueContext: jest.fn().mockResolvedValue(context),
+        getLeagueFuturePicks: jest.fn().mockResolvedValue(picks),
+      } as any,
+      computeLeagueDashboard: jest.fn().mockResolvedValue({
+        teams: [
+          { team_id: 'team-1', display_name: 'Test Team', roster, totals: {}, overall_total: 0 },
+        ],
+      }),
+      classifyTeamDirection,
+    };
+  }
+
+  test('returns 400 when league_id is missing', async () => {
+    const app = buildApp(makeDeps());
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user');
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  test('returns available:false with quiet message when no active team', async () => {
+    const deps = makeDeps({ context: { ...baseContext, activeTeam: null } as any });
+    const app = buildApp(deps);
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.available).toBe(false);
+    expect(typeof res.body.reason).toBe('string');
+  });
+
+  test('returns direction payload for valid team with good roster', async () => {
+    const app = buildApp(makeDeps());
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.available).toBe(true);
+    expect(['contender', 'rebuild', 'retool', 'uncertain']).toContain(res.body.direction);
+    expect(['high', 'medium', 'low']).toContain(res.body.confidence);
+    expect(Array.isArray(res.body.reasons)).toBe(true);
+    expect(Array.isArray(res.body.blockers)).toBe(true);
+    expect(res.body.coverage).toHaveProperty('matched');
+    expect(res.body.coverage).toHaveProperty('total');
+    expect(res.body.coverage).toHaveProperty('rate');
+  });
+
+  test('returns low-coverage result as uncertain when roster is mostly unmatched', async () => {
+    const sparseRoster = rosterOf([
+      { pos: 'QB', alpha: null },
+      { pos: 'RB', alpha: null },
+      { pos: 'WR', alpha: null },
+      { pos: 'WR', alpha: null },
+      { pos: 'TE', alpha: 60 },
+    ]);
+    const app = buildApp(makeDeps({ roster: sparseRoster }));
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+    expect(res.body.direction).toBe('uncertain');
+    expect(res.body.blockers.length).toBeGreaterThan(0);
+  });
+
+  test('returns available:false when team not found in dashboard', async () => {
+    const deps = makeDeps();
+    deps.computeLeagueDashboard = jest.fn().mockResolvedValue({ teams: [] });
+    const app = buildApp(deps);
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+    expect(res.body.available).toBe(false);
+  });
+});

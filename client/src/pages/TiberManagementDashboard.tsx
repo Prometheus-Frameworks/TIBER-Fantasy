@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import {
   type TeamEnvironmentMovementResponse,
@@ -45,24 +45,77 @@ type LeagueSyncListResponse = {
   leagues?: League[];
 };
 
+type RosterPlayer = {
+  rosterKey?: string;
+  canonicalId?: string | null;
+  sleeperId?: string | null;
+  name?: string | null;
+  pos?: string | null;
+  position?: string | null;
+  nflTeam?: string | null;
+  alpha?: number | null;
+  tier?: number | null;
+  missingReason?: string | null;
+  usedAsStarter?: boolean;
+};
+
 type LeagueDashboardTeam = {
   team_id: string;
   display_name: string;
   totals?: Partial<Record<'QB' | 'RB' | 'WR' | 'TE', number>>;
-  roster?: Array<{ pos?: string | null; position?: string | null; alpha?: number | null }>;
+  overall_total?: number;
+  roster?: RosterPlayer[];
 };
 
 type LeagueDashboardResponse = {
   success: boolean;
   error?: string;
   teams?: LeagueDashboardTeam[];
+  diagnostics?: {
+    rosterCount?: number;
+    resolvedCanonicalCount?: number;
+    unresolvedSleeperCount?: number;
+    stillMissingCount?: number;
+  };
 };
 
-type ModelSignalStatus = 'ready' | 'unavailable' | 'not wired';
+type LeaguePick = {
+  id?: string;
+  season: number;
+  round: number;
+  originalRosterId?: string | null;
+  currentRosterId?: string | null;
+  source?: string;
+};
+
+type PicksResponse = {
+  success: boolean;
+  available?: boolean;
+  picks?: LeaguePick[];
+  error?: string;
+};
+
+type TeamDirectionCoverage = { matched: number; total: number; rate: number };
+
+type TeamDirectionResponse = {
+  success: boolean;
+  available?: boolean;
+  direction?: 'contender' | 'rebuild' | 'retool' | 'uncertain' | null;
+  confidence?: 'high' | 'medium' | 'low' | null;
+  reasons?: string[];
+  blockers?: string[];
+  coverage?: TeamDirectionCoverage;
+  teamName?: string;
+  reason?: string;
+  error?: string;
+};
+
+type ModelSignalStatus = 'ready' | 'unavailable' | 'inspection only';
 
 type ModelSignalCard = {
   title: string;
   status: ModelSignalStatus;
+  statusLabel: string;
   explanation: string;
   href: string;
   linkLabel: string;
@@ -74,11 +127,11 @@ const DEFAULT_USER_ID = 'default_user';
 const positionGroups = ['QB', 'RB', 'WR', 'TE'] as const;
 
 function displayLeagueName(league?: League | null) {
-  return league?.leagueName ?? league?.league_name ?? 'League unavailable';
+  return league?.leagueName ?? league?.league_name ?? 'Unknown league';
 }
 
 function displayTeamName(team?: LeagueTeam | null) {
-  return team?.displayName ?? team?.display_name ?? 'Team unavailable';
+  return team?.displayName ?? team?.display_name ?? 'Unknown team';
 }
 
 function getLeagueIdForTeam(team?: LeagueTeam | null) {
@@ -137,6 +190,167 @@ function buildRosterCounts(team?: LeagueDashboardTeam | null) {
   return counts;
 }
 
+function groupRosterByPosition(roster: RosterPlayer[]) {
+  const groups: Record<string, RosterPlayer[]> = { QB: [], RB: [], WR: [], TE: [], Other: [] };
+  for (const player of roster) {
+    const pos = String(player.pos ?? player.position ?? '').toUpperCase();
+    if (pos === 'QB' || pos === 'RB' || pos === 'WR' || pos === 'TE') {
+      groups[pos].push(player);
+    } else {
+      groups['Other'].push(player);
+    }
+  }
+  // Sort each group by alpha desc (matched first, then unmatched)
+  for (const pos of Object.keys(groups)) {
+    groups[pos].sort((a, b) => {
+      if (a.alpha !== null && a.alpha !== undefined && b.alpha !== null && b.alpha !== undefined) return b.alpha - a.alpha;
+      if (a.alpha !== null && a.alpha !== undefined) return -1;
+      if (b.alpha !== null && b.alpha !== undefined) return 1;
+      return 0;
+    });
+  }
+  return groups;
+}
+
+function missingReasonLabel(reason?: string | null) {
+  if (reason === 'unmapped_sleeper_id') return 'Not in identity map';
+  if (reason === 'missing_forge_row') return 'No FORGE row';
+  if (reason === 'alpha_null') return 'FORGE score null';
+  return 'Unmatched';
+}
+
+function forgeTierLabel(tier?: number | null): string | null {
+  if (tier === 1) return 'T1';
+  if (tier === 2) return 'T2';
+  if (tier === 3) return 'T3';
+  if (tier === 4) return 'T4';
+  return null;
+}
+
+function groupPicksBySeason(picks: LeaguePick[]) {
+  const map = new Map<number, LeaguePick[]>();
+  for (const pick of picks) {
+    if (!map.has(pick.season)) map.set(pick.season, []);
+    map.get(pick.season)!.push(pick);
+  }
+  // Sort within each season by round
+  map.forEach((v) => v.sort((a, b) => a.round - b.round));
+  return map;
+}
+
+function directionMeta(direction?: string | null) {
+  if (direction === 'contender') return { label: 'Contender', icon: <TrendingUp size={18} />, cls: 'tmd-dir-contender' };
+  if (direction === 'rebuild') return { label: 'Rebuild', icon: <TrendingDown size={18} />, cls: 'tmd-dir-rebuild' };
+  if (direction === 'retool') return { label: 'Retool', icon: <RefreshCw size={18} />, cls: 'tmd-dir-retool' };
+  return { label: 'Uncertain', icon: <HelpCircle size={18} />, cls: 'tmd-dir-uncertain' };
+}
+
+function TeamDirectionCard({
+  query,
+  activeTeam,
+}: {
+  query: ReturnType<typeof useQuery<TeamDirectionResponse>>;
+  activeTeam?: LeagueTeam | null;
+}) {
+  const data = query.data;
+  const meta = directionMeta(data?.direction);
+
+  return (
+    <section className="tmd-card">
+      <div className="tmd-card-header">
+        <div>
+          <h2>Team Direction</h2>
+          <p>FORGE-powered read of where your roster is headed — rebuild, retool, or contend.</p>
+        </div>
+        {data?.available && data.direction ? (
+          <span className={`tmd-dir-badge ${meta.cls}`}>
+            {meta.icon}
+            {meta.label}
+          </span>
+        ) : (
+          <span className="tmd-status tmd-status-unavailable">
+            {query.isLoading ? 'Loading…' : 'Unavailable'}
+          </span>
+        )}
+      </div>
+
+      {!activeTeam ? (
+        <div className="tmd-empty-state">
+          Connect a team above to unlock Team Direction.
+          <span className="tmd-empty-sub">Requires at least 50% of roster players to have FORGE data.</span>
+        </div>
+      ) : query.isLoading ? (
+        <div className="tmd-empty-state"><Loader2 size={15} className="tmd-spin" /> Classifying team direction…</div>
+      ) : !data?.available ? (
+        <div className="tmd-empty-state">
+          {data?.reason ?? 'Team direction is unavailable for this roster.'}
+        </div>
+      ) : data.direction === 'uncertain' ? (
+        <div className="tmd-dir-body">
+          <div className="tmd-callout tmd-callout-warn">
+            Not enough FORGE data to classify this roster.
+          </div>
+          {data.blockers && data.blockers.length > 0 && (
+            <div className="tmd-dir-section">
+              <div className="tmd-dir-section-label">What's blocking this</div>
+              <ul className="tmd-dir-list tmd-dir-list-blockers">
+                {data.blockers.map((b) => <li key={b}>{b}</li>)}
+              </ul>
+            </div>
+          )}
+          {data.coverage && (
+            <div className="tmd-dir-coverage">
+              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="tmd-dir-body">
+          <div className={`tmd-dir-hero ${meta.cls}`}>
+            {meta.icon}
+            <div>
+              <div className="tmd-dir-hero-label">{meta.label}</div>
+              {data.confidence && (
+                <div className="tmd-dir-confidence">
+                  {data.confidence.charAt(0).toUpperCase() + data.confidence.slice(1)} confidence
+                </div>
+              )}
+            </div>
+          </div>
+
+          {data.reasons && data.reasons.length > 0 && (
+            <div className="tmd-dir-section">
+              <div className="tmd-dir-section-label">Why this direction</div>
+              <ul className="tmd-dir-list">
+                {data.reasons.map((r) => <li key={r}>{r}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {data.blockers && data.blockers.length > 0 && (
+            <div className="tmd-dir-section">
+              <div className="tmd-dir-section-label">Things to watch</div>
+              <ul className="tmd-dir-list tmd-dir-list-blockers">
+                {data.blockers.map((b) => <li key={b}>{b}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {data.coverage && (
+            <div className="tmd-dir-coverage">
+              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+            </div>
+          )}
+
+          <div className="tmd-provenance">
+            Read-only classifier. Uses FORGE alpha scores and draft pick capital — does not modify rankings, projections, or roster advice.
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function TiberManagementDashboard() {
   const queryClient = useQueryClient();
   const [sleeperLeagueId, setSleeperLeagueId] = useState('');
@@ -174,24 +388,52 @@ export default function TiberManagementDashboard() {
     return dashboardQuery.data.teams.find((team) => team.team_id === activeTeam.id) ?? null;
   }, [activeTeam?.id, dashboardQuery.data?.teams]);
 
+  const picksQuery = useQuery<PicksResponse>({
+    queryKey: [`/api/league-sync/picks?user_id=${DEFAULT_USER_ID}&league_id=${activeLeagueId ?? ''}&team_id=${activeTeam?.id ?? ''}`],
+    enabled: Boolean(activeLeagueId && activeTeam?.id),
+  });
+
+  const teamDirectionQuery = useQuery<TeamDirectionResponse>({
+    queryKey: [`/api/management/team-direction?user_id=${DEFAULT_USER_ID}&league_id=${activeLeagueId ?? ''}`],
+    enabled: Boolean(activeLeagueId && activeTeam?.id),
+  });
+
   const rosterCounts = useMemo(() => buildRosterCounts(activeDashboardTeam), [activeDashboardTeam]);
   const hasRosterData = Boolean(activeDashboardTeam?.roster?.length);
   const hasDashboardTotals = Boolean(activeDashboardTeam?.totals);
+  const rosterGroups = useMemo(() => groupRosterByPosition(activeDashboardTeam?.roster ?? []), [activeDashboardTeam]);
+  const picksBySeason = useMemo(() => groupPicksBySeason(picksQuery.data?.picks ?? []), [picksQuery.data?.picks]);
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/league-sync/sync', {
-        user_id: DEFAULT_USER_ID,
-        league_id_external: sleeperLeagueId.trim(),
+      const response = await fetch('/api/league-sync/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: DEFAULT_USER_ID, league_id_external: sleeperLeagueId.trim() }),
       });
-      return response.json();
+      const data = await response.json().catch(() => ({})) as {
+        success?: boolean; error?: string; requestId?: string;
+        league?: { id?: string }; teams?: Array<{ id?: string }>;
+        suggestedTeamId?: string | null; activeTeam?: { id?: string } | null;
+      };
+      if (!response.ok || data.success === false) {
+        const msg = data.error || `Request failed (HTTP ${response.status})`;
+        throw Object.assign(new Error(msg), { requestId: data.requestId });
+      }
+      return data;
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setSleeperLeagueId('');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [`/api/league-context?user_id=${DEFAULT_USER_ID}`] }),
         queryClient.invalidateQueries({ queryKey: [`/api/league-sync/leagues?user_id=${DEFAULT_USER_ID}`] }),
       ]);
+      // Auto-select the newly synced league and suggested team if the response tells us which one
+      if (data?.league?.id) {
+        setSelectedLeagueId(data.league.id);
+        const autoTeam = data.suggestedTeamId ?? data.activeTeam?.id ?? null;
+        if (autoTeam) setSelectedTeamId(autoTeam);
+      }
     },
   });
 
@@ -211,81 +453,103 @@ export default function TiberManagementDashboard() {
     },
   });
 
-  const selectableTeams = useMemo(() => {
-    const league = leaguesQuery.data?.leagues?.find((item) => item.id === selectedLeagueId);
-    return league?.teams ?? [];
+  const selectedLeagueData = useMemo(() => {
+    if (!selectedLeagueId) return null;
+    return leaguesQuery.data?.leagues?.find((item) => item.id === selectedLeagueId) ?? null;
   }, [leaguesQuery.data?.leagues, selectedLeagueId]);
+
+  const selectableTeams = useMemo(() => {
+    return selectedLeagueData?.teams ?? [];
+  }, [selectedLeagueData]);
+
+  const teamsEmpty = selectedLeagueId && !leaguesQuery.isLoading && selectableTeams.length === 0;
 
   const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateQuery.data);
   const teamstateDetails = teamstateQuery.isError
-    ? ['Teamstate endpoint could not be reached. No movement context was fabricated.']
+    ? ['Team environment movement data could not be reached in this deployment.']
     : getTeamEnvironmentMovementReadinessDetails(teamstateQuery.data);
 
   const modelSignals: ModelSignalCard[] = [
     {
       title: 'Teamstate Movement',
       status: teamstateReady ? 'ready' : 'unavailable',
+      statusLabel: teamstateReady ? 'Ready' : 'Not connected',
       explanation: teamstateQuery.isLoading
-        ? 'Checking the read-only Teamstate movement artifact before reporting availability.'
+        ? 'Checking team environment movement data…'
         : teamstateReady
-          ? 'Read-only team environment movement is available for context inspection. It is not used for scoring or roster advice here.'
-          : 'Read-only team environment movement is unavailable. No Teamstate context is used for scoring, diagnosis, or roster advice.',
+          ? 'Shows whether player team environments are improving, declining, or at risk. Useful context before making roster moves.'
+          : 'Team environment data is not available in this deployment.',
       href: '/tiber-data-lab/team-research',
       linkLabel: 'Open Team Research',
-      provenance: 'Reads /api/data-lab/team-environment-movement as visibility-only context; the team-specific /:teamAbbr endpoint remains available for follow-up inspection.',
+      provenance: 'Read-only team environment inspection. Does not affect scoring or roster analysis.',
       details: teamstateDetails,
     },
     {
       title: 'Role & Opportunity',
       status: 'ready',
-      explanation: 'Promoted role/deployment context can help explain how players are being used before you make roster decisions.',
+      statusLabel: 'Research surface ready',
+      explanation: "Helps explain how a player's usage and deployment is changing week to week. Useful before positional decisions.",
       href: '/tiber-data-lab/role-opportunity',
       linkLabel: 'Open Role Lab',
-      provenance: 'Read-only Data Lab adapter; TIBER-Fantasy does not recompute upstream model logic.',
+      provenance: 'Read-only research surface. Inspect before making positional decisions.',
     },
     {
       title: 'FORGE',
       status: hasDashboardTotals ? 'ready' : 'unavailable',
+      statusLabel: hasDashboardTotals ? 'Roster context available' : 'Connect team first',
       explanation: hasDashboardTotals
-        ? 'League dashboard totals are available for roster inspection, but this shell does not turn them into final advice.'
-        : 'FORGE roster totals need an active synced league and available model rows before diagnosis can be trusted.',
+        ? 'FORGE roster totals are available for your league. Inspect positional alpha scores and compare players.'
+        : 'Sync a league and set an active team to unlock FORGE roster context.',
       href: '/forge',
       linkLabel: 'Open FORGE',
-      provenance: 'Existing FORGE surfaces remain separate; no ranking, grading, or scoring changes were added.',
+      provenance: 'Rankings and scoring are unchanged. Inspection only.',
     },
     {
-      title: 'Rookies / Player Ownership',
-      status: 'not wired',
-      explanation: 'Rookie Board is available as research, but roster-specific ownership synthesis is not wired into this shell yet.',
+      title: 'Rookies',
+      status: 'inspection only',
+      statusLabel: 'Inspection only',
+      explanation: 'Browse the Rookie Board for prospect context. Useful when evaluating trade targets or dynasty adds.',
       href: '/rookies',
       linkLabel: 'Open Rookie Board',
-      provenance: 'Read-only promoted/board surfaces; ownership remains research context, not a generated transaction recommendation.',
+      provenance: 'Read-only promoted board. Research context, not roster advice.',
     },
     {
       title: 'Point Scenarios',
       status: 'ready',
-      explanation: 'Scenario context can be inspected for what-if outcomes after you identify a player or weak position group.',
+      statusLabel: 'Research surface ready',
+      explanation: 'Explore what-if scoring outcomes for specific players or situations.',
       href: '/tiber-data-lab/point-scenarios',
       linkLabel: 'Open Scenarios',
-      provenance: 'Read-only scenario adapter; this dashboard does not author or recalculate projections.',
+      provenance: 'Read-only scenario inspection. No projections are recalculated here.',
     },
   ];
 
-  const diagnosisState = !activeTeam
-    ? 'needs active team'
-    : !hasRosterData
-      ? 'needs model data'
-      : 'uncertain';
+  const actionSteps = activeTeam
+    ? [
+        'Review roster snapshot',
+        'Check your weakest position group',
+        'Inspect team environment risks',
+        'Review role & opportunity context',
+        'Open research command center',
+      ]
+    : [
+        'Enter your Sleeper league ID',
+        'Sync your league',
+        'Select a league',
+        'Select your team',
+        'Set active team',
+        'Explore research surfaces',
+      ];
 
   return (
     <div className="tmd-page">
       <section className="tmd-hero">
         <div>
           <div className="tmd-eyebrow">TIBER Management Dashboard</div>
-          <h1>Start here: sync your team, inspect context, then research the next move.</h1>
+          <h1>Connect your team, inspect signals, then research your next move.</h1>
           <p>
-            This is the first roster-management shell for TIBER-Fantasy. It connects existing sync, context, FORGE,
-            and Data Lab surfaces without creating new fantasy advice or model contracts.
+            Your roster management cockpit. Sync a Sleeper league to unlock roster-specific context,
+            then use research surfaces to understand what your roster needs.
           </p>
         </div>
         <Link href="/tiber-data-lab/command-center" className="tmd-hero-link">
@@ -298,7 +562,7 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Connect your fantasy team</h2>
-              <p>Sync a Sleeper league, then choose the league/team context TIBER should inspect.</p>
+              <p>Sync a Sleeper league, then choose which team TIBER should inspect.</p>
             </div>
             <span className="tmd-pill">Sleeper beta</span>
           </div>
@@ -322,16 +586,17 @@ export default function TiberManagementDashboard() {
 
           {syncMutation.isError && (
             <div className="tmd-callout tmd-callout-warn">
-              Existing league-sync route rejected the sync. Confirm the Sleeper league ID and try again.
+              Sync failed: {(syncMutation.error as Error)?.message || 'Confirm your Sleeper league ID and try again.'}
+              <span className="tmd-empty-sub">Check that this is a Sleeper league ID, not a user ID or invite URL.</span>
             </div>
           )}
           {syncMutation.isSuccess && (
-            <div className="tmd-callout tmd-callout-ok">League sync completed. Pick an active team if it was not selected automatically.</div>
+            <div className="tmd-callout tmd-callout-ok">League synced. Select your team below to set the active context.</div>
           )}
 
           <div className="tmd-selector-grid">
             <label>
-              Synced league
+              Saved leagues
               <select
                 value={selectedLeagueId}
                 onChange={(event) => {
@@ -344,21 +609,52 @@ export default function TiberManagementDashboard() {
                   <option key={league.id} value={league.id}>{displayLeagueName(league)}</option>
                 ))}
               </select>
+              <span className="tmd-selector-hint">Saved leagues may come from earlier syncs. Re-sync if teams are missing.</span>
             </label>
             <label>
               Team
-              <select value={selectedTeamId} onChange={(event) => setSelectedTeamId(event.target.value)} disabled={!selectedLeagueId}>
-                <option value="">Select a team</option>
+              <select
+                value={selectedTeamId}
+                onChange={(event) => setSelectedTeamId(event.target.value)}
+                disabled={!selectedLeagueId || !!teamsEmpty}
+              >
+                {!selectedLeagueId && <option value="">Select a league first</option>}
+                {selectedLeagueId && leaguesQuery.isLoading && <option value="">Loading teams…</option>}
+                {selectedLeagueId && !leaguesQuery.isLoading && selectableTeams.length === 0 && (
+                  <option value="">No teams — re-sync this league</option>
+                )}
+                {selectableTeams.length > 0 && <option value="">Select a team</option>}
                 {selectableTeams.map((team) => (
                   <option key={team.id} value={team.id}>{displayTeamName(team)}</option>
                 ))}
               </select>
             </label>
           </div>
+
+          {teamsEmpty && (
+            <div className="tmd-callout tmd-callout-warn">
+              This saved league has no teams loaded. Re-sync the Sleeper league ID to rebuild team context.
+            </div>
+          )}
+
+          {selectedLeagueData && (
+            <div className="tmd-league-debug">
+              <span>ID: {selectedLeagueData.id}</span>
+              {((selectedLeagueData as any).leagueIdExternal ?? (selectedLeagueData as any).league_id_external) && (
+                <span>Sleeper ID: {(selectedLeagueData as any).leagueIdExternal ?? (selectedLeagueData as any).league_id_external}</span>
+              )}
+              <span>Teams: {selectableTeams.length}</span>
+              {selectedLeagueData.season && <span>Season: {selectedLeagueData.season}</span>}
+              {(selectedLeagueData.platform ?? (selectedLeagueData as any).platform) && (
+                <span>Platform: {selectedLeagueData.platform ?? (selectedLeagueData as any).platform}</span>
+              )}
+            </div>
+          )}
+
           <button
             type="button"
             className="tmd-secondary-button"
-            disabled={!selectedLeagueId || !selectedTeamId || setContextMutation.isPending}
+            disabled={!selectedLeagueId || !selectedTeamId || !!teamsEmpty || setContextMutation.isPending}
             onClick={() => setContextMutation.mutate()}
           >
             {setContextMutation.isPending ? <Loader2 size={15} className="tmd-spin" /> : null}
@@ -367,8 +663,8 @@ export default function TiberManagementDashboard() {
 
           {!activeTeam && (
             <div className="tmd-empty-state">
-              No active team context is available yet. Use the existing /api/league-sync/sync and /api/league-context flow above,
-              or continue into research surfaces without roster-specific diagnosis.
+              Connect a Sleeper league to unlock roster-specific context.
+              <span className="tmd-empty-sub">Research surfaces are available now without a roster connection.</span>
             </div>
           )}
         </article>
@@ -377,15 +673,15 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Active Context</h2>
-              <p>The dashboard only shows synced context returned by existing league context APIs.</p>
+              <p>Current league and team selection.</p>
             </div>
             <span className={`tmd-status ${activeTeam ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
-              {activeTeam ? 'ready' : 'unavailable'}
+              {activeTeam ? 'Connected' : 'Not connected'}
             </span>
           </div>
 
           {contextQuery.isLoading ? (
-            <div className="tmd-empty-state">Loading active league context…</div>
+            <div className="tmd-empty-state">Loading…</div>
           ) : activeLeague && activeTeam ? (
             <div className="tmd-context-list">
               <div><span>League</span><strong>{displayLeagueName(activeLeague)}</strong></div>
@@ -395,81 +691,143 @@ export default function TiberManagementDashboard() {
             </div>
           ) : (
             <div className="tmd-empty-state">
-              Active league/team is unavailable. TIBER will not invent a roster, team name, readiness state, or diagnosis.
+              Connect a team above to see your active context here.
             </div>
           )}
         </article>
       </section>
 
-      <section className="tmd-grid tmd-grid-two">
-        <article className="tmd-card">
-          <div className="tmd-card-header">
-            <div>
-              <h2>Roster Snapshot</h2>
-              <p>Position group readiness for QB/RB/WR/TE.</p>
-            </div>
-            <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
-              {hasRosterData ? 'ready' : 'unavailable'}
-            </span>
-          </div>
+      <TeamDirectionCard query={teamDirectionQuery} activeTeam={activeTeam} />
 
-          <div className="tmd-position-grid">
+      <section className="tmd-card">
+        <div className="tmd-card-header">
+          <div>
+            <h2>Roster Snapshot</h2>
+            <p>FORGE values and mapping status for every player on your active roster.</p>
+          </div>
+          <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
+            {dashboardQuery.isLoading ? 'Loading…' : hasRosterData ? 'Ready' : 'Needs synced roster'}
+          </span>
+        </div>
+
+        {hasRosterData && (
+          <div className="tmd-position-grid tmd-position-grid-summary">
             {positionGroups.map((position) => {
               const count = rosterCounts[position];
               return (
                 <div className="tmd-position-card" key={position}>
                   <span>{position}</span>
-                  <strong>{hasRosterData ? count.players : '—'}</strong>
-                  <small>
-                    {hasRosterData
-                      ? `${count.modelReady} with model rows${count.total !== null ? ` · total ${count.total.toFixed(1)}` : ''}`
-                      : 'Awaiting synced roster'}
-                  </small>
+                  <strong>{count.players}</strong>
+                  <small>{count.modelReady}/{count.players} matched{count.total !== null ? ` · ${count.total.toFixed(1)}α` : ''}</small>
+                </div>
+              );
+            })}
+            {activeDashboardTeam?.overall_total != null && (
+              <div className="tmd-position-card tmd-position-card-total">
+                <span>Overall</span>
+                <strong>{activeDashboardTeam.overall_total.toFixed(1)}</strong>
+                <small>FORGE alpha total</small>
+              </div>
+            )}
+          </div>
+        )}
+
+        {hasRosterData ? (
+          <div className="tmd-player-table">
+            {['QB', 'RB', 'WR', 'TE', 'Other'].map((pos) => {
+              const players = rosterGroups[pos] ?? [];
+              if (players.length === 0) return null;
+              return (
+                <div key={pos} className="tmd-player-group">
+                  <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
+                  {players.map((player, idx) => {
+                    const isMatched = typeof player.alpha === 'number';
+                    const tierLabel = isMatched ? forgeTierLabel(player.tier) : null;
+                    return (
+                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${isMatched ? '' : 'tmd-player-row-unmatched'}`}>
+                        <div className="tmd-player-name">
+                          <span>{player.name ?? player.sleeperId ?? 'Unknown'}</span>
+                          {player.nflTeam && <span className="tmd-player-team">{player.nflTeam}</span>}
+                        </div>
+                        <div className="tmd-player-meta">
+                          <span className="tmd-player-pos">{String(player.pos ?? player.position ?? '').toUpperCase() || '—'}</span>
+                          {player.usedAsStarter && <span className="tmd-player-starter">STR</span>}
+                          {tierLabel && <span className={`tmd-player-tier tmd-player-tier-${player.tier}`}>{tierLabel}</span>}
+                        </div>
+                        <div className="tmd-player-alpha">
+                          {isMatched ? (
+                            <div className="tmd-player-alpha-matched">
+                              <strong>{(player.alpha as number).toFixed(1)}</strong>
+                              <span className="tmd-player-matched-badge">Matched</span>
+                            </div>
+                          ) : (
+                            <div className="tmd-player-alpha-unmatched">
+                              <span className="tmd-player-unmatched-label">Unmatched</span>
+                              <span className="tmd-player-unmatched-reason">{missingReasonLabel(player.missingReason)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
           </div>
-
-          {!hasRosterData && (
-            <div className="tmd-empty-state">
-              Roster details are not loaded. This section is placeholder-ready and will use existing league-dashboard data when available.
-            </div>
-          )}
-        </article>
-
-        <article className="tmd-card">
-          <div className="tmd-card-header">
-            <div>
-              <h2>TIBER Diagnosis</h2>
-              <p>High-level management framing, not final transaction advice.</p>
-            </div>
-            <span className={`tmd-status ${hasRosterData ? 'tmd-status-not-wired' : 'tmd-status-unavailable'}`}>
-              {diagnosisState}
-            </span>
+        ) : (
+          <div className="tmd-empty-state">
+            {dashboardQuery.isLoading ? 'Loading roster…' : 'Roster snapshot appears after you connect a team.'}
           </div>
+        )}
+      </section>
 
-          <div className="tmd-diagnosis-band">
-            <span>Team state</span>
-            <strong>{hasRosterData ? 'Uncertain' : 'Needs model data'}</strong>
+      <section className="tmd-card">
+        <div className="tmd-card-header">
+          <div>
+            <h2>Draft Picks / Future Capital</h2>
+            <p>Traded picks stored from your last sync.</p>
           </div>
-          <div className="tmd-diagnosis-list">
-            <div>
-              <h3>Roster strengths</h3>
-              <p>{hasRosterData ? 'Strength synthesis is not wired yet; inspect FORGE totals and research surfaces below.' : 'Unavailable until an active roster has model-backed data.'}</p>
-            </div>
-            <div>
-              <h3>Roster weaknesses</h3>
-              <p>{hasRosterData ? 'Weakness synthesis is not wired yet; start with the lowest-confidence position group.' : 'Unavailable until roster gap analysis is connected.'}</p>
-            </div>
+          <span className={`tmd-status ${picksQuery.data?.available ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
+            {picksQuery.isLoading ? 'Loading…' : picksQuery.data?.available ? 'Available' : 'Unavailable'}
+          </span>
+        </div>
+
+        {!activeLeagueId || !activeTeam?.id ? (
+          <div className="tmd-empty-state">
+            Connect a team to inspect future picks.
+            <span className="tmd-empty-sub">Pick capital is shown for your active team only — not league-wide.</span>
           </div>
-        </article>
+        ) : picksQuery.isLoading ? (
+          <div className="tmd-empty-state">Loading picks…</div>
+        ) : picksQuery.data?.available && picksBySeason.size > 0 ? (
+          <div className="tmd-picks-grid">
+            {Array.from(picksBySeason.entries()).sort(([a], [b]) => a - b).map(([season, seasonPicks]) => (
+              <div key={season} className="tmd-picks-season">
+                <div className="tmd-picks-season-label">{season}</div>
+                <div className="tmd-picks-list">
+                  {seasonPicks.map((pick, idx) => (
+                    <div key={pick.id ?? idx} className="tmd-pick-row">
+                      <span className="tmd-pick-round">Rd {pick.round}</span>
+                      <span className="tmd-pick-source">{pick.source === 'trade' ? 'Traded in' : 'Original'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="tmd-empty-state">
+            No traded pick data available for this league.
+            <span className="tmd-empty-sub">Pick capital is recorded when picks are traded. Re-sync the league after trades are made.</span>
+          </div>
+        )}
       </section>
 
       <section className="tmd-card">
         <div className="tmd-card-header">
           <div>
             <h2>Model Signals</h2>
-            <p>Readiness map for model context that can support management decisions later.</p>
+            <p>What each research surface can tell you about your roster.</p>
           </div>
           <ShieldCheck size={20} />
         </div>
@@ -478,7 +836,9 @@ export default function TiberManagementDashboard() {
             <article className="tmd-signal-card" key={signal.title}>
               <div className="tmd-signal-topline">
                 <h3>{signal.title}</h3>
-                <span className={`tmd-status ${statusClass(signal.status)}`}>{statusIcon(signal.status)}{signal.status}</span>
+                <span className={`tmd-status ${statusClass(signal.status)}`}>
+                  {statusIcon(signal.status)}{signal.statusLabel}
+                </span>
               </div>
               <p>{signal.explanation}</p>
               <div className="tmd-provenance">{signal.provenance}</div>
@@ -500,23 +860,21 @@ export default function TiberManagementDashboard() {
           <div className="tmd-card-header">
             <div>
               <h2>Action Queue</h2>
-              <p>What to do after opening TIBER.</p>
+              <p>{activeTeam ? 'What to do next with your connected team.' : 'Steps to get started.'}</p>
             </div>
           </div>
           <ol className="tmd-action-list">
-            <li><span>1</span> Sync team</li>
-            <li><span>2</span> Review roster diagnosis</li>
-            <li><span>3</span> Inspect weak position group</li>
-            <li><span>4</span> Review team environment risks</li>
-            <li><span>5</span> Open research command center</li>
+            {actionSteps.map((step, index) => (
+              <li key={step}><span>{index + 1}</span>{step}</li>
+            ))}
           </ol>
         </article>
 
         <article className="tmd-card">
           <div className="tmd-card-header">
             <div>
-              <h2>Deep Links</h2>
-              <p>Jump to the live surfaces this shell points toward.</p>
+              <h2>Research Surfaces</h2>
+              <p>Jump to any research surface — no active roster required.</p>
             </div>
           </div>
           <div className="tmd-link-grid">
@@ -526,7 +884,7 @@ export default function TiberManagementDashboard() {
             <Link href="/tiber-data-lab/role-opportunity">Role & Opportunity</Link>
             <Link href="/forge">FORGE</Link>
             <Link href="/forge-workbench">FORGE Workbench</Link>
-            <Link href="/tiber-data-lab/team-research">Teamstate movement <span>endpoint-only context</span></Link>
+            <Link href="/tiber-data-lab/team-research">Team Environment</Link>
           </div>
         </article>
       </section>
