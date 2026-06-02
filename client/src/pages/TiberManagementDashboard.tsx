@@ -45,6 +45,18 @@ type LeagueSyncListResponse = {
   leagues?: League[];
 };
 
+type RookieAssetContext = {
+  source: 'rookie_alpha_promoted_artifact';
+  playerName: string;
+  position: string;
+  alphaRank: number | null;
+  positionRank: string | null;
+  rookieAlphaScore: number | null;
+  talentScore: number | null;
+  consensusDelta: number | null;
+  interpretation: string;
+};
+
 type RosterPlayer = {
   rosterKey?: string;
   canonicalId?: string | null;
@@ -57,6 +69,7 @@ type RosterPlayer = {
   tier?: number | null;
   missingReason?: string | null;
   usedAsStarter?: boolean;
+  rookieAsset?: RookieAssetContext | null;
 };
 
 type LeagueDashboardTeam = {
@@ -76,6 +89,7 @@ type LeagueDashboardResponse = {
     resolvedCanonicalCount?: number;
     unresolvedSleeperCount?: number;
     stillMissingCount?: number;
+    rookieAlphaMatchedCount?: number;
   };
 };
 
@@ -95,7 +109,9 @@ type PicksResponse = {
   error?: string;
 };
 
-type TeamDirectionCoverage = { matched: number; total: number; rate: number };
+type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
+type TeamDirectionCoverageSummary = Pick<TeamDirectionCoverage, 'matched' | 'total' | 'rate'>;
+type TeamDirectionEvidenceCoverage = TeamDirectionCoverageSummary & { rookieAlphaMatched?: number };
 
 type TeamDirectionResponse = {
   success: boolean;
@@ -105,6 +121,8 @@ type TeamDirectionResponse = {
   reasons?: string[];
   blockers?: string[];
   coverage?: TeamDirectionCoverage;
+  evidenceCoverage?: TeamDirectionEvidenceCoverage;
+  forgeCoverage?: TeamDirectionCoverageSummary;
   teamName?: string;
   reason?: string;
   error?: string;
@@ -254,13 +272,15 @@ function TeamDirectionCard({
 }) {
   const data = query.data;
   const meta = directionMeta(data?.direction);
+  const evidenceCoverage = data?.evidenceCoverage ?? data?.coverage;
+  const forgeCoverage = data?.forgeCoverage;
 
   return (
     <section className="tmd-card">
       <div className="tmd-card-header">
         <div>
           <h2>Team Direction</h2>
-          <p>FORGE-powered read of where your roster is headed — rebuild, retool, or contend.</p>
+          <p>FORGE-powered read of where your roster is headed, with Rookie Alpha evidence coverage for assets outside FORGE.</p>
         </div>
         {data?.available && data.direction ? (
           <span className={`tmd-dir-badge ${meta.cls}`}>
@@ -277,7 +297,7 @@ function TeamDirectionCard({
       {!activeTeam ? (
         <div className="tmd-empty-state">
           Connect a team above to unlock Team Direction.
-          <span className="tmd-empty-sub">Requires at least 50% of roster players to have FORGE data.</span>
+          <span className="tmd-empty-sub">Requires at least 50% FORGE scoring coverage. Rookie Alpha improves visibility but never replaces the scoring gate.</span>
         </div>
       ) : query.isLoading ? (
         <div className="tmd-empty-state"><Loader2 size={15} className="tmd-spin" /> Classifying team direction…</div>
@@ -288,7 +308,7 @@ function TeamDirectionCard({
       ) : data.direction === 'uncertain' ? (
         <div className="tmd-dir-body">
           <div className="tmd-callout tmd-callout-warn">
-            Not enough FORGE data to classify this roster.
+            Not enough scoring evidence to classify this roster.
           </div>
           {data.blockers && data.blockers.length > 0 && (
             <div className="tmd-dir-section">
@@ -298,9 +318,13 @@ function TeamDirectionCard({
               </ul>
             </div>
           )}
-          {data.coverage && (
+          {evidenceCoverage && (
             <div className="tmd-dir-coverage">
-              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
+              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
+                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
+                : ''}
+              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
             </div>
           )}
         </div>
@@ -336,14 +360,18 @@ function TeamDirectionCard({
             </div>
           )}
 
-          {data.coverage && (
+          {evidenceCoverage && (
             <div className="tmd-dir-coverage">
-              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
+              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
+                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
+                : ''}
+              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
             </div>
           )}
 
           <div className="tmd-provenance">
-            Read-only classifier. Uses FORGE alpha scores and draft pick capital — does not modify rankings, projections, or roster advice.
+            Read-only classifier. Uses FORGE alpha scores and draft pick capital for direction. Promoted Rookie Alpha only improves evidence coverage and visibility — it is never blended into FORGE scoring or rankings.
           </div>
         </div>
       )}
@@ -703,7 +731,7 @@ export default function TiberManagementDashboard() {
         <div className="tmd-card-header">
           <div>
             <h2>Roster Snapshot</h2>
-            <p>FORGE values and mapping status for every player on your active roster.</p>
+            <p>FORGE values and promoted Rookie Alpha fallback context for every player on your active roster.</p>
           </div>
           <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
             {dashboardQuery.isLoading ? 'Loading…' : hasRosterData ? 'Ready' : 'Needs synced roster'}
@@ -742,9 +770,10 @@ export default function TiberManagementDashboard() {
                   <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
                   {players.map((player, idx) => {
                     const isMatched = typeof player.alpha === 'number';
+                    const rookieAsset = !isMatched ? player.rookieAsset : null;
                     const tierLabel = isMatched ? forgeTierLabel(player.tier) : null;
                     return (
-                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${isMatched ? '' : 'tmd-player-row-unmatched'}`}>
+                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${!isMatched && !rookieAsset ? 'tmd-player-row-unmatched' : ''}`}>
                         <div className="tmd-player-name">
                           <span>{player.name ?? player.sleeperId ?? 'Unknown'}</span>
                           {player.nflTeam && <span className="tmd-player-team">{player.nflTeam}</span>}
@@ -759,6 +788,16 @@ export default function TiberManagementDashboard() {
                             <div className="tmd-player-alpha-matched">
                               <strong>{(player.alpha as number).toFixed(1)}</strong>
                               <span className="tmd-player-matched-badge">Matched</span>
+                            </div>
+                          ) : rookieAsset ? (
+                            <div className="tmd-player-rookie-asset">
+                              <strong>{rookieAsset.rookieAlphaScore ?? '—'}</strong>
+                              <span className="tmd-player-rookie-rank">
+                                Rookie Alpha {rookieAsset.positionRank ?? (rookieAsset.alphaRank != null ? `#${rookieAsset.alphaRank}` : '')}
+                              </span>
+                              <span className="tmd-player-rookie-badge">Rookie Asset</span>
+                              {rookieAsset.talentScore != null && <span className="tmd-player-rookie-detail">Talent {rookieAsset.talentScore}</span>}
+                              {rookieAsset.consensusDelta != null && <span className="tmd-player-rookie-detail">Consensus Δ {rookieAsset.consensusDelta > 0 ? '+' : ''}{rookieAsset.consensusDelta}</span>}
                             </div>
                           ) : (
                             <div className="tmd-player-alpha-unmatched">

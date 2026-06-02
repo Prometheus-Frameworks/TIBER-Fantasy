@@ -14,12 +14,13 @@ const baseTeam = { id: 'team-1', displayName: 'Test Team', externalRosterId: 'ro
 const baseLeague = { id: 'league-1', leagueName: 'Test League', teams: [baseTeam] };
 const baseContext = { preference: null, activeLeague: baseLeague, activeTeam: baseTeam };
 
-function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string }[]) {
+function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string; rookieAsset?: object }[]) {
   return players.map((p, i) => ({
     rosterKey: `k${i}`,
     pos: p.pos,
     alpha: p.alpha,
     missingReason: p.missingReason ?? (p.alpha === null ? 'missing_forge_row' : undefined),
+    rookieAsset: p.rookieAsset,
   }));
 }
 
@@ -45,6 +46,46 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.coverage.matched).toBe(1);
     expect(result.coverage.total).toBe(4);
     expect(result.blockers.some((b) => b.includes('50%'))).toBe(true);
+  });
+
+  test('counts Rookie Alpha fallback as covered evidence without blending it into FORGE strength', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: null, rookieAsset: { rookieAlphaScore: 83 } },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.coverage).toEqual(expect.objectContaining({ matched: 4, forgeMatched: 3, rookieAlphaMatched: 1, rate: 1 }));
+    expect(result.evidenceCoverage).toEqual({ matched: 4, total: 4, rate: 1, rookieAlphaMatched: 1 });
+    expect(result.forgeCoverage).toEqual({ matched: 3, total: 4, rate: 0.75 });
+    expect(result.reasons.some((reason) => reason.includes('without blending into FORGE scoring'))).toBe(true);
+  });
+
+  test('does not classify roster strength from Rookie Alpha fallback alone', () => {
+    const roster = rosterOf([
+      { pos: 'RB', alpha: null, rookieAsset: { rookieAlphaScore: 83 } },
+      { pos: 'WR', alpha: null, rookieAsset: { rookieAlphaScore: 81 } },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('uncertain');
+    expect(result.coverage.rookieAlphaMatched).toBe(2);
+    expect(result.blockers.some((blocker) => blocker.includes('still needs sufficient FORGE scoring coverage'))).toBe(true);
+  });
+
+  test('does not classify sparse FORGE scoring coverage even when Rookie Alpha lifts visibility coverage', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 92 },
+      ...Array.from({ length: 7 }, (_, index) => ({ pos: index % 2 === 0 ? 'RB' : 'WR', alpha: null, rookieAsset: { rookieAlphaScore: 80 - index } })),
+      ...Array.from({ length: 7 }, (_, index) => ({ pos: index % 2 === 0 ? 'WR' : 'TE', alpha: null })),
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('uncertain');
+    expect(result.evidenceCoverage).toEqual({ matched: 8, total: 15, rate: 8 / 15, rookieAlphaMatched: 7 });
+    expect(result.forgeCoverage).toEqual({ matched: 1, total: 15, rate: 1 / 15 });
+    expect(result.blockers).toContain(
+      'Rookie Alpha covers 7 assets for visibility, but Team Direction still needs sufficient FORGE scoring coverage before classifying roster strength.'
+    );
   });
 
   test('returns contender with high average alpha and strong QB', () => {
@@ -272,6 +313,8 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(res.body.coverage).toHaveProperty('matched');
     expect(res.body.coverage).toHaveProperty('total');
     expect(res.body.coverage).toHaveProperty('rate');
+    expect(res.body.evidenceCoverage).toHaveProperty('rate');
+    expect(res.body.forgeCoverage).toHaveProperty('rate');
   });
 
   test('returns low-coverage result as uncertain when roster is mostly unmatched', async () => {

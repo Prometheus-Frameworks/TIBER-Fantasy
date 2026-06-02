@@ -15,6 +15,8 @@ export interface RookieArtifactRow {
   college_ypc?: number | null;
   draft_capital_score?: number | null;
   athleticism_score?: number | null;
+  talent_score?: number | null;
+  consensus_delta?: number | null;
   ht?: number | null;
   wt?: number | null;
   forty?: number | null;
@@ -69,6 +71,8 @@ export interface TiberRookieRow {
   college_ypc: number | null;
   draft_capital_score: number | null;
   athleticism_score: number | null;
+  talent_score: number | null;
+  consensus_delta: number | null;
   height_inches: number | null;
   weight_lbs: number | null;
   forty_yard_dash: number | null;

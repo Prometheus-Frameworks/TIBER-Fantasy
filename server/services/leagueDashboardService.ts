@@ -3,8 +3,14 @@ import { sleeperClient, type SleeperRoster } from '../integrations/sleeperClient
 import { db } from '../infra/db';
 import { forgePlayerState, playerIdentityMap } from '@shared/schema';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { forgeService, type ForgeScore } from '../modules/forge/forgeService';
+import { forgeService } from '../modules/forge/forgeService';
+import type { ForgeScore } from '../modules/forge/types';
 import { createPlaybookForgeLogger, type PlaybookForgeLogger } from '../utils/playbookForgeLogger';
+import {
+  findRookieAsset,
+  rookieArtifactService,
+  type RookieAssetContext,
+} from '../modules/externalModels/rookies/rookieArtifactService';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -21,6 +27,7 @@ type LeagueDashboardPlayer = {
   alpha: number | null;
   tier?: number | null;
   missingReason?: string | null;
+  rookieAsset?: RookieAssetContext | null;
 };
 
 export type LeagueDashboardTeam = {
@@ -43,9 +50,12 @@ export type LeagueDashboardPayload = {
     cachedForgeRowCount: number;
     computedForgeCount: number;
     stillMissingCount: number;
+    rookieAlphaMatchedCount: number;
   };
   unresolvedPlayers: Array<{ sleeperId: string; reason: string }>;
   teams: LeagueDashboardTeam[];
+  leagueSettings?: unknown;
+  settings?: unknown;
 };
 
 type LeagueDashboardParams = {
@@ -68,6 +78,7 @@ type LeagueDashboardDeps = {
   sleeperClient: typeof sleeperClient;
   db: typeof db;
   forgeService: typeof forgeService;
+  rookieArtifactService?: Pick<typeof rookieArtifactService, 'getRookieAssetLookup'>;
 };
 
 const defaultDeps: LeagueDashboardDeps = {
@@ -75,6 +86,7 @@ const defaultDeps: LeagueDashboardDeps = {
   sleeperClient,
   db,
   forgeService,
+  rookieArtifactService,
 };
 
 function normalizeExternalId(value?: string | null) {
@@ -446,18 +458,37 @@ export async function computeLeagueDashboard(
   }
 
   let newlyMatchedFromCompute = 0;
+  const hasPlayersMissingForge = Array.from(teamPlayersMap.values()).some((players) =>
+    players.some((player) => player.alpha === null)
+  );
+  let rookieAssetLookup = new Map<string, RookieAssetContext>();
+  if (hasPlayersMissingForge && effectiveSeason !== null) {
+    try {
+      rookieAssetLookup = await (deps.rookieArtifactService ?? rookieArtifactService).getRookieAssetLookup(Number(effectiveSeason));
+    } catch (error) {
+      logger.log('rookie-alpha-unavailable', {
+        requestId: logger.requestId,
+        season: effectiveSeason,
+        error: (error as Error).message,
+      });
+    }
+  }
 
   for (const team of league.teams) {
     const players = teamPlayersMap.get(team.id) ?? [];
 
     const updatedPlayers = players.map((player) => {
-      if (!player.canonicalId) return player;
-      const updatedAlpha = alphaByPlayer.get(player.canonicalId)?.alpha ?? null;
+      const updatedAlpha = player.canonicalId ? alphaByPlayer.get(player.canonicalId)?.alpha ?? null : null;
       const missingReason = updatedAlpha === null ? player.missingReason ?? 'missing_forge_row' : null;
       if (updatedAlpha !== null && player.alpha === null) {
         newlyMatchedFromCompute += 1;
       }
-      return { ...player, alpha: updatedAlpha, missingReason };
+      return {
+        ...player,
+        alpha: updatedAlpha,
+        missingReason,
+        rookieAsset: updatedAlpha === null ? findRookieAsset(rookieAssetLookup, player) : null,
+      };
     });
 
     const { totals, startersUsed, roster: rosterRows, overallTotal, benchContribution } = buildLineup(updatedPlayers, positions);
@@ -490,6 +521,7 @@ export async function computeLeagueDashboard(
       cachedForgeRowCount: alphaByPlayer.size,
       computedForgeCount,
       stillMissingCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null).length, 0),
+      rookieAlphaMatchedCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null && p.rookieAsset).length, 0),
     },
     unresolvedPlayers,
     teams,

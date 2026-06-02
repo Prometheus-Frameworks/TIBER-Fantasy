@@ -3297,3 +3297,26 @@ html, body {
   color: var(--tmd-text-dim, rgba(226,228,232,0.28));
   padding-top: 4px;
 }
+
+.tmd-player-rookie-asset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 116px;
+}
+
+.tmd-player-rookie-rank,
+.tmd-player-rookie-detail {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--tmd-text-muted);
+}
+
+.tmd-player-rookie-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #a78bfa;
+  text-transform: uppercase;
+}

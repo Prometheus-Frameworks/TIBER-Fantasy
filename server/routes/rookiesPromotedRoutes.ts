@@ -38,9 +38,9 @@ export function createRookiesPromotedRouter(service: RookieArtifactService = roo
       if (error instanceof RookieIntegrationError) {
         const guidance =
           error.code === 'not_found'
-            ? 'Set ROOKIE_PROMOTED_ARTIFACT_PATH to the validated promoted TIBER-Rookies export before deploying.'
+            ? 'Set ROOKIE_ALPHA_PROMOTED_DIR to the validated TIBER-Rookies exports/promoted/rookie-alpha directory before deploying.'
             : error.code === 'config_error'
-              ? 'Set ROOKIE_PROMOTED_MODEL_ENABLED=1 and point ROOKIE_PROMOTED_ARTIFACT_PATH at a promoted artifact JSON file.'
+              ? 'Set ROOKIE_PROMOTED_MODEL_ENABLED=1 and point ROOKIE_ALPHA_PROMOTED_DIR at the promoted Rookie Alpha artifact directory.'
               : error.code === 'invalid_payload'
                 ? 'Artifact is present but does not match the promoted contract. Re-promote a validated artifact for this season.'
                 : error.code === 'upstream_unavailable'

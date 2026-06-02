@@ -86,7 +86,7 @@ describe('promoted rookies routes', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('not_found');
-    expect(res.body.guidance).toContain('ROOKIE_PROMOTED_ARTIFACT_PATH');
+    expect(res.body.guidance).toContain('ROOKIE_ALPHA_PROMOTED_DIR');
     expect(res.body.promoted_artifact_backed).toBe(false);
   });
 

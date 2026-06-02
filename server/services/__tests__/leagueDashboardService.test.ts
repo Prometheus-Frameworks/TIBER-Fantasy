@@ -131,6 +131,34 @@ describe('computeLeagueDashboard', () => {
     expect(rosterPlayer.missingReason).toBe('unmapped_sleeper_id');
   });
 
+  it('adds promoted Rookie Alpha context when FORGE remains unavailable', async () => {
+    const rookieAsset = {
+      source: 'rookie_alpha_promoted_artifact' as const,
+      playerName: 'Jeremiyah Love',
+      position: 'RB',
+      alphaRank: 1,
+      positionRank: 'RB1',
+      rookieAlphaScore: 83,
+      talentScore: 91,
+      consensusDelta: 4.2,
+      interpretation: 'High-value rookie asset currently outside FORGE coverage.',
+    };
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2026 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: { ...sleeperDeps, getLeague: jest.fn().mockResolvedValue({ season: 2026, week: 1 }) } as any,
+        db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'RB', fullName: 'Jeremiyah Love' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        rookieArtifactService: { getRookieAssetLookup: jest.fn().mockResolvedValue(new Map([['name:jeremiyahlove', rookieAsset]])) },
+      }
+    );
+
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({ alpha: null, rookieAsset }));
+    expect(result.teams[0].overall_total).toBe(0);
+    expect(result.diagnostics?.rookieAlphaMatchedCount).toBe(1);
+  });
+
   it('defaults week to latest league week when not provided', async () => {
     const dbMock = createDbMock({
       identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: 'Player One' }],

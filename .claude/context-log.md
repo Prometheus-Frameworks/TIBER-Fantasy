@@ -460,3 +460,16 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/lib/teamEnvironmentMovement.ts`, `client/src/__tests__/teamEnvironmentMovement.test.ts`, `client/src/index.css`, `.claude/context-log.md`, `.claude/agents/codex.md`, `replit.md`.
 - **Validation:** `npx vite build` passed; `npm run build` passed with the existing duplicate class-member warning; focused Teamstate helper/API and league route Jest suites passed with `--coverage=false`; `git diff --check` passed; `npm run typecheck` still fails on pre-existing repo-wide TypeScript errors outside touched files and no touched-file errors were present.
 - **Notes:** Teamstate movement remains a read-only visibility surface only. It is not wired into roster diagnosis, scoring, rankings, projections, trade logic, or player truth.
+
+### 2026-06-02 — Codex: Management Rookie Alpha promoted-artifact fallback
+- **What changed:** Reused the read-only TIBER-Rookies promoted adapter for Management roster fallback context when FORGE remains unavailable. Added Rookie Alpha evidence coverage to Team Direction without blending rookie values into FORGE strength, plus roster presentation for Rookie Alpha rank/score, position rank, talent score, and consensus delta when present.
+- **Files modified:** `server/modules/externalModels/rookies/*`, `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, docs/tests.
+- **Validation:** Targeted Jest suites, build, typecheck review, and diff check recorded in PR notes.
+- **Notes:** Producer repo is TIBER-Rookies; promoted lane is `exports/promoted/rookie-alpha/{season}_rookie_alpha_predraft_v0.json`. `ROOKIE_ALPHA_PROMOTED_DIR` configures the artifact directory. No runtime route dependency and no FORGE score/rank mutation were added.
+
+
+### 2026-06-02 — Codex: Separate Management evidence coverage from Team Direction FORGE gate
+- **What changed:** Tightened the Rookie Alpha Management fallback after review. Team Direction now exposes additive evidence and FORGE coverage summaries but requires sufficient FORGE scoring coverage before classifying strength. Generic missing roster rows render as `Unmatched` rather than incorrectly labeling veterans or unmapped players as rookie-pending.
+- **Files modified:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, focused tests, and Rookie Alpha handoff docs.
+- **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, and diff check recorded in PR notes.
+- **Notes:** Rookie Alpha improves Management visibility only. It cannot lift sparse FORGE scoring coverage over the Team Direction classification gate.
