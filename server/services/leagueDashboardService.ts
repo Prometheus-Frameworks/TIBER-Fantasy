@@ -54,6 +54,8 @@ export type LeagueDashboardPayload = {
   };
   unresolvedPlayers: Array<{ sleeperId: string; reason: string }>;
   teams: LeagueDashboardTeam[];
+  leagueSettings?: unknown;
+  settings?: unknown;
 };
 
 type LeagueDashboardParams = {

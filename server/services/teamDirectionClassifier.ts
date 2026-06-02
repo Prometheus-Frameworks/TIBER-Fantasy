@@ -1,9 +1,14 @@
+type TeamDirectionCoverage = { matched: number; total: number; rate: number };
+type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatched: number };
+
 export type TeamDirectionResult = {
   direction: 'contender' | 'rebuild' | 'retool' | 'uncertain';
   confidence: 'high' | 'medium' | 'low';
   reasons: string[];
   blockers: string[];
-  coverage: { matched: number; total: number; rate: number; forgeMatched: number; rookieAlphaMatched: number };
+  coverage: TeamDirectionCoverage & { forgeMatched: number; rookieAlphaMatched: number };
+  evidenceCoverage: TeamDirectionEvidenceCoverage;
+  forgeCoverage: TeamDirectionCoverage;
 };
 
 export type ClassifierOptions = {
@@ -54,42 +59,45 @@ export function classifyTeamDirection(
   const rookieAlphaMatched = rosterPlayers.filter((p) => typeof p.alpha !== 'number' && Boolean(p.rookieAsset)).length;
   const matched = forgeMatched + rookieAlphaMatched;
   const rate = total === 0 ? 0 : matched / total;
-  const coverage = { matched, total, rate, forgeMatched, rookieAlphaMatched };
+  const forgeRate = total === 0 ? 0 : forgeMatched / total;
+  const evidenceCoverage = { matched, total, rate, rookieAlphaMatched };
+  const forgeCoverage = { matched: forgeMatched, total, rate: forgeRate };
+  // Preserve the original additive coverage shape for existing Management consumers.
+  const coverage = { ...evidenceCoverage, forgeMatched, rookieAlphaMatched };
+  const coverageDetails = { coverage, evidenceCoverage, forgeCoverage };
 
-  if (total === 0 || rate < COVERAGE_THRESHOLD) {
-    const blockers: string[] = [];
-    if (total === 0) {
-      blockers.push('No roster data — sync your league and select a team first.');
-    } else {
-      const unmapped = rosterPlayers.filter((p) => p.missingReason === 'unmapped_sleeper_id').length;
-      const missingForge = rosterPlayers.filter(
-        (p) => p.missingReason === 'missing_forge_row' || p.missingReason === 'alpha_null'
-      ).length;
+  if (total === 0) {
+    return {
+      direction: 'uncertain',
+      confidence: 'low',
+      reasons: [],
+      blockers: ['No roster data — sync your league and select a team first.'],
+      ...coverageDetails,
+    };
+  }
+
+  if (forgeRate < COVERAGE_THRESHOLD) {
+    const unmapped = rosterPlayers.filter((p) => p.missingReason === 'unmapped_sleeper_id').length;
+    const missingForge = rosterPlayers.filter(
+      (p) => p.missingReason === 'missing_forge_row' || p.missingReason === 'alpha_null'
+    ).length;
+    const blockers = [
+      rookieAlphaMatched > 0
+        ? `Rookie Alpha covers ${rookieAlphaMatched} asset${rookieAlphaMatched === 1 ? '' : 's'} for visibility, but Team Direction still needs sufficient FORGE scoring coverage before classifying roster strength.`
+        : 'Team Direction still needs sufficient FORGE scoring coverage before classifying roster strength.',
+      `Only ${forgeMatched} of ${total} roster players have FORGE scoring data (${Math.round(forgeRate * 100)}% coverage). Need ≥ 50% to classify.`,
+    ];
+    if (unmapped > 0)
+      blockers.push(`${unmapped} player${unmapped > 1 ? 's' : ''} not found in the identity map.`);
+    if (missingForge > 0)
       blockers.push(
-        `Only ${matched} of ${total} roster players have management evidence (${Math.round(rate * 100)}% coverage). Need ≥ 50% to classify.`
+        `${missingForge} player${missingForge > 1 ? 's' : ''} mapped but missing a FORGE row. Re-sync or recompute FORGE grades.`
       );
-      if (unmapped > 0)
-        blockers.push(`${unmapped} player${unmapped > 1 ? 's' : ''} not found in the identity map.`);
-      if (missingForge > 0)
-        blockers.push(
-          `${missingForge} player${missingForge > 1 ? 's' : ''} mapped but missing a FORGE row. Re-sync or recompute FORGE grades.`
-        );
-    }
-    return { direction: 'uncertain', confidence: 'low', reasons: [], blockers, coverage };
+    return { direction: 'uncertain', confidence: 'low', reasons: [], blockers, ...coverageDetails };
   }
 
   const matchedPlayers = rosterPlayers.filter((p) => typeof p.alpha === 'number');
   const alphas = matchedPlayers.map((p) => p.alpha as number);
-
-  if (forgeMatched === 0) {
-    return {
-      direction: 'uncertain',
-      confidence: rookieAlphaMatched > 0 ? 'medium' : 'low',
-      reasons: [],
-      blockers: ['Rookie Alpha covers roster visibility, but Team Direction still needs FORGE alpha rows before it can classify roster strength.'],
-      coverage,
-    };
-  }
 
   const totalAlpha = alphas.reduce((s, a) => s + a, 0);
   const avgAlpha = totalAlpha / forgeMatched;
@@ -281,5 +289,5 @@ export function classifyTeamDirection(
     );
   }
 
-  return { direction, confidence, reasons, blockers, coverage };
+  return { direction, confidence, reasons, blockers, ...coverageDetails };
 }

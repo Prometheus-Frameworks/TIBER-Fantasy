@@ -676,3 +676,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Summary:** Wired Management roster rows and Team Direction evidence coverage to the existing read-only TIBER-Rookies promoted adapter when FORGE remains unavailable. Added additive UI context and operator docs for the `exports/promoted/rookie-alpha` lane.
 - **Key Files:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `server/modules/externalModels/rookies/`, `client/src/pages/TiberManagementDashboard.tsx`, `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`
 - **Validation:** Targeted Jest suites, build, typecheck review, diff check.
+
+
+### 2026-06-02 — Management Rookie Alpha FORGE-gate review fix
+- **Summary:** Split Management evidence coverage from FORGE scoring coverage, required the FORGE coverage threshold before Team Direction classification, changed generic missing-player UI copy to `Unmatched`, and added the sparse-FORGE regression case.
+- **Key Files:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `server/routes/__tests__/managementRoutes.test.ts`
+- **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, diff check.

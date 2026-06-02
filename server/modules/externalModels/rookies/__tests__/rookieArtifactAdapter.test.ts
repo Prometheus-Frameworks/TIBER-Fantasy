@@ -22,8 +22,6 @@ describe('rookie artifact adapter', () => {
             talent_score: 88,
             consensus_delta: 6.5,
             profile_summary: 'Explosive separator',
-        talent_score: 88,
-        consensus_delta: 6.5,
             rookie_tier: 'T1',
             rookie_rank: 3,
           },

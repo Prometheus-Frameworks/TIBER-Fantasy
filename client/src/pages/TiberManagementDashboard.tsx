@@ -110,6 +110,8 @@ type PicksResponse = {
 };
 
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
+type TeamDirectionCoverageSummary = Pick<TeamDirectionCoverage, 'matched' | 'total' | 'rate'>;
+type TeamDirectionEvidenceCoverage = TeamDirectionCoverageSummary & { rookieAlphaMatched?: number };
 
 type TeamDirectionResponse = {
   success: boolean;
@@ -119,6 +121,8 @@ type TeamDirectionResponse = {
   reasons?: string[];
   blockers?: string[];
   coverage?: TeamDirectionCoverage;
+  evidenceCoverage?: TeamDirectionEvidenceCoverage;
+  forgeCoverage?: TeamDirectionCoverageSummary;
   teamName?: string;
   reason?: string;
   error?: string;
@@ -268,6 +272,8 @@ function TeamDirectionCard({
 }) {
   const data = query.data;
   const meta = directionMeta(data?.direction);
+  const evidenceCoverage = data?.evidenceCoverage ?? data?.coverage;
+  const forgeCoverage = data?.forgeCoverage;
 
   return (
     <section className="tmd-card">
@@ -291,7 +297,7 @@ function TeamDirectionCard({
       {!activeTeam ? (
         <div className="tmd-empty-state">
           Connect a team above to unlock Team Direction.
-          <span className="tmd-empty-sub">Requires at least 50% roster evidence coverage. Rookie Alpha can cover visibility but never replaces FORGE scoring.</span>
+          <span className="tmd-empty-sub">Requires at least 50% FORGE scoring coverage. Rookie Alpha improves visibility but never replaces the scoring gate.</span>
         </div>
       ) : query.isLoading ? (
         <div className="tmd-empty-state"><Loader2 size={15} className="tmd-spin" /> Classifying team direction…</div>
@@ -312,12 +318,13 @@ function TeamDirectionCard({
               </ul>
             </div>
           )}
-          {data.coverage && (
+          {evidenceCoverage && (
             <div className="tmd-dir-coverage">
-              Evidence coverage: {data.coverage.matched}/{data.coverage.total} players ({Math.round(data.coverage.rate * 100)}%)
-              {typeof data.coverage.rookieAlphaMatched === 'number' && data.coverage.rookieAlphaMatched > 0
-                ? ` · ${data.coverage.forgeMatched ?? 0} FORGE · ${data.coverage.rookieAlphaMatched} Rookie Alpha`
+              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
+              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
+                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
                 : ''}
+              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
             </div>
           )}
         </div>
@@ -353,12 +360,13 @@ function TeamDirectionCard({
             </div>
           )}
 
-          {data.coverage && (
+          {evidenceCoverage && (
             <div className="tmd-dir-coverage">
-              Evidence coverage: {data.coverage.matched}/{data.coverage.total} players ({Math.round(data.coverage.rate * 100)}%)
-              {typeof data.coverage.rookieAlphaMatched === 'number' && data.coverage.rookieAlphaMatched > 0
-                ? ` · ${data.coverage.forgeMatched ?? 0} FORGE · ${data.coverage.rookieAlphaMatched} Rookie Alpha`
+              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
+              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
+                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
                 : ''}
+              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
             </div>
           )}
 
@@ -793,7 +801,7 @@ export default function TiberManagementDashboard() {
                             </div>
                           ) : (
                             <div className="tmd-player-alpha-unmatched">
-                              <span className="tmd-player-unmatched-label">Rookie Asset Pending</span>
+                              <span className="tmd-player-unmatched-label">Unmatched</span>
                               <span className="tmd-player-unmatched-reason">{missingReasonLabel(player.missingReason)}</span>
                             </div>
                           )}

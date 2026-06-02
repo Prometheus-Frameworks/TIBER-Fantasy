@@ -466,3 +466,10 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/externalModels/rookies/*`, `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, docs/tests.
 - **Validation:** Targeted Jest suites, build, typecheck review, and diff check recorded in PR notes.
 - **Notes:** Producer repo is TIBER-Rookies; promoted lane is `exports/promoted/rookie-alpha/{season}_rookie_alpha_predraft_v0.json`. `ROOKIE_ALPHA_PROMOTED_DIR` configures the artifact directory. No runtime route dependency and no FORGE score/rank mutation were added.
+
+
+### 2026-06-02 — Codex: Separate Management evidence coverage from Team Direction FORGE gate
+- **What changed:** Tightened the Rookie Alpha Management fallback after review. Team Direction now exposes additive evidence and FORGE coverage summaries but requires sufficient FORGE scoring coverage before classifying strength. Generic missing roster rows render as `Unmatched` rather than incorrectly labeling veterans or unmapped players as rookie-pending.
+- **Files modified:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, focused tests, and Rookie Alpha handoff docs.
+- **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, and diff check recorded in PR notes.
+- **Notes:** Rookie Alpha improves Management visibility only. It cannot lift sparse FORGE scoring coverage over the Team Direction classification gate.

@@ -50,7 +50,7 @@ TIBER-Fantasy reads the JSON artifact only. The CSV and manifest remain operator
 - Service orchestration: `server/modules/externalModels/rookies/rookieArtifactService.ts`
 - Product API route: `GET /api/rookies/:season`
 - Product page: `/rookies`
-- Management roster fallback: `server/services/leagueDashboardService.ts` attaches additive `rookieAsset` context only when FORGE remains unavailable. Team Direction counts the promoted match as evidence coverage without blending Rookie Alpha into FORGE roster strength.
+- Management roster fallback: `server/services/leagueDashboardService.ts` attaches additive `rookieAsset` context only when FORGE remains unavailable. Team Direction counts the promoted match as Management evidence coverage without blending Rookie Alpha into FORGE roster strength. Classification still requires sufficient FORGE scoring coverage; Rookie Alpha cannot satisfy the strength-classification gate.
 
 ## Missing/invalid artifact behavior
 
