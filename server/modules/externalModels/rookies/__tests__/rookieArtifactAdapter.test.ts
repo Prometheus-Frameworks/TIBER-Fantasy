@@ -19,7 +19,11 @@ describe('rookie artifact adapter', () => {
             tiber_rookie_alpha: 84.6,
             tiber_ras_v2: 9.11,
             production_score: 72.4,
+            talent_score: 88,
+            consensus_delta: 6.5,
             profile_summary: 'Explosive separator',
+        talent_score: 88,
+        consensus_delta: 6.5,
             rookie_tier: 'T1',
             rookie_rank: 3,
           },
@@ -39,6 +43,8 @@ describe('rookie artifact adapter', () => {
         rookie_rank: 3,
         tiber_ras_v2: 9.11,
         profile_summary: 'Explosive separator',
+        talent_score: 88,
+        consensus_delta: 6.5,
       }),
     );
   });

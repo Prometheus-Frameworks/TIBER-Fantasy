@@ -9,7 +9,7 @@ Wire the validated promoted rookie artifact from **TIBER-Rookies** into the TIBE
 TIBER-Fantasy expects a JSON artifact with:
 
 - `meta.season` (required)
-- `players[]` (required, non-empty)
+- `{season}_rookie_alpha_predraft_v0.json` containing `players[]` (required, non-empty)
 - each row has at minimum a player name + position (e.g. `name`/`player_name`, `pos`/`position`)
 
 Optional promoted fields are consumed when present:
@@ -21,14 +21,27 @@ Optional promoted fields are consumed when present:
 
 ## Configuration
 
-Set the artifact path in environment:
+Set the promoted artifact directory in environment:
 
 ```env
-ROOKIE_PROMOTED_ARTIFACT_PATH=./data/rookies/2026_rookie_grades_v2.json
+ROOKIE_ALPHA_PROMOTED_DIR=../TIBER-Rookies/exports/promoted/rookie-alpha
 ROOKIE_PROMOTED_MODEL_ENABLED=1
 ```
 
-If omitted, TIBER-Fantasy defaults to `./data/rookies/2026_rookie_grades_v2.json`.
+If omitted, TIBER-Fantasy defaults to `../TIBER-Rookies/exports/promoted/rookie-alpha` and resolves `{season}_rookie_alpha_predraft_v0.json`. `ROOKIE_PROMOTED_ARTIFACT_PATH` remains supported as an explicit single-file compatibility override.
+
+## Promoted lane boundary
+
+Consume only the TIBER-Rookies promoted lane:
+
+```text
+exports/promoted/rookie-alpha/
+  {season}_rookie_alpha_predraft_v0.json
+  {season}_rookie_alpha_predraft_v0.csv
+  {season}_manifest.json
+```
+
+TIBER-Fantasy reads the JSON artifact only. The CSV and manifest remain operator-visible promotion companions. Do not consume `/cards/rookies/*` or a TIBER-Rookies runtime route.
 
 ## Runtime read path
 
@@ -37,10 +50,11 @@ If omitted, TIBER-Fantasy defaults to `./data/rookies/2026_rookie_grades_v2.json
 - Service orchestration: `server/modules/externalModels/rookies/rookieArtifactService.ts`
 - Product API route: `GET /api/rookies/:season`
 - Product page: `/rookies`
+- Management roster fallback: `server/services/leagueDashboardService.ts` attaches additive `rookieAsset` context only when FORGE remains unavailable. Team Direction counts the promoted match as evidence coverage without blending Rookie Alpha into FORGE roster strength.
 
 ## Missing/invalid artifact behavior
 
-- Missing artifact: `404` with `code: "not_found"` + guidance about `ROOKIE_PROMOTED_ARTIFACT_PATH`
+- Missing artifact: `404` with `code: "not_found"` + guidance about `ROOKIE_ALPHA_PROMOTED_DIR`
 - Invalid JSON/contract: `502` with `code: "invalid_payload"`
 - Disabled integration: `503` with `code: "config_error"`
 - Unexpected read failure: `503` with `code: "upstream_unavailable"`
@@ -54,7 +68,7 @@ Use this before draft-week promotion windows.
 ### 1) Confirm env wiring
 
 - `ROOKIE_PROMOTED_MODEL_ENABLED=1`
-- `ROOKIE_PROMOTED_ARTIFACT_PATH` points to the promoted JSON artifact for the current season (2026 during pre-draft).
+- `ROOKIE_ALPHA_PROMOTED_DIR` points to the promoted Rookie Alpha artifact directory for the current season (2026 during pre-draft).
 
 ### 2) Verify product API shape
 

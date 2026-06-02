@@ -77,3 +77,9 @@ TIBER Management Dashboard is now the first product-shell step toward “sync my
 - **@neondatabase/serverless**: PostgreSQL connections in serverless environments.
 - **Google Gemini API**: AI embeddings and chat generation.
 - **FIRE (Fantasy In-season Rolling Evaluator)**: Rolling 4-week opportunity and role scoring.
+
+### Management Rookie Alpha promoted-artifact fallback (June 2026)
+- Management roster snapshots reuse the read-only TIBER-Rookies promoted adapter for `exports/promoted/rookie-alpha/{season}_rookie_alpha_predraft_v0.json` when a roster player remains outside FORGE coverage.
+- Additive `rookieAsset` context can expose Rookie Alpha rank/score, position rank, talent score, consensus delta, and a transaction-safe interpretation string when present upstream.
+- Team Direction counts matched Rookie Alpha assets as evidence coverage only. Rookie Alpha is never blended into FORGE roster strength, lineup totals, scoring, or rankings.
+- Configure the promoted directory with `ROOKIE_ALPHA_PROMOTED_DIR`; do not depend on TIBER-Rookies runtime routes or `/cards/rookies/*`.

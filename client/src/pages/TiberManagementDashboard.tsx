@@ -45,6 +45,18 @@ type LeagueSyncListResponse = {
   leagues?: League[];
 };
 
+type RookieAssetContext = {
+  source: 'rookie_alpha_promoted_artifact';
+  playerName: string;
+  position: string;
+  alphaRank: number | null;
+  positionRank: string | null;
+  rookieAlphaScore: number | null;
+  talentScore: number | null;
+  consensusDelta: number | null;
+  interpretation: string;
+};
+
 type RosterPlayer = {
   rosterKey?: string;
   canonicalId?: string | null;
@@ -57,6 +69,7 @@ type RosterPlayer = {
   tier?: number | null;
   missingReason?: string | null;
   usedAsStarter?: boolean;
+  rookieAsset?: RookieAssetContext | null;
 };
 
 type LeagueDashboardTeam = {
@@ -76,6 +89,7 @@ type LeagueDashboardResponse = {
     resolvedCanonicalCount?: number;
     unresolvedSleeperCount?: number;
     stillMissingCount?: number;
+    rookieAlphaMatchedCount?: number;
   };
 };
 
@@ -95,7 +109,7 @@ type PicksResponse = {
   error?: string;
 };
 
-type TeamDirectionCoverage = { matched: number; total: number; rate: number };
+type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
 
 type TeamDirectionResponse = {
   success: boolean;
@@ -260,7 +274,7 @@ function TeamDirectionCard({
       <div className="tmd-card-header">
         <div>
           <h2>Team Direction</h2>
-          <p>FORGE-powered read of where your roster is headed — rebuild, retool, or contend.</p>
+          <p>FORGE-powered read of where your roster is headed, with Rookie Alpha evidence coverage for assets outside FORGE.</p>
         </div>
         {data?.available && data.direction ? (
           <span className={`tmd-dir-badge ${meta.cls}`}>
@@ -277,7 +291,7 @@ function TeamDirectionCard({
       {!activeTeam ? (
         <div className="tmd-empty-state">
           Connect a team above to unlock Team Direction.
-          <span className="tmd-empty-sub">Requires at least 50% of roster players to have FORGE data.</span>
+          <span className="tmd-empty-sub">Requires at least 50% roster evidence coverage. Rookie Alpha can cover visibility but never replaces FORGE scoring.</span>
         </div>
       ) : query.isLoading ? (
         <div className="tmd-empty-state"><Loader2 size={15} className="tmd-spin" /> Classifying team direction…</div>
@@ -288,7 +302,7 @@ function TeamDirectionCard({
       ) : data.direction === 'uncertain' ? (
         <div className="tmd-dir-body">
           <div className="tmd-callout tmd-callout-warn">
-            Not enough FORGE data to classify this roster.
+            Not enough scoring evidence to classify this roster.
           </div>
           {data.blockers && data.blockers.length > 0 && (
             <div className="tmd-dir-section">
@@ -300,7 +314,10 @@ function TeamDirectionCard({
           )}
           {data.coverage && (
             <div className="tmd-dir-coverage">
-              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+              Evidence coverage: {data.coverage.matched}/{data.coverage.total} players ({Math.round(data.coverage.rate * 100)}%)
+              {typeof data.coverage.rookieAlphaMatched === 'number' && data.coverage.rookieAlphaMatched > 0
+                ? ` · ${data.coverage.forgeMatched ?? 0} FORGE · ${data.coverage.rookieAlphaMatched} Rookie Alpha`
+                : ''}
             </div>
           )}
         </div>
@@ -338,12 +355,15 @@ function TeamDirectionCard({
 
           {data.coverage && (
             <div className="tmd-dir-coverage">
-              Coverage: {data.coverage.matched}/{data.coverage.total} players matched ({Math.round(data.coverage.rate * 100)}%)
+              Evidence coverage: {data.coverage.matched}/{data.coverage.total} players ({Math.round(data.coverage.rate * 100)}%)
+              {typeof data.coverage.rookieAlphaMatched === 'number' && data.coverage.rookieAlphaMatched > 0
+                ? ` · ${data.coverage.forgeMatched ?? 0} FORGE · ${data.coverage.rookieAlphaMatched} Rookie Alpha`
+                : ''}
             </div>
           )}
 
           <div className="tmd-provenance">
-            Read-only classifier. Uses FORGE alpha scores and draft pick capital — does not modify rankings, projections, or roster advice.
+            Read-only classifier. Uses FORGE alpha scores and draft pick capital for direction. Promoted Rookie Alpha only improves evidence coverage and visibility — it is never blended into FORGE scoring or rankings.
           </div>
         </div>
       )}
@@ -703,7 +723,7 @@ export default function TiberManagementDashboard() {
         <div className="tmd-card-header">
           <div>
             <h2>Roster Snapshot</h2>
-            <p>FORGE values and mapping status for every player on your active roster.</p>
+            <p>FORGE values and promoted Rookie Alpha fallback context for every player on your active roster.</p>
           </div>
           <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
             {dashboardQuery.isLoading ? 'Loading…' : hasRosterData ? 'Ready' : 'Needs synced roster'}
@@ -742,9 +762,10 @@ export default function TiberManagementDashboard() {
                   <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
                   {players.map((player, idx) => {
                     const isMatched = typeof player.alpha === 'number';
+                    const rookieAsset = !isMatched ? player.rookieAsset : null;
                     const tierLabel = isMatched ? forgeTierLabel(player.tier) : null;
                     return (
-                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${isMatched ? '' : 'tmd-player-row-unmatched'}`}>
+                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${!isMatched && !rookieAsset ? 'tmd-player-row-unmatched' : ''}`}>
                         <div className="tmd-player-name">
                           <span>{player.name ?? player.sleeperId ?? 'Unknown'}</span>
                           {player.nflTeam && <span className="tmd-player-team">{player.nflTeam}</span>}
@@ -760,9 +781,19 @@ export default function TiberManagementDashboard() {
                               <strong>{(player.alpha as number).toFixed(1)}</strong>
                               <span className="tmd-player-matched-badge">Matched</span>
                             </div>
+                          ) : rookieAsset ? (
+                            <div className="tmd-player-rookie-asset">
+                              <strong>{rookieAsset.rookieAlphaScore ?? '—'}</strong>
+                              <span className="tmd-player-rookie-rank">
+                                Rookie Alpha {rookieAsset.positionRank ?? (rookieAsset.alphaRank != null ? `#${rookieAsset.alphaRank}` : '')}
+                              </span>
+                              <span className="tmd-player-rookie-badge">Rookie Asset</span>
+                              {rookieAsset.talentScore != null && <span className="tmd-player-rookie-detail">Talent {rookieAsset.talentScore}</span>}
+                              {rookieAsset.consensusDelta != null && <span className="tmd-player-rookie-detail">Consensus Δ {rookieAsset.consensusDelta > 0 ? '+' : ''}{rookieAsset.consensusDelta}</span>}
+                            </div>
                           ) : (
                             <div className="tmd-player-alpha-unmatched">
-                              <span className="tmd-player-unmatched-label">Unmatched</span>
+                              <span className="tmd-player-unmatched-label">Rookie Asset Pending</span>
                               <span className="tmd-player-unmatched-reason">{missingReasonLabel(player.missingReason)}</span>
                             </div>
                           )}

@@ -2,14 +2,14 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { RookieIntegrationError } from './types';
 
-const DEFAULT_PROMOTED_ARTIFACT_PATH = path.join(process.cwd(), 'data', 'rookies', '2026_rookie_grades_v2.json');
+const DEFAULT_PROMOTED_ARTIFACT_PATH = path.join(process.cwd(), '..', 'TIBER-Rookies', 'exports', 'promoted', 'rookie-alpha');
 
 export class RookieArtifactClient {
   private readonly artifactPath: string;
   private readonly enabled: boolean;
 
   constructor(config: { artifactPath?: string; enabled?: boolean } = {}) {
-    this.artifactPath = config.artifactPath ?? process.env.ROOKIE_PROMOTED_ARTIFACT_PATH ?? DEFAULT_PROMOTED_ARTIFACT_PATH;
+    this.artifactPath = config.artifactPath ?? process.env.ROOKIE_ALPHA_PROMOTED_DIR ?? process.env.ROOKIE_PROMOTED_ARTIFACT_PATH ?? DEFAULT_PROMOTED_ARTIFACT_PATH;
     this.enabled = config.enabled ?? process.env.ROOKIE_PROMOTED_MODEL_ENABLED !== '0';
   }
 
@@ -21,16 +21,20 @@ export class RookieArtifactClient {
     };
   }
 
-  async loadPromotedRookieArtifact(): Promise<{ payload: unknown; sourcePath: string }> {
+  async loadPromotedRookieArtifact(season?: number): Promise<{ payload: unknown; sourcePath: string }> {
     if (!this.enabled) {
       throw new RookieIntegrationError('config_error', 'Rookie promoted model integration is disabled by configuration.', 503);
     }
 
+    const sourcePath = path.extname(this.artifactPath).toLowerCase() === '.json'
+      ? this.artifactPath
+      : path.join(this.artifactPath, `${season ?? new Date().getUTCFullYear()}_rookie_alpha_predraft_v0.json`);
+
     try {
-      const raw = await fs.readFile(this.artifactPath, 'utf8');
+      const raw = await fs.readFile(sourcePath, 'utf8');
       return {
         payload: JSON.parse(raw) as unknown,
-        sourcePath: this.artifactPath,
+        sourcePath,
       };
     } catch (error) {
       const nodeError = error as NodeJS.ErrnoException;
