@@ -112,6 +112,18 @@ type PicksResponse = {
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
 type TeamDirectionCoverageSummary = Pick<TeamDirectionCoverage, 'matched' | 'total' | 'rate'>;
 type TeamDirectionEvidenceCoverage = TeamDirectionCoverageSummary & { rookieAlphaMatched?: number };
+type TeamDirectionConfidenceInputs = {
+  driver?: string;
+  forgeCoverage?: TeamDirectionCoverageSummary;
+  evidenceCoverage?: TeamDirectionEvidenceCoverage;
+  scoredPlayers?: number;
+  scoredPositionCounts?: Partial<Record<'QB' | 'RB' | 'WR' | 'TE' | 'Other', number>>;
+  missingScoredPositions?: string[];
+  minimumForgeCoverageRate?: number;
+  highConfidenceForgeCoverageRate?: number;
+  highConfidenceScoredPlayers?: number;
+  notes?: string[];
+};
 
 type TeamDirectionResponse = {
   success: boolean;
@@ -123,6 +135,7 @@ type TeamDirectionResponse = {
   coverage?: TeamDirectionCoverage;
   evidenceCoverage?: TeamDirectionEvidenceCoverage;
   forgeCoverage?: TeamDirectionCoverageSummary;
+  confidenceInputs?: TeamDirectionConfidenceInputs;
   teamName?: string;
   reason?: string;
   error?: string;
@@ -256,6 +269,54 @@ function groupPicksBySeason(picks: LeaguePick[]) {
   return map;
 }
 
+
+function pct(rate?: number | null) {
+  return `${Math.round((rate ?? 0) * 100)}%`;
+}
+
+function coverageText(label: string, coverage?: TeamDirectionCoverageSummary, extra?: string) {
+  if (!coverage) return null;
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{coverage.matched}/{coverage.total} ({pct(coverage.rate)})</strong>
+      {extra ? <small>{extra}</small> : null}
+    </div>
+  );
+}
+
+function TeamDirectionInputs({ data }: { data: TeamDirectionResponse }) {
+  const evidenceCoverage = data.evidenceCoverage ?? data.coverage;
+  const forgeCoverage = data.forgeCoverage ?? data.confidenceInputs?.forgeCoverage;
+  const rookieAlphaMatched = evidenceCoverage?.rookieAlphaMatched ?? data.coverage?.rookieAlphaMatched ?? 0;
+  const confidenceInputs = data.confidenceInputs;
+  const scoredPositionCounts = confidenceInputs?.scoredPositionCounts;
+  const positionSummary = scoredPositionCounts
+    ? `Scored positions: QB ${scoredPositionCounts.QB ?? 0} · RB ${scoredPositionCounts.RB ?? 0} · WR ${scoredPositionCounts.WR ?? 0} · TE ${scoredPositionCounts.TE ?? 0}`
+    : undefined;
+
+  return (
+    <div className="tmd-dir-inputs" aria-label="Team Direction confidence inputs">
+      {coverageText('FORGE scoring coverage', forgeCoverage, 'Classification confidence uses this scored coverage, not Rookie Alpha fallback.')}
+      {coverageText(
+        'Evidence coverage',
+        evidenceCoverage,
+        rookieAlphaMatched > 0 ? `${rookieAlphaMatched} Rookie Alpha fallback match${rookieAlphaMatched === 1 ? '' : 'es'} included for visibility.` : 'Roster context visible through FORGE scoring rows.'
+      )}
+      <div>
+        <span>Direction confidence</span>
+        <strong>{data.confidence ? `${data.confidence.charAt(0).toUpperCase()}${data.confidence.slice(1)}` : 'Unknown'}</strong>
+        <small>{positionSummary ?? 'Based on FORGE scoring coverage and scored positional data quality.'}</small>
+      </div>
+      {confidenceInputs?.missingScoredPositions && confidenceInputs.missingScoredPositions.length > 0 && (
+        <div className="tmd-dir-inputs-note">
+          Missing scored position data: {confidenceInputs.missingScoredPositions.join(', ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function directionMeta(direction?: string | null) {
   if (direction === 'contender') return { label: 'Contender', icon: <TrendingUp size={18} />, cls: 'tmd-dir-contender' };
   if (direction === 'rebuild') return { label: 'Rebuild', icon: <TrendingDown size={18} />, cls: 'tmd-dir-rebuild' };
@@ -272,8 +333,6 @@ function TeamDirectionCard({
 }) {
   const data = query.data;
   const meta = directionMeta(data?.direction);
-  const evidenceCoverage = data?.evidenceCoverage ?? data?.coverage;
-  const forgeCoverage = data?.forgeCoverage;
 
   return (
     <section className="tmd-card">
@@ -318,15 +377,7 @@ function TeamDirectionCard({
               </ul>
             </div>
           )}
-          {evidenceCoverage && (
-            <div className="tmd-dir-coverage">
-              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
-              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
-                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
-                : ''}
-              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
-            </div>
-          )}
+          <TeamDirectionInputs data={data} />
         </div>
       ) : (
         <div className="tmd-dir-body">
@@ -360,15 +411,7 @@ function TeamDirectionCard({
             </div>
           )}
 
-          {evidenceCoverage && (
-            <div className="tmd-dir-coverage">
-              Evidence coverage: {evidenceCoverage.matched}/{evidenceCoverage.total} players ({Math.round(evidenceCoverage.rate * 100)}%)
-              {typeof evidenceCoverage.rookieAlphaMatched === 'number' && evidenceCoverage.rookieAlphaMatched > 0
-                ? ` · ${evidenceCoverage.rookieAlphaMatched} Rookie Alpha`
-                : ''}
-              {forgeCoverage ? ` · FORGE scoring: ${forgeCoverage.matched}/${forgeCoverage.total} (${Math.round(forgeCoverage.rate * 100)}%)` : ''}
-            </div>
-          )}
+          <TeamDirectionInputs data={data} />
 
           <div className="tmd-provenance">
             Read-only classifier. Uses FORGE alpha scores and draft pick capital for direction. Promoted Rookie Alpha only improves evidence coverage and visibility — it is never blended into FORGE scoring or rankings.

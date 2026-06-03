@@ -3291,6 +3291,58 @@ html, body {
   color: rgba(202, 138, 4, 0.85);
 }
 
+
+.tmd-dir-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tmd-dir-inputs > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tmd-dir-inputs span {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+}
+
+.tmd-dir-inputs strong {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--tmd-text, rgba(226,228,232,0.86));
+}
+
+.tmd-dir-inputs small,
+.tmd-dir-inputs-note {
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--tmd-text-muted, rgba(226,228,232,0.56));
+}
+
+.tmd-dir-inputs .tmd-dir-inputs-note {
+  grid-column: 1 / -1;
+  border-color: rgba(202, 138, 4, 0.14);
+  background: rgba(202, 138, 4, 0.04);
+  color: rgba(202, 138, 4, 0.82);
+}
+
+@media (max-width: 760px) {
+  .tmd-dir-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tmd-dir-coverage {
   font-size: 11px;
   font-family: var(--font-mono);
