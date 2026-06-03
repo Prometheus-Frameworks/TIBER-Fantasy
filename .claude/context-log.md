@@ -473,3 +473,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, focused tests, and Rookie Alpha handoff docs.
 - **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, and diff check recorded in PR notes.
 - **Notes:** Rookie Alpha improves Management visibility only. It cannot lift sparse FORGE scoring coverage over the Team Direction classification gate.
+
+### 2026-06-03 — Codex: Management roster coverage diagnostics wording
+- **What changed:** Replaced ambiguous Management roster “matched” language with explicit FORGE-scored, Rookie Alpha fallback, known/unscored, unresolved, and evidence-coverage counts. Added per-row visibility state/unavailable reason fields while preserving Rookie Alpha as visibility/evidence only and leaving FORGE scoring/direction semantics unchanged.
+- **Files modified:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, focused Management tests.
+- **Validation:** Focused Jest suites passed with dummy `DATABASE_URL`, `--coverage=false`, and `--forceExit`; `npm run build` passed with the pre-existing duplicate `applyAdjusters` warning; `npm run typecheck` remains blocked by pre-existing repo-wide TypeScript errors outside the touched Management files.
+- **Notes:** Management payload diagnostics now expose clear roster visibility counts. Rookie Alpha remains read-only fallback visibility and is not blended into FORGE alpha totals, scoring, rankings, or direction confidence.
