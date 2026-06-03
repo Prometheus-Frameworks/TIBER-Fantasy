@@ -2483,6 +2483,13 @@ html, body {
   border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
+.tmd-status-partial,
+.tmd-status-inspection {
+  color: var(--tmd-amber);
+  background: var(--tmd-amber-dim);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
 .tmd-status-unavailable {
   color: var(--tmd-red);
   background: var(--tmd-red-dim);

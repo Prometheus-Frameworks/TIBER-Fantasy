@@ -5,6 +5,7 @@ import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, ExternalLink, Load
 import { apiRequest } from '@/lib/queryClient';
 import {
   type TeamEnvironmentMovementResponse,
+  buildTeamEnvironmentMovementSummary,
   getTeamEnvironmentMovementReadinessDetails,
   hasUsableTeamEnvironmentMovementContext,
 } from '@/lib/teamEnvironmentMovement';
@@ -159,9 +160,9 @@ type TeamDirectionResponse = {
   error?: string;
 };
 
-type ModelSignalStatus = 'ready' | 'unavailable' | 'inspection only';
+export type ModelSignalStatus = 'ready' | 'partial' | 'unavailable' | 'not wired' | 'inspection only';
 
-type ModelSignalCard = {
+export type ModelSignalCard = {
   title: string;
   status: ModelSignalStatus;
   statusLabel: string;
@@ -189,7 +190,9 @@ function getLeagueIdForTeam(team?: LeagueTeam | null) {
 
 function statusClass(status: ModelSignalStatus) {
   if (status === 'ready') return 'tmd-status-ready';
+  if (status === 'partial') return 'tmd-status-partial';
   if (status === 'unavailable') return 'tmd-status-unavailable';
+  if (status === 'inspection only') return 'tmd-status-inspection';
   return 'tmd-status-not-wired';
 }
 
@@ -200,6 +203,14 @@ function statusIcon(status: ModelSignalStatus) {
 }
 
 function ExternalOrInternalLink({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) {
+  if (href.startsWith('#')) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+
   if (href.startsWith('http')) {
     return (
       <a href={href} target="_blank" rel="noreferrer" className={className}>
@@ -330,6 +341,118 @@ function coverageText(label: string, coverage?: TeamDirectionCoverageSummary, ex
       {extra ? <small>{extra}</small> : null}
     </div>
   );
+}
+
+
+function summarizeTeamState(response: TeamEnvironmentMovementResponse | null | undefined): string | null {
+  if (!hasUsableTeamEnvironmentMovementContext(response)) return null;
+  if (response?.selectedTeam) return buildTeamEnvironmentMovementSummary(response.selectedTeam);
+
+  const teamCount = response?.teams?.length ?? 0;
+  const latestWeek = response?.coverage?.latestWeek;
+  const latestWeekText = typeof latestWeek === 'number' ? `latest week ${latestWeek}` : 'latest week unknown';
+  return `${teamCount} team${teamCount === 1 ? '' : 's'} with TeamState movement context; ${latestWeekText}.`;
+}
+
+export function buildManagementModelSignals({
+  hasActiveTeam,
+  hasRosterData,
+  hasDashboardTotals,
+  rosterVisibility,
+  teamstateQueryState,
+  teamstateResponse,
+  teamstateDetails,
+}: {
+  hasActiveTeam: boolean;
+  hasRosterData: boolean;
+  hasDashboardTotals: boolean;
+  rosterVisibility: RosterCoverageCounts;
+  teamstateQueryState: 'loading' | 'error' | 'success';
+  teamstateResponse?: TeamEnvironmentMovementResponse | null;
+  teamstateDetails: string[];
+}): ModelSignalCard[] {
+  const forgeCoverageRate = rosterVisibility.total > 0 ? rosterVisibility.forgeScored / rosterVisibility.total : 0;
+  const hasForgeAlphaTotals = hasDashboardTotals;
+  const hasRookieFallbacks = rosterVisibility.rookieAlphaFallback > 0;
+  const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateResponse);
+  const teamstateSummary = summarizeTeamState(teamstateResponse);
+
+  return [
+    {
+      title: 'FORGE',
+      status: !hasActiveTeam || !hasRosterData ? 'unavailable' : rosterVisibility.forgeScored === rosterVisibility.total ? 'ready' : rosterVisibility.forgeScored > 0 ? 'partial' : 'unavailable',
+      statusLabel: !hasActiveTeam
+        ? 'Unavailable'
+        : !hasRosterData
+          ? 'Unavailable'
+          : rosterVisibility.forgeScored === rosterVisibility.total
+            ? 'Ready'
+            : rosterVisibility.forgeScored > 0
+              ? 'Partial'
+              : 'Unavailable',
+      explanation: hasRosterData
+        ? `FORGE has scored rows for ${rosterVisibility.forgeScored}/${rosterVisibility.total} roster players (${pct(forgeCoverageRate)}). Alpha totals are ${hasForgeAlphaTotals ? 'available' : 'unavailable'}.`
+        : 'Connect an active team with roster rows before inspecting FORGE coverage.',
+      href: '#roster-snapshot',
+      linkLabel: 'Inspect Roster Snapshot',
+      provenance: 'Uses Management roster visibility diagnostics. No scoring semantics changed.',
+      details: [
+        `FORGE scored coverage: ${rosterVisibility.forgeScored}/${rosterVisibility.total}.`,
+        `FORGE alpha totals: ${hasForgeAlphaTotals ? 'available' : 'unavailable'}.`,
+        'Team Direction confidence still uses FORGE scoring coverage, not fallback visibility.',
+      ],
+    },
+    {
+      title: 'Rookie Alpha',
+      status: !hasActiveTeam || !hasRosterData ? 'unavailable' : hasRookieFallbacks ? 'inspection only' : 'unavailable',
+      statusLabel: !hasActiveTeam || !hasRosterData ? 'Unavailable' : hasRookieFallbacks ? 'Inspection only' : 'Unavailable',
+      explanation: hasRosterData
+        ? `${rosterVisibility.rookieAlphaFallback} roster player${rosterVisibility.rookieAlphaFallback === 1 ? '' : 's'} have promoted Rookie Alpha fallback visibility.`
+        : 'No active roster visibility diagnostics are available yet.',
+      href: '#roster-snapshot',
+      linkLabel: 'Inspect fallback rows',
+      provenance: 'Evidence/visibility only. Rookie Alpha is never blended into FORGE roster strength, scoring, or rankings.',
+      details: [
+        `Fallback count: ${rosterVisibility.rookieAlphaFallback}/${rosterVisibility.total}.`,
+        `Evidence-covered roster rows: ${rosterVisibility.evidenceCovered}/${rosterVisibility.total}.`,
+        'Artifact source: promoted Rookie Alpha fallback context when present on roster rows.',
+      ],
+    },
+    {
+      title: 'TeamState',
+      status: teamstateQueryState === 'loading' ? 'partial' : teamstateReady ? 'ready' : 'unavailable',
+      statusLabel: teamstateQueryState === 'loading' ? 'Partial' : teamstateReady ? 'Ready' : 'Unavailable',
+      explanation: teamstateQueryState === 'loading'
+        ? 'Checking existing Team Environment Movement data.'
+        : teamstateReady
+          ? (teamstateSummary ?? 'Team Environment Movement artifact is available for inspection.')
+          : 'Management can query Team Environment Movement, but no usable TeamState movement rows are available here.',
+      href: '/tiber-data-lab/team-research',
+      linkLabel: 'Open Team Research',
+      provenance: 'Read-only TeamState movement inspection. Does not affect roster scoring or Team Direction.',
+      details: teamstateDetails,
+    },
+    {
+      title: 'ROP / Opportunity',
+      status: 'not wired',
+      statusLabel: 'Not wired',
+      explanation: 'Role/opportunity labs exist, but Management does not currently join active roster players to a role/opportunity readiness feed.',
+      href: '/tiber-data-lab/role-opportunity',
+      linkLabel: 'Open Role Lab',
+      provenance: 'Research surface link only. No active-roster readiness is claimed in Management.',
+      details: ['No Management integration is active for roster-level ROP coverage.'],
+    },
+    {
+      title: 'Point Prediction',
+      status: 'not wired',
+      statusLabel: 'Pending ingestion',
+      explanation: 'Point scenario/prediction outputs are not connected to Management roster readiness yet.',
+      href: '/tiber-data-lab/point-scenarios',
+      linkLabel: 'Open Scenarios',
+      provenance: 'Pending ingestion / not wired. No projections are recalculated or implied here.',
+      details: ['No active Management integration is present for point prediction coverage.'],
+    },
+  ];
 }
 
 function TeamDirectionInputs({ data }: { data: TeamDirectionResponse }) {
@@ -586,65 +709,19 @@ export default function TiberManagementDashboard() {
 
   const teamsEmpty = selectedLeagueId && !leaguesQuery.isLoading && selectableTeams.length === 0;
 
-  const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateQuery.data);
   const teamstateDetails = teamstateQuery.isError
     ? ['Team environment movement data could not be reached in this deployment.']
     : getTeamEnvironmentMovementReadinessDetails(teamstateQuery.data);
 
-  const modelSignals: ModelSignalCard[] = [
-    {
-      title: 'Teamstate Movement',
-      status: teamstateReady ? 'ready' : 'unavailable',
-      statusLabel: teamstateReady ? 'Ready' : 'Not connected',
-      explanation: teamstateQuery.isLoading
-        ? 'Checking team environment movement data…'
-        : teamstateReady
-          ? 'Shows whether player team environments are improving, declining, or at risk. Useful context before making roster moves.'
-          : 'Team environment data is not available in this deployment.',
-      href: '/tiber-data-lab/team-research',
-      linkLabel: 'Open Team Research',
-      provenance: 'Read-only team environment inspection. Does not affect scoring or roster analysis.',
-      details: teamstateDetails,
-    },
-    {
-      title: 'Role & Opportunity',
-      status: 'ready',
-      statusLabel: 'Research surface ready',
-      explanation: "Helps explain how a player's usage and deployment is changing week to week. Useful before positional decisions.",
-      href: '/tiber-data-lab/role-opportunity',
-      linkLabel: 'Open Role Lab',
-      provenance: 'Read-only research surface. Inspect before making positional decisions.',
-    },
-    {
-      title: 'FORGE',
-      status: hasDashboardTotals ? 'ready' : 'unavailable',
-      statusLabel: hasDashboardTotals ? 'Roster context available' : 'Connect team first',
-      explanation: hasDashboardTotals
-        ? 'FORGE roster totals are available for your league. Inspect positional alpha scores and compare players.'
-        : 'Sync a league and set an active team to unlock FORGE roster context.',
-      href: '/forge',
-      linkLabel: 'Open FORGE',
-      provenance: 'Rankings and scoring are unchanged. Inspection only.',
-    },
-    {
-      title: 'Rookies',
-      status: 'inspection only',
-      statusLabel: 'Inspection only',
-      explanation: 'Browse the Rookie Board for prospect context. Useful when evaluating trade targets or dynasty adds.',
-      href: '/rookies',
-      linkLabel: 'Open Rookie Board',
-      provenance: 'Read-only promoted board. Research context, not roster advice.',
-    },
-    {
-      title: 'Point Scenarios',
-      status: 'ready',
-      statusLabel: 'Research surface ready',
-      explanation: 'Explore what-if scoring outcomes for specific players or situations.',
-      href: '/tiber-data-lab/point-scenarios',
-      linkLabel: 'Open Scenarios',
-      provenance: 'Read-only scenario inspection. No projections are recalculated here.',
-    },
-  ];
+  const modelSignals = buildManagementModelSignals({
+    hasActiveTeam: Boolean(activeTeam),
+    hasRosterData,
+    hasDashboardTotals,
+    rosterVisibility,
+    teamstateQueryState: teamstateQuery.isLoading ? 'loading' : teamstateQuery.isError ? 'error' : 'success',
+    teamstateResponse: teamstateQuery.data,
+    teamstateDetails,
+  });
 
   const actionSteps = activeTeam
     ? [
@@ -824,7 +901,7 @@ export default function TiberManagementDashboard() {
       <section className="tmd-card">
         <div className="tmd-card-header">
           <div>
-            <h2>Roster Snapshot</h2>
+            <h2 id="roster-snapshot">Roster Snapshot</h2>
             <p>FORGE values and promoted Rookie Alpha fallback context for every player on your active roster.</p>
           </div>
           <span className={`tmd-status ${hasRosterData ? 'tmd-status-ready' : 'tmd-status-unavailable'}`}>
@@ -992,8 +1069,8 @@ export default function TiberManagementDashboard() {
       <section className="tmd-card">
         <div className="tmd-card-header">
           <div>
-            <h2>Model Signals</h2>
-            <p>What each research surface can tell you about your roster.</p>
+            <h2>Model Stack / Model Signals</h2>
+            <p>Operator readiness for model layers connected to this Management context.</p>
           </div>
           <ShieldCheck size={20} />
         </div>
