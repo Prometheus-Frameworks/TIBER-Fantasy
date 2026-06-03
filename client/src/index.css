@@ -3372,3 +3372,56 @@ html, body {
   color: #a78bfa;
   text-transform: uppercase;
 }
+
+.tmd-position-card-detail {
+  margin-top: 4px;
+}
+
+.tmd-roster-coverage-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tmd-roster-coverage-strip > div {
+  border: 1px solid var(--tmd-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 12px;
+}
+
+.tmd-roster-coverage-strip span,
+.tmd-roster-coverage-strip small {
+  display: block;
+  color: var(--tmd-text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tmd-roster-coverage-strip span {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tmd-roster-coverage-strip strong {
+  display: block;
+  margin: 5px 0 2px;
+  color: var(--tmd-text);
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+
+@media (max-width: 980px) {
+  .tmd-roster-coverage-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .tmd-roster-coverage-strip {
+    grid-template-columns: 1fr;
+  }
+}

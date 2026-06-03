@@ -59,6 +59,14 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.coverage).toEqual(expect.objectContaining({ matched: 4, forgeMatched: 3, rookieAlphaMatched: 1, rate: 1 }));
     expect(result.evidenceCoverage).toEqual({ matched: 4, total: 4, rate: 1, rookieAlphaMatched: 1 });
     expect(result.forgeCoverage).toEqual({ matched: 3, total: 4, rate: 0.75 });
+    expect(result.visibilityCounts).toEqual({
+      total: 4,
+      forgeScored: 3,
+      rookieAlphaFallback: 1,
+      knownUnscored: 0,
+      unresolved: 0,
+      evidenceCovered: 4,
+    });
     expect(result.confidenceInputs).toEqual(expect.objectContaining({
       driver: 'forge_scoring_coverage_and_position_quality',
       scoredPlayers: 3,
@@ -113,6 +121,14 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.direction).toBe('uncertain');
     expect(result.evidenceCoverage).toEqual({ matched: 8, total: 15, rate: 8 / 15, rookieAlphaMatched: 7 });
     expect(result.forgeCoverage).toEqual({ matched: 1, total: 15, rate: 1 / 15 });
+    expect(result.visibilityCounts).toEqual({
+      total: 15,
+      forgeScored: 1,
+      rookieAlphaFallback: 7,
+      knownUnscored: 7,
+      unresolved: 0,
+      evidenceCovered: 8,
+    });
     expect(result.blockers).toContain(
       'Rookie Alpha covers 7 assets for visibility, but Team Direction still needs sufficient FORGE scoring coverage before classifying roster strength.'
     );

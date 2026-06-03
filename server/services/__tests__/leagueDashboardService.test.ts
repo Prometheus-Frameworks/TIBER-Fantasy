@@ -129,6 +129,16 @@ describe('computeLeagueDashboard', () => {
     expect(rosterPlayer.canonicalId).toBeNull();
     expect(rosterPlayer.alpha).toBeNull();
     expect(rosterPlayer.missingReason).toBe('unmapped_sleeper_id');
+    expect(rosterPlayer.visibilityState).toBe('unresolved');
+    expect(rosterPlayer.unavailableReason).toBe('identity_unresolved');
+    expect(result.diagnostics?.rosterVisibility).toEqual({
+      total: 1,
+      forgeScored: 0,
+      rookieAlphaFallback: 0,
+      knownUnscored: 0,
+      unresolved: 1,
+      evidenceCovered: 0,
+    });
   });
 
   it('adds promoted Rookie Alpha context when FORGE remains unavailable', async () => {
@@ -154,9 +164,22 @@ describe('computeLeagueDashboard', () => {
       }
     );
 
-    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({ alpha: null, rookieAsset }));
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      alpha: null,
+      rookieAsset,
+      visibilityState: 'rookie_alpha_fallback',
+      unavailableReason: 'missing_forge_row',
+    }));
     expect(result.teams[0].overall_total).toBe(0);
     expect(result.diagnostics?.rookieAlphaMatchedCount).toBe(1);
+    expect(result.diagnostics?.rosterVisibility).toEqual({
+      total: 1,
+      forgeScored: 0,
+      rookieAlphaFallback: 1,
+      knownUnscored: 0,
+      unresolved: 0,
+      evidenceCovered: 1,
+    });
   });
 
   it('defaults week to latest league week when not provided', async () => {

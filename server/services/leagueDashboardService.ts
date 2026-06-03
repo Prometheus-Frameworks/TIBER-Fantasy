@@ -17,6 +17,17 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 const MISSING_RATE_BYPASS_THRESHOLD = Number(process.env.PLAYBOOK_FORGE_BYPASS_THRESHOLD ?? 0.1);
 const UPSERT_CACHE_DEFAULT = process.env.PLAYBOOK_FORGE_UPSERT_CACHE !== '0';
 
+type RosterVisibilityState = 'forge_scored' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
+
+type RosterCoverageCounts = {
+  total: number;
+  forgeScored: number;
+  rookieAlphaFallback: number;
+  knownUnscored: number;
+  unresolved: number;
+  evidenceCovered: number;
+};
+
 type LeagueDashboardPlayer = {
   rosterKey: string;
   canonicalId: string | null;
@@ -27,6 +38,8 @@ type LeagueDashboardPlayer = {
   alpha: number | null;
   tier?: number | null;
   missingReason?: string | null;
+  visibilityState?: RosterVisibilityState;
+  unavailableReason?: string | null;
   rookieAsset?: RookieAssetContext | null;
 };
 
@@ -51,6 +64,12 @@ export type LeagueDashboardPayload = {
     computedForgeCount: number;
     stillMissingCount: number;
     rookieAlphaMatchedCount: number;
+    forgeScoredCount: number;
+    rookieAlphaFallbackCount: number;
+    knownUnscoredCount: number;
+    unresolvedCount: number;
+    evidenceCoveredCount: number;
+    rosterVisibility: RosterCoverageCounts;
   };
   unresolvedPlayers: Array<{ sleeperId: string; reason: string }>;
   teams: LeagueDashboardTeam[];
@@ -98,6 +117,43 @@ function resolveRosterPositions(settings: any, fallback: string[] = []) {
   if (!settings) return fallback;
   if (Array.isArray((settings as any).roster_positions)) return (settings as any).roster_positions as string[];
   return fallback;
+}
+
+function classifyRosterVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>): RosterVisibilityState {
+  if (typeof player.alpha === 'number') return 'forge_scored';
+  if (player.rookieAsset) return 'rookie_alpha_fallback';
+  if (player.missingReason === 'unmapped_sleeper_id') return 'unresolved';
+  return 'known_unscored';
+}
+
+function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>): string | null {
+  if (typeof player.alpha === 'number') return null;
+  if (player.missingReason === 'unmapped_sleeper_id') return 'identity_unresolved';
+  if (player.missingReason === 'alpha_null') return 'alpha_null';
+  if (player.missingReason === 'missing_forge_row' && !player.rookieAsset) return 'rookie_alpha_fallback_unavailable';
+  return player.missingReason ?? 'rookie_alpha_fallback_unavailable';
+}
+
+function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>>): RosterCoverageCounts {
+  const counts: RosterCoverageCounts = {
+    total: players.length,
+    forgeScored: 0,
+    rookieAlphaFallback: 0,
+    knownUnscored: 0,
+    unresolved: 0,
+    evidenceCovered: 0,
+  };
+
+  for (const player of players) {
+    const state = classifyRosterVisibility(player);
+    if (state === 'forge_scored') counts.forgeScored += 1;
+    if (state === 'rookie_alpha_fallback') counts.rookieAlphaFallback += 1;
+    if (state === 'known_unscored') counts.knownUnscored += 1;
+    if (state === 'unresolved') counts.unresolved += 1;
+  }
+
+  counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
+  return counts;
 }
 
 function computeSnapshotMissingRates(payload: any) {
@@ -483,11 +539,15 @@ export async function computeLeagueDashboard(
       if (updatedAlpha !== null && player.alpha === null) {
         newlyMatchedFromCompute += 1;
       }
+      const rookieAsset = updatedAlpha === null ? findRookieAsset(rookieAssetLookup, player) : null;
+      const visibilityState = classifyRosterVisibility({ ...player, alpha: updatedAlpha, missingReason, rookieAsset });
       return {
         ...player,
         alpha: updatedAlpha,
         missingReason,
-        rookieAsset: updatedAlpha === null ? findRookieAsset(rookieAssetLookup, player) : null,
+        rookieAsset,
+        visibilityState,
+        unavailableReason: unavailableReasonForPlayer({ ...player, alpha: updatedAlpha, missingReason, rookieAsset }),
       };
     });
 
@@ -505,6 +565,8 @@ export async function computeLeagueDashboard(
   }
   matchedAlphaCount += newlyMatchedFromCompute;
 
+  const rosterVisibility = buildRosterCoverageCounts(teams.flatMap((team) => team.roster));
+
   const payload: LeagueDashboardPayload = {
     success: true,
     meta: {
@@ -521,7 +583,13 @@ export async function computeLeagueDashboard(
       cachedForgeRowCount: alphaByPlayer.size,
       computedForgeCount,
       stillMissingCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null).length, 0),
-      rookieAlphaMatchedCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null && p.rookieAsset).length, 0),
+      rookieAlphaMatchedCount: rosterVisibility.rookieAlphaFallback,
+      forgeScoredCount: rosterVisibility.forgeScored,
+      rookieAlphaFallbackCount: rosterVisibility.rookieAlphaFallback,
+      knownUnscoredCount: rosterVisibility.knownUnscored,
+      unresolvedCount: rosterVisibility.unresolved,
+      evidenceCoveredCount: rosterVisibility.evidenceCovered,
+      rosterVisibility,
     },
     unresolvedPlayers,
     teams,

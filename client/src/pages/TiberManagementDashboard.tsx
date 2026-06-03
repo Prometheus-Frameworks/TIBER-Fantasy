@@ -68,6 +68,8 @@ type RosterPlayer = {
   alpha?: number | null;
   tier?: number | null;
   missingReason?: string | null;
+  visibilityState?: 'forge_scored' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
+  unavailableReason?: string | null;
   usedAsStarter?: boolean;
   rookieAsset?: RookieAssetContext | null;
 };
@@ -90,6 +92,12 @@ type LeagueDashboardResponse = {
     unresolvedSleeperCount?: number;
     stillMissingCount?: number;
     rookieAlphaMatchedCount?: number;
+    forgeScoredCount?: number;
+    rookieAlphaFallbackCount?: number;
+    knownUnscoredCount?: number;
+    unresolvedCount?: number;
+    evidenceCoveredCount?: number;
+    rosterVisibility?: RosterCoverageCounts;
   };
 };
 
@@ -107,6 +115,15 @@ type PicksResponse = {
   available?: boolean;
   picks?: LeaguePick[];
   error?: string;
+};
+
+type RosterCoverageCounts = {
+  total: number;
+  forgeScored: number;
+  rookieAlphaFallback: number;
+  knownUnscored: number;
+  unresolved: number;
+  evidenceCovered: number;
 };
 
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
@@ -135,6 +152,7 @@ type TeamDirectionResponse = {
   coverage?: TeamDirectionCoverage;
   evidenceCoverage?: TeamDirectionEvidenceCoverage;
   forgeCoverage?: TeamDirectionCoverageSummary;
+  visibilityCounts?: RosterCoverageCounts;
   confidenceInputs?: TeamDirectionConfidenceInputs;
   teamName?: string;
   reason?: string;
@@ -197,24 +215,48 @@ function ExternalOrInternalLink({ href, children, className }: { href: string; c
   );
 }
 
+function emptyRosterCoverageCounts(): RosterCoverageCounts {
+  return { total: 0, forgeScored: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
+}
+
+function classifyRosterVisibility(player: RosterPlayer): keyof Omit<RosterCoverageCounts, 'total' | 'evidenceCovered'> {
+  if (typeof player.alpha === 'number') return 'forgeScored';
+  if (player.rookieAsset) return 'rookieAlphaFallback';
+  if (player.missingReason === 'unmapped_sleeper_id' || player.visibilityState === 'unresolved') return 'unresolved';
+  return 'knownUnscored';
+}
+
+function buildRosterVisibilitySummary(roster: RosterPlayer[] = []): RosterCoverageCounts {
+  const counts = emptyRosterCoverageCounts();
+  counts.total = roster.length;
+  for (const player of roster) {
+    const state = classifyRosterVisibility(player);
+    counts[state] += 1;
+  }
+  counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
+  return counts;
+}
+
 function buildRosterCounts(team?: LeagueDashboardTeam | null) {
-  const counts: Record<(typeof positionGroups)[number], { players: number; modelReady: number; total: number | null }> = {
-    QB: { players: 0, modelReady: 0, total: null },
-    RB: { players: 0, modelReady: 0, total: null },
-    WR: { players: 0, modelReady: 0, total: null },
-    TE: { players: 0, modelReady: 0, total: null },
+  const counts: Record<(typeof positionGroups)[number], RosterCoverageCounts & { totalAlpha: number | null }> = {
+    QB: { ...emptyRosterCoverageCounts(), totalAlpha: null },
+    RB: { ...emptyRosterCoverageCounts(), totalAlpha: null },
+    WR: { ...emptyRosterCoverageCounts(), totalAlpha: null },
+    TE: { ...emptyRosterCoverageCounts(), totalAlpha: null },
   };
 
   for (const position of positionGroups) {
     const total = team?.totals?.[position];
-    counts[position].total = typeof total === 'number' ? total : null;
+    counts[position].totalAlpha = typeof total === 'number' ? total : null;
   }
 
   for (const player of team?.roster ?? []) {
     const position = String(player.pos ?? player.position ?? '').toUpperCase();
     if (position === 'QB' || position === 'RB' || position === 'WR' || position === 'TE') {
-      counts[position].players += 1;
-      if (typeof player.alpha === 'number') counts[position].modelReady += 1;
+      counts[position].total += 1;
+      const state = classifyRosterVisibility(player);
+      counts[position][state] += 1;
+      counts[position].evidenceCovered = counts[position].forgeScored + counts[position].rookieAlphaFallback;
     }
   }
 
@@ -244,10 +286,15 @@ function groupRosterByPosition(roster: RosterPlayer[]) {
 }
 
 function missingReasonLabel(reason?: string | null) {
-  if (reason === 'unmapped_sleeper_id') return 'Not in identity map';
-  if (reason === 'missing_forge_row') return 'No FORGE row';
-  if (reason === 'alpha_null') return 'FORGE score null';
-  return 'Unmatched';
+  if (reason === 'identity_unresolved' || reason === 'unmapped_sleeper_id') return 'Identity unresolved';
+  if (reason === 'missing_forge_row') return 'Missing FORGE row';
+  if (reason === 'rookie_alpha_fallback_unavailable') return 'Missing FORGE row · Rookie Alpha fallback unavailable';
+  if (reason === 'alpha_null') return 'Alpha null · Rookie Alpha fallback unavailable';
+  return 'Known but unscored';
+}
+
+function unscoredReasonLabel(player: RosterPlayer) {
+  return missingReasonLabel(player.unavailableReason ?? player.missingReason);
 }
 
 function forgeTierLabel(tier?: number | null): string | null {
@@ -470,6 +517,10 @@ export default function TiberManagementDashboard() {
   });
 
   const rosterCounts = useMemo(() => buildRosterCounts(activeDashboardTeam), [activeDashboardTeam]);
+  const rosterVisibility = useMemo(
+    () => buildRosterVisibilitySummary(activeDashboardTeam?.roster ?? []),
+    [activeDashboardTeam?.roster],
+  );
   const hasRosterData = Boolean(activeDashboardTeam?.roster?.length);
   const hasDashboardTotals = Boolean(activeDashboardTeam?.totals);
   const rosterGroups = useMemo(() => groupRosterByPosition(activeDashboardTeam?.roster ?? []), [activeDashboardTeam]);
@@ -782,14 +833,46 @@ export default function TiberManagementDashboard() {
         </div>
 
         {hasRosterData && (
+          <div className="tmd-roster-coverage-strip" aria-label="Roster coverage diagnostics">
+            <div>
+              <span>FORGE scored</span>
+              <strong>{rosterVisibility.forgeScored}/{rosterVisibility.total}</strong>
+            </div>
+            <div>
+              <span>Rookie Alpha fallback</span>
+              <strong>{rosterVisibility.rookieAlphaFallback}/{rosterVisibility.total}</strong>
+            </div>
+            <div>
+              <span>Known · unscored</span>
+              <strong>{rosterVisibility.knownUnscored}/{rosterVisibility.total}</strong>
+            </div>
+            <div>
+              <span>Unresolved</span>
+              <strong>{rosterVisibility.unresolved}/{rosterVisibility.total}</strong>
+            </div>
+            <div>
+              <span>Evidence coverage</span>
+              <strong>{rosterVisibility.evidenceCovered}/{rosterVisibility.total}</strong>
+              <small>FORGE scored + Rookie Alpha fallback</small>
+            </div>
+          </div>
+        )}
+
+        {hasRosterData && (
           <div className="tmd-position-grid tmd-position-grid-summary">
             {positionGroups.map((position) => {
               const count = rosterCounts[position];
               return (
                 <div className="tmd-position-card" key={position}>
                   <span>{position}</span>
-                  <strong>{count.players}</strong>
-                  <small>{count.modelReady}/{count.players} matched{count.total !== null ? ` · ${count.total.toFixed(1)}α` : ''}</small>
+                  <strong>{count.total}</strong>
+                  <small>{count.forgeScored}/{count.total} FORGE scored{count.totalAlpha !== null ? ` · ${count.totalAlpha.toFixed(1)}α` : ''}</small>
+                  {(count.rookieAlphaFallback > 0 || count.knownUnscored > 0 || count.unresolved > 0) && (
+                    <small className="tmd-position-card-detail">
+                      {count.rookieAlphaFallback > 0 ? `${count.rookieAlphaFallback} Rookie Alpha · ` : ''}
+                      {count.knownUnscored} known · unscored · {count.unresolved} unresolved
+                    </small>
+                  )}
                 </div>
               );
             })}
@@ -812,11 +895,12 @@ export default function TiberManagementDashboard() {
                 <div key={pos} className="tmd-player-group">
                   <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
                   {players.map((player, idx) => {
-                    const isMatched = typeof player.alpha === 'number';
-                    const rookieAsset = !isMatched ? player.rookieAsset : null;
-                    const tierLabel = isMatched ? forgeTierLabel(player.tier) : null;
+                    const isForgeScored = typeof player.alpha === 'number';
+                    const rookieAsset = !isForgeScored ? player.rookieAsset : null;
+                    const isUnresolved = !isForgeScored && !rookieAsset && (player.visibilityState === 'unresolved' || player.missingReason === 'unmapped_sleeper_id');
+                    const tierLabel = isForgeScored ? forgeTierLabel(player.tier) : null;
                     return (
-                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${!isMatched && !rookieAsset ? 'tmd-player-row-unmatched' : ''}`}>
+                      <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${!isForgeScored && !rookieAsset ? 'tmd-player-row-unmatched' : ''}`}>
                         <div className="tmd-player-name">
                           <span>{player.name ?? player.sleeperId ?? 'Unknown'}</span>
                           {player.nflTeam && <span className="tmd-player-team">{player.nflTeam}</span>}
@@ -827,10 +911,10 @@ export default function TiberManagementDashboard() {
                           {tierLabel && <span className={`tmd-player-tier tmd-player-tier-${player.tier}`}>{tierLabel}</span>}
                         </div>
                         <div className="tmd-player-alpha">
-                          {isMatched ? (
+                          {isForgeScored ? (
                             <div className="tmd-player-alpha-matched">
                               <strong>{(player.alpha as number).toFixed(1)}</strong>
-                              <span className="tmd-player-matched-badge">Matched</span>
+                              <span className="tmd-player-matched-badge">FORGE scored</span>
                             </div>
                           ) : rookieAsset ? (
                             <div className="tmd-player-rookie-asset">
@@ -844,8 +928,8 @@ export default function TiberManagementDashboard() {
                             </div>
                           ) : (
                             <div className="tmd-player-alpha-unmatched">
-                              <span className="tmd-player-unmatched-label">Unmatched</span>
-                              <span className="tmd-player-unmatched-reason">{missingReasonLabel(player.missingReason)}</span>
+                              <span className="tmd-player-unmatched-label">{isUnresolved ? 'Unresolved' : 'Known · unscored'}</span>
+                              <span className="tmd-player-unmatched-reason">{unscoredReasonLabel(player)}</span>
                             </div>
                           )}
                         </div>

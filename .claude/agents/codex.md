@@ -682,3 +682,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Summary:** Split Management evidence coverage from FORGE scoring coverage, required the FORGE coverage threshold before Team Direction classification, changed generic missing-player UI copy to `Unmatched`, and added the sparse-FORGE regression case.
 - **Key Files:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `server/routes/__tests__/managementRoutes.test.ts`
 - **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, diff check.
+
+### 2026-06-03 — Management roster coverage diagnostics wording
+- **Summary:** Made Management roster coverage auditable by adding explicit visibility states/counts for FORGE scored, Rookie Alpha fallback, known but unscored, unresolved, and evidence coverage. Updated cards/rows to avoid ambiguous `matched` wording and show actual unavailable reasons.
+- **Key Files:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
+- **Validation:** Focused Management Jest suites ✅; `npm run build` ✅ with existing warning; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files.

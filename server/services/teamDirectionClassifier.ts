@@ -1,5 +1,13 @@
 type TeamDirectionCoverage = { matched: number; total: number; rate: number };
 type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatched: number };
+type RosterVisibilityCounts = {
+  total: number;
+  forgeScored: number;
+  rookieAlphaFallback: number;
+  knownUnscored: number;
+  unresolved: number;
+  evidenceCovered: number;
+};
 type ScoredPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'Other';
 
 export type TeamDirectionConfidenceInputs = {
@@ -23,6 +31,7 @@ export type TeamDirectionResult = {
   coverage: TeamDirectionCoverage & { forgeMatched: number; rookieAlphaMatched: number };
   evidenceCoverage: TeamDirectionEvidenceCoverage;
   forgeCoverage: TeamDirectionCoverage;
+  visibilityCounts: RosterVisibilityCounts;
   confidenceInputs: TeamDirectionConfidenceInputs;
 };
 
@@ -61,6 +70,32 @@ function avg(values: number[]): number | null {
 
 function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals);
+}
+
+function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCounts {
+  const counts: RosterVisibilityCounts = {
+    total: players.length,
+    forgeScored: 0,
+    rookieAlphaFallback: 0,
+    knownUnscored: 0,
+    unresolved: 0,
+    evidenceCovered: 0,
+  };
+
+  for (const player of players) {
+    if (typeof player.alpha === 'number') {
+      counts.forgeScored += 1;
+    } else if (player.rookieAsset) {
+      counts.rookieAlphaFallback += 1;
+    } else if (player.missingReason === 'unmapped_sleeper_id') {
+      counts.unresolved += 1;
+    } else {
+      counts.knownUnscored += 1;
+    }
+  }
+
+  counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
+  return counts;
 }
 
 function buildScoredPositionCounts(players: ClassifierPlayer[]): Record<ScoredPosition, number> {
@@ -118,6 +153,7 @@ export function classifyTeamDirection(
   const forgeCoverage = { matched: forgeMatched, total, rate: forgeRate };
   const scoredPositionCounts = buildScoredPositionCounts(rosterPlayers);
   const missingScoredPositions = SCORED_POSITIONS.filter((position) => scoredPositionCounts[position] === 0);
+  const visibilityCounts = buildVisibilityCounts(rosterPlayers);
   const confidenceInputs: TeamDirectionConfidenceInputs = {
     driver: 'forge_scoring_coverage_and_position_quality',
     forgeCoverage,
@@ -135,7 +171,7 @@ export function classifyTeamDirection(
   };
   // Preserve the original additive coverage shape for existing Management consumers.
   const coverage = { ...evidenceCoverage, forgeMatched, rookieAlphaMatched };
-  const coverageDetails = { coverage, evidenceCoverage, forgeCoverage, confidenceInputs };
+  const coverageDetails = { coverage, evidenceCoverage, forgeCoverage, visibilityCounts, confidenceInputs };
 
   if (total === 0) {
     return {
