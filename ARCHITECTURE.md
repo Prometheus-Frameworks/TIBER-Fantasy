@@ -14,6 +14,18 @@ TIBER-Fantasy is a grounded fantasy football decision-support product, not a lor
 
 ---
 
+## June 2026 Product Surface Milestone
+
+TIBER-Fantasy is the downstream product/API/UI shell for promoted model outputs and real fantasy-team context. In June 2026, Management v0 established the first continuous dynasty-team workflow: Sleeper league sync → active team context → roster and traded-pick loading → FORGE-backed Team Direction → explicit evidence gaps → linked research surfaces.
+
+The Management surface is read-only and coverage-gated. It must distinguish synced roster state from graded FORGE alpha, promoted Rookie Alpha fallback evidence, unmatched players, and missing valuation layers. Rookie Alpha is consumed through the promoted artifact boundary; it must not be blended into FORGE roster strength or treated as a dependency on the TIBER-Rookies static card/detail runtime.
+
+Sleeper Sync v2 also records append-only add, drop, and trade ownership events. Those events are the foundation for Team Delta, the next roster-history and transaction-attribution surface. Do not describe a complete pick-capital-aware Team Delta dashboard as shipped until the product surface exposes it.
+
+See `docs/product/MANAGEMENT_DASHBOARD_V0.md` for the Management v0 capability boundary.
+
+---
+
 ## 1. Quick Start for Agents
 
 1. Read this file for orientation.
