@@ -59,7 +59,37 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.coverage).toEqual(expect.objectContaining({ matched: 4, forgeMatched: 3, rookieAlphaMatched: 1, rate: 1 }));
     expect(result.evidenceCoverage).toEqual({ matched: 4, total: 4, rate: 1, rookieAlphaMatched: 1 });
     expect(result.forgeCoverage).toEqual({ matched: 3, total: 4, rate: 0.75 });
+    expect(result.confidenceInputs).toEqual(expect.objectContaining({
+      driver: 'forge_scoring_coverage_and_position_quality',
+      scoredPlayers: 3,
+      forgeCoverage: { matched: 3, total: 4, rate: 0.75 },
+      evidenceCoverage: { matched: 4, total: 4, rate: 1, rookieAlphaMatched: 1 },
+    }));
     expect(result.reasons.some((reason) => reason.includes('without blending into FORGE scoring'))).toBe(true);
+  });
+
+  test('Rookie Alpha evidence completeness does not inflate direction confidence', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 65 },
+      { pos: 'TE', alpha: 60 },
+      { pos: 'RB', alpha: 62 },
+      ...Array.from({ length: 6 }, (_, index) => ({
+        pos: index % 2 === 0 ? 'WR' : 'RB',
+        alpha: null,
+        rookieAsset: { rookieAlphaScore: 85 - index },
+      })),
+    ]);
+
+    const result = classifyTeamDirection(roster, []);
+
+    expect(result.direction).toBe('contender');
+    expect(result.evidenceCoverage).toEqual({ matched: 12, total: 12, rate: 1, rookieAlphaMatched: 6 });
+    expect(result.forgeCoverage).toEqual({ matched: 6, total: 12, rate: 0.5 });
+    expect(result.confidence).toBe('low');
+    expect(result.blockers.some((blocker) => blocker.includes('Direction confidence is limited by scored data only'))).toBe(true);
   });
 
   test('does not classify roster strength from Rookie Alpha fallback alone', () => {
@@ -315,6 +345,12 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(res.body.coverage).toHaveProperty('rate');
     expect(res.body.evidenceCoverage).toHaveProperty('rate');
     expect(res.body.forgeCoverage).toHaveProperty('rate');
+    expect(res.body.confidenceInputs).toEqual(expect.objectContaining({
+      driver: 'forge_scoring_coverage_and_position_quality',
+      forgeCoverage: expect.objectContaining({ rate: expect.any(Number) }),
+      evidenceCoverage: expect.objectContaining({ rate: expect.any(Number) }),
+      scoredPositionCounts: expect.any(Object),
+    }));
   });
 
   test('returns low-coverage result as uncertain when roster is mostly unmatched', async () => {

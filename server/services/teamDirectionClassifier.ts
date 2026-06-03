@@ -1,5 +1,19 @@
 type TeamDirectionCoverage = { matched: number; total: number; rate: number };
 type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatched: number };
+type ScoredPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'Other';
+
+export type TeamDirectionConfidenceInputs = {
+  driver: 'forge_scoring_coverage_and_position_quality';
+  forgeCoverage: TeamDirectionCoverage;
+  evidenceCoverage: TeamDirectionEvidenceCoverage;
+  scoredPlayers: number;
+  scoredPositionCounts: Record<ScoredPosition, number>;
+  missingScoredPositions: ScoredPosition[];
+  minimumForgeCoverageRate: number;
+  highConfidenceForgeCoverageRate: number;
+  highConfidenceScoredPlayers: number;
+  notes: string[];
+};
 
 export type TeamDirectionResult = {
   direction: 'contender' | 'rebuild' | 'retool' | 'uncertain';
@@ -9,6 +23,7 @@ export type TeamDirectionResult = {
   coverage: TeamDirectionCoverage & { forgeMatched: number; rookieAlphaMatched: number };
   evidenceCoverage: TeamDirectionEvidenceCoverage;
   forgeCoverage: TeamDirectionCoverage;
+  confidenceInputs: TeamDirectionConfidenceInputs;
 };
 
 export type ClassifierOptions = {
@@ -31,6 +46,7 @@ type ClassifierPick = {
 const COVERAGE_THRESHOLD = 0.5;
 const HIGH_CONFIDENCE_COVERAGE = 0.8;
 const MIN_HIGH_CONFIDENCE_PLAYERS = 10;
+const SCORED_POSITIONS: ScoredPosition[] = ['QB', 'RB', 'WR', 'TE'];
 
 function posAlphas(players: ClassifierPlayer[], pos: string): number[] {
   return players
@@ -45,6 +61,44 @@ function avg(values: number[]): number | null {
 
 function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals);
+}
+
+function buildScoredPositionCounts(players: ClassifierPlayer[]): Record<ScoredPosition, number> {
+  const counts: Record<ScoredPosition, number> = { QB: 0, RB: 0, WR: 0, TE: 0, Other: 0 };
+
+  for (const player of players) {
+    if (typeof player.alpha !== 'number') continue;
+
+    const position = String(player.pos ?? '').toUpperCase();
+    if (position === 'QB' || position === 'RB' || position === 'WR' || position === 'TE') {
+      counts[position] += 1;
+    } else {
+      counts.Other += 1;
+    }
+  }
+
+  return counts;
+}
+
+function confidenceFromForgeInputs(
+  forgeCoverage: TeamDirectionCoverage,
+  scoredPositionCounts: Record<ScoredPosition, number>
+): TeamDirectionResult['confidence'] {
+  let confidence: TeamDirectionResult['confidence'] =
+    forgeCoverage.rate >= HIGH_CONFIDENCE_COVERAGE && forgeCoverage.matched >= MIN_HIGH_CONFIDENCE_PLAYERS
+      ? 'high'
+      : forgeCoverage.rate >= 0.65
+        ? 'medium'
+        : 'low';
+
+  const missingCorePosition = scoredPositionCounts.QB === 0 || scoredPositionCounts.RB === 0 || scoredPositionCounts.WR === 0;
+  const missingMultipleCorePositions = [scoredPositionCounts.QB, scoredPositionCounts.RB, scoredPositionCounts.WR]
+    .filter((count) => count === 0).length >= 2;
+
+  if (confidence === 'high' && missingCorePosition) confidence = 'medium';
+  if (confidence === 'medium' && missingMultipleCorePositions) confidence = 'low';
+
+  return confidence;
 }
 
 export function classifyTeamDirection(
@@ -62,9 +116,26 @@ export function classifyTeamDirection(
   const forgeRate = total === 0 ? 0 : forgeMatched / total;
   const evidenceCoverage = { matched, total, rate, rookieAlphaMatched };
   const forgeCoverage = { matched: forgeMatched, total, rate: forgeRate };
+  const scoredPositionCounts = buildScoredPositionCounts(rosterPlayers);
+  const missingScoredPositions = SCORED_POSITIONS.filter((position) => scoredPositionCounts[position] === 0);
+  const confidenceInputs: TeamDirectionConfidenceInputs = {
+    driver: 'forge_scoring_coverage_and_position_quality',
+    forgeCoverage,
+    evidenceCoverage,
+    scoredPlayers: forgeMatched,
+    scoredPositionCounts,
+    missingScoredPositions,
+    minimumForgeCoverageRate: COVERAGE_THRESHOLD,
+    highConfidenceForgeCoverageRate: HIGH_CONFIDENCE_COVERAGE,
+    highConfidenceScoredPlayers: MIN_HIGH_CONFIDENCE_PLAYERS,
+    notes: [
+      'Direction confidence is derived from FORGE scoring coverage and scored positional data quality.',
+      'Promoted Rookie Alpha fallback contributes to evidence completeness only; it does not raise direction confidence.',
+    ],
+  };
   // Preserve the original additive coverage shape for existing Management consumers.
   const coverage = { ...evidenceCoverage, forgeMatched, rookieAlphaMatched };
-  const coverageDetails = { coverage, evidenceCoverage, forgeCoverage };
+  const coverageDetails = { coverage, evidenceCoverage, forgeCoverage, confidenceInputs };
 
   if (total === 0) {
     return {
@@ -124,12 +195,7 @@ export function classifyTeamDirection(
 
   const pickCount = picks.length;
 
-  const confidence: TeamDirectionResult['confidence'] =
-    rate >= HIGH_CONFIDENCE_COVERAGE && matched >= MIN_HIGH_CONFIDENCE_PLAYERS
-      ? 'high'
-      : rate >= 0.65
-        ? 'medium'
-        : 'low';
+  const confidence = confidenceFromForgeInputs(forgeCoverage, scoredPositionCounts);
 
   const reasons: string[] = [];
   const blockers: string[] = [];
@@ -281,11 +347,18 @@ export function classifyTeamDirection(
     }
   }
 
-  // ── Low coverage footnote ──
-  if (rate < HIGH_CONFIDENCE_COVERAGE) {
-    const unmatchedCount = total - matched;
+  // ── Coverage/completeness footnotes ──
+  if (forgeRate < HIGH_CONFIDENCE_COVERAGE) {
+    const unscoredCount = total - forgeMatched;
     blockers.push(
-      `${unmatchedCount} roster player${unmatchedCount > 1 ? 's' : ''} still missing FORGE or promoted Rookie Alpha evidence (${Math.round(rate * 100)}% coverage). Confidence is limited.`
+      `${unscoredCount} roster player${unscoredCount > 1 ? 's' : ''} still missing FORGE scoring data (${Math.round(forgeRate * 100)}% FORGE scoring coverage). Direction confidence is limited by scored data only.`
+    );
+  }
+
+  if (rate < HIGH_CONFIDENCE_COVERAGE) {
+    const unseenCount = total - matched;
+    blockers.push(
+      `${unseenCount} roster player${unseenCount > 1 ? 's' : ''} still missing both FORGE and promoted Rookie Alpha evidence (${Math.round(rate * 100)}% evidence coverage). Evidence completeness is limited.`
     );
   }
 
