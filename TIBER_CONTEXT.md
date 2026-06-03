@@ -1,7 +1,7 @@
 
 # Tiber Fantasy — Project Context File
 
-> Last updated: February 19, 2026
+> Last updated: June 2, 2026
 > Purpose: Give any AI agent a complete, accurate understanding of what Tiber Fantasy is, what's built, what's live, and how everything connects.
 
 ---
@@ -16,6 +16,14 @@ Tiber Fantasy is a free, independent fantasy football analytics platform. It pro
 **Human-in-the-loop doctrine:** TIBER-Fantasy is a decision cockpit, not a delegated roster manager. The product should surface evidence, explain signals, and make uncertainty visible so users can make better decisions themselves. TIBER can recommend and simulate, but final roster/trade/waiver decisions remain with the human manager.
 
 **Primary focus:** Dynasty leagues, skill positions (QB, RB, WR, TE). The platform also includes a DST Streamer tool for weekly defense streaming recommendations as a utility feature, though defensive players are not part of the core grading or ranking systems.
+
+## June 2026 Management Milestone
+
+TIBER-Fantasy crossed from infrastructure-first development into product-first usage when Management v0 made real Sleeper dynasty teams inspectable through one read-only cockpit. The `/management` route can combine saved league context, active team context, roster rows, traded-pick context where available, FORGE-backed Team Direction, explicit coverage gaps, model-signal readiness, and links into deeper research surfaces.
+
+Team Direction returns `contender`, `rebuild`, `retool`, or `uncertain` with `high`, `medium`, or `low` confidence. It stays coverage-gated: promoted Rookie Alpha fallback improves evidence visibility for rookie assets, but it does not replace FORGE scoring coverage or blend into FORGE roster strength. Unmatched players and missing valuation layers remain visible.
+
+The next Management operating question is Team Delta: **How has my team changed since the last time I looked?** Sleeper Sync v2 records append-only add, drop, and trade ownership events as the attribution foundation. A complete pick-capital-aware Team Delta dashboard remains a next product surface, not a shipped v0 claim. See `docs/product/MANAGEMENT_DASHBOARD_V0.md`.
 
 ---
 

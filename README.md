@@ -8,6 +8,18 @@ TIBER-Fantasy is a decision cockpit, not a delegated roster manager. It helps us
 
 **Product shell note (March 2026):** The visible shell now uses clearer product-facing language across Home and navigation so new users can quickly understand where to start and what each lane is for.
 
+## June 2026 Milestone: TIBER becomes a usable fantasy operating system
+
+June 2026 marked the first phase where TIBER-Fantasy could be used continuously against real Sleeper dynasty rosters. The product crossed from infrastructure-first development into product-first usage: sync a real league, select an active team context, inspect roster and future-pick state, evaluate Team Direction, review missing evidence, and move into the appropriate research surface.
+
+The Management Dashboard (`/management`, with `/team-management` as an alias) is the first operating-system surface where TIBER's model ecosystem meets a user's actual fantasy team. Management v0 brings together Active Context, Team Direction, Roster Snapshot, Draft Picks / Future Capital, Model Signals, and Research Surface links. It is read-only decision support: TIBER prepares the decision, and the human manager owns the final roster, trade, or waiver action.
+
+Team Direction classifies an inspected roster as `contender`, `rebuild`, `retool`, or `uncertain`, with `high`, `medium`, or `low` confidence. It remains coverage-gated: missing FORGE rows, unmatched players, and incomplete valuation layers lower confidence rather than being silently smoothed over. Promoted Rookie Alpha artifacts can add rookie-asset evidence when FORGE remains unavailable, but they are not blended into FORGE roster strength, scoring, or rankings.
+
+The next Management question is Team Delta: **How has my team changed since the last time I looked?** Sleeper Sync v2 already records append-only add, drop, and trade ownership events. A complete pick-capital-aware Team Delta view remains the next roster-history and transaction-attribution surface; it is review and attribution, not automated advice.
+
+See `docs/product/MANAGEMENT_DASHBOARD_V0.md` for the capability boundaries and next-phase framing.
+
 ---
 
 ## Features
