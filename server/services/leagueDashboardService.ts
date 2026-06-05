@@ -1,5 +1,5 @@
 import { storage, type IStorage } from '../storage';
-import { sleeperClient, type SleeperRoster } from '../integrations/sleeperClient';
+import { sleeperClient, type SleeperPlayer, type SleeperRoster } from '../integrations/sleeperClient';
 import { db } from '../infra/db';
 import { forgePlayerState, playerIdentityMap } from '@shared/schema';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
@@ -111,6 +111,159 @@ const defaultDeps: LeagueDashboardDeps = {
 function normalizeExternalId(value?: string | null) {
   if (!value) return null;
   return String(value);
+}
+
+
+function normalizeSleeperPosition(position?: string | null): string | null {
+  const normalized = position?.trim().toUpperCase();
+  if (!normalized) return null;
+  const positionMap: Record<string, string> = {
+    QUARTERBACK: 'QB',
+    'RUNNING BACK': 'RB',
+    RUNNINGBACK: 'RB',
+    'WIDE RECEIVER': 'WR',
+    WIDERECEIVER: 'WR',
+    'TIGHT END': 'TE',
+    TIGHTEND: 'TE',
+    DEFENSE: 'DEF',
+    DEFENCE: 'DEF',
+    DST: 'DEF',
+    'D/ST': 'DEF',
+  };
+  return positionMap[normalized] ?? normalized;
+}
+
+function normalizeSleeperTeam(team?: string | null): string | null {
+  const normalized = team?.trim().toUpperCase();
+  if (!normalized) return null;
+  if (normalized === 'JAX') return 'JAC';
+  return normalized;
+}
+
+function buildSleeperFullName(player: SleeperPlayer): string | null {
+  const fullName = player.full_name?.trim();
+  if (fullName) return fullName;
+  const firstName = player.first_name?.trim() ?? '';
+  const lastName = player.last_name?.trim() ?? '';
+  const joined = `${firstName} ${lastName}`.trim();
+  return joined || null;
+}
+
+function parseSleeperBirthDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseSleeperWeight(value?: string | number | null): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isSleeperPlayerActive(player: SleeperPlayer): boolean {
+  if (player.active === true) return true;
+  if (player.status?.toLowerCase() === 'active') return true;
+  if (player.status?.toLowerCase() === 'inactive') return false;
+  return Boolean(player.team?.trim());
+}
+
+function confidenceForSleeperIdentity(player: SleeperPlayer): number {
+  let confidence = 0.5;
+  if (player.full_name?.trim()) confidence += 0.2;
+  if (player.first_name?.trim() && player.last_name?.trim()) confidence += 0.1;
+  if (player.team?.trim()) confidence += 0.1;
+  if (player.active === true || player.status?.toLowerCase() === 'active') confidence += 0.1;
+  if (['QB', 'RB', 'WR', 'TE'].includes(normalizeSleeperPosition(player.position) ?? '')) confidence += 0.1;
+  return Math.min(confidence, 1);
+}
+
+function normalizeNameFingerprint(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function buildIdentityRowFromSleeperPlayer(sleeperId: string, player: SleeperPlayer) {
+  const fullName = buildSleeperFullName(player);
+  const position = normalizeSleeperPosition(player.position);
+  if (!fullName || !position) return null;
+
+  const fantasyDataId = player.fantasy_data_id === null || player.fantasy_data_id === undefined
+    ? null
+    : String(player.fantasy_data_id);
+
+  return {
+    canonicalId: `sleeper:${sleeperId}`,
+    fullName,
+    firstName: player.first_name?.trim() || null,
+    lastName: player.last_name?.trim() || null,
+    position,
+    nflTeam: normalizeSleeperTeam(player.team),
+    sleeperId,
+    fantasyDataId,
+    gsisId: player.gsis_id?.trim() || null,
+    birthDate: parseSleeperBirthDate(player.birth_date),
+    college: player.college?.trim() || null,
+    height: player.height?.trim() || null,
+    weight: parseSleeperWeight(player.weight),
+    nameFingerprint: normalizeNameFingerprint(fullName),
+    teamHistory: normalizeSleeperTeam(player.team) ? [normalizeSleeperTeam(player.team)!] : [],
+    dataCompleteness: [sleeperId, fantasyDataId, player.gsis_id, player.birth_date, player.college, player.height, player.weight]
+      .filter((value) => value !== null && value !== undefined && value !== '').length,
+    isActive: isSleeperPlayerActive(player),
+    confidence: confidenceForSleeperIdentity(player),
+    lastVerified: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+async function hydrateMissingSleeperIdentities(
+  sleeperIds: string[],
+  deps: LeagueDashboardDeps,
+  logger: PlaybookForgeLogger,
+): Promise<typeof playerIdentityMap.$inferSelect[]> {
+  const uniqueMissingIds = Array.from(new Set(sleeperIds.filter(Boolean)));
+  const getNflPlayers = deps.sleeperClient.getNflPlayers;
+  if (uniqueMissingIds.length === 0 || typeof getNflPlayers !== 'function') return [];
+
+  try {
+    const sleeperPlayers = await getNflPlayers.call(deps.sleeperClient);
+    const rows = uniqueMissingIds
+      .map((sleeperId) => {
+        const player = sleeperPlayers[sleeperId];
+        return player ? buildIdentityRowFromSleeperPlayer(sleeperId, { ...player, player_id: player.player_id ?? sleeperId }) : null;
+      })
+      .filter((row): row is NonNullable<ReturnType<typeof buildIdentityRowFromSleeperPlayer>> => row !== null);
+
+    if (rows.length === 0) {
+      logger.log('identity-hydration-empty', {
+        requestId: logger.requestId,
+        requested: uniqueMissingIds.length,
+      });
+      return [];
+    }
+
+    await deps.db
+      .insert(playerIdentityMap)
+      .values(rows as any)
+      .onConflictDoNothing();
+
+    logger.log('identity-hydration-complete', {
+      requestId: logger.requestId,
+      requested: uniqueMissingIds.length,
+      hydrated: rows.length,
+      sample: rows.slice(0, 5).map((row) => ({ sleeperId: row.sleeperId, canonicalId: row.canonicalId, fullName: row.fullName })),
+    });
+
+    return rows as any;
+  } catch (error) {
+    logger.log('identity-hydration-failed', {
+      requestId: logger.requestId,
+      requested: uniqueMissingIds.length,
+      error: (error as Error).message,
+    });
+    return [];
+  }
 }
 
 function resolveRosterPositions(settings: any, fallback: string[] = []) {
@@ -352,12 +505,23 @@ export async function computeLeagueDashboard(
     rosterByOwner.set(String(roster.owner_id), roster);
   });
 
-  const identities = rosterPlayerIds.length
+  let identities = rosterPlayerIds.length
     ? await deps.db
         .select()
         .from(playerIdentityMap)
         .where(inArray(playerIdentityMap.sleeperId, rosterPlayerIds))
     : [];
+
+  const initiallyResolvedSleeperIds = new Set(identities.map((id) => String(id.sleeperId)));
+  const missingSleeperIds = rosterPlayerIds.filter((id) => !initiallyResolvedSleeperIds.has(id));
+  const hydratedIdentities = await hydrateMissingSleeperIdentities(missingSleeperIds, deps, logger);
+  if (hydratedIdentities.length > 0) {
+    const seenSleeperIds = new Set(identities.map((id) => String(id.sleeperId)));
+    identities = [
+      ...identities,
+      ...hydratedIdentities.filter((id) => id.sleeperId && !seenSleeperIds.has(String(id.sleeperId))),
+    ];
+  }
 
   const identityBySleeperId = new Map(identities.map((id) => [String(id.sleeperId), id]));
   const canonicalIds = identities.map((id) => id.canonicalId);

@@ -485,3 +485,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/storage.ts`, `server/__tests__/storageLeagueContext.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
 - **Validation:** Focused storage Jest suite passed with `--coverage=false`; `npm run typecheck` remains blocked by pre-existing repo-wide TypeScript errors outside this change.
 - **Notes:** No schema changes and no Sleeper sync behavior changes. The patch keeps the active-context unavailable/error behavior explicit and does not fabricate league/team data.
+
+### 2026-06-05 — Codex: Management roster Sleeper identity hydration
+- **What changed:** Added a Management dashboard identity-hydration pass for roster Sleeper IDs missing from `player_identity_map`, using Sleeper `/players/nfl` metadata to create explicit `sleeper:<id>` identity rows before classifying players as unresolved.
+- **Files modified:** `server/integrations/sleeperClient.ts`, `server/services/leagueDashboardService.ts`, `server/services/__tests__/leagueDashboardService.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Focused League Dashboard Jest suite passed with `--coverage=false --forceExit`; `git diff --check` passed; `npm run typecheck` still fails on pre-existing repo-wide TypeScript errors outside touched files and no touched-file errors were reported by a filtered typecheck check.
+- **Notes:** This remains a downstream consumer fix: it does not fabricate FORGE scores or rookie evidence. If Sleeper metadata is unavailable or incomplete, players continue to surface as unresolved.
