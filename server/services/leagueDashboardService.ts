@@ -17,11 +17,13 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 const MISSING_RATE_BYPASS_THRESHOLD = Number(process.env.PLAYBOOK_FORGE_BYPASS_THRESHOLD ?? 0.1);
 const UPSERT_CACHE_DEFAULT = process.env.PLAYBOOK_FORGE_UPSERT_CACHE !== '0';
 
-type RosterVisibilityState = 'forge_scored' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
+type RosterVisibilityState = 'forge_scored' | 'forge_baseline' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
+type ForgeScoreSource = 'player_specific' | 'generated_baseline' | 'cached_unknown';
 
 type RosterCoverageCounts = {
   total: number;
   forgeScored: number;
+  forgeBaseline: number;
   rookieAlphaFallback: number;
   knownUnscored: number;
   unresolved: number;
@@ -36,6 +38,14 @@ type LeagueDashboardPlayer = {
   pos: string;
   nflTeam?: string | null;
   alpha: number | null;
+  forgeScoreSource?: ForgeScoreSource | null;
+  forgeScoreProvenance?: {
+    source: ForgeScoreSource;
+    reason: string;
+    gamesPlayed?: number | null;
+    confidence?: number | null;
+    dataQuality?: ForgeScore['dataQuality'] | null;
+  } | null;
   tier?: number | null;
   missingReason?: string | null;
   visibilityState?: RosterVisibilityState;
@@ -65,6 +75,7 @@ export type LeagueDashboardPayload = {
     stillMissingCount: number;
     rookieAlphaMatchedCount: number;
     forgeScoredCount: number;
+    forgeBaselineCount: number;
     rookieAlphaFallbackCount: number;
     knownUnscoredCount: number;
     unresolvedCount: number;
@@ -138,6 +149,36 @@ function normalizeSleeperTeam(team?: string | null): string | null {
   if (!normalized) return null;
   if (normalized === 'JAX') return 'JAC';
   return normalized;
+}
+
+const GENERATED_BASELINE_ALPHA_BY_POSITION: Record<string, number> = {
+  QB: 22.7,
+  RB: 15.0,
+  WR: 13.5,
+  TE: 9.2,
+};
+
+function nearlyEqual(a: number, b: number, epsilon = 0.05): boolean {
+  return Math.abs(a - b) <= epsilon;
+}
+
+function matchesGeneratedPositionBaseline(position: unknown, alpha: number | null): boolean {
+  if (typeof alpha !== 'number') return false;
+  const baseline = GENERATED_BASELINE_ALPHA_BY_POSITION[String(position ?? '').toUpperCase()];
+  return typeof baseline === 'number' && nearlyEqual(alpha, baseline);
+}
+
+function classifyComputedForgeScoreSource(score: ForgeScore): ForgeScoreSource {
+  if ((score.gamesPlayed ?? 0) >= 3) return 'player_specific';
+  return 'generated_baseline';
+}
+
+function classifyCachedForgeScoreSource(row: any, alpha: number | null): ForgeScoreSource {
+  if (alpha === null) return 'cached_unknown';
+  const confidence = row?.confidenceScore;
+  if (matchesGeneratedPositionBaseline(row?.position, alpha)) return 'generated_baseline';
+  if (typeof confidence === 'number') return confidence > 45 ? 'player_specific' : 'generated_baseline';
+  return 'cached_unknown';
 }
 
 function buildSleeperFullName(player: SleeperPlayer): string | null {
@@ -272,25 +313,32 @@ function resolveRosterPositions(settings: any, fallback: string[] = []) {
   return fallback;
 }
 
-function classifyRosterVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>): RosterVisibilityState {
-  if (typeof player.alpha === 'number') return 'forge_scored';
+function isPlayerSpecificForgeScore(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource'>): boolean {
+  return typeof player.alpha === 'number' && player.forgeScoreSource === 'player_specific';
+}
+
+function classifyRosterVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>): RosterVisibilityState {
+  if (isPlayerSpecificForgeScore(player)) return 'forge_scored';
+  if (typeof player.alpha === 'number') return 'forge_baseline';
   if (player.rookieAsset) return 'rookie_alpha_fallback';
   if (player.missingReason === 'unmapped_sleeper_id') return 'unresolved';
   return 'known_unscored';
 }
 
-function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>): string | null {
-  if (typeof player.alpha === 'number') return null;
+function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>): string | null {
+  if (isPlayerSpecificForgeScore(player)) return null;
+  if (typeof player.alpha === 'number') return 'forge_generated_baseline_not_player_specific';
   if (player.missingReason === 'unmapped_sleeper_id') return 'identity_unresolved';
   if (player.missingReason === 'alpha_null') return 'alpha_null';
   if (player.missingReason === 'missing_forge_row' && !player.rookieAsset) return 'rookie_alpha_fallback_unavailable';
   return player.missingReason ?? 'rookie_alpha_fallback_unavailable';
 }
 
-function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'alpha' | 'missingReason' | 'rookieAsset'>>): RosterCoverageCounts {
+function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>>): RosterCoverageCounts {
   const counts: RosterCoverageCounts = {
     total: players.length,
     forgeScored: 0,
+    forgeBaseline: 0,
     rookieAlphaFallback: 0,
     knownUnscored: 0,
     unresolved: 0,
@@ -300,6 +348,7 @@ function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'a
   for (const player of players) {
     const state = classifyRosterVisibility(player);
     if (state === 'forge_scored') counts.forgeScored += 1;
+    if (state === 'forge_baseline') counts.forgeBaseline += 1;
     if (state === 'rookie_alpha_fallback') counts.rookieAlphaFallback += 1;
     if (state === 'known_unscored') counts.knownUnscored += 1;
     if (state === 'unresolved') counts.unresolved += 1;
@@ -317,7 +366,7 @@ function computeSnapshotMissingRates(payload: any) {
   for (const team of payload.teams as any[]) {
     const roster = Array.isArray(team?.roster) ? team.roster : [];
     totalPlayers += roster.length;
-    missingAlpha += roster.filter((r: any) => r.alpha === null || r.alpha === undefined).length;
+    missingAlpha += roster.filter((r: any) => r.alpha === null || r.alpha === undefined || r.forgeScoreSource !== 'player_specific').length;
   }
 
   const unresolvedPlayers = Array.isArray(payload.unresolvedPlayers) ? payload.unresolvedPlayers.length : 0;
@@ -349,6 +398,10 @@ function buildLineup(players: LeagueDashboardPlayer[], rosterPositions: string[]
 
   const sorted = [...players].sort((a, b) => (b.alpha ?? 0) - (a.alpha ?? 0));
 
+  function scoringAlpha(player: LeagueDashboardPlayer): number {
+    return isPlayerSpecificForgeScore(player) ? (player.alpha ?? 0) : 0;
+  }
+
   function takePlayers(pos: string, count: number) {
     for (const player of sorted) {
       if (count <= 0) break;
@@ -356,7 +409,7 @@ function buildLineup(players: LeagueDashboardPlayer[], rosterPositions: string[]
       if (player.pos !== pos) continue;
       used.add(player.rosterKey);
       startersUsed.push(player);
-      totals[pos as keyof typeof totals] += player.alpha ?? 0;
+      totals[pos as keyof typeof totals] += scoringAlpha(player);
       count -= 1;
     }
   }
@@ -381,7 +434,7 @@ function buildLineup(players: LeagueDashboardPlayer[], rosterPositions: string[]
       if (!predicate(player)) continue;
       used.add(player.rosterKey);
       startersUsed.push(player);
-      totals[player.pos as keyof typeof totals] += player.alpha ?? 0;
+      totals[player.pos as keyof typeof totals] += scoringAlpha(player);
       count -= 1;
     }
   }
@@ -396,7 +449,7 @@ function buildLineup(players: LeagueDashboardPlayer[], rosterPositions: string[]
 
   const benchSum = roster
     .filter((p) => !p.usedAsStarter)
-    .reduce((sum, p) => sum + (p.alpha ?? 0), 0);
+    .reduce((sum, p) => sum + scoringAlpha(p), 0);
 
   const benchContribution = BENCH_WEIGHT * benchSum;
   const overall = Object.values(totals).reduce((sum, val) => sum + val, 0) + benchContribution;
@@ -551,13 +604,25 @@ export async function computeLeagueDashboard(
         .orderBy(desc(forgePlayerState.season), desc(forgePlayerState.week), desc(forgePlayerState.computedAt))
     : [];
 
-  const alphaByPlayer = new Map<string, { alpha: number | null; row: any }>();
+  const alphaByPlayer = new Map<string, { alpha: number | null; row: any; source: ForgeScoreSource; provenance: LeagueDashboardPlayer['forgeScoreProvenance'] }>();
   for (const row of alphaRows) {
     if (alphaByPlayer.has(row.playerId)) continue;
     const alphaValue = row.alphaFinal ?? row.alphaRaw;
+    const alpha = alphaValue === null || alphaValue === undefined ? null : Number(alphaValue);
+    const source = classifyCachedForgeScoreSource(row, alpha);
     alphaByPlayer.set(row.playerId, {
-      alpha: alphaValue === null || alphaValue === undefined ? null : Number(alphaValue),
+      alpha,
       row,
+      source,
+      provenance: alpha === null ? null : {
+        source,
+        reason: source === 'player_specific'
+          ? 'cached_forge_row_with_confidence'
+          : source === 'generated_baseline'
+            ? 'cached_row_matches_generated_position_baseline_or_low_confidence'
+            : 'cached_row_lacks_player_specific_provenance',
+        confidence: row.confidenceScore ?? null,
+      },
     });
   }
 
@@ -634,6 +699,8 @@ export async function computeLeagueDashboard(
         pos,
         nflTeam: identity?.nflTeam ?? null,
         alpha,
+        forgeScoreSource: alphaEntry?.source ?? null,
+        forgeScoreProvenance: alphaEntry?.provenance ?? null,
         tier: typeof tierFinal === 'number' ? tierFinal : null,
         missingReason: alpha === null ? (!canonicalId ? 'unmapped_sleeper_id' : !alphaEntry ? 'missing_forge_row' : 'alpha_null') : null,
       };
@@ -649,7 +716,21 @@ export async function computeLeagueDashboard(
     computedForgeCount = scores.length;
 
     scores.forEach((score) => {
-      alphaByPlayer.set(score.playerId, { alpha: score.alpha, row: null });
+      const source = classifyComputedForgeScoreSource(score);
+      alphaByPlayer.set(score.playerId, {
+        alpha: score.alpha,
+        row: null,
+        source,
+        provenance: {
+          source,
+          reason: source === 'player_specific'
+            ? 'computed_forge_score_with_player_game_sample'
+            : 'computed_score_has_insufficient_player_specific_game_sample',
+          gamesPlayed: score.gamesPlayed ?? null,
+          confidence: score.confidence ?? null,
+          dataQuality: score.dataQuality ?? null,
+        },
+      });
     });
 
     if (upsertCache && scores.length > 0) {
@@ -661,6 +742,7 @@ export async function computeLeagueDashboard(
         week: Number(targetWeekFilter ?? score.asOfWeek ?? computeWeek),
         alphaRaw: score.rawAlpha ?? score.alpha,
         alphaFinal: score.alpha,
+        confidenceScore: score.confidence,
       }));
       await deps.db
         .insert(forgePlayerState)
@@ -670,6 +752,7 @@ export async function computeLeagueDashboard(
           set: {
             alphaRaw: sql`excluded.alpha_raw`,
             alphaFinal: sql`excluded.alpha_final`,
+            confidenceScore: sql`excluded.confidence_score`,
             computedAt: new Date(),
             position: sql`excluded.position`,
           },
@@ -698,20 +781,25 @@ export async function computeLeagueDashboard(
     const players = teamPlayersMap.get(team.id) ?? [];
 
     const updatedPlayers = players.map((player) => {
-      const updatedAlpha = player.canonicalId ? alphaByPlayer.get(player.canonicalId)?.alpha ?? null : null;
+      const updatedEntry = player.canonicalId ? alphaByPlayer.get(player.canonicalId) : undefined;
+      const updatedAlpha = updatedEntry?.alpha ?? null;
+      const forgeScoreSource = updatedAlpha === null ? null : updatedEntry?.source ?? null;
+      const forgeScoreProvenance = updatedAlpha === null ? null : updatedEntry?.provenance ?? null;
       const missingReason = updatedAlpha === null ? player.missingReason ?? 'missing_forge_row' : null;
       if (updatedAlpha !== null && player.alpha === null) {
         newlyMatchedFromCompute += 1;
       }
       const rookieAsset = updatedAlpha === null ? findRookieAsset(rookieAssetLookup, player) : null;
-      const visibilityState = classifyRosterVisibility({ ...player, alpha: updatedAlpha, missingReason, rookieAsset });
+      const visibilityState = classifyRosterVisibility({ ...player, alpha: updatedAlpha, forgeScoreSource, missingReason, rookieAsset });
       return {
         ...player,
         alpha: updatedAlpha,
+        forgeScoreSource,
+        forgeScoreProvenance,
         missingReason,
         rookieAsset,
         visibilityState,
-        unavailableReason: unavailableReasonForPlayer({ ...player, alpha: updatedAlpha, missingReason, rookieAsset }),
+        unavailableReason: unavailableReasonForPlayer({ ...player, alpha: updatedAlpha, forgeScoreSource, missingReason, rookieAsset }),
       };
     });
 
@@ -749,6 +837,7 @@ export async function computeLeagueDashboard(
       stillMissingCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null).length, 0),
       rookieAlphaMatchedCount: rosterVisibility.rookieAlphaFallback,
       forgeScoredCount: rosterVisibility.forgeScored,
+      forgeBaselineCount: rosterVisibility.forgeBaseline,
       rookieAlphaFallbackCount: rosterVisibility.rookieAlphaFallback,
       knownUnscoredCount: rosterVisibility.knownUnscored,
       unresolvedCount: rosterVisibility.unresolved,

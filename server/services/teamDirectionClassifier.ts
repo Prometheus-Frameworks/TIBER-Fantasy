@@ -3,6 +3,7 @@ type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatche
 type RosterVisibilityCounts = {
   total: number;
   forgeScored: number;
+  forgeBaseline: number;
   rookieAlphaFallback: number;
   knownUnscored: number;
   unresolved: number;
@@ -42,6 +43,7 @@ export type ClassifierOptions = {
 type ClassifierPlayer = {
   pos?: string | null;
   alpha?: number | null;
+  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null;
   missingReason?: string | null;
   rookieAsset?: unknown;
 };
@@ -57,9 +59,15 @@ const HIGH_CONFIDENCE_COVERAGE = 0.8;
 const MIN_HIGH_CONFIDENCE_PLAYERS = 10;
 const SCORED_POSITIONS: ScoredPosition[] = ['QB', 'RB', 'WR', 'TE'];
 
+function hasPlayerSpecificForgeScore(player: ClassifierPlayer): boolean {
+  if (typeof player.alpha !== 'number') return false;
+  // Backward-compatible default for direct unit fixtures that predate provenance.
+  return player.forgeScoreSource === undefined || player.forgeScoreSource === null || player.forgeScoreSource === 'player_specific';
+}
+
 function posAlphas(players: ClassifierPlayer[], pos: string): number[] {
   return players
-    .filter((p) => String(p.pos ?? '').toUpperCase() === pos && typeof p.alpha === 'number')
+    .filter((p) => String(p.pos ?? '').toUpperCase() === pos && hasPlayerSpecificForgeScore(p))
     .map((p) => p.alpha as number);
 }
 
@@ -76,6 +84,7 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
   const counts: RosterVisibilityCounts = {
     total: players.length,
     forgeScored: 0,
+    forgeBaseline: 0,
     rookieAlphaFallback: 0,
     knownUnscored: 0,
     unresolved: 0,
@@ -83,8 +92,10 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
   };
 
   for (const player of players) {
-    if (typeof player.alpha === 'number') {
+    if (hasPlayerSpecificForgeScore(player)) {
       counts.forgeScored += 1;
+    } else if (typeof player.alpha === 'number') {
+      counts.forgeBaseline += 1;
     } else if (player.rookieAsset) {
       counts.rookieAlphaFallback += 1;
     } else if (player.missingReason === 'unmapped_sleeper_id') {
@@ -102,7 +113,7 @@ function buildScoredPositionCounts(players: ClassifierPlayer[]): Record<ScoredPo
   const counts: Record<ScoredPosition, number> = { QB: 0, RB: 0, WR: 0, TE: 0, Other: 0 };
 
   for (const player of players) {
-    if (typeof player.alpha !== 'number') continue;
+    if (!hasPlayerSpecificForgeScore(player)) continue;
 
     const position = String(player.pos ?? '').toUpperCase();
     if (position === 'QB' || position === 'RB' || position === 'WR' || position === 'TE') {
@@ -144,8 +155,9 @@ export function classifyTeamDirection(
   const { superflex = false } = options;
 
   const total = rosterPlayers.length;
-  const forgeMatched = rosterPlayers.filter((p) => typeof p.alpha === 'number').length;
-  const rookieAlphaMatched = rosterPlayers.filter((p) => typeof p.alpha !== 'number' && Boolean(p.rookieAsset)).length;
+  const forgeMatched = rosterPlayers.filter(hasPlayerSpecificForgeScore).length;
+  const baselineMatched = rosterPlayers.filter((p) => typeof p.alpha === 'number' && !hasPlayerSpecificForgeScore(p)).length;
+  const rookieAlphaMatched = rosterPlayers.filter((p) => !hasPlayerSpecificForgeScore(p) && typeof p.alpha !== 'number' && Boolean(p.rookieAsset)).length;
   const matched = forgeMatched + rookieAlphaMatched;
   const rate = total === 0 ? 0 : matched / total;
   const forgeRate = total === 0 ? 0 : forgeMatched / total;
@@ -167,6 +179,7 @@ export function classifyTeamDirection(
     notes: [
       'Direction confidence is derived from FORGE scoring coverage and scored positional data quality.',
       'Promoted Rookie Alpha fallback contributes to evidence completeness only; it does not raise direction confidence.',
+      'Generated/default/baseline FORGE values are kept visible but excluded from scored coverage and confidence.',
     ],
   };
   // Preserve the original additive coverage shape for existing Management consumers.
@@ -200,10 +213,14 @@ export function classifyTeamDirection(
       blockers.push(
         `${missingForge} player${missingForge > 1 ? 's' : ''} mapped but missing a FORGE row. Re-sync or recompute FORGE grades.`
       );
+    if (baselineMatched > 0)
+      blockers.push(
+        `${baselineMatched} player${baselineMatched > 1 ? 's have' : ' has'} only generated/default FORGE baseline values, not player-specific scoring evidence.`
+      );
     return { direction: 'uncertain', confidence: 'low', reasons: [], blockers, ...coverageDetails };
   }
 
-  const matchedPlayers = rosterPlayers.filter((p) => typeof p.alpha === 'number');
+  const matchedPlayers = rosterPlayers.filter(hasPlayerSpecificForgeScore);
   const alphas = matchedPlayers.map((p) => p.alpha as number);
 
   const totalAlpha = alphas.reduce((s, a) => s + a, 0);
