@@ -479,3 +479,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, focused Management tests.
 - **Validation:** Focused Jest suites passed with dummy `DATABASE_URL`, `--coverage=false`, and `--forceExit`; `npm run build` passed with the pre-existing duplicate `applyAdjusters` warning; `npm run typecheck` remains blocked by pre-existing repo-wide TypeScript errors outside the touched Management files.
 - **Notes:** Management payload diagnostics now expose clear roster visibility counts. Rookie Alpha remains read-only fallback visibility and is not blended into FORGE alpha totals, scoring, rankings, or direction confidence.
+
+### 2026-06-05 — Codex: League context raw-row normalization
+- **What changed:** Fixed league context storage reads/writes to tolerate raw SQL snake_case rows for `league_id`, `active_league_id`, and `active_team_id` while preserving camelCase access for Drizzle-shaped rows.
+- **Files modified:** `server/storage.ts`, `server/__tests__/storageLeagueContext.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Focused storage Jest suite passed with `--coverage=false`; `npm run typecheck` remains blocked by pre-existing repo-wide TypeScript errors outside this change.
+- **Notes:** No schema changes and no Sleeper sync behavior changes. The patch keeps the active-context unavailable/error behavior explicit and does not fabricate league/team data.

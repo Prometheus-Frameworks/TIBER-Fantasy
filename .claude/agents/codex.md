@@ -687,3 +687,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Summary:** Made Management roster coverage auditable by adding explicit visibility states/counts for FORGE scored, Rookie Alpha fallback, known but unscored, unresolved, and evidence coverage. Updated cards/rows to avoid ambiguous `matched` wording and show actual unavailable reasons.
 - **Key Files:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
 - **Validation:** Focused Management Jest suites ✅; `npm run build` ✅ with existing warning; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files.
+
+### 2026-06-05 — League context raw-row normalization
+- **Summary:** Patched `DatabaseStorage` league context methods so raw SQL rows using snake_case columns no longer fail active-team validation or active-context lookup after Sleeper league sync.
+- **Key Files:** `server/storage.ts`, `server/__tests__/storageLeagueContext.test.ts`
+- **Validation:** Focused storage Jest suite ✅; `npm run typecheck` ⚠️ existing repo-wide failures outside this change.

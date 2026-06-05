@@ -1073,6 +1073,38 @@ export class MemStorage implements IStorage {
   }
 }
 
+type RawLeagueTeamRow = LeagueTeam & { league_id?: string | null };
+type RawUserLeaguePreferenceRow = UserLeaguePreference & {
+  user_id?: string | null;
+  active_league_id?: string | null;
+  active_team_id?: string | null;
+};
+
+function getRowLeagueId(team: RawLeagueTeamRow | null | undefined): string | null {
+  return team?.league_id ?? team?.leagueId ?? null;
+}
+
+function getRowActiveLeagueId(preference: RawUserLeaguePreferenceRow | null | undefined): string | null {
+  return preference?.active_league_id ?? preference?.activeLeagueId ?? null;
+}
+
+function getRowActiveTeamId(preference: RawUserLeaguePreferenceRow | null | undefined): string | null {
+  return preference?.active_team_id ?? preference?.activeTeamId ?? null;
+}
+
+function normalizeUserLeaguePreferenceRow(
+  preference: RawUserLeaguePreferenceRow | null | undefined
+): UserLeaguePreference | null {
+  if (!preference) return null;
+
+  return {
+    ...preference,
+    userId: preference.user_id ?? preference.userId,
+    activeLeagueId: getRowActiveLeagueId(preference),
+    activeTeamId: getRowActiveTeamId(preference),
+  } as UserLeaguePreference;
+}
+
 export class DatabaseStorage implements IStorage {
   private async seedData() {
     // Check if data already exists
@@ -3078,19 +3110,21 @@ export class DatabaseStorage implements IStorage {
     activeTeam: LeagueTeam | null;
   }> {
     const preferenceResult = await db.execute(sql`SELECT * FROM user_league_preferences WHERE user_id = ${userId} LIMIT 1`);
-    const preference = (preferenceResult.rows[0] as UserLeaguePreference) || null;
+    const preference = normalizeUserLeaguePreferenceRow(preferenceResult.rows[0] as RawUserLeaguePreferenceRow | undefined);
+    const activeLeagueId = getRowActiveLeagueId(preference);
+    const activeTeamId = getRowActiveTeamId(preference);
 
-    if (!preference?.activeLeagueId) {
+    if (!activeLeagueId) {
       return { preference, activeLeague: null, activeTeam: null };
     }
 
-    const [league] = (await db.execute(sql`SELECT * FROM leagues WHERE id = ${preference.activeLeagueId} LIMIT 1`)).rows as League[];
+    const [league] = (await db.execute(sql`SELECT * FROM leagues WHERE id = ${activeLeagueId} LIMIT 1`)).rows as League[];
     if (!league) {
       return { preference, activeLeague: null, activeTeam: null };
     }
 
     const leagueTeamsResult = (await db.execute(sql`SELECT * FROM league_teams WHERE league_id = ${league.id}`)).rows as LeagueTeam[];
-    const activeTeam = leagueTeamsResult.find((team) => team.id === preference.activeTeamId) ?? null;
+    const activeTeam = leagueTeamsResult.find((team) => team.id === activeTeamId) ?? null;
 
     return {
       preference,
@@ -3105,14 +3139,14 @@ export class DatabaseStorage implements IStorage {
       throw new Error('League not found for user');
     }
 
-    const [team] = (await db.execute(sql`SELECT * FROM league_teams WHERE id = ${data.teamId} LIMIT 1`)).rows as LeagueTeam[];
-    if (!team || team.leagueId !== data.leagueId) {
+    const [team] = (await db.execute(sql`SELECT * FROM league_teams WHERE id = ${data.teamId} LIMIT 1`)).rows as RawLeagueTeamRow[];
+    if (!team || getRowLeagueId(team) !== data.leagueId) {
       throw new Error('Team not found for league');
     }
 
-    const [preference] = (await db.execute(sql`INSERT INTO user_league_preferences (user_id, active_league_id, active_team_id) VALUES (${data.userId}, ${data.leagueId}, ${data.teamId}) ON CONFLICT (user_id) DO UPDATE SET active_league_id = EXCLUDED.active_league_id, active_team_id = EXCLUDED.active_team_id, updated_at = NOW() RETURNING *`)).rows as UserLeaguePreference[];
+    const [preference] = (await db.execute(sql`INSERT INTO user_league_preferences (user_id, active_league_id, active_team_id) VALUES (${data.userId}, ${data.leagueId}, ${data.teamId}) ON CONFLICT (user_id) DO UPDATE SET active_league_id = EXCLUDED.active_league_id, active_team_id = EXCLUDED.active_team_id, updated_at = NOW() RETURNING *`)).rows as RawUserLeaguePreferenceRow[];
 
-    return preference;
+    return normalizeUserLeaguePreferenceRow(preference) as UserLeaguePreference;
   }
 
   async upsertUserPlatformProfile(data: { userId: string; platform: string; externalUserId: string; username?: string | null }): Promise<UserPlatformProfile> {
