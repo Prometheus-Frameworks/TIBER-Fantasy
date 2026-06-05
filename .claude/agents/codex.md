@@ -701,3 +701,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `npm run test -- --runInBand --coverage=false --forceExit server/services/__tests__/leagueDashboardService.test.ts` ✅
   - `git diff --check` ✅
   - `npm run typecheck` ⚠️ pre-existing repo-wide errors outside touched files; filtered touched-file check returned no matches
+
+### 2026-06-05 — Management coverage diagnostics cleanup
+- Split Management roster diagnostics into identity coverage, baseline visibility, player-specific FORGE evidence, Rookie Alpha fallback, and evidence coverage.
+- Added best-available player-name fallback for resolved roster identities whose stored `fullName` is blank, including generated baseline rows.
+- Preserved generated/default FORGE baseline semantics: visible but not counted as player-specific scoring evidence or Team Direction confidence.
+- Validation: focused Management Jest suites ✅; `npm run build` ✅ with existing duplicate class-member warning; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files; `git diff --check` ✅.

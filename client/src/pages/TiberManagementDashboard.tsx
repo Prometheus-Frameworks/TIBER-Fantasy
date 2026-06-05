@@ -105,6 +105,8 @@ type LeagueDashboardResponse = {
     rookieAlphaFallbackCount?: number;
     knownUnscoredCount?: number;
     unresolvedCount?: number;
+    identityCoveredCount?: number;
+    baselineVisibleCount?: number;
     evidenceCoveredCount?: number;
     rosterVisibility?: RosterCoverageCounts;
   };
@@ -128,6 +130,8 @@ type PicksResponse = {
 
 type RosterCoverageCounts = {
   total: number;
+  identityCovered: number;
+  baselineVisible: number;
   forgeScored: number;
   forgeBaseline: number;
   rookieAlphaFallback: number;
@@ -236,14 +240,16 @@ function ExternalOrInternalLink({ href, children, className }: { href: string; c
 }
 
 function emptyRosterCoverageCounts(): RosterCoverageCounts {
-  return { total: 0, forgeScored: 0, forgeBaseline: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
+  return { total: 0, identityCovered: 0, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
 }
 
 function hasPlayerSpecificForgeScore(player: RosterPlayer): boolean {
   return typeof player.alpha === 'number' && player.forgeScoreSource === 'player_specific';
 }
 
-function classifyRosterVisibility(player: RosterPlayer): keyof Omit<RosterCoverageCounts, 'total' | 'evidenceCovered'> {
+type RosterVisibilityBucket = 'forgeScored' | 'forgeBaseline' | 'rookieAlphaFallback' | 'knownUnscored' | 'unresolved';
+
+function classifyRosterVisibility(player: RosterPlayer): RosterVisibilityBucket {
   if (hasPlayerSpecificForgeScore(player)) return 'forgeScored';
   if (typeof player.alpha === 'number') return 'forgeBaseline';
   if (player.rookieAsset) return 'rookieAlphaFallback';
@@ -258,6 +264,8 @@ function buildRosterVisibilitySummary(roster: RosterPlayer[] = []): RosterCovera
     const state = classifyRosterVisibility(player);
     counts[state] += 1;
   }
+  counts.identityCovered = counts.total - counts.unresolved;
+  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }
@@ -281,6 +289,8 @@ function buildRosterCounts(team?: LeagueDashboardTeam | null) {
       counts[position].total += 1;
       const state = classifyRosterVisibility(player);
       counts[position][state] += 1;
+      counts[position].identityCovered = counts[position].total - counts[position].unresolved;
+      counts[position].baselineVisible = counts[position].forgeScored + counts[position].forgeBaseline;
       counts[position].evidenceCovered = counts[position].forgeScored + counts[position].rookieAlphaFallback;
     }
   }
@@ -308,6 +318,22 @@ function groupRosterByPosition(roster: RosterPlayer[]) {
     });
   }
   return groups;
+}
+
+function bestAvailableRosterName(player: RosterPlayer): string {
+  const candidates = [
+    player.name,
+    player.rookieAsset?.playerName,
+    player.canonicalId && !String(player.canonicalId).startsWith('sleeper:') ? player.canonicalId : null,
+    player.sleeperId,
+  ];
+
+  for (const candidate of candidates) {
+    const value = String(candidate ?? '').trim();
+    if (value) return value;
+  }
+
+  return 'Unknown player';
 }
 
 function missingReasonLabel(reason?: string | null) {
@@ -927,29 +953,32 @@ export default function TiberManagementDashboard() {
         {hasRosterData && (
           <div className="tmd-roster-coverage-strip" aria-label="Roster coverage diagnostics">
             <div>
-              <span>Player-specific FORGE</span>
-              <strong>{rosterVisibility.forgeScored}/{rosterVisibility.total}</strong>
+              <span>Identity coverage</span>
+              <strong>{rosterVisibility.identityCovered}/{rosterVisibility.total}</strong>
+              <small>Roster IDs resolved to player identities</small>
             </div>
             <div>
-              <span>Generated baseline</span>
-              <strong>{rosterVisibility.forgeBaseline}/{rosterVisibility.total}</strong>
+              <span>Baseline visibility</span>
+              <strong>{rosterVisibility.baselineVisible}/{rosterVisibility.total}</strong>
+              <small>Generated/default values visible, not scoring evidence</small>
+            </div>
+            <div>
+              <span>Player-specific FORGE evidence</span>
+              <strong>{rosterVisibility.forgeScored}/{rosterVisibility.total}</strong>
             </div>
             <div>
               <span>Rookie Alpha fallback</span>
               <strong>{rosterVisibility.rookieAlphaFallback}/{rosterVisibility.total}</strong>
             </div>
             <div>
-              <span>Known · unscored</span>
-              <strong>{rosterVisibility.knownUnscored}/{rosterVisibility.total}</strong>
+              <span>Evidence coverage</span>
+              <strong>{rosterVisibility.evidenceCovered}/{rosterVisibility.total}</strong>
+              <small>Player-specific FORGE + Rookie Alpha fallback</small>
             </div>
             <div>
               <span>Unresolved</span>
               <strong>{rosterVisibility.unresolved}/{rosterVisibility.total}</strong>
-            </div>
-            <div>
-              <span>Evidence coverage</span>
-              <strong>{rosterVisibility.evidenceCovered}/{rosterVisibility.total}</strong>
-              <small>Player-specific FORGE + Rookie Alpha fallback</small>
+              <small>{rosterVisibility.knownUnscored}/{rosterVisibility.total} known but unscored</small>
             </div>
           </div>
         )}
@@ -1000,7 +1029,7 @@ export default function TiberManagementDashboard() {
                     return (
                       <div key={player.rosterKey ?? player.sleeperId ?? idx} className={`tmd-player-row ${!isForgeScored && !rookieAsset ? 'tmd-player-row-unmatched' : ''}`}>
                         <div className="tmd-player-name">
-                          <span>{player.name ?? player.sleeperId ?? 'Unknown'}</span>
+                          <span>{bestAvailableRosterName(player)}</span>
                           {player.nflTeam && <span className="tmd-player-team">{player.nflTeam}</span>}
                         </div>
                         <div className="tmd-player-meta">

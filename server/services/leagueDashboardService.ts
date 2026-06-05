@@ -22,6 +22,8 @@ type ForgeScoreSource = 'player_specific' | 'generated_baseline' | 'cached_unkno
 
 type RosterCoverageCounts = {
   total: number;
+  identityCovered: number;
+  baselineVisible: number;
   forgeScored: number;
   forgeBaseline: number;
   rookieAlphaFallback: number;
@@ -79,6 +81,8 @@ export type LeagueDashboardPayload = {
     rookieAlphaFallbackCount: number;
     knownUnscoredCount: number;
     unresolvedCount: number;
+    identityCoveredCount: number;
+    baselineVisibleCount: number;
     evidenceCoveredCount: number;
     rosterVisibility: RosterCoverageCounts;
   };
@@ -307,6 +311,23 @@ async function hydrateMissingSleeperIdentities(
   }
 }
 
+function bestAvailablePlayerName(identity: any, sleeperId: string): string {
+  const candidates = [
+    identity?.fullName,
+    [identity?.firstName, identity?.lastName].filter(Boolean).join(' '),
+    identity?.playerName,
+    identity?.name,
+    sleeperId,
+  ];
+
+  for (const candidate of candidates) {
+    const value = String(candidate ?? '').trim();
+    if (value) return value;
+  }
+
+  return 'Unknown player';
+}
+
 function resolveRosterPositions(settings: any, fallback: string[] = []) {
   if (!settings) return fallback;
   if (Array.isArray((settings as any).roster_positions)) return (settings as any).roster_positions as string[];
@@ -337,6 +358,8 @@ function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' 
 function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>>): RosterCoverageCounts {
   const counts: RosterCoverageCounts = {
     total: players.length,
+    identityCovered: 0,
+    baselineVisible: 0,
     forgeScored: 0,
     forgeBaseline: 0,
     rookieAlphaFallback: 0,
@@ -354,6 +377,8 @@ function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'a
     if (state === 'unresolved') counts.unresolved += 1;
   }
 
+  counts.identityCovered = counts.total - counts.unresolved;
+  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }
@@ -695,7 +720,7 @@ export async function computeLeagueDashboard(
         rosterKey,
         canonicalId,
         sleeperId,
-        name: identity?.fullName ?? sleeperId,
+        name: bestAvailablePlayerName(identity, sleeperId),
         pos,
         nflTeam: identity?.nflTeam ?? null,
         alpha,
@@ -841,6 +866,8 @@ export async function computeLeagueDashboard(
       rookieAlphaFallbackCount: rosterVisibility.rookieAlphaFallback,
       knownUnscoredCount: rosterVisibility.knownUnscored,
       unresolvedCount: rosterVisibility.unresolved,
+      identityCoveredCount: rosterVisibility.identityCovered,
+      baselineVisibleCount: rosterVisibility.baselineVisible,
       evidenceCoveredCount: rosterVisibility.evidenceCovered,
       rosterVisibility,
     },

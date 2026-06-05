@@ -158,6 +158,8 @@ describe('computeLeagueDashboard', () => {
     }));
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
+      identityCovered: 1,
+      baselineVisible: 1,
       forgeScored: 0,
       forgeBaseline: 1,
       rookieAlphaFallback: 0,
@@ -165,6 +167,39 @@ describe('computeLeagueDashboard', () => {
       unresolved: 0,
       evidenceCovered: 0,
     });
+  });
+
+
+
+  it('falls back to first and last name when resolved identity fullName is blank', async () => {
+    const baselineScore = {
+      ...forgeScore,
+      alpha: 13.5,
+      rawAlpha: 13.5,
+      confidence: 20,
+      gamesPlayed: 0,
+    };
+    const dbMock = createDbMock({
+      identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: '   ', firstName: 'Player', lastName: 'One', nflTeam: 'CIN' }],
+    });
+
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: dbMock,
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([baselineScore]) } as any,
+      }
+    );
+
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      name: 'Player One',
+      nflTeam: 'CIN',
+      alpha: 13.5,
+      forgeScoreSource: 'generated_baseline',
+      visibilityState: 'forge_baseline',
+    }));
   });
 
   it('surfaces unmapped sleeper ids without synthetic canonical ids', async () => {
@@ -190,6 +225,8 @@ describe('computeLeagueDashboard', () => {
     expect(rosterPlayer.unavailableReason).toBe('identity_unresolved');
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
+      identityCovered: 0,
+      baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
       rookieAlphaFallback: 0,
@@ -254,6 +291,8 @@ describe('computeLeagueDashboard', () => {
     }));
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
+      identityCovered: 1,
+      baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
       rookieAlphaFallback: 0,
@@ -296,6 +335,8 @@ describe('computeLeagueDashboard', () => {
     expect(result.diagnostics?.rookieAlphaMatchedCount).toBe(1);
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
+      identityCovered: 1,
+      baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
       rookieAlphaFallback: 1,
