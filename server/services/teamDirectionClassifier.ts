@@ -2,6 +2,8 @@ type TeamDirectionCoverage = { matched: number; total: number; rate: number };
 type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatched: number };
 type RosterVisibilityCounts = {
   total: number;
+  identityCovered: number;
+  baselineVisible: number;
   forgeScored: number;
   forgeBaseline: number;
   rookieAlphaFallback: number;
@@ -83,6 +85,8 @@ function fmt(n: number, decimals = 1): string {
 function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCounts {
   const counts: RosterVisibilityCounts = {
     total: players.length,
+    identityCovered: 0,
+    baselineVisible: 0,
     forgeScored: 0,
     forgeBaseline: 0,
     rookieAlphaFallback: 0,
@@ -105,6 +109,8 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
     }
   }
 
+  counts.identityCovered = counts.total - counts.unresolved;
+  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }

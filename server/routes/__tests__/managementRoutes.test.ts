@@ -62,6 +62,8 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.forgeCoverage).toEqual({ matched: 3, total: 4, rate: 0.75 });
     expect(result.visibilityCounts).toEqual({
       total: 4,
+      identityCovered: 4,
+      baselineVisible: 3,
       forgeScored: 3,
       forgeBaseline: 0,
       rookieAlphaFallback: 1,
@@ -127,6 +129,8 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.forgeCoverage).toEqual({ matched: 0, total: 5, rate: 0 });
     expect(result.visibilityCounts).toEqual({
       total: 5,
+      identityCovered: 5,
+      baselineVisible: 5,
       forgeScored: 0,
       forgeBaseline: 5,
       rookieAlphaFallback: 0,
@@ -149,6 +153,8 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.forgeCoverage).toEqual({ matched: 1, total: 15, rate: 1 / 15 });
     expect(result.visibilityCounts).toEqual({
       total: 15,
+      identityCovered: 15,
+      baselineVisible: 1,
       forgeScored: 1,
       forgeBaseline: 0,
       rookieAlphaFallback: 7,

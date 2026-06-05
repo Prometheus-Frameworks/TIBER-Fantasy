@@ -491,3 +491,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/integrations/sleeperClient.ts`, `server/services/leagueDashboardService.ts`, `server/services/__tests__/leagueDashboardService.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
 - **Validation:** Focused League Dashboard Jest suite passed with `--coverage=false --forceExit`; `git diff --check` passed; `npm run typecheck` still fails on pre-existing repo-wide TypeScript errors outside touched files and no touched-file errors were reported by a filtered typecheck check.
 - **Notes:** This remains a downstream consumer fix: it does not fabricate FORGE scores or rookie evidence. If Sleeper metadata is unavailable or incomplete, players continue to surface as unresolved.
+
+### 2026-06-05 — Codex: Management coverage diagnostics cleanup
+- **What changed:** Split Management roster diagnostics into identity coverage, baseline visibility, player-specific FORGE evidence, Rookie Alpha fallback, and true evidence coverage. Added resolved-name fallbacks so baseline rows with blank identity `fullName` still show the best available player name.
+- **Files modified:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
+- **Validation:** Focused Management service and route Jest suites; `npm run build`; `git diff --check`; `npm run typecheck` still reports pre-existing repo-wide TypeScript errors, with no touched-file matches from a filtered run.
+- **Notes:** Generated/default FORGE baselines remain visible but excluded from player-specific FORGE evidence and Team Direction scoring coverage.
