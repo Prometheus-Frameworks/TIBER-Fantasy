@@ -21,6 +21,7 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy }: { identiti
       values: (rows: any) => {
         insertSpy?.(rows);
         return {
+          onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
           onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
         };
       },
@@ -90,7 +91,10 @@ describe('computeLeagueDashboard', () => {
     (dbMock.insert as jest.Mock).mockImplementation(() => ({
       values: (rows: any) => {
         insertSpy(rows);
-        return { onConflictDoUpdate: jest.fn().mockResolvedValue(undefined) };
+        return {
+          onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
+          onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
+        };
       },
     }));
 
@@ -137,6 +141,69 @@ describe('computeLeagueDashboard', () => {
       rookieAlphaFallback: 0,
       knownUnscored: 0,
       unresolved: 1,
+      evidenceCovered: 0,
+    });
+  });
+
+  it('hydrates missing roster identities from Sleeper player metadata before classifying them unresolved', async () => {
+    const insertSpy = jest.fn();
+    const dbMock = createDbMock({ identities: [], insertSpy });
+    const forgeServiceMock = { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) };
+
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: {
+          ...sleeperDeps,
+          getNflPlayers: jest.fn().mockResolvedValue({
+            s1: {
+              player_id: 's1',
+              full_name: 'Player One',
+              first_name: 'Player',
+              last_name: 'One',
+              position: 'WR',
+              team: 'CIN',
+              active: true,
+              fantasy_data_id: 12345,
+              gsis_id: '00-0030001',
+            },
+          }),
+        } as any,
+        db: dbMock,
+        forgeService: forgeServiceMock as any,
+      }
+    );
+
+    expect(result.unresolvedPlayers).toEqual([]);
+    expect(forgeServiceMock.getForgeScoresForPlayers).toHaveBeenCalledWith(['sleeper:s1'], 2024, 1);
+    expect(insertSpy).toHaveBeenCalledWith([expect.objectContaining({
+      canonicalId: 'sleeper:s1',
+      sleeperId: 's1',
+      fullName: 'Player One',
+      position: 'WR',
+      nflTeam: 'CIN',
+      fantasyDataId: '12345',
+      gsisId: '00-0030001',
+    })]);
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      rosterKey: 'sleeper:s1',
+      canonicalId: 'sleeper:s1',
+      sleeperId: 's1',
+      name: 'Player One',
+      pos: 'WR',
+      nflTeam: 'CIN',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+      visibilityState: 'known_unscored',
+      unavailableReason: 'rookie_alpha_fallback_unavailable',
+    }));
+    expect(result.diagnostics?.rosterVisibility).toEqual({
+      total: 1,
+      forgeScored: 0,
+      rookieAlphaFallback: 0,
+      knownUnscored: 1,
+      unresolved: 0,
       evidenceCovered: 0,
     });
   });

@@ -692,3 +692,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Summary:** Patched `DatabaseStorage` league context methods so raw SQL rows using snake_case columns no longer fail active-team validation or active-context lookup after Sleeper league sync.
 - **Key Files:** `server/storage.ts`, `server/__tests__/storageLeagueContext.test.ts`
 - **Validation:** Focused storage Jest suite ✅; `npm run typecheck` ⚠️ existing repo-wide failures outside this change.
+
+### 2026-06-05 — Management roster Sleeper identity hydration
+- Added a focused roster identity hydration pass in `leagueDashboardService` so Management can resolve active Sleeper roster IDs to explicit `player_identity_map` rows using Sleeper `/players/nfl` metadata.
+- Extended the Sleeper client with a typed `getNflPlayers()` method and covered the regression where missing identity-map rows previously rendered as raw IDs/unresolved.
+- Preserved explicit unavailable behavior: no metadata means unresolved, and hydrated-but-unscored players remain `known_unscored`/fallback-only rather than receiving fabricated FORGE values.
+- Validation:
+  - `npm run test -- --runInBand --coverage=false --forceExit server/services/__tests__/leagueDashboardService.test.ts` ✅
+  - `git diff --check` ✅
+  - `npm run typecheck` ⚠️ pre-existing repo-wide errors outside touched files; filtered touched-file check returned no matches

@@ -43,6 +43,23 @@ export interface SleeperTradedPick {
   owner_id: number;
 }
 
+export interface SleeperPlayer {
+  player_id?: string;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  position?: string | null;
+  team?: string | null;
+  active?: boolean | null;
+  status?: string | null;
+  fantasy_data_id?: string | number | null;
+  gsis_id?: string | null;
+  birth_date?: string | null;
+  college?: string | null;
+  height?: string | null;
+  weight?: string | number | null;
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`);
   if (!res.ok) {
@@ -75,6 +92,10 @@ export const sleeperClient = {
 
   async getUserLeagues(userId: string, season: string): Promise<SleeperLeagueDetail[]> {
     return fetchJson<SleeperLeagueDetail[]>(`/user/${userId}/leagues/nfl/${season}`);
+  },
+
+  async getNflPlayers(): Promise<Record<string, SleeperPlayer>> {
+    return fetchJson<Record<string, SleeperPlayer>>('/players/nfl');
   },
 };
 
