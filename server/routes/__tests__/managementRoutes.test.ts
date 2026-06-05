@@ -14,12 +14,13 @@ const baseTeam = { id: 'team-1', displayName: 'Test Team', externalRosterId: 'ro
 const baseLeague = { id: 'league-1', leagueName: 'Test League', teams: [baseTeam] };
 const baseContext = { preference: null, activeLeague: baseLeague, activeTeam: baseTeam };
 
-function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string; rookieAsset?: object }[]) {
+function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string; forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null; rookieAsset?: object }[]) {
   return players.map((p, i) => ({
     rosterKey: `k${i}`,
     pos: p.pos,
     alpha: p.alpha,
     missingReason: p.missingReason ?? (p.alpha === null ? 'missing_forge_row' : undefined),
+    forgeScoreSource: p.forgeScoreSource,
     rookieAsset: p.rookieAsset,
   }));
 }
@@ -62,6 +63,7 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.visibilityCounts).toEqual({
       total: 4,
       forgeScored: 3,
+      forgeBaseline: 0,
       rookieAlphaFallback: 1,
       knownUnscored: 0,
       unresolved: 0,
@@ -111,6 +113,30 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.blockers.some((blocker) => blocker.includes('still needs sufficient FORGE scoring coverage'))).toBe(true);
   });
 
+  test('does not count generated/default baseline alpha values as FORGE scoring coverage', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 22.7, forgeScoreSource: 'generated_baseline' },
+      { pos: 'RB', alpha: 15.0, forgeScoreSource: 'generated_baseline' },
+      { pos: 'WR', alpha: 13.5, forgeScoreSource: 'generated_baseline' },
+      { pos: 'WR', alpha: 13.5, forgeScoreSource: 'generated_baseline' },
+      { pos: 'TE', alpha: 9.2, forgeScoreSource: 'generated_baseline' },
+    ]);
+    const result = classifyTeamDirection(roster, []);
+    expect(result.direction).toBe('uncertain');
+    expect(result.confidence).toBe('low');
+    expect(result.forgeCoverage).toEqual({ matched: 0, total: 5, rate: 0 });
+    expect(result.visibilityCounts).toEqual({
+      total: 5,
+      forgeScored: 0,
+      forgeBaseline: 5,
+      rookieAlphaFallback: 0,
+      knownUnscored: 0,
+      unresolved: 0,
+      evidenceCovered: 0,
+    });
+    expect(result.blockers.some((blocker) => blocker.includes('generated/default FORGE baseline values'))).toBe(true);
+  });
+
   test('does not classify sparse FORGE scoring coverage even when Rookie Alpha lifts visibility coverage', () => {
     const roster = rosterOf([
       { pos: 'QB', alpha: 92 },
@@ -124,6 +150,7 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.visibilityCounts).toEqual({
       total: 15,
       forgeScored: 1,
+      forgeBaseline: 0,
       rookieAlphaFallback: 7,
       knownUnscored: 7,
       unresolved: 0,

@@ -52,6 +52,7 @@ describe('Management model signal cards', () => {
       rosterVisibility: {
         total: 4,
         forgeScored: 2,
+        forgeBaseline: 0,
         rookieAlphaFallback: 1,
         knownUnscored: 1,
         unresolved: 0,
@@ -67,7 +68,8 @@ describe('Management model signal cards', () => {
       statusLabel: 'Partial',
     });
     expect(signal(cards, 'FORGE').details).toEqual(expect.arrayContaining([
-      'FORGE scored coverage: 2/4.',
+      'Player-specific FORGE coverage: 2/4.',
+      'Generated/default FORGE baselines excluded from coverage: 0/4.',
       'FORGE alpha totals: available.',
       'Team Direction confidence still uses FORGE scoring coverage, not fallback visibility.',
     ]));
@@ -89,6 +91,7 @@ describe('Management model signal cards', () => {
       rosterVisibility: {
         total: 2,
         forgeScored: 0,
+        forgeBaseline: 0,
         rookieAlphaFallback: 0,
         knownUnscored: 2,
         unresolved: 0,

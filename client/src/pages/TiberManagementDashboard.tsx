@@ -67,9 +67,16 @@ type RosterPlayer = {
   position?: string | null;
   nflTeam?: string | null;
   alpha?: number | null;
+  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null;
+  forgeScoreProvenance?: {
+    source?: 'player_specific' | 'generated_baseline' | 'cached_unknown';
+    reason?: string;
+    gamesPlayed?: number | null;
+    confidence?: number | null;
+  } | null;
   tier?: number | null;
   missingReason?: string | null;
-  visibilityState?: 'forge_scored' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
+  visibilityState?: 'forge_scored' | 'forge_baseline' | 'rookie_alpha_fallback' | 'known_unscored' | 'unresolved';
   unavailableReason?: string | null;
   usedAsStarter?: boolean;
   rookieAsset?: RookieAssetContext | null;
@@ -94,6 +101,7 @@ type LeagueDashboardResponse = {
     stillMissingCount?: number;
     rookieAlphaMatchedCount?: number;
     forgeScoredCount?: number;
+    forgeBaselineCount?: number;
     rookieAlphaFallbackCount?: number;
     knownUnscoredCount?: number;
     unresolvedCount?: number;
@@ -121,6 +129,7 @@ type PicksResponse = {
 type RosterCoverageCounts = {
   total: number;
   forgeScored: number;
+  forgeBaseline: number;
   rookieAlphaFallback: number;
   knownUnscored: number;
   unresolved: number;
@@ -227,11 +236,16 @@ function ExternalOrInternalLink({ href, children, className }: { href: string; c
 }
 
 function emptyRosterCoverageCounts(): RosterCoverageCounts {
-  return { total: 0, forgeScored: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
+  return { total: 0, forgeScored: 0, forgeBaseline: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
+}
+
+function hasPlayerSpecificForgeScore(player: RosterPlayer): boolean {
+  return typeof player.alpha === 'number' && player.forgeScoreSource === 'player_specific';
 }
 
 function classifyRosterVisibility(player: RosterPlayer): keyof Omit<RosterCoverageCounts, 'total' | 'evidenceCovered'> {
-  if (typeof player.alpha === 'number') return 'forgeScored';
+  if (hasPlayerSpecificForgeScore(player)) return 'forgeScored';
+  if (typeof player.alpha === 'number') return 'forgeBaseline';
   if (player.rookieAsset) return 'rookieAlphaFallback';
   if (player.missingReason === 'unmapped_sleeper_id' || player.visibilityState === 'unresolved') return 'unresolved';
   return 'knownUnscored';
@@ -391,13 +405,14 @@ export function buildManagementModelSignals({
               ? 'Partial'
               : 'Unavailable',
       explanation: hasRosterData
-        ? `FORGE has scored rows for ${rosterVisibility.forgeScored}/${rosterVisibility.total} roster players (${pct(forgeCoverageRate)}). Alpha totals are ${hasForgeAlphaTotals ? 'available' : 'unavailable'}.`
+        ? `FORGE has player-specific scored rows for ${rosterVisibility.forgeScored}/${rosterVisibility.total} roster players (${pct(forgeCoverageRate)}). Alpha totals are ${hasForgeAlphaTotals ? 'available' : 'unavailable'}.`
         : 'Connect an active team with roster rows before inspecting FORGE coverage.',
       href: '#roster-snapshot',
       linkLabel: 'Inspect Roster Snapshot',
       provenance: 'Uses Management roster visibility diagnostics. No scoring semantics changed.',
       details: [
-        `FORGE scored coverage: ${rosterVisibility.forgeScored}/${rosterVisibility.total}.`,
+        `Player-specific FORGE coverage: ${rosterVisibility.forgeScored}/${rosterVisibility.total}.`,
+        `Generated/default FORGE baselines excluded from coverage: ${rosterVisibility.forgeBaseline ?? 0}/${rosterVisibility.total}.`,
         `FORGE alpha totals: ${hasForgeAlphaTotals ? 'available' : 'unavailable'}.`,
         'Team Direction confidence still uses FORGE scoring coverage, not fallback visibility.',
       ],
@@ -912,8 +927,12 @@ export default function TiberManagementDashboard() {
         {hasRosterData && (
           <div className="tmd-roster-coverage-strip" aria-label="Roster coverage diagnostics">
             <div>
-              <span>FORGE scored</span>
+              <span>Player-specific FORGE</span>
               <strong>{rosterVisibility.forgeScored}/{rosterVisibility.total}</strong>
+            </div>
+            <div>
+              <span>Generated baseline</span>
+              <strong>{rosterVisibility.forgeBaseline}/{rosterVisibility.total}</strong>
             </div>
             <div>
               <span>Rookie Alpha fallback</span>
@@ -930,7 +949,7 @@ export default function TiberManagementDashboard() {
             <div>
               <span>Evidence coverage</span>
               <strong>{rosterVisibility.evidenceCovered}/{rosterVisibility.total}</strong>
-              <small>FORGE scored + Rookie Alpha fallback</small>
+              <small>Player-specific FORGE + Rookie Alpha fallback</small>
             </div>
           </div>
         )}
@@ -943,9 +962,10 @@ export default function TiberManagementDashboard() {
                 <div className="tmd-position-card" key={position}>
                   <span>{position}</span>
                   <strong>{count.total}</strong>
-                  <small>{count.forgeScored}/{count.total} FORGE scored{count.totalAlpha !== null ? ` · ${count.totalAlpha.toFixed(1)}α` : ''}</small>
-                  {(count.rookieAlphaFallback > 0 || count.knownUnscored > 0 || count.unresolved > 0) && (
+                  <small>{count.forgeScored}/{count.total} player-specific FORGE{count.totalAlpha !== null ? ` · ${count.totalAlpha.toFixed(1)}α` : ''}</small>
+                  {(count.forgeBaseline > 0 || count.rookieAlphaFallback > 0 || count.knownUnscored > 0 || count.unresolved > 0) && (
                     <small className="tmd-position-card-detail">
+                      {count.forgeBaseline > 0 ? `${count.forgeBaseline} baseline · ` : ''}
                       {count.rookieAlphaFallback > 0 ? `${count.rookieAlphaFallback} Rookie Alpha · ` : ''}
                       {count.knownUnscored} known · unscored · {count.unresolved} unresolved
                     </small>
@@ -972,8 +992,9 @@ export default function TiberManagementDashboard() {
                 <div key={pos} className="tmd-player-group">
                   <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
                   {players.map((player, idx) => {
-                    const isForgeScored = typeof player.alpha === 'number';
-                    const rookieAsset = !isForgeScored ? player.rookieAsset : null;
+                    const isForgeScored = hasPlayerSpecificForgeScore(player);
+                    const hasGeneratedBaseline = typeof player.alpha === 'number' && !isForgeScored;
+                    const rookieAsset = !isForgeScored && !hasGeneratedBaseline ? player.rookieAsset : null;
                     const isUnresolved = !isForgeScored && !rookieAsset && (player.visibilityState === 'unresolved' || player.missingReason === 'unmapped_sleeper_id');
                     const tierLabel = isForgeScored ? forgeTierLabel(player.tier) : null;
                     return (
@@ -991,7 +1012,13 @@ export default function TiberManagementDashboard() {
                           {isForgeScored ? (
                             <div className="tmd-player-alpha-matched">
                               <strong>{(player.alpha as number).toFixed(1)}</strong>
-                              <span className="tmd-player-matched-badge">FORGE scored</span>
+                              <span className="tmd-player-matched-badge">Player-specific FORGE</span>
+                            </div>
+                          ) : hasGeneratedBaseline ? (
+                            <div className="tmd-player-alpha-unmatched">
+                              <strong>{(player.alpha as number).toFixed(1)}</strong>
+                              <span className="tmd-player-unmatched-label">Generated baseline</span>
+                              <span className="tmd-player-unmatched-reason">Not counted as player-specific FORGE evidence{player.forgeScoreProvenance?.gamesPlayed != null ? ` · ${player.forgeScoreProvenance.gamesPlayed} games` : ''}</span>
                             </div>
                           ) : rookieAsset ? (
                             <div className="tmd-player-rookie-asset">

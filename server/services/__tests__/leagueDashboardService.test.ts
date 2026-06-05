@@ -74,7 +74,7 @@ describe('computeLeagueDashboard', () => {
     subScores: {} as any,
     trajectory: 'up',
     confidence: 90,
-    gamesPlayed: 1,
+    gamesPlayed: 8,
     dataQuality: {
       hasAdvancedStats: true,
       hasSnapData: true,
@@ -111,7 +111,60 @@ describe('computeLeagueDashboard', () => {
     expect(result.teams[0].overall_total).toBeGreaterThan(0);
     expect(result.unresolvedPlayers).toEqual([]);
     expect(result.diagnostics?.computedForgeCount).toBe(1);
-    expect(insertSpy).toHaveBeenCalled();
+    expect(result.diagnostics?.forgeScoredCount).toBe(1);
+    expect(result.diagnostics?.forgeBaselineCount).toBe(0);
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      alpha: 50,
+      forgeScoreSource: 'player_specific',
+      visibilityState: 'forge_scored',
+      unavailableReason: null,
+    }));
+    expect(insertSpy).toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
+  });
+
+  it('keeps generated FORGE baselines visible without counting them as scored coverage', async () => {
+    const baselineScore = {
+      ...forgeScore,
+      alpha: 13.5,
+      rawAlpha: 13.5,
+      confidence: 20,
+      gamesPlayed: 0,
+      dataQuality: {
+        hasAdvancedStats: false,
+        hasSnapData: false,
+        hasDvPData: false,
+        hasEnvironmentData: false,
+        cappedDueToMissingData: true,
+      },
+    };
+    const dbMock = createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: 'Player One' }] });
+
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: dbMock,
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([baselineScore]) } as any,
+      }
+    );
+
+    expect(result.teams[0].overall_total).toBe(0);
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      alpha: 13.5,
+      forgeScoreSource: 'generated_baseline',
+      visibilityState: 'forge_baseline',
+      unavailableReason: 'forge_generated_baseline_not_player_specific',
+    }));
+    expect(result.diagnostics?.rosterVisibility).toEqual({
+      total: 1,
+      forgeScored: 0,
+      forgeBaseline: 1,
+      rookieAlphaFallback: 0,
+      knownUnscored: 0,
+      unresolved: 0,
+      evidenceCovered: 0,
+    });
   });
 
   it('surfaces unmapped sleeper ids without synthetic canonical ids', async () => {
@@ -138,6 +191,7 @@ describe('computeLeagueDashboard', () => {
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
       forgeScored: 0,
+      forgeBaseline: 0,
       rookieAlphaFallback: 0,
       knownUnscored: 0,
       unresolved: 1,
@@ -201,6 +255,7 @@ describe('computeLeagueDashboard', () => {
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
       forgeScored: 0,
+      forgeBaseline: 0,
       rookieAlphaFallback: 0,
       knownUnscored: 1,
       unresolved: 0,
@@ -242,6 +297,7 @@ describe('computeLeagueDashboard', () => {
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
       forgeScored: 0,
+      forgeBaseline: 0,
       rookieAlphaFallback: 1,
       knownUnscored: 0,
       unresolved: 0,
