@@ -158,6 +158,14 @@ describe('computeLeagueDashboard', () => {
     expect(result.diagnostics?.forgeBaselineCount).toBe(0);
     expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(1);
     expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(0);
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 1,
+      rosterCanonicalIdsMatched: 1,
+      playerSpecificRosterMatches: 1,
+      generatedBaselineRosterMatches: 0,
+      sampleMatchedCanonicalIds: ['p1'],
+      sampleUnmatchedCanonicalIds: [],
+    }));
     expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
       alpha: 50,
       forgeScoreSource: 'player_specific',
@@ -204,6 +212,14 @@ describe('computeLeagueDashboard', () => {
     }));
     expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(0);
     expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(1);
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 1,
+      rosterCanonicalIdsMatched: 1,
+      playerSpecificRosterMatches: 0,
+      generatedBaselineRosterMatches: 1,
+      sampleMatchedCanonicalIds: ['p1'],
+      sampleUnmatchedCanonicalIds: [],
+    }));
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
       identityCovered: 1,
@@ -356,6 +372,40 @@ describe('computeLeagueDashboard', () => {
     });
   });
 
+  it('exposes available FORGE_PLAYER_STATIC_V1 diagnostics when roster canonical IDs do not match artifact rows', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: 'Player One' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([forgeScore]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({ playerId: 'p2', playerName: 'Player Two' })])) } as any,
+      }
+    );
+
+    expect(result.teams[0].overall_total).toBe(0);
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      canonicalId: 'p1',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+      visibilityState: 'known_unscored',
+    }));
+    expect(result.diagnostics?.forgeArtifact).toEqual(expect.objectContaining({
+      available: true,
+      rowCount: 1,
+      playerSpecificCount: 1,
+    }));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 1,
+      rosterCanonicalIdsMatched: 0,
+      playerSpecificRosterMatches: 0,
+      generatedBaselineRosterMatches: 0,
+      sampleMatchedCanonicalIds: [],
+      sampleUnmatchedCanonicalIds: ['p1'],
+    }));
+  });
+
   it('adds promoted Rookie Alpha context when FORGE remains unavailable', async () => {
     const rookieAsset = {
       source: 'rookie_alpha_promoted_artifact' as const,
@@ -424,6 +474,14 @@ describe('computeLeagueDashboard', () => {
       unavailableReason: 'forge_player_static_v1_unavailable',
     }));
     expect(result.diagnostics?.forgeArtifact).toEqual(expect.objectContaining({ available: false, state: 'missing' }));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 1,
+      rosterCanonicalIdsMatched: 0,
+      playerSpecificRosterMatches: 0,
+      generatedBaselineRosterMatches: 0,
+      sampleMatchedCanonicalIds: [],
+      sampleUnmatchedCanonicalIds: ['p1'],
+    }));
     expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(0);
     expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(0);
   });

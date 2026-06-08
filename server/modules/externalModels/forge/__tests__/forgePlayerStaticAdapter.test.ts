@@ -104,7 +104,7 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
   it('defaults to the promoted sibling-repo forge_player_static artifact path', () => {
     const client = new ForgePlayerStaticClient();
 
-    expect(client.getConfig().artifactPath).toBe(path.join(
+    const defaultPath = path.join(
       process.cwd(),
       '..',
       'TIBER-FORGE',
@@ -112,7 +112,16 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       'promoted',
       'forge_player_static',
       'forge_player_static_v1.json',
-    ));
+    );
+    expect(client.getConfig().artifactPath).toBe(defaultPath);
+    expect(client.getConfig().sourcePath).toBe(defaultPath);
+  });
+
+  it('reports the attempted JSON source path when configured with an artifact directory', () => {
+    const client = new ForgePlayerStaticClient({ artifactPath: '/tmp/forge-player-static-dir' });
+
+    expect(client.getConfig().artifactPath).toBe('/tmp/forge-player-static-dir');
+    expect(client.getConfig().sourcePath).toBe('/tmp/forge-player-static-dir/forge_player_static_v1.json');
   });
 
   it('fails closed on duplicate canonical player IDs', () => {
@@ -143,7 +152,7 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
 
   it('fails closed through service state when the artifact is missing', async () => {
     const service = new ForgePlayerStaticService({
-      getConfig: jest.fn().mockReturnValue({ enabled: true, configured: true, artifactPath: '/tmp/missing_static.json' }),
+      getConfig: jest.fn().mockReturnValue({ enabled: true, configured: true, artifactPath: '/tmp/missing_static_dir', sourcePath: '/tmp/missing_static_dir/forge_player_static_v1.json' }),
       loadPromotedArtifact: jest.fn().mockRejectedValue(new ForgePlayerStaticIntegrationError(
         'not_found',
         'missing',
@@ -157,6 +166,7 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       available: false,
       state: 'missing',
       rowCount: 0,
+      sourcePath: '/tmp/missing_static_dir/forge_player_static_v1.json',
     }));
     expect(lookup.rowsByPlayerId.size).toBe(0);
   });

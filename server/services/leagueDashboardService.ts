@@ -37,6 +37,16 @@ type RosterCoverageCounts = {
   evidenceCovered: number;
 };
 
+type ForgeRosterMatchDiagnostics = {
+  rosterCanonicalIdsChecked: number;
+  rosterCanonicalIdsMatched: number;
+  playerSpecificRosterMatches: number;
+  generatedBaselineRosterMatches: number;
+  nonEvidenceRosterMatches: number;
+  sampleUnmatchedCanonicalIds: string[];
+  sampleMatchedCanonicalIds: string[];
+};
+
 type LeagueDashboardPlayer = {
   rosterKey: string;
   canonicalId: string | null;
@@ -95,6 +105,7 @@ export type LeagueDashboardPayload = {
     generatedBaselineVisibilityCount: number;
     unresolvedRosterIdentityCount: number;
     forgeArtifact: ForgePlayerStaticLookup['artifact'];
+    forgeRosterMatching: ForgeRosterMatchDiagnostics;
     rosterVisibility: RosterCoverageCounts;
   };
   unresolvedPlayers: Array<{ sleeperId: string; reason: string }>;
@@ -337,6 +348,45 @@ function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' 
   if (player.missingReason === 'forge_artifact_unavailable') return 'forge_player_static_v1_unavailable';
   if (player.missingReason === 'missing_forge_row' && !player.rookieAsset) return 'rookie_alpha_fallback_unavailable';
   return player.missingReason ?? 'rookie_alpha_fallback_unavailable';
+}
+
+function buildForgeRosterMatchDiagnostics(
+  canonicalIds: string[],
+  forgeStaticLookup: ForgePlayerStaticLookup,
+): ForgeRosterMatchDiagnostics {
+  const uniqueCanonicalIds = Array.from(new Set(canonicalIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
+  const matchedIds: string[] = [];
+  const unmatchedIds: string[] = [];
+  let playerSpecificRosterMatches = 0;
+  let generatedBaselineRosterMatches = 0;
+  let nonEvidenceRosterMatches = 0;
+
+  for (const canonicalId of uniqueCanonicalIds) {
+    const row = forgeStaticLookup.rowsByPlayerId.get(canonicalId);
+    if (!row) {
+      unmatchedIds.push(canonicalId);
+      continue;
+    }
+
+    matchedIds.push(canonicalId);
+    if (row.isPlayerSpecificEvidence) {
+      playerSpecificRosterMatches += 1;
+    } else if (row.isGeneratedBaselineVisibility) {
+      generatedBaselineRosterMatches += 1;
+    } else {
+      nonEvidenceRosterMatches += 1;
+    }
+  }
+
+  return {
+    rosterCanonicalIdsChecked: uniqueCanonicalIds.length,
+    rosterCanonicalIdsMatched: matchedIds.length,
+    playerSpecificRosterMatches,
+    generatedBaselineRosterMatches,
+    nonEvidenceRosterMatches,
+    sampleUnmatchedCanonicalIds: unmatchedIds.slice(0, 10),
+    sampleMatchedCanonicalIds: matchedIds.slice(0, 10),
+  };
 }
 
 function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>>): RosterCoverageCounts {
@@ -624,9 +674,12 @@ export async function computeLeagueDashboard(
     }
   }
 
+  const forgeRosterMatching = buildForgeRosterMatchDiagnostics(canonicalIds, forgeStaticLookup);
+
   logger.log('forge-player-static-v1', {
     requestId: logger.requestId,
     artifact: forgeStaticLookup.artifact,
+    roster_matching: forgeRosterMatching,
     roster_canonical_ids: canonicalIds.length,
     visible_rows_for_roster: alphaByPlayer.size,
     player_specific_for_roster: Array.from(alphaByPlayer.values()).filter((entry) => entry.source === 'player_specific').length,
@@ -809,6 +862,7 @@ export async function computeLeagueDashboard(
       generatedBaselineVisibilityCount: rosterVisibility.generatedBaselineVisibility,
       unresolvedRosterIdentityCount: rosterVisibility.unresolved,
       forgeArtifact: forgeStaticLookup.artifact,
+      forgeRosterMatching,
       rosterVisibility,
     },
     unresolvedPlayers,

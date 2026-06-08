@@ -89,6 +89,13 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
         available: true,
         teamId: activeTeam.id,
         teamName: (activeTeam as any).displayName ?? (activeTeam as any).display_name ?? 'Team',
+        forgeDiagnostics: dashboardPayload.diagnostics
+          ? {
+              artifact: dashboardPayload.diagnostics.forgeArtifact,
+              rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
+              rosterVisibility: dashboardPayload.diagnostics.rosterVisibility,
+            }
+          : null,
         ...result,
       });
     } catch (error) {

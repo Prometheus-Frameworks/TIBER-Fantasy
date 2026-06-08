@@ -358,6 +358,11 @@ describe('GET /api/management/team-direction (endpoint)', () => {
         getLeagueFuturePicks: jest.fn().mockResolvedValue(picks),
       } as any,
       computeLeagueDashboard: jest.fn().mockResolvedValue({
+        diagnostics: {
+          forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
+          forgeRosterMatching: { rosterCanonicalIdsChecked: roster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
+          rosterVisibility: { total: roster.length, identityCovered: roster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: roster.length, unresolved: 0, evidenceCovered: 0 },
+        },
         teams: [
           { team_id: 'team-1', display_name: 'Test Team', roster, totals: {}, overall_total: 0 },
         ],
@@ -398,6 +403,10 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(res.body.coverage).toHaveProperty('rate');
     expect(res.body.evidenceCoverage).toHaveProperty('rate');
     expect(res.body.forgeCoverage).toHaveProperty('rate');
+    expect(res.body.forgeDiagnostics).toEqual(expect.objectContaining({
+      artifact: expect.objectContaining({ state: 'missing', available: false }),
+      rosterMatching: expect.objectContaining({ rosterCanonicalIdsChecked: goodRoster.length }),
+    }));
     expect(res.body.confidenceInputs).toEqual(expect.objectContaining({
       driver: 'forge_scoring_coverage_and_position_quality',
       forgeCoverage: expect.objectContaining({ rate: expect.any(Number) }),

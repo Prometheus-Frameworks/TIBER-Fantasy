@@ -108,6 +108,10 @@ type LeagueDashboardResponse = {
     identityCoveredCount?: number;
     baselineVisibleCount?: number;
     evidenceCoveredCount?: number;
+    playerSpecificForgeCoverageCount?: number;
+    generatedBaselineVisibilityCount?: number;
+    forgeArtifact?: ForgeArtifactDiagnostics;
+    forgeRosterMatching?: ForgeRosterMatchingDiagnostics;
     rosterVisibility?: RosterCoverageCounts;
   };
 };
@@ -134,10 +138,35 @@ type RosterCoverageCounts = {
   baselineVisible: number;
   forgeScored: number;
   forgeBaseline: number;
+  generatedBaselineVisibility?: number;
   rookieAlphaFallback: number;
   knownUnscored: number;
   unresolved: number;
   evidenceCovered: number;
+};
+
+type ForgeArtifactDiagnostics = {
+  state?: 'available' | 'missing' | 'malformed' | 'duplicate_ids' | 'unsupported' | 'disabled' | string;
+  available?: boolean;
+  reason?: string | null;
+  code?: string | null;
+  sourcePath?: string | null;
+  rowCount?: number;
+  playerSpecificCount?: number;
+  generatedBaselineCount?: number;
+  nonEvidenceCount?: number;
+  contractVersion?: string | null;
+  generatedAt?: string | null;
+};
+
+type ForgeRosterMatchingDiagnostics = {
+  rosterCanonicalIdsChecked?: number;
+  rosterCanonicalIdsMatched?: number;
+  playerSpecificRosterMatches?: number;
+  generatedBaselineRosterMatches?: number;
+  nonEvidenceRosterMatches?: number;
+  sampleUnmatchedCanonicalIds?: string[];
+  sampleMatchedCanonicalIds?: string[];
 };
 
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
@@ -240,7 +269,7 @@ function ExternalOrInternalLink({ href, children, className }: { href: string; c
 }
 
 function emptyRosterCoverageCounts(): RosterCoverageCounts {
-  return { total: 0, identityCovered: 0, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
+  return { total: 0, identityCovered: 0, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: 0, unresolved: 0, evidenceCovered: 0 };
 }
 
 function hasPlayerSpecificForgeScore(player: RosterPlayer): boolean {
@@ -339,6 +368,8 @@ function bestAvailableRosterName(player: RosterPlayer): string {
 function missingReasonLabel(reason?: string | null) {
   if (reason === 'identity_unresolved' || reason === 'unmapped_sleeper_id') return 'Identity unresolved';
   if (reason === 'missing_forge_row') return 'Missing FORGE row';
+  if (reason === 'forge_artifact_unavailable' || reason === 'forge_player_static_v1_unavailable') return 'FORGE_PLAYER_STATIC_V1 unavailable';
+  if (reason === 'forge_generated_baseline_not_player_specific') return 'Generated baseline · not evidence';
   if (reason === 'rookie_alpha_fallback_unavailable') return 'Missing FORGE row · Rookie Alpha fallback unavailable';
   if (reason === 'alpha_null') return 'Alpha null · Rookie Alpha fallback unavailable';
   return 'Known but unscored';
@@ -379,6 +410,92 @@ function coverageText(label: string, coverage?: TeamDirectionCoverageSummary, ex
       <span>{label}</span>
       <strong>{coverage.matched}/{coverage.total} ({pct(coverage.rate)})</strong>
       {extra ? <small>{extra}</small> : null}
+    </div>
+  );
+}
+
+function diagnosticValue(value: unknown): string {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'string' && value.trim()) return value;
+  return '—';
+}
+
+function artifactStatusClass(artifact?: ForgeArtifactDiagnostics | null) {
+  if (artifact?.available) return 'tmd-status-ready';
+  if (artifact?.state === 'missing' || artifact?.state === 'disabled') return 'tmd-status-unavailable';
+  return 'tmd-status-partial';
+}
+
+function forgeArtifactNarrative(artifact?: ForgeArtifactDiagnostics | null, matching?: ForgeRosterMatchingDiagnostics | null) {
+  if (!artifact) return 'No FORGE_PLAYER_STATIC_V1 diagnostics were returned by the dashboard payload.';
+  if (!artifact.available) {
+    if (artifact.state === 'missing') return 'Artifact missing/unavailable. Management is failing closed and not fabricating scores.';
+    return `Artifact unavailable (${artifact.state ?? 'unknown'}). Management is failing closed and preserving strict contract semantics.`;
+  }
+  if ((matching?.rosterCanonicalIdsChecked ?? 0) > 0 && (matching?.rosterCanonicalIdsMatched ?? 0) === 0) {
+    return 'Artifact is available, but none of this roster’s canonical IDs match FORGE_PLAYER_STATIC_V1 rows.';
+  }
+  if ((matching?.playerSpecificRosterMatches ?? 0) > 0) {
+    return 'Artifact is available and player_specific roster rows are matching.';
+  }
+  return 'Artifact is available. Generated baseline rows may be visible, but player_specific evidence is not currently matching this roster.';
+}
+
+function CanonicalIdSamples({ label, ids }: { label: string; ids?: string[] }) {
+  return (
+    <div className="tmd-forge-id-samples">
+      <span>{label}</span>
+      {ids && ids.length > 0 ? (
+        <code>{ids.join(', ')}</code>
+      ) : (
+        <small>None returned</small>
+      )}
+    </div>
+  );
+}
+
+function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDashboardResponse['diagnostics'] }) {
+  const artifact = diagnostics?.forgeArtifact;
+  const matching = diagnostics?.forgeRosterMatching;
+
+  return (
+    <div className="tmd-forge-diagnostics" aria-label="FORGE_PLAYER_STATIC_V1 artifact diagnostics">
+      <div className="tmd-forge-diagnostics-topline">
+        <div>
+          <h3>FORGE_PLAYER_STATIC_V1 runtime diagnostics</h3>
+          <p>{forgeArtifactNarrative(artifact, matching)}</p>
+        </div>
+        <span className={`tmd-status ${artifactStatusClass(artifact)}`}>
+          {artifact?.available ? 'Available' : artifact?.state ? String(artifact.state) : 'Unavailable'}
+        </span>
+      </div>
+
+      <div className="tmd-forge-diagnostics-grid">
+        <div><span>Artifact state</span><strong>{diagnosticValue(artifact?.state)}</strong></div>
+        <div><span>Available</span><strong>{diagnosticValue(artifact?.available)}</strong></div>
+        <div><span>Reason / code</span><strong>{diagnosticValue(artifact?.code)}</strong><small>{diagnosticValue(artifact?.reason)}</small></div>
+        <div><span>Source path</span><code>{diagnosticValue(artifact?.sourcePath)}</code></div>
+        <div><span>Rows</span><strong>{diagnosticValue(artifact?.rowCount)}</strong><small>Total artifact rows</small></div>
+        <div><span>player_specific</span><strong>{diagnosticValue(artifact?.playerSpecificCount)}</strong><small>Artifact-wide evidence rows</small></div>
+        <div><span>generated_baseline</span><strong>{diagnosticValue(artifact?.generatedBaselineCount)}</strong><small>Visibility only, not evidence</small></div>
+        <div><span>non-evidence</span><strong>{diagnosticValue(artifact?.nonEvidenceCount)}</strong></div>
+        <div><span>Contract version</span><strong>{diagnosticValue(artifact?.contractVersion)}</strong></div>
+        <div><span>Generated at</span><strong>{diagnosticValue(artifact?.generatedAt)}</strong></div>
+      </div>
+
+      <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
+        <div><span>Roster canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong></div>
+        <div><span>Roster IDs matched to FORGE rows</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong></div>
+        <div><span>player_specific roster matches</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
+        <div><span>generated_baseline roster matches</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
+        <div><span>non-evidence roster matches</span><strong>{diagnosticValue(matching?.nonEvidenceRosterMatches)}</strong></div>
+      </div>
+
+      <div className="tmd-forge-sample-grid">
+        <CanonicalIdSamples label="Sample matched canonical IDs" ids={matching?.sampleMatchedCanonicalIds} />
+        <CanonicalIdSamples label="Sample unmatched canonical IDs" ids={matching?.sampleUnmatchedCanonicalIds} />
+      </div>
     </div>
   );
 }
@@ -981,6 +1098,10 @@ export default function TiberManagementDashboard() {
               <small>{rosterVisibility.knownUnscored}/{rosterVisibility.total} known but unscored</small>
             </div>
           </div>
+        )}
+
+        {hasRosterData && (
+          <ForgeArtifactDiagnosticsPanel diagnostics={dashboardQuery.data?.diagnostics} />
         )}
 
         {hasRosterData && (
