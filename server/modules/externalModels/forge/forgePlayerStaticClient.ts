@@ -8,7 +8,7 @@ const DEFAULT_PROMOTED_ARTIFACT_PATH = path.join(
   'TIBER-FORGE',
   'exports',
   'promoted',
-  'FORGE_PLAYER_STATIC_V1',
+  'forge_player_static',
   'forge_player_static_v1.json',
 );
 

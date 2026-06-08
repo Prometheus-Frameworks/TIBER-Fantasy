@@ -134,7 +134,7 @@ npm run forge:parity:report -- --json --out tmp/forge-parity-report.json
 
 Management consumes the promoted static FORGE artifact through the local adapter stack in this folder:
 
-- `forgePlayerStaticClient.ts` reads the JSON artifact from `FORGE_PLAYER_STATIC_V1_ARTIFACT_PATH`, `FORGE_PLAYER_STATIC_PROMOTED_PATH`, or the default sibling-repo path `../TIBER-FORGE/exports/promoted/FORGE_PLAYER_STATIC_V1/forge_player_static_v1.json`.
+- `forgePlayerStaticClient.ts` reads the JSON artifact from `FORGE_PLAYER_STATIC_V1_ARTIFACT_PATH`, `FORGE_PLAYER_STATIC_PROMOTED_PATH`, or the default sibling-repo path `../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json`.
 - `forgePlayerStaticAdapter.ts` validates the downstream consumer contract at the adapter edge and fails closed for unsupported contracts, malformed rows, and duplicate canonical player IDs.
 - `forgePlayerStaticService.ts` maps missing/disabled/malformed/unsupported artifacts into an unavailable lookup instead of producing scores.
 

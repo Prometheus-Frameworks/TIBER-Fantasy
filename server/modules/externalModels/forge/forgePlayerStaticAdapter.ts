@@ -55,7 +55,9 @@ function normalizeScoreSource(value: unknown): ForgePlayerStaticScoreSource {
 function assertSupportedArtifact(payload: Record<string, unknown>) {
   const meta = toRecord(payload.meta ?? payload.metadata ?? payload.manifest);
   const manifest = toRecord(payload.consumer_manifest ?? payload.downstream_consumer_manifest ?? payload.manifest);
-  const declaredId = pickString({ ...meta, ...manifest }, [
+  const declaredId = pickString({ ...payload, ...meta, ...manifest }, [
+    'artifact_type',
+    'artifactType',
     'artifact_id',
     'artifactId',
     'artifact_name',
@@ -66,9 +68,15 @@ function assertSupportedArtifact(payload: Record<string, unknown>) {
     'contract_id',
     'contractId',
   ]);
-  const declaredVersion = pickString({ ...meta, ...manifest }, ['version', 'contract_version', 'contractVersion', 'schema_version', 'schemaVersion']);
+  const declaredVersion = pickString({ ...payload, ...meta, ...manifest }, ['version', 'contract_version', 'contractVersion', 'schema_version', 'schemaVersion']);
+  const normalizedDeclaredId = declaredId?.toUpperCase();
 
-  if (declaredId && declaredId !== 'FORGE_PLAYER_STATIC_V1' && !declaredId.includes('FORGE_PLAYER_STATIC_V1')) {
+  if (
+    normalizedDeclaredId
+    && normalizedDeclaredId !== 'FORGE_PLAYER_STATIC_V1'
+    && normalizedDeclaredId !== 'FORGE_PLAYER_STATIC'
+    && !normalizedDeclaredId.includes('FORGE_PLAYER_STATIC_V1')
+  ) {
     throw new ForgePlayerStaticIntegrationError(
       'unsupported',
       `Unsupported FORGE static artifact (${declaredId}); expected FORGE_PLAYER_STATIC_V1.`,
@@ -77,7 +85,7 @@ function assertSupportedArtifact(payload: Record<string, unknown>) {
     );
   }
 
-  if (declaredVersion && !String(declaredVersion).toLowerCase().includes('v1') && declaredVersion !== '1') {
+  if (declaredVersion && !String(declaredVersion).toLowerCase().includes('v1') && !String(declaredVersion).startsWith('1')) {
     throw new ForgePlayerStaticIntegrationError(
       'unsupported',
       `Unsupported FORGE static artifact version (${declaredVersion}); expected v1.`,
@@ -112,7 +120,21 @@ function normalizeRow(row: unknown): ForgePlayerStaticRow {
   }
 
   const scoreSource = normalizeScoreSource(provenance.score_source ?? provenance.scoreSource);
-  const alpha = pickNumber(nested, ['alpha', 'alpha_final', 'alphaFinal', 'score.alpha', 'score.alpha_final', 'scores.alpha', 'scores.alphaFinal']);
+  const alpha = pickNumber(nested, [
+    'forge_alpha',
+    'forgeAlpha',
+    'alpha',
+    'alpha_final',
+    'alphaFinal',
+    'score.forge_alpha',
+    'score.forgeAlpha',
+    'score.alpha',
+    'score.alpha_final',
+    'scores.forge_alpha',
+    'scores.forgeAlpha',
+    'scores.alpha',
+    'scores.alphaFinal',
+  ]);
 
   return {
     playerId,
@@ -120,8 +142,9 @@ function normalizeRow(row: unknown): ForgePlayerStaticRow {
     position: pickString(nested, ['position', 'pos']),
     team: pickString(nested, ['team', 'nfl_team', 'nflTeam']),
     alpha,
-    tier: pickNumber(nested, ['tier', 'tier_final', 'tierFinal', 'score.tier_rank', 'score.tierRank']) ?? pickString(nested, ['tier', 'tier_label', 'tierLabel', 'score.tier']),
-    confidence: pickNumber(nested, ['confidence', 'confidence_score', 'confidenceScore', 'score.confidence']),
+    tier: pickNumber(nested, ['forge_tier', 'forgeTier', 'tier', 'tier_final', 'tierFinal', 'score.tier_rank', 'score.tierRank'])
+      ?? pickString(nested, ['forge_tier', 'forgeTier', 'tier', 'tier_label', 'tierLabel', 'score.forge_tier', 'score.forgeTier', 'score.tier']),
+    confidence: pickNumber(nested, ['confidence.score', 'confidence.value', 'confidence', 'confidence_score', 'confidenceScore', 'score.confidence']),
     scoreSource,
     isPlayerSpecificEvidence: scoreSource === 'player_specific' && typeof alpha === 'number',
     isGeneratedBaselineVisibility: scoreSource === 'generated_baseline' && typeof alpha === 'number',
@@ -180,8 +203,8 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
       code: null,
       sourcePath,
       artifactId: 'FORGE_PLAYER_STATIC_V1',
-      contractVersion: pickString({ ...meta, ...manifest }, ['contract_version', 'contractVersion', 'version', 'schema_version', 'schemaVersion']),
-      generatedAt: pickString({ ...meta, ...manifest }, ['generated_at', 'generatedAt', 'promoted_at', 'promotedAt']),
+      contractVersion: pickString({ ...record, ...meta, ...manifest }, ['contract_version', 'contractVersion', 'version', 'schema_version', 'schemaVersion']),
+      generatedAt: pickString({ ...record, ...meta, ...manifest }, ['generated_at', 'generatedAt', 'promoted_at', 'promotedAt']),
       rowCount: rowsByPlayerId.size,
       playerSpecificCount,
       generatedBaselineCount,
