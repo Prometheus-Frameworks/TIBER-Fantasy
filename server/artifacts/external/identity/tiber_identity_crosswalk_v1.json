@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "artifact_id": "TIBER_IDENTITY_CROSSWALK_V1",
+    "contract_version": "v1",
+    "generated_at": "2026-06-08T00:00:00.000Z",
+    "producer_repo": "TIBER-Data",
+    "promoted_artifact_path": "exports/promoted/identity_crosswalk/tiber_identity_crosswalk_v1.json"
+  },
+  "rows": [
+    {
+      "tiber_player_id": "tiber-data-player-2025-justin-herbert",
+      "player_name": "Justin Herbert",
+      "position": "QB",
+      "provider_mappings": [
+        { "provider": "sleeper", "provider_id": "6797" }
+      ]
+    },
+    {
+      "tiber_player_id": "tiber-data-player-2025-puka-nacua",
+      "player_name": "Puka Nacua",
+      "position": "WR",
+      "provider_mappings": [
+        { "provider": "sleeper", "provider_id": "9493" }
+      ]
+    },
+    {
+      "tiber_player_id": "tiber-data-player-2025-bijan-robinson",
+      "player_name": "Bijan Robinson",
+      "position": "RB",
+      "provider_mappings": [
+        { "provider": "sleeper", "provider_id": "9509" }
+      ]
+    }
+  ]
+}
