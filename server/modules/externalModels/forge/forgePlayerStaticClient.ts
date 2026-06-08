@@ -25,10 +25,17 @@ export class ForgePlayerStaticClient {
     this.enabled = config.enabled ?? process.env.FORGE_PLAYER_STATIC_V1_ENABLED !== '0';
   }
 
+  private resolveSourcePath() {
+    return path.extname(this.artifactPath).toLowerCase() === '.json'
+      ? this.artifactPath
+      : path.join(this.artifactPath, 'forge_player_static_v1.json');
+  }
+
   getConfig() {
     return {
       enabled: this.enabled,
       artifactPath: this.artifactPath,
+      sourcePath: this.resolveSourcePath(),
       configured: Boolean(this.artifactPath),
     };
   }
@@ -43,9 +50,7 @@ export class ForgePlayerStaticClient {
       );
     }
 
-    const sourcePath = path.extname(this.artifactPath).toLowerCase() === '.json'
-      ? this.artifactPath
-      : path.join(this.artifactPath, 'forge_player_static_v1.json');
+    const sourcePath = this.resolveSourcePath();
 
     try {
       const raw = await fs.readFile(sourcePath, 'utf8');

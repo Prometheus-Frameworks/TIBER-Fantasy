@@ -49,7 +49,7 @@ export class ForgePlayerStaticService {
       return adaptForgePlayerStaticArtifact(payload, sourcePath);
     } catch (error) {
       if (error instanceof ForgePlayerStaticIntegrationError) {
-        return unavailableLookup(error, config.artifactPath);
+        return unavailableLookup(error, config.sourcePath ?? config.artifactPath);
       }
       return unavailableLookup(
         new ForgePlayerStaticIntegrationError(
@@ -59,7 +59,7 @@ export class ForgePlayerStaticService {
           'malformed',
           error,
         ),
-        config.artifactPath,
+        config.sourcePath ?? config.artifactPath,
       );
     }
   }
