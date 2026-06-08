@@ -1,0 +1,699 @@
+{
+  "artifact_type": "forge_player_static",
+  "schema_version": "1.0.0",
+  "contract_version": "v1",
+  "generated_at": "2026-06-07T00:00:00.000Z",
+  "consumer_manifest": {
+    "artifact_id": "FORGE_PLAYER_STATIC_V1",
+    "producer_repo": "TIBER-FORGE",
+    "producer_artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+    "bundled_snapshot_path": "server/artifacts/external/forge/forge_player_static_v1.json",
+    "consumer_contract": "Management reads player_specific as evidence and generated_baseline as visibility-only; Fantasy does not generate or modify scores."
+  },
+  "rows": [
+    {
+      "player_id": "tiber-data-player-2025-justin-herbert",
+      "player_name": "Justin Herbert",
+      "position": "QB",
+      "nfl_team": "LAC",
+      "forge_alpha": 61.4,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.82
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-bijan-robinson",
+      "player_name": "Bijan Robinson",
+      "position": "RB",
+      "nfl_team": "ATL",
+      "forge_alpha": 86.2,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.91
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-puka-nacua",
+      "player_name": "Puka Nacua",
+      "position": "WR",
+      "nfl_team": "LAR",
+      "forge_alpha": 89.3,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.88
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-josh-allen",
+      "player_name": "Josh Allen",
+      "position": "QB",
+      "nfl_team": "BUF",
+      "forge_alpha": 84.6,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.9
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-matthew-stafford",
+      "player_name": "Matthew Stafford",
+      "position": "QB",
+      "nfl_team": "LAR",
+      "forge_alpha": 74.1,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.78
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-drake-maye",
+      "player_name": "Drake Maye",
+      "position": "QB",
+      "nfl_team": "NE",
+      "forge_alpha": 64.5,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.76
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-patrick-mahomes",
+      "player_name": "Patrick Mahomes",
+      "position": "QB",
+      "nfl_team": "KC",
+      "forge_alpha": 71.8,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.74
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-jalen-hurts",
+      "player_name": "Jalen Hurts",
+      "position": "QB",
+      "nfl_team": "PHI",
+      "forge_alpha": 66.5,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.8
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-bo-nix",
+      "player_name": "Bo Nix",
+      "position": "QB",
+      "nfl_team": "DEN",
+      "forge_alpha": 57.3,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.72
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-christian-mccaffrey",
+      "player_name": "Christian McCaffrey",
+      "position": "RB",
+      "nfl_team": "SF",
+      "forge_alpha": 88.7,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.86
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-jahmyr-gibbs",
+      "player_name": "Jahmyr Gibbs",
+      "position": "RB",
+      "nfl_team": "DET",
+      "forge_alpha": 84.4,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.89
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-jonathan-taylor",
+      "player_name": "Jonathan Taylor",
+      "position": "RB",
+      "nfl_team": "IND",
+      "forge_alpha": 82.6,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.86
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-devon-achane",
+      "player_name": "De'Von Achane",
+      "position": "RB",
+      "nfl_team": "MIA",
+      "forge_alpha": 79.2,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.72
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-james-cook",
+      "player_name": "James Cook",
+      "position": "RB",
+      "nfl_team": "BUF",
+      "forge_alpha": 73.5,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.8
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-derrick-henry",
+      "player_name": "Derrick Henry",
+      "position": "RB",
+      "nfl_team": "BAL",
+      "forge_alpha": 69.1,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.76
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-chase-brown",
+      "player_name": "Chase Brown",
+      "position": "RB",
+      "nfl_team": "CIN",
+      "forge_alpha": 66.8,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.72
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-ashton-jeanty",
+      "player_name": "Ashton Jeanty",
+      "position": "RB",
+      "nfl_team": "LV",
+      "forge_alpha": 61.3,
+      "forge_tier": "T3",
+      "confidence": {
+        "score": 0.62
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-jaxon-smith-njigba",
+      "player_name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "nfl_team": "SEA",
+      "forge_alpha": 86.5,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.85
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-jamarr-chase",
+      "player_name": "Ja'Marr Chase",
+      "position": "WR",
+      "nfl_team": "CIN",
+      "forge_alpha": 88.4,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.9
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-amon-ra-st-brown",
+      "player_name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "nfl_team": "DET",
+      "forge_alpha": 84.7,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.9
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-george-pickens",
+      "player_name": "George Pickens",
+      "position": "WR",
+      "nfl_team": "DAL",
+      "forge_alpha": 73.2,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.7
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-zay-flowers",
+      "player_name": "Zay Flowers",
+      "position": "WR",
+      "nfl_team": "BAL",
+      "forge_alpha": 71.5,
+      "forge_tier": "T2",
+      "confidence": {
+        "score": 0.75
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-trey-mcbride",
+      "player_name": "Trey McBride",
+      "position": "TE",
+      "nfl_team": "ARI",
+      "forge_alpha": 88.9,
+      "forge_tier": "T1",
+      "confidence": {
+        "score": 0.87
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-kyle-pitts",
+      "player_name": "Kyle Pitts",
+      "position": "TE",
+      "nfl_team": "ATL",
+      "forge_alpha": 65.2,
+      "forge_tier": "T3",
+      "confidence": {
+        "score": 0.65
+      },
+      "provenance": {
+        "score_source": "player_specific",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-wandale-robinson",
+      "player_name": "Wan'Dale Robinson",
+      "position": "WR",
+      "nfl_team": "NYG",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-courtland-sutton",
+      "player_name": "Courtland Sutton",
+      "position": "WR",
+      "nfl_team": "DEN",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-travis-kelce",
+      "player_name": "Travis Kelce",
+      "position": "TE",
+      "nfl_team": "KC",
+      "forge_alpha": 9.2,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-harold-fannin-jr",
+      "player_name": "Harold Fannin Jr.",
+      "position": "TE",
+      "nfl_team": "CLE",
+      "forge_alpha": 9.2,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-chris-rodriguez",
+      "player_name": "Chris Rodriguez",
+      "position": "RB",
+      "nfl_team": "WAS",
+      "forge_alpha": 13.5,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-tyler-allgeier",
+      "player_name": "Tyler Allgeier",
+      "position": "RB",
+      "nfl_team": "ATL",
+      "forge_alpha": 13.5,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-zach-charbonnet",
+      "player_name": "Zach Charbonnet",
+      "position": "RB",
+      "nfl_team": "SEA",
+      "forge_alpha": 13.5,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-roschon-johnson",
+      "player_name": "Roschon Johnson",
+      "position": "RB",
+      "nfl_team": "CHI",
+      "forge_alpha": 13.5,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-joshua-palmer",
+      "player_name": "Joshua Palmer",
+      "position": "WR",
+      "nfl_team": "LAC",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-quentin-johnston",
+      "player_name": "Quentin Johnston",
+      "position": "WR",
+      "nfl_team": "LAC",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-darnell-mooney",
+      "player_name": "Darnell Mooney",
+      "position": "WR",
+      "nfl_team": "ATL",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-demarcus-robinson",
+      "player_name": "Demarcus Robinson",
+      "position": "WR",
+      "nfl_team": "LAR",
+      "forge_alpha": 15.0,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-dalton-schultz",
+      "player_name": "Dalton Schultz",
+      "position": "TE",
+      "nfl_team": "HOU",
+      "forge_alpha": 9.2,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    },
+    {
+      "player_id": "tiber-data-player-2025-gardner-minshew",
+      "player_name": "Gardner Minshew",
+      "position": "QB",
+      "nfl_team": "LV",
+      "forge_alpha": 22.7,
+      "forge_tier": "BASELINE",
+      "confidence": {
+        "score": 0.1
+      },
+      "provenance": {
+        "score_source": "generated_baseline",
+        "producer_repo": "TIBER-FORGE",
+        "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+      }
+    }
+  ]
+}
