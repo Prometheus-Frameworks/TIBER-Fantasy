@@ -111,6 +111,7 @@ type LeagueDashboardResponse = {
     playerSpecificForgeCoverageCount?: number;
     generatedBaselineVisibilityCount?: number;
     forgeArtifact?: ForgeArtifactDiagnostics;
+    identityCrosswalkArtifact?: IdentityCrosswalkArtifactDiagnostics;
     forgeRosterMatching?: ForgeRosterMatchingDiagnostics;
     rosterVisibility?: RosterCoverageCounts;
   };
@@ -159,17 +160,30 @@ type ForgeArtifactDiagnostics = {
   generatedAt?: string | null;
 };
 
+type IdentityCrosswalkArtifactDiagnostics = {
+  state?: 'available' | 'missing' | 'malformed' | 'duplicate_ids' | 'unsupported' | 'disabled' | string;
+  available?: boolean;
+  reason?: string | null;
+  code?: string | null;
+  sourcePath?: string | null;
+  rowCount?: number;
+  providerMappingCount?: number;
+  providerCount?: number;
+  contractVersion?: string | null;
+  generatedAt?: string | null;
+};
+
 type ForgeRosterMatchingDiagnostics = {
   rosterCanonicalIdsChecked?: number;
   rosterCanonicalIdsMatched?: number;
   directCanonicalMatches?: number;
-  bridgeCanonicalMatches?: number;
+  crosswalkCanonicalMatches?: number;
   playerSpecificRosterMatches?: number;
   generatedBaselineRosterMatches?: number;
   nonEvidenceRosterMatches?: number;
   sampleUnmatchedCanonicalIds?: string[];
   sampleMatchedCanonicalIds?: string[];
-  sampleBridgeMatchedCanonicalIds?: Array<{ rosterCanonicalId: string; forgePlayerId: string }>;
+  sampleCrosswalkMatchedCanonicalIds?: Array<{ rosterCanonicalId: string; forgePlayerId: string; providerKey?: string }>;
 };
 
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
@@ -439,8 +453,8 @@ function forgeArtifactNarrative(artifact?: ForgeArtifactDiagnostics | null, matc
   if ((matching?.rosterCanonicalIdsChecked ?? 0) > 0 && (matching?.rosterCanonicalIdsMatched ?? 0) === 0) {
     return 'Artifact is available, but none of this roster’s canonical IDs match FORGE_PLAYER_STATIC_V1 rows.';
   }
-  if ((matching?.bridgeCanonicalMatches ?? 0) > 0) {
-    return 'Artifact is available and player_specific roster rows are matching through the temporary Sleeper-to-FORGE identity bridge.';
+  if ((matching?.crosswalkCanonicalMatches ?? 0) > 0) {
+    return 'Artifact is available and roster rows are matching through TIBER_IDENTITY_CROSSWALK_V1.';
   }
   if ((matching?.playerSpecificRosterMatches ?? 0) > 0) {
     return 'Artifact is available and player_specific roster rows are matching directly.';
@@ -464,6 +478,7 @@ function CanonicalIdSamples({ label, ids }: { label: string; ids?: string[] }) {
 function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDashboardResponse['diagnostics'] }) {
   const artifact = diagnostics?.forgeArtifact;
   const matching = diagnostics?.forgeRosterMatching;
+  const identityArtifact = diagnostics?.identityCrosswalkArtifact;
 
   return (
     <div className="tmd-forge-diagnostics" aria-label="FORGE_PLAYER_STATIC_V1 artifact diagnostics">
@@ -490,11 +505,22 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
         <div><span>Generated at</span><strong>{diagnosticValue(artifact?.generatedAt)}</strong></div>
       </div>
 
+      <div className="tmd-forge-diagnostics-grid">
+        <div><span>Identity artifact state</span><strong>{diagnosticValue(identityArtifact?.state)}</strong></div>
+        <div><span>Identity available</span><strong>{diagnosticValue(identityArtifact?.available)}</strong></div>
+        <div><span>Identity reason / code</span><strong>{diagnosticValue(identityArtifact?.code)}</strong><small>{diagnosticValue(identityArtifact?.reason)}</small></div>
+        <div><span>Identity source path</span><code>{diagnosticValue(identityArtifact?.sourcePath)}</code></div>
+        <div><span>Identity rows</span><strong>{diagnosticValue(identityArtifact?.rowCount)}</strong></div>
+        <div><span>Provider mappings</span><strong>{diagnosticValue(identityArtifact?.providerMappingCount)}</strong></div>
+        <div><span>Providers</span><strong>{diagnosticValue(identityArtifact?.providerCount)}</strong></div>
+        <div><span>Identity contract</span><strong>{diagnosticValue(identityArtifact?.contractVersion)}</strong></div>
+      </div>
+
       <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
         <div><span>Roster canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong></div>
         <div><span>Roster IDs matched to FORGE rows</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong></div>
         <div><span>Direct canonical matches</span><strong>{diagnosticValue(matching?.directCanonicalMatches)}</strong></div>
-        <div><span>Bridge/crosswalk matches</span><strong>{diagnosticValue(matching?.bridgeCanonicalMatches)}</strong></div>
+        <div><span>Crosswalk matches</span><strong>{diagnosticValue(matching?.crosswalkCanonicalMatches)}</strong></div>
         <div><span>player_specific roster matches</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
         <div><span>generated_baseline roster matches</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
         <div><span>non-evidence roster matches</span><strong>{diagnosticValue(matching?.nonEvidenceRosterMatches)}</strong></div>
@@ -502,7 +528,7 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
 
       <div className="tmd-forge-sample-grid">
         <CanonicalIdSamples label="Sample matched roster canonical IDs" ids={matching?.sampleMatchedCanonicalIds} />
-        <BridgeIdSamples label="Sample bridge/crosswalk matches" ids={matching?.sampleBridgeMatchedCanonicalIds} />
+        <BridgeIdSamples label="Sample TIBER_IDENTITY_CROSSWALK_V1 matches" ids={matching?.sampleCrosswalkMatchedCanonicalIds} />
         <CanonicalIdSamples label="Sample unmatched roster canonical IDs" ids={matching?.sampleUnmatchedCanonicalIds} />
       </div>
     </div>
@@ -510,12 +536,12 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
 }
 
 
-function BridgeIdSamples({ label, ids }: { label: string; ids?: Array<{ rosterCanonicalId: string; forgePlayerId: string }> }) {
+function BridgeIdSamples({ label, ids }: { label: string; ids?: Array<{ rosterCanonicalId: string; forgePlayerId: string; providerKey?: string }> }) {
   return (
     <div className="tmd-forge-id-samples">
       <span>{label}</span>
       {ids && ids.length > 0 ? (
-        <code>{ids.map((id) => `${id.rosterCanonicalId} → ${id.forgePlayerId}`).join(', ')}</code>
+        <code>{ids.map((id) => `${id.rosterCanonicalId} → ${id.forgePlayerId}${id.providerKey ? ` (${id.providerKey})` : ''}`).join(', ')}</code>
       ) : (
         <small>None reported</small>
       )}

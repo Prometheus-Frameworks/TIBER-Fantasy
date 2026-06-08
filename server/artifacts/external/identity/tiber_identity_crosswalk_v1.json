@@ -1,0 +1,54 @@
+{
+  "artifact_id": "TIBER_IDENTITY_CROSSWALK_V1",
+  "schema_version": "v1",
+  "generated_at": "2026-06-08T00:00:00.000Z",
+  "supported_providers": ["sleeper"],
+  "coverage": {
+    "provider_record_counts": {
+      "sleeper": 3
+    },
+    "total_records": 3
+  },
+  "record_count": 3,
+  "records": [
+    {
+      "provider": "sleeper",
+      "provider_player_id": "6797",
+      "provider_canonical_id": "sleeper:6797",
+      "tiber_player_id": "tiber-data-player-2025-justin-herbert",
+      "player_name": "Justin Herbert",
+      "position": "QB",
+      "team": "LAC",
+      "confidence": 1,
+      "match_method": "promoted_identity_crosswalk",
+      "source": "TIBER-Data",
+      "source_updated_at": "2026-06-08T00:00:00.000Z"
+    },
+    {
+      "provider": "sleeper",
+      "provider_player_id": "9493",
+      "provider_canonical_id": "sleeper:9493",
+      "tiber_player_id": "tiber-data-player-2025-puka-nacua",
+      "player_name": "Puka Nacua",
+      "position": "WR",
+      "team": "LAR",
+      "confidence": 1,
+      "match_method": "promoted_identity_crosswalk",
+      "source": "TIBER-Data",
+      "source_updated_at": "2026-06-08T00:00:00.000Z"
+    },
+    {
+      "provider": "sleeper",
+      "provider_player_id": "9509",
+      "provider_canonical_id": "sleeper:9509",
+      "tiber_player_id": "tiber-data-player-2025-bijan-robinson",
+      "player_name": "Bijan Robinson",
+      "position": "RB",
+      "team": "ATL",
+      "confidence": 1,
+      "match_method": "promoted_identity_crosswalk",
+      "source": "TIBER-Data",
+      "source_updated_at": "2026-06-08T00:00:00.000Z"
+    }
+  ]
+}
