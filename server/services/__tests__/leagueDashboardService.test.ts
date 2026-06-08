@@ -56,6 +56,39 @@ function forgeStaticLookup(rows: any[], artifact: any = {}) {
   };
 }
 
+
+function identityCrosswalkLookup(mappings: Array<{ provider: string; providerId: string; tiberPlayerId: string }>, artifact: any = {}) {
+  const tiberPlayerIdsByProviderKey = new Map(mappings.map((mapping) => [`${mapping.provider}:${mapping.providerId}`, mapping.tiberPlayerId]));
+  return {
+    artifact: {
+      state: 'available',
+      available: true,
+      reason: null,
+      code: null,
+      sourcePath: '/tmp/tiber_identity_crosswalk_v1.json',
+      artifactId: 'TIBER_IDENTITY_CROSSWALK_V1',
+      contractVersion: 'v1',
+      generatedAt: '2026-06-08T00:00:00.000Z',
+      rowCount: mappings.length,
+      providerMappingCount: mappings.length,
+      providerCount: new Set(mappings.map((mapping) => mapping.provider)).size,
+      ...artifact,
+    },
+    rows: mappings.map((mapping) => ({
+      provider: mapping.provider,
+      providerId: mapping.providerId,
+      providerCanonicalId: `${mapping.provider}:${mapping.providerId}`,
+      tiberPlayerId: mapping.tiberPlayerId,
+      playerName: null,
+      position: null,
+      raw: {},
+    })),
+    tiberPlayerIdsByProviderKey,
+  };
+}
+
+const emptyIdentityCrosswalkLookup = () => identityCrosswalkLookup([]);
+
 function forgeStaticRow(overrides: any) {
   return {
     playerId: 'p1',
@@ -148,6 +181,7 @@ describe('computeLeagueDashboard', () => {
         db: dbMock,
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([forgeScore]) } as any,
         forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({})])) } as any,
+        tiberIdentityCrosswalkService: { getLookup: jest.fn().mockResolvedValue(emptyIdentityCrosswalkLookup()) } as any,
       }
     );
 
@@ -175,7 +209,7 @@ describe('computeLeagueDashboard', () => {
     expect(insertSpy).not.toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
   });
 
-  it('bridges Sleeper fallback canonical IDs to FORGE_PLAYER_STATIC_V1 canonical player IDs', async () => {
+  it('uses TIBER_IDENTITY_CROSSWALK_V1 to resolve Sleeper fallback canonical IDs to FORGE_PLAYER_STATIC_V1 canonical player IDs', async () => {
     const result = await computeLeagueDashboard(
       { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
       {
@@ -194,6 +228,11 @@ describe('computeLeagueDashboard', () => {
             }),
           ])),
         } as any,
+        tiberIdentityCrosswalkService: {
+          getLookup: jest.fn().mockResolvedValue(identityCrosswalkLookup([
+            { provider: 'sleeper', providerId: '6797', tiberPlayerId: 'tiber-data-player-2025-justin-herbert' },
+          ])),
+        } as any,
       }
     );
 
@@ -204,7 +243,7 @@ describe('computeLeagueDashboard', () => {
       visibilityState: 'forge_scored',
     }));
     expect(result.teams[0].roster[0].forgeScoreProvenance).toEqual(expect.objectContaining({
-      matchType: 'sleeper_bridge',
+      matchType: 'identity_crosswalk',
       rosterCanonicalId: 'sleeper:6797',
       forgePlayerId: 'tiber-data-player-2025-justin-herbert',
     }));
@@ -212,10 +251,97 @@ describe('computeLeagueDashboard', () => {
       rosterCanonicalIdsChecked: 1,
       rosterCanonicalIdsMatched: 1,
       directCanonicalMatches: 0,
-      bridgeCanonicalMatches: 1,
+      crosswalkCanonicalMatches: 1,
       playerSpecificRosterMatches: 1,
-      sampleBridgeMatchedCanonicalIds: [{ rosterCanonicalId: 'sleeper:6797', forgePlayerId: 'tiber-data-player-2025-justin-herbert' }],
+      sampleCrosswalkMatchedCanonicalIds: [{ rosterCanonicalId: 'sleeper:6797', forgePlayerId: 'tiber-data-player-2025-justin-herbert', providerKey: 'sleeper:6797' }],
       sampleUnmatchedCanonicalIds: [],
+    }));
+  });
+
+  it('matches raw Sleeper provider IDs through TIBER_IDENTITY_CROSSWALK_V1 before FORGE lookup', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: {
+          ...sleeperDeps,
+          getLeagueRosters: jest.fn().mockResolvedValue([{ owner_id: 'owner1', players: ['6797'] }]),
+        } as any,
+        db: createDbMock({ identities: [{ sleeperId: '6797', canonicalId: 'local-herbert', position: 'QB', fullName: 'Justin Herbert' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: {
+          getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([
+            forgeStaticRow({
+              playerId: 'tiber-data-player-2025-justin-herbert',
+              playerName: 'Justin Herbert',
+              position: 'QB',
+              alpha: 61.4,
+            }),
+          ])),
+        } as any,
+        tiberIdentityCrosswalkService: {
+          getLookup: jest.fn().mockResolvedValue(identityCrosswalkLookup([
+            { provider: 'sleeper', providerId: '6797', tiberPlayerId: 'tiber-data-player-2025-justin-herbert' },
+          ])),
+        } as any,
+      }
+    );
+
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      canonicalId: 'local-herbert',
+      alpha: 61.4,
+      forgeScoreSource: 'player_specific',
+    }));
+    expect(result.teams[0].roster[0].forgeScoreProvenance).toEqual(expect.objectContaining({
+      matchType: 'identity_crosswalk',
+      identityProviderKey: 'sleeper:6797',
+      identityCrosswalkArtifactId: 'TIBER_IDENTITY_CROSSWALK_V1',
+    }));
+  });
+
+  it('fails closed when TIBER_IDENTITY_CROSSWALK_V1 is missing and no direct canonical FORGE row exists', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'sleeper:6797', position: 'QB', fullName: 'Justin Herbert' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: {
+          getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([
+            forgeStaticRow({
+              playerId: 'tiber-data-player-2025-justin-herbert',
+              playerName: 'Justin Herbert',
+              position: 'QB',
+              alpha: 61.4,
+            }),
+          ])),
+        } as any,
+        tiberIdentityCrosswalkService: {
+          getLookup: jest.fn().mockResolvedValue(identityCrosswalkLookup([], {
+            available: false,
+            state: 'missing',
+            code: 'not_found',
+            reason: 'missing crosswalk',
+          })),
+        } as any,
+      }
+    );
+
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      canonicalId: 'sleeper:6797',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+      visibilityState: 'known_unscored',
+    }));
+    expect(result.diagnostics?.identityCrosswalkArtifact).toEqual(expect.objectContaining({
+      available: false,
+      state: 'missing',
+    }));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsMatched: 0,
+      crosswalkCanonicalMatches: 0,
+      sampleUnmatchedCanonicalIds: ['sleeper:6797'],
     }));
   });
 

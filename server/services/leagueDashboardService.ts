@@ -16,7 +16,11 @@ import {
   type ForgePlayerStaticService,
 } from '../modules/externalModels/forge/forgePlayerStaticService';
 import type { ForgePlayerStaticLookup, ForgePlayerStaticRow } from '../modules/externalModels/forge/forgePlayerStaticTypes';
-import { resolveForgePlayerStaticId } from '../modules/externalModels/forge/forgePlayerStaticIdentityBridge';
+import {
+  tiberIdentityCrosswalkService,
+  type TiberIdentityCrosswalkService,
+} from '../modules/externalModels/identity/tiberIdentityCrosswalkService';
+import type { TiberIdentityCrosswalkLookup } from '../modules/externalModels/identity/tiberIdentityCrosswalkTypes';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -42,13 +46,13 @@ type ForgeRosterMatchDiagnostics = {
   rosterCanonicalIdsChecked: number;
   rosterCanonicalIdsMatched: number;
   directCanonicalMatches: number;
-  bridgeCanonicalMatches: number;
+  crosswalkCanonicalMatches: number;
   playerSpecificRosterMatches: number;
   generatedBaselineRosterMatches: number;
   nonEvidenceRosterMatches: number;
   sampleUnmatchedCanonicalIds: string[];
   sampleMatchedCanonicalIds: string[];
-  sampleBridgeMatchedCanonicalIds: Array<{ rosterCanonicalId: string; forgePlayerId: string }>;
+  sampleCrosswalkMatchedCanonicalIds: Array<{ rosterCanonicalId: string; forgePlayerId: string; providerKey: string }>;
 };
 
 type LeagueDashboardPlayer = {
@@ -68,10 +72,11 @@ type LeagueDashboardPlayer = {
     dataQuality?: ForgeScore['dataQuality'] | null;
     artifactId?: 'FORGE_PLAYER_STATIC_V1';
     contractVersion?: string | null;
-    matchType?: 'direct' | 'sleeper_bridge';
+    matchType?: 'direct' | 'identity_crosswalk';
     rosterCanonicalId?: string | null;
     forgePlayerId?: string | null;
-    bridgeSource?: string | null;
+    identityProviderKey?: string | null;
+    identityCrosswalkArtifactId?: 'TIBER_IDENTITY_CROSSWALK_V1' | null;
   } | null;
   tier?: number | null;
   missingReason?: string | null;
@@ -113,6 +118,7 @@ export type LeagueDashboardPayload = {
     generatedBaselineVisibilityCount: number;
     unresolvedRosterIdentityCount: number;
     forgeArtifact: ForgePlayerStaticLookup['artifact'];
+    identityCrosswalkArtifact: TiberIdentityCrosswalkLookup['artifact'];
     forgeRosterMatching: ForgeRosterMatchDiagnostics;
     rosterVisibility: RosterCoverageCounts;
   };
@@ -144,6 +150,7 @@ type LeagueDashboardDeps = {
   forgeService: typeof forgeService;
   rookieArtifactService?: Pick<typeof rookieArtifactService, 'getRookieAssetLookup'>;
   forgePlayerStaticService?: Pick<ForgePlayerStaticService, 'getLookup'>;
+  tiberIdentityCrosswalkService?: Pick<TiberIdentityCrosswalkService, 'getLookup'>;
 };
 
 const defaultDeps: LeagueDashboardDeps = {
@@ -153,6 +160,7 @@ const defaultDeps: LeagueDashboardDeps = {
   forgeService,
   rookieArtifactService,
   forgePlayerStaticService,
+  tiberIdentityCrosswalkService,
 };
 
 function normalizeExternalId(value?: string | null) {
@@ -358,33 +366,97 @@ function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' 
   return player.missingReason ?? 'rookie_alpha_fallback_unavailable';
 }
 
-function buildForgeRosterMatchDiagnostics(
-  canonicalIds: string[],
+type RosterIdentityReference = {
+  sleeperId: string;
+  rosterCanonicalId: string | null;
+};
+
+type ForgeRosterResolution = {
+  rosterCanonicalId: string;
+  forgePlayerId: string | null;
+  matchType: 'direct' | 'identity_crosswalk' | 'unmatched';
+  identityProviderKey: string | null;
+};
+
+function providerKey(provider: string, providerId: string): string {
+  return `${provider}:${providerId}`;
+}
+
+function resolveForgeRosterId(
+  ref: RosterIdentityReference,
   forgeStaticLookup: ForgePlayerStaticLookup,
+  identityCrosswalkLookup: TiberIdentityCrosswalkLookup,
+): ForgeRosterResolution {
+  const rosterCanonicalId = String(ref.rosterCanonicalId ?? `sleeper:${ref.sleeperId}`).trim();
+
+  if (ref.rosterCanonicalId && forgeStaticLookup.rowsByPlayerId.has(ref.rosterCanonicalId)) {
+    return {
+      rosterCanonicalId,
+      forgePlayerId: ref.rosterCanonicalId,
+      matchType: 'direct',
+      identityProviderKey: null,
+    };
+  }
+
+  if (!identityCrosswalkLookup.artifact.available) {
+    return { rosterCanonicalId, forgePlayerId: null, matchType: 'unmatched', identityProviderKey: null };
+  }
+
+  const candidateProviderKeys = Array.from(new Set([
+    ref.sleeperId ? providerKey('sleeper', ref.sleeperId) : null,
+    ref.rosterCanonicalId?.startsWith('sleeper:') ? ref.rosterCanonicalId : null,
+  ].filter((key): key is string => Boolean(key))));
+
+  for (const candidateProviderKey of candidateProviderKeys) {
+    const tiberPlayerId = identityCrosswalkLookup.tiberPlayerIdsByProviderKey.get(candidateProviderKey);
+    if (!tiberPlayerId) continue;
+    return {
+      rosterCanonicalId,
+      forgePlayerId: tiberPlayerId,
+      matchType: 'identity_crosswalk',
+      identityProviderKey: candidateProviderKey,
+    };
+  }
+
+  return { rosterCanonicalId, forgePlayerId: null, matchType: 'unmatched', identityProviderKey: null };
+}
+
+function buildForgeRosterMatchDiagnostics(
+  rosterIdentityRefs: RosterIdentityReference[],
+  forgeStaticLookup: ForgePlayerStaticLookup,
+  identityCrosswalkLookup: TiberIdentityCrosswalkLookup,
 ): ForgeRosterMatchDiagnostics {
-  const uniqueCanonicalIds = Array.from(new Set(canonicalIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
+  const refsByRosterCanonicalId = new Map<string, RosterIdentityReference>();
+  for (const ref of rosterIdentityRefs) {
+    const rosterCanonicalId = String(ref.rosterCanonicalId ?? `sleeper:${ref.sleeperId}`).trim();
+    if (rosterCanonicalId) refsByRosterCanonicalId.set(rosterCanonicalId, ref);
+  }
+
   const matchedIds: string[] = [];
   const unmatchedIds: string[] = [];
-  const bridgeMatchedIds: Array<{ rosterCanonicalId: string; forgePlayerId: string }> = [];
+  const crosswalkMatchedIds: Array<{ rosterCanonicalId: string; forgePlayerId: string; providerKey: string }> = [];
   let directCanonicalMatches = 0;
-  let bridgeCanonicalMatches = 0;
+  let crosswalkCanonicalMatches = 0;
   let playerSpecificRosterMatches = 0;
   let generatedBaselineRosterMatches = 0;
   let nonEvidenceRosterMatches = 0;
 
-  for (const canonicalId of uniqueCanonicalIds) {
-    const resolution = resolveForgePlayerStaticId(canonicalId);
-    const forgePlayerId = resolution.forgePlayerId;
-    const row = forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(forgePlayerId) : undefined;
+  for (const ref of Array.from(refsByRosterCanonicalId.values())) {
+    const resolution = resolveForgeRosterId(ref, forgeStaticLookup, identityCrosswalkLookup);
+    const row = resolution.forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(resolution.forgePlayerId) : undefined;
     if (!row) {
-      unmatchedIds.push(canonicalId);
+      unmatchedIds.push(resolution.rosterCanonicalId);
       continue;
     }
 
-    matchedIds.push(canonicalId);
-    if (resolution.matchType === 'sleeper_bridge') {
-      bridgeCanonicalMatches += 1;
-      bridgeMatchedIds.push({ rosterCanonicalId: canonicalId, forgePlayerId });
+    matchedIds.push(resolution.rosterCanonicalId);
+    if (resolution.matchType === 'identity_crosswalk') {
+      crosswalkCanonicalMatches += 1;
+      crosswalkMatchedIds.push({
+        rosterCanonicalId: resolution.rosterCanonicalId,
+        forgePlayerId: resolution.forgePlayerId!,
+        providerKey: resolution.identityProviderKey ?? 'unknown',
+      });
     } else {
       directCanonicalMatches += 1;
     }
@@ -399,16 +471,16 @@ function buildForgeRosterMatchDiagnostics(
   }
 
   return {
-    rosterCanonicalIdsChecked: uniqueCanonicalIds.length,
+    rosterCanonicalIdsChecked: refsByRosterCanonicalId.size,
     rosterCanonicalIdsMatched: matchedIds.length,
     directCanonicalMatches,
-    bridgeCanonicalMatches,
+    crosswalkCanonicalMatches,
     playerSpecificRosterMatches,
     generatedBaselineRosterMatches,
     nonEvidenceRosterMatches,
     sampleUnmatchedCanonicalIds: unmatchedIds.slice(0, 10),
     sampleMatchedCanonicalIds: matchedIds.slice(0, 10),
-    sampleBridgeMatchedCanonicalIds: bridgeMatchedIds.slice(0, 10),
+    sampleCrosswalkMatchedCanonicalIds: crosswalkMatchedIds.slice(0, 10),
   };
 }
 
@@ -662,6 +734,10 @@ export async function computeLeagueDashboard(
 
   const identityBySleeperId = new Map(identities.map((id) => [String(id.sleeperId), id]));
   const canonicalIds = identities.map((id) => id.canonicalId);
+  const rosterIdentityRefs: RosterIdentityReference[] = rosterPlayerIds.map((sleeperId) => ({
+    sleeperId,
+    rosterCanonicalId: identityBySleeperId.get(sleeperId)?.canonicalId ?? null,
+  }));
 
   logger.log('identity-join', {
     requestId: logger.requestId,
@@ -673,16 +749,16 @@ export async function computeLeagueDashboard(
   const targetSeasonFilter = effectiveSeason;
   const targetWeekFilter = effectiveWeek;
   const forgeStaticLookup = await (deps.forgePlayerStaticService ?? forgePlayerStaticService).getLookup();
+  const identityCrosswalkLookup = await (deps.tiberIdentityCrosswalkService ?? tiberIdentityCrosswalkService).getLookup();
 
-  const alphaByPlayer = new Map<string, { alpha: number | null; row: ForgePlayerStaticRow | null; source: ForgeScoreSource; provenance: LeagueDashboardPlayer['forgeScoreProvenance'] }>();
+  const alphaByRosterKey = new Map<string, { alpha: number | null; row: ForgePlayerStaticRow | null; source: ForgeScoreSource; provenance: LeagueDashboardPlayer['forgeScoreProvenance'] }>();
   if (forgeStaticLookup.artifact.available) {
-    for (const canonicalId of canonicalIds) {
-      const resolution = resolveForgePlayerStaticId(canonicalId);
-      const forgePlayerId = resolution.forgePlayerId;
-      const row = forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(forgePlayerId) : undefined;
+    for (const ref of rosterIdentityRefs) {
+      const resolution = resolveForgeRosterId(ref, forgeStaticLookup, identityCrosswalkLookup);
+      const row = resolution.forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(resolution.forgePlayerId) : undefined;
       if (!row) continue;
       if (!row.isPlayerSpecificEvidence && !row.isGeneratedBaselineVisibility) continue;
-      alphaByPlayer.set(canonicalId, {
+      alphaByRosterKey.set(resolution.rosterCanonicalId, {
         alpha: row.alpha,
         row,
         source: row.scoreSource,
@@ -694,25 +770,27 @@ export async function computeLeagueDashboard(
           confidence: row.confidence,
           artifactId: 'FORGE_PLAYER_STATIC_V1',
           contractVersion: forgeStaticLookup.artifact.contractVersion,
-          matchType: resolution.matchType === 'sleeper_bridge' ? 'sleeper_bridge' : 'direct',
-          rosterCanonicalId: canonicalId,
-          forgePlayerId,
-          bridgeSource: resolution.bridgeSource,
+          matchType: resolution.matchType === 'identity_crosswalk' ? 'identity_crosswalk' : 'direct',
+          rosterCanonicalId: resolution.rosterCanonicalId,
+          forgePlayerId: resolution.forgePlayerId,
+          identityProviderKey: resolution.identityProviderKey,
+          identityCrosswalkArtifactId: resolution.matchType === 'identity_crosswalk' ? 'TIBER_IDENTITY_CROSSWALK_V1' : null,
         },
       });
     }
   }
 
-  const forgeRosterMatching = buildForgeRosterMatchDiagnostics(canonicalIds, forgeStaticLookup);
+  const forgeRosterMatching = buildForgeRosterMatchDiagnostics(rosterIdentityRefs, forgeStaticLookup, identityCrosswalkLookup);
 
   logger.log('forge-player-static-v1', {
     requestId: logger.requestId,
     artifact: forgeStaticLookup.artifact,
+    identity_crosswalk_artifact: identityCrosswalkLookup.artifact,
     roster_matching: forgeRosterMatching,
     roster_canonical_ids: canonicalIds.length,
-    visible_rows_for_roster: alphaByPlayer.size,
-    player_specific_for_roster: Array.from(alphaByPlayer.values()).filter((entry) => entry.source === 'player_specific').length,
-    generated_baseline_for_roster: Array.from(alphaByPlayer.values()).filter((entry) => entry.source === 'generated_baseline').length,
+    visible_rows_for_roster: alphaByRosterKey.size,
+    player_specific_for_roster: Array.from(alphaByRosterKey.values()).filter((entry) => entry.source === 'player_specific').length,
+    generated_baseline_for_roster: Array.from(alphaByRosterKey.values()).filter((entry) => entry.source === 'generated_baseline').length,
     target_season: targetSeasonFilter,
     target_week: effectiveWeek,
   });
@@ -739,7 +817,7 @@ export async function computeLeagueDashboard(
       const canonicalId = identity?.canonicalId ?? null;
       const pos = identity?.position ?? 'FLEX';
       const rosterKey = canonicalId ?? `sleeper:${sleeperId}`;
-      const alphaEntry = canonicalId ? alphaByPlayer.get(canonicalId) : undefined;
+      const alphaEntry = alphaByRosterKey.get(rosterKey);
       const alpha = alphaEntry ? alphaEntry.alpha : null;
 
       if (canonicalId) {
@@ -824,7 +902,7 @@ export async function computeLeagueDashboard(
     const players = teamPlayersMap.get(team.id) ?? [];
 
     const updatedPlayers = players.map((player) => {
-      const updatedEntry = player.canonicalId ? alphaByPlayer.get(player.canonicalId) : undefined;
+      const updatedEntry = alphaByRosterKey.get(player.rosterKey);
       const updatedAlpha = updatedEntry?.alpha ?? null;
       const forgeScoreSource = updatedAlpha === null ? null : updatedEntry?.source ?? null;
       const forgeScoreProvenance = updatedAlpha === null ? null : updatedEntry?.provenance ?? null;
@@ -875,7 +953,7 @@ export async function computeLeagueDashboard(
       rosterCount: rosterPlayerIds.length,
       resolvedCanonicalCount,
       unresolvedSleeperCount: unresolvedPlayers.length,
-      cachedForgeRowCount: alphaByPlayer.size,
+      cachedForgeRowCount: alphaByRosterKey.size,
       computedForgeCount,
       stillMissingCount: teams.reduce((sum, t) => sum + t.roster.filter((p) => p.alpha === null).length, 0),
       rookieAlphaMatchedCount: rosterVisibility.rookieAlphaFallback,
@@ -891,6 +969,7 @@ export async function computeLeagueDashboard(
       generatedBaselineVisibilityCount: rosterVisibility.generatedBaselineVisibility,
       unresolvedRosterIdentityCount: rosterVisibility.unresolved,
       forgeArtifact: forgeStaticLookup.artifact,
+      identityCrosswalkArtifact: identityCrosswalkLookup.artifact,
       forgeRosterMatching,
       rosterVisibility,
     },
