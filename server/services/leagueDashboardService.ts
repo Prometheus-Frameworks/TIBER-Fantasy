@@ -16,6 +16,7 @@ import {
   type ForgePlayerStaticService,
 } from '../modules/externalModels/forge/forgePlayerStaticService';
 import type { ForgePlayerStaticLookup, ForgePlayerStaticRow } from '../modules/externalModels/forge/forgePlayerStaticTypes';
+import { resolveForgePlayerStaticId } from '../modules/externalModels/forge/forgePlayerStaticIdentityBridge';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -40,11 +41,14 @@ type RosterCoverageCounts = {
 type ForgeRosterMatchDiagnostics = {
   rosterCanonicalIdsChecked: number;
   rosterCanonicalIdsMatched: number;
+  directCanonicalMatches: number;
+  bridgeCanonicalMatches: number;
   playerSpecificRosterMatches: number;
   generatedBaselineRosterMatches: number;
   nonEvidenceRosterMatches: number;
   sampleUnmatchedCanonicalIds: string[];
   sampleMatchedCanonicalIds: string[];
+  sampleBridgeMatchedCanonicalIds: Array<{ rosterCanonicalId: string; forgePlayerId: string }>;
 };
 
 type LeagueDashboardPlayer = {
@@ -64,6 +68,10 @@ type LeagueDashboardPlayer = {
     dataQuality?: ForgeScore['dataQuality'] | null;
     artifactId?: 'FORGE_PLAYER_STATIC_V1';
     contractVersion?: string | null;
+    matchType?: 'direct' | 'sleeper_bridge';
+    rosterCanonicalId?: string | null;
+    forgePlayerId?: string | null;
+    bridgeSource?: string | null;
   } | null;
   tier?: number | null;
   missingReason?: string | null;
@@ -357,18 +365,30 @@ function buildForgeRosterMatchDiagnostics(
   const uniqueCanonicalIds = Array.from(new Set(canonicalIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
   const matchedIds: string[] = [];
   const unmatchedIds: string[] = [];
+  const bridgeMatchedIds: Array<{ rosterCanonicalId: string; forgePlayerId: string }> = [];
+  let directCanonicalMatches = 0;
+  let bridgeCanonicalMatches = 0;
   let playerSpecificRosterMatches = 0;
   let generatedBaselineRosterMatches = 0;
   let nonEvidenceRosterMatches = 0;
 
   for (const canonicalId of uniqueCanonicalIds) {
-    const row = forgeStaticLookup.rowsByPlayerId.get(canonicalId);
+    const resolution = resolveForgePlayerStaticId(canonicalId);
+    const forgePlayerId = resolution.forgePlayerId;
+    const row = forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(forgePlayerId) : undefined;
     if (!row) {
       unmatchedIds.push(canonicalId);
       continue;
     }
 
     matchedIds.push(canonicalId);
+    if (resolution.matchType === 'sleeper_bridge') {
+      bridgeCanonicalMatches += 1;
+      bridgeMatchedIds.push({ rosterCanonicalId: canonicalId, forgePlayerId });
+    } else {
+      directCanonicalMatches += 1;
+    }
+
     if (row.isPlayerSpecificEvidence) {
       playerSpecificRosterMatches += 1;
     } else if (row.isGeneratedBaselineVisibility) {
@@ -381,11 +401,14 @@ function buildForgeRosterMatchDiagnostics(
   return {
     rosterCanonicalIdsChecked: uniqueCanonicalIds.length,
     rosterCanonicalIdsMatched: matchedIds.length,
+    directCanonicalMatches,
+    bridgeCanonicalMatches,
     playerSpecificRosterMatches,
     generatedBaselineRosterMatches,
     nonEvidenceRosterMatches,
     sampleUnmatchedCanonicalIds: unmatchedIds.slice(0, 10),
     sampleMatchedCanonicalIds: matchedIds.slice(0, 10),
+    sampleBridgeMatchedCanonicalIds: bridgeMatchedIds.slice(0, 10),
   };
 }
 
@@ -654,7 +677,9 @@ export async function computeLeagueDashboard(
   const alphaByPlayer = new Map<string, { alpha: number | null; row: ForgePlayerStaticRow | null; source: ForgeScoreSource; provenance: LeagueDashboardPlayer['forgeScoreProvenance'] }>();
   if (forgeStaticLookup.artifact.available) {
     for (const canonicalId of canonicalIds) {
-      const row = forgeStaticLookup.rowsByPlayerId.get(canonicalId);
+      const resolution = resolveForgePlayerStaticId(canonicalId);
+      const forgePlayerId = resolution.forgePlayerId;
+      const row = forgePlayerId ? forgeStaticLookup.rowsByPlayerId.get(forgePlayerId) : undefined;
       if (!row) continue;
       if (!row.isPlayerSpecificEvidence && !row.isGeneratedBaselineVisibility) continue;
       alphaByPlayer.set(canonicalId, {
@@ -669,6 +694,10 @@ export async function computeLeagueDashboard(
           confidence: row.confidence,
           artifactId: 'FORGE_PLAYER_STATIC_V1',
           contractVersion: forgeStaticLookup.artifact.contractVersion,
+          matchType: resolution.matchType === 'sleeper_bridge' ? 'sleeper_bridge' : 'direct',
+          rosterCanonicalId: canonicalId,
+          forgePlayerId,
+          bridgeSource: resolution.bridgeSource,
         },
       });
     }

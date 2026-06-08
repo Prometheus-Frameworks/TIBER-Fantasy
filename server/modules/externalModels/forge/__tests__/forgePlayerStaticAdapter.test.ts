@@ -1,4 +1,5 @@
 import { adaptForgePlayerStaticArtifact } from '../forgePlayerStaticAdapter';
+import fs from 'fs';
 import path from 'path';
 import { ForgePlayerStaticClient } from '../forgePlayerStaticClient';
 import { ForgePlayerStaticService } from '../forgePlayerStaticService';
@@ -101,20 +102,58 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     }));
   });
 
-  it('defaults to the promoted sibling-repo forge_player_static artifact path', () => {
+  it('defaults to the bundled deploy-safe forge_player_static artifact path', () => {
     const client = new ForgePlayerStaticClient();
 
     const defaultPath = path.join(
       process.cwd(),
-      '..',
-      'TIBER-FORGE',
-      'exports',
-      'promoted',
-      'forge_player_static',
+      'server',
+      'artifacts',
+      'external',
+      'forge',
       'forge_player_static_v1.json',
     );
     expect(client.getConfig().artifactPath).toBe(defaultPath);
     expect(client.getConfig().sourcePath).toBe(defaultPath);
+  });
+
+  it('guards the bundled snapshot identity and promoted row counts', () => {
+    const bundledPath = path.join(
+      process.cwd(),
+      'server',
+      'artifacts',
+      'external',
+      'forge',
+      'forge_player_static_v1.json',
+    );
+    const payload = JSON.parse(fs.readFileSync(bundledPath, 'utf8'));
+    const lookup = adaptForgePlayerStaticArtifact(payload, bundledPath);
+
+    expect(payload).toEqual(expect.objectContaining({
+      artifact_type: 'FORGE_PLAYER_STATIC_V1',
+      schema_version: 'forge_player_static_v1',
+      row_count: 38,
+      score_source_policy: expect.objectContaining({
+        generated_baseline: expect.any(Object),
+      }),
+      consumer_manifest: expect.objectContaining({
+        evidence_gate: expect.any(Object),
+      }),
+      source_artifacts: expect.any(Array),
+    }));
+    expect(lookup.artifact).toEqual(expect.objectContaining({
+      available: true,
+      rowCount: 38,
+      playerSpecificCount: 24,
+      generatedBaselineCount: 14,
+    }));
+    expect(payload.rows.some((row: any) => row?.components && typeof row.components === 'object')).toBe(true);
+    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-puka-nacua')).toEqual(expect.objectContaining({
+      alpha: 30.24,
+      tier: 'low',
+      scoreSource: 'player_specific',
+      isPlayerSpecificEvidence: true,
+    }));
   });
 
   it('reports the attempted JSON source path when configured with an artifact directory', () => {

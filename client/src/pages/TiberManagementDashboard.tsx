@@ -162,11 +162,14 @@ type ForgeArtifactDiagnostics = {
 type ForgeRosterMatchingDiagnostics = {
   rosterCanonicalIdsChecked?: number;
   rosterCanonicalIdsMatched?: number;
+  directCanonicalMatches?: number;
+  bridgeCanonicalMatches?: number;
   playerSpecificRosterMatches?: number;
   generatedBaselineRosterMatches?: number;
   nonEvidenceRosterMatches?: number;
   sampleUnmatchedCanonicalIds?: string[];
   sampleMatchedCanonicalIds?: string[];
+  sampleBridgeMatchedCanonicalIds?: Array<{ rosterCanonicalId: string; forgePlayerId: string }>;
 };
 
 type TeamDirectionCoverage = { matched: number; total: number; rate: number; forgeMatched?: number; rookieAlphaMatched?: number };
@@ -436,8 +439,11 @@ function forgeArtifactNarrative(artifact?: ForgeArtifactDiagnostics | null, matc
   if ((matching?.rosterCanonicalIdsChecked ?? 0) > 0 && (matching?.rosterCanonicalIdsMatched ?? 0) === 0) {
     return 'Artifact is available, but none of this roster’s canonical IDs match FORGE_PLAYER_STATIC_V1 rows.';
   }
+  if ((matching?.bridgeCanonicalMatches ?? 0) > 0) {
+    return 'Artifact is available and player_specific roster rows are matching through the temporary Sleeper-to-FORGE identity bridge.';
+  }
   if ((matching?.playerSpecificRosterMatches ?? 0) > 0) {
-    return 'Artifact is available and player_specific roster rows are matching.';
+    return 'Artifact is available and player_specific roster rows are matching directly.';
   }
   return 'Artifact is available. Generated baseline rows may be visible, but player_specific evidence is not currently matching this roster.';
 }
@@ -487,15 +493,32 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
       <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
         <div><span>Roster canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong></div>
         <div><span>Roster IDs matched to FORGE rows</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong></div>
+        <div><span>Direct canonical matches</span><strong>{diagnosticValue(matching?.directCanonicalMatches)}</strong></div>
+        <div><span>Bridge/crosswalk matches</span><strong>{diagnosticValue(matching?.bridgeCanonicalMatches)}</strong></div>
         <div><span>player_specific roster matches</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
         <div><span>generated_baseline roster matches</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
         <div><span>non-evidence roster matches</span><strong>{diagnosticValue(matching?.nonEvidenceRosterMatches)}</strong></div>
       </div>
 
       <div className="tmd-forge-sample-grid">
-        <CanonicalIdSamples label="Sample matched canonical IDs" ids={matching?.sampleMatchedCanonicalIds} />
-        <CanonicalIdSamples label="Sample unmatched canonical IDs" ids={matching?.sampleUnmatchedCanonicalIds} />
+        <CanonicalIdSamples label="Sample matched roster canonical IDs" ids={matching?.sampleMatchedCanonicalIds} />
+        <BridgeIdSamples label="Sample bridge/crosswalk matches" ids={matching?.sampleBridgeMatchedCanonicalIds} />
+        <CanonicalIdSamples label="Sample unmatched roster canonical IDs" ids={matching?.sampleUnmatchedCanonicalIds} />
       </div>
+    </div>
+  );
+}
+
+
+function BridgeIdSamples({ label, ids }: { label: string; ids?: Array<{ rosterCanonicalId: string; forgePlayerId: string }> }) {
+  return (
+    <div className="tmd-forge-id-samples">
+      <span>{label}</span>
+      {ids && ids.length > 0 ? (
+        <code>{ids.map((id) => `${id.rosterCanonicalId} → ${id.forgePlayerId}`).join(', ')}</code>
+      ) : (
+        <small>None reported</small>
+      )}
     </div>
   );
 }

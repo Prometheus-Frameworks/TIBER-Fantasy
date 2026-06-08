@@ -2,13 +2,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { ForgePlayerStaticIntegrationError } from './forgePlayerStaticTypes';
 
-const DEFAULT_PROMOTED_ARTIFACT_PATH = path.join(
+const DEFAULT_BUNDLED_ARTIFACT_PATH = path.join(
   process.cwd(),
-  '..',
-  'TIBER-FORGE',
-  'exports',
-  'promoted',
-  'forge_player_static',
+  'server',
+  'artifacts',
+  'external',
+  'forge',
   'forge_player_static_v1.json',
 );
 
@@ -21,7 +20,7 @@ export class ForgePlayerStaticClient {
       config.artifactPath ??
       process.env.FORGE_PLAYER_STATIC_V1_ARTIFACT_PATH ??
       process.env.FORGE_PLAYER_STATIC_PROMOTED_PATH ??
-      DEFAULT_PROMOTED_ARTIFACT_PATH;
+      DEFAULT_BUNDLED_ARTIFACT_PATH;
     this.enabled = config.enabled ?? process.env.FORGE_PLAYER_STATIC_V1_ENABLED !== '0';
   }
 

@@ -175,6 +175,50 @@ describe('computeLeagueDashboard', () => {
     expect(insertSpy).not.toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
   });
 
+  it('bridges Sleeper fallback canonical IDs to FORGE_PLAYER_STATIC_V1 canonical player IDs', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'sleeper:6797', position: 'QB', fullName: 'Justin Herbert' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: {
+          getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([
+            forgeStaticRow({
+              playerId: 'tiber-data-player-2025-justin-herbert',
+              playerName: 'Justin Herbert',
+              position: 'QB',
+              alpha: 61.4,
+              tier: 'T2',
+            }),
+          ])),
+        } as any,
+      }
+    );
+
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      canonicalId: 'sleeper:6797',
+      alpha: 61.4,
+      forgeScoreSource: 'player_specific',
+      visibilityState: 'forge_scored',
+    }));
+    expect(result.teams[0].roster[0].forgeScoreProvenance).toEqual(expect.objectContaining({
+      matchType: 'sleeper_bridge',
+      rosterCanonicalId: 'sleeper:6797',
+      forgePlayerId: 'tiber-data-player-2025-justin-herbert',
+    }));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 1,
+      rosterCanonicalIdsMatched: 1,
+      directCanonicalMatches: 0,
+      bridgeCanonicalMatches: 1,
+      playerSpecificRosterMatches: 1,
+      sampleBridgeMatchedCanonicalIds: [{ rosterCanonicalId: 'sleeper:6797', forgePlayerId: 'tiber-data-player-2025-justin-herbert' }],
+      sampleUnmatchedCanonicalIds: [],
+    }));
+  });
+
   it('keeps generated FORGE baselines visible without counting them as scored coverage', async () => {
     const baselineScore = {
       ...forgeScore,
