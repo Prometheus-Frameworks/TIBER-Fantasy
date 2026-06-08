@@ -1,15 +1,8 @@
 {
-  "artifact_type": "forge_player_static",
-  "schema_version": "1.0.0",
+  "artifact_type": "FORGE_PLAYER_STATIC_V1",
+  "schema_version": "forge_player_static_v1",
   "contract_version": "v1",
   "generated_at": "2026-06-07T00:00:00.000Z",
-  "consumer_manifest": {
-    "artifact_id": "FORGE_PLAYER_STATIC_V1",
-    "producer_repo": "TIBER-FORGE",
-    "producer_artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-    "bundled_snapshot_path": "server/artifacts/external/forge/forge_player_static_v1.json",
-    "consumer_contract": "Management reads player_specific as evidence and generated_baseline as visibility-only; Fantasy does not generate or modify scores."
-  },
   "rows": [
     {
       "player_id": "tiber-data-player-2025-justin-herbert",
@@ -25,8 +18,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -43,8 +35,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -52,8 +43,8 @@
       "player_name": "Puka Nacua",
       "position": "WR",
       "nfl_team": "LAR",
-      "forge_alpha": 89.3,
-      "forge_tier": "T1",
+      "forge_alpha": 30.24,
+      "forge_tier": "low",
       "confidence": {
         "score": 0.88
       },
@@ -61,8 +52,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -79,8 +69,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -97,8 +86,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -115,8 +103,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -133,8 +120,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -151,8 +137,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -169,8 +154,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -187,8 +171,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -205,8 +188,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -223,8 +205,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -241,8 +222,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -259,8 +239,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -277,8 +256,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -295,8 +273,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -313,8 +290,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -331,8 +307,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -349,8 +324,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -367,8 +341,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -385,8 +358,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -403,8 +375,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -421,8 +392,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -439,8 +409,7 @@
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Pinned promoted snapshot bundled for deploy-safe Fantasy consumption; Fantasy must not alter scoring semantics."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -457,8 +426,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -475,8 +443,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -493,8 +460,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -511,8 +477,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -529,8 +494,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -547,8 +511,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -565,8 +528,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -583,8 +545,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -601,8 +562,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -619,8 +579,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -637,8 +596,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -655,8 +613,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -673,8 +630,7 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     },
     {
@@ -691,9 +647,9 @@
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
-        "promotion_note": "Visibility-only baseline row; excluded from Team Direction confidence and roster strength."
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
       }
     }
-  ]
+  ],
+  "row_count": 38
 }

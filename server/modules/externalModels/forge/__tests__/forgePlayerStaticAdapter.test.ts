@@ -117,7 +117,7 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     expect(client.getConfig().sourcePath).toBe(defaultPath);
   });
 
-  it('adapts the bundled pinned snapshot with expected promoted row counts', () => {
+  it('guards the bundled snapshot identity and promoted row counts', () => {
     const bundledPath = path.join(
       process.cwd(),
       'server',
@@ -129,13 +129,20 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     const payload = JSON.parse(fs.readFileSync(bundledPath, 'utf8'));
     const lookup = adaptForgePlayerStaticArtifact(payload, bundledPath);
 
+    expect(payload).toEqual(expect.objectContaining({
+      artifact_type: 'FORGE_PLAYER_STATIC_V1',
+      schema_version: 'forge_player_static_v1',
+      row_count: 38,
+    }));
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
       rowCount: 38,
       playerSpecificCount: 24,
       generatedBaselineCount: 14,
     }));
-    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-justin-herbert')).toEqual(expect.objectContaining({
+    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-puka-nacua')).toEqual(expect.objectContaining({
+      alpha: 30.24,
+      tier: 'low',
       scoreSource: 'player_specific',
       isPlayerSpecificEvidence: true,
     }));
