@@ -129,3 +129,13 @@ npm run forge:parity:report -- --json --out tmp/forge-parity-report.json
 
 - `FORGE_SOURCE_SELECTOR_PREVIEW_ENABLED=1` enables external-backed selector modes for the contained `selectedForgeInsight` preview path.
 - The default remains migration-safe: if the flag is unset, `external_preview` returns unavailable and `auto_with_legacy_fallback` stays on legacy FORGE.
+
+## Management `FORGE_PLAYER_STATIC_V1` consumption
+
+Management consumes the promoted static FORGE artifact through the local adapter stack in this folder:
+
+- `forgePlayerStaticClient.ts` reads the JSON artifact from `FORGE_PLAYER_STATIC_V1_ARTIFACT_PATH`, `FORGE_PLAYER_STATIC_PROMOTED_PATH`, or the default sibling-repo path `../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json`.
+- `forgePlayerStaticAdapter.ts` validates the downstream consumer contract at the adapter edge and fails closed for unsupported contracts, malformed rows, and duplicate canonical player IDs.
+- `forgePlayerStaticService.ts` maps missing/disabled/malformed/unsupported artifacts into an unavailable lookup instead of producing scores.
+
+Management evidence semantics are intentionally strict: only rows where `row.provenance.score_source === "player_specific"` are true FORGE evidence. Rows with `generated_baseline` are visible only as baseline/lookup scaffolding and do not count toward Team Direction confidence, FORGE scoring coverage, roster strength, alpha totals, or player-specific evidence coverage. `fallback_default`, unknown score sources, missing artifacts, unsupported artifacts, malformed artifacts, and duplicate IDs fail closed or remain non-evidence.

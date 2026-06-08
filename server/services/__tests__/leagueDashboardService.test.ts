@@ -32,6 +32,48 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy }: { identiti
 jest.mock('../../infra/db', () => ({ db: {} }));
 jest.mock('../../storage', () => ({ storage: {} }));
 
+function forgeStaticLookup(rows: any[], artifact: any = {}) {
+  const rowsByPlayerId = new Map(rows.map((row) => [row.playerId, row]));
+  const playerSpecificCount = rows.filter((row) => row.isPlayerSpecificEvidence).length;
+  const generatedBaselineCount = rows.filter((row) => row.isGeneratedBaselineVisibility).length;
+  return {
+    artifact: {
+      state: 'available',
+      available: true,
+      reason: null,
+      code: null,
+      sourcePath: '/tmp/forge_player_static_v1.json',
+      artifactId: 'FORGE_PLAYER_STATIC_V1',
+      contractVersion: 'v1',
+      generatedAt: '2026-06-07T00:00:00.000Z',
+      rowCount: rows.length,
+      playerSpecificCount,
+      generatedBaselineCount,
+      nonEvidenceCount: rows.length - playerSpecificCount - generatedBaselineCount,
+      ...artifact,
+    },
+    rowsByPlayerId,
+  };
+}
+
+function forgeStaticRow(overrides: any) {
+  return {
+    playerId: 'p1',
+    playerName: 'Player One',
+    position: 'WR',
+    team: null,
+    alpha: 50,
+    tier: null,
+    confidence: 0.9,
+    scoreSource: 'player_specific',
+    isPlayerSpecificEvidence: true,
+    isGeneratedBaselineVisibility: false,
+    provenance: { score_source: 'player_specific' },
+    raw: {},
+    ...overrides,
+  };
+}
+
 describe('computeLeagueDashboard', () => {
   beforeAll(async () => {
     process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://example.com/testdb';
@@ -85,7 +127,7 @@ describe('computeLeagueDashboard', () => {
     scoredAt: new Date(),
   };
 
-  it('computes FORGE on cache miss when identities resolve', async () => {
+  it('consumes player_specific FORGE_PLAYER_STATIC_V1 rows when identities resolve', async () => {
     const dbMock = createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: 'Player One' }] });
     const insertSpy = jest.fn();
     (dbMock.insert as jest.Mock).mockImplementation(() => ({
@@ -105,21 +147,24 @@ describe('computeLeagueDashboard', () => {
         sleeperClient: sleeperDeps as any,
         db: dbMock,
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([forgeScore]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({})])) } as any,
       }
     );
 
     expect(result.teams[0].overall_total).toBeGreaterThan(0);
     expect(result.unresolvedPlayers).toEqual([]);
-    expect(result.diagnostics?.computedForgeCount).toBe(1);
+    expect(result.diagnostics?.computedForgeCount).toBe(0);
     expect(result.diagnostics?.forgeScoredCount).toBe(1);
     expect(result.diagnostics?.forgeBaselineCount).toBe(0);
+    expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(1);
+    expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(0);
     expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
       alpha: 50,
       forgeScoreSource: 'player_specific',
       visibilityState: 'forge_scored',
       unavailableReason: null,
     }));
-    expect(insertSpy).toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
+    expect(insertSpy).not.toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
   });
 
   it('keeps generated FORGE baselines visible without counting them as scored coverage', async () => {
@@ -146,6 +191,7 @@ describe('computeLeagueDashboard', () => {
         sleeperClient: sleeperDeps as any,
         db: dbMock,
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([baselineScore]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({ alpha: 13.5, confidence: 0.2, scoreSource: 'generated_baseline', isPlayerSpecificEvidence: false, isGeneratedBaselineVisibility: true, provenance: { score_source: 'generated_baseline' } })])) } as any,
       }
     );
 
@@ -156,12 +202,15 @@ describe('computeLeagueDashboard', () => {
       visibilityState: 'forge_baseline',
       unavailableReason: 'forge_generated_baseline_not_player_specific',
     }));
+    expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(0);
+    expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(1);
     expect(result.diagnostics?.rosterVisibility).toEqual({
       total: 1,
       identityCovered: 1,
       baselineVisible: 1,
       forgeScored: 0,
       forgeBaseline: 1,
+      generatedBaselineVisibility: 1,
       rookieAlphaFallback: 0,
       knownUnscored: 0,
       unresolved: 0,
@@ -190,6 +239,7 @@ describe('computeLeagueDashboard', () => {
         sleeperClient: sleeperDeps as any,
         db: dbMock,
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([baselineScore]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({ alpha: 13.5, confidence: 0.2, scoreSource: 'generated_baseline', isPlayerSpecificEvidence: false, isGeneratedBaselineVisibility: true, provenance: { score_source: 'generated_baseline' } })])) } as any,
       }
     );
 
@@ -211,6 +261,7 @@ describe('computeLeagueDashboard', () => {
         sleeperClient: sleeperDeps as any,
         db: createDbMock({ identities: [] }),
         forgeService: forgeServiceMock as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
       }
     );
 
@@ -229,6 +280,7 @@ describe('computeLeagueDashboard', () => {
       baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
+      generatedBaselineVisibility: 0,
       rookieAlphaFallback: 0,
       knownUnscored: 0,
       unresolved: 1,
@@ -263,11 +315,12 @@ describe('computeLeagueDashboard', () => {
         } as any,
         db: dbMock,
         forgeService: forgeServiceMock as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
       }
     );
 
     expect(result.unresolvedPlayers).toEqual([]);
-    expect(forgeServiceMock.getForgeScoresForPlayers).toHaveBeenCalledWith(['sleeper:s1'], 2024, 1);
+    expect(forgeServiceMock.getForgeScoresForPlayers).not.toHaveBeenCalled();
     expect(insertSpy).toHaveBeenCalledWith([expect.objectContaining({
       canonicalId: 'sleeper:s1',
       sleeperId: 's1',
@@ -295,6 +348,7 @@ describe('computeLeagueDashboard', () => {
       baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
+      generatedBaselineVisibility: 0,
       rookieAlphaFallback: 0,
       knownUnscored: 1,
       unresolved: 0,
@@ -322,6 +376,7 @@ describe('computeLeagueDashboard', () => {
         db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'RB', fullName: 'Jeremiyah Love' }] }),
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
         rookieArtifactService: { getRookieAssetLookup: jest.fn().mockResolvedValue(new Map([['name:jeremiyahlove', rookieAsset]])) },
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
       }
     );
 
@@ -339,11 +394,38 @@ describe('computeLeagueDashboard', () => {
       baselineVisible: 0,
       forgeScored: 0,
       forgeBaseline: 0,
+      generatedBaselineVisibility: 0,
       rookieAlphaFallback: 1,
       knownUnscored: 0,
       unresolved: 0,
       evidenceCovered: 1,
     });
+  });
+
+
+  it('fails Management roster output closed when FORGE_PLAYER_STATIC_V1 is unavailable', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: sleeperDeps as any,
+        db: createDbMock({ identities: [{ sleeperId: 's1', canonicalId: 'p1', position: 'WR', fullName: 'Player One' }] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([forgeScore]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([], { available: false, state: 'missing', code: 'not_found', reason: 'missing artifact' })) } as any,
+      }
+    );
+
+    expect(result.teams[0].overall_total).toBe(0);
+    expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+      alpha: null,
+      forgeScoreSource: null,
+      missingReason: 'forge_artifact_unavailable',
+      visibilityState: 'known_unscored',
+      unavailableReason: 'forge_player_static_v1_unavailable',
+    }));
+    expect(result.diagnostics?.forgeArtifact).toEqual(expect.objectContaining({ available: false, state: 'missing' }));
+    expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(0);
+    expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(0);
   });
 
   it('defaults week to latest league week when not provided', async () => {
@@ -368,6 +450,7 @@ describe('computeLeagueDashboard', () => {
         } as any,
         db: dbMock,
         forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([forgeStaticRow({ alpha: 55 })])) } as any,
       }
     );
 

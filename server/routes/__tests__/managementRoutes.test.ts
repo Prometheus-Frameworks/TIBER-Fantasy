@@ -1,3 +1,7 @@
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://example.com/testdb';
+jest.mock('../../infra/db', () => ({ db: {} }));
+jest.mock('../../storage', () => ({ storage: {} }));
+
 import express from 'express';
 import request from 'supertest';
 import { createManagementRouter } from '../managementRoutes';
