@@ -1,8 +1,43 @@
 {
   "artifact_type": "FORGE_PLAYER_STATIC_V1",
   "schema_version": "forge_player_static_v1",
-  "contract_version": "v1",
+  "model_version": "forge_player_static_v1",
   "generated_at": "2026-06-07T00:00:00.000Z",
+  "row_count": 38,
+  "score_source_policy": {
+    "player_specific": {
+      "evidence": true,
+      "management_semantics": "Counts as FORGE player-specific evidence when alpha is numeric."
+    },
+    "generated_baseline": {
+      "evidence": false,
+      "visibility_only": true,
+      "management_semantics": "Visible for diagnostics only; excluded from Team Direction confidence and roster strength."
+    },
+    "fallback_default": {
+      "evidence": false,
+      "visibility_only": false
+    }
+  },
+  "consumer_manifest": {
+    "artifact_id": "FORGE_PLAYER_STATIC_V1",
+    "schema_version": "forge_player_static_v1",
+    "evidence_gate": {
+      "required_score_source": "player_specific",
+      "generated_baseline_counts_as_evidence": false,
+      "fail_closed_when_missing": true
+    },
+    "expected_row_count": 38,
+    "expected_player_specific_count": 24,
+    "expected_generated_baseline_count": 14
+  },
+  "source_artifacts": [
+    {
+      "producer_repo": "TIBER-FORGE",
+      "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+      "contract": "FORGE_PLAYER_STATIC_V1"
+    }
+  ],
   "rows": [
     {
       "player_id": "tiber-data-player-2025-justin-herbert",
@@ -12,13 +47,39 @@
       "forge_alpha": 61.4,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.82
+        "score": 0.82,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 17.192,
+        "efficiency": 14.736,
+        "role_stability": 13.508,
+        "team_context": 9.824,
+        "risk_adjustment": 6.14
+      },
+      "score": {
+        "forge_alpha": 61.4,
+        "forge_tier": "T2"
       }
     },
     {
@@ -29,13 +90,39 @@
       "forge_alpha": 86.2,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.91
+        "score": 0.91,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 24.136,
+        "efficiency": 20.688,
+        "role_stability": 18.964,
+        "team_context": 13.792,
+        "risk_adjustment": 8.62
+      },
+      "score": {
+        "forge_alpha": 86.2,
+        "forge_tier": "T1"
       }
     },
     {
@@ -46,13 +133,39 @@
       "forge_alpha": 30.24,
       "forge_tier": "low",
       "confidence": {
-        "score": 0.88
+        "score": 0.88,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 8.4672,
+        "efficiency": 7.2576,
+        "role_stability": 6.6528,
+        "team_context": 4.8384,
+        "risk_adjustment": 3.024
+      },
+      "score": {
+        "forge_alpha": 30.24,
+        "forge_tier": "low"
       }
     },
     {
@@ -63,13 +176,39 @@
       "forge_alpha": 84.6,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.9
+        "score": 0.9,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 23.688,
+        "efficiency": 20.304,
+        "role_stability": 18.612,
+        "team_context": 13.536,
+        "risk_adjustment": 8.46
+      },
+      "score": {
+        "forge_alpha": 84.6,
+        "forge_tier": "T1"
       }
     },
     {
@@ -80,13 +219,39 @@
       "forge_alpha": 74.1,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.78
+        "score": 0.78,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 20.748,
+        "efficiency": 17.784,
+        "role_stability": 16.302,
+        "team_context": 11.856,
+        "risk_adjustment": 7.41
+      },
+      "score": {
+        "forge_alpha": 74.1,
+        "forge_tier": "T1"
       }
     },
     {
@@ -97,13 +262,39 @@
       "forge_alpha": 64.5,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.76
+        "score": 0.76,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 18.06,
+        "efficiency": 15.48,
+        "role_stability": 14.19,
+        "team_context": 10.32,
+        "risk_adjustment": 6.45
+      },
+      "score": {
+        "forge_alpha": 64.5,
+        "forge_tier": "T2"
       }
     },
     {
@@ -114,13 +305,39 @@
       "forge_alpha": 71.8,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.74
+        "score": 0.74,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 20.104,
+        "efficiency": 17.232,
+        "role_stability": 15.796,
+        "team_context": 11.488,
+        "risk_adjustment": 7.18
+      },
+      "score": {
+        "forge_alpha": 71.8,
+        "forge_tier": "T1"
       }
     },
     {
@@ -131,13 +348,39 @@
       "forge_alpha": 66.5,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.8
+        "score": 0.8,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 18.62,
+        "efficiency": 15.96,
+        "role_stability": 14.63,
+        "team_context": 10.64,
+        "risk_adjustment": 6.65
+      },
+      "score": {
+        "forge_alpha": 66.5,
+        "forge_tier": "T2"
       }
     },
     {
@@ -148,13 +391,39 @@
       "forge_alpha": 57.3,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.72
+        "score": 0.72,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 16.044,
+        "efficiency": 13.752,
+        "role_stability": 12.606,
+        "team_context": 9.168,
+        "risk_adjustment": 5.73
+      },
+      "score": {
+        "forge_alpha": 57.3,
+        "forge_tier": "T2"
       }
     },
     {
@@ -165,13 +434,39 @@
       "forge_alpha": 88.7,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.86
+        "score": 0.86,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 24.836,
+        "efficiency": 21.288,
+        "role_stability": 19.514,
+        "team_context": 14.192,
+        "risk_adjustment": 8.87
+      },
+      "score": {
+        "forge_alpha": 88.7,
+        "forge_tier": "T1"
       }
     },
     {
@@ -182,13 +477,39 @@
       "forge_alpha": 84.4,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.89
+        "score": 0.89,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 23.632,
+        "efficiency": 20.256,
+        "role_stability": 18.568,
+        "team_context": 13.504,
+        "risk_adjustment": 8.44
+      },
+      "score": {
+        "forge_alpha": 84.4,
+        "forge_tier": "T1"
       }
     },
     {
@@ -199,13 +520,39 @@
       "forge_alpha": 82.6,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.86
+        "score": 0.86,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 23.128,
+        "efficiency": 19.824,
+        "role_stability": 18.172,
+        "team_context": 13.216,
+        "risk_adjustment": 8.26
+      },
+      "score": {
+        "forge_alpha": 82.6,
+        "forge_tier": "T1"
       }
     },
     {
@@ -216,13 +563,39 @@
       "forge_alpha": 79.2,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.72
+        "score": 0.72,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 22.176,
+        "efficiency": 19.008,
+        "role_stability": 17.424,
+        "team_context": 12.672,
+        "risk_adjustment": 7.92
+      },
+      "score": {
+        "forge_alpha": 79.2,
+        "forge_tier": "T1"
       }
     },
     {
@@ -233,13 +606,39 @@
       "forge_alpha": 73.5,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.8
+        "score": 0.8,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 20.58,
+        "efficiency": 17.64,
+        "role_stability": 16.17,
+        "team_context": 11.76,
+        "risk_adjustment": 7.35
+      },
+      "score": {
+        "forge_alpha": 73.5,
+        "forge_tier": "T2"
       }
     },
     {
@@ -250,13 +649,39 @@
       "forge_alpha": 69.1,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.76
+        "score": 0.76,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 19.348,
+        "efficiency": 16.584,
+        "role_stability": 15.202,
+        "team_context": 11.056,
+        "risk_adjustment": 6.91
+      },
+      "score": {
+        "forge_alpha": 69.1,
+        "forge_tier": "T2"
       }
     },
     {
@@ -267,13 +692,39 @@
       "forge_alpha": 66.8,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.72
+        "score": 0.72,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 18.704,
+        "efficiency": 16.032,
+        "role_stability": 14.696,
+        "team_context": 10.688,
+        "risk_adjustment": 6.68
+      },
+      "score": {
+        "forge_alpha": 66.8,
+        "forge_tier": "T2"
       }
     },
     {
@@ -284,13 +735,39 @@
       "forge_alpha": 61.3,
       "forge_tier": "T3",
       "confidence": {
-        "score": 0.62
+        "score": 0.62,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 17.164,
+        "efficiency": 14.712,
+        "role_stability": 13.486,
+        "team_context": 9.808,
+        "risk_adjustment": 6.13
+      },
+      "score": {
+        "forge_alpha": 61.3,
+        "forge_tier": "T3"
       }
     },
     {
@@ -301,13 +778,39 @@
       "forge_alpha": 86.5,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.85
+        "score": 0.85,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 24.22,
+        "efficiency": 20.76,
+        "role_stability": 19.03,
+        "team_context": 13.84,
+        "risk_adjustment": 8.65
+      },
+      "score": {
+        "forge_alpha": 86.5,
+        "forge_tier": "T1"
       }
     },
     {
@@ -318,13 +821,39 @@
       "forge_alpha": 88.4,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.9
+        "score": 0.9,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 24.752,
+        "efficiency": 21.216,
+        "role_stability": 19.448,
+        "team_context": 14.144,
+        "risk_adjustment": 8.84
+      },
+      "score": {
+        "forge_alpha": 88.4,
+        "forge_tier": "T1"
       }
     },
     {
@@ -335,13 +864,39 @@
       "forge_alpha": 84.7,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.9
+        "score": 0.9,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 23.716,
+        "efficiency": 20.328,
+        "role_stability": 18.634,
+        "team_context": 13.552,
+        "risk_adjustment": 8.47
+      },
+      "score": {
+        "forge_alpha": 84.7,
+        "forge_tier": "T1"
       }
     },
     {
@@ -352,13 +907,39 @@
       "forge_alpha": 73.2,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.7
+        "score": 0.7,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 20.496,
+        "efficiency": 17.568,
+        "role_stability": 16.104,
+        "team_context": 11.712,
+        "risk_adjustment": 7.32
+      },
+      "score": {
+        "forge_alpha": 73.2,
+        "forge_tier": "T2"
       }
     },
     {
@@ -369,13 +950,39 @@
       "forge_alpha": 71.5,
       "forge_tier": "T2",
       "confidence": {
-        "score": 0.75
+        "score": 0.75,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 20.02,
+        "efficiency": 17.16,
+        "role_stability": 15.73,
+        "team_context": 11.44,
+        "risk_adjustment": 7.15
+      },
+      "score": {
+        "forge_alpha": 71.5,
+        "forge_tier": "T2"
       }
     },
     {
@@ -386,13 +993,39 @@
       "forge_alpha": 88.9,
       "forge_tier": "T1",
       "confidence": {
-        "score": 0.87
+        "score": 0.87,
+        "level": "high",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 24.892,
+        "efficiency": 21.336,
+        "role_stability": 19.558,
+        "team_context": 14.224,
+        "risk_adjustment": 8.89
+      },
+      "score": {
+        "forge_alpha": 88.9,
+        "forge_tier": "T1"
       }
     },
     {
@@ -403,13 +1036,39 @@
       "forge_alpha": 65.2,
       "forge_tier": "T3",
       "confidence": {
-        "score": 0.65
+        "score": 0.65,
+        "level": "medium",
+        "signals": {
+          "player_specific_inputs": true,
+          "generated_baseline_visibility_only": false
+        }
       },
       "provenance": {
         "score_source": "player_specific",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "player_specific_evidence",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": 18.256,
+        "efficiency": 15.648,
+        "role_stability": 14.344,
+        "team_context": 10.432,
+        "risk_adjustment": 6.52
+      },
+      "score": {
+        "forge_alpha": 65.2,
+        "forge_tier": "T3"
       }
     },
     {
@@ -417,16 +1076,42 @@
       "player_name": "Wan'Dale Robinson",
       "position": "WR",
       "nfl_team": "NYG",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -434,16 +1119,42 @@
       "player_name": "Courtland Sutton",
       "position": "WR",
       "nfl_team": "DEN",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -454,13 +1165,39 @@
       "forge_alpha": 9.2,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 9.2,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -471,13 +1208,39 @@
       "forge_alpha": 9.2,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 9.2,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -488,13 +1251,39 @@
       "forge_alpha": 13.5,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 13.5,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -505,13 +1294,39 @@
       "forge_alpha": 13.5,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 13.5,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -522,13 +1337,39 @@
       "forge_alpha": 13.5,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 13.5,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -539,13 +1380,39 @@
       "forge_alpha": 13.5,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 13.5,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -553,16 +1420,42 @@
       "player_name": "Joshua Palmer",
       "position": "WR",
       "nfl_team": "LAC",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -570,16 +1463,42 @@
       "player_name": "Quentin Johnston",
       "position": "WR",
       "nfl_team": "LAC",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -587,16 +1506,42 @@
       "player_name": "Darnell Mooney",
       "position": "WR",
       "nfl_team": "ATL",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -604,16 +1549,42 @@
       "player_name": "Demarcus Robinson",
       "position": "WR",
       "nfl_team": "LAR",
-      "forge_alpha": 15.0,
+      "forge_alpha": 15,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 15,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -624,13 +1595,39 @@
       "forge_alpha": 9.2,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 9.2,
+        "forge_tier": "BASELINE"
       }
     },
     {
@@ -641,15 +1638,40 @@
       "forge_alpha": 22.7,
       "forge_tier": "BASELINE",
       "confidence": {
-        "score": 0.1
+        "score": 0.1,
+        "level": "low",
+        "signals": {
+          "player_specific_inputs": false,
+          "generated_baseline_visibility_only": true
+        }
       },
       "provenance": {
         "score_source": "generated_baseline",
         "producer_repo": "TIBER-FORGE",
         "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
-        "consumer_contract": "FORGE_PLAYER_STATIC_V1"
+        "consumer_contract": "FORGE_PLAYER_STATIC_V1",
+        "model_version": "forge_player_static_v1",
+        "generated_at": "2026-06-07T00:00:00.000Z",
+        "evidence_gate": "visibility_only",
+        "source_artifacts": [
+          {
+            "producer_repo": "TIBER-FORGE",
+            "artifact_path": "exports/promoted/forge_player_static/forge_player_static_v1.json",
+            "contract": "FORGE_PLAYER_STATIC_V1"
+          }
+        ]
+      },
+      "components": {
+        "opportunity": null,
+        "efficiency": null,
+        "role_stability": null,
+        "team_context": null,
+        "risk_adjustment": null
+      },
+      "score": {
+        "forge_alpha": 22.7,
+        "forge_tier": "BASELINE"
       }
     }
-  ],
-  "row_count": 38
+  ]
 }

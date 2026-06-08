@@ -133,6 +133,13 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       artifact_type: 'FORGE_PLAYER_STATIC_V1',
       schema_version: 'forge_player_static_v1',
       row_count: 38,
+      score_source_policy: expect.objectContaining({
+        generated_baseline: expect.any(Object),
+      }),
+      consumer_manifest: expect.objectContaining({
+        evidence_gate: expect.any(Object),
+      }),
+      source_artifacts: expect.any(Array),
     }));
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
@@ -140,6 +147,7 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       playerSpecificCount: 24,
       generatedBaselineCount: 14,
     }));
+    expect(payload.rows.some((row: any) => row?.components && typeof row.components === 'object')).toBe(true);
     expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-puka-nacua')).toEqual(expect.objectContaining({
       alpha: 30.24,
       tier: 'low',
