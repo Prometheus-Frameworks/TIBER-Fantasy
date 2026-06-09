@@ -48,7 +48,15 @@ git log --since="1 week ago" -p -- server | grep -n "return \[\]"
 
 A `catch` that returns `[]`/defaults instead of erroring is a poisoning/staleness vector — note it.
 
-## 7. Follow-ups
+## 7. Dependency advisories?
+
+```bash
+npm run security:audit
+```
+
+Advisory-only for now — **expect this to exit non-zero** until the pre-existing high/critical advisories are triaged (15 high / 3 critical as of 2026-06-09). Look for *new* highs/criticals vs. last week, and merge or close any open Dependabot PRs. CI also runs this weekly and on dependency-file changes (`.github/workflows/security-audit.yml`, report-only).
+
+## 8. Follow-ups
 
 Add anything found to the running list below. Open a GitHub issue for anything High severity.
 
