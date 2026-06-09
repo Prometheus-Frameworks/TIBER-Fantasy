@@ -105,6 +105,16 @@ export const rateLimiters = {
     skipSuccessfulRequests: false
   }),
   
+  // Looser limit for client-triggered refresh endpoints: expensive enough to
+  // throttle, but reachable from the UI, so the limit must tolerate normal
+  // usage (and stay generous in case req.ip resolves to a shared proxy IP).
+  publicRefresh: createRateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 10,          // 10 requests per 15 minutes
+    message: 'Refresh rate limit exceeded. Maximum 10 requests per 15 minutes.',
+    skipSuccessfulRequests: false
+  }),
+
   // Light rate limiting for status/health endpoints
   statusCheck: createRateLimit({
     windowMs: 1 * 60 * 1000,   // 1 minute

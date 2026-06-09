@@ -115,6 +115,22 @@ GET /api/player-pool?pos=WR&limit=20
 GET /api/consensus
 ```
 
+## 🔒 Security Hardening State (Issue #192)
+
+Ongoing audit work — see Issue #192 for the full findings list. Completed so far:
+
+- **PR #193 (merged)**: all `/api/admin/*` and `/api/debug/*` routes require `requireAdminAuth` (`x-admin-api-key` header or `Authorization: Bearer`; fail-closed 503 if `ADMIN_API_KEY` unset). Production 5xx responses return generic messages.
+- **Rate-limiting follow-up (2026-06-09)**:
+  - `POST /api/unified-players/refresh` throttled with `rateLimiters.publicRefresh` (10 req / 15 min — client-called, keep generous).
+  - `POST /api/admin/season/set` and `POST /api/admin/rag/seed-narratives` add `rateLimiters.heavyOperation` behind admin auth as defense-in-depth.
+  - `app.set("trust proxy", 1)` in `server/index.ts` so `req.ip` resolves to the real client behind Railway's proxy (required for IP-keyed rate limits).
+  - Admin key comparisons (`ADMIN_API_KEY`, `FORGE_ADMIN_KEY`) use `timingSafeKeyCompare` from `server/middleware/adminAuth.ts` — use it for any new shared-secret check.
+  - `POST /api/generate/wr-snap-data` is dev-only (inside the `NODE_ENV !== 'production'` test-route guard).
+
+**Rules for new code**: new `/api/admin/*` or `/api/debug/*` routes must use `requireAdminAuth`; expensive or state-mutating routes should reuse a limiter from `server/middleware/rateLimit.ts`; secret comparisons must be timing-safe.
+
+Still open from the audit: artifact freshness enforcement (M3), internal CSV adapter hardening (M4), doctrine/agent-policy docs (M5), helmet/security headers (M6), CI `npm audit` (M7), global rate limiting.
+
 ## 📊 Current Platform State
 
 ### Operational Systems

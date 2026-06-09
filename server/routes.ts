@@ -1682,10 +1682,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Test endpoint for snap percentages
     app.get('/api/test/snap-percentages', testSnapPercentages);
+
+    // Generate WR snap percentage data (reads gamelog JSON from repo root — dev tooling only)
+    app.post('/api/generate/wr-snap-data', generateWRSnapData);
   }
-  
-  // Generate WR snap percentage data
-  app.post('/api/generate/wr-snap-data', generateWRSnapData);
 
   // 🏈 SLEEPER SNAP PERCENTAGE SYSTEM - New Implementation
   
@@ -2711,7 +2711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/unified-players/refresh', async (req, res) => {
+  app.post('/api/unified-players/refresh', rateLimiters.publicRefresh, async (req, res) => {
     try {
       const { unifiedPlayerService } = await import('./unifiedPlayerService');
       
@@ -5599,7 +5599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * 1. POST /api/admin/season/set - Manual season override for testing/debugging
    */
-  app.post('/api/admin/season/set', requireAdminAuth, async (req: Request, res: Response) => {
+  app.post('/api/admin/season/set', requireAdminAuth, rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     const startTime = Date.now();
     
     try {
@@ -7723,7 +7723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
-  app.post('/api/admin/rag/seed-narratives', requireAdminAuth, async (req: Request, res: Response) => {
+  app.post('/api/admin/rag/seed-narratives', requireAdminAuth, rateLimiters.heavyOperation, async (req: Request, res: Response) => {
     try {
       const { chunks } = await import('@shared/schema');
       const { generateEmbedding } = await import('./services/geminiEmbeddings');
