@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ArtifactFreshness } from '../artifactFreshness';
 
 export const wrBestRecipeSummarySchema = z
   .object({
@@ -72,6 +73,8 @@ export interface TiberWrBreakoutLab {
     provider: 'signal-validation-model';
     exportDirectory: string;
   };
+  /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+  freshness?: ArtifactFreshness;
 }
 
 export type SignalValidationErrorCode =

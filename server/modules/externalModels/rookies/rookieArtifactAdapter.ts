@@ -1,3 +1,4 @@
+import { assessAndLogArtifactFreshness } from '../artifactFreshness';
 import { RookieArtifact, RookieIntegrationError, TiberRookieBoard, TiberRookieRow } from './types';
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -227,6 +228,11 @@ export function mapRookieArtifactToFantasySurface(payload: unknown, sourcePath: 
       version: artifact.meta.model_version ?? null,
       promotedAt: artifact.meta.promoted_at ?? null,
       generatedAt: artifact.meta.generated_at ?? null,
+      freshness: assessAndLogArtifactFreshness({
+        artifact: 'rookies_promoted_board',
+        generatedAt: artifact.meta.generated_at,
+        promotedAt: artifact.meta.promoted_at,
+      }),
       sourcePath,
     },
     players,

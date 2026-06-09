@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ArtifactFreshness } from '../artifactFreshness';
 
 export const canonicalAgeCurveLabRowSchema = z.object({
   player_id: z.string().min(1).nullable().optional(),
@@ -76,6 +77,8 @@ export interface TiberAgeCurveLab {
     location: string | null;
     mode: 'api' | 'artifact';
   };
+  /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+  freshness?: ArtifactFreshness;
 }
 
 export type AgeCurveErrorCode =

@@ -1,3 +1,5 @@
+import type { ArtifactFreshness } from '../artifactFreshness';
+
 export interface RookieArtifactRow {
   name: string;
   pos: string;
@@ -94,6 +96,8 @@ export interface TiberRookieBoard {
     version: string | null;
     promotedAt: string | null;
     generatedAt: string | null;
+    /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+    freshness?: ArtifactFreshness;
     sourcePath: string;
   };
   players: TiberRookieRow[];

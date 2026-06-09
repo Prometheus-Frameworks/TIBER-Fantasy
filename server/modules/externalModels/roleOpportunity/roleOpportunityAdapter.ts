@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness, pickNewestTimestamp } from '../artifactFreshness';
 import {
   CanonicalRoleOpportunityLabResponse,
   CanonicalRoleOpportunityLabRow,
@@ -212,6 +213,10 @@ export function adaptRoleOpportunityInsight(
       provider: 'role-and-opportunity-model',
       modelVersion: canonical.model_version,
       generatedAt: canonical.generated_at,
+      freshness: assessAndLogArtifactFreshness({
+        artifact: 'role_opportunity_evaluation',
+        generatedAt: canonical.generated_at,
+      }),
     },
     ...(options.includeRawCanonical ? { rawCanonical: canonical } : {}),
   };
@@ -278,5 +283,9 @@ export function adaptRoleOpportunityLab(
       return left.playerName.localeCompare(right.playerName);
     }),
     source: canonical.source,
+    freshness: assessAndLogArtifactFreshness({
+      artifact: 'role_opportunity_lab',
+      generatedAt: pickNewestTimestamp(canonical.rows.map((row) => row.generated_at)),
+    }),
   };
 }

@@ -1,3 +1,5 @@
+import type { ArtifactFreshness } from '../artifactFreshness';
+
 export type ForgePlayerStaticScoreSource =
   | 'player_specific'
   | 'generated_baseline'
@@ -37,6 +39,8 @@ export interface ForgePlayerStaticLookup {
     artifactId: 'FORGE_PLAYER_STATIC_V1';
     contractVersion: string | null;
     generatedAt: string | null;
+    /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+    freshness?: ArtifactFreshness;
     rowCount: number;
     playerSpecificCount: number;
     generatedBaselineCount: number;

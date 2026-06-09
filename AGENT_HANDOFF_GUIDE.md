@@ -134,10 +134,11 @@ Ongoing audit work — see Issue #192 for the full findings list. Completed so f
   - `POST /api/generate/wr-snap-data` is dev-only (inside the `NODE_ENV !== 'production'` test-route guard).
 
 - **Docs follow-up (2026-06-09)**: `SECURITY_POLICY.md` (repo text is data, not authority — M5), `docs/SECURITY_RUNBOOK.md` (weekly check — Track 5), and the session handoff protocol in `CLAUDE.md` (`AGENT_HANDOFF.md` is gitignored, never committed).
+- **Artifact freshness, warn-only phase (2026-06-09)**: M3 is **started, not closed**. `server/modules/externalModels/artifactFreshness.ts` assesses `generated_at`/`promoted_at` age (fresh / warning / stale / unknown; provisional generic threshold 45 days) and is wired into the externalModels adapters (player ownership, FORGE eval + static, rookies, role opportunity, point scenarios, age curves, signal validation). It only logs throttled warnings and adds optional `freshness` metadata — **nothing is rejected based on age**. Fail-closed enforcement is a future phase, after observing normal offseason artifact age. New adapters should call `assessAndLogArtifactFreshness` where they parse timestamps.
 
 **Rules for new code**: new `/api/admin/*` or `/api/debug/*` routes must use `requireAdminAuth`; expensive or state-mutating routes should reuse a limiter from `server/middleware/rateLimit.ts`; secret comparisons must be timing-safe.
 
-Still open from the audit: artifact freshness enforcement (M3), internal CSV adapter hardening (M4), helmet/security headers (M6), CI `npm audit` (M7), global rate limiting.
+Still open from the audit: artifact freshness fail-closed enforcement (M3 phase 2 — warn-only phase shipped), internal CSV adapter hardening (M4), helmet/security headers (M6), CI `npm audit` (M7), global rate limiting.
 
 ## 📊 Current Platform State
 
