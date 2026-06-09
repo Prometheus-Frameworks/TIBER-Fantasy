@@ -16,7 +16,7 @@ function signal(cards: ModelSignalCard[], title: string): ModelSignalCard {
 
 
 function managementFixtureRoster() {
-  const mappedPlayers = [
+  const playerSpecificMappedPlayers = [
     ['Justin Herbert', 'QB', 'LAC', '6797', 'tiber-data-player-2025-justin-herbert'],
     ['Puka Nacua', 'WR', 'LAR', '9493', 'tiber-data-player-2025-puka-nacua'],
     ['Bijan Robinson', 'RB', 'ATL', '9509', 'tiber-data-player-2025-bijan-robinson'],
@@ -40,14 +40,53 @@ function managementFixtureRoster() {
       forgePlayerId: tiberId,
     },
   }));
-  const missingPlayers = Array.from({ length: 27 }, (_, index) => ({
-    name: index === 0 ? 'Ladd McConkey' : `Known Player ${index + 1}`,
-    pos: index % 2 === 0 ? 'WR' : 'RB',
-    nflTeam: index === 0 ? 'LAC' : 'FA',
-    sleeperId: String(10000 + index),
+
+  const expandedCrosswalkOnlyPlayers = [
+    ['Frank Gore Jr.', 'RB', 'BUF', '11573', 'tiber-data-player-2025-frank-gore-jr'],
+    ['Xavier Worthy', 'WR', 'KC', '11624', 'tiber-data-player-2025-xavier-worthy'],
+    ['Ladd McConkey', 'WR', 'LAC', '11635', 'tiber-data-player-2025-ladd-mcconkey'],
+    ['Ryan Flournoy', 'WR', 'DAL', '11783', 'tiber-data-player-2025-ryan-flournoy'],
+    ['Terrance Ferguson', 'TE', 'LAR', '12487', 'tiber-data-player-2025-terrance-ferguson'],
+    ['Harold Fannin Jr.', 'TE', 'CLE', '12506', 'tiber-data-player-2025-harold-fannin-jr'],
+    ['Luther Burden III', 'WR', 'CHI', '12519', 'tiber-data-player-2025-luther-burden-iii'],
+    ['Travis Hunter', 'WR', 'JAX', '12530', 'tiber-data-player-2025-travis-hunter'],
+    ['Jameis Winston', 'QB', 'NYG', '2306', 'tiber-data-player-2025-jameis-winston'],
+    ['Derrick Henry', 'RB', 'BAL', '3198', 'tiber-data-player-2025-derrick-henry'],
+    ['Christian McCaffrey', 'RB', 'SF', '4034', 'tiber-data-player-2025-christian-mccaffrey'],
+    ['Kendrick Bourne', 'WR', 'NE', '4454', 'tiber-data-player-2025-kendrick-bourne'],
+    ['T.J. Hockenson', 'TE', 'MIN', '5844', 'tiber-data-player-2025-t-j-hockenson'],
+    ['Deebo Samuel Sr.', 'WR', 'WAS', '5872', 'tiber-data-player-2025-deebo-samuel-sr'],
+    ['Gardner Minshew', 'QB', 'KC', '6011', 'tiber-data-player-2025-gardner-minshew'],
+    ['Rico Dowdle', 'RB', 'CAR', '7021', 'tiber-data-player-2025-rico-dowdle'],
+    ['Mac Jones', 'QB', 'SF', '7527', 'tiber-data-player-2025-mac-jones'],
+    ['Jalen Tolbert', 'WR', 'DAL', '8117', 'tiber-data-player-2025-jalen-tolbert'],
+    ['Calvin Austin III', 'WR', 'PIT', '8125', 'tiber-data-player-2025-calvin-austin-iii'],
+    ['Tyquan Thornton', 'WR', 'KC', '8188', 'tiber-data-player-2025-tyquan-thornton'],
+    ['Malik Davis', 'RB', 'DAL', '8800', 'tiber-data-player-2025-malik-davis'],
+    ['Marvin Mims Jr.', 'WR', 'DEN', '9494', 'tiber-data-player-2025-marvin-mims-jr'],
+  ].map(([name, pos, team, sleeperId, tiberId]) => ({
+    name,
+    pos,
+    nflTeam: team,
+    sleeperId,
     provider: 'sleeper',
-    providerPlayerId: String(10000 + index),
-    providerCanonicalId: `sleeper:${10000 + index}`,
+    providerPlayerId: sleeperId,
+    providerCanonicalId: `sleeper:${sleeperId}`,
+    currentTiberPlayerId: tiberId,
+    crosswalkStatus: 'matched' as const,
+    alpha: null,
+    missingReason: 'missing_forge_row' as const,
+    visibilityState: 'known_unscored' as const,
+  }));
+
+  const omittedPlayers = ['13299', '13322', '13408', '13413', '13414'].map((sleeperId, index) => ({
+    name: `Omitted Player ${index + 1}`,
+    pos: index % 2 === 0 ? 'WR' : 'RB',
+    nflTeam: 'FA',
+    sleeperId,
+    provider: 'sleeper',
+    providerPlayerId: sleeperId,
+    providerCanonicalId: `sleeper:${sleeperId}`,
     currentTiberPlayerId: null,
     crosswalkStatus: 'missing' as const,
     alpha: null,
@@ -55,7 +94,7 @@ function managementFixtureRoster() {
     visibilityState: 'known_unscored' as const,
   }));
 
-  return [...mappedPlayers, ...missingPlayers];
+  return [...playerSpecificMappedPlayers, ...expandedCrosswalkOnlyPlayers, ...omittedPlayers];
 }
 
 function teamStateResponse(overrides: Partial<TeamEnvironmentMovementResponse> = {}): TeamEnvironmentMovementResponse {
@@ -203,7 +242,7 @@ describe('Management model signal cards', () => {
       unresolved: 0,
     });
     expect(matching).toMatchObject({
-      tiberCrosswalkMapped: 3,
+      tiberCrosswalkMapped: 25,
       forgeRowMatched: 3,
       directCanonicalMatches: 0,
       playerSpecificEvidenceMatched: 3,
@@ -228,7 +267,7 @@ describe('Management model signal cards', () => {
         rosterCount: 352,
         resolvedCanonicalCount: 352,
         forgeArtifact: { available: true, sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json', rowCount: 38, playerSpecificCount: 24, generatedBaselineCount: 14, contractVersion: 'forge_player_static_v1', generatedAt: '2026-01-08T00:00:00.000Z' },
-        identityCrosswalkArtifact: { available: true, sourcePath: 'server/artifacts/external/identity/tiber_identity_crosswalk_v1.json', rowCount: 3, providerMappingCount: 3, providerCount: 1, contractVersion: 'v1' },
+        identityCrosswalkArtifact: { available: true, sourcePath: 'server/artifacts/external/identity/tiber_identity_crosswalk_v1.json', rowCount: 25, providerMappingCount: 25, providerCount: 1, contractVersion: 'v1' },
       },
     });
 
@@ -245,7 +284,7 @@ describe('Management model signal cards', () => {
         unresolved: { matched: 0, total: 30 },
       },
       active_team_matching: {
-        tiber_crosswalk_mapped: 3,
+        tiber_crosswalk_mapped: 25,
         forge_row_matched: 3,
         direct_canonical_matches: 0,
         player_specific_evidence_matched: 3,
@@ -261,13 +300,13 @@ describe('Management model signal cards', () => {
       },
     });
     expect(snapshot.identity_seed_report.players).toHaveLength(30);
-    expect(snapshot.identity_seed_report.summary).toMatchObject({ roster_count: 30, crosswalk_matched: 3, forge_player_specific_matched: 3, generated_baseline_matched: 0 });
-    expect(snapshot.identity_seed_report.players.filter((player) => player.crosswalk_status === 'missing')).toHaveLength(27);
+    expect(snapshot.identity_seed_report.summary).toMatchObject({ roster_count: 30, crosswalk_matched: 25, forge_player_specific_matched: 3, generated_baseline_matched: 0 });
+    expect(snapshot.identity_seed_report.players.filter((player) => player.crosswalk_status === 'missing')).toHaveLength(5);
   });
 });
 
 describe('Management identity seed report', () => {
-  it('exports full active roster seed data with 3 mapped and 27 missing crosswalk rows', () => {
+  it('exports full active roster seed data with expanded mapped rows and omitted players still missing', () => {
     const roster = managementFixtureRoster();
 
     const report = buildManagementIdentitySeedReport({
@@ -304,7 +343,7 @@ describe('Management identity seed report', () => {
       summary: {
         roster_count: 30,
         identity_covered: 30,
-        crosswalk_matched: 3,
+        crosswalk_matched: 25,
         forge_player_specific_matched: 3,
         generated_baseline_matched: 0,
         known_unscored: 27,
@@ -325,10 +364,26 @@ describe('Management identity seed report', () => {
       forge_status: 'player_specific',
       recommended_action: 'already_mapped',
     });
-    expect(report.players[3]).toMatchObject({
+    expect(report.players[2]).toMatchObject({
+      display_name: 'Bijan Robinson',
+      team: 'ATL',
+      current_tiber_player_id: 'tiber-data-player-2025-bijan-robinson',
+      forge_status: 'player_specific',
+    });
+    expect(report.players[5]).toMatchObject({
       display_name: 'Ladd McConkey',
-      sleeper_id: '10000',
-      provider_canonical_id: 'sleeper:10000',
+      sleeper_id: '11635',
+      provider_canonical_id: 'sleeper:11635',
+      current_tiber_player_id: 'tiber-data-player-2025-ladd-mcconkey',
+      crosswalk_status: 'matched',
+      forge_status: 'missing_forge_row',
+      visibility_state: 'known_unscored',
+      recommended_action: 'already_mapped',
+    });
+    expect(report.players[25]).toMatchObject({
+      display_name: 'Omitted Player 1',
+      sleeper_id: '13299',
+      provider_canonical_id: 'sleeper:13299',
       current_tiber_player_id: null,
       crosswalk_status: 'missing',
       forge_status: 'missing_forge_row',
