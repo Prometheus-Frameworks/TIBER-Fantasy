@@ -497,3 +497,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
 - **Validation:** Focused Management service and route Jest suites; `npm run build`; `git diff --check`; `npm run typecheck` still reports pre-existing repo-wide TypeScript errors, with no touched-file matches from a filtered run.
 - **Notes:** Generated/default FORGE baselines remain visible but excluded from player-specific FORGE evidence and Team Direction scoring coverage.
+
+### 2026-06-09 — Codex: Management identity seed export
+- **What changed:** Added a copyable Management identity seed report for the active roster, including Sleeper provider IDs, current TIBER crosswalk mapping status, FORGE visibility status, and explicit recommended actions for TIBER-Data review.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, `client/src/__tests__/managementModelSignals.test.ts`, `server/services/leagueDashboardService.ts`
+- **Validation:** Ran targeted Management seed/report tests and Management route tests. Full typecheck was attempted but remains blocked by pre-existing repo-wide TypeScript errors unrelated to this change.
+- **Notes:** Fantasy does not infer or mint TIBER IDs; `current_tiber_player_id` is populated only from existing `TIBER_IDENTITY_CROSSWALK_V1` resolution/provenance. Missing rows remain `crosswalk_status: "missing"` for TIBER-Data review.

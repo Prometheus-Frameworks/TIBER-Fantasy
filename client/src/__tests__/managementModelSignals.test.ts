@@ -1,5 +1,6 @@
 import {
   buildManagementModelSignals,
+  buildManagementIdentitySeedReport,
   buildRosterVisibilitySummary,
   type ModelSignalCard,
 } from '@/pages/TiberManagementDashboard';
@@ -139,6 +140,109 @@ describe('Management model signal cards', () => {
     expect(signal(cards, 'TeamState')).toMatchObject({
       status: 'unavailable',
       statusLabel: 'Unavailable',
+    });
+  });
+});
+
+describe('Management identity seed report', () => {
+  it('exports full active roster seed data with 3 mapped and 27 missing crosswalk rows', () => {
+    const mappedPlayers = [
+      ['Justin Herbert', 'QB', 'LAC', '6797', 'tiber-data-player-2025-justin-herbert'],
+      ['Puka Nacua', 'WR', 'LAR', '9221', 'tiber-data-player-2025-puka-nacua'],
+      ['Bijan Robinson', 'RB', 'ATL', '9509', 'tiber-data-player-2025-bijan-robinson'],
+    ].map(([name, pos, team, sleeperId, tiberId]) => ({
+      name,
+      pos,
+      nflTeam: team,
+      sleeperId,
+      provider: 'sleeper',
+      providerPlayerId: sleeperId,
+      providerCanonicalId: `sleeper:${sleeperId}`,
+      currentTiberPlayerId: tiberId,
+      crosswalkStatus: 'matched',
+      alpha: 70,
+      forgeScoreSource: 'player_specific',
+      visibilityState: 'forge_scored',
+    }));
+    const missingPlayers = Array.from({ length: 27 }, (_, index) => ({
+      name: index === 0 ? 'Ladd McConkey' : `Known Player ${index + 1}`,
+      pos: index % 2 === 0 ? 'WR' : 'RB',
+      nflTeam: index === 0 ? 'LAC' : 'FA',
+      sleeperId: String(10000 + index),
+      provider: 'sleeper',
+      providerPlayerId: String(10000 + index),
+      providerCanonicalId: `sleeper:${10000 + index}`,
+      currentTiberPlayerId: null,
+      crosswalkStatus: 'missing',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+      visibilityState: 'known_unscored',
+    }));
+
+    const report = buildManagementIdentitySeedReport({
+      generatedAt: '2026-06-09T00:00:00.000Z',
+      league: {
+        id: 'league-db-id',
+        leagueIdExternal: 'sleeper-league-id',
+        leagueName: 'Morts FF Dynasty',
+        scoringFormat: 'ppr',
+        season: 2026,
+      },
+      team: { id: 'team-1', displayName: 'Garbage Time' },
+      dashboardTeam: {
+        team_id: 'team-1',
+        display_name: 'Garbage Time',
+        roster: [...mappedPlayers, ...missingPlayers],
+      },
+    });
+
+    expect(report).toMatchObject({
+      artifact_type: 'TIBER_MANAGEMENT_IDENTITY_SEED_REPORT',
+      generated_at: '2026-06-09T00:00:00.000Z',
+      league: {
+        league_id: 'sleeper-league-id',
+        league_name: 'Morts FF Dynasty',
+        team_name: 'Garbage Time',
+        season: 2026,
+        format: 'ppr',
+      },
+      source: {
+        producer: 'TIBER-Fantasy Management',
+        purpose: 'operator_seed_for_tiber_data_identity_crosswalk_expansion',
+      },
+      summary: {
+        roster_count: 30,
+        identity_covered: 30,
+        crosswalk_matched: 3,
+        forge_player_specific_matched: 3,
+        generated_baseline_matched: 0,
+        known_unscored: 27,
+        unresolved: 0,
+      },
+    });
+    expect(report.players).toHaveLength(30);
+    expect(report.players[0]).toMatchObject({
+      display_name: 'Justin Herbert',
+      position: 'QB',
+      team: 'LAC',
+      sleeper_id: '6797',
+      provider: 'sleeper',
+      provider_player_id: '6797',
+      provider_canonical_id: 'sleeper:6797',
+      current_tiber_player_id: 'tiber-data-player-2025-justin-herbert',
+      crosswalk_status: 'matched',
+      forge_status: 'player_specific',
+      recommended_action: 'already_mapped',
+    });
+    expect(report.players[3]).toMatchObject({
+      display_name: 'Ladd McConkey',
+      sleeper_id: '10000',
+      provider_canonical_id: 'sleeper:10000',
+      current_tiber_player_id: null,
+      crosswalk_status: 'missing',
+      forge_status: 'missing_forge_row',
+      visibility_state: 'known_unscored',
+      recommended_action: 'candidate_for_tiber_data_crosswalk_review',
     });
   });
 });
