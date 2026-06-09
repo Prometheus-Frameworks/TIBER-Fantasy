@@ -354,6 +354,97 @@ describe('computeLeagueDashboard', () => {
     }));
   });
 
+
+  it('expands identity crosswalk mapping without counting missing/generated-baseline rows as player-specific evidence or team truth', async () => {
+    const rosterIds = ['11635', '11624', '3198', '4034', '13299'];
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: {
+          ...sleeperDeps,
+          getLeagueRosters: jest.fn().mockResolvedValue([{ owner_id: 'owner1', players: rosterIds }]),
+        } as any,
+        db: createDbMock({
+          identities: [
+            { sleeperId: '11635', canonicalId: 'sleeper:11635', position: 'WR', fullName: 'Ladd McConkey', nflTeam: 'CURRENT_LAC' },
+            { sleeperId: '11624', canonicalId: 'sleeper:11624', position: 'WR', fullName: 'Xavier Worthy', nflTeam: 'CURRENT_KC' },
+            { sleeperId: '3198', canonicalId: 'sleeper:3198', position: 'RB', fullName: 'Derrick Henry', nflTeam: 'CURRENT_BAL' },
+            { sleeperId: '4034', canonicalId: 'sleeper:4034', position: 'RB', fullName: 'Christian McCaffrey', nflTeam: 'CURRENT_SF' },
+            { sleeperId: '13299', canonicalId: 'sleeper:13299', position: 'WR', fullName: 'Omitted Player', nflTeam: 'CURRENT_FA' },
+          ],
+        }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([
+          forgeStaticRow({
+            playerId: 'tiber-data-player-2025-ladd-mcconkey',
+            playerName: 'Ladd McConkey',
+            alpha: 60,
+            scoreSource: 'generated_baseline',
+            isPlayerSpecificEvidence: false,
+            isGeneratedBaselineVisibility: true,
+          }),
+        ])) } as any,
+        tiberIdentityCrosswalkService: {
+          getLookup: jest.fn().mockResolvedValue(identityCrosswalkLookup([
+            { provider: 'sleeper', providerId: '11635', tiberPlayerId: 'tiber-data-player-2025-ladd-mcconkey' },
+            { provider: 'sleeper', providerId: '11624', tiberPlayerId: 'tiber-data-player-2025-xavier-worthy' },
+            { provider: 'sleeper', providerId: '3198', tiberPlayerId: 'tiber-data-player-2025-derrick-henry' },
+            { provider: 'sleeper', providerId: '4034', tiberPlayerId: 'tiber-data-player-2025-christian-mccaffrey' },
+          ], { rowCount: 25, providerMappingCount: 25 }))
+        } as any,
+      }
+    );
+
+    const rosterBySleeperId = new Map(result.teams[0].roster.map((player) => [player.sleeperId, player]));
+    expect(rosterBySleeperId.get('11635')).toEqual(expect.objectContaining({
+      currentTiberPlayerId: 'tiber-data-player-2025-ladd-mcconkey',
+      crosswalkStatus: 'matched',
+      forgeScoreSource: 'generated_baseline',
+      visibilityState: 'forge_baseline',
+      unavailableReason: 'forge_generated_baseline_not_player_specific',
+      nflTeam: 'CURRENT_LAC',
+    }));
+    expect(rosterBySleeperId.get('11624')).toEqual(expect.objectContaining({
+      currentTiberPlayerId: 'tiber-data-player-2025-xavier-worthy',
+      crosswalkStatus: 'matched',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+      visibilityState: 'known_unscored',
+      nflTeam: 'CURRENT_KC',
+    }));
+    expect(rosterBySleeperId.get('13299')).toEqual(expect.objectContaining({
+      currentTiberPlayerId: null,
+      crosswalkStatus: 'missing',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+    }));
+    expect(result.teams[0].overall_total).toBe(0);
+    expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(0);
+    expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(1);
+    expect(result.diagnostics?.rosterVisibility).toEqual(expect.objectContaining({
+      total: 5,
+      identityCovered: 5,
+      baselineVisible: 1,
+      forgeScored: 0,
+      forgeBaseline: 1,
+      generatedBaselineVisibility: 1,
+      knownUnscored: 4,
+      evidenceCovered: 0,
+    }));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 5,
+      rosterCanonicalIdsMatched: 1,
+      crosswalkCanonicalMatches: 1,
+      playerSpecificRosterMatches: 0,
+      generatedBaselineRosterMatches: 1,
+    }));
+    expect(result.diagnostics?.identityCrosswalkArtifact).toEqual(expect.objectContaining({
+      rowCount: 25,
+      providerMappingCount: 25,
+    }));
+  });
+
   it('fails closed when TIBER_IDENTITY_CROSSWALK_V1 is missing and no direct canonical FORGE row exists', async () => {
     const result = await computeLeagueDashboard(
       { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },

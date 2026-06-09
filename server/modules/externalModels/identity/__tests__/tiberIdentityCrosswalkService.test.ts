@@ -24,4 +24,27 @@ describe('TiberIdentityCrosswalkService', () => {
     }));
     expect(lookup.tiberPlayerIdsByProviderKey.size).toBe(0);
   });
+
+  it('loads the bundled expanded TIBER-Data artifact through the service boundary', async () => {
+    const artifactPath = `${process.cwd()}/server/artifacts/external/identity/tiber_identity_crosswalk_v1.json`;
+    const service = new TiberIdentityCrosswalkService({
+      getConfig: () => ({ enabled: true, artifactPath, sourcePath: artifactPath, configured: true }),
+      loadPromotedArtifact: async () => ({
+        payload: JSON.parse(await import('node:fs/promises').then((fs) => fs.readFile(artifactPath, 'utf8'))),
+        sourcePath: artifactPath,
+      }),
+    });
+
+    const lookup = await service.getLookup();
+
+    expect(lookup.artifact).toEqual(expect.objectContaining({
+      available: true,
+      rowCount: 25,
+      providerMappingCount: 25,
+      providerCount: 1,
+    }));
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11635')).toBe('tiber-data-player-2025-ladd-mcconkey');
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11624')).toBe('tiber-data-player-2025-xavier-worthy');
+  });
+
 });

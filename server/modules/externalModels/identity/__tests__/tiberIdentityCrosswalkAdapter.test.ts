@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { adaptTiberIdentityCrosswalkArtifact } from '../tiberIdentityCrosswalkAdapter';
 import { TiberIdentityCrosswalkIntegrationError } from '../tiberIdentityCrosswalkTypes';
 
@@ -54,6 +56,9 @@ const producerPayload = {
   ],
 };
 
+const bundledArtifactPath = path.join(process.cwd(), 'server/artifacts/external/identity/tiber_identity_crosswalk_v1.json');
+const expandedProducerPayload = JSON.parse(fs.readFileSync(bundledArtifactPath, 'utf8'));
+
 describe('TIBER_IDENTITY_CROSSWALK_V1 adapter', () => {
   it('consumes the producer records[] artifact shape without reshaping it in Fantasy', () => {
     const lookup = adaptTiberIdentityCrosswalkArtifact(producerPayload, '/tmp/tiber_identity_crosswalk_v1.json');
@@ -74,6 +79,59 @@ describe('TIBER_IDENTITY_CROSSWALK_V1 adapter', () => {
       source: 'TIBER-Data',
       source_updated_at: '2026-06-08T00:00:00.000Z',
     }));
+  });
+
+
+
+  it('loads the expanded bundled TIBER-Data records[] artifact and exposes all provider mappings', () => {
+    const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
+
+    expect(lookup.artifact).toEqual(expect.objectContaining({
+      available: true,
+      artifactId: 'TIBER_IDENTITY_CROSSWALK_V1',
+      contractVersion: 'v1',
+      rowCount: 25,
+      providerMappingCount: 25,
+      providerCount: 1,
+    }));
+    expect(expandedProducerPayload).toEqual(expect.objectContaining({
+      schema_version: 'v1',
+      coverage: 'seeded_operator_verified_mappings_only_not_full_player_universe',
+      record_count: 25,
+    }));
+    expect(expandedProducerPayload.records).toHaveLength(25);
+  });
+
+  it.each([
+    ['sleeper:11635', 'tiber-data-player-2025-ladd-mcconkey'],
+    ['sleeper:11624', 'tiber-data-player-2025-xavier-worthy'],
+    ['sleeper:3198', 'tiber-data-player-2025-derrick-henry'],
+    ['sleeper:4034', 'tiber-data-player-2025-christian-mccaffrey'],
+  ])('resolves expanded bundled mapping %s to %s', (lookupKey, expectedTiberPlayerId) => {
+    const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
+
+    expect(lookup.tiberPlayerIdsByProviderKey.get(lookupKey)).toBe(expectedTiberPlayerId);
+  });
+
+  it.each(['sleeper:13299', 'sleeper:13322', 'sleeper:13408', 'sleeper:13413', 'sleeper:13414'])(
+    'leaves omitted Sleeper player %s unmapped when absent from the producer crosswalk',
+    (lookupKey) => {
+      const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
+
+      expect(lookup.tiberPlayerIdsByProviderKey.has(lookupKey)).toBe(false);
+    },
+  );
+
+  it('retains crosswalk team only as raw descriptive provenance metadata', () => {
+    const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
+    const row = lookup.rows.find((mapping) => mapping.providerCanonicalId === 'sleeper:4034');
+
+    expect(row?.raw).toEqual(expect.objectContaining({
+      player_name: 'Christian McCaffrey',
+      team: 'SF',
+    }));
+    expect(row).not.toHaveProperty('currentTeam');
+    expect(row).not.toHaveProperty('nflTeam');
   });
 
   it.each([
