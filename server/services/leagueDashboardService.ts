@@ -59,6 +59,12 @@ type LeagueDashboardPlayer = {
   rosterKey: string;
   canonicalId: string | null;
   sleeperId?: string | null;
+  provider?: 'sleeper' | string | null;
+  providerPlayerId?: string | null;
+  providerCanonicalId?: string | null;
+  currentTiberPlayerId?: string | null;
+  crosswalkStatus?: 'matched' | 'missing' | 'unresolved';
+  identityProviderKey?: string | null;
   name: string;
   pos: string;
   nflTeam?: string | null;
@@ -822,6 +828,22 @@ export async function computeLeagueDashboard(
       const canonicalId = identity?.canonicalId ?? null;
       const pos = identity?.position ?? 'FLEX';
       const rosterKey = canonicalId ?? `sleeper:${sleeperId}`;
+      const provider = 'sleeper';
+      const providerPlayerId = sleeperId || null;
+      const providerCanonicalId = sleeperId ? providerKey(provider, sleeperId) : null;
+      const crosswalkResolution = resolveForgeRosterId(
+        { sleeperId, rosterCanonicalId: canonicalId },
+        forgeStaticLookup,
+        identityCrosswalkLookup,
+      );
+      const currentTiberPlayerId = crosswalkResolution.matchType === 'identity_crosswalk'
+        ? crosswalkResolution.forgePlayerId
+        : null;
+      const crosswalkStatus = currentTiberPlayerId
+        ? 'matched'
+        : canonicalId
+          ? 'missing'
+          : 'unresolved';
       const alphaEntry = alphaByRosterKey.get(rosterKey);
       const alpha = alphaEntry ? alphaEntry.alpha : null;
 
@@ -860,6 +882,12 @@ export async function computeLeagueDashboard(
         rosterKey,
         canonicalId,
         sleeperId,
+        provider,
+        providerPlayerId,
+        providerCanonicalId,
+        currentTiberPlayerId,
+        crosswalkStatus,
+        identityProviderKey: crosswalkResolution.identityProviderKey ?? providerCanonicalId,
         name: bestAvailablePlayerName(identity, sleeperId),
         pos,
         nflTeam: identity?.nflTeam ?? null,

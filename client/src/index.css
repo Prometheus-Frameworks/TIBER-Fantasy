@@ -3550,3 +3550,76 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Management identity seed export */
+.tmd-identity-seed-export {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.035);
+}
+
+.tmd-identity-seed-export-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tmd-identity-seed-export h3 {
+  margin: 0 0 4px;
+  color: var(--tmd-text);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.tmd-identity-seed-export p {
+  margin: 0;
+  color: var(--tmd-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tmd-identity-seed-export details {
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+}
+
+.tmd-identity-seed-export summary {
+  cursor: pointer;
+  padding: 10px;
+  color: var(--tmd-text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tmd-identity-seed-export pre {
+  max-height: 320px;
+  margin: 0;
+  padding: 0 10px 10px;
+  overflow: auto;
+  color: var(--tmd-text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.tmd-identity-seed-export .tmd-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 760px) {
+  .tmd-identity-seed-export-header {
+    flex-direction: column;
+  }
+}
