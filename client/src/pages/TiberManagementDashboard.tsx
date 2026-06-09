@@ -67,9 +67,9 @@ type RosterPlayer = {
   position?: string | null;
   nflTeam?: string | null;
   alpha?: number | null;
-  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null;
+  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'fallback_default' | 'unknown' | 'cached_unknown' | null;
   forgeScoreProvenance?: {
-    source?: 'player_specific' | 'generated_baseline' | 'cached_unknown';
+    source?: 'player_specific' | 'generated_baseline' | 'fallback_default' | 'unknown' | 'cached_unknown';
     reason?: string;
     gamesPlayed?: number | null;
     confidence?: number | null;
@@ -293,17 +293,21 @@ function hasPlayerSpecificForgeScore(player: RosterPlayer): boolean {
   return typeof player.alpha === 'number' && player.forgeScoreSource === 'player_specific';
 }
 
+function hasGeneratedBaselineForgeVisibility(player: RosterPlayer): boolean {
+  return typeof player.alpha === 'number' && player.forgeScoreSource === 'generated_baseline';
+}
+
 type RosterVisibilityBucket = 'forgeScored' | 'forgeBaseline' | 'rookieAlphaFallback' | 'knownUnscored' | 'unresolved';
 
 function classifyRosterVisibility(player: RosterPlayer): RosterVisibilityBucket {
   if (hasPlayerSpecificForgeScore(player)) return 'forgeScored';
-  if (typeof player.alpha === 'number') return 'forgeBaseline';
+  if (hasGeneratedBaselineForgeVisibility(player)) return 'forgeBaseline';
   if (player.rookieAsset) return 'rookieAlphaFallback';
   if (player.missingReason === 'unmapped_sleeper_id' || player.visibilityState === 'unresolved') return 'unresolved';
   return 'knownUnscored';
 }
 
-function buildRosterVisibilitySummary(roster: RosterPlayer[] = []): RosterCoverageCounts {
+export function buildRosterVisibilitySummary(roster: RosterPlayer[] = []): RosterCoverageCounts {
   const counts = emptyRosterCoverageCounts();
   counts.total = roster.length;
   for (const player of roster) {
@@ -311,7 +315,8 @@ function buildRosterVisibilitySummary(roster: RosterPlayer[] = []): RosterCovera
     counts[state] += 1;
   }
   counts.identityCovered = counts.total - counts.unresolved;
-  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
+  counts.generatedBaselineVisibility = counts.forgeBaseline;
+  counts.baselineVisible = counts.generatedBaselineVisibility ?? counts.forgeBaseline;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }
@@ -336,7 +341,8 @@ function buildRosterCounts(team?: LeagueDashboardTeam | null) {
       const state = classifyRosterVisibility(player);
       counts[position][state] += 1;
       counts[position].identityCovered = counts[position].total - counts[position].unresolved;
-      counts[position].baselineVisible = counts[position].forgeScored + counts[position].forgeBaseline;
+      counts[position].generatedBaselineVisibility = counts[position].forgeBaseline;
+      counts[position].baselineVisible = counts[position].generatedBaselineVisibility ?? counts[position].forgeBaseline;
       counts[position].evidenceCovered = counts[position].forgeScored + counts[position].rookieAlphaFallback;
     }
   }
@@ -517,12 +523,12 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
       </div>
 
       <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
-        <div><span>Roster canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong></div>
-        <div><span>Roster IDs matched to FORGE rows</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong></div>
+        <div><span>Sleeper roster identity resolved</span><strong>{diagnosticValue(diagnostics?.rosterVisibility?.identityCovered ?? diagnostics?.resolvedCanonicalCount)}</strong><small>Roster players with resolved identities</small></div>
+        <div><span>TIBER crosswalk mapped</span><strong>{diagnosticValue(matching?.crosswalkCanonicalMatches)}</strong><small>Resolved through TIBER_IDENTITY_CROSSWALK_V1</small></div>
+        <div><span>FORGE row matched</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong><small>Any FORGE_PLAYER_STATIC_V1 row, evidence or visibility</small></div>
         <div><span>Direct canonical matches</span><strong>{diagnosticValue(matching?.directCanonicalMatches)}</strong></div>
-        <div><span>Crosswalk matches</span><strong>{diagnosticValue(matching?.crosswalkCanonicalMatches)}</strong></div>
-        <div><span>player_specific roster matches</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
-        <div><span>generated_baseline roster matches</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
+        <div><span>player_specific evidence matched</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
+        <div><span>generated_baseline visibility matched</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
         <div><span>non-evidence roster matches</span><strong>{diagnosticValue(matching?.nonEvidenceRosterMatches)}</strong></div>
       </div>
 
@@ -1126,7 +1132,7 @@ export default function TiberManagementDashboard() {
             <div>
               <span>Baseline visibility</span>
               <strong>{rosterVisibility.baselineVisible}/{rosterVisibility.total}</strong>
-              <small>Generated/default values visible, not scoring evidence</small>
+              <small>generated_baseline visibility only; player-specific evidence excluded</small>
             </div>
             <div>
               <span>Player-specific FORGE evidence</span>
@@ -1192,7 +1198,7 @@ export default function TiberManagementDashboard() {
                   <div className="tmd-player-group-header">{pos === 'Other' ? 'Unmatched / Other' : pos}</div>
                   {players.map((player, idx) => {
                     const isForgeScored = hasPlayerSpecificForgeScore(player);
-                    const hasGeneratedBaseline = typeof player.alpha === 'number' && !isForgeScored;
+                    const hasGeneratedBaseline = hasGeneratedBaselineForgeVisibility(player);
                     const rookieAsset = !isForgeScored && !hasGeneratedBaseline ? player.rookieAsset : null;
                     const isUnresolved = !isForgeScored && !rookieAsset && (player.visibilityState === 'unresolved' || player.missingReason === 'unmapped_sleeper_id');
                     const tierLabel = isForgeScored ? forgeTierLabel(player.tier) : null;

@@ -1,5 +1,6 @@
 import {
   buildManagementModelSignals,
+  buildRosterVisibilitySummary,
   type ModelSignalCard,
 } from '@/pages/TiberManagementDashboard';
 import type { TeamEnvironmentMovementResponse } from '@/lib/teamEnvironmentMovement';
@@ -44,6 +45,31 @@ function teamStateResponse(overrides: Partial<TeamEnvironmentMovementResponse> =
 }
 
 describe('Management model signal cards', () => {
+
+  it('keeps generated baseline visibility separate from player-specific FORGE evidence', () => {
+    const visibility = buildRosterVisibilitySummary([
+      { name: 'Justin Herbert', pos: 'QB', alpha: 61.4, forgeScoreSource: 'player_specific' },
+      { name: 'Puka Nacua', pos: 'WR', alpha: 67.2, forgeScoreSource: 'player_specific' },
+      { name: 'Bijan Robinson', pos: 'RB', alpha: 64.8, forgeScoreSource: 'player_specific' },
+      ...Array.from({ length: 27 }, (_, index) => ({
+        name: `Known Player ${index + 1}`,
+        pos: index % 2 === 0 ? 'WR' : 'RB',
+        alpha: null,
+        missingReason: 'missing_forge_row' as const,
+      })),
+    ]);
+
+    expect(visibility).toMatchObject({
+      total: 30,
+      identityCovered: 30,
+      baselineVisible: 0,
+      forgeScored: 3,
+      forgeBaseline: 0,
+      generatedBaselineVisibility: 0,
+      evidenceCovered: 3,
+    });
+  });
+
   it('uses roster visibility diagnostics for FORGE and Rookie Alpha readiness without changing semantics', () => {
     const cards = buildManagementModelSignals({
       hasActiveTeam: true,
