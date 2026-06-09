@@ -148,7 +148,7 @@ describe('Management identity seed report', () => {
   it('exports full active roster seed data with 3 mapped and 27 missing crosswalk rows', () => {
     const mappedPlayers = [
       ['Justin Herbert', 'QB', 'LAC', '6797', 'tiber-data-player-2025-justin-herbert'],
-      ['Puka Nacua', 'WR', 'LAR', '9221', 'tiber-data-player-2025-puka-nacua'],
+      ['Puka Nacua', 'WR', 'LAR', '9493', 'tiber-data-player-2025-puka-nacua'],
       ['Bijan Robinson', 'RB', 'ATL', '9509', 'tiber-data-player-2025-bijan-robinson'],
     ].map(([name, pos, team, sleeperId, tiberId]) => ({
       name,

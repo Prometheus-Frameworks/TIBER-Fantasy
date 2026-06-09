@@ -712,3 +712,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added a Management diagnostics export that builds a full active-roster `TIBER_MANAGEMENT_IDENTITY_SEED_REPORT` with Sleeper IDs, provider canonical IDs, current crosswalk status, FORGE status, and recommended TIBER-Data review actions.
 - Extended league dashboard roster rows with existing provider/crosswalk fields without changing scoring, Team Direction thresholds, or FORGE matching semantics.
 - Added targeted Jest coverage for the 30-player, 3 matched / 27 missing seed-report case.
+
+### 2026-06-09 — Management identity diagnostics label correction
+- Removed the `resolvedCanonicalCount` fallback from the active-roster “Sleeper roster identity resolved” card.
+- Added separate diagnostics labels for canonical IDs checked and resolved identity rows scanned.
+- Updated the seed report test fixture to use Puka Nacua sleeper ID `9493`.

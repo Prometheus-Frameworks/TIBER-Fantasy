@@ -643,7 +643,9 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
       </div>
 
       <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
-        <div><span>Sleeper roster identity resolved</span><strong>{diagnosticValue(diagnostics?.rosterVisibility?.identityCovered ?? diagnostics?.resolvedCanonicalCount)}</strong><small>Roster players with resolved identities</small></div>
+        <div><span>Sleeper roster identity resolved</span><strong>{diagnosticValue(diagnostics?.rosterVisibility?.identityCovered)}</strong><small>Active-roster players with resolved Sleeper identities only</small></div>
+        <div><span>Canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong><small>Active-roster provider/canonical IDs scanned for matching</small></div>
+        <div><span>Resolved identity rows scanned</span><strong>{diagnosticValue(diagnostics?.resolvedCanonicalCount)}</strong><small>Diagnostic count only; not active-roster coverage</small></div>
         <div><span>TIBER crosswalk mapped</span><strong>{diagnosticValue(matching?.crosswalkCanonicalMatches)}</strong><small>Resolved through TIBER_IDENTITY_CROSSWALK_V1</small></div>
         <div><span>FORGE row matched</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong><small>Any FORGE_PLAYER_STATIC_V1 row, evidence or visibility</small></div>
         <div><span>Direct canonical matches</span><strong>{diagnosticValue(matching?.directCanonicalMatches)}</strong></div>
