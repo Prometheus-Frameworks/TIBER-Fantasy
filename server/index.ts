@@ -20,6 +20,11 @@ function sanitizeErrorMessage(err: any, status: number): string {
 // Exported so bootstrap.mjs can use it as the request handler.
 export const app = express();
 
+// Deployed behind a single proxy hop (Railway), which sets X-Forwarded-For.
+// Without this, req.ip is the proxy address, so IP-keyed rate limiting would
+// throttle all users as one client.
+app.set("trust proxy", 1);
+
 type ProductionFrontendMountResult =
   | { mounted: true; publicDir: string; indexHtml: string }
   | { mounted: false; reason: "public_dir_missing" | "index_missing"; publicDir: string; indexHtml: string };

@@ -7,6 +7,7 @@
 
 import { Router, Request, Response } from 'express';
 import { rebuildForgeContext } from '../services/forgeRebuildService';
+import { timingSafeKeyCompare } from '../middleware/adminAuth';
 
 const router = Router();
 
@@ -21,8 +22,8 @@ function isAuthorized(req: Request): boolean {
     console.warn('[FORGE Admin] FORGE_ADMIN_KEY not set - all requests will be rejected');
     return false;
   }
-  
-  return header === adminKey;
+
+  return timingSafeKeyCompare(typeof header === 'string' ? header : undefined, adminKey);
 }
 
 /**
