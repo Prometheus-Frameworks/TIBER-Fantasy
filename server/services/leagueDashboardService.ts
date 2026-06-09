@@ -348,9 +348,13 @@ function isPlayerSpecificForgeScore(player: Pick<LeagueDashboardPlayer, 'alpha' 
   return typeof player.alpha === 'number' && player.forgeScoreSource === 'player_specific';
 }
 
+function isGeneratedBaselineForgeVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource'>): boolean {
+  return typeof player.alpha === 'number' && player.forgeScoreSource === 'generated_baseline';
+}
+
 function classifyRosterVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>): RosterVisibilityState {
   if (isPlayerSpecificForgeScore(player)) return 'forge_scored';
-  if (typeof player.alpha === 'number') return 'forge_baseline';
+  if (isGeneratedBaselineForgeVisibility(player)) return 'forge_baseline';
   if (player.rookieAsset) return 'rookie_alpha_fallback';
   if (player.missingReason === 'unmapped_sleeper_id') return 'unresolved';
   return 'known_unscored';
@@ -358,7 +362,8 @@ function classifyRosterVisibility(player: Pick<LeagueDashboardPlayer, 'alpha' | 
 
 function unavailableReasonForPlayer(player: Pick<LeagueDashboardPlayer, 'alpha' | 'forgeScoreSource' | 'missingReason' | 'rookieAsset'>): string | null {
   if (isPlayerSpecificForgeScore(player)) return null;
-  if (typeof player.alpha === 'number') return 'forge_generated_baseline_not_player_specific';
+  if (isGeneratedBaselineForgeVisibility(player)) return 'forge_generated_baseline_not_player_specific';
+  if (typeof player.alpha === 'number') return 'forge_non_evidence_not_player_specific';
   if (player.missingReason === 'unmapped_sleeper_id') return 'identity_unresolved';
   if (player.missingReason === 'alpha_null') return 'alpha_null';
   if (player.missingReason === 'forge_artifact_unavailable') return 'forge_player_static_v1_unavailable';
@@ -511,7 +516,7 @@ function buildRosterCoverageCounts(players: Array<Pick<LeagueDashboardPlayer, 'a
   }
 
   counts.identityCovered = counts.total - counts.unresolved;
-  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
+  counts.baselineVisible = counts.generatedBaselineVisibility;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }

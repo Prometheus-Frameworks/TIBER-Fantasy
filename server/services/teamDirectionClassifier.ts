@@ -6,6 +6,7 @@ type RosterVisibilityCounts = {
   baselineVisible: number;
   forgeScored: number;
   forgeBaseline: number;
+  generatedBaselineVisibility: number;
   rookieAlphaFallback: number;
   knownUnscored: number;
   unresolved: number;
@@ -45,7 +46,7 @@ export type ClassifierOptions = {
 type ClassifierPlayer = {
   pos?: string | null;
   alpha?: number | null;
-  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null;
+  forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'fallback_default' | 'unknown' | 'cached_unknown' | null;
   missingReason?: string | null;
   rookieAsset?: unknown;
 };
@@ -65,6 +66,10 @@ function hasPlayerSpecificForgeScore(player: ClassifierPlayer): boolean {
   if (typeof player.alpha !== 'number') return false;
   // Backward-compatible default for direct unit fixtures that predate provenance.
   return player.forgeScoreSource === undefined || player.forgeScoreSource === null || player.forgeScoreSource === 'player_specific';
+}
+
+function hasGeneratedBaselineForgeVisibility(player: ClassifierPlayer): boolean {
+  return typeof player.alpha === 'number' && player.forgeScoreSource === 'generated_baseline';
 }
 
 function posAlphas(players: ClassifierPlayer[], pos: string): number[] {
@@ -89,6 +94,7 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
     baselineVisible: 0,
     forgeScored: 0,
     forgeBaseline: 0,
+    generatedBaselineVisibility: 0,
     rookieAlphaFallback: 0,
     knownUnscored: 0,
     unresolved: 0,
@@ -98,8 +104,9 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
   for (const player of players) {
     if (hasPlayerSpecificForgeScore(player)) {
       counts.forgeScored += 1;
-    } else if (typeof player.alpha === 'number') {
+    } else if (hasGeneratedBaselineForgeVisibility(player)) {
       counts.forgeBaseline += 1;
+      counts.generatedBaselineVisibility += 1;
     } else if (player.rookieAsset) {
       counts.rookieAlphaFallback += 1;
     } else if (player.missingReason === 'unmapped_sleeper_id') {
@@ -110,7 +117,7 @@ function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCou
   }
 
   counts.identityCovered = counts.total - counts.unresolved;
-  counts.baselineVisible = counts.forgeScored + counts.forgeBaseline;
+  counts.baselineVisible = counts.generatedBaselineVisibility;
   counts.evidenceCovered = counts.forgeScored + counts.rookieAlphaFallback;
   return counts;
 }
@@ -162,7 +169,7 @@ export function classifyTeamDirection(
 
   const total = rosterPlayers.length;
   const forgeMatched = rosterPlayers.filter(hasPlayerSpecificForgeScore).length;
-  const baselineMatched = rosterPlayers.filter((p) => typeof p.alpha === 'number' && !hasPlayerSpecificForgeScore(p)).length;
+  const baselineMatched = rosterPlayers.filter(hasGeneratedBaselineForgeVisibility).length;
   const rookieAlphaMatched = rosterPlayers.filter((p) => !hasPlayerSpecificForgeScore(p) && typeof p.alpha !== 'number' && Boolean(p.rookieAsset)).length;
   const matched = forgeMatched + rookieAlphaMatched;
   const rate = total === 0 ? 0 : matched / total;

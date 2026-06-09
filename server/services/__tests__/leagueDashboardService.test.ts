@@ -209,6 +209,61 @@ describe('computeLeagueDashboard', () => {
     expect(insertSpy).not.toHaveBeenCalledWith([expect.objectContaining({ confidenceScore: 90 })]);
   });
 
+
+  it('reports 3 player_specific evidence rows and 0 generated_baseline visibility rows without inflating baseline visibility', async () => {
+    const result = await computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: {
+          ...sleeperDeps,
+          getLeagueRosters: jest.fn().mockResolvedValue([{ owner_id: 'owner1', players: ['6797', 'puka', 'bijan'] }]),
+        } as any,
+        db: createDbMock({ identities: [
+          { sleeperId: '6797', canonicalId: 'tiber-data-player-2025-justin-herbert', position: 'QB', fullName: 'Justin Herbert' },
+          { sleeperId: 'puka', canonicalId: 'tiber-data-player-2025-puka-nacua', position: 'WR', fullName: 'Puka Nacua' },
+          { sleeperId: 'bijan', canonicalId: 'tiber-data-player-2025-bijan-robinson', position: 'RB', fullName: 'Bijan Robinson' },
+        ] }),
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: {
+          getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([
+            forgeStaticRow({ playerId: 'tiber-data-player-2025-justin-herbert', playerName: 'Justin Herbert', position: 'QB', alpha: 61.4 }),
+            forgeStaticRow({ playerId: 'tiber-data-player-2025-puka-nacua', playerName: 'Puka Nacua', position: 'WR', alpha: 67.2 }),
+            forgeStaticRow({ playerId: 'tiber-data-player-2025-bijan-robinson', playerName: 'Bijan Robinson', position: 'RB', alpha: 64.8 }),
+          ])),
+        } as any,
+        tiberIdentityCrosswalkService: { getLookup: jest.fn().mockResolvedValue(emptyIdentityCrosswalkLookup()) } as any,
+      }
+    );
+
+    expect(result.teams[0].roster).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Justin Herbert', forgeScoreSource: 'player_specific', visibilityState: 'forge_scored' }),
+      expect.objectContaining({ name: 'Puka Nacua', forgeScoreSource: 'player_specific', visibilityState: 'forge_scored' }),
+      expect.objectContaining({ name: 'Bijan Robinson', forgeScoreSource: 'player_specific', visibilityState: 'forge_scored' }),
+    ]));
+    expect(result.diagnostics?.forgeRosterMatching).toEqual(expect.objectContaining({
+      rosterCanonicalIdsChecked: 3,
+      rosterCanonicalIdsMatched: 3,
+      playerSpecificRosterMatches: 3,
+      generatedBaselineRosterMatches: 0,
+    }));
+    expect(result.diagnostics?.rosterVisibility).toEqual({
+      total: 3,
+      identityCovered: 3,
+      baselineVisible: 0,
+      forgeScored: 3,
+      forgeBaseline: 0,
+      generatedBaselineVisibility: 0,
+      rookieAlphaFallback: 0,
+      knownUnscored: 0,
+      unresolved: 0,
+      evidenceCovered: 3,
+    });
+    expect(result.diagnostics?.playerSpecificForgeCoverageCount).toBe(3);
+    expect(result.diagnostics?.generatedBaselineVisibilityCount).toBe(0);
+    expect(result.diagnostics?.baselineVisibleCount).toBe(0);
+  });
+
   it('uses TIBER_IDENTITY_CROSSWALK_V1 to resolve Sleeper fallback canonical IDs to FORGE_PLAYER_STATIC_V1 canonical player IDs', async () => {
     const result = await computeLeagueDashboard(
       { userId: 'u1', leagueId: 'league1', week: 1, season: 2025 },
