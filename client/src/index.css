@@ -3612,6 +3612,14 @@ html, body {
   white-space: pre-wrap;
 }
 
+.tmd-export-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .tmd-identity-seed-export .tmd-secondary-button {
   display: inline-flex;
   align-items: center;
@@ -3621,5 +3629,9 @@ html, body {
 @media (max-width: 760px) {
   .tmd-identity-seed-export-header {
     flex-direction: column;
+  }
+
+  .tmd-export-button-row {
+    justify-content: flex-start;
   }
 }
