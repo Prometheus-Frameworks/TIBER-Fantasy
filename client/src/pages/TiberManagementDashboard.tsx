@@ -830,7 +830,7 @@ function ForgeArtifactDiagnosticsPanel({
       <div className="tmd-forge-sample-grid">
         <CanonicalIdSamples label="Sample matched roster canonical IDs" ids={matching?.sampleMatchedCanonicalIds} />
         <BridgeIdSamples label="Sample TIBER_IDENTITY_CROSSWALK_V1 matches" ids={matching?.sampleCrosswalkMatchedCanonicalIds} />
-        <CanonicalIdSamples label="Sample unmatched roster canonical IDs" ids={matching?.sampleUnmatchedCanonicalIds} />
+        <CanonicalIdSamples label="Sample roster canonical IDs without FORGE row" ids={matching?.sampleUnmatchedCanonicalIds} />
       </div>
     </div>
   );
