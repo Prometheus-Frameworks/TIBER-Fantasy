@@ -6,6 +6,17 @@ import { attachSignatureHeader } from "./middleware/signature";
 
 const log = (...args: any[]) => console.log(...args);
 
+// In production, never leak raw internal error detail (DB/schema/stack messages)
+// for unexpected 5xx failures. Deliberate client errors (4xx) keep their message,
+// and full detail is preserved in non-production for debugging.
+function sanitizeErrorMessage(err: any, status: number): string {
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && status >= 500) {
+    return "Internal server error";
+  }
+  return err?.message ?? "Internal Server Error";
+}
+
 // Exported so bootstrap.mjs can use it as the request handler.
 export const app = express();
 
@@ -109,7 +120,7 @@ export async function initBackground(): Promise<void> {
   // Error handler
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err?.status ?? err?.statusCode ?? 500;
-    res.status(status).json({ message: err?.message ?? "Internal Server Error" });
+    res.status(status).json({ message: sanitizeErrorMessage(err, status) });
     console.error("Unhandled error:", err);
   });
 
@@ -175,7 +186,7 @@ if (process.env.NODE_ENV === "development") {
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err?.status ?? err?.statusCode ?? 500;
-      res.status(status).json({ message: err?.message ?? "Internal Server Error" });
+      res.status(status).json({ message: sanitizeErrorMessage(err, status) });
       console.error("Unhandled error:", err);
     });
 

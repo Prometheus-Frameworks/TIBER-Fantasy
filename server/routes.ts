@@ -2357,9 +2357,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount Power Processing routes (Grok's Enhancement) 
   registerPowerProcessingRoutes(app);
 
-  // Mount Debug Calculation Routes
+  // Mount Debug Calculation Routes (admin-only — exposes internal calculation internals)
   const debugCalculation = await import('./routes/debug-calculation');
-  app.use('/api/debug', debugCalculation.default);
+  app.use('/api/debug', requireAdminAuth, debugCalculation.default);
   
   // TIBER Consensus routes
   // TIBER Consensus Command Router v1 - dedicated update endpoint
@@ -2981,8 +2981,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerRoleBankRoutes(app);
   console.log('🎭 Role Bank v1.0 routes mounted at /api/role-bank/:position/:season');
   
-  // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper
-  app.use('/api/debug', weekSummaryRouter);
+  // Week Summary Debug Endpoint - Validate NFLfastR pipeline against Sleeper (admin-only — exposes raw stats)
+  app.use('/api/debug', requireAdminAuth, weekSummaryRouter);
   console.log('🔍 Week Summary Debug routes mounted at /api/debug/week-summary');
   
   // Defense vs Position (DvP) matchup system
@@ -5876,7 +5876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * GET /api/admin/rag-status - RAG System Status Dashboard
    */
-  app.get('/api/admin/rag-status', async (req: Request, res: Response) => {
+  app.get('/api/admin/rag-status', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { chunks, chatSessions, chatMessages } = await import('@shared/schema');
       
@@ -5971,7 +5971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Returns: Top 30 WRs from 2025 season with 2+ games / 10+ targets, sorted by alphaScore DESC
    * Includes IR/OUT players with red status badges
    */
-  app.get('/api/admin/wr-rankings-sandbox', async (req: Request, res: Response) => {
+  app.get('/api/admin/wr-rankings-sandbox', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { weeklyStats, playerIdentityMap, wrRoleBank } = await import('@shared/schema');
       const { calculateWRAdvancedMetrics } = await import('./services/wrAdvancedMetricsService');
@@ -6320,7 +6320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Returns: Top 30 RBs from 2025 season with 2+ games / 15+ carries
    * Metrics: Total carries, total rushing yards, fantasy points per rush attempt
    */
-  app.get('/api/admin/rb-rankings-sandbox', async (req: Request, res: Response) => {
+  app.get('/api/admin/rb-rankings-sandbox', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { weeklyStats, playerIdentityMap } = await import('@shared/schema');
       const { playerInjuries } = await import('@shared/schema');
@@ -6592,7 +6592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Returns: TEs from 2025 season with 2+ games / 10+ targets
    * ============================================================
    */
-  app.get('/api/admin/te-rankings-sandbox', async (req: Request, res: Response) => {
+  app.get('/api/admin/te-rankings-sandbox', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { weeklyStats, playerIdentityMap, playerInjuries, playerUsage, bronzeNflfastrPlays } = await import('@shared/schema');
       
@@ -7166,7 +7166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * Returns: QBs from 2025 season with 100+ pass attempts
    * ============================================================
    */
-  app.get('/api/admin/qb-rankings-sandbox', async (req: Request, res: Response) => {
+  app.get('/api/admin/qb-rankings-sandbox', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { bronzeNflfastrPlays, qbContextMetrics, qbEpaReference } = await import('@shared/schema');
       
@@ -7723,7 +7723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   /**
    * POST /api/admin/rag/seed-narratives - Seed TIBER narratives with embeddings
    */
-  app.post('/api/admin/rag/seed-narratives', async (req: Request, res: Response) => {
+  app.post('/api/admin/rag/seed-narratives', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { chunks } = await import('@shared/schema');
       const { generateEmbedding } = await import('./services/geminiEmbeddings');
@@ -7841,7 +7841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // RAG Semantic Search endpoint
-  app.post('/api/admin/rag/search', async (req, res) => {
+  app.post('/api/admin/rag/search', requireAdminAuth, async (req, res) => {
     try {
       const { query, limit = 3 } = req.body;
 
@@ -7907,7 +7907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * GET /api/admin/api-lexicon
    * Returns the full API registry for the Admin API Lexicon page.
    */
-  app.get('/api/admin/api-lexicon', async (req: Request, res: Response) => {
+  app.get('/api/admin/api-lexicon', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const tags = getAllTags();
       res.json({
@@ -7929,7 +7929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * GET /api/admin/api-lexicon/:key
    * Returns a specific endpoint descriptor with optional live example.
    */
-  app.get('/api/admin/api-lexicon/:key', async (req: Request, res: Response) => {
+  app.get('/api/admin/api-lexicon/:key', requireAdminAuth, async (req: Request, res: Response) => {
     try {
       const { key } = req.params;
       const descriptor = getEndpointByKey(key);
