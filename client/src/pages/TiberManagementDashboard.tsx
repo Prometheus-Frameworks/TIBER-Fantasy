@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import {
   type TeamEnvironmentMovementResponse,
@@ -441,6 +441,170 @@ export function buildManagementIdentitySeedReport({
   };
 }
 
+
+type ActiveTeamMatchingSummary = {
+  tiberCrosswalkMapped: number;
+  forgeRowMatched: number;
+  directCanonicalMatches: number;
+  playerSpecificEvidenceMatched: number;
+  generatedBaselineVisibilityMatched: number;
+  nonEvidenceRosterMatches: number;
+  sampleMatchedRosterCanonicalIds: string[];
+  sampleUnmatchedRosterCanonicalIds: string[];
+};
+
+type ManagementSnapshotExportParams = {
+  league?: League | null;
+  team?: LeagueTeam | null;
+  dashboardTeam?: LeagueDashboardTeam | null;
+  teamDirection?: TeamDirectionResponse | null;
+  diagnostics?: LeagueDashboardResponse['diagnostics'];
+  identitySeedReport?: ReturnType<typeof buildManagementIdentitySeedReport>;
+  generatedAt?: string;
+};
+
+function playerProviderCanonicalId(player: RosterPlayer): string | null {
+  const sleeperId = player.sleeperId ? String(player.sleeperId) : null;
+  const provider = player.provider ?? (sleeperId ? 'sleeper' : null);
+  const providerPlayerId = player.providerPlayerId ?? sleeperId;
+  return player.providerCanonicalId ?? (provider && providerPlayerId ? `${provider}:${providerPlayerId}` : null);
+}
+
+function currentTiberPlayerIdForRosterPlayer(player: RosterPlayer): string | null {
+  return player.currentTiberPlayerId ?? (
+    player.forgeScoreProvenance?.identityCrosswalkArtifactId === 'TIBER_IDENTITY_CROSSWALK_V1'
+      ? player.forgeScoreProvenance.forgePlayerId ?? null
+      : null
+  );
+}
+
+function hasAnyForgeRowVisibility(player: RosterPlayer): boolean {
+  return hasPlayerSpecificForgeScore(player) || hasGeneratedBaselineForgeVisibility(player) || Boolean(
+    player.forgeScoreSource && player.forgeScoreSource !== 'unknown' && player.forgeScoreSource !== 'cached_unknown'
+  );
+}
+
+export function buildActiveTeamMatchingSummary(roster: RosterPlayer[] = []): ActiveTeamMatchingSummary {
+  const matchedIds: string[] = [];
+  const unmatchedIds: string[] = [];
+  let tiberCrosswalkMapped = 0;
+  let forgeRowMatched = 0;
+  let directCanonicalMatches = 0;
+  let playerSpecificEvidenceMatched = 0;
+  let generatedBaselineVisibilityMatched = 0;
+  let nonEvidenceRosterMatches = 0;
+
+  for (const player of roster) {
+    const providerCanonicalId = playerProviderCanonicalId(player);
+    const hasForgeRow = hasAnyForgeRowVisibility(player);
+
+    if (currentTiberPlayerIdForRosterPlayer(player)) tiberCrosswalkMapped += 1;
+    if (hasPlayerSpecificForgeScore(player)) playerSpecificEvidenceMatched += 1;
+    if (hasGeneratedBaselineForgeVisibility(player)) generatedBaselineVisibilityMatched += 1;
+    if (hasForgeRow) {
+      forgeRowMatched += 1;
+      if (!hasPlayerSpecificForgeScore(player) && !hasGeneratedBaselineForgeVisibility(player)) nonEvidenceRosterMatches += 1;
+      if (player.forgeScoreProvenance?.matchType === 'direct') directCanonicalMatches += 1;
+      if (providerCanonicalId && matchedIds.length < 10) matchedIds.push(providerCanonicalId);
+    } else if (providerCanonicalId && unmatchedIds.length < 10) {
+      unmatchedIds.push(providerCanonicalId);
+    }
+  }
+
+  return {
+    tiberCrosswalkMapped,
+    forgeRowMatched,
+    directCanonicalMatches,
+    playerSpecificEvidenceMatched,
+    generatedBaselineVisibilityMatched,
+    nonEvidenceRosterMatches,
+    sampleMatchedRosterCanonicalIds: matchedIds,
+    sampleUnmatchedRosterCanonicalIds: unmatchedIds,
+  };
+}
+
+function titleCaseNullable(value?: string | null): string | null {
+  if (!value) return null;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function buildManagementSnapshotExport({
+  league,
+  team,
+  dashboardTeam,
+  teamDirection,
+  diagnostics,
+  identitySeedReport,
+  generatedAt = new Date().toISOString(),
+}: ManagementSnapshotExportParams) {
+  const roster = dashboardTeam?.roster ?? [];
+  const visibility = buildRosterVisibilitySummary(roster);
+  const activeMatching = buildActiveTeamMatchingSummary(roster);
+  const seedReport = identitySeedReport ?? buildManagementIdentitySeedReport({ league, team, dashboardTeam, generatedAt });
+  const blockingReason = teamDirection?.blockers?.[0] ?? teamDirection?.reasons?.[0] ?? teamDirection?.reason ?? teamDirection?.error ?? null;
+
+  return {
+    artifact_type: 'TIBER_MANAGEMENT_SNAPSHOT_EXPORT',
+    generated_at: generatedAt,
+    league: {
+      league_id: league?.leagueIdExternal ?? league?.league_id_external ?? league?.id ?? null,
+      league_name: league ? displayLeagueName(league) : null,
+      team_name: team ? displayTeamName(team) : dashboardTeam?.display_name ?? null,
+      season: league?.season ?? null,
+      format: league?.scoringFormat ?? league?.scoring_format ?? null,
+    },
+    team_direction: {
+      classification: titleCaseNullable(teamDirection?.direction) ?? 'Uncertain',
+      confidence: titleCaseNullable(teamDirection?.confidence) ?? 'Low',
+      blocking_reason: blockingReason,
+    },
+    active_roster_summary: {
+      roster_count: visibility.total,
+      identity_coverage: { matched: visibility.identityCovered, total: visibility.total },
+      baseline_visibility: { matched: visibility.baselineVisible, total: visibility.total },
+      player_specific_forge_evidence: { matched: visibility.forgeScored, total: visibility.total },
+      rookie_alpha_fallback: { matched: visibility.rookieAlphaFallback, total: visibility.total },
+      evidence_coverage: { matched: visibility.evidenceCovered, total: visibility.total },
+      unresolved: { matched: visibility.unresolved, total: visibility.total },
+    },
+    artifact_diagnostics: {
+      forge_player_static_v1: {
+        available: diagnostics?.forgeArtifact?.available ?? false,
+        source_path: diagnostics?.forgeArtifact?.sourcePath ?? null,
+        rows: diagnostics?.forgeArtifact?.rowCount ?? null,
+        player_specific: diagnostics?.forgeArtifact?.playerSpecificCount ?? null,
+        generated_baseline: diagnostics?.forgeArtifact?.generatedBaselineCount ?? null,
+        contract_version: diagnostics?.forgeArtifact?.contractVersion ?? null,
+        generated_at: diagnostics?.forgeArtifact?.generatedAt ?? null,
+      },
+      tiber_identity_crosswalk_v1: {
+        available: diagnostics?.identityCrosswalkArtifact?.available ?? false,
+        source_path: diagnostics?.identityCrosswalkArtifact?.sourcePath ?? null,
+        identity_rows: diagnostics?.identityCrosswalkArtifact?.rowCount ?? null,
+        provider_mappings: diagnostics?.identityCrosswalkArtifact?.providerMappingCount ?? null,
+        providers: diagnostics?.identityCrosswalkArtifact?.providerCount ?? null,
+        contract_version: diagnostics?.identityCrosswalkArtifact?.contractVersion ?? null,
+      },
+      league_wide_diagnostics: {
+        resolved_identity_rows_scanned: diagnostics?.resolvedCanonicalCount ?? null,
+        roster_identity_rows_scanned: diagnostics?.rosterCount ?? null,
+        helper_text: 'League-wide diagnostic count; not active-team roster coverage.',
+      },
+    },
+    active_team_matching: {
+      tiber_crosswalk_mapped: activeMatching.tiberCrosswalkMapped,
+      forge_row_matched: activeMatching.forgeRowMatched,
+      direct_canonical_matches: activeMatching.directCanonicalMatches,
+      player_specific_evidence_matched: activeMatching.playerSpecificEvidenceMatched,
+      generated_baseline_visibility_matched: activeMatching.generatedBaselineVisibilityMatched,
+      non_evidence_roster_matches: activeMatching.nonEvidenceRosterMatches,
+      sample_matched_roster_canonical_ids: activeMatching.sampleMatchedRosterCanonicalIds,
+      sample_unmatched_roster_canonical_ids: activeMatching.sampleUnmatchedRosterCanonicalIds,
+    },
+    identity_seed_report: seedReport,
+  };
+}
+
 function buildRosterCounts(team?: LeagueDashboardTeam | null) {
   const counts: Record<(typeof positionGroups)[number], RosterCoverageCounts & { totalAlpha: number | null }> = {
     QB: { ...emptyRosterCoverageCounts(), totalAlpha: null },
@@ -601,7 +765,15 @@ function CanonicalIdSamples({ label, ids }: { label: string; ids?: string[] }) {
   );
 }
 
-function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDashboardResponse['diagnostics'] }) {
+function ForgeArtifactDiagnosticsPanel({
+  diagnostics,
+  activeRosterVisibility,
+  activeTeamMatching,
+}: {
+  diagnostics?: LeagueDashboardResponse['diagnostics'];
+  activeRosterVisibility: RosterCoverageCounts;
+  activeTeamMatching: ActiveTeamMatchingSummary;
+}) {
   const artifact = diagnostics?.forgeArtifact;
   const matching = diagnostics?.forgeRosterMatching;
   const identityArtifact = diagnostics?.identityCrosswalkArtifact;
@@ -643,15 +815,16 @@ function ForgeArtifactDiagnosticsPanel({ diagnostics }: { diagnostics?: LeagueDa
       </div>
 
       <div className="tmd-forge-diagnostics-grid tmd-forge-diagnostics-grid-matching">
-        <div><span>Sleeper roster identity resolved</span><strong>{diagnosticValue(diagnostics?.rosterVisibility?.identityCovered)}</strong><small>Active-roster players with resolved Sleeper identities only</small></div>
-        <div><span>Canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong><small>Active-roster provider/canonical IDs scanned for matching</small></div>
-        <div><span>Resolved identity rows scanned</span><strong>{diagnosticValue(diagnostics?.resolvedCanonicalCount)}</strong><small>Diagnostic count only; not active-roster coverage</small></div>
-        <div><span>TIBER crosswalk mapped</span><strong>{diagnosticValue(matching?.crosswalkCanonicalMatches)}</strong><small>Resolved through TIBER_IDENTITY_CROSSWALK_V1</small></div>
-        <div><span>FORGE row matched</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsMatched)}</strong><small>Any FORGE_PLAYER_STATIC_V1 row, evidence or visibility</small></div>
-        <div><span>Direct canonical matches</span><strong>{diagnosticValue(matching?.directCanonicalMatches)}</strong></div>
-        <div><span>player_specific evidence matched</span><strong>{diagnosticValue(matching?.playerSpecificRosterMatches)}</strong></div>
-        <div><span>generated_baseline visibility matched</span><strong>{diagnosticValue(matching?.generatedBaselineRosterMatches)}</strong><small>Not counted as player-specific evidence</small></div>
-        <div><span>non-evidence roster matches</span><strong>{diagnosticValue(matching?.nonEvidenceRosterMatches)}</strong></div>
+        <div><span>Sleeper roster identity resolved</span><strong>{activeRosterVisibility.identityCovered}/{activeRosterVisibility.total}</strong><small>Active-team roster players with resolved Sleeper identities only</small></div>
+        <div><span>Active-team canonical IDs checked</span><strong>{activeRosterVisibility.total}</strong><small>Active-team provider/canonical IDs scanned for matching</small></div>
+        <div><span>League-wide resolved identity rows scanned</span><strong>{diagnosticValue(diagnostics?.resolvedCanonicalCount)}</strong><small>League-wide diagnostic count; not active-team roster coverage.</small></div>
+        <div><span>League-wide canonical IDs checked</span><strong>{diagnosticValue(matching?.rosterCanonicalIdsChecked)}</strong><small>Diagnostic count only; not active-team roster coverage.</small></div>
+        <div><span>TIBER crosswalk mapped</span><strong>{diagnosticValue(activeTeamMatching.tiberCrosswalkMapped)}</strong><small>Active-team rows resolved through TIBER_IDENTITY_CROSSWALK_V1</small></div>
+        <div><span>FORGE row matched</span><strong>{diagnosticValue(activeTeamMatching.forgeRowMatched)}</strong><small>Active-team FORGE_PLAYER_STATIC_V1 rows, evidence or visibility</small></div>
+        <div><span>Direct canonical matches</span><strong>{diagnosticValue(activeTeamMatching.directCanonicalMatches)}</strong></div>
+        <div><span>player_specific evidence matched</span><strong>{diagnosticValue(activeTeamMatching.playerSpecificEvidenceMatched)}</strong></div>
+        <div><span>generated_baseline visibility matched</span><strong>{diagnosticValue(activeTeamMatching.generatedBaselineVisibilityMatched)}</strong><small>Not counted as player-specific evidence</small></div>
+        <div><span>non-evidence roster matches</span><strong>{diagnosticValue(activeTeamMatching.nonEvidenceRosterMatches)}</strong></div>
       </div>
 
       <div className="tmd-forge-sample-grid">
@@ -933,6 +1106,7 @@ export default function TiberManagementDashboard() {
   const [selectedLeagueId, setSelectedLeagueId] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [identitySeedCopied, setIdentitySeedCopied] = useState(false);
+  const [managementSnapshotCopied, setManagementSnapshotCopied] = useState(false);
 
   const contextQuery = useQuery<LeagueContextResponse>({
     queryKey: [`/api/league-context?user_id=${DEFAULT_USER_ID}`],
@@ -990,6 +1164,16 @@ export default function TiberManagementDashboard() {
     dashboardTeam: activeDashboardTeam,
   }), [activeLeague, activeTeam, activeDashboardTeam]);
   const identitySeedReportJson = useMemo(() => JSON.stringify(identitySeedReport, null, 2), [identitySeedReport]);
+  const activeTeamMatching = useMemo(() => buildActiveTeamMatchingSummary(activeDashboardTeam?.roster ?? []), [activeDashboardTeam?.roster]);
+  const managementSnapshot = useMemo(() => buildManagementSnapshotExport({
+    league: activeLeague,
+    team: activeTeam,
+    dashboardTeam: activeDashboardTeam,
+    teamDirection: teamDirectionQuery.data,
+    diagnostics: dashboardQuery.data?.diagnostics,
+    identitySeedReport,
+  }), [activeLeague, activeTeam, activeDashboardTeam, teamDirectionQuery.data, dashboardQuery.data?.diagnostics, identitySeedReport]);
+  const managementSnapshotJson = useMemo(() => JSON.stringify(managementSnapshot, null, 2), [managementSnapshot]);
 
   async function copyIdentitySeedReport() {
     try {
@@ -1012,6 +1196,42 @@ export default function TiberManagementDashboard() {
       console.error('[Management] failed to copy identity seed report', error);
       setIdentitySeedCopied(false);
     }
+  }
+
+
+  async function copyManagementSnapshot() {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(managementSnapshotJson);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = managementSnapshotJson;
+        textarea.setAttribute('readonly', 'true');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setManagementSnapshotCopied(true);
+      window.setTimeout(() => setManagementSnapshotCopied(false), 1800);
+    } catch (error) {
+      console.error('[Management] failed to copy Management snapshot', error);
+      setManagementSnapshotCopied(false);
+    }
+  }
+
+  function downloadManagementSnapshot() {
+    const blob = new Blob([managementSnapshotJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tiber-management-snapshot-${activeLeague?.leagueIdExternal ?? activeLeague?.id ?? 'league'}-${activeTeam?.id ?? 'team'}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }
 
   const syncMutation = useMutation({
@@ -1308,23 +1528,37 @@ export default function TiberManagementDashboard() {
         )}
 
         {hasRosterData && (
-          <ForgeArtifactDiagnosticsPanel diagnostics={dashboardQuery.data?.diagnostics} />
+          <ForgeArtifactDiagnosticsPanel diagnostics={dashboardQuery.data?.diagnostics} activeRosterVisibility={rosterVisibility} activeTeamMatching={activeTeamMatching} />
         )}
 
         {hasRosterData && (
           <div className="tmd-identity-seed-export" aria-label="Management identity seed export">
             <div className="tmd-identity-seed-export-header">
               <div>
-                <h3>Identity seed report</h3>
-                <p>Full active-roster provider IDs and current TIBER crosswalk status for TIBER-Data expansion. No TIBER IDs are guessed here.</p>
+                <h3>Management exports</h3>
+                <p>Copy the full active-team Management snapshot for review, or use the focused identity seed report for TIBER-Data crosswalk expansion. No TIBER IDs are guessed here.</p>
               </div>
-              <button type="button" className="tmd-secondary-button" onClick={copyIdentitySeedReport}>
-                <Copy size={14} />
-                {identitySeedCopied ? 'Copied' : 'Copy identity seed report'}
-              </button>
+              <div className="tmd-export-button-row">
+                <button type="button" className="tmd-secondary-button" onClick={copyIdentitySeedReport}>
+                  <Copy size={14} />
+                  {identitySeedCopied ? 'Copied' : 'Copy identity seed report'}
+                </button>
+                <button type="button" className="tmd-secondary-button" onClick={copyManagementSnapshot}>
+                  <Copy size={14} />
+                  {managementSnapshotCopied ? 'Copied' : 'Copy Management snapshot JSON'}
+                </button>
+                <button type="button" className="tmd-secondary-button" onClick={downloadManagementSnapshot}>
+                  <Download size={14} />
+                  Download Management snapshot JSON
+                </button>
+              </div>
             </div>
             <details>
-              <summary>Preview JSON ({identitySeedReport.summary.roster_count} roster players)</summary>
+              <summary>Preview Management snapshot JSON ({managementSnapshot.active_roster_summary.roster_count} roster players)</summary>
+              <pre>{managementSnapshotJson}</pre>
+            </details>
+            <details>
+              <summary>Preview identity seed report JSON ({identitySeedReport.summary.roster_count} roster players)</summary>
               <pre>{identitySeedReportJson}</pre>
             </details>
           </div>
