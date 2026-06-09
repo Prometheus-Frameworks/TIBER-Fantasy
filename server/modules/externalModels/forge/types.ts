@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ArtifactFreshness } from '../artifactFreshness';
 
 const booleanQueryParamSchema = z.preprocess((value) => {
   if (typeof value === 'string') {
@@ -182,6 +183,8 @@ export interface TiberForgeEvaluation {
     contractVersion?: string;
     calibrationVersion?: string;
     generatedAt: string;
+    /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+    freshness?: ArtifactFreshness;
     dataWindow?: {
       season: number;
       throughWeek: TiberForgeWeek;

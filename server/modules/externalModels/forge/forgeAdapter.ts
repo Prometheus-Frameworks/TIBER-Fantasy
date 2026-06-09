@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness } from '../artifactFreshness';
 import {
   CanonicalForgeEvaluationResponse,
   CanonicalForgeEvaluationResult,
@@ -76,6 +77,10 @@ export function adaptForgeEvaluation(
       modelVersion: canonical.service_meta.model_version,
       calibrationVersion: canonical.service_meta.calibration_version,
       generatedAt: canonical.service_meta.generated_at,
+      freshness: assessAndLogArtifactFreshness({
+        artifact: 'external_forge_evaluation',
+        generatedAt: canonical.service_meta.generated_at,
+      }),
       dataWindow: result.source_meta
         ? {
             season: result.source_meta.data_window.season,

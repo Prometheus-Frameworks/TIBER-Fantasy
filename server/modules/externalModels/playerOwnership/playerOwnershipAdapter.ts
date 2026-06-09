@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness } from '../artifactFreshness';
 import {
   CanonicalPlayerOwnershipAliasArtifact,
   CanonicalPlayerOwnershipAliasRow,
@@ -17,7 +18,14 @@ export function normalizePlayerOwnershipToken(value: string | null | undefined):
 
 export function parsePlayerOwnershipArtifact(payload: unknown): CanonicalPlayerOwnershipArtifact {
   try {
-    return canonicalPlayerOwnershipArtifactSchema.parse(payload);
+    const artifact = canonicalPlayerOwnershipArtifactSchema.parse(payload);
+    // Log-only: the return type is the upstream zod contract, so freshness is
+    // not attached to the response here (warn-only phase, Issue #192 M3).
+    assessAndLogArtifactFreshness({
+      artifact: 'player_ownership_v0',
+      generatedAt: artifact.generated_at,
+    });
+    return artifact;
   } catch (error) {
     throw new PlayerOwnershipIntegrationError(
       'invalid_payload',

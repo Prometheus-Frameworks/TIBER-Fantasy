@@ -1,3 +1,4 @@
+import { assessAndLogArtifactFreshness } from '../artifactFreshness';
 import {
   ForgePlayerStaticIntegrationError,
   ForgePlayerStaticLookup,
@@ -195,6 +196,8 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
   const playerSpecificCount = Array.from(rowsByPlayerId.values()).filter((row) => row.isPlayerSpecificEvidence).length;
   const generatedBaselineCount = Array.from(rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility).length;
 
+  const generatedAt = pickString({ ...record, ...meta, ...manifest }, ['generated_at', 'generatedAt', 'promoted_at', 'promotedAt']);
+
   return {
     artifact: {
       state: 'available',
@@ -204,7 +207,8 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
       sourcePath,
       artifactId: 'FORGE_PLAYER_STATIC_V1',
       contractVersion: pickString({ ...record, ...meta, ...manifest }, ['contract_version', 'contractVersion', 'version', 'schema_version', 'schemaVersion']),
-      generatedAt: pickString({ ...record, ...meta, ...manifest }, ['generated_at', 'generatedAt', 'promoted_at', 'promotedAt']),
+      generatedAt,
+      freshness: assessAndLogArtifactFreshness({ artifact: 'forge_player_static_v1', generatedAt }),
       rowCount: rowsByPlayerId.size,
       playerSpecificCount,
       generatedBaselineCount,

@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness } from '../artifactFreshness';
 import {
   CanonicalSignalValidationExports,
   CanonicalWrBestRecipeSummary,
@@ -170,17 +171,22 @@ export function adaptSignalValidationExports(
   options: { includeRawCanonical?: boolean; exportDirectory: string },
 ): TiberWrBreakoutLab {
   const rows = normalizeWrSignalCardRows(parseWrPlayerSignalCardsCsv(payload.playerSignalCardsCsv), payload.season);
+  const bestRecipeSummary = normalizeWrBestRecipeSummary(payload.bestRecipeSummary, payload.season, {
+    includeRawCanonical: options.includeRawCanonical,
+  });
 
   return {
     season: payload.season,
     availableSeasons: payload.availableSeasons,
     rows,
-    bestRecipeSummary: normalizeWrBestRecipeSummary(payload.bestRecipeSummary, payload.season, {
-      includeRawCanonical: options.includeRawCanonical,
-    }),
+    bestRecipeSummary,
     source: {
       provider: 'signal-validation-model',
       exportDirectory: options.exportDirectory,
     },
+    freshness: assessAndLogArtifactFreshness({
+      artifact: 'signal_validation_wr_exports',
+      generatedAt: bestRecipeSummary.generatedAt,
+    }),
   };
 }

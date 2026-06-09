@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness, pickNewestTimestamp } from '../artifactFreshness';
 import {
   CanonicalPointScenarioLabResponse,
   CanonicalPointScenarioLabRow,
@@ -271,5 +272,9 @@ export function adaptPointScenarioLab(
       return left.playerName.localeCompare(right.playerName);
     }),
     source: canonical.source,
+    freshness: assessAndLogArtifactFreshness({
+      artifact: 'point_scenario_lab',
+      generatedAt: pickNewestTimestamp(canonical.rows.map((row) => row.provenance.generated_at)),
+    }),
   };
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ArtifactFreshness } from '../artifactFreshness';
 
 const canonicalShareSchema = z.number().finite().min(0).max(100);
 const canonicalNullableShareSchema = canonicalShareSchema.nullable().optional();
@@ -91,6 +92,8 @@ export interface TiberRoleOpportunityInsight {
     provider: 'role-and-opportunity-model';
     modelVersion: string;
     generatedAt: string;
+    /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+    freshness?: ArtifactFreshness;
   };
   rawCanonical?: CanonicalRoleOpportunityResponse;
 }
@@ -138,6 +141,8 @@ export interface TiberRoleOpportunityLab {
     location: string | null;
     mode: 'api' | 'artifact';
   };
+  /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
+  freshness?: ArtifactFreshness;
 }
 
 export type RoleOpportunityErrorCode =

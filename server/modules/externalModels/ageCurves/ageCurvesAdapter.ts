@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { assessAndLogArtifactFreshness, pickNewestTimestamp } from '../artifactFreshness';
 import {
   AgeCurveIntegrationError,
   CanonicalAgeCurveLabResponse,
@@ -223,5 +224,9 @@ export function adaptAgeCurveLab(
       return left.playerName.localeCompare(right.playerName);
     }),
     source: canonical.source,
+    freshness: assessAndLogArtifactFreshness({
+      artifact: 'age_curve_lab',
+      generatedAt: pickNewestTimestamp(canonical.rows.map((row) => row.provenance.generated_at)),
+    }),
   };
 }
