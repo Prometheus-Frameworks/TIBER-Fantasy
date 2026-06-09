@@ -1,0 +1,50 @@
+name: Security Audit
+
+# Advisory-only dependency audit (Issue #192, finding M7 — phase 1).
+#
+# This workflow REPORTS advisories; it never fails the build. As of 2026-06-09
+# the repo has known high/critical advisories (npm audit: 3 critical, 15 high),
+# so a blocking gate would make every PR red regardless of its content.
+# Path to blocking: triage/fix the existing high+critical advisories, then
+# remove the `|| true` guards so `--audit-level=high` failures block.
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/security-audit.yml'
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC, matches the weekly security runbook
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (advisory-only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      # npm audit reads package.json + package-lock.json; no install needed.
+      - name: Audit all dependencies (report only)
+        run: |
+          npm audit --audit-level=high | tee audit-all.txt || true
+          {
+            echo '## npm audit — all dependencies (advisory-only)'
+            echo '```'
+            tail -n 15 audit-all.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Audit production dependencies only (report only)
+        run: |
+          npm audit --omit=dev --audit-level=high | tee audit-prod.txt || true
+          {
+            echo '## npm audit — production dependencies only (advisory-only)'
+            echo '```'
+            tail -n 15 audit-prod.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,21 @@
+# Weekly dependency update PRs (Issue #192, finding M7).
+# Minor/patch npm updates are grouped into one PR to keep noise low;
+# majors arrive individually so they get real review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
