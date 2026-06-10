@@ -61,6 +61,8 @@ describe('strategy ontology consumer adapter', () => {
       sourcePath: artifactPath,
       artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
       contractVersion: 'dynasty_strategy_ontology_v1',
+      modelVersion: 'dynasty-strategy-ontology-v1.0.0',
+      generatedAt: '2026-06-10T00:00:00.000Z',
       rowCount: 0,
       concepts: 11,
       playerAssetArchetypes: 10,
@@ -127,6 +129,8 @@ describe('strategy ontology consumer adapter', () => {
       available: true,
       artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
       contractVersion: 'dynasty_strategy_ontology_v1',
+      modelVersion: 'dynasty-strategy-ontology-v1.0.0',
+      generatedAt: '2026-06-10T00:00:00.000Z',
       rowCount: 0,
       safetyRules: requiredSafetyRules,
       archetypeAssignmentEnabled: false,
@@ -165,6 +169,8 @@ describe('strategy ontology consumer adapter', () => {
       state: 'missing',
       code: 'not_found',
       sourcePath: missingPath,
+      modelVersion: null,
+      generatedAt: null,
       archetypeAssignmentEnabled: false,
       templateSelectionEnabled: false,
     });
@@ -183,6 +189,8 @@ describe('strategy ontology consumer adapter', () => {
       available: false,
       state: 'malformed',
       code: 'invalid_payload',
+      modelVersion: null,
+      generatedAt: null,
       concepts: 0,
       archetypeAssignmentEnabled: false,
       templateSelectionEnabled: false,
@@ -197,7 +205,7 @@ describe('strategy ontology consumer adapter', () => {
     const integration = new StrategyOntologyIntegration(new StrategyOntologyClient({ artifactPath }));
     const lookup = await integration.getLookup();
 
-    expect(lookup.artifact).toMatchObject({ available: false, state: 'malformed', code: 'invalid_payload' });
+    expect(lookup.artifact).toMatchObject({ available: false, state: 'malformed', code: 'invalid_payload', modelVersion: null, generatedAt: null });
     await rm(dir, { recursive: true, force: true });
   });
 

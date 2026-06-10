@@ -35,6 +35,8 @@ export interface StrategyOntologyDiagnostics {
   artifactId: 'DYNASTY_STRATEGY_ONTOLOGY_V1';
   artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1' | null;
   contractVersion: string | null;
+  modelVersion: string | null;
+  generatedAt: string | null;
   rowCount: number | null;
   concepts: number;
   playerAssetArchetypes: number;

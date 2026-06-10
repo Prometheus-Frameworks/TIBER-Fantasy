@@ -130,6 +130,8 @@ export function adaptStrategyOntologyArtifact(payload: unknown, sourcePath: stri
   }
 
   const schemaVersion = pickString(record, ['schema_version', 'schemaVersion']);
+  const modelVersion = pickString(record, ['model_version', 'modelVersion']);
+  const generatedAt = pickString(record, ['generated_at', 'generatedAt']);
   if (schemaVersion !== 'dynasty_strategy_ontology_v1') {
     throw new StrategyOntologyIntegrationError(
       'unsupported',
@@ -165,6 +167,8 @@ export function adaptStrategyOntologyArtifact(payload: unknown, sourcePath: stri
       artifactId: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
       artifactType,
       contractVersion: schemaVersion,
+      modelVersion,
+      generatedAt,
       rowCount: 0,
       concepts: concepts.length,
       playerAssetArchetypes: playerAssetArchetypes.length,
