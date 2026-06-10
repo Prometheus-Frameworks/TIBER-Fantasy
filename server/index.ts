@@ -55,11 +55,13 @@ export function mountProductionFrontend(appToMount: express.Express, publicDir: 
 }
 
 // ── Core middleware ────────────────────────────────────────────────────────────
+// Baseline security headers first — registered BEFORE the body parsers so that
+// parser-generated error responses (malformed JSON → 400, oversized payload →
+// 413) still carry the headers. No CSP here; the API keeps its own restrictive
+// CSP via securityHeaders() on /api.
+app.use(baselineSecurityHeaders());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-// Baseline security headers on every response (SPA + API). No CSP here —
-// the API keeps its own restrictive CSP via securityHeaders() on /api.
-app.use(baselineSecurityHeaders());
 app.use(attachSignatureHeader);
 
 // Tiny API request logger
