@@ -2,6 +2,7 @@ import express from 'express';
 import { storage } from '../storage';
 import { computeLeagueDashboard } from '../services/leagueDashboardService';
 import { classifyTeamDirection } from '../services/teamDirectionClassifier';
+import { buildStrategyTemplateDiagnostics } from '../modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
 
 type ManagementDeps = {
   storage: typeof storage;
@@ -83,6 +84,15 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
       );
 
       const result = deps.classifyTeamDirection(teamData.roster ?? [], teamPicks, { superflex });
+      const strategyTemplateDiagnostics = buildStrategyTemplateDiagnostics(
+        dashboardPayload.diagnostics
+          ? {
+              artifact: dashboardPayload.diagnostics.strategyOntologyArtifact,
+              templates: dashboardPayload.diagnostics.strategyOntologyTemplates ?? [],
+            }
+          : null,
+        result,
+      );
 
       res.json({
         success: true,
@@ -95,8 +105,10 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
               rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
               rosterVisibility: dashboardPayload.diagnostics.rosterVisibility,
               strategyOntology: dashboardPayload.diagnostics.strategyOntologyArtifact,
+              strategyTemplateDiagnostics,
             }
           : null,
+        strategy_template_diagnostics: strategyTemplateDiagnostics,
         ...result,
       });
     } catch (error) {

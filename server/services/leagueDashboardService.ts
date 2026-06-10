@@ -26,6 +26,7 @@ import {
   type StrategyOntologyIntegration,
 } from '../modules/externalModels/strategyOntology/StrategyOntologyIntegration';
 import type { StrategyOntologyLookup } from '../modules/externalModels/strategyOntology/types';
+import { summarizeStrategyOntologyTemplates, type StrategyOntologyTemplateSummary } from '../modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -131,6 +132,7 @@ export type LeagueDashboardPayload = {
     forgeArtifact: ForgePlayerStaticLookup['artifact'];
     identityCrosswalkArtifact: TiberIdentityCrosswalkLookup['artifact'];
     strategyOntologyArtifact: StrategyOntologyLookup['artifact'];
+    strategyOntologyTemplates: StrategyOntologyTemplateSummary[];
     forgeRosterMatching: ForgeRosterMatchDiagnostics;
     rosterVisibility: RosterCoverageCounts;
   };
@@ -848,7 +850,7 @@ export async function computeLeagueDashboard(
       const currentTiberPlayerId = crosswalkResolution.matchType === 'identity_crosswalk'
         ? crosswalkResolution.forgePlayerId
         : null;
-      const crosswalkStatus = currentTiberPlayerId
+      const crosswalkStatus: LeagueDashboardPlayer['crosswalkStatus'] = currentTiberPlayerId
         ? 'matched'
         : canonicalId
           ? 'missing'
@@ -1013,6 +1015,7 @@ export async function computeLeagueDashboard(
       forgeArtifact: forgeStaticLookup.artifact,
       identityCrosswalkArtifact: identityCrosswalkLookup.artifact,
       strategyOntologyArtifact: strategyOntologyLookup.artifact,
+      strategyOntologyTemplates: summarizeStrategyOntologyTemplates(strategyOntologyLookup),
       forgeRosterMatching,
       rosterVisibility,
     },

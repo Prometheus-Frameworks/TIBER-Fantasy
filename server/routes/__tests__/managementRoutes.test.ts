@@ -455,6 +455,12 @@ describe('GET /api/management/team-direction (endpoint)', () => {
             archetypeAssignmentEnabled: false,
             templateSelectionEnabled: false,
           },
+          strategyOntologyTemplates: [
+            { template_id: 'rebuild_low_alpha_concentration', applies_to: ['rebuild'] },
+            { template_id: 'rebuild_premium_assets_timeline_mismatch', applies_to: ['rebuild', 'timeline_mismatch'] },
+            { template_id: 'productive_rebuild_with_anchor_base', applies_to: ['productive_rebuild'] },
+            { template_id: 'contender_with_future_pick_drag', applies_to: ['contender'] },
+          ],
         },
         teams: [
           { team_id: 'team-1', display_name: 'Test Team', roster, totals: {}, overall_total: 0 },
@@ -515,6 +521,19 @@ describe('GET /api/management/team-direction (endpoint)', () => {
       evidenceCoverage: expect.objectContaining({ rate: expect.any(Number) }),
       scoredPositionCounts: expect.any(Object),
     }));
+    expect(res.body.strategy_template_diagnostics).toMatchObject({
+      available: true,
+      template_selection_enabled: false,
+      selected_template_id: null,
+      current_team_direction: 'Contender',
+      current_confidence: 'Medium',
+      evaluated_template_count: 4,
+      classification_compatible_template_ids: ['contender_with_future_pick_drag'],
+      blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+      missing_future_contract_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+    });
+    expect(res.body.forgeDiagnostics.strategyTemplateDiagnostics).toEqual(res.body.strategy_template_diagnostics);
+    expect(JSON.stringify(res.body.strategy_template_diagnostics)).not.toContain('text');
   });
 
 
@@ -526,7 +545,8 @@ describe('GET /api/management/team-direction (endpoint)', () => {
         forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
         forgeRosterMatching: { rosterCanonicalIdsChecked: goodRoster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
         rosterVisibility: { total: goodRoster.length, identityCovered: goodRoster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: goodRoster.length, unresolved: 0, evidenceCovered: 0 },
-        strategyOntologyArtifact: { available: false, state: 'missing', modelVersion: null, generatedAt: null, archetypeAssignmentEnabled: false, templateSelectionEnabled: false },
+        strategyOntologyArtifact: { available: false, state: 'missing', reason: 'missing artifact', artifactType: null, contractVersion: null, modelVersion: null, generatedAt: null, futureContractInputs: [], archetypeAssignmentEnabled: false, templateSelectionEnabled: false },
+        strategyOntologyTemplates: [],
       },
       teams: [
         { team_id: 'team-1', display_name: 'Test Team', roster: goodRoster, totals: {}, overall_total: 0 },
@@ -544,6 +564,9 @@ describe('GET /api/management/team-direction (endpoint)', () => {
       archetypeAssignmentEnabled: false,
       templateSelectionEnabled: false,
     });
+    expect(withRes.body.strategy_template_diagnostics.selected_template_id).toBeNull();
+    expect(withRes.body.strategy_template_diagnostics.template_selection_enabled).toBe(false);
+    expect(withRes.body.strategy_template_diagnostics.current_team_direction.toLowerCase()).toBe(withRes.body.direction);
   });
 
   test('returns low-coverage result as uncertain when roster is mostly unmatched', async () => {
