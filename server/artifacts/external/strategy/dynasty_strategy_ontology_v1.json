@@ -1,0 +1,35 @@
+{
+  "artifact_type": "DYNASTY_STRATEGY_ONTOLOGY_V1",
+  "schema_version": "dynasty_strategy_ontology_v1",
+  "row_count": 0,
+  "concepts": [
+    { "id": "team_direction", "description": "Read-only strategy vocabulary for describing roster direction." },
+    { "id": "roster_timeline", "description": "Vocabulary for near-, medium-, and long-window roster framing." },
+    { "id": "asset_liquidity", "description": "Vocabulary for market liquidity discussion." },
+    { "id": "evidence_boundary", "description": "Vocabulary for preserving upstream evidence boundaries." }
+  ],
+  "player_asset_archetypes": [],
+  "roster_state_definitions": [],
+  "timeline_rules": [],
+  "explanation_templates": [],
+  "consumer_manifest": {
+    "intended_consumers": ["TIBER-Fantasy"],
+    "missing_input_behavior": "do_not_assign_fail_closed",
+    "future_contract_inputs": [
+      "age_band",
+      "experience_band",
+      "role_security_signal",
+      "market_liquidity_signal"
+    ],
+    "consumer_safety_rules": [
+      "cannot_override_identity",
+      "cannot_override_team_assignment",
+      "cannot_override_forge_evidence",
+      "cannot_count_generated_baselines_as_evidence",
+      "cannot_create_projections",
+      "cannot_assign_player_labels_itself",
+      "cannot_consume_operator_notes_as_evidence",
+      "cannot_replace_human_decision"
+    ]
+  }
+}

@@ -21,6 +21,11 @@ import {
   type TiberIdentityCrosswalkService,
 } from '../modules/externalModels/identity/tiberIdentityCrosswalkService';
 import type { TiberIdentityCrosswalkLookup } from '../modules/externalModels/identity/tiberIdentityCrosswalkTypes';
+import {
+  strategyOntologyIntegration,
+  type StrategyOntologyIntegration,
+} from '../modules/externalModels/strategyOntology/StrategyOntologyIntegration';
+import type { StrategyOntologyLookup } from '../modules/externalModels/strategyOntology/types';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -125,6 +130,7 @@ export type LeagueDashboardPayload = {
     unresolvedRosterIdentityCount: number;
     forgeArtifact: ForgePlayerStaticLookup['artifact'];
     identityCrosswalkArtifact: TiberIdentityCrosswalkLookup['artifact'];
+    strategyOntologyArtifact: StrategyOntologyLookup['artifact'];
     forgeRosterMatching: ForgeRosterMatchDiagnostics;
     rosterVisibility: RosterCoverageCounts;
   };
@@ -157,6 +163,7 @@ type LeagueDashboardDeps = {
   rookieArtifactService?: Pick<typeof rookieArtifactService, 'getRookieAssetLookup'>;
   forgePlayerStaticService?: Pick<ForgePlayerStaticService, 'getLookup'>;
   tiberIdentityCrosswalkService?: Pick<TiberIdentityCrosswalkService, 'getLookup'>;
+  strategyOntologyIntegration?: Pick<StrategyOntologyIntegration, 'getLookup'>;
 };
 
 const defaultDeps: LeagueDashboardDeps = {
@@ -167,6 +174,7 @@ const defaultDeps: LeagueDashboardDeps = {
   rookieArtifactService,
   forgePlayerStaticService,
   tiberIdentityCrosswalkService,
+  strategyOntologyIntegration,
 };
 
 function normalizeExternalId(value?: string | null) {
@@ -761,6 +769,7 @@ export async function computeLeagueDashboard(
   const targetWeekFilter = effectiveWeek;
   const forgeStaticLookup = await (deps.forgePlayerStaticService ?? forgePlayerStaticService).getLookup();
   const identityCrosswalkLookup = await (deps.tiberIdentityCrosswalkService ?? tiberIdentityCrosswalkService).getLookup();
+  const strategyOntologyLookup = await (deps.strategyOntologyIntegration ?? strategyOntologyIntegration).getLookup();
 
   const alphaByRosterKey = new Map<string, { alpha: number | null; row: ForgePlayerStaticRow | null; source: ForgeScoreSource; provenance: LeagueDashboardPlayer['forgeScoreProvenance'] }>();
   if (forgeStaticLookup.artifact.available) {
@@ -1003,6 +1012,7 @@ export async function computeLeagueDashboard(
       unresolvedRosterIdentityCount: rosterVisibility.unresolved,
       forgeArtifact: forgeStaticLookup.artifact,
       identityCrosswalkArtifact: identityCrosswalkLookup.artifact,
+      strategyOntologyArtifact: strategyOntologyLookup.artifact,
       forgeRosterMatching,
       rosterVisibility,
     },
