@@ -199,6 +199,8 @@ type StrategyOntologyArtifactDiagnostics = {
   artifactId?: 'DYNASTY_STRATEGY_ONTOLOGY_V1';
   artifactType?: 'DYNASTY_STRATEGY_ONTOLOGY_V1' | string | null;
   contractVersion?: string | null;
+  modelVersion?: string | null;
+  generatedAt?: string | null;
   rowCount?: number | null;
   concepts?: number;
   playerAssetArchetypes?: number;
@@ -613,6 +615,8 @@ export function buildManagementSnapshotExport({
         source_path: diagnostics?.strategyOntologyArtifact?.sourcePath ?? null,
         contract_version: diagnostics?.strategyOntologyArtifact?.contractVersion ?? null,
         artifact_type: diagnostics?.strategyOntologyArtifact?.artifactType ?? null,
+        model_version: diagnostics?.strategyOntologyArtifact?.modelVersion ?? null,
+        generated_at: diagnostics?.strategyOntologyArtifact?.generatedAt ?? null,
         concepts: diagnostics?.strategyOntologyArtifact?.concepts ?? null,
         player_asset_archetypes: diagnostics?.strategyOntologyArtifact?.playerAssetArchetypes ?? null,
         roster_state_definitions: diagnostics?.strategyOntologyArtifact?.rosterStateDefinitions ?? null,

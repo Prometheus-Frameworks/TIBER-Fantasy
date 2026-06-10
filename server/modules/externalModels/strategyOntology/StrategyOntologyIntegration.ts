@@ -16,6 +16,8 @@ function unavailableLookup(error: StrategyOntologyIntegrationError, sourcePath: 
       artifactId: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
       artifactType: null,
       contractVersion: null,
+      modelVersion: null,
+      generatedAt: null,
       rowCount: null,
       concepts: 0,
       playerAssetArchetypes: 0,
