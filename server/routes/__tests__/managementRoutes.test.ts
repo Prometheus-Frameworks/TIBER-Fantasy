@@ -18,9 +18,10 @@ const baseTeam = { id: 'team-1', displayName: 'Test Team', externalRosterId: 'ro
 const baseLeague = { id: 'league-1', leagueName: 'Test League', teams: [baseTeam] };
 const baseContext = { preference: null, activeLeague: baseLeague, activeTeam: baseTeam };
 
-function rosterOf(players: { pos: string; alpha: number | null; missingReason?: string; forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null; rookieAsset?: object }[]) {
+function rosterOf(players: { name?: string; pos: string; alpha: number | null; missingReason?: string; forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'cached_unknown' | null; rookieAsset?: object }[]) {
   return players.map((p, i) => ({
     rosterKey: `k${i}`,
+    name: p.name,
     pos: p.pos,
     alpha: p.alpha,
     missingReason: p.missingReason ?? (p.alpha === null ? 'missing_forge_row' : undefined),
@@ -172,6 +173,73 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.blockers).toContain(
       'Rookie Alpha covers 7 assets for visibility, but Team Direction still needs sufficient FORGE scoring coverage before classifying roster strength.'
     );
+  });
+
+  test('post-PR200 Management state classifies 24/30 realistic player-specific FORGE evidence as Rebuild High with neutral concentration wording', () => {
+    const playerSpecificForgeRows = [
+      { name: 'Puka Nacua', pos: 'WR', alpha: 30.24 },
+      { name: 'Bijan Robinson', pos: 'RB', alpha: 25.03 },
+      { name: 'Justin Herbert', pos: 'QB', alpha: 26.88 },
+      { name: 'Ladd McConkey', pos: 'WR', alpha: 24.18 },
+      { name: 'Christian McCaffrey', pos: 'RB', alpha: 21.33 },
+      { name: 'Derrick Henry', pos: 'RB', alpha: 28.76 },
+      { name: 'T.J. Hockenson', pos: 'TE', alpha: 13.77 },
+      { name: 'Xavier Worthy', pos: 'WR', alpha: 22.91 },
+      { name: 'Frank Gore Jr.', pos: 'RB', alpha: 12.94 },
+      { name: 'Ryan Flournoy', pos: 'WR', alpha: 10.82 },
+      { name: 'Terrance Ferguson', pos: 'TE', alpha: 11.41 },
+      { name: 'Harold Fannin Jr.', pos: 'TE', alpha: 12.09 },
+      { name: 'Luther Burden III', pos: 'WR', alpha: 17.64 },
+      { name: 'Travis Hunter', pos: 'WR', alpha: 19.27 },
+      { name: 'Depth RB 1', pos: 'RB', alpha: 14.82 },
+      { name: 'Depth RB 2', pos: 'RB', alpha: 15.16 },
+      { name: 'Depth WR 1', pos: 'WR', alpha: 16.45 },
+      { name: 'Depth WR 2', pos: 'WR', alpha: 13.38 },
+      { name: 'Depth WR 3', pos: 'WR', alpha: 12.73 },
+      { name: 'Depth QB 1', pos: 'QB', alpha: 18.52 },
+      { name: 'Depth RB 3', pos: 'RB', alpha: 11.66 },
+      { name: 'Depth WR 4', pos: 'WR', alpha: 10.95 },
+      { name: 'Depth TE 1', pos: 'TE', alpha: 9.84 },
+      { name: 'Depth RB 4', pos: 'RB', alpha: 8.91 },
+    ];
+    const unscored = Array.from({ length: 6 }, (_, index) => ({
+      name: `Mapped Missing FORGE ${index + 1}`,
+      pos: index % 2 === 0 ? 'WR' : 'RB',
+      alpha: null,
+      missingReason: 'missing_forge_row',
+    }));
+
+    const result = classifyTeamDirection(rosterOf([...playerSpecificForgeRows, ...unscored]), []);
+    const explanationText = [...result.reasons, ...result.blockers].join(' ');
+
+    expect(result.direction).toBe('rebuild');
+    expect(result.confidence).toBe('high');
+    expect(result.forgeCoverage).toEqual({ matched: 24, total: 30, rate: 0.8 });
+    expect(result.evidenceCoverage).toEqual({ matched: 24, total: 30, rate: 0.8, rookieAlphaMatched: 0 });
+    expect(result.visibilityCounts.generatedBaselineVisibility).toBe(0);
+    expect(explanationText).not.toContain('No clear top-end difference-makers');
+    expect(explanationText).toContain('concentration');
+    expect(explanationText).toContain('clean contender read');
+    expect(explanationText).toContain('durable long-term anchors');
+  });
+
+  test('generated_baseline rows remain visibility only and cannot lift Team Direction above low-coverage Uncertain', () => {
+    const roster = rosterOf([
+      { name: 'Player-Specific QB', pos: 'QB', alpha: 68, forgeScoreSource: 'player_specific' },
+      { name: 'Player-Specific WR', pos: 'WR', alpha: 64, forgeScoreSource: 'player_specific' },
+      { name: 'Generated RB 1', pos: 'RB', alpha: 70, forgeScoreSource: 'generated_baseline' },
+      { name: 'Generated RB 2', pos: 'RB', alpha: 69, forgeScoreSource: 'generated_baseline' },
+      { name: 'Generated WR', pos: 'WR', alpha: 67, forgeScoreSource: 'generated_baseline' },
+      { name: 'Generated TE', pos: 'TE', alpha: 65, forgeScoreSource: 'generated_baseline' },
+    ]);
+
+    const result = classifyTeamDirection(roster, []);
+
+    expect(result.direction).toBe('uncertain');
+    expect(result.confidence).toBe('low');
+    expect(result.forgeCoverage).toEqual({ matched: 2, total: 6, rate: 2 / 6 });
+    expect(result.visibilityCounts.generatedBaselineVisibility).toBe(4);
+    expect(result.blockers.some((blocker) => blocker.includes('Need ≥ 50% to classify'))).toBe(true);
   });
 
   test('returns contender with high average alpha and strong QB', () => {

@@ -334,8 +334,11 @@ export function classifyTeamDirection(
     if (pickCount >= 3) reasons.push(`Holding ${pickCount} future picks signals long-term capital accumulation.`);
     if (avgAlpha >= 42 && avgAlpha < 50)
       blockers.push('Alpha is borderline — re-sync or recompute FORGE grades to confirm rebuild reading.');
-    if (top3Rate < 0.45)
-      blockers.push('No clear top-end difference-makers. Priority: identify a franchise anchor.');
+    if (top3Rate < 0.45) {
+      blockers.push(
+        'Top-end FORGE alpha concentration is not strong enough for a clean contender read. Priority: consolidate around durable long-term anchors instead of treating short-window production or recognizable names as enough roster-wide strength.'
+      );
+    }
 
     // QB in rebuild
     if (qbDataMissing) {
