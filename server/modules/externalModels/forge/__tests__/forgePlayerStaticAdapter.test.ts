@@ -132,19 +132,23 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     expect(payload).toEqual(expect.objectContaining({
       artifact_type: 'FORGE_PLAYER_STATIC_V1',
       schema_version: 'forge_player_static_v1',
-      row_count: 38,
+      row_count: 59,
       score_source_policy: expect.objectContaining({
-        generated_baseline: expect.any(Object),
+        generated_baseline: expect.any(String),
       }),
       consumer_manifest: expect.objectContaining({
         evidence_gate: expect.any(Object),
       }),
-      source_artifacts: expect.any(Array),
+      source_artifacts: [
+        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json',
+        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
+        'tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json',
+      ],
     }));
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
-      rowCount: 38,
-      playerSpecificCount: 24,
+      rowCount: 59,
+      playerSpecificCount: 45,
       generatedBaselineCount: 14,
     }));
     expect(payload.rows.some((row: any) => row?.components && typeof row.components === 'object')).toBe(true);
@@ -154,6 +158,18 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       scoreSource: 'player_specific',
       isPlayerSpecificEvidence: true,
     }));
+    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-ladd-mcconkey')).toEqual(expect.objectContaining({
+      scoreSource: 'player_specific',
+      isPlayerSpecificEvidence: true,
+      isGeneratedBaselineVisibility: false,
+      provenance: expect.objectContaining({
+        source_artifacts: expect.arrayContaining([
+          'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
+        ]),
+      }),
+    }));
+    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-frank-gore-jr')).toBeUndefined();
+    expect(Array.from(lookup.rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility)).toHaveLength(14);
   });
 
   it('reports the attempted JSON source path when configured with an artifact directory', () => {
