@@ -63,3 +63,14 @@ Add anything found to the running list below. Open a GitHub issue for anything H
 | Date | Finding | Severity | Issue/PR |
 |------|---------|----------|----------|
 | | | | |
+
+## 9. Deferred security work (known, intentional)
+
+- **Content-Security-Policy for the app shell (M6 phase 2).** The SPA HTML
+  currently has no CSP. `baselineSecurityHeaders()` (M6 phase 1) intentionally
+  ships HSTS / Referrer-Policy / Permissions-Policy / nosniff / frame headers
+  **without** a CSP, because a CSP broad enough to cover the Vite/React asset
+  graph can break script/style/asset loading if rushed. CSP should be its own
+  PR: start in `Content-Security-Policy-Report-Only` mode, watch violation
+  reports, then enforce. The restrictive API-only CSP on `/api`
+  (`securityHeaders()`) is unaffected and stays in place.

@@ -3,6 +3,7 @@ import express, { type Request, type Response, type NextFunction } from "express
 import path from "node:path";
 import fs from "node:fs";
 import { attachSignatureHeader } from "./middleware/signature";
+import { baselineSecurityHeaders } from "./middleware/security";
 
 const log = (...args: any[]) => console.log(...args);
 
@@ -56,6 +57,9 @@ export function mountProductionFrontend(appToMount: express.Express, publicDir: 
 // ── Core middleware ────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+// Baseline security headers on every response (SPA + API). No CSP here —
+// the API keeps its own restrictive CSP via securityHeaders() on /api.
+app.use(baselineSecurityHeaders());
 app.use(attachSignatureHeader);
 
 // Tiny API request logger
