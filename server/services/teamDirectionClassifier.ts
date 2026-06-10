@@ -44,6 +44,7 @@ export type ClassifierOptions = {
 };
 
 type ClassifierPlayer = {
+  name?: string | null;
   pos?: string | null;
   alpha?: number | null;
   forgeScoreSource?: 'player_specific' | 'generated_baseline' | 'fallback_default' | 'unknown' | 'cached_unknown' | null;
@@ -85,6 +86,17 @@ function avg(values: number[]): number | null {
 
 function fmt(n: number, decimals = 1): string {
   return n.toFixed(decimals);
+}
+
+function describePlayerNames(players: ClassifierPlayer[], limit = 3): string | null {
+  const names = players
+    .map((player) => String(player.name ?? '').trim())
+    .filter((name) => name.length > 0);
+
+  if (names.length === 0) return null;
+  if (names.length <= limit) return names.join(', ');
+
+  return `${names.slice(0, limit).join(', ')} and ${names.length - limit} more`;
 }
 
 function buildVisibilityCounts(players: ClassifierPlayer[]): RosterVisibilityCounts {
@@ -242,6 +254,13 @@ export function classifyTeamDirection(
   const sortedAlphas = [...alphas].sort((a, b) => b - a);
   const top3Sum = sortedAlphas.slice(0, 3).reduce((s, a) => s + a, 0);
   const top3Rate = totalAlpha > 0 ? top3Sum / totalAlpha : 0;
+  const premiumPlayers = matchedPlayers
+    .filter((player) => typeof player.alpha === 'number' && player.alpha >= 60)
+    .sort((a, b) => (b.alpha as number) - (a.alpha as number));
+  const strongCorePlayers = matchedPlayers
+    .filter((player) => typeof player.alpha === 'number' && player.alpha >= 52)
+    .sort((a, b) => (b.alpha as number) - (a.alpha as number));
+  const premiumPlayerNames = describePlayerNames(premiumPlayers);
 
   // QB room strength — boosted requirement in Superflex
   const qbAlphas = posAlphas(matchedPlayers, 'QB');
@@ -330,12 +349,25 @@ export function classifyTeamDirection(
   } else if (avgAlpha < 42 || (avgAlpha < 50 && pickCount >= 3)) {
     // ── Rebuild gate ──
     direction = 'rebuild';
-    reasons.push(`Below-average FORGE alpha across the roster (avg ${fmt(avgAlpha)}) suggests long-term rebuild.`);
+    if (premiumPlayers.length >= 2) {
+      reasons.push(
+        `Below-average roster-wide FORGE alpha (avg ${fmt(avgAlpha)}) supports Rebuild even with ${premiumPlayers.length} premium alpha pieces${premiumPlayerNames ? ` (${premiumPlayerNames})` : ''}.`
+      );
+    } else {
+      reasons.push(`Below-average FORGE alpha across the roster (avg ${fmt(avgAlpha)}) suggests long-term rebuild.`);
+    }
     if (pickCount >= 3) reasons.push(`Holding ${pickCount} future picks signals long-term capital accumulation.`);
     if (avgAlpha >= 42 && avgAlpha < 50)
       blockers.push('Alpha is borderline — re-sync or recompute FORGE grades to confirm rebuild reading.');
-    if (top3Rate < 0.45)
-      blockers.push('No clear top-end difference-makers. Priority: identify a franchise anchor.');
+    if (top3Rate < 0.45) {
+      if (premiumPlayers.length > 0 || strongCorePlayers.length >= 3) {
+        blockers.push(
+          'Premium names and/or high-alpha pieces are present, but the evidence profile points away from a clean contender build. Priority: consolidate around durable long-term anchors instead of treating short-window production or recognizable names as enough roster-wide strength.'
+        );
+      } else {
+        blockers.push('Roster lacks enough top-end FORGE alpha concentration. Priority: identify or acquire a durable franchise anchor.');
+      }
+    }
 
     // QB in rebuild
     if (qbDataMissing) {
