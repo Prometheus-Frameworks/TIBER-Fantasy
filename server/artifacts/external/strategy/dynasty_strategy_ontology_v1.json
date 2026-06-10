@@ -1,305 +1,1481 @@
 {
   "artifact_type": "DYNASTY_STRATEGY_ONTOLOGY_V1",
   "schema_version": "dynasty_strategy_ontology_v1",
+  "model_version": "dynasty-strategy-ontology-v1.0.0",
+  "generated_at": "2026-06-10T00:00:00.000Z",
   "row_count": 0,
-  "producer": {
-    "repo": "TIBER-Strategy",
-    "export_path": "exports/promoted/dynasty_strategy_ontology/dynasty_strategy_ontology_v1.json"
-  },
   "concepts": [
     {
-      "concept_id": "strategy_vocabulary",
-      "statement": "Shared vocabulary for read-only dynasty strategy explanations."
+      "id": "age_curve_risk",
+      "label": "Age curve risk",
+      "group": "timeline_value",
+      "description": "The structural risk that production declines as an asset moves through the typical aging pattern for its position. Positions differ: the typical RB curve declines earlier and more steeply than the typical WR, TE, or QB curve.",
+      "boundary": "Describes position-typical patterns only. It is not a prediction about any individual player, must not be treated as injury information, and cannot override observed FORGE production evidence about what a player has actually done.",
+      "use_case": "Separating \"productive right now\" from \"durably valuable\" when production evidence and timeline pull in different directions.",
+      "positive_signals": [
+        "Aged or late-prime band at a steep-curve position",
+        "Heavy historical usage at a wear-sensitive position"
+      ],
+      "negative_signals": [
+        "Early-career stage at a long-curve position"
+      ],
+      "consumer_guidance": "Express as risk framing in explanations, never as a projection. Requires the age/experience inputs flagged as future contracts in the consumer manifest.",
+      "related_concepts": [
+        "production_window",
+        "short_window_asset"
+      ]
     },
     {
-      "concept_id": "asset_window",
-      "statement": "Language for describing short-, medium-, and long-window dynasty assets."
+      "id": "alpha_concentration",
+      "label": "Alpha concentration",
+      "group": "roster_structure",
+      "description": "The share of a roster's total alpha held by its top few assets. A concentration signal: it measures how value is distributed across the roster, not how good the best players are.",
+      "boundary": "Explicitly NOT a player-quality signal. Low concentration on a deep roster is arithmetically expected even when elite assets are present, so low concentration must never be read or phrased as \"no top-end difference-makers\". Absolute top-end quality requires a separate signal.",
+      "use_case": "Describing roster shape (stars-and-scrubs versus balanced-depth) without making false claims about top-end talent.",
+      "positive_signals": [
+        "High share of total alpha in the top assets indicates a concentrated build",
+        "Low share on a deep roster indicates distributed value"
+      ],
+      "negative_signals": [
+        "Using a low concentration share alone to assert absence of elite talent",
+        "Comparing concentration across rosters of very different sizes without normalization"
+      ],
+      "consumer_guidance": "Pair concentration with an absolute top-end signal (e.g. best player-specific evidence tier present) before generating any \"lacks difference-makers\" style language.",
+      "related_concepts": [
+        "durable_anchor_density"
+      ]
     },
     {
-      "concept_id": "roster_state",
-      "statement": "Definitions for roster-level competitive state without changing Team Direction."
+      "id": "consolidation_window",
+      "label": "Consolidation window",
+      "group": "roster_structure",
+      "description": "A period in which a roster holds more mid-tier value than its lineup can use, making two-for-one or three-for-one consolidations into premium assets structurally favorable.",
+      "boundary": "Identifies a structural condition, not a specific trade. This ontology never names trade targets, never values specific players, and never instructs a manager to execute a transaction.",
+      "use_case": "Explaining when depth should be converted into top-end quality, especially for asset-rich rebuilds approaching their window.",
+      "positive_signals": [
+        "Surplus of startable but non-anchor assets",
+        "Bench value that cannot reach the starting lineup"
+      ],
+      "negative_signals": [
+        "Thin rosters where consolidation would create unfillable holes"
+      ],
+      "consumer_guidance": "Frame as a window with tradeoffs (depth loss, injury exposure) and keep user approval as the boundary for any prepared action.",
+      "related_concepts": [
+        "roster_lifecycle_fit",
+        "market_liquidity"
+      ]
     },
     {
-      "concept_id": "timeline_fit",
-      "statement": "Rules for discussing whether roster assets align with a team timeline."
+      "id": "durable_anchor",
+      "label": "Durable anchor",
+      "group": "timeline_value",
+      "description": "An asset combining strong production evidence with a long remaining window, around which a roster core can be built across multiple seasons.",
+      "boundary": "Requires BOTH production evidence and timeline durability. Elite current production alone never makes a durable anchor; a long window alone never makes one either. Cannot be assigned without age/experience inputs.",
+      "use_case": "Counting how much of a roster is build-around material versus rental or depth material.",
+      "positive_signals": [
+        "Elite or strong production evidence tier from player-specific FORGE evidence",
+        "Young, ascending, or prime age band",
+        "Secure role"
+      ],
+      "negative_signals": [
+        "Production evidence from fallback or generated-baseline rows",
+        "Aged band regardless of current output"
+      ],
+      "consumer_guidance": "Anchor judgments feed durable_anchor_density. Fail closed when age inputs are missing: report the anchor read as unavailable rather than guessing.",
+      "related_concepts": [
+        "durable_anchor_density",
+        "long_window_asset"
+      ]
     },
     {
-      "concept_id": "market_liquidity",
-      "statement": "Vocabulary for trade-market liquidity signals when supplied by a future contract."
+      "id": "durable_anchor_density",
+      "label": "Durable anchor density",
+      "group": "timeline_value",
+      "description": "A roster-level measure of how many durable anchors a roster holds relative to a viable multi-season core. Low density on a roster full of recognizable names usually indicates timeline problems, not talent-recognition problems.",
+      "boundary": "A roster-structure read, not a player ranking. Density bands are qualitative (low/moderate/high); this ontology does not define numeric thresholds over specific alpha values and never outputs a per-player anchor list itself.",
+      "use_case": "Explaining why a roster with premium names can still classify away from contender: the issue is anchor density and timeline durability, not absence of talent.",
+      "positive_signals": [
+        "Multiple assets that satisfy durable_anchor criteria",
+        "Anchors distributed across positions rather than stacked in one slot"
+      ],
+      "negative_signals": [
+        "Top production concentrated in short-window veterans",
+        "Anchor count of zero or one on a full-size dynasty roster"
+      ],
+      "consumer_guidance": "Use in explanation templates instead of claims like \"no clear difference-makers\". Density language acknowledges talent while explaining structure.",
+      "related_concepts": [
+        "durable_anchor",
+        "alpha_concentration"
+      ]
     },
     {
-      "concept_id": "role_security",
-      "statement": "Vocabulary for role-security signals when supplied by a future contract."
+      "id": "long_window_asset",
+      "label": "Long-window asset",
+      "group": "timeline_value",
+      "description": "An asset whose expected useful production window extends across multiple future seasons, making it valuable to rosters building toward a future window as well as rosters competing now.",
+      "boundary": "A timeline classification, not a quality grade. A long window does not imply elite production, and the window length must be derived from age/experience inputs supplied by the consumer, never asserted by this ontology for a specific player.",
+      "use_case": "Distinguishing assets a rebuilding roster should acquire and hold from assets whose value is concentrated in the immediate season.",
+      "positive_signals": [
+        "Young or ascending age band for the position",
+        "Early career stage with established or growing role",
+        "Position with a long typical durability curve (e.g. QB, WR relative to RB)"
+      ],
+      "negative_signals": [
+        "Late-prime or aged band for the position",
+        "Role dependent on a closing situation rather than the player"
+      ],
+      "consumer_guidance": "Use to weight acquisition and hold decisions by roster lifecycle stage. Do not present window length as a projection of future points.",
+      "related_concepts": [
+        "short_window_asset",
+        "production_window",
+        "roster_lifecycle_fit"
+      ]
     },
     {
-      "concept_id": "age_experience_band",
-      "statement": "Vocabulary for age and experience bands when supplied by a future contract."
+      "id": "market_liquidity",
+      "label": "Market liquidity",
+      "group": "roster_structure",
+      "description": "How readily an asset can be moved at fair value in a given league market. Liquid assets (premium young producers, early picks) trade easily; illiquid assets (aging depth) often cannot be converted even when moving them is correct.",
+      "boundary": "A future-contract concept: this ontology defines the vocabulary but has no market, ADP, or trade data, and no market input exists in the current evidence chain. Nothing here is a price, valuation, or trade recommendation.",
+      "use_case": "Tempering liquidation advice: an asset can be a liquidation candidate in principle yet practically unmovable.",
+      "positive_signals": [
+        "Asset classes that historically clear quickly in dynasty markets",
+        "Multiple plausible acquiring roster states in the league"
+      ],
+      "negative_signals": [
+        "Short-window depth pieces with replacement-level alternatives freely available"
+      ],
+      "consumer_guidance": "Until a market/liquidity input contract exists, treat liquidity as unknown and avoid implying an asset can definitely be sold.",
+      "related_concepts": [
+        "consolidation_window"
+      ]
     },
     {
-      "concept_id": "evidence_boundary",
-      "statement": "Consumer boundary that ontology language cannot replace upstream evidence."
+      "id": "production_window",
+      "label": "Production window",
+      "group": "timeline_value",
+      "description": "The span of seasons over which an asset is expected to remain a meaningful producer, derived from position-typical durability curves and the asset's age/experience stage.",
+      "boundary": "A qualitative span classification (long/medium/short), not a projection. This ontology supplies the derivation rules; it never computes a window for a named player and never emits season-by-season forecasts.",
+      "use_case": "Shared input vocabulary for archetype criteria and timeline rules.",
+      "positive_signals": [
+        "Consumer-supplied age band and position",
+        "Role security context where available"
+      ],
+      "negative_signals": [
+        "Attempts to infer windows from name recognition or reputation"
+      ],
+      "consumer_guidance": "Derive windows in the consumer from explicit inputs using the timeline rules in this artifact. Missing inputs mean an unknown window, not a default long window.",
+      "related_concepts": [
+        "age_curve_risk",
+        "long_window_asset",
+        "short_window_asset"
+      ]
     },
     {
-      "concept_id": "template_slot",
-      "statement": "Slotted explanation structure for future deterministic template selection."
+      "id": "role_security",
+      "label": "Role security",
+      "group": "timeline_value",
+      "description": "How firmly an asset holds its on-field role: secure featured usage versus contested committees or replaceable depth roles. Role security modulates how much current production evidence says about future seasons.",
+      "boundary": "This ontology defines the concept and its bands (secure/contested/unstable/unknown). It does not own depth charts, team assignments, or contract data, and cannot assert role security for a specific player.",
+      "use_case": "Distinguishing fragile production (volume that could vanish with one roster move) from insulated production.",
+      "positive_signals": [
+        "Featured usage sustained across multiple evidence periods",
+        "Contract or team-context inputs indicating commitment, where available"
+      ],
+      "negative_signals": [
+        "Committee or rotation usage patterns",
+        "Production spike tied to a temporary vacancy"
+      ],
+      "consumer_guidance": "Role security inputs are a future contract decision; until supplied, treat security as unknown and fail closed on archetypes that require it.",
+      "related_concepts": [
+        "production_window",
+        "roster_lifecycle_fit"
+      ]
     },
     {
-      "concept_id": "human_decision",
-      "statement": "Decision-support boundary preserving manager ownership of final choices."
+      "id": "roster_lifecycle_fit",
+      "label": "Roster lifecycle fit",
+      "group": "timeline_value",
+      "description": "How well an individual asset's production window aligns with the roster's competitive timeline. The same asset can be a great fit for a contender and a poor fit for a rebuild without its quality changing at all.",
+      "boundary": "A relational concept between asset timeline and roster state. It never changes the asset's production evidence or quality tier, and it is not advice to make any specific transaction.",
+      "use_case": "The core lens for explaining timeline_mismatch rosters and for framing liquidation/consolidation discussions as tradeoffs.",
+      "positive_signals": [
+        "Long-window assets on rebuilding rosters",
+        "Short-window producers on contending rosters"
+      ],
+      "negative_signals": [
+        "Short-window elite production concentrated on a rebuilding roster",
+        "Future-pick hoarding on a roster whose core window is open now"
+      ],
+      "consumer_guidance": "Always present lifecycle fit as a tradeoff with explicit reasoning, preserving the human manager's final decision authority.",
+      "related_concepts": [
+        "long_window_asset",
+        "short_window_asset",
+        "consolidation_window"
+      ]
     },
     {
-      "concept_id": "fail_closed",
-      "statement": "Unavailable or missing inputs must block assignment rather than invent continuity."
+      "id": "short_window_asset",
+      "label": "Short-window asset",
+      "group": "timeline_value",
+      "description": "An asset whose expected useful production window is concentrated in the immediate one-to-two seasons. Often still highly productive right now; the constraint is duration, not current output.",
+      "boundary": "Not a synonym for \"bad asset\" or \"low production\". Elite current producers can be short-window assets. This concept must never be used to dismiss current production evidence from FORGE.",
+      "use_case": "Explaining why a productive veteran can be a strong contender piece and simultaneously a weak rebuild hold.",
+      "positive_signals": [
+        "Late-prime or aged band for the position",
+        "Position with a steep typical decline curve",
+        "Production sustained by short-lived situational factors"
+      ],
+      "negative_signals": [
+        "Young age band with rising role",
+        "Multiple seasons of expected role security ahead"
+      ],
+      "consumer_guidance": "Pair with roster state: short-window assets are upgrades for contenders and liquidation or hold-to-sell considerations for rebuilds.",
+      "related_concepts": [
+        "long_window_asset",
+        "age_curve_risk",
+        "roster_lifecycle_fit"
+      ]
     }
   ],
   "player_asset_archetypes": [
     {
-      "archetype_id": "franchise_anchor",
-      "definition": "Elite or near-elite long-window asset vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "ascending_young_asset",
+      "label": "Ascending young asset",
+      "description": "A long-window asset whose production evidence is moderate-to-strong and improving: not yet anchor-tier, but trending toward it.",
+      "boundary": "A trajectory read, not a guarantee of arrival. Trend evidence must come from player-specific FORGE momentum, never from hype or reputation.",
+      "criteria": [
+        {
+          "criterion_id": "aya_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "moderate",
+            "strong"
+          ],
+          "note": "Below current anchor tier."
+        },
+        {
+          "criterion_id": "aya_trend",
+          "input": "production_trend",
+          "comparator": "equals",
+          "value": "improving",
+          "note": "From FORGE momentum/recursion signals."
+        },
+        {
+          "criterion_id": "aya_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "long",
+          "note": "Derived window must be long."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_trend",
+        "production_window"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Rising usage share with rising efficiency",
+        "Role expanding within the offense"
+      ],
+      "negative_signals": [
+        "Improvement driven by one anomalous spike week"
+      ],
+      "consumer_guidance": "Primary rebuild accumulation class below the premium tier. Watch for promotion to rebuild_core or franchise_anchor as evidence accrues."
     },
     {
-      "archetype_id": "premium_young_wr",
-      "definition": "Young premium wide receiver asset vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "consolidation_target",
+      "label": "Consolidation target",
+      "description": "A premium long-window asset worth packaging multiple lesser assets to acquire: the buy side of a consolidation window.",
+      "boundary": "Identifies the asset class, not a named player or a price. This ontology never values a specific trade package and never instructs the consumer to propose one.",
+      "criteria": [
+        {
+          "criterion_id": "ct_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite"
+          ],
+          "note": "Only premium evidence justifies consolidation cost."
+        },
+        {
+          "criterion_id": "ct_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "long",
+          "note": "Consolidating into short windows compounds risk."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Franchise-anchor-class assets on rosters in different lifecycle stages"
+      ],
+      "negative_signals": [
+        "Premium current names with short windows (consolidation into decay)"
+      ],
+      "consumer_guidance": "Pair with consolidation_window roster reads; the target class is what asset-rich rebuilds should convert surplus into."
     },
     {
-      "archetype_id": "elite_short_window_veteran",
-      "definition": "High-output veteran with shorter dynasty window vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "contender_patch",
+      "label": "Contender patch",
+      "description": "A short-window asset with usable production that fills a contender's specific lineup hole cheaply: valuable to a roster competing now, near-worthless to a rebuild.",
+      "boundary": "Value is entirely roster-state-relative. The same asset is a patch on a contender and surplus on a rebuild; this archetype never implies hold value outside a competitive window.",
+      "criteria": [
+        {
+          "criterion_id": "cp_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "strong",
+            "moderate"
+          ],
+          "note": "Startable output."
+        },
+        {
+          "criterion_id": "cp_window",
+          "input": "production_window",
+          "comparator": "in",
+          "value": [
+            "short",
+            "medium"
+          ],
+          "note": "Short-horizon value."
+        },
+        {
+          "criterion_id": "cp_context",
+          "input": "roster_state",
+          "comparator": "in",
+          "value": [
+            "contender",
+            "fragile_contender"
+          ],
+          "note": "Archetype applies in contending contexts."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window",
+        "roster_state"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Fills a specific weekly lineup hole",
+        "Cheap acquisition cost relative to output"
+      ],
+      "negative_signals": [
+        "Cost paid in long-window assets"
+      ],
+      "consumer_guidance": "Frame patch acquisitions as window spending: current points purchased with future value."
     },
     {
-      "archetype_id": "stable_core_starter",
-      "definition": "Reliable lineup core asset vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "elite_short_window_veteran",
+      "label": "Elite short-window veteran",
+      "description": "An asset producing at an elite tier whose remaining window is short. Maximum current value, declining strategic durability: a centerpiece for contenders and a sell-consideration for rebuilds.",
+      "boundary": "The defining tension: this archetype confirms elite production while denying anchor durability. It must never be described as lacking quality, and never counted as a rebuild anchor.",
+      "criteria": [
+        {
+          "criterion_id": "esv_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite"
+          ],
+          "note": "Player-specific evidence only."
+        },
+        {
+          "criterion_id": "esv_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "short",
+          "note": "Derived from age_band and position curve."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Elite tier in a late-prime or aged band",
+        "Steep-curve position with heavy accumulated usage"
+      ],
+      "negative_signals": [
+        "Elite tier in a young band (that is franchise_anchor territory)"
+      ],
+      "consumer_guidance": "On contenders: core piece. On rebuilds: roster_lifecycle_fit conflict — candidate for liquidation framing, subject to market liquidity."
     },
     {
-      "archetype_id": "ascending_role_bet",
-      "definition": "Player with improving role-security vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "fragile_depth_piece",
+      "label": "Fragile depth piece",
+      "description": "An asset with low-to-moderate production evidence and weak role security: replaceable depth whose value evaporates with one roster move.",
+      "boundary": "Describes structural fragility of the role, not the player's ability. Cannot be assigned without a role security input; production tier alone never makes an asset fragile.",
+      "criteria": [
+        {
+          "criterion_id": "fdp_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "moderate",
+            "low"
+          ],
+          "note": "Depth-tier evidence."
+        },
+        {
+          "criterion_id": "fdp_role",
+          "input": "role_security_signal",
+          "comparator": "in",
+          "value": [
+            "contested",
+            "unstable"
+          ],
+          "note": "Future-contract input: fail closed until supplied."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "role_security_signal"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Committee usage",
+        "Production tied to an injury vacancy"
+      ],
+      "negative_signals": [
+        "Featured usage with stable share"
+      ],
+      "consumer_guidance": "Counts toward roster size, not toward contender depth or anchor density. Low priority in consolidation packages."
     },
     {
-      "archetype_id": "volatile_liquidity_asset",
-      "definition": "Asset with uncertain liquidity vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "franchise_anchor",
+      "label": "Franchise anchor",
+      "description": "An asset with elite production evidence and a long remaining window: the build-around class. The scarcest and most strategically important archetype.",
+      "boundary": "Production alone is insufficient — an elite producer in an aged band is an elite_short_window_veteran, not a franchise anchor. Cannot be assigned without age/experience inputs; fail closed when they are missing.",
+      "criteria": [
+        {
+          "criterion_id": "fa_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite"
+          ],
+          "note": "Player-specific FORGE evidence only; fallback/generated rows never qualify."
+        },
+        {
+          "criterion_id": "fa_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "long",
+          "note": "Derived via timeline rules from age_band and position."
+        },
+        {
+          "criterion_id": "fa_role",
+          "input": "role_security_signal",
+          "comparator": "in",
+          "value": [
+            "secure"
+          ],
+          "note": "Anchors must own their role, not share it."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window",
+        "role_security_signal"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Elite tier sustained across evidence periods",
+        "Young-to-prime band at a long-curve position"
+      ],
+      "negative_signals": [
+        "Elite output in an aged band",
+        "Tier supported by a temporary role vacancy"
+      ],
+      "consumer_guidance": "Franchise anchor counts drive durable_anchor_density. Report \"unknown\" rather than assigning when window inputs are unavailable."
     },
     {
-      "archetype_id": "developmental_bench_asset",
-      "definition": "Longer-horizon bench/development asset vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "liquidation_candidate",
+      "label": "Liquidation candidate",
+      "description": "A short-window asset on a roster whose state cannot use its remaining window: value that decays if held and should be considered for conversion into long-window assets or picks.",
+      "boundary": "A roster-relative flag, never an absolute one — and never an instruction. Whether liquidation is feasible depends on market liquidity, and whether it happens is the manager's decision.",
+      "criteria": [
+        {
+          "criterion_id": "lc_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "short",
+          "note": "Decaying horizon."
+        },
+        {
+          "criterion_id": "lc_context",
+          "input": "roster_state",
+          "comparator": "in",
+          "value": [
+            "rebuild",
+            "productive_rebuild",
+            "asset_rich_rebuild",
+            "timeline_mismatch"
+          ],
+          "note": "Roster cannot use the window."
+        },
+        {
+          "criterion_id": "lc_production",
+          "input": "production_evidence_tier",
+          "comparator": "not_in",
+          "value": [
+            "none"
+          ],
+          "note": "Asset must have realizable value to liquidate."
+        }
+      ],
+      "required_inputs": [
+        "production_window",
+        "roster_state",
+        "production_evidence_tier"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Elite or strong short-window production on a rebuild (peak sell value)"
+      ],
+      "negative_signals": [
+        "Illiquid depth nobody will acquire (flag, but temper with market_liquidity)"
+      ],
+      "consumer_guidance": "Always present as a tradeoff with the timeline reasoning attached, and defer to market liquidity limits once that input exists."
     },
     {
-      "archetype_id": "contender_depth_piece",
-      "definition": "Depth asset useful to short-window contenders; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "premium_young_wr",
+      "label": "Premium young WR",
+      "description": "A wide receiver early in its career with elite or strong production evidence: historically the most durable and liquid dynasty asset class, central to rebuild cores.",
+      "boundary": "Position-specific by design (WR durability curve). Strong early production does not retroactively guarantee a long career; the archetype expresses structural durability odds, not a projection.",
+      "criteria": [
+        {
+          "criterion_id": "pyw_position",
+          "input": "position",
+          "comparator": "equals",
+          "value": "WR",
+          "note": "Archetype is WR-specific."
+        },
+        {
+          "criterion_id": "pyw_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite",
+            "strong"
+          ],
+          "note": "Player-specific evidence only."
+        },
+        {
+          "criterion_id": "pyw_age",
+          "input": "age_band",
+          "comparator": "in",
+          "value": [
+            "young",
+            "ascending"
+          ],
+          "note": "Future-contract input: fail closed until supplied."
+        },
+        {
+          "criterion_id": "pyw_experience",
+          "input": "experience_band",
+          "comparator": "in",
+          "value": [
+            "rookie",
+            "early",
+            "mid"
+          ],
+          "note": "Future-contract input."
+        }
+      ],
+      "required_inputs": [
+        "position",
+        "production_evidence_tier",
+        "age_band",
+        "experience_band"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Early-career target share at elite tier",
+        "Production not dependent on a single scheme quirk"
+      ],
+      "negative_signals": [
+        "One-spike evidence with low surrounding volume"
+      ],
+      "consumer_guidance": "High strategic importance for rebuild/retool planning; usually a hold-or-acquire class across all roster states."
     },
     {
-      "archetype_id": "rebuild_flex_asset",
-      "definition": "Flexible asset vocabulary for rebuild/retool contexts; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "productive_veteran",
+      "label": "Productive veteran",
+      "description": "A veteran with strong or moderate production evidence and a short-to-medium window. Useful weekly output without build-around weight: productive is not the same as strategically durable.",
+      "boundary": "Not a durable core asset regardless of how steady the output is. Distinguish from elite_short_window_veteran by tier and from fragile_depth_piece by role stability.",
+      "criteria": [
+        {
+          "criterion_id": "pv_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "strong",
+            "moderate"
+          ],
+          "note": "Below elite tier."
+        },
+        {
+          "criterion_id": "pv_window",
+          "input": "production_window",
+          "comparator": "in",
+          "value": [
+            "short",
+            "medium"
+          ],
+          "note": "Window-limited by band/position."
+        }
+      ],
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Multi-season steady output at a non-elite tier"
+      ],
+      "negative_signals": [
+        "Output dependent on injury vacancies ahead of them"
+      ],
+      "consumer_guidance": "Contender glue, rebuild trade bait. Explanations should credit the production while being honest about durability."
     },
     {
-      "archetype_id": "fragile_window_asset",
-      "definition": "Production-window fragility vocabulary; not assigned by this consumer.",
-      "assignment_enabled": false
+      "id": "rebuild_core",
+      "label": "Rebuild core",
+      "description": "The long-window assets a rebuilding roster is actually building around: strong-or-better young producers plus elite ascenders. The rebuild's future starting lineup, distinct from its tradeable surplus.",
+      "boundary": "Membership is about window plus evidence, not name value. Short-window veterans never belong to a rebuild core regardless of tier.",
+      "criteria": [
+        {
+          "criterion_id": "rc_window",
+          "input": "production_window",
+          "comparator": "equals",
+          "value": "long",
+          "note": "Core must outlast the rebuild."
+        },
+        {
+          "criterion_id": "rc_production",
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite",
+            "strong"
+          ],
+          "note": "Real current evidence, not projection."
+        },
+        {
+          "criterion_id": "rc_age",
+          "input": "age_band",
+          "comparator": "in",
+          "value": [
+            "young",
+            "ascending",
+            "prime"
+          ],
+          "note": "Future-contract input: fail closed until supplied."
+        }
+      ],
+      "required_inputs": [
+        "production_window",
+        "production_evidence_tier",
+        "age_band"
+      ],
+      "missing_input_behavior": "do_not_assign_fail_closed",
+      "positive_signals": [
+        "Premium young WR profiles",
+        "Young anchors at long-curve positions"
+      ],
+      "negative_signals": [
+        "Elite aged producers (window conflict)",
+        "Moderate-tier depth without trend"
+      ],
+      "consumer_guidance": "Rebuild core size and quality is the honest measure of rebuild health — use it in productive_rebuild explanations."
     }
   ],
   "roster_state_definitions": [
     {
-      "state_id": "contender_core",
-      "definition": "Roster-state vocabulary for a roster with credible present-window evidence."
+      "id": "asset_rich_rebuild",
+      "label": "Asset-rich rebuild",
+      "description": "A rebuild holding surplus tradeable value — premium picks, multiple long-window assets, movable veterans — giving it consolidation leverage most rebuilds lack.",
+      "boundary": "Describes capital position, not a timeline promise. Surplus assets do not guarantee a successful window; the read identifies leverage, and any consolidation remains the manager's decision.",
+      "evidence_signals": [
+        {
+          "signal": "surplus_draft_capital",
+          "interpretation": "Future pick inventory above league-typical baseline."
+        },
+        {
+          "signal": "movable_value_present",
+          "interpretation": "Short-window producers whose value is realizable via trade (subject to market liquidity)."
+        }
+      ],
+      "misread_risks": [
+        "Hoarding capital past the point where consolidation would start a window."
+      ],
+      "consumer_guidance": "Pair with consolidation_window language when surplus depth exceeds lineup capacity.",
+      "related_templates": [
+        "asset_rich_rebuild_consolidation_window"
+      ]
     },
     {
-      "state_id": "rebuild_core",
-      "definition": "Roster-state vocabulary for a roster needing longer-window accumulation."
+      "id": "contender",
+      "label": "Contender",
+      "description": "A roster whose current-season lineup strength and anchor base support a credible championship pursuit this season without depending on unlikely breakouts.",
+      "boundary": "A read on roster structure given evidence, not a prediction of finish. Requires player-specific production evidence coverage; cannot be asserted from name recognition or from fallback/generated-baseline rows.",
+      "evidence_signals": [
+        {
+          "signal": "broad_starting_lineup_strength",
+          "interpretation": "Player-specific evidence tiers at most starting slots are strong or better."
+        },
+        {
+          "signal": "present_window_alignment",
+          "interpretation": "Core producers have windows that include the current season; the roster is not waiting on development."
+        },
+        {
+          "signal": "top_end_quality_present",
+          "interpretation": "At least some assets show elite-tier player-specific evidence (absolute signal, not concentration share)."
+        }
+      ],
+      "misread_risks": [
+        "Calling a contender from depth alone with no elite tier present (see fragile_contender).",
+        "Calling a contender from reputation when evidence coverage is thin (see false_contender)."
+      ],
+      "consumer_guidance": "Contender reads should state which signals support them and which window the read applies to.",
+      "related_templates": [
+        "contender_with_future_pick_drag"
+      ]
     },
     {
-      "state_id": "retool_core",
-      "definition": "Roster-state vocabulary for partial competitive reset framing."
+      "id": "false_contender",
+      "label": "False contender",
+      "description": "A roster that looks like a contender by name recognition or surface depth but whose evidence profile does not support the read: missing top-end tiers, misaligned windows, or production resting on non-evidence rows.",
+      "boundary": "A read about evidence support, never an insult to the roster. It specifically requires showing which contender signal is missing; it cannot be assigned merely because concentration share is low.",
+      "evidence_signals": [
+        {
+          "signal": "reputation_evidence_gap",
+          "interpretation": "Recognizable names whose current player-specific evidence tiers no longer support core roles."
+        },
+        {
+          "signal": "missing_top_end_tier",
+          "interpretation": "No assets at elite player-specific evidence tier despite broad moderate depth."
+        }
+      ],
+      "misread_risks": [
+        "Assigning false_contender from low alpha concentration alone while elite assets are present."
+      ],
+      "consumer_guidance": "Always name the missing signal. This state exists to prevent polite-but-wrong contender reads, not to dunk on rosters.",
+      "related_templates": [
+        "false_contender_evidence_gap"
+      ]
     },
     {
-      "state_id": "uncertain_evidence",
-      "definition": "Roster-state vocabulary when evidence is insufficient or unavailable."
+      "id": "fragile_contender",
+      "label": "Fragile contender",
+      "description": "A roster whose contender read depends on a short-window or thin core: competitive now, but one injury, one decline season, or one role change collapses the window.",
+      "boundary": "A risk-shape read layered on a contender posture, not an instruction to sell. It must cite the specific fragility (short windows, thin depth, role insecurity), not vague pessimism.",
+      "evidence_signals": [
+        {
+          "signal": "short_window_core_dependency",
+          "interpretation": "Multiple core producers classify as short-window assets."
+        },
+        {
+          "signal": "thin_insulation",
+          "interpretation": "Little startable depth behind fragile or wear-sensitive roles."
+        }
+      ],
+      "misread_risks": [
+        "Conflating fragile with false: a fragile contender is genuinely competitive now."
+      ],
+      "consumer_guidance": "Frame as window management: compete now while planning the exit ramp for short-window pieces.",
+      "related_templates": [
+        "fragile_contender_short_window_core"
+      ]
     },
     {
-      "state_id": "young_core_build",
-      "definition": "Roster-state vocabulary for young assets aligned to a later window."
+      "id": "productive_rebuild",
+      "label": "Productive rebuild",
+      "description": "A rebuild whose long-window core is already producing: the roster is not competitive top-to-bottom, but its young anchors generate real current production while the future window assembles.",
+      "boundary": "Still a rebuild posture. Current production from young anchors does not by itself reopen the present window; the read stays future-weighted until lineup-wide strength supports more.",
+      "evidence_signals": [
+        {
+          "signal": "producing_young_core",
+          "interpretation": "Long-window assets with strong or elite player-specific evidence now."
+        },
+        {
+          "signal": "incomplete_supporting_cast",
+          "interpretation": "Starting lineup strength outside the young core remains thin."
+        }
+      ],
+      "misread_risks": [
+        "Prematurely flipping to contender because the young core had a strong stretch.",
+        "Liquidating the producing core as if it were short-window value."
+      ],
+      "consumer_guidance": "Highlight the anchor base explicitly; productive rebuilds are the healthiest rebuild form and the language should reflect that.",
+      "related_templates": [
+        "productive_rebuild_with_anchor_base"
+      ]
     },
     {
-      "state_id": "veteran_short_window",
-      "definition": "Roster-state vocabulary for veteran-heavy near-term windows."
+      "id": "rebuild",
+      "label": "Rebuild",
+      "description": "A roster prioritizing future windows over the current season: accumulating long-window assets and draft capital while deprioritizing short-window production.",
+      "boundary": "A direction read, not a value judgment, and never evidence that the roster lacks talent. A rebuild read must not be phrased as \"no difference-makers\" when premium assets are present; the distinguishing question is window alignment and anchor density.",
+      "evidence_signals": [
+        {
+          "signal": "low_durable_anchor_density",
+          "interpretation": "Few assets satisfy both production and timeline criteria for anchors."
+        },
+        {
+          "signal": "future_capital_weighting",
+          "interpretation": "Meaningful share of roster value held in picks and long-window developmental assets."
+        },
+        {
+          "signal": "present_window_shortfall",
+          "interpretation": "Starting lineup strength insufficient for a credible current-season pursuit."
+        }
+      ],
+      "misread_risks": [
+        "Reading low alpha concentration as absence of top-end talent (concentration is a distribution signal).",
+        "Treating short-window elite veterans as rebuild anchors."
+      ],
+      "consumer_guidance": "Rebuild explanations should separate talent acknowledgment from structure: premium assets can exist on a roster that still reads rebuild.",
+      "related_templates": [
+        "rebuild_premium_assets_timeline_mismatch",
+        "rebuild_low_alpha_concentration"
+      ]
     },
     {
-      "state_id": "liquidity_constrained",
-      "definition": "Roster-state vocabulary for limited market flexibility when supplied."
+      "id": "retool",
+      "label": "Retool",
+      "description": "A roster with a viable core but enough structural gaps or timeline friction that it should reshape on the move — selectively trading and acquiring while staying loosely competitive — rather than committing to a full rebuild or an all-in push.",
+      "boundary": "A transitional posture, not a euphemism for rebuild. It implies the anchor base is worth keeping. This ontology does not pick which assets to move; it defines when the posture applies.",
+      "evidence_signals": [
+        {
+          "signal": "partial_anchor_base",
+          "interpretation": "One or more durable anchors present, but density is below a clean contender core."
+        },
+        {
+          "signal": "mixed_window_alignment",
+          "interpretation": "Core windows partially overlap the current season but point at friction within one or two seasons."
+        }
+      ],
+      "misread_risks": [
+        "Drifting in retool indefinitely without converging toward contender or rebuild."
+      ],
+      "consumer_guidance": "Retool explanations should name the friction (timeline, positional gap, depth) so the manager can choose a direction.",
+      "related_templates": []
     },
     {
-      "state_id": "timeline_mixed",
-      "definition": "Roster-state vocabulary for mixed asset timelines."
+      "id": "timeline_mismatch",
+      "label": "Timeline mismatch",
+      "description": "A roster whose asset windows point in conflicting directions: for example, elite short-window veterans stacked on a roster whose anchor base and depth are rebuild-shaped. The roster is talented but structurally incoherent.",
+      "boundary": "A structural flag that can overlay any base state; it is not itself a quality grade. It must be supported by window classifications on both sides of the mismatch, which require the age/experience inputs flagged as future contracts.",
+      "evidence_signals": [
+        {
+          "signal": "conflicting_window_clusters",
+          "interpretation": "Meaningful value in both short-window producers and long-window developmental assets, with neither cluster sufficient alone."
+        },
+        {
+          "signal": "anchor_window_disagreement",
+          "interpretation": "Best production evidence sits in assets whose windows do not overlap the roster's likely competitive window."
+        }
+      ],
+      "misread_risks": [
+        "Explaining a timeline mismatch as a talent shortage.",
+        "Resolving the flag automatically; direction choice belongs to the manager."
+      ],
+      "consumer_guidance": "Timeline mismatch is the preferred explanation when a roster has premium names but no clean contender read. Use it instead of denying the talent exists.",
+      "related_templates": [
+        "rebuild_premium_assets_timeline_mismatch"
+      ]
     }
   ],
   "timeline_rules": [
     {
-      "rule_id": "do_not_infer_age_band",
-      "statement": "Do not infer age_band if not supplied by a governed input."
+      "id": "tr_anchor_density_bands",
+      "label": "Durable anchor density bands",
+      "description": "Roster anchor density classifies into qualitative bands — low, moderate, high — from the count of assets satisfying durable-anchor criteria relative to roster core size.",
+      "boundary": "Bands are qualitative and roster-relative; this artifact fixes the band vocabulary, not numeric cutoffs, which belong to the consumer's calibration against its own roster-size context.",
+      "when": [
+        {
+          "input": "durable_anchor_count_band",
+          "comparator": "in",
+          "value": [
+            "low",
+            "moderate",
+            "high"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "durable_anchor_density",
+          "value": "same_band_as_input"
+        },
+        "excludes_archetypes": [],
+        "note": "Identity mapping; exists so density language is grounded in a declared input."
+      },
+      "required_inputs": [
+        "durable_anchor_count_band"
+      ],
+      "consumer_guidance": "Low density with premium names present should route to timeline framing, not talent-absence framing."
     },
     {
-      "rule_id": "do_not_infer_experience_band",
-      "statement": "Do not infer experience_band if not supplied by a governed input."
+      "id": "tr_concentration_share_is_not_quality",
+      "label": "Concentration share is not a quality signal",
+      "description": "A low top-N alpha concentration share must never, by itself, produce a claim that the roster lacks top-end difference-makers. Absence of top-end talent requires an absolute signal: no asset at elite player-specific evidence tier.",
+      "boundary": "Guards explanation generation. It does not change how concentration is computed; it constrains what concentration is allowed to mean.",
+      "when": [
+        {
+          "input": "alpha_concentration_band",
+          "comparator": "in",
+          "value": [
+            "low"
+          ]
+        },
+        {
+          "input": "best_production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite",
+            "strong"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "explanation_constraint",
+          "value": "forbid_no_difference_makers_language"
+        },
+        "excludes_archetypes": [],
+        "note": "Deep rosters dilute concentration arithmetically even when elite assets are present."
+      },
+      "required_inputs": [
+        "alpha_concentration_band",
+        "best_production_evidence_tier"
+      ],
+      "consumer_guidance": "When this rule fires, prefer durable_anchor_density or timeline_mismatch framing over talent-absence claims."
     },
     {
-      "rule_id": "do_not_infer_role_security",
-      "statement": "Do not infer role_security_signal if not supplied by a governed input."
+      "id": "tr_elite_short_window_not_anchor",
+      "label": "Elite production with short window is not an anchor",
+      "description": "Elite production evidence combined with a short derived window classifies toward elite_short_window_veteran and is excluded from franchise_anchor and rebuild_core.",
+      "boundary": "The exclusion is about durability, not quality. Explanations applying this rule must explicitly credit the elite production.",
+      "when": [
+        {
+          "input": "production_evidence_tier",
+          "comparator": "in",
+          "value": [
+            "elite"
+          ]
+        },
+        {
+          "input": "production_window",
+          "comparator": "in",
+          "value": [
+            "short"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "archetype_eligibility",
+          "value": "elite_short_window_veteran"
+        },
+        "excludes_archetypes": [
+          "franchise_anchor",
+          "rebuild_core",
+          "consolidation_target"
+        ],
+        "note": "The canonical \"useful but not a rebuild anchor\" case for elite aged producers."
+      },
+      "required_inputs": [
+        "production_evidence_tier",
+        "production_window"
+      ],
+      "consumer_guidance": "High contender value, lower rebuild-anchor durability — say both halves."
     },
     {
-      "rule_id": "do_not_infer_market_liquidity",
-      "statement": "Do not infer market_liquidity_signal if not supplied by a governed input."
+      "id": "tr_lifecycle_fit_valuation_direction",
+      "label": "Lifecycle fit shifts valuation direction",
+      "description": "Contending roster states weight short-window production up and pure futures down; rebuild-family states weight long-window assets and picks up and short-window production down. Retool weights both near parity.",
+      "boundary": "Directional weighting vocabulary only — no numeric multipliers, prices, or projections. It changes framing and priority order, never the underlying evidence.",
+      "when": [
+        {
+          "input": "roster_state",
+          "comparator": "in",
+          "value": [
+            "contender",
+            "fragile_contender",
+            "retool",
+            "rebuild",
+            "productive_rebuild",
+            "asset_rich_rebuild"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "valuation_direction",
+          "value": "state_dependent"
+        },
+        "excludes_archetypes": [],
+        "note": "The structural reason the same asset reads differently across rosters."
+      },
+      "required_inputs": [
+        "roster_state"
+      ],
+      "consumer_guidance": "Surface the direction as explicit tradeoff language; the manager decides whether to act on it."
     },
     {
-      "rule_id": "short_window_requires_input",
-      "statement": "Short-window language requires explicit future contract inputs."
+      "id": "tr_missing_inputs_fail_closed",
+      "label": "Missing inputs fail closed",
+      "description": "When any required input for an archetype or rule is missing or comes from a non-evidence source (fallback_default, generated_baseline), the classification is not made and the consumer reports the read as unavailable.",
+      "boundary": "Applies to every rule and archetype in this artifact without exception. Silence is always preferred over a guessed strategy label.",
+      "when": [
+        {
+          "input": "required_input_coverage",
+          "comparator": "in",
+          "value": [
+            "incomplete"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "classification_result",
+          "value": "unavailable_do_not_assign"
+        },
+        "excludes_archetypes": [],
+        "note": "Mirrors the fail-closed posture of FORGE_PLAYER_STATIC_V1 consumption."
+      },
+      "required_inputs": [
+        "required_input_coverage"
+      ],
+      "consumer_guidance": "Track which future-contract inputs (age, experience, role security, market) blocked a read and surface that as a coverage gap, not as a player judgment."
     },
     {
-      "rule_id": "long_window_requires_input",
-      "statement": "Long-window language requires explicit future contract inputs."
+      "id": "tr_prime_band_window_by_position_curve",
+      "label": "Prime band window depends on position curve",
+      "description": "An asset in a prime band derives a medium window at steep-curve positions (RB) and a long window at durable-curve positions (QB, WR, TE).",
+      "boundary": "Encodes position-typical curve differences only. It is not an individual durability prediction and must not be applied without a position input.",
+      "when": [
+        {
+          "input": "age_band",
+          "comparator": "in",
+          "value": [
+            "prime"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "production_window",
+          "value": "position_curve_dependent"
+        },
+        "excludes_archetypes": [],
+        "note": "RB prime derives medium; QB/WR/TE prime derives long."
+      },
+      "required_inputs": [
+        "age_band",
+        "position"
+      ],
+      "consumer_guidance": "This is where RB-specific window compression enters the system; do not hardcode it elsewhere."
     },
     {
-      "rule_id": "team_direction_read_only",
-      "statement": "Team Direction remains the existing Management classifier output."
+      "id": "tr_timeline_mismatch_flag",
+      "label": "Timeline mismatch flag",
+      "description": "A roster in a rebuild-family state holding multiple elite-or-strong short-window assets raises the timeline_mismatch structural flag.",
+      "boundary": "A flag, not a resolution. Whether to liquidate the short-window cluster or push the window forward is a manager decision the system must present as a tradeoff.",
+      "when": [
+        {
+          "input": "roster_state",
+          "comparator": "in",
+          "value": [
+            "rebuild",
+            "productive_rebuild",
+            "asset_rich_rebuild"
+          ]
+        },
+        {
+          "input": "short_window_premium_asset_count_band",
+          "comparator": "in",
+          "value": [
+            "moderate",
+            "high"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "roster_flag",
+          "value": "timeline_mismatch"
+        },
+        "excludes_archetypes": [],
+        "note": "Counts use qualitative bands; the consumer maps its own counts to bands."
+      },
+      "required_inputs": [
+        "roster_state",
+        "short_window_premium_asset_count_band"
+      ],
+      "consumer_guidance": "Select rebuild_premium_assets_timeline_mismatch template language when this flag is raised."
     },
     {
-      "rule_id": "generated_baseline_non_evidence",
-      "statement": "Generated baselines cannot satisfy evidence requirements."
+      "id": "tr_window_long_from_young_band",
+      "label": "Young band implies long window",
+      "description": "An asset in a young or ascending position-relative band derives a long production window unless a role-security input actively contradicts it.",
+      "boundary": "A long window is a duration classification, not a quality or breakout claim. Long-window depth is still depth.",
+      "when": [
+        {
+          "input": "age_band",
+          "comparator": "in",
+          "value": [
+            "young",
+            "ascending"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "production_window",
+          "value": "long"
+        },
+        "excludes_archetypes": [],
+        "note": "Eligibility gate for rebuild_core and franchise_anchor; production criteria still apply."
+      },
+      "required_inputs": [
+        "age_band"
+      ],
+      "consumer_guidance": "Combine with production tier before any anchor language; long window plus low tier is developmental depth, not core."
     },
     {
-      "rule_id": "fail_closed_on_missing_inputs",
-      "statement": "Missing required inputs block assignment and template selection."
+      "id": "tr_window_short_from_aged_band",
+      "label": "Aged band implies short window",
+      "description": "An asset in a late_prime or aged position-relative band derives a short production window, regardless of current production tier.",
+      "boundary": "Window derivation only — this rule never reduces the asset's production evidence tier and is not a decline projection for any individual.",
+      "when": [
+        {
+          "input": "age_band",
+          "comparator": "in",
+          "value": [
+            "late_prime",
+            "aged"
+          ]
+        }
+      ],
+      "then": {
+        "derive": {
+          "input": "production_window",
+          "value": "short"
+        },
+        "excludes_archetypes": [
+          "franchise_anchor",
+          "rebuild_core"
+        ],
+        "note": "Elite producers caught by this rule classify as elite_short_window_veteran, not anchors."
+      },
+      "required_inputs": [
+        "age_band"
+      ],
+      "consumer_guidance": "Fail closed: with no age_band input, the window is unknown — do not default to long or short."
     }
   ],
   "explanation_templates": [
     {
-      "template_id": "timeline_fit_summary",
-      "slots": [
-        "roster_state",
-        "timeline_fit",
-        "evidence_boundary"
+      "id": "asset_rich_rebuild_consolidation_window",
+      "label": "Asset-rich rebuild in a consolidation window",
+      "description": "Explains that a rebuild holds surplus tradeable value and that a consolidation window is structurally open.",
+      "boundary": "Identifies leverage and a window, never a specific trade. Market liquidity limits apply once that input exists.",
+      "applies_to": [
+        "asset_rich_rebuild"
       ],
-      "selection_enabled": false
+      "slots": [
+        "pick_inventory_note",
+        "surplus_asset_note",
+        "consolidation_note"
+      ],
+      "text": "This rebuild is asset-rich: {pick_inventory_note} {surplus_asset_note} More value is on the roster than the future lineup can use, which opens a consolidation window — converting surplus into premium long-window targets is structurally favorable. {consolidation_note} The tradeoff is depth and optionality for top-end quality; the call remains yours.",
+      "consumer_guidance": "Pair with consolidation_target archetype vocabulary; keep all action framing as prepared options requiring manager approval."
     },
     {
-      "template_id": "asset_archetype_summary",
-      "slots": [
-        "player_asset_archetype",
-        "required_inputs",
-        "safety_boundary"
+      "id": "contender_with_future_pick_drag",
+      "label": "Contender carrying unused future capital",
+      "description": "Explains a contender whose roster carries future pick inventory or developmental depth that is not contributing to the open window.",
+      "boundary": "A tradeoff surface, not an instruction to spend picks. The manager may rationally keep the capital; the template only makes the drag visible.",
+      "applies_to": [
+        "contender"
       ],
-      "selection_enabled": false
+      "slots": [
+        "future_pick_count",
+        "window_note"
+      ],
+      "text": "Current-season lineup strength supports a contender read, but {future_pick_count} future picks and developmental slots are not contributing to the open window. {window_note} Consider whether converting part of that capital into current production better matches the roster's window — the tradeoff is future optionality against present points.",
+      "consumer_guidance": "Use when an open window coexists with above-baseline future capital; keep the decision explicitly with the manager."
     },
     {
-      "template_id": "contender_window_note",
-      "slots": [
-        "team_direction",
-        "short_window",
-        "human_decision"
+      "id": "false_contender_evidence_gap",
+      "label": "False contender from an evidence gap",
+      "description": "Explains why a roster that looks competitive by reputation does not support a contender read, naming the specific missing signal.",
+      "boundary": "Requires identifying which contender signal failed (missing elite tier, window misalignment, or non-evidence rows). Forbidden when the only weak signal is a low concentration share.",
+      "applies_to": [
+        "false_contender"
       ],
-      "selection_enabled": false
+      "slots": [
+        "missing_signal_note",
+        "evidence_coverage_note"
+      ],
+      "text": "The roster profiles as a contender by name recognition, but the evidence does not support the read: {missing_signal_note}. {evidence_coverage_note} Treat the contender appearance as unconfirmed until the missing signal resolves, and plan direction from the evidence rather than the reputation.",
+      "consumer_guidance": "Exists to prevent polite-but-wrong contender reads; always populate missing_signal_note with the concrete failed check."
     },
     {
-      "template_id": "rebuild_window_note",
-      "slots": [
-        "team_direction",
-        "long_window",
-        "human_decision"
+      "id": "fragile_contender_short_window_core",
+      "label": "Fragile contender on a short-window core",
+      "description": "Explains a competitive roster whose contender status depends on short-window producers, naming the fragility precisely.",
+      "boundary": "Must cite the actual fragile elements; never use as generic pessimism about an aging roster that still has durable anchors.",
+      "applies_to": [
+        "fragile_contender"
       ],
-      "selection_enabled": false
+      "slots": [
+        "short_window_asset_count",
+        "role_security_note",
+        "window_note"
+      ],
+      "text": "The roster is genuinely competitive now, but the contender read rests on {short_window_asset_count} short-window core producers. {role_security_note} {window_note} The structural risk is window collapse, not current weakness: compete now while planning the exit ramp for short-window pieces.",
+      "consumer_guidance": "Pair with lifecycle-fit language; this state argues for urgency within the window, not for selling it off."
     },
     {
-      "template_id": "retool_window_note",
-      "slots": [
-        "team_direction",
-        "mixed_window",
-        "human_decision"
+      "id": "productive_rebuild_with_anchor_base",
+      "label": "Productive rebuild with a producing anchor base",
+      "description": "Explains a rebuild whose long-window core is already producing, crediting the anchor base while keeping the read future-weighted.",
+      "boundary": "Requires actual producing long-window assets; do not use to flatter a rebuild whose young assets have no production evidence yet.",
+      "applies_to": [
+        "productive_rebuild"
       ],
-      "selection_enabled": false
+      "slots": [
+        "anchor_count",
+        "ascending_asset_count",
+        "timeline_note"
+      ],
+      "text": "This rebuild is ahead of schedule structurally: {anchor_count} durable anchors and {ascending_asset_count} ascending young assets are already producing. {timeline_note} The supporting cast is not contender-grade yet, so the read stays future-weighted — protect the producing core and keep accumulating toward its window.",
+      "consumer_guidance": "The healthiest rebuild form; language should be constructive and name the core explicitly via consumer-side data."
     },
     {
-      "template_id": "uncertain_evidence_note",
-      "slots": [
-        "unavailable_inputs",
-        "fail_closed",
-        "next_evidence_needed"
+      "id": "rebuild_low_alpha_concentration",
+      "label": "Rebuild with low alpha concentration",
+      "description": "Explains a rebuild read driven by distributed roster value, using concentration as a structure signal while explicitly avoiding talent-absence claims.",
+      "boundary": "Blocked by rule tr_concentration_share_is_not_quality whenever an elite-tier asset is present — route to the timeline-mismatch template instead in that case.",
+      "applies_to": [
+        "rebuild"
       ],
-      "selection_enabled": false
+      "slots": [
+        "alpha_concentration_signal",
+        "anchor_count",
+        "timeline_note"
+      ],
+      "text": "Roster-wide alpha concentration ({alpha_concentration_signal}) does not support a clean contender read, and durable anchor count is {anchor_count}. {timeline_note} Priority: consolidate around durable long-term anchors.",
+      "consumer_guidance": "Concentration is a distribution signal; this template must only fire when the absolute top-end check has also been applied."
     },
     {
-      "template_id": "market_liquidity_note",
-      "slots": [
-        "market_liquidity_signal",
-        "evidence_boundary",
-        "no_projection"
+      "id": "rebuild_premium_assets_timeline_mismatch",
+      "label": "Rebuild with premium assets and timeline mismatch",
+      "description": "Explains a rebuild read on a roster that holds recognizable premium assets, attributing the read to window alignment and anchor density instead of denying the talent.",
+      "boundary": "Only valid when premium assets are actually present and the timeline_mismatch flag is raised. Never use on rosters where the issue genuinely is a missing top-end tier.",
+      "applies_to": [
+        "rebuild",
+        "timeline_mismatch"
       ],
-      "selection_enabled": false
+      "slots": [
+        "premium_asset_count",
+        "short_window_asset_count",
+        "anchor_count",
+        "timeline_note"
+      ],
+      "text": "Roster holds premium assets ({premium_asset_count} at elite or strong evidence tiers), but the evidence profile points away from a clean contender build: {short_window_asset_count} of the top producers are short-window assets and durable anchor count is {anchor_count}. The issue is timeline durability and anchor density, not talent recognition. {timeline_note} Priority: consolidate around durable long-term anchors and avoid overvaluing short-window veteran production.",
+      "consumer_guidance": "Preferred template for the \"premium names but rebuild read\" case. Fill timeline_note with the specific window conflict."
     }
   ],
   "consumer_manifest": {
+    "contract_name": "DYNASTY_STRATEGY_ONTOLOGY_V1_DOWNSTREAM_CONSUMPTION",
     "intended_consumers": [
       "TIBER-Fantasy"
-    ],
-    "missing_input_behavior": "do_not_assign_fail_closed",
-    "required_inputs": [
-      {
-        "input_id": "age_band",
-        "status": "future_contract",
-        "description": "Age band supplied by a future governed producer."
-      },
-      {
-        "input_id": "experience_band",
-        "status": "future_contract",
-        "description": "Experience band supplied by a future governed producer."
-      },
-      {
-        "input_id": "role_security_signal",
-        "status": "future_contract",
-        "description": "Role security signal supplied by a future governed producer."
-      },
-      {
-        "input_id": "market_liquidity_signal",
-        "status": "future_contract",
-        "description": "Market liquidity signal supplied by a future governed producer."
-      }
     ],
     "consumer_safety_rules": [
       {
         "rule_id": "cannot_override_identity",
-        "statement": "The ontology cannot override canonical identity or crosswalk outputs."
+        "statement": "This artifact cannot override TIBER identity mappings. Player identity is owned by TIBER-Data (TIBER_IDENTITY_CROSSWALK_V1)."
       },
       {
         "rule_id": "cannot_override_team_assignment",
-        "statement": "The ontology cannot override team, roster, or league assignment."
+        "statement": "This artifact cannot override or infer current team assignment. Team context is owned by the identity/data chain, never by strategy vocabulary."
       },
       {
         "rule_id": "cannot_override_forge_evidence",
-        "statement": "The ontology cannot override FORGE evidence or scoring provenance."
+        "statement": "This artifact cannot override FORGE production evidence. Strategy concepts interpret evidence; they never change, replace, or outrank it."
       },
       {
         "rule_id": "cannot_count_generated_baselines_as_evidence",
-        "statement": "Generated/default baselines remain visibility only and cannot count as evidence."
+        "statement": "This artifact cannot cause generated_baseline or fallback_default rows to count as player-specific evidence. Archetype criteria over production_evidence_tier accept player-specific FORGE evidence only."
       },
       {
         "rule_id": "cannot_create_projections",
-        "statement": "The ontology cannot create projections, rankings, or player-level forecasts."
+        "statement": "This artifact cannot create fantasy projections. Windows, bands, and curves are qualitative structural classifications, never point forecasts."
       },
       {
         "rule_id": "cannot_assign_player_labels_itself",
-        "statement": "The ontology cannot assign player archetypes without governed future inputs and an explicit consumer phase."
+        "statement": "This artifact cannot assign player-specific strategy labels by itself. It ships rules; archetype assignment happens in the consumer, applied to the consumer's own evidence, subject to fail-closed input coverage."
       },
       {
         "rule_id": "cannot_consume_operator_notes_as_evidence",
-        "statement": "The ontology cannot consume operator notes as evidence."
+        "statement": "This artifact cannot cause operator notes, chat content, or free-text commentary to be consumed as model evidence. Only declared evidence inputs feed the rules."
       },
       {
         "rule_id": "cannot_replace_human_decision",
-        "statement": "The ontology cannot replace the human manager's final decision."
+        "statement": "This artifact cannot replace human final decision-making. All liquidation, consolidation, and lineup framing is tradeoff explanation; user approval remains the action boundary."
+      }
+    ],
+    "required_inputs": [
+      {
+        "input_id": "production_evidence_tier",
+        "description": "Qualitative tier (elite/strong/moderate/low/none) the consumer derives from player-specific FORGE evidence only.",
+        "status": "available",
+        "expected_source": "TIBER-FORGE via FORGE_PLAYER_STATIC_V1 (score_source === player_specific)"
+      },
+      {
+        "input_id": "production_trend",
+        "description": "Directional trend (improving/stable/declining/unknown) from FORGE momentum/recursion signals.",
+        "status": "available",
+        "expected_source": "TIBER-FORGE momentum components"
+      },
+      {
+        "input_id": "position",
+        "description": "Skill position (QB/RB/WR/TE) from the identity-resolved evidence row.",
+        "status": "available",
+        "expected_source": "TIBER-Data identity chain / FORGE row"
+      },
+      {
+        "input_id": "alpha_concentration_band",
+        "description": "Qualitative band (low/moderate/high) of top-N alpha share, computed by the consumer. A distribution signal, never a quality signal.",
+        "status": "available",
+        "expected_source": "Consumer roster computation over FORGE evidence"
+      },
+      {
+        "input_id": "best_production_evidence_tier",
+        "description": "The highest player-specific evidence tier present on the roster; the absolute top-end signal that gates talent-absence language.",
+        "status": "available",
+        "expected_source": "Consumer roster computation over FORGE evidence"
+      },
+      {
+        "input_id": "future_pick_inventory",
+        "description": "Roster future draft capital relative to league baseline.",
+        "status": "available",
+        "expected_source": "Consumer league/roster data"
+      },
+      {
+        "input_id": "roster_state",
+        "description": "The roster state classification produced by applying this ontology's roster_state_definitions.",
+        "status": "derived",
+        "expected_source": "Consumer classification using this artifact"
+      },
+      {
+        "input_id": "durable_anchor_count_band",
+        "description": "Qualitative band (low/moderate/high) of how many roster assets satisfy durable-anchor criteria.",
+        "status": "derived",
+        "expected_source": "Consumer roster computation using this artifact (blocked until age inputs exist)"
+      },
+      {
+        "input_id": "short_window_premium_asset_count_band",
+        "description": "Qualitative band (low/moderate/high) of how many elite-or-strong assets carry short derived windows.",
+        "status": "derived",
+        "expected_source": "Consumer roster computation using this artifact (blocked until age inputs exist)"
+      },
+      {
+        "input_id": "required_input_coverage",
+        "description": "Adapter bookkeeping flag (complete/incomplete) recording whether every input a rule needs was present from an evidence-grade source.",
+        "status": "derived",
+        "expected_source": "Consumer adapter input-coverage accounting"
+      },
+      {
+        "input_id": "production_window",
+        "description": "Derived window (long/medium/short/unknown) from timeline rules over age_band and position.",
+        "status": "derived",
+        "expected_source": "Consumer derivation using timeline_rules (blocked until age inputs exist)"
+      },
+      {
+        "input_id": "age_band",
+        "description": "Position-relative age band (young/ascending/prime/late_prime/aged). Player age is not in the current evidence chain.",
+        "status": "future_contract",
+        "expected_source": "Undecided: TIBER-Data crosswalk or FORGE static artifact — see future_contract_decisions"
+      },
+      {
+        "input_id": "experience_band",
+        "description": "Career stage band (rookie/early/mid/late) from draft year / accrued seasons. Not in the current evidence chain.",
+        "status": "future_contract",
+        "expected_source": "Undecided: TIBER-Data crosswalk or FORGE static artifact — see future_contract_decisions"
+      },
+      {
+        "input_id": "role_security_signal",
+        "description": "Role stability band (secure/contested/unstable/unknown) from depth chart, usage, and contract/security context.",
+        "status": "future_contract",
+        "expected_source": "Undecided: depth chart / contract context contract — see future_contract_decisions"
+      },
+      {
+        "input_id": "market_liquidity_signal",
+        "description": "Tradeability band (liquid/neutral/illiquid/unknown) from league market context.",
+        "status": "future_contract",
+        "expected_source": "Undecided: no market/ADP artifact exists for this chain yet — see future_contract_decisions"
+      }
+    ],
+    "non_authority_boundaries": [
+      "player_identity",
+      "current_team_assignment",
+      "realized_production_evidence",
+      "fantasy_projections",
+      "player_rankings",
+      "per_player_strategy_labels",
+      "market_pricing_and_adp",
+      "final_roster_decisions"
+    ],
+    "missing_input_behavior": "do_not_assign_fail_closed",
+    "fail_closed_behavior": {
+      "missing_artifact": "unavailable_strategy_vocabulary",
+      "malformed_artifact": "unavailable_strategy_vocabulary",
+      "unknown_concept_reference": "ignore_reference_report_gap",
+      "missing_required_input": "do_not_assign_fail_closed",
+      "unknown_input_status": "treat_as_future_contract"
+    },
+    "future_contract_decisions": [
+      {
+        "decision_id": "age_input_ownership",
+        "summary": "player age / age_band is required by franchise_anchor, premium_young_wr, rebuild_core and all window derivation, but neither FORGE_PLAYER_STATIC_V1 required_row_fields nor TIBER_IDENTITY_CROSSWALK_V1 currently carries age or birthdate. Decide which repo owns the field before applying archetype predicates.",
+        "status": "open"
+      },
+      {
+        "decision_id": "experience_input_ownership",
+        "summary": "draft year / accrued experience is required for experience_band; same ownership question as age.",
+        "status": "open"
+      },
+      {
+        "decision_id": "role_and_contract_context",
+        "summary": "role_security_signal needs depth-chart and contract/security context; no current artifact supplies it.",
+        "status": "open"
+      },
+      {
+        "decision_id": "team_context_consumption",
+        "summary": "current team context is available in the evidence chain but this ontology never reads or asserts it; any future use stays consumer-side.",
+        "status": "open"
+      },
+      {
+        "decision_id": "market_liquidity_artifact",
+        "summary": "market/liquidity context (trade markets, ADP) would require an explicit new artifact; the boundary doc forbids importing it implicitly.",
+        "status": "open"
       }
     ]
   }

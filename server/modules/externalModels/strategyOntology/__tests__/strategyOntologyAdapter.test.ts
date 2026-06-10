@@ -74,6 +74,66 @@ describe('strategy ontology consumer adapter', () => {
     });
   });
 
+  it('accepts the canonical TIBER-Strategy promoted artifact contract, not a Fantasy-shaped substitute', () => {
+    const artifactPath = path.join(process.cwd(), 'server', 'artifacts', 'external', 'strategy', 'dynasty_strategy_ontology_v1.json');
+    const payload = JSON.parse(readFileSync(artifactPath, 'utf8')) as Record<string, unknown>;
+
+    // Canonical producer identity (TIBER-Strategy exports/promoted/dynasty_strategy_ontology).
+    expect(payload.model_version).toBe('dynasty-strategy-ontology-v1.0.0');
+    expect(payload.generated_at).toBe('2026-06-10T00:00:00.000Z');
+
+    // Canonical entries use the producer's `id` field, so a local substitute keyed by
+    // concept_id/archetype_id (or with generic stand-in entries) fails these assertions
+    // even when section counts match.
+    const idsOf = (key: string) =>
+      (payload[key] as Array<{ id: string }>).map((entry) => entry.id);
+
+    expect(idsOf('concepts')).toEqual(expect.arrayContaining(['alpha_concentration']));
+    expect(idsOf('player_asset_archetypes')).toEqual(
+      expect.arrayContaining([
+        'franchise_anchor',
+        'premium_young_wr',
+        'elite_short_window_veteran',
+        'rebuild_core',
+        'liquidation_candidate',
+        'consolidation_target',
+      ]),
+    );
+    expect(idsOf('roster_state_definitions')).toEqual(
+      expect.arrayContaining([
+        'contender',
+        'rebuild',
+        'productive_rebuild',
+        'fragile_contender',
+        'false_contender',
+        'asset_rich_rebuild',
+        'timeline_mismatch',
+      ]),
+    );
+    expect(idsOf('timeline_rules')).toEqual(
+      expect.arrayContaining(['tr_concentration_share_is_not_quality', 'tr_elite_short_window_not_anchor']),
+    );
+    expect(idsOf('explanation_templates')).toEqual(
+      expect.arrayContaining([
+        'rebuild_low_alpha_concentration',
+        'rebuild_premium_assets_timeline_mismatch',
+        'productive_rebuild_with_anchor_base',
+      ]),
+    );
+
+    // The adapter must accept the real producer contract and keep read-only boundaries.
+    const lookup = adaptStrategyOntologyArtifact(payload, artifactPath);
+    expect(lookup.artifact).toMatchObject({
+      available: true,
+      artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+      contractVersion: 'dynasty_strategy_ontology_v1',
+      rowCount: 0,
+      safetyRules: requiredSafetyRules,
+      archetypeAssignmentEnabled: false,
+      templateSelectionEnabled: false,
+    });
+  });
+
   it('loads a valid DYNASTY_STRATEGY_ONTOLOGY_V1 artifact as read-only diagnostics', () => {
     const lookup = adaptStrategyOntologyArtifact(validArtifact(), '/artifact.json');
 
