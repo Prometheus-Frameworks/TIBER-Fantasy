@@ -2,34 +2,305 @@
   "artifact_type": "DYNASTY_STRATEGY_ONTOLOGY_V1",
   "schema_version": "dynasty_strategy_ontology_v1",
   "row_count": 0,
+  "producer": {
+    "repo": "TIBER-Strategy",
+    "export_path": "exports/promoted/dynasty_strategy_ontology/dynasty_strategy_ontology_v1.json"
+  },
   "concepts": [
-    { "id": "team_direction", "description": "Read-only strategy vocabulary for describing roster direction." },
-    { "id": "roster_timeline", "description": "Vocabulary for near-, medium-, and long-window roster framing." },
-    { "id": "asset_liquidity", "description": "Vocabulary for market liquidity discussion." },
-    { "id": "evidence_boundary", "description": "Vocabulary for preserving upstream evidence boundaries." }
+    {
+      "concept_id": "strategy_vocabulary",
+      "statement": "Shared vocabulary for read-only dynasty strategy explanations."
+    },
+    {
+      "concept_id": "asset_window",
+      "statement": "Language for describing short-, medium-, and long-window dynasty assets."
+    },
+    {
+      "concept_id": "roster_state",
+      "statement": "Definitions for roster-level competitive state without changing Team Direction."
+    },
+    {
+      "concept_id": "timeline_fit",
+      "statement": "Rules for discussing whether roster assets align with a team timeline."
+    },
+    {
+      "concept_id": "market_liquidity",
+      "statement": "Vocabulary for trade-market liquidity signals when supplied by a future contract."
+    },
+    {
+      "concept_id": "role_security",
+      "statement": "Vocabulary for role-security signals when supplied by a future contract."
+    },
+    {
+      "concept_id": "age_experience_band",
+      "statement": "Vocabulary for age and experience bands when supplied by a future contract."
+    },
+    {
+      "concept_id": "evidence_boundary",
+      "statement": "Consumer boundary that ontology language cannot replace upstream evidence."
+    },
+    {
+      "concept_id": "template_slot",
+      "statement": "Slotted explanation structure for future deterministic template selection."
+    },
+    {
+      "concept_id": "human_decision",
+      "statement": "Decision-support boundary preserving manager ownership of final choices."
+    },
+    {
+      "concept_id": "fail_closed",
+      "statement": "Unavailable or missing inputs must block assignment rather than invent continuity."
+    }
   ],
-  "player_asset_archetypes": [],
-  "roster_state_definitions": [],
-  "timeline_rules": [],
-  "explanation_templates": [],
+  "player_asset_archetypes": [
+    {
+      "archetype_id": "franchise_anchor",
+      "definition": "Elite or near-elite long-window asset vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "premium_young_wr",
+      "definition": "Young premium wide receiver asset vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "elite_short_window_veteran",
+      "definition": "High-output veteran with shorter dynasty window vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "stable_core_starter",
+      "definition": "Reliable lineup core asset vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "ascending_role_bet",
+      "definition": "Player with improving role-security vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "volatile_liquidity_asset",
+      "definition": "Asset with uncertain liquidity vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "developmental_bench_asset",
+      "definition": "Longer-horizon bench/development asset vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "contender_depth_piece",
+      "definition": "Depth asset useful to short-window contenders; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "rebuild_flex_asset",
+      "definition": "Flexible asset vocabulary for rebuild/retool contexts; not assigned by this consumer.",
+      "assignment_enabled": false
+    },
+    {
+      "archetype_id": "fragile_window_asset",
+      "definition": "Production-window fragility vocabulary; not assigned by this consumer.",
+      "assignment_enabled": false
+    }
+  ],
+  "roster_state_definitions": [
+    {
+      "state_id": "contender_core",
+      "definition": "Roster-state vocabulary for a roster with credible present-window evidence."
+    },
+    {
+      "state_id": "rebuild_core",
+      "definition": "Roster-state vocabulary for a roster needing longer-window accumulation."
+    },
+    {
+      "state_id": "retool_core",
+      "definition": "Roster-state vocabulary for partial competitive reset framing."
+    },
+    {
+      "state_id": "uncertain_evidence",
+      "definition": "Roster-state vocabulary when evidence is insufficient or unavailable."
+    },
+    {
+      "state_id": "young_core_build",
+      "definition": "Roster-state vocabulary for young assets aligned to a later window."
+    },
+    {
+      "state_id": "veteran_short_window",
+      "definition": "Roster-state vocabulary for veteran-heavy near-term windows."
+    },
+    {
+      "state_id": "liquidity_constrained",
+      "definition": "Roster-state vocabulary for limited market flexibility when supplied."
+    },
+    {
+      "state_id": "timeline_mixed",
+      "definition": "Roster-state vocabulary for mixed asset timelines."
+    }
+  ],
+  "timeline_rules": [
+    {
+      "rule_id": "do_not_infer_age_band",
+      "statement": "Do not infer age_band if not supplied by a governed input."
+    },
+    {
+      "rule_id": "do_not_infer_experience_band",
+      "statement": "Do not infer experience_band if not supplied by a governed input."
+    },
+    {
+      "rule_id": "do_not_infer_role_security",
+      "statement": "Do not infer role_security_signal if not supplied by a governed input."
+    },
+    {
+      "rule_id": "do_not_infer_market_liquidity",
+      "statement": "Do not infer market_liquidity_signal if not supplied by a governed input."
+    },
+    {
+      "rule_id": "short_window_requires_input",
+      "statement": "Short-window language requires explicit future contract inputs."
+    },
+    {
+      "rule_id": "long_window_requires_input",
+      "statement": "Long-window language requires explicit future contract inputs."
+    },
+    {
+      "rule_id": "team_direction_read_only",
+      "statement": "Team Direction remains the existing Management classifier output."
+    },
+    {
+      "rule_id": "generated_baseline_non_evidence",
+      "statement": "Generated baselines cannot satisfy evidence requirements."
+    },
+    {
+      "rule_id": "fail_closed_on_missing_inputs",
+      "statement": "Missing required inputs block assignment and template selection."
+    }
+  ],
+  "explanation_templates": [
+    {
+      "template_id": "timeline_fit_summary",
+      "slots": [
+        "roster_state",
+        "timeline_fit",
+        "evidence_boundary"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "asset_archetype_summary",
+      "slots": [
+        "player_asset_archetype",
+        "required_inputs",
+        "safety_boundary"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "contender_window_note",
+      "slots": [
+        "team_direction",
+        "short_window",
+        "human_decision"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "rebuild_window_note",
+      "slots": [
+        "team_direction",
+        "long_window",
+        "human_decision"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "retool_window_note",
+      "slots": [
+        "team_direction",
+        "mixed_window",
+        "human_decision"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "uncertain_evidence_note",
+      "slots": [
+        "unavailable_inputs",
+        "fail_closed",
+        "next_evidence_needed"
+      ],
+      "selection_enabled": false
+    },
+    {
+      "template_id": "market_liquidity_note",
+      "slots": [
+        "market_liquidity_signal",
+        "evidence_boundary",
+        "no_projection"
+      ],
+      "selection_enabled": false
+    }
+  ],
   "consumer_manifest": {
-    "intended_consumers": ["TIBER-Fantasy"],
+    "intended_consumers": [
+      "TIBER-Fantasy"
+    ],
     "missing_input_behavior": "do_not_assign_fail_closed",
-    "future_contract_inputs": [
-      "age_band",
-      "experience_band",
-      "role_security_signal",
-      "market_liquidity_signal"
+    "required_inputs": [
+      {
+        "input_id": "age_band",
+        "status": "future_contract",
+        "description": "Age band supplied by a future governed producer."
+      },
+      {
+        "input_id": "experience_band",
+        "status": "future_contract",
+        "description": "Experience band supplied by a future governed producer."
+      },
+      {
+        "input_id": "role_security_signal",
+        "status": "future_contract",
+        "description": "Role security signal supplied by a future governed producer."
+      },
+      {
+        "input_id": "market_liquidity_signal",
+        "status": "future_contract",
+        "description": "Market liquidity signal supplied by a future governed producer."
+      }
     ],
     "consumer_safety_rules": [
-      "cannot_override_identity",
-      "cannot_override_team_assignment",
-      "cannot_override_forge_evidence",
-      "cannot_count_generated_baselines_as_evidence",
-      "cannot_create_projections",
-      "cannot_assign_player_labels_itself",
-      "cannot_consume_operator_notes_as_evidence",
-      "cannot_replace_human_decision"
+      {
+        "rule_id": "cannot_override_identity",
+        "statement": "The ontology cannot override canonical identity or crosswalk outputs."
+      },
+      {
+        "rule_id": "cannot_override_team_assignment",
+        "statement": "The ontology cannot override team, roster, or league assignment."
+      },
+      {
+        "rule_id": "cannot_override_forge_evidence",
+        "statement": "The ontology cannot override FORGE evidence or scoring provenance."
+      },
+      {
+        "rule_id": "cannot_count_generated_baselines_as_evidence",
+        "statement": "Generated/default baselines remain visibility only and cannot count as evidence."
+      },
+      {
+        "rule_id": "cannot_create_projections",
+        "statement": "The ontology cannot create projections, rankings, or player-level forecasts."
+      },
+      {
+        "rule_id": "cannot_assign_player_labels_itself",
+        "statement": "The ontology cannot assign player archetypes without governed future inputs and an explicit consumer phase."
+      },
+      {
+        "rule_id": "cannot_consume_operator_notes_as_evidence",
+        "statement": "The ontology cannot consume operator notes as evidence."
+      },
+      {
+        "rule_id": "cannot_replace_human_decision",
+        "statement": "The ontology cannot replace the human manager's final decision."
+      }
     ]
   }
 }

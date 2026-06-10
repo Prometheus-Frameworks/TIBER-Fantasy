@@ -21,6 +21,30 @@ function pickStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim());
 }
 
+function pickRuleIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === 'string' && item.trim()) return [item.trim()];
+    const record = toRecord(item);
+    const ruleId = pickString(record, ['rule_id', 'ruleId', 'id']);
+    return ruleId ? [ruleId] : [];
+  });
+}
+
+function pickFutureContractInputs(manifest: Record<string, unknown>): string[] {
+  const requiredInputs = manifest.required_inputs;
+  if (Array.isArray(requiredInputs)) {
+    return requiredInputs.flatMap((input) => {
+      const record = toRecord(input);
+      if (record.status !== 'future_contract') return [];
+      const inputId = pickString(record, ['input_id', 'inputId', 'id', 'name']);
+      return inputId ? [inputId] : [];
+    });
+  }
+
+  return pickStringArray(manifest.future_contract_inputs);
+}
+
 function assertArray(record: Record<string, unknown>, key: string): unknown[] {
   const value = record[key];
   if (!Array.isArray(value)) {
@@ -67,7 +91,7 @@ function assertConsumerManifest(record: Record<string, unknown>): {
     );
   }
 
-  const safetyRules = pickStringArray(manifest.consumer_safety_rules ?? manifest.safety_rules);
+  const safetyRules = pickRuleIds(manifest.consumer_safety_rules ?? manifest.safety_rules);
   const missingRules = REQUIRED_STRATEGY_ONTOLOGY_SAFETY_RULES.filter((rule) => !safetyRules.includes(rule));
   if (missingRules.length > 0) {
     throw new StrategyOntologyIntegrationError(
@@ -79,7 +103,7 @@ function assertConsumerManifest(record: Record<string, unknown>): {
   }
 
   return {
-    futureContractInputs: pickStringArray(manifest.future_contract_inputs),
+    futureContractInputs: pickFutureContractInputs(manifest),
     safetyRules,
   };
 }

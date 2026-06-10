@@ -1,9 +1,33 @@
+import { readFileSync } from 'fs';
 import { mkdtemp, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { adaptStrategyOntologyArtifact } from '../strategyOntologyAdapter';
 import { StrategyOntologyClient } from '../strategyOntologyClient';
 import { StrategyOntologyIntegration } from '../StrategyOntologyIntegration';
+
+const requiredSafetyRules = [
+  'cannot_override_identity',
+  'cannot_override_team_assignment',
+  'cannot_override_forge_evidence',
+  'cannot_count_generated_baselines_as_evidence',
+  'cannot_create_projections',
+  'cannot_assign_player_labels_itself',
+  'cannot_consume_operator_notes_as_evidence',
+  'cannot_replace_human_decision',
+];
+
+function ruleObjects(ruleIds: string[] = requiredSafetyRules) {
+  return ruleIds.map((ruleId) => ({ rule_id: ruleId, statement: `${ruleId} boundary.` }));
+}
+
+function futureRequiredInputs() {
+  return ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'].map((inputId) => ({
+    input_id: inputId,
+    status: 'future_contract',
+    description: `${inputId} will be supplied by a future governed producer.`,
+  }));
+}
 
 function validArtifact(overrides: Record<string, unknown> = {}) {
   return {
@@ -18,23 +42,38 @@ function validArtifact(overrides: Record<string, unknown> = {}) {
     consumer_manifest: {
       intended_consumers: ['TIBER-Fantasy'],
       missing_input_behavior: 'do_not_assign_fail_closed',
-      future_contract_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
-      consumer_safety_rules: [
-        'cannot_override_identity',
-        'cannot_override_team_assignment',
-        'cannot_override_forge_evidence',
-        'cannot_count_generated_baselines_as_evidence',
-        'cannot_create_projections',
-        'cannot_assign_player_labels_itself',
-        'cannot_consume_operator_notes_as_evidence',
-        'cannot_replace_human_decision',
-      ],
+      required_inputs: futureRequiredInputs(),
+      consumer_safety_rules: ruleObjects(),
     },
     ...overrides,
   };
 }
 
 describe('strategy ontology consumer adapter', () => {
+  it('loads the bundled promoted DYNASTY_STRATEGY_ONTOLOGY_V1 artifact shape as read-only diagnostics', () => {
+    const artifactPath = path.join(process.cwd(), 'server', 'artifacts', 'external', 'strategy', 'dynasty_strategy_ontology_v1.json');
+    const payload = JSON.parse(readFileSync(artifactPath, 'utf8')) as unknown;
+
+    const lookup = adaptStrategyOntologyArtifact(payload, artifactPath);
+
+    expect(lookup.artifact).toMatchObject({
+      available: true,
+      sourcePath: artifactPath,
+      artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+      contractVersion: 'dynasty_strategy_ontology_v1',
+      rowCount: 0,
+      concepts: 11,
+      playerAssetArchetypes: 10,
+      rosterStateDefinitions: 8,
+      timelineRules: 9,
+      explanationTemplates: 7,
+      futureContractInputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+      safetyRules: requiredSafetyRules,
+      archetypeAssignmentEnabled: false,
+      templateSelectionEnabled: false,
+    });
+  });
+
   it('loads a valid DYNASTY_STRATEGY_ONTOLOGY_V1 artifact as read-only diagnostics', () => {
     const lookup = adaptStrategyOntologyArtifact(validArtifact(), '/artifact.json');
 
@@ -106,15 +145,7 @@ describe('strategy ontology consumer adapter', () => {
     const artifact = validArtifact({
       consumer_manifest: {
         ...validArtifact().consumer_manifest,
-        consumer_safety_rules: [
-          'cannot_override_identity',
-          'cannot_override_team_assignment',
-          'cannot_override_forge_evidence',
-          'cannot_count_generated_baselines_as_evidence',
-          'cannot_create_projections',
-          'cannot_assign_player_labels_itself',
-          'cannot_consume_operator_notes_as_evidence',
-        ],
+        consumer_safety_rules: ruleObjects(requiredSafetyRules.filter((ruleId) => ruleId !== 'cannot_replace_human_decision')),
       },
     });
 
