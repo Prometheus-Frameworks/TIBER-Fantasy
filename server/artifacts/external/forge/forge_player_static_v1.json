@@ -50,6 +50,7 @@
   },
   "source_artifacts": [
     "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+    "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
     "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
   ],
   "rows": [
@@ -3165,7 +3166,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3243,7 +3244,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3321,7 +3322,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3399,7 +3400,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3477,7 +3478,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3555,7 +3556,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3633,7 +3634,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3711,7 +3712,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3789,7 +3790,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3867,7 +3868,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -3945,7 +3946,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4023,7 +4024,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4101,7 +4102,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4179,7 +4180,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4257,7 +4258,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4335,7 +4336,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4413,7 +4414,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4491,7 +4492,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4569,7 +4570,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4647,7 +4648,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",
@@ -4725,7 +4726,7 @@
         "generated_at": "2026-01-08T00:00:00.000Z",
         "model_version": "forge-player-static-v1.0.0",
         "source_artifacts": [
-          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json",
+          "tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json",
           "tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json"
         ],
         "source_set_id": "td-2025-cohort-build-001",

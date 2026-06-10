@@ -139,7 +139,11 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       consumer_manifest: expect.objectContaining({
         evidence_gate: expect.any(Object),
       }),
-      source_artifacts: expect.any(Array),
+      source_artifacts: [
+        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json',
+        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
+        'tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json',
+      ],
     }));
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
@@ -158,6 +162,11 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       scoreSource: 'player_specific',
       isPlayerSpecificEvidence: true,
       isGeneratedBaselineVisibility: false,
+      provenance: expect.objectContaining({
+        source_artifacts: expect.arrayContaining([
+          'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
+        ]),
+      }),
     }));
     expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-frank-gore-jr')).toBeUndefined();
     expect(Array.from(lookup.rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility)).toHaveLength(14);
