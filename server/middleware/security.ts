@@ -231,6 +231,44 @@ export function securityHeaders() {
 }
 
 /**
+ * Baseline Security Headers Middleware (M6 phase 1)
+ *
+ * Low-risk headers that are safe to apply to ALL responses, including the
+ * Vite/React SPA shell. Intentionally omits Content-Security-Policy: a CSP
+ * broad enough to cover the SPA asset graph can break script/style/asset
+ * loading and is deferred to a later phase (see docs/SECURITY_RUNBOOK.md).
+ *
+ * This does NOT change the API-only restrictive CSP applied by
+ * securityHeaders() on /api — that middleware still runs and, for /api
+ * responses, overrides X-Frame-Options to DENY and adds the CSP on top.
+ */
+export function baselineSecurityHeaders() {
+  return (_req: Request, res: Response, next: NextFunction) => {
+    // Prevent MIME type sniffing
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    // Clickjacking protection. SAMEORIGIN is safe for the app shell
+    // (the /api middleware tightens this to DENY for API responses).
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
+    // Limit referrer leakage to cross-origin destinations
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // Disable powerful browser features the app does not use
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+    // Enforce HTTPS for a year (HSTS). Only honoured by browsers over HTTPS,
+    // so it is inert in local/dev http. To disable, set max-age=0.
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+    // Hide framework fingerprint
+    res.removeHeader('X-Powered-By');
+
+    next();
+  };
+}
+
+/**
  * Request Validation Middleware
  * Validates request structure and content
  */

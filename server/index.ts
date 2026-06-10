@@ -3,6 +3,7 @@ import express, { type Request, type Response, type NextFunction } from "express
 import path from "node:path";
 import fs from "node:fs";
 import { attachSignatureHeader } from "./middleware/signature";
+import { baselineSecurityHeaders } from "./middleware/security";
 
 const log = (...args: any[]) => console.log(...args);
 
@@ -54,6 +55,11 @@ export function mountProductionFrontend(appToMount: express.Express, publicDir: 
 }
 
 // ── Core middleware ────────────────────────────────────────────────────────────
+// Baseline security headers first — registered BEFORE the body parsers so that
+// parser-generated error responses (malformed JSON → 400, oversized payload →
+// 413) still carry the headers. No CSP here; the API keeps its own restrictive
+// CSP via securityHeaders() on /api.
+app.use(baselineSecurityHeaders());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(attachSignatureHeader);
