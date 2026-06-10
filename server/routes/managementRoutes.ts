@@ -94,6 +94,7 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
               artifact: dashboardPayload.diagnostics.forgeArtifact,
               rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
               rosterVisibility: dashboardPayload.diagnostics.rosterVisibility,
+              strategyOntology: dashboardPayload.diagnostics.strategyOntologyArtifact,
             }
           : null,
         ...result,

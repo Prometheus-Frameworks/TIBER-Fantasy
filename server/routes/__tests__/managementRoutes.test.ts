@@ -433,6 +433,26 @@ describe('GET /api/management/team-direction (endpoint)', () => {
           forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
           forgeRosterMatching: { rosterCanonicalIdsChecked: roster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
           rosterVisibility: { total: roster.length, identityCovered: roster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: roster.length, unresolved: 0, evidenceCovered: 0 },
+          strategyOntologyArtifact: {
+            state: 'available',
+            available: true,
+            reason: null,
+            code: null,
+            sourcePath: 'server/artifacts/external/strategy/dynasty_strategy_ontology_v1.json',
+            artifactId: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+            artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+            contractVersion: 'dynasty_strategy_ontology_v1',
+            rowCount: 0,
+            concepts: 11,
+            playerAssetArchetypes: 10,
+            rosterStateDefinitions: 8,
+            timelineRules: 9,
+            explanationTemplates: 7,
+            futureContractInputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+            safetyRules: ['cannot_override_identity'],
+            archetypeAssignmentEnabled: false,
+            templateSelectionEnabled: false,
+          },
         },
         teams: [
           { team_id: 'team-1', display_name: 'Test Team', roster, totals: {}, overall_total: 0 },
@@ -477,6 +497,13 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(res.body.forgeDiagnostics).toEqual(expect.objectContaining({
       artifact: expect.objectContaining({ state: 'missing', available: false }),
       rosterMatching: expect.objectContaining({ rosterCanonicalIdsChecked: goodRoster.length }),
+      strategyOntology: expect.objectContaining({
+        available: true,
+        artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+        contractVersion: 'dynasty_strategy_ontology_v1',
+        archetypeAssignmentEnabled: false,
+        templateSelectionEnabled: false,
+      }),
     }));
     expect(res.body.confidenceInputs).toEqual(expect.objectContaining({
       driver: 'forge_scoring_coverage_and_position_quality',
@@ -484,6 +511,35 @@ describe('GET /api/management/team-direction (endpoint)', () => {
       evidenceCoverage: expect.objectContaining({ rate: expect.any(Number) }),
       scoredPositionCounts: expect.any(Object),
     }));
+  });
+
+
+  test('strategy ontology diagnostics do not change Management classification output', async () => {
+    const depsWithOntology = makeDeps();
+    const depsWithoutOntology = makeDeps();
+    depsWithoutOntology.computeLeagueDashboard = jest.fn().mockResolvedValue({
+      diagnostics: {
+        forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
+        forgeRosterMatching: { rosterCanonicalIdsChecked: goodRoster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
+        rosterVisibility: { total: goodRoster.length, identityCovered: goodRoster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: goodRoster.length, unresolved: 0, evidenceCovered: 0 },
+        strategyOntologyArtifact: { available: false, state: 'missing', archetypeAssignmentEnabled: false, templateSelectionEnabled: false },
+      },
+      teams: [
+        { team_id: 'team-1', display_name: 'Test Team', roster: goodRoster, totals: {}, overall_total: 0 },
+      ],
+    });
+
+    const withRes = await request(buildApp(depsWithOntology)).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    const withoutRes = await request(buildApp(depsWithoutOntology)).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+
+    expect(withRes.body.direction).toBe(withoutRes.body.direction);
+    expect(withRes.body.confidence).toBe(withoutRes.body.confidence);
+    expect(withRes.body.reasons).toEqual(withoutRes.body.reasons);
+    expect(withRes.body.blockers).toEqual(withoutRes.body.blockers);
+    expect(withRes.body.forgeDiagnostics.strategyOntology).toMatchObject({
+      archetypeAssignmentEnabled: false,
+      templateSelectionEnabled: false,
+    });
   });
 
   test('returns low-coverage result as uncertain when roster is mostly unmatched', async () => {

@@ -127,6 +127,7 @@ type LeagueDashboardResponse = {
     generatedBaselineVisibilityCount?: number;
     forgeArtifact?: ForgeArtifactDiagnostics;
     identityCrosswalkArtifact?: IdentityCrosswalkArtifactDiagnostics;
+    strategyOntologyArtifact?: StrategyOntologyArtifactDiagnostics;
     forgeRosterMatching?: ForgeRosterMatchingDiagnostics;
     rosterVisibility?: RosterCoverageCounts;
   };
@@ -186,6 +187,28 @@ type IdentityCrosswalkArtifactDiagnostics = {
   providerCount?: number;
   contractVersion?: string | null;
   generatedAt?: string | null;
+};
+
+
+type StrategyOntologyArtifactDiagnostics = {
+  state?: 'available' | 'missing' | 'malformed' | 'unsupported' | 'disabled' | string;
+  available?: boolean;
+  reason?: string | null;
+  code?: string | null;
+  sourcePath?: string | null;
+  artifactId?: 'DYNASTY_STRATEGY_ONTOLOGY_V1';
+  artifactType?: 'DYNASTY_STRATEGY_ONTOLOGY_V1' | string | null;
+  contractVersion?: string | null;
+  rowCount?: number | null;
+  concepts?: number;
+  playerAssetArchetypes?: number;
+  rosterStateDefinitions?: number;
+  timelineRules?: number;
+  explanationTemplates?: number;
+  futureContractInputs?: string[];
+  safetyRules?: string[];
+  archetypeAssignmentEnabled?: false;
+  templateSelectionEnabled?: false;
 };
 
 type ForgeRosterMatchingDiagnostics = {
@@ -584,6 +607,20 @@ export function buildManagementSnapshotExport({
         provider_mappings: diagnostics?.identityCrosswalkArtifact?.providerMappingCount ?? null,
         providers: diagnostics?.identityCrosswalkArtifact?.providerCount ?? null,
         contract_version: diagnostics?.identityCrosswalkArtifact?.contractVersion ?? null,
+      },
+      dynasty_strategy_ontology_v1: {
+        available: diagnostics?.strategyOntologyArtifact?.available ?? false,
+        source_path: diagnostics?.strategyOntologyArtifact?.sourcePath ?? null,
+        contract_version: diagnostics?.strategyOntologyArtifact?.contractVersion ?? null,
+        artifact_type: diagnostics?.strategyOntologyArtifact?.artifactType ?? null,
+        concepts: diagnostics?.strategyOntologyArtifact?.concepts ?? null,
+        player_asset_archetypes: diagnostics?.strategyOntologyArtifact?.playerAssetArchetypes ?? null,
+        roster_state_definitions: diagnostics?.strategyOntologyArtifact?.rosterStateDefinitions ?? null,
+        timeline_rules: diagnostics?.strategyOntologyArtifact?.timelineRules ?? null,
+        explanation_templates: diagnostics?.strategyOntologyArtifact?.explanationTemplates ?? null,
+        future_contract_inputs: diagnostics?.strategyOntologyArtifact?.futureContractInputs ?? [],
+        archetype_assignment_enabled: false,
+        template_selection_enabled: false,
       },
       league_wide_diagnostics: {
         resolved_identity_rows_scanned: diagnostics?.resolvedCanonicalCount ?? null,
