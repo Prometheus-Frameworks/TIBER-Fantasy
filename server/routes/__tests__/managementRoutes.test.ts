@@ -175,21 +175,33 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     );
   });
 
-  test('post-PR200 Management state classifies 24/30 player-specific FORGE evidence as Rebuild High without anti-premium wording', () => {
-    const premiumCore = [
-      { name: 'Puka Nacua', pos: 'WR', alpha: 72 },
-      { name: 'Bijan Robinson', pos: 'RB', alpha: 71 },
-      { name: 'Justin Herbert', pos: 'QB', alpha: 66 },
-      { name: 'Ladd McConkey', pos: 'WR', alpha: 64 },
-      { name: 'Christian McCaffrey', pos: 'RB', alpha: 63 },
-      { name: 'Derrick Henry', pos: 'RB', alpha: 61 },
-      { name: 'T.J. Hockenson', pos: 'TE', alpha: 60 },
+  test('post-PR200 Management state classifies 24/30 realistic player-specific FORGE evidence as Rebuild High with neutral concentration wording', () => {
+    const playerSpecificForgeRows = [
+      { name: 'Puka Nacua', pos: 'WR', alpha: 30.24 },
+      { name: 'Bijan Robinson', pos: 'RB', alpha: 25.03 },
+      { name: 'Justin Herbert', pos: 'QB', alpha: 26.88 },
+      { name: 'Ladd McConkey', pos: 'WR', alpha: 24.18 },
+      { name: 'Christian McCaffrey', pos: 'RB', alpha: 21.33 },
+      { name: 'Derrick Henry', pos: 'RB', alpha: 28.76 },
+      { name: 'T.J. Hockenson', pos: 'TE', alpha: 13.77 },
+      { name: 'Xavier Worthy', pos: 'WR', alpha: 22.91 },
+      { name: 'Frank Gore Jr.', pos: 'RB', alpha: 12.94 },
+      { name: 'Ryan Flournoy', pos: 'WR', alpha: 10.82 },
+      { name: 'Terrance Ferguson', pos: 'TE', alpha: 11.41 },
+      { name: 'Harold Fannin Jr.', pos: 'TE', alpha: 12.09 },
+      { name: 'Luther Burden III', pos: 'WR', alpha: 17.64 },
+      { name: 'Travis Hunter', pos: 'WR', alpha: 19.27 },
+      { name: 'Depth RB 1', pos: 'RB', alpha: 14.82 },
+      { name: 'Depth RB 2', pos: 'RB', alpha: 15.16 },
+      { name: 'Depth WR 1', pos: 'WR', alpha: 16.45 },
+      { name: 'Depth WR 2', pos: 'WR', alpha: 13.38 },
+      { name: 'Depth WR 3', pos: 'WR', alpha: 12.73 },
+      { name: 'Depth QB 1', pos: 'QB', alpha: 18.52 },
+      { name: 'Depth RB 3', pos: 'RB', alpha: 11.66 },
+      { name: 'Depth WR 4', pos: 'WR', alpha: 10.95 },
+      { name: 'Depth TE 1', pos: 'TE', alpha: 9.84 },
+      { name: 'Depth RB 4', pos: 'RB', alpha: 8.91 },
     ];
-    const scoredDepth = Array.from({ length: 17 }, (_, index) => ({
-      name: `Depth Player ${index + 1}`,
-      pos: index % 4 === 0 ? 'WR' : index % 4 === 1 ? 'RB' : index % 4 === 2 ? 'TE' : 'QB',
-      alpha: index % 3 === 0 ? 25 : index % 3 === 1 ? 24 : 23,
-    }));
     const unscored = Array.from({ length: 6 }, (_, index) => ({
       name: `Mapped Missing FORGE ${index + 1}`,
       pos: index % 2 === 0 ? 'WR' : 'RB',
@@ -197,16 +209,18 @@ describe('classifyTeamDirection (pure unit tests)', () => {
       missingReason: 'missing_forge_row',
     }));
 
-    const result = classifyTeamDirection(rosterOf([...premiumCore, ...scoredDepth, ...unscored]), []);
+    const result = classifyTeamDirection(rosterOf([...playerSpecificForgeRows, ...unscored]), []);
     const explanationText = [...result.reasons, ...result.blockers].join(' ');
 
     expect(result.direction).toBe('rebuild');
     expect(result.confidence).toBe('high');
     expect(result.forgeCoverage).toEqual({ matched: 24, total: 30, rate: 0.8 });
     expect(result.evidenceCoverage).toEqual({ matched: 24, total: 30, rate: 0.8, rookieAlphaMatched: 0 });
+    expect(result.visibilityCounts.generatedBaselineVisibility).toBe(0);
     expect(explanationText).not.toContain('No clear top-end difference-makers');
-    expect(explanationText).toContain('Premium names and/or high-alpha pieces are present');
-    expect(explanationText).toContain('evidence profile points away from a clean contender build');
+    expect(explanationText).toContain('concentration');
+    expect(explanationText).toContain('clean contender read');
+    expect(explanationText).toContain('durable long-term anchors');
   });
 
   test('generated_baseline rows remain visibility only and cannot lift Team Direction above low-coverage Uncertain', () => {
