@@ -2,7 +2,7 @@ import express from 'express';
 import { storage } from '../storage';
 import { computeLeagueDashboard } from '../services/leagueDashboardService';
 import { classifyTeamDirection } from '../services/teamDirectionClassifier';
-import { buildStrategyTemplateDiagnostics } from '../modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
+import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
 
 type ManagementDeps = {
   storage: typeof storage;

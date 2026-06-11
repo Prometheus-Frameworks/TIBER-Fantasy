@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
-import { buildStrategyTemplateDiagnostics } from '../../../server/modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
+import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
 import {
   type TeamEnvironmentMovementResponse,
   buildTeamEnvironmentMovementSummary,
