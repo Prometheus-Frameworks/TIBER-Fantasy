@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { buildStrategyTemplateDiagnostics } from '../../../server/modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
 import {
   type TeamEnvironmentMovementResponse,
   buildTeamEnvironmentMovementSummary,
@@ -130,6 +131,7 @@ type LeagueDashboardResponse = {
     strategyOntologyArtifact?: StrategyOntologyArtifactDiagnostics;
     forgeRosterMatching?: ForgeRosterMatchingDiagnostics;
     rosterVisibility?: RosterCoverageCounts;
+    strategyOntologyTemplates?: Array<{ template_id: string; applies_to: string[] }>;
   };
 };
 
@@ -257,6 +259,7 @@ type TeamDirectionResponse = {
   teamName?: string;
   reason?: string;
   error?: string;
+  strategy_template_diagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics>;
 };
 
 export type ModelSignalStatus = 'ready' | 'partial' | 'unavailable' | 'not wired' | 'inspection only';
@@ -567,6 +570,20 @@ export function buildManagementSnapshotExport({
   const activeMatching = buildActiveTeamMatchingSummary(roster);
   const seedReport = identitySeedReport ?? buildManagementIdentitySeedReport({ league, team, dashboardTeam, generatedAt });
   const blockingReason = teamDirection?.blockers?.[0] ?? teamDirection?.reasons?.[0] ?? teamDirection?.reason ?? teamDirection?.error ?? null;
+  const strategyTemplateDiagnostics = teamDirection?.strategy_template_diagnostics ?? buildStrategyTemplateDiagnostics(
+    diagnostics?.strategyOntologyArtifact
+      ? {
+          artifact: diagnostics.strategyOntologyArtifact as Parameters<typeof buildStrategyTemplateDiagnostics>[0] extends { artifact: infer T } ? T : never,
+          templates: diagnostics.strategyOntologyTemplates ?? [],
+        }
+      : null,
+    teamDirection
+      ? {
+          direction: teamDirection.direction ?? 'uncertain',
+          confidence: teamDirection.confidence ?? 'low',
+        }
+      : null,
+  );
 
   return {
     artifact_type: 'TIBER_MANAGEMENT_SNAPSHOT_EXPORT',
@@ -632,6 +649,7 @@ export function buildManagementSnapshotExport({
         helper_text: 'League-wide diagnostic count; not active-team roster coverage.',
       },
     },
+    strategy_template_diagnostics: strategyTemplateDiagnostics,
     active_team_matching: {
       tiber_crosswalk_mapped: activeMatching.tiberCrosswalkMapped,
       forge_row_matched: activeMatching.forgeRowMatched,
