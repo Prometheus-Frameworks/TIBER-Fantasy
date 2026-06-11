@@ -278,7 +278,7 @@ describe('Management model signal cards', () => {
       teamDirection: {
         success: true,
         available: true,
-        direction: 'contending',
+        direction: 'rebuild',
         confidence: 'high',
         blockers: [],
       },
@@ -315,6 +315,11 @@ describe('Management model signal cards', () => {
           archetypeAssignmentEnabled: false,
           templateSelectionEnabled: false,
         },
+        strategyOntologyTemplates: [
+          { template_id: 'rebuild_low_alpha_concentration', applies_to: ['rebuild'] },
+          { template_id: 'rebuild_premium_assets_timeline_mismatch', applies_to: ['rebuild', 'timeline_mismatch'] },
+          { template_id: 'contender_with_future_pick_drag', applies_to: ['contender'] },
+        ],
       },
     });
 
@@ -337,6 +342,25 @@ describe('Management model signal cards', () => {
         player_specific_evidence_matched: 24,
         generated_baseline_visibility_matched: 0,
         non_evidence_roster_matches: 0,
+      },
+      strategy_template_diagnostics: {
+        available: true,
+        artifact_type: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+        contract_version: 'dynasty_strategy_ontology_v1',
+        model_version: 'dynasty-strategy-ontology-v1.0.0',
+        generated_at: '2026-06-10T00:00:00.000Z',
+        template_selection_enabled: false,
+        selected_template_id: null,
+        current_team_direction: 'Rebuild',
+        current_confidence: 'High',
+        evaluated_template_count: 3,
+        classification_compatible_template_ids: [
+          'rebuild_low_alpha_concentration',
+          'rebuild_premium_assets_timeline_mismatch',
+        ],
+        blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+        missing_future_contract_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+        unavailable_reason: null,
       },
       artifact_diagnostics: {
         dynasty_strategy_ontology_v1: {
@@ -362,6 +386,19 @@ describe('Management model signal cards', () => {
         },
       },
     });
+    expect(snapshot.strategy_template_diagnostics.templates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        template_id: 'rebuild_low_alpha_concentration',
+        classification_compatible: true,
+        eligibility_state: 'blocked',
+        blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+        missing_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+      }),
+    ]));
+    const exportedJson = JSON.stringify(snapshot);
+    expect(exportedJson).not.toContain('template_text');
+    expect(JSON.stringify(snapshot.strategy_template_diagnostics)).not.toContain('template_text');
+    expect(exportedJson).not.toContain('{{');
     expect(snapshot.identity_seed_report.players).toHaveLength(30);
     expect(snapshot.identity_seed_report.summary).toMatchObject({ roster_count: 30, crosswalk_matched: 25, forge_player_specific_matched: 24, generated_baseline_matched: 0 });
     expect(snapshot.identity_seed_report.players.find((player) => player.display_name === 'Frank Gore Jr.')).toMatchObject({
@@ -375,6 +412,53 @@ describe('Management model signal cards', () => {
       'Cyrus Allen',
       'Kaelon Black',
     ]);
+  });
+
+  it('fails closed with unavailable strategy template diagnostics when the ontology artifact is malformed', () => {
+    const snapshot = buildManagementSnapshotExport({
+      generatedAt: '2026-06-09T00:00:00.000Z',
+      league: { id: 'league-db-id', leagueIdExternal: 'sleeper-league-id', leagueName: 'Morts FF Dynasty', scoringFormat: 'ppr', season: 2026 },
+      team: { id: 'team-1', displayName: 'Garbage Time' },
+      dashboardTeam: { team_id: 'team-1', display_name: 'Garbage Time', roster: [] },
+      teamDirection: {
+        success: true,
+        available: true,
+        direction: 'rebuild',
+        confidence: 'high',
+        blockers: [],
+      },
+      diagnostics: {
+        strategyOntologyArtifact: {
+          available: false,
+          state: 'malformed',
+          reason: 'malformed artifact',
+          artifactType: null,
+          contractVersion: null,
+          modelVersion: null,
+          generatedAt: null,
+          futureContractInputs: [],
+          archetypeAssignmentEnabled: false,
+          templateSelectionEnabled: false,
+        },
+        strategyOntologyTemplates: [
+          { template_id: 'rebuild_low_alpha_concentration', applies_to: ['rebuild'] },
+        ],
+      },
+    });
+
+    expect(snapshot.strategy_template_diagnostics).toMatchObject({
+      available: false,
+      template_selection_enabled: false,
+      selected_template_id: null,
+      current_team_direction: 'Rebuild',
+      current_confidence: 'High',
+      evaluated_template_count: 0,
+      classification_compatible_template_ids: [],
+      blocked_reasons: [],
+      missing_future_contract_inputs: [],
+      templates: [],
+      unavailable_reason: 'malformed artifact',
+    });
   });
 });
 
