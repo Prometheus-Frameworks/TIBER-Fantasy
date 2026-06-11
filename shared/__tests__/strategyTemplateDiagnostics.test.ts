@@ -1,9 +1,9 @@
-import { adaptStrategyOntologyArtifact } from '../strategyOntologyAdapter';
+import { adaptStrategyOntologyArtifact } from '../../server/modules/externalModels/strategyOntology/strategyOntologyAdapter';
 import {
   buildStrategyTemplateDiagnostics,
   summarizeStrategyOntologyTemplates,
 } from '../strategyTemplateDiagnostics';
-import type { StrategyOntologyLookup } from '../types';
+import type { StrategyOntologyLookup } from '../../server/modules/externalModels/strategyOntology/types';
 
 const requiredSafetyRules = [
   'cannot_override_identity',

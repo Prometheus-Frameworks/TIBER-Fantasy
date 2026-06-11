@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   buildManagementModelSignals,
   buildManagementIdentitySeedReport,
@@ -247,6 +249,14 @@ describe('Management model signal cards', () => {
     });
   });
 
+
+
+  it('keeps the client snapshot export wired to the shared strategy diagnostics helper', () => {
+    const source = readFileSync(resolve(process.cwd(), 'client/src/pages/TiberManagementDashboard.tsx'), 'utf8');
+
+    expect(source).toContain('@shared/strategyTemplateDiagnostics');
+    expect(source).not.toContain('server/modules/externalModels/strategyOntology/strategyTemplateDiagnostics');
+  });
 
   it('builds active-team matching and snapshot export without using league-wide counts as roster coverage', () => {
     const roster = managementFixtureRoster();

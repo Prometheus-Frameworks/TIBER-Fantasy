@@ -26,7 +26,7 @@ import {
   type StrategyOntologyIntegration,
 } from '../modules/externalModels/strategyOntology/StrategyOntologyIntegration';
 import type { StrategyOntologyLookup } from '../modules/externalModels/strategyOntology/types';
-import { summarizeStrategyOntologyTemplates, type StrategyOntologyTemplateSummary } from '../modules/externalModels/strategyOntology/strategyTemplateDiagnostics';
+import { summarizeStrategyOntologyTemplates, type StrategyOntologyTemplateSummary } from '@shared/strategyTemplateDiagnostics';
 
 const BENCH_WEIGHT = 0.15;
 const CACHE_TTL_MS = 30 * 60 * 1000;

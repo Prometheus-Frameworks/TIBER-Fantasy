@@ -1,6 +1,3 @@
-import type { TeamDirectionResult } from '../../../services/teamDirectionClassifier';
-import type { StrategyOntologyDiagnostics, StrategyOntologyLookup } from './types';
-
 const TEMPLATE_SELECTION_ENABLED = false as const;
 
 export const EXPECTED_STRATEGY_TEMPLATE_FUTURE_INPUTS = [
@@ -10,15 +7,15 @@ export const EXPECTED_STRATEGY_TEMPLATE_FUTURE_INPUTS = [
   'market_liquidity_signal',
 ] as const;
 
-type StrategyTemplateBlockedReason = 'template_selection_disabled' | 'missing_future_contract_inputs';
-type StrategyTemplateEligibilityState = 'blocked' | 'not_applicable';
+export type StrategyTemplateBlockedReason = 'template_selection_disabled' | 'missing_future_contract_inputs';
+export type StrategyTemplateEligibilityState = 'blocked' | 'not_applicable';
 
 export type StrategyOntologyTemplateSummary = {
   template_id: string;
   applies_to: string[];
 };
 
-type StrategyTemplateRecord = {
+export type StrategyTemplateRecord = {
   template_id: string;
   classification_compatible: boolean;
   eligibility_state: StrategyTemplateEligibilityState;
@@ -72,13 +69,22 @@ function displayValue(value?: string | null): string | null {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1).toLowerCase();
 }
 
-function missingFutureInputs(lookup: { artifact: Pick<StrategyOntologyDiagnostics, 'futureContractInputs'> }): string[] {
-  const artifactInputs = lookup.artifact.futureContractInputs.filter((input) => input.trim().length > 0);
-  return artifactInputs.length > 0 ? artifactInputs : [...EXPECTED_STRATEGY_TEMPLATE_FUTURE_INPUTS];
-}
+export type StrategyTemplateArtifactDiagnostics = {
+  available: boolean;
+  reason?: string | null;
+  artifactType: 'DYNASTY_STRATEGY_ONTOLOGY_V1' | null;
+  contractVersion: string | null;
+  modelVersion: string | null;
+  generatedAt: string | null;
+  futureContractInputs: string[];
+};
 
+export type StrategyOntologyTemplateLookup = {
+  artifact: StrategyTemplateArtifactDiagnostics;
+  raw: Record<string, unknown> | null;
+};
 
-export function summarizeStrategyOntologyTemplates(lookup: StrategyOntologyLookup): StrategyOntologyTemplateSummary[] {
+export function summarizeStrategyOntologyTemplates(lookup: StrategyOntologyTemplateLookup): StrategyOntologyTemplateSummary[] {
   if (!lookup.artifact.available || !lookup.raw) return [];
   const rawTemplates = Array.isArray(lookup.raw.explanation_templates) ? lookup.raw.explanation_templates : [];
   return rawTemplates.flatMap((rawTemplate): StrategyOntologyTemplateSummary[] => {
@@ -89,9 +95,14 @@ export function summarizeStrategyOntologyTemplates(lookup: StrategyOntologyLooku
   });
 }
 
-type StrategyTemplateDiagnosticsSource =
-  | StrategyOntologyLookup
-  | { artifact: StrategyOntologyDiagnostics; templates: StrategyOntologyTemplateSummary[] };
+export type StrategyTemplateDiagnosticsSource =
+  | StrategyOntologyTemplateLookup
+  | { artifact: StrategyTemplateArtifactDiagnostics; templates: StrategyOntologyTemplateSummary[] };
+
+function missingFutureInputs(lookup: { artifact: Pick<StrategyTemplateArtifactDiagnostics, 'futureContractInputs'> }): string[] {
+  const artifactInputs = lookup.artifact.futureContractInputs.filter((input) => input.trim().length > 0);
+  return artifactInputs.length > 0 ? artifactInputs : [...EXPECTED_STRATEGY_TEMPLATE_FUTURE_INPUTS];
+}
 
 function templatesForDiagnostics(source: StrategyTemplateDiagnosticsSource): StrategyOntologyTemplateSummary[] {
   if ('templates' in source) return source.templates;
@@ -100,7 +111,7 @@ function templatesForDiagnostics(source: StrategyTemplateDiagnosticsSource): Str
 
 export function buildStrategyTemplateDiagnostics(
   lookup: StrategyTemplateDiagnosticsSource | null | undefined,
-  teamDirection: Pick<TeamDirectionResult, 'direction' | 'confidence'> | null | undefined,
+  teamDirection: { direction?: string | null; confidence?: string | null } | null | undefined,
 ): StrategyTemplateDiagnostics {
   const currentDirection = normalizeTeamDirection(teamDirection?.direction ?? null);
   const currentConfidence = teamDirection?.confidence ?? null;
