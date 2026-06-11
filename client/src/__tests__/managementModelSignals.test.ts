@@ -216,6 +216,111 @@ describe('Management model signal cards', () => {
     ]));
   });
 
+  it('surfaces read-only Strategy Template Diagnostics without rendering template text or slots', () => {
+    const cards = buildManagementModelSignals({
+      hasActiveTeam: true,
+      hasRosterData: true,
+      hasDashboardTotals: true,
+      rosterVisibility: {
+        total: 30,
+        identityCovered: 30,
+        baselineVisible: 0,
+        forgeScored: 24,
+        forgeBaseline: 0,
+        rookieAlphaFallback: 0,
+        knownUnscored: 6,
+        unresolved: 0,
+        evidenceCovered: 24,
+      },
+      teamstateQueryState: 'success',
+      teamstateResponse: teamStateResponse(),
+      teamstateDetails: ['Provenance status: governed_promoted.'],
+      strategyTemplateDiagnostics: {
+        available: true,
+        artifact_type: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+        contract_version: 'dynasty_strategy_ontology_v1',
+        model_version: 'dynasty-strategy-ontology-v1.0.0',
+        generated_at: '2026-06-10T00:00:00.000Z',
+        template_selection_enabled: false,
+        selected_template_id: null,
+        current_team_direction: 'Rebuild',
+        current_confidence: 'High',
+        evaluated_template_count: 7,
+        classification_compatible_template_ids: [
+          'rebuild_low_alpha_concentration',
+          'rebuild_premium_assets_timeline_mismatch',
+        ],
+        blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+        missing_future_contract_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+        templates: [
+          {
+            template_id: 'rebuild_low_alpha_concentration',
+            classification_compatible: true,
+            eligibility_state: 'blocked',
+            blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+            missing_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+          },
+        ],
+        unavailable_reason: null,
+      },
+    });
+
+    const card = signal(cards, 'Strategy Templates');
+    expect(card).toMatchObject({
+      status: 'inspection only',
+      statusLabel: 'Inspection only',
+    });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Strategy ontology availability: yes.',
+      'Template selection: Disabled.',
+      'Selected template: None.',
+      'Current direction: Rebuild.',
+      'Current confidence: High.',
+      'Evaluated templates: 7.',
+      'Compatible templates: 2 (rebuild_low_alpha_concentration, rebuild_premium_assets_timeline_mismatch).',
+      'Blocked by: template_selection_disabled, missing_future_contract_inputs.',
+      'Missing inputs: 4 (age_band, experience_band, role_security_signal, market_liquidity_signal).',
+    ]));
+    const serializedCard = JSON.stringify(card);
+    expect(serializedCard).not.toContain('template_text');
+    expect(serializedCard).not.toContain('{{');
+    expect(serializedCard).not.toContain('}}');
+  });
+
+  it('fails Strategy Template Diagnostics closed when diagnostics are missing', () => {
+    const cards = buildManagementModelSignals({
+      hasActiveTeam: true,
+      hasRosterData: true,
+      hasDashboardTotals: false,
+      rosterVisibility: {
+        total: 2,
+        identityCovered: 2,
+        baselineVisible: 0,
+        forgeScored: 0,
+        forgeBaseline: 0,
+        rookieAlphaFallback: 0,
+        knownUnscored: 2,
+        unresolved: 0,
+        evidenceCovered: 0,
+      },
+      teamstateQueryState: 'success',
+      teamstateResponse: teamStateResponse({ artifactAvailable: false, teams: [] }),
+      teamstateDetails: [],
+    });
+
+    expect(signal(cards, 'Strategy Templates')).toMatchObject({
+      status: 'unavailable',
+      statusLabel: 'Unavailable',
+      details: expect.arrayContaining([
+        'Strategy ontology availability: no.',
+        'Template selection: Disabled.',
+        'Selected template: None.',
+        'Compatible templates: 0.',
+        'Missing inputs: not inspected.',
+      ]),
+    });
+  });
+
   it('does not claim active Management integration for ROP or point prediction', () => {
     const cards = buildManagementModelSignals({
       hasActiveTeam: true,

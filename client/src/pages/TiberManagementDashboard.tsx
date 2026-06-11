@@ -787,6 +787,14 @@ function diagnosticValue(value: unknown): string {
   return '—';
 }
 
+function yesNo(value?: boolean | null): string {
+  return value ? 'yes' : 'no';
+}
+
+function listOrNone(values?: string[] | null): string {
+  return values && values.length > 0 ? values.join(', ') : 'none';
+}
+
 function artifactStatusClass(artifact?: ForgeArtifactDiagnostics | null) {
   if (artifact?.available) return 'tmd-status-ready';
   if (artifact?.state === 'missing' || artifact?.state === 'disabled') return 'tmd-status-unavailable';
@@ -928,6 +936,7 @@ export function buildManagementModelSignals({
   teamstateQueryState,
   teamstateResponse,
   teamstateDetails,
+  strategyTemplateDiagnostics,
 }: {
   hasActiveTeam: boolean;
   hasRosterData: boolean;
@@ -936,12 +945,36 @@ export function buildManagementModelSignals({
   teamstateQueryState: 'loading' | 'error' | 'success';
   teamstateResponse?: TeamEnvironmentMovementResponse | null;
   teamstateDetails: string[];
+  strategyTemplateDiagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics> | null;
 }): ModelSignalCard[] {
   const forgeCoverageRate = rosterVisibility.total > 0 ? rosterVisibility.forgeScored / rosterVisibility.total : 0;
   const hasForgeAlphaTotals = hasDashboardTotals;
   const hasRookieFallbacks = rosterVisibility.rookieAlphaFallback > 0;
   const teamstateReady = hasUsableTeamEnvironmentMovementContext(teamstateResponse);
   const teamstateSummary = summarizeTeamState(teamstateResponse);
+  const strategyTemplateAvailable = strategyTemplateDiagnostics?.available === true;
+  const strategyTemplateUnavailableReason = strategyTemplateDiagnostics?.unavailable_reason ?? 'Strategy template diagnostics were not returned for inspection.';
+  const compatibleTemplateIds = strategyTemplateDiagnostics?.classification_compatible_template_ids ?? [];
+  const missingFutureInputs = strategyTemplateDiagnostics?.missing_future_contract_inputs ?? [];
+  const strategyTemplateDetails = strategyTemplateDiagnostics
+    ? [
+        `Strategy ontology availability: ${yesNo(strategyTemplateDiagnostics.available)}.`,
+        `Template selection: ${strategyTemplateDiagnostics.template_selection_enabled ? 'Enabled' : 'Disabled'}.`,
+        `Selected template: ${strategyTemplateDiagnostics.selected_template_id ?? 'None'}.`,
+        `Current direction: ${strategyTemplateDiagnostics.current_team_direction ?? 'Unknown'}.`,
+        `Current confidence: ${strategyTemplateDiagnostics.current_confidence ?? 'Unknown'}.`,
+        `Evaluated templates: ${strategyTemplateDiagnostics.evaluated_template_count}.`,
+        `Compatible templates: ${compatibleTemplateIds.length}${compatibleTemplateIds.length > 0 ? ` (${compatibleTemplateIds.join(', ')})` : ''}.`,
+        `Blocked by: ${listOrNone(strategyTemplateDiagnostics.blocked_reasons)}.`,
+        `Missing inputs: ${missingFutureInputs.length}${missingFutureInputs.length > 0 ? ` (${missingFutureInputs.join(', ')})` : ''}.`,
+      ]
+    : [
+        'Strategy ontology availability: no.',
+        'Template selection: Disabled.',
+        'Selected template: None.',
+        'Compatible templates: 0.',
+        'Missing inputs: not inspected.',
+      ];
 
   return [
     {
@@ -998,6 +1031,18 @@ export function buildManagementModelSignals({
       linkLabel: 'Open Team Research',
       provenance: 'Read-only TeamState movement inspection. Does not affect roster scoring or Team Direction.',
       details: teamstateDetails,
+    },
+    {
+      title: 'Strategy Templates',
+      status: strategyTemplateAvailable ? 'inspection only' : 'unavailable',
+      statusLabel: strategyTemplateAvailable ? 'Inspection only' : 'Unavailable',
+      explanation: strategyTemplateAvailable
+        ? 'DYNASTY_STRATEGY_ONTOLOGY_V1 template diagnostics are visible for read-only inspection. Template selection, template text rendering, and slot interpolation remain disabled.'
+        : `Strategy template diagnostics are unavailable: ${strategyTemplateUnavailableReason}`,
+      href: '#team-direction',
+      linkLabel: 'Inspect Team Direction',
+      provenance: 'Read-only Strategy template diagnostics from Management/Team Direction payloads. No templates are selected, rendered, interpolated, or applied to players.',
+      details: strategyTemplateDetails,
     },
     {
       title: 'ROP / Opportunity',
@@ -1075,7 +1120,7 @@ function TeamDirectionCard({
     <section className="tmd-card">
       <div className="tmd-card-header">
         <div>
-          <h2>Team Direction</h2>
+          <h2 id="team-direction">Team Direction</h2>
           <p>FORGE-powered read of where your roster is headed, with Rookie Alpha evidence coverage for assets outside FORGE.</p>
         </div>
         {data?.available && data.direction ? (
@@ -1365,6 +1410,7 @@ export default function TiberManagementDashboard() {
     teamstateQueryState: teamstateQuery.isLoading ? 'loading' : teamstateQuery.isError ? 'error' : 'success',
     teamstateResponse: teamstateQuery.data,
     teamstateDetails,
+    strategyTemplateDiagnostics: managementSnapshot.strategy_template_diagnostics,
   });
 
   const actionSteps = activeTeam
