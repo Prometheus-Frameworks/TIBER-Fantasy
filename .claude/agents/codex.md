@@ -717,3 +717,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Removed the `resolvedCanonicalCount` fallback from the active-roster “Sleeper roster identity resolved” card.
 - Added separate diagnostics labels for canonical IDs checked and resolved identity rows scanned.
 - Updated the seed report test fixture to use Puka Nacua sleeper ID `9493`.
+
+### 2026-06-10 — Management strategy template eligibility diagnostics
+- Added read-only strategy template readiness diagnostics sourced from the validated DYNASTY_STRATEGY_ONTOLOGY_V1 artifact.
+- Exposed sanitized template summaries from the dashboard service and emitted `strategy_template_diagnostics` plus `forgeDiagnostics.strategyTemplateDiagnostics` from the Management Team Direction endpoint.
+- Preserved disabled template selection, null selected template, unchanged classification output, no template text rendering, and no archetype/player inference.
+- Validation: targeted Jest suites passed; `git diff --check` passed; full typecheck remains blocked by existing repo-wide issues outside touched files.

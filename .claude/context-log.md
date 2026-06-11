@@ -509,3 +509,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementModelSignals.test.ts`
 - **Validation:** Re-ran targeted Management seed/report tests and Management route tests.
 - **Notes:** Larger scanned/candidate counts are still visible, but no longer labeled as active-roster identity coverage.
+
+### 2026-06-10 — Codex: Management strategy template eligibility diagnostics
+- **What changed:** Added read-only DYNASTY_STRATEGY_ONTOLOGY_V1 template readiness diagnostics for Management Team Direction responses. Diagnostics enumerate sanitized template IDs/applies_to states, mark compatible templates blocked by disabled selection and missing future-contract inputs, keep selected_template_id null, and avoid rendering template text or changing classification.
+- **Files modified:** server/modules/externalModels/strategyOntology/strategyTemplateDiagnostics.ts, server/services/leagueDashboardService.ts, server/routes/managementRoutes.ts, server/modules/externalModels/strategyOntology/__tests__/strategyTemplateDiagnostics.test.ts, server/routes/__tests__/managementRoutes.test.ts
+- **Validation:** Targeted strategy ontology/Management Jest suites passed; git diff check passed; full typecheck still reports pre-existing repo-wide errors outside touched files, with no touched-file matches after filtering.
+- **Notes:** Template selection remains disabled and future-contract inputs remain diagnostic-only until governed artifacts supply them.
