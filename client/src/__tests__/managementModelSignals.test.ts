@@ -477,6 +477,17 @@ describe('Management model signal cards', () => {
         missing_future_contract_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
         unavailable_reason: null,
       },
+      management_strategy_context: {
+        available: true,
+        status: 'blocked',
+        team_direction: 'rebuild',
+        team_direction_confidence: 'high',
+        strategy_ontology_available: true,
+        strategy_template_selection_enabled: false,
+        selected_template_id: null,
+        blocked_reasons: ['strategy_template_activation_deferred'],
+        missing_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+      },
       artifact_diagnostics: {
         dynasty_strategy_ontology_v1: {
           available: true,
@@ -573,6 +584,14 @@ describe('Management model signal cards', () => {
       missing_future_contract_inputs: [],
       templates: [],
       unavailable_reason: 'malformed artifact',
+    });
+    expect(snapshot.management_strategy_context).toMatchObject({
+      available: false,
+      status: 'unavailable',
+      strategy_ontology_available: false,
+      strategy_template_selection_enabled: false,
+      selected_template_id: null,
+      blocked_reasons: ['strategy_ontology_unavailable'],
     });
   });
 });

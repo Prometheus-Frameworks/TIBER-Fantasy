@@ -4,6 +4,7 @@ import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
+import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
 import {
   type TeamEnvironmentMovementResponse,
   buildTeamEnvironmentMovementSummary,
@@ -650,6 +651,21 @@ export function buildManagementSnapshotExport({
       },
     },
     strategy_template_diagnostics: strategyTemplateDiagnostics,
+    management_strategy_context: buildManagementStrategyContext({
+      teamDirection: teamDirection
+        ? {
+            direction: teamDirection.direction ?? null,
+            confidence: teamDirection.confidence ?? null,
+            coverage: teamDirection.coverage ?? null,
+            evidenceCoverage: teamDirection.evidenceCoverage ?? null,
+            forgeCoverage: teamDirection.forgeCoverage ?? null,
+            visibilityCounts: teamDirection.visibilityCounts ?? null,
+          }
+        : null,
+      rosterVisibility: visibility,
+      diagnostics,
+      strategyTemplateDiagnostics,
+    }),
     active_team_matching: {
       tiber_crosswalk_mapped: activeMatching.tiberCrosswalkMapped,
       forge_row_matched: activeMatching.forgeRowMatched,
