@@ -3,6 +3,7 @@ import { storage } from '../storage';
 import { computeLeagueDashboard } from '../services/leagueDashboardService';
 import { classifyTeamDirection } from '../services/teamDirectionClassifier';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
+import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
 
 type ManagementDeps = {
   storage: typeof storage;
@@ -93,6 +94,12 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
           : null,
         result,
       );
+      const managementStrategyContext = buildManagementStrategyContext({
+        teamDirection: result,
+        rosterVisibility: dashboardPayload.diagnostics?.rosterVisibility,
+        diagnostics: dashboardPayload.diagnostics,
+        strategyTemplateDiagnostics,
+      });
 
       res.json({
         success: true,
@@ -106,9 +113,11 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
               rosterVisibility: dashboardPayload.diagnostics.rosterVisibility,
               strategyOntology: dashboardPayload.diagnostics.strategyOntologyArtifact,
               strategyTemplateDiagnostics,
+              managementStrategyContext,
             }
           : null,
         strategy_template_diagnostics: strategyTemplateDiagnostics,
+        management_strategy_context: managementStrategyContext,
         ...result,
       });
     } catch (error) {
