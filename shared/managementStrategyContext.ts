@@ -3,6 +3,23 @@ import type { StrategyTemplateDiagnostics } from './strategyTemplateDiagnostics'
 const STRATEGY_TEMPLATE_SELECTION_ENABLED = false as const;
 const STRATEGY_CONTEXT_DEFERRED_REASON = 'strategy_template_activation_deferred' as const;
 
+const STRATEGY_CONTEXT_NOTE_READONLY =
+  'Read-only Management Strategy Context for future Strategy ontology activation.' as const;
+const STRATEGY_CONTEXT_NOTE_SELECTION_DISABLED =
+  'Strategy template selection remains disabled; no template rendering, interpolation, or recommendations are performed.' as const;
+const STRATEGY_ONTOLOGY_UNAVAILABLE_NOTE_PREFIX = 'Strategy ontology unavailable:' as const;
+
+const STRATEGY_CONTEXT_SAFE_BUILDER_NOTES: readonly string[] = [
+  STRATEGY_CONTEXT_NOTE_READONLY,
+  STRATEGY_CONTEXT_NOTE_SELECTION_DISABLED,
+];
+
+// Interpolation markers are never legitimate in a read-only context note.
+const STRATEGY_NOTE_INTERPOLATION_MARKER_PATTERN = /\{\{|\}\}/;
+// Advice/activation language that could imply active strategy output.
+const STRATEGY_NOTE_ADVICE_ACTIVATION_PATTERN =
+  /\b(recommend(?:s|ed|ation|ations|ing)?|advis(?:e|es|ed|ory|ing)|should\s+(?:start|sit|trade|drop|add|stash|cut|hold))\b/i;
+
 type CoverageSummary = {
   matched?: number | null;
   total?: number | null;
@@ -146,6 +163,31 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
+function isKnownSafeBuilderNote(note: string): boolean {
+  return STRATEGY_CONTEXT_SAFE_BUILDER_NOTES.includes(note) || note.startsWith(STRATEGY_ONTOLOGY_UNAVAILABLE_NOTE_PREFIX);
+}
+
+/**
+ * Applies the same fail-closed rules to a single context note that we apply to
+ * template bodies: interpolation markers are never legitimate, and any note that
+ * implies active strategy advice/output is dropped. Known read-only builder
+ * notes (whose advice wording is a negation) are preserved verbatim.
+ *
+ * Returns the note to keep, or `null` to drop it.
+ */
+function sanitizeStrategyContextNote(note: string): string | null {
+  if (STRATEGY_NOTE_INTERPOLATION_MARKER_PATTERN.test(note)) return null;
+  if (isKnownSafeBuilderNote(note)) return note;
+  if (STRATEGY_NOTE_ADVICE_ACTIVATION_PATTERN.test(note)) return null;
+  return note;
+}
+
+function sanitizeStrategyContextNotes(value: unknown): string[] {
+  return cleanStringList(Array.isArray(value) ? (value as string[]) : null)
+    .map((note) => sanitizeStrategyContextNote(note))
+    .filter((note): note is string => note !== null);
+}
+
 /**
  * Resolves the readiness status for the Strategy Context.
  *
@@ -191,7 +233,7 @@ export function buildManagementStrategyContext(input: ManagementStrategyContextI
     ?? ontology?.futureContractInputs
     ?? [];
   const unavailableNote = !ontologyAvailable && ontology?.reason
-    ? [`Strategy ontology unavailable: ${ontology.reason}`]
+    ? [`${STRATEGY_ONTOLOGY_UNAVAILABLE_NOTE_PREFIX} ${ontology.reason}`]
     : [];
 
   return {
@@ -217,11 +259,11 @@ export function buildManagementStrategyContext(input: ManagementStrategyContextI
       strategy_ontology_model_version: cleanString(ontology?.modelVersion ?? null),
       strategy_ontology_generated_at: cleanString(ontology?.generatedAt ?? null),
     },
-    notes: [
-      'Read-only Management Strategy Context for future Strategy ontology activation.',
-      'Strategy template selection remains disabled; no template rendering, interpolation, or recommendations are performed.',
+    notes: sanitizeStrategyContextNotes([
+      STRATEGY_CONTEXT_NOTE_READONLY,
+      STRATEGY_CONTEXT_NOTE_SELECTION_DISABLED,
       ...unavailableNote,
-    ],
+    ]),
   };
 }
 
@@ -315,6 +357,6 @@ export function normalizeManagementStrategyContext(value: unknown): ManagementSt
           : null,
       ),
     },
-    notes: normalizeStringArray(record.notes),
+    notes: sanitizeStrategyContextNotes(record.notes),
   };
 }

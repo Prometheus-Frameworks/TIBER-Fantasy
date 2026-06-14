@@ -265,6 +265,40 @@ describe('normalizeManagementStrategyContext', () => {
     expect(normalizeManagementStrategyContext({ available: true, status: 'blocked' })?.available).toBe(true);
   });
 
+  it('drops unsafe notes containing interpolation markers or advice activation language', () => {
+    const normalized = normalizeManagementStrategyContext({
+      status: 'blocked',
+      notes: [
+        'Read-only Management Strategy Context for future Strategy ontology activation.',
+        '{{slot}} recommendation',
+        'Recommendation: trade Christian McCaffrey for picks.',
+        'You should start Puka Nacua this week.',
+        'Strategy ontology unavailable: artifact missing',
+        '   ',
+        42,
+      ],
+    });
+
+    expect(normalized?.notes).toEqual([
+      'Read-only Management Strategy Context for future Strategy ontology activation.',
+      'Strategy ontology unavailable: artifact missing',
+    ]);
+
+    const serialized = JSON.stringify(normalized);
+    expect(serialized).not.toContain('{{');
+    expect(serialized).not.toContain('McCaffrey');
+    expect(serialized).not.toContain('Puka Nacua');
+  });
+
+  it('preserves the known read-only builder notes even though they mention recommendations', () => {
+    const builderNotes = buildManagementStrategyContext({
+      teamDirection: representativeTeamDirection,
+      diagnostics: representativeDiagnostics,
+    }).notes;
+
+    expect(normalizeManagementStrategyContext({ status: 'blocked', notes: builderNotes })?.notes).toEqual(builderNotes);
+  });
+
   it('does not import from server in shared/client-safe code', () => {
     const source = readFileSync(resolve(process.cwd(), 'shared/managementStrategyContext.ts'), 'utf8');
 
