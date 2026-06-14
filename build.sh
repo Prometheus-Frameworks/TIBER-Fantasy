@@ -8,5 +8,5 @@
   --packages=external \
   --format=esm \
   --outfile=dist/app.mjs \
-  && npx vite build \
+  && ./node_modules/.bin/vite build \
   && cp server/bootstrap.mjs dist/index.mjs
