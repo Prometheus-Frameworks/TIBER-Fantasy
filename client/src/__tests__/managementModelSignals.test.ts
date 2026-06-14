@@ -387,6 +387,62 @@ describe('Management model signal cards', () => {
     });
   });
 
+  it('fails the Strategy Context card closed without crashing on a malformed context payload', () => {
+    const cards = buildManagementModelSignals({
+      hasActiveTeam: true,
+      hasRosterData: true,
+      hasDashboardTotals: true,
+      rosterVisibility: {
+        total: 30,
+        identityCovered: 30,
+        baselineVisible: 0,
+        forgeScored: 24,
+        forgeBaseline: 0,
+        rookieAlphaFallback: 0,
+        knownUnscored: 6,
+        unresolved: 0,
+        evidenceCovered: 24,
+      },
+      teamstateQueryState: 'success',
+      teamstateResponse: teamStateResponse(),
+      teamstateDetails: ['Provenance status: governed_promoted.'],
+      // Intentionally malformed: missing source_summary, notes is not an array,
+      // an injected template body, and an attempt to enable activation.
+      managementStrategyContext: {
+        available: true,
+        status: 'definitely_active',
+        team_direction: 'rebuild',
+        strategy_ontology_available: true,
+        strategy_template_selection_enabled: true,
+        selected_template_id: 'rebuild_premium_assets_timeline_mismatch',
+        blocked_reasons: ['bogus_reason'],
+        template_text: 'Roster has premium names but {{anchor_count}} anchors.',
+        notes: [
+          '{{anchor_count}} recommendation: trade Christian McCaffrey now.',
+          'You should start Puka Nacua this week.',
+        ],
+      } as unknown as Parameters<typeof buildManagementModelSignals>[0]['managementStrategyContext'],
+    });
+
+    const contextCard = signal(cards, 'Strategy Context');
+    expect(contextCard).toMatchObject({
+      status: 'unavailable',
+      statusLabel: 'Unavailable',
+    });
+    expect(contextCard.details).toEqual(expect.arrayContaining([
+      'Status: unavailable.',
+      'Template selection: Disabled.',
+      'Selected template: None.',
+      'Notes: none.',
+    ]));
+    const serializedContextCard = JSON.stringify(contextCard);
+    expect(serializedContextCard).not.toContain('template_text');
+    expect(serializedContextCard).not.toContain('{{');
+    expect(serializedContextCard).not.toContain('McCaffrey');
+    expect(serializedContextCard).not.toContain('Puka Nacua');
+    expect(serializedContextCard).not.toContain('rebuild_premium_assets_timeline_mismatch');
+  });
+
   it('does not claim active Management integration for ROP or point prediction', () => {
     const cards = buildManagementModelSignals({
       hasActiveTeam: true,
