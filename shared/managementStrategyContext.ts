@@ -45,6 +45,15 @@ export type ManagementStrategyContextBlockedReason =
   | 'team_direction_missing'
   | 'team_direction_confidence_missing';
 
+const STRATEGY_CONTEXT_STATUSES: readonly ManagementStrategyContextStatus[] = ['available', 'blocked', 'unavailable'];
+const KNOWN_BLOCKED_REASONS: readonly ManagementStrategyContextBlockedReason[] = [
+  STRATEGY_CONTEXT_DEFERRED_REASON,
+  'strategy_ontology_diagnostics_missing',
+  'strategy_ontology_unavailable',
+  'team_direction_missing',
+  'team_direction_confidence_missing',
+];
+
 export type ManagementStrategyContextInput = {
   teamDirection?: {
     direction?: string | null;
@@ -133,6 +142,34 @@ function uniqueReasons(reasons: ManagementStrategyContextBlockedReason[]): Manag
   return Array.from(new Set(reasons));
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+/**
+ * Resolves the readiness status for the Strategy Context.
+ *
+ * `'available'` is reserved for a future Strategy activation phase and is never
+ * emitted while template selection is deferred. Until then an inspectable
+ * ontology reports `'blocked'` (visible but gated) and a missing/unavailable
+ * ontology fails closed to `'unavailable'`.
+ */
+function resolveManagementStrategyContextStatus(ontologyAvailable: boolean): ManagementStrategyContextStatus {
+  return ontologyAvailable ? 'blocked' : 'unavailable';
+}
+
+/**
+ * A Strategy Context is "inspectable" when Management can show its read-only
+ * diagnostics. This is visibility only — it never implies template selection,
+ * rendering, interpolation, advice output, or Team Direction recalculation.
+ */
+export function isManagementStrategyContextInspectable(
+  context: ManagementStrategyContext | null | undefined,
+): boolean {
+  if (!context) return false;
+  return context.available || context.status === 'blocked' || context.status === 'available';
+}
+
 export function buildManagementStrategyContext(input: ManagementStrategyContextInput | null | undefined): ManagementStrategyContext {
   const teamDirection = input?.teamDirection ?? null;
   const rosterVisibility = input?.rosterVisibility ?? teamDirection?.visibilityCounts ?? null;
@@ -159,7 +196,7 @@ export function buildManagementStrategyContext(input: ManagementStrategyContextI
 
   return {
     available: hasRequiredPreviewInputs,
-    status: hasRequiredPreviewInputs ? 'blocked' : ontologyDiagnosticsAvailable && ontologyAvailable ? 'blocked' : 'unavailable',
+    status: resolveManagementStrategyContextStatus(ontologyAvailable),
     team_direction: direction,
     team_direction_confidence: confidence,
     evidence_coverage: preserveCoverage(teamDirection?.evidenceCoverage) ?? coverageFromCounts(rosterVisibility?.evidenceCovered, rosterVisibility?.total),
@@ -185,5 +222,99 @@ export function buildManagementStrategyContext(input: ManagementStrategyContextI
       'Strategy template selection remains disabled; no template rendering, interpolation, or recommendations are performed.',
       ...unavailableNote,
     ],
+  };
+}
+
+function normalizeStatus(value: unknown): ManagementStrategyContextStatus {
+  return typeof value === 'string' && (STRATEGY_CONTEXT_STATUSES as readonly string[]).includes(value)
+    ? (value as ManagementStrategyContextStatus)
+    : 'unavailable';
+}
+
+function normalizeBlockedReasons(value: unknown): ManagementStrategyContextBlockedReason[] {
+  if (!Array.isArray(value)) return [];
+  return uniqueReasons(
+    value.filter(
+      (reason): reason is ManagementStrategyContextBlockedReason =>
+        typeof reason === 'string' && (KNOWN_BLOCKED_REASONS as readonly string[]).includes(reason),
+    ),
+  );
+}
+
+function normalizeCoverage(value: unknown): CoverageSummary | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const summary: CoverageSummary = {
+    matched: finiteNumberOrNull(record.matched),
+    total: finiteNumberOrNull(record.total),
+    rate: finiteNumberOrNull(record.rate),
+  };
+  if ('forgeMatched' in record) summary.forgeMatched = finiteNumberOrNull(record.forgeMatched);
+  if ('rookieAlphaMatched' in record) summary.rookieAlphaMatched = finiteNumberOrNull(record.rookieAlphaMatched);
+  return Object.values(summary).some((entry) => entry !== null) ? summary : null;
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? cleanStringList(value as string[]) : [];
+}
+
+/**
+ * Defensively coerces an arbitrary (possibly partial, malformed, or untrusted)
+ * value into a safe {@link ManagementStrategyContext}, or returns `null` when the
+ * value is not an object at all.
+ *
+ * Fail-closed guarantees enforced here regardless of input:
+ * - `strategy_template_selection_enabled` is always `false`.
+ * - `selected_template_id` is always `null`.
+ * - `available` cannot be `true` unless the status is also inspectable.
+ * - Only known fields are copied, so injected template bodies/slots cannot leak
+ *   through into Management surfaces.
+ */
+export function normalizeManagementStrategyContext(value: unknown): ManagementStrategyContext | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const status = normalizeStatus(record.status);
+  const sourceSummary = asRecord(record.source_summary) ?? {};
+
+  return {
+    available: record.available === true && status !== 'unavailable',
+    status,
+    team_direction: cleanString(typeof record.team_direction === 'string' ? record.team_direction : null),
+    team_direction_confidence: cleanString(
+      typeof record.team_direction_confidence === 'string' ? record.team_direction_confidence : null,
+    ),
+    evidence_coverage: normalizeCoverage(record.evidence_coverage),
+    identity_coverage: normalizeCoverage(record.identity_coverage),
+    forge_coverage: normalizeCoverage(record.forge_coverage),
+    strategy_ontology_available: record.strategy_ontology_available === true,
+    // Hard invariants — never trust an incoming payload to enable activation.
+    strategy_template_selection_enabled: STRATEGY_TEMPLATE_SELECTION_ENABLED,
+    selected_template_id: null,
+    blocked_reasons: normalizeBlockedReasons(record.blocked_reasons),
+    missing_inputs: normalizeStringArray(record.missing_inputs),
+    roster_timeline_signals: asRecord(record.roster_timeline_signals),
+    asset_archetype_signals: asRecord(record.asset_archetype_signals),
+    management_tensions: normalizeStringArray(record.management_tensions),
+    source_summary: {
+      roster_count: finiteNumberOrNull(sourceSummary.roster_count),
+      resolved_identity_rows_scanned: finiteNumberOrNull(sourceSummary.resolved_identity_rows_scanned),
+      strategy_ontology_contract_version: cleanString(
+        typeof sourceSummary.strategy_ontology_contract_version === 'string'
+          ? sourceSummary.strategy_ontology_contract_version
+          : null,
+      ),
+      strategy_ontology_model_version: cleanString(
+        typeof sourceSummary.strategy_ontology_model_version === 'string'
+          ? sourceSummary.strategy_ontology_model_version
+          : null,
+      ),
+      strategy_ontology_generated_at: cleanString(
+        typeof sourceSummary.strategy_ontology_generated_at === 'string'
+          ? sourceSummary.strategy_ontology_generated_at
+          : null,
+      ),
+    },
+    notes: normalizeStringArray(record.notes),
   };
 }

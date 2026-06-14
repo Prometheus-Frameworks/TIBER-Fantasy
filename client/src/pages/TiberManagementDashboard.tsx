@@ -4,7 +4,12 @@ import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
-import { buildManagementStrategyContext, type ManagementStrategyContext } from '@shared/managementStrategyContext';
+import {
+  buildManagementStrategyContext,
+  isManagementStrategyContextInspectable,
+  normalizeManagementStrategyContext,
+  type ManagementStrategyContext,
+} from '@shared/managementStrategyContext';
 import {
   type TeamEnvironmentMovementResponse,
   buildTeamEnvironmentMovementSummary,
@@ -1005,22 +1010,26 @@ export function buildManagementModelSignals({
         'Compatible templates: 0.',
         'Missing inputs: not inspected.',
       ];
-  const strategyContextAvailable = managementStrategyContext?.available === true;
-  const strategyContextStatus = managementStrategyContext?.status;
-  const strategyContextDetails = managementStrategyContext
+  // Defensively normalize the incoming context: API payloads may be partial,
+  // malformed, or absent. Normalization fails closed and guarantees template
+  // selection stays disabled and the selected template stays null before any
+  // nested field is read for display.
+  const normalizedStrategyContext = normalizeManagementStrategyContext(managementStrategyContext ?? null);
+  const strategyContextInspectable = isManagementStrategyContextInspectable(normalizedStrategyContext);
+  const strategyContextDetails = normalizedStrategyContext
     ? [
-        `Status: ${managementStrategyContext.status}.`,
-        `Team Direction: ${managementStrategyContext.team_direction ?? 'Unknown'}.`,
-        `Team Direction confidence: ${managementStrategyContext.team_direction_confidence ?? 'Unknown'}.`,
-        coverageDetail('Identity coverage', managementStrategyContext.identity_coverage),
-        coverageDetail('FORGE/evidence coverage', managementStrategyContext.evidence_coverage ?? managementStrategyContext.forge_coverage),
-        `Strategy ontology availability: ${yesNo(managementStrategyContext.strategy_ontology_available)}.`,
-        `Template selection: ${managementStrategyContext.strategy_template_selection_enabled ? 'Enabled' : 'Disabled'}.`,
-        `Selected template: ${managementStrategyContext.selected_template_id ?? 'None'}.`,
-        `Blocked by: ${listOrNone(managementStrategyContext.blocked_reasons)}.`,
-        `Missing inputs: ${listOrNone(managementStrategyContext.missing_inputs)}.`,
-        `Source summary: roster ${managementStrategyContext.source_summary.roster_count ?? 'unknown'}; identity rows ${managementStrategyContext.source_summary.resolved_identity_rows_scanned ?? 'unknown'}; ontology ${managementStrategyContext.source_summary.strategy_ontology_contract_version ?? 'unknown'} / ${managementStrategyContext.source_summary.strategy_ontology_model_version ?? 'unknown'}.`,
-        `Notes: ${listOrNone(managementStrategyContext.notes.map(safeStrategyContextNote))}.`,
+        `Status: ${normalizedStrategyContext.status}.`,
+        `Team Direction: ${normalizedStrategyContext.team_direction ?? 'Unknown'}.`,
+        `Team Direction confidence: ${normalizedStrategyContext.team_direction_confidence ?? 'Unknown'}.`,
+        coverageDetail('Identity coverage', normalizedStrategyContext.identity_coverage),
+        coverageDetail('FORGE/evidence coverage', normalizedStrategyContext.evidence_coverage ?? normalizedStrategyContext.forge_coverage),
+        `Strategy ontology availability: ${yesNo(normalizedStrategyContext.strategy_ontology_available)}.`,
+        `Template selection: ${normalizedStrategyContext.strategy_template_selection_enabled ? 'Enabled' : 'Disabled'}.`,
+        `Selected template: ${normalizedStrategyContext.selected_template_id ?? 'None'}.`,
+        `Blocked by: ${listOrNone(normalizedStrategyContext.blocked_reasons)}.`,
+        `Missing inputs: ${listOrNone(normalizedStrategyContext.missing_inputs)}.`,
+        `Source summary: roster ${normalizedStrategyContext.source_summary.roster_count ?? 'unknown'}; identity rows ${normalizedStrategyContext.source_summary.resolved_identity_rows_scanned ?? 'unknown'}; ontology ${normalizedStrategyContext.source_summary.strategy_ontology_contract_version ?? 'unknown'} / ${normalizedStrategyContext.source_summary.strategy_ontology_model_version ?? 'unknown'}.`,
+        `Notes: ${listOrNone(normalizedStrategyContext.notes.map(safeStrategyContextNote))}.`,
       ]
     : [
         'Status: unavailable.',
@@ -1104,11 +1113,11 @@ export function buildManagementModelSignals({
     },
     {
       title: 'Strategy Context',
-      status: strategyContextAvailable || strategyContextStatus === 'blocked' ? 'inspection only' : 'unavailable',
-      statusLabel: strategyContextAvailable || strategyContextStatus === 'blocked' ? 'Inspection only' : 'Unavailable',
-      explanation: managementStrategyContext
+      status: strategyContextInspectable ? 'inspection only' : 'unavailable',
+      statusLabel: strategyContextInspectable ? 'Inspection only' : 'Unavailable',
+      explanation: strategyContextInspectable
         ? 'Read-only future-activation context for Management Strategy ontology diagnostics. It is blocked/deferred visibility only: no template selection, rendering, interpolation, advice output, or Team Direction recalculation occurs.'
-        : 'Management Strategy Context is unavailable or was not returned. Strategy activation remains disabled.',
+        : 'Management Strategy Context is unavailable, malformed, or was not returned. Strategy activation remains disabled.',
       href: '#team-direction',
       linkLabel: 'Inspect Team Direction',
       provenance: 'Read-only Management Strategy Context from Management/Team Direction payloads. Visibility only; not an active advice engine.',
