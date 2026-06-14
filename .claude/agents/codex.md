@@ -723,3 +723,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Exposed sanitized template summaries from the dashboard service and emitted `strategy_template_diagnostics` plus `forgeDiagnostics.strategyTemplateDiagnostics` from the Management Team Direction endpoint.
 - Preserved disabled template selection, null selected template, unchanged classification output, no template text rendering, and no archetype/player inference.
 - Validation: targeted Jest suites passed; `git diff --check` passed; full typecheck remains blocked by existing repo-wide issues outside touched files.
+
+### 2026-06-14 — Phase 3B Strategy Context Management diagnostics
+- Added read-only Management Strategy Context model-signal card near Strategy Templates diagnostics.
+- Extended targeted Management model-signal tests for present and missing/fail-closed context states.
+- Validation: targeted Jest passed, diff check passed, repo typecheck failed on existing unrelated errors outside touched files.

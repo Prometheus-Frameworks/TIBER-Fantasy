@@ -515,3 +515,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** server/modules/externalModels/strategyOntology/strategyTemplateDiagnostics.ts, server/services/leagueDashboardService.ts, server/routes/managementRoutes.ts, server/modules/externalModels/strategyOntology/__tests__/strategyTemplateDiagnostics.test.ts, server/routes/__tests__/managementRoutes.test.ts
 - **Validation:** Targeted strategy ontology/Management Jest suites passed; git diff check passed; full typecheck still reports pre-existing repo-wide errors outside touched files, with no touched-file matches after filtering.
 - **Notes:** Template selection remains disabled and future-contract inputs remain diagnostic-only until governed artifacts supply them.
+
+### 2026-06-14 — Codex: Phase 3B Strategy Context Management diagnostics
+- **What changed:** Added a read-only Strategy Context model-signal card to Management diagnostics, sourced from `management_strategy_context`, with fail-closed unavailable copy when context is absent.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementModelSignals.test.ts`
+- **Validation:** `npm run test -- client/src/__tests__/managementModelSignals.test.ts` passed; `git diff --check` passed; `npm run typecheck` still fails from pre-existing unrelated repo-wide TypeScript errors outside touched files.
+- **Notes:** Phase 3B remains visibility-only: no strategy template selection, template rendering, slot interpolation, advice output, or Team Direction recalculation.
