@@ -4,7 +4,7 @@ import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
-import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
+import { buildManagementStrategyContext, type ManagementStrategyContext } from '@shared/managementStrategyContext';
 import {
   type TeamEnvironmentMovementResponse,
   buildTeamEnvironmentMovementSummary,
@@ -261,6 +261,7 @@ type TeamDirectionResponse = {
   reason?: string;
   error?: string;
   strategy_template_diagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics>;
+  management_strategy_context?: ManagementStrategyContext;
 };
 
 export type ModelSignalStatus = 'ready' | 'partial' | 'unavailable' | 'not wired' | 'inspection only';
@@ -811,6 +812,17 @@ function listOrNone(values?: string[] | null): string {
   return values && values.length > 0 ? values.join(', ') : 'none';
 }
 
+function coverageDetail(label: string, coverage?: { matched?: number | null; total?: number | null; rate?: number | null } | null): string {
+  if (!coverage || (coverage.matched == null && coverage.total == null)) return `${label}: unavailable.`;
+  const matched = coverage.matched ?? 'unknown';
+  const total = coverage.total ?? 'unknown';
+  return `${label}: ${matched}/${total} (${pct(coverage.rate)}).`;
+}
+
+function safeStrategyContextNote(note: string): string {
+  return note.replace(/\brecommendations\b/gi, 'advice outputs').replace(/\brecommendation\b/gi, 'advice output');
+}
+
 function artifactStatusClass(artifact?: ForgeArtifactDiagnostics | null) {
   if (artifact?.available) return 'tmd-status-ready';
   if (artifact?.state === 'missing' || artifact?.state === 'disabled') return 'tmd-status-unavailable';
@@ -953,6 +965,7 @@ export function buildManagementModelSignals({
   teamstateResponse,
   teamstateDetails,
   strategyTemplateDiagnostics,
+  managementStrategyContext,
 }: {
   hasActiveTeam: boolean;
   hasRosterData: boolean;
@@ -962,6 +975,7 @@ export function buildManagementModelSignals({
   teamstateResponse?: TeamEnvironmentMovementResponse | null;
   teamstateDetails: string[];
   strategyTemplateDiagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics> | null;
+  managementStrategyContext?: ManagementStrategyContext | null;
 }): ModelSignalCard[] {
   const forgeCoverageRate = rosterVisibility.total > 0 ? rosterVisibility.forgeScored / rosterVisibility.total : 0;
   const hasForgeAlphaTotals = hasDashboardTotals;
@@ -990,6 +1004,34 @@ export function buildManagementModelSignals({
         'Selected template: None.',
         'Compatible templates: 0.',
         'Missing inputs: not inspected.',
+      ];
+  const strategyContextAvailable = managementStrategyContext?.available === true;
+  const strategyContextStatus = managementStrategyContext?.status;
+  const strategyContextDetails = managementStrategyContext
+    ? [
+        `Status: ${managementStrategyContext.status}.`,
+        `Team Direction: ${managementStrategyContext.team_direction ?? 'Unknown'}.`,
+        `Team Direction confidence: ${managementStrategyContext.team_direction_confidence ?? 'Unknown'}.`,
+        coverageDetail('Identity coverage', managementStrategyContext.identity_coverage),
+        coverageDetail('FORGE/evidence coverage', managementStrategyContext.evidence_coverage ?? managementStrategyContext.forge_coverage),
+        `Strategy ontology availability: ${yesNo(managementStrategyContext.strategy_ontology_available)}.`,
+        `Template selection: ${managementStrategyContext.strategy_template_selection_enabled ? 'Enabled' : 'Disabled'}.`,
+        `Selected template: ${managementStrategyContext.selected_template_id ?? 'None'}.`,
+        `Blocked by: ${listOrNone(managementStrategyContext.blocked_reasons)}.`,
+        `Missing inputs: ${listOrNone(managementStrategyContext.missing_inputs)}.`,
+        `Source summary: roster ${managementStrategyContext.source_summary.roster_count ?? 'unknown'}; identity rows ${managementStrategyContext.source_summary.resolved_identity_rows_scanned ?? 'unknown'}; ontology ${managementStrategyContext.source_summary.strategy_ontology_contract_version ?? 'unknown'} / ${managementStrategyContext.source_summary.strategy_ontology_model_version ?? 'unknown'}.`,
+        `Notes: ${listOrNone(managementStrategyContext.notes.map(safeStrategyContextNote))}.`,
+      ]
+    : [
+        'Status: unavailable.',
+        'Team Direction: Unknown.',
+        'Team Direction confidence: Unknown.',
+        'Identity coverage: unavailable.',
+        'FORGE/evidence coverage: unavailable.',
+        'Strategy ontology availability: no.',
+        'Template selection: Disabled.',
+        'Selected template: None.',
+        'Blocked by: management_strategy_context missing or malformed.',
       ];
 
   return [
@@ -1059,6 +1101,18 @@ export function buildManagementModelSignals({
       linkLabel: 'Inspect Team Direction',
       provenance: 'Read-only Strategy template diagnostics from Management/Team Direction payloads. No templates are selected, rendered, interpolated, or applied to players.',
       details: strategyTemplateDetails,
+    },
+    {
+      title: 'Strategy Context',
+      status: strategyContextAvailable || strategyContextStatus === 'blocked' ? 'inspection only' : 'unavailable',
+      statusLabel: strategyContextAvailable || strategyContextStatus === 'blocked' ? 'Inspection only' : 'Unavailable',
+      explanation: managementStrategyContext
+        ? 'Read-only future-activation context for Management Strategy ontology diagnostics. It is blocked/deferred visibility only: no template selection, rendering, interpolation, advice output, or Team Direction recalculation occurs.'
+        : 'Management Strategy Context is unavailable or was not returned. Strategy activation remains disabled.',
+      href: '#team-direction',
+      linkLabel: 'Inspect Team Direction',
+      provenance: 'Read-only Management Strategy Context from Management/Team Direction payloads. Visibility only; not an active advice engine.',
+      details: strategyContextDetails,
     },
     {
       title: 'ROP / Opportunity',
@@ -1427,6 +1481,7 @@ export default function TiberManagementDashboard() {
     teamstateResponse: teamstateQuery.data,
     teamstateDetails,
     strategyTemplateDiagnostics: managementSnapshot.strategy_template_diagnostics,
+    managementStrategyContext: managementSnapshot.management_strategy_context,
   });
 
   const actionSteps = activeTeam

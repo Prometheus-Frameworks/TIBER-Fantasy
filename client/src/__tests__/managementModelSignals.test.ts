@@ -263,6 +263,34 @@ describe('Management model signal cards', () => {
         ],
         unavailable_reason: null,
       },
+      managementStrategyContext: {
+        available: true,
+        status: 'blocked',
+        team_direction: 'rebuild',
+        team_direction_confidence: 'high',
+        evidence_coverage: { matched: 24, total: 30, rate: 0.8, rookieAlphaMatched: 0 },
+        identity_coverage: { matched: 30, total: 30, rate: 1 },
+        forge_coverage: { matched: 24, total: 30, rate: 0.8 },
+        strategy_ontology_available: true,
+        strategy_template_selection_enabled: false,
+        selected_template_id: null,
+        blocked_reasons: ['strategy_template_activation_deferred'],
+        missing_inputs: ['age_band', 'experience_band', 'role_security_signal', 'market_liquidity_signal'],
+        roster_timeline_signals: null,
+        asset_archetype_signals: null,
+        management_tensions: [],
+        source_summary: {
+          roster_count: 30,
+          resolved_identity_rows_scanned: 352,
+          strategy_ontology_contract_version: 'dynasty_strategy_ontology_v1',
+          strategy_ontology_model_version: 'dynasty-strategy-ontology-v1.0.0',
+          strategy_ontology_generated_at: '2026-06-10T00:00:00.000Z',
+        },
+        notes: [
+          'Read-only Management Strategy Context for future Strategy ontology activation.',
+          'Strategy template selection remains disabled; no template rendering, interpolation, or recommendations are performed.',
+        ],
+      },
     });
 
     const card = signal(cards, 'Strategy Templates');
@@ -285,6 +313,31 @@ describe('Management model signal cards', () => {
     expect(serializedCard).not.toContain('template_text');
     expect(serializedCard).not.toContain('{{');
     expect(serializedCard).not.toContain('}}');
+
+    const contextCard = signal(cards, 'Strategy Context');
+    expect(contextCard).toMatchObject({
+      status: 'inspection only',
+      statusLabel: 'Inspection only',
+    });
+    expect(contextCard.explanation).toContain('blocked/deferred visibility only');
+    expect(contextCard.details).toEqual(expect.arrayContaining([
+      'Status: blocked.',
+      'Team Direction: rebuild.',
+      'Team Direction confidence: high.',
+      'Identity coverage: 30/30 (100%).',
+      'FORGE/evidence coverage: 24/30 (80%).',
+      'Strategy ontology availability: yes.',
+      'Template selection: Disabled.',
+      'Selected template: None.',
+      'Blocked by: strategy_template_activation_deferred.',
+      'Missing inputs: age_band, experience_band, role_security_signal, market_liquidity_signal.',
+      'Source summary: roster 30; identity rows 352; ontology dynasty_strategy_ontology_v1 / dynasty-strategy-ontology-v1.0.0.',
+    ]));
+    const serializedContextCard = JSON.stringify(contextCard);
+    expect(serializedContextCard).not.toContain('template_text');
+    expect(serializedContextCard).not.toContain('{{');
+    expect(serializedContextCard).not.toContain('}}');
+    expect(serializedContextCard).not.toContain('recommendation');
   });
 
   it('fails Strategy Template Diagnostics closed when diagnostics are missing', () => {
@@ -317,6 +370,19 @@ describe('Management model signal cards', () => {
         'Selected template: None.',
         'Compatible templates: 0.',
         'Missing inputs: not inspected.',
+      ]),
+    });
+    expect(signal(cards, 'Strategy Context')).toMatchObject({
+      status: 'unavailable',
+      statusLabel: 'Unavailable',
+      details: expect.arrayContaining([
+        'Status: unavailable.',
+        'Team Direction: Unknown.',
+        'Team Direction confidence: Unknown.',
+        'Strategy ontology availability: no.',
+        'Template selection: Disabled.',
+        'Selected template: None.',
+        'Blocked by: management_strategy_context missing or malformed.',
       ]),
     });
   });
