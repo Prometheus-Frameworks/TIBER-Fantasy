@@ -86,3 +86,11 @@ The fallback is intentionally additive: it can expose promoted rookie context wh
 Management is an inspection and decision-support surface. It may surface evidence, uncertainty, provenance, and research paths. It must not silently execute or imply automatic roster, trade, or waiver decisions.
 
 See `docs/product/HUMAN_IN_THE_LOOP_DECISION_DOCTRINE.md` for the product-wide rule.
+
+## Post-Phase-3 readiness checkpoint
+
+See `docs/product/MANAGEMENT_PHASE3_CHECKPOINT.md` for the June 2026 checkpoint
+recording where Management landed after PRs #200 and #219–#222 against the
+expanded 59-row FORGE evidence base, including active-team coverage counts,
+Strategy Context fail-closed invariants, and Team Direction classification
+readiness ahead of Phase 4.
