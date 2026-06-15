@@ -102,8 +102,9 @@ remain intact:
   selected template `None`, notes `none`.
 
 An inspectable ontology reports `status: blocked` (visible but gated); a
-missing/unavailable ontology fails closed to `status: unavailable`. `available`
-is never emitted while template selection is deferred.
+missing/unavailable ontology fails closed to `status: unavailable`. The
+`status: "available"` state is never emitted while template selection is
+deferred.
 
 ## 4. Team Direction classification on the expanded evidence base
 
