@@ -117,6 +117,16 @@ describe('Strategy Context readiness (diagnostic only, no template activation)',
     expect(resolved.capped).toBe(false);
   });
 
+  it('caps inspectable statuses at Level 1 even when a higher level is requested', () => {
+    const blocked = evaluateStrategyContextReadiness({ status: 'blocked', uiLabeled: true }, 2);
+    expect(blocked.resolved.requestedLevel).toBe(2);
+    expect(blocked.resolved.effectiveLevel).toBe(1);
+    expect(blocked.resolved.capped).toBe(true);
+
+    const available = evaluateStrategyContextReadiness({ status: 'available', uiLabeled: true }, 3);
+    expect(available.resolved.effectiveLevel).toBe(1);
+  });
+
   it('fails closed to Level 0 when the context is unavailable', () => {
     const { resolved } = evaluateStrategyContextReadiness({ status: 'unavailable', uiLabeled: true }, 1);
     expect(resolved.effectiveLevel).toBe(0);

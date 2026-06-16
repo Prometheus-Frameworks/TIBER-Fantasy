@@ -280,8 +280,13 @@ export function evaluateStrategyContextReadiness(
     if (input.status === 'unavailable') {
       gateResults.push(gateResult(useId, 'G1', false, 0, 'strategy context unavailable — fail closed'));
     } else {
+      // `blocked`/`available` are inspectable for diagnostics, but Strategy Context
+      // is visibility-only in this slice (template selection stays disabled). The
+      // gate passes (it is inspectable) yet caps at Level 1, so a caller that
+      // requests a higher level — or future wiring — can never promote blocked
+      // readiness past read-only diagnostic.
       gateResults.push(
-        gateResult(useId, 'G1', true, null, `strategy context inspectable (${input.status})`),
+        gateResult(useId, 'G1', true, 1, `strategy context inspectable but diagnostic visibility only (${input.status})`),
       );
     }
   }
