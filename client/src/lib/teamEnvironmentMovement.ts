@@ -28,7 +28,8 @@ export interface TeamEnvironmentMovementEntry {
 
 export interface TeamEnvironmentMovementResponse {
   ok: boolean;
-  artifact: 'team_environment_movement_v0';
+  // Accepts the team-state-only v1 successor and the legacy v0 during the migration transition.
+  artifact: 'team_environment_movement_v0' | 'team_environment_movement_v1';
   artifactAvailable: boolean;
   provenanceStatus: string | null;
   inputSources: unknown[];

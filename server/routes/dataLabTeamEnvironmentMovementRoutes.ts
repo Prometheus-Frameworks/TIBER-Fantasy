@@ -21,7 +21,7 @@ function statusForState(state: string) {
 function buildPayload(result: Awaited<ReturnType<TeamEnvironmentMovementService['getMovement']>>) {
   return {
     ok: result.state === 'ready',
-    artifact: TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME,
+    artifact: result.artifact,
     artifactAvailable: result.artifactAvailable,
     provenanceStatus: result.provenanceStatus,
     inputSources: result.inputSources,

@@ -41,6 +41,79 @@ const validArtifact = {
   ],
 };
 
+// team_environment_movement_v1: team-state-only successor. Note it carries NO fantasyPointsFor*
+// fields in either window averages or deltas — the consumer must not require them.
+const validArtifactV1 = {
+  artifact: 'team_environment_movement_v1',
+  generatedAt: '2026-06-16T00:32:37.853Z',
+  metadata: {
+    provenanceStatus: 'fixture_scaffold',
+    inputSources: ['team_week_raw_v0.movement_demo.sample.json'],
+    coverage: {
+      teamCount: 1,
+      teams: ['DET'],
+      seasons: [2025],
+      weeks: [1, 2, 3, 4, 5, 6],
+      latestWeek: 6,
+      isFullLeague: false,
+    },
+  },
+  teams: [
+    {
+      teamId: 'DET',
+      teamAbbr: 'DET',
+      season: 2025,
+      weeksCovered: [1, 2, 3, 4, 5, 6],
+      earlyWindow: {
+        weeks: [1, 2, 3],
+        games: 3,
+        averages: {
+          pointsPerDrive: 2,
+          epaPerPlay: 0.05,
+          successRate: 0.44,
+          explosivePlayRate: 0.0967,
+          pressureRateAllowed: 0.28,
+          secondsPerPlay: 27.2,
+          neutralPassRate: 0.5567,
+          volatilityScore: 43.67,
+        },
+      },
+      lateWindow: {
+        weeks: [4, 5, 6],
+        games: 3,
+        averages: {
+          pointsPerDrive: 2.767,
+          epaPerPlay: 0.1567,
+          successRate: 0.5,
+          explosivePlayRate: 0.14,
+          pressureRateAllowed: 0.22,
+          secondsPerPlay: 26.033,
+          neutralPassRate: 0.59,
+          volatilityScore: 36.69,
+        },
+      },
+      deltas: {
+        pointsPerDrive: 0.767,
+        epaPerPlay: 0.1067,
+        successRate: 0.06,
+        explosivePlayRate: 0.0433,
+        pressureRateAllowed: -0.06,
+        secondsPerPlay: -1.167,
+        neutralPassRate: 0.0333,
+      },
+      movement: {
+        offenseDirection: 'improving',
+        passEnvironmentDirection: 'more_pass_heavy',
+        paceDirection: 'faster',
+        pressureDirection: 'improving',
+        volatilityDirection: 'falling',
+        verdict: 'offensive_environment_improving',
+      },
+      warnings: [],
+    },
+  ],
+};
+
 describe('TeamEnvironmentMovementService', () => {
   let tmpDir: string;
 
@@ -130,5 +203,82 @@ describe('TeamEnvironmentMovementService', () => {
       verdict: 'offensive_environment_declining_pressure_worsening',
     }));
     expect(result.teams).toEqual([]);
+  });
+
+  it('accepts the team-state-only v1 artifact and echoes the v1 literal', async () => {
+    const artifactPath = path.join(tmpDir, 'team_environment_movement_v1.json');
+    await writeFile(artifactPath, JSON.stringify(validArtifactV1));
+
+    const result = await serviceFor(artifactPath).getMovement();
+
+    expect(result.artifact).toBe('team_environment_movement_v1');
+    expect(result.artifactAvailable).toBe(true);
+    expect(result.state).toBe('ready');
+    expect(result.provenanceStatus).toBe('fixture_scaffold');
+    expect(result.coverage).toEqual(expect.objectContaining({ latestWeek: 6, teams: ['DET'] }));
+    expect(result.teams[0]).toEqual(expect.objectContaining({
+      team: 'DET',
+      teamId: 'DET',
+      offenseDirection: 'improving',
+      pressureDirection: 'improving',
+      passEnvironmentDirection: 'more_pass_heavy',
+      paceDirection: 'faster',
+      volatilityDirection: 'falling',
+      verdict: 'offensive_environment_improving',
+    }));
+  });
+
+  it('does not require the removed fantasy-point fields when reading v1', async () => {
+    const artifactPath = path.join(tmpDir, 'team_environment_movement_v1.json');
+    await writeFile(artifactPath, JSON.stringify(validArtifactV1));
+
+    const result = await serviceFor(artifactPath).getMovement();
+
+    expect(result.state).toBe('ready');
+    // The v1 fixture intentionally carries no fantasyPointsFor* keys; the consumer must still read it.
+    const serialized = JSON.stringify(result.teams[0]);
+    expect(serialized).not.toContain('fantasyPointsForQB');
+    expect(serialized).not.toContain('fantasyPointsForRB');
+    expect(serialized).not.toContain('fantasyPointsForWR');
+    expect(serialized).not.toContain('fantasyPointsForTE');
+    // Team-state window/delta fields still flow through as opaque pass-through context.
+    expect(result.teams[0].earlyWindow).toEqual(expect.objectContaining({ averages: expect.any(Object) }));
+    expect(result.teams[0].deltas).toEqual(expect.objectContaining({ pointsPerDrive: expect.any(Number) }));
+  });
+
+  it('looks up a v1 movement entry by abbreviation', async () => {
+    const artifactPath = path.join(tmpDir, 'team_environment_movement_v1.json');
+    await writeFile(artifactPath, JSON.stringify(validArtifactV1));
+
+    const result = await serviceFor(artifactPath).getMovement('det');
+
+    expect(result.artifact).toBe('team_environment_movement_v1');
+    expect(result.selectedTeam).toEqual(expect.objectContaining({ team: 'DET', offenseDirection: 'improving' }));
+    expect(result.teams).toEqual([]);
+  });
+
+  it('fails closed for an unrecognized artifact literal', async () => {
+    const artifactPath = path.join(tmpDir, 'future.json');
+    await writeFile(artifactPath, JSON.stringify({ ...validArtifactV1, artifact: 'team_environment_movement_v2' }));
+
+    const result = await serviceFor(artifactPath).getMovement();
+
+    expect(result.artifactAvailable).toBe(false);
+    expect(result.state).toBe('error');
+    expect(result.errors[0].code).toBe('invalid_payload');
+    expect(result.teams).toEqual([]);
+  });
+
+  it('remains read-only regardless of artifact version', async () => {
+    const artifactPath = path.join(tmpDir, 'team_environment_movement_v1.json');
+    await writeFile(artifactPath, JSON.stringify(validArtifactV1));
+
+    const result = await serviceFor(artifactPath).getMovement();
+
+    expect(result.source).toEqual(expect.objectContaining({
+      provider: 'tiber-teamstate',
+      mode: 'artifact',
+      readOnly: true,
+    }));
   });
 });

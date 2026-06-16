@@ -1,15 +1,43 @@
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import path from 'path';
 
-export const TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME = 'team_environment_movement_v0' as const;
+export const TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V0 = 'team_environment_movement_v0' as const;
+export const TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1 = 'team_environment_movement_v1' as const;
 
-const DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH = path.join(
-  process.cwd(),
-  '..',
-  'TIBER-Teamstate',
-  'output',
-  'team_environment_movement_v0.json',
-);
+export type TeamEnvironmentMovementArtifactName =
+  | typeof TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V0
+  | typeof TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1;
+
+/**
+ * Accepted artifact literals, in preference order. v1 is the team-state-only successor that drops
+ * the legacy fantasy-point fields (fantasyPointsForQB/RB/WR/TE); v0 is retained for the transition
+ * period because the v1 artifact is not yet the committed representative fixture in TIBER-Teamstate.
+ * TIBER-Fantasy never read the fantasy-point fields, so consuming either literal is functionally
+ * identical for this read-only inspection boundary. See TIBER-Teamstate issue #34.
+ */
+export const TEAM_ENVIRONMENT_MOVEMENT_ACCEPTED_ARTIFACT_NAMES = [
+  TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1,
+  TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V0,
+] as const;
+
+/** Preferred/canonical artifact literal used when no artifact has been parsed (e.g. unavailable/error states). */
+export const TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME = TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1;
+
+const TEAMSTATE_OUTPUT_DIR = path.join(process.cwd(), '..', 'TIBER-Teamstate', 'output');
+const DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH_V1 = path.join(TEAMSTATE_OUTPUT_DIR, 'team_environment_movement_v1.json');
+const DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH_V0 = path.join(TEAMSTATE_OUTPUT_DIR, 'team_environment_movement_v0.json');
+
+/**
+ * Resolve the default movement artifact path. Prefer the team-state-only v1 artifact once it is
+ * present on disk, otherwise fall back to v0 so the consumer keeps working before TIBER-Teamstate
+ * commits the v1 representative fixture. An explicit TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_PATH env
+ * override always wins. This is intentionally a path-resolution choice only: a missing artifact
+ * still fails closed via the unavailable state, never fabricating movement context.
+ */
+function resolveDefaultTeamEnvironmentMovementPath(): string {
+  if (existsSync(DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH_V1)) return DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH_V1;
+  return DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH_V0;
+}
 
 export type TeamEnvironmentMovementErrorCode = 'not_found' | 'invalid_payload' | 'upstream_unavailable';
 
@@ -62,13 +90,16 @@ export interface TeamEnvironmentMovementEntry {
   raw: Record<string, unknown>;
 }
 
-export interface TeamEnvironmentMovementArtifactV0 {
-  artifact: typeof TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME;
+export interface TeamEnvironmentMovementArtifact {
+  artifact: TeamEnvironmentMovementArtifactName;
   generatedAt: string | null;
   metadata: TeamEnvironmentMovementMetadata;
   coverage: TeamEnvironmentMovementCoverage;
   movements: TeamEnvironmentMovementEntry[];
 }
+
+/** @deprecated Use {@link TeamEnvironmentMovementArtifact}. Retained for back-compat; v0/v1 normalize to the same shape. */
+export type TeamEnvironmentMovementArtifactV0 = TeamEnvironmentMovementArtifact;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -150,15 +181,20 @@ function normalizeCoverage(value: unknown): TeamEnvironmentMovementCoverage {
   };
 }
 
-export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironmentMovementArtifactV0 {
+function parseArtifactName(value: unknown): TeamEnvironmentMovementArtifactName | null {
+  return TEAM_ENVIRONMENT_MOVEMENT_ACCEPTED_ARTIFACT_NAMES.find((name) => name === value) ?? null;
+}
+
+export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironmentMovementArtifact {
   if (!isRecord(raw)) {
     throw new TeamEnvironmentMovementIntegrationError('invalid_payload', 'Team Environment Movement artifact must be a JSON object.', 502);
   }
 
-  if (raw.artifact !== TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME) {
+  const artifactName = parseArtifactName(raw.artifact);
+  if (!artifactName) {
     throw new TeamEnvironmentMovementIntegrationError(
       'invalid_payload',
-      'Team Environment Movement artifact literal mismatch; expected team_environment_movement_v0.',
+      'Team Environment Movement artifact literal mismatch; expected team_environment_movement_v1 or team_environment_movement_v0.',
       502,
     );
   }
@@ -178,7 +214,7 @@ export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironm
   }
 
   return {
-    artifact: TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME,
+    artifact: artifactName,
     generatedAt: typeof raw.generatedAt === 'string' ? raw.generatedAt : null,
     metadata: normalizeMetadata(raw.metadata),
     coverage: normalizeCoverage(isRecord(raw.metadata) ? raw.metadata.coverage : null),
@@ -188,14 +224,14 @@ export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironm
 
 export class TeamEnvironmentMovementClient {
   constructor(
-    private readonly artifactPath = process.env.TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_PATH ?? DEFAULT_TEAM_ENVIRONMENT_MOVEMENT_PATH,
+    private readonly artifactPath = process.env.TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_PATH ?? resolveDefaultTeamEnvironmentMovementPath(),
   ) {}
 
   getConfig() {
     return { artifactPath: this.artifactPath };
   }
 
-  async readArtifact(): Promise<TeamEnvironmentMovementArtifactV0 | null> {
+  async readArtifact(): Promise<TeamEnvironmentMovementArtifact | null> {
     try {
       const raw = await fs.readFile(this.artifactPath, 'utf8');
       return parseTeamEnvironmentMovementArtifact(JSON.parse(raw) as unknown);
