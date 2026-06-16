@@ -65,6 +65,11 @@ its readiness gates (Section 2) currently support; failing a gate demotes it.
 - **No silent jumps.** Moving a source up a level is a reviewed change with a
   named owner, a test, and a UI label update — never a side effect of another
   change.
+- **Levels attach to uses, not raw sources.** A single source can power more
+  than one use at different levels (e.g. player-specific FORGE evidence both
+  *drives* the Team Direction classification at Level 3 and *feeds coverage
+  counts* at Level 2). Each use is gated independently at its own level; the gate
+  model evaluates uses, so it must not collapse a multi-use source to one level.
 - **A read-only diagnostic does not become scoring, ranking, advice, or a trade
   recommendation without an explicit later gate.** This is the load-bearing
   invariant of the entire phase.
@@ -113,7 +118,7 @@ The ceiling is a cap, not a commitment to build.
 
 | Source | Current level | Phase 4 ceiling | Gating notes |
 | --- | --- | --- | --- |
-| **FORGE player-specific evidence** (`FORGE_PLAYER_STATIC_V1`, `score_source === player_specific`) | 2 (feeds coverage + Team Direction classification) | 3 (cited as explanatory evidence behind the existing read-only direction) | Already passes G1–G3 at 24/30 coverage; G5 caps confidence. Must not change scoring or thresholds. |
+| **FORGE player-specific evidence** (`FORGE_PLAYER_STATIC_V1`, `score_source === player_specific`) | 3 for classification (already the scored input to the read-only Team Direction classifier); 2 for coverage accounting | 3 (additionally *cited* as explanatory evidence behind the existing read-only direction) | This source has two distinct uses: driving the Team Direction classification is a **Level 3** influence (Section 1's own Level 3 example), governed by the full Level 3 gates; contributing to coverage counts is a separate **Level 2** use. Already passes G1–G3 at 24/30 coverage; G5 caps confidence. Phase 4 adds explicit evidence *citation*, not a new classification input. Must not change scoring or thresholds. |
 | **FORGE generated baselines** (`score_source === generated_baseline`) | 1 (visibility only) | 1 (visibility only) | Permanently capped at visibility by G3. Never coverage, never confidence, never evidence. |
 | **Strategy Context readiness** (`shared/managementStrategyContext.ts`) | 1 (`status: blocked` shown; `unavailable` fails closed) | 2 (eligible supporting context: readiness/coverage visibility) | Template selection stays **disabled**; `selected_template_id` stays `null`. Reaching Level 2 means showing readiness, **not** activating templates. |
 | **Teamstate movement v1** (TIBER-Teamstate promoted movement) | 1 (read-only diagnostic) | 2 (eligible supporting context) | Gated on G1/G2/G4 (governed vs fixture) and G6 freshness. May contextualize, may not re-rank or score. |
@@ -188,9 +193,12 @@ ordered so that gate machinery lands before any promotion uses it.
 3. **Strategy Context readiness → Level 2 (visibility only).** Surface template
    *input coverage* and blocked/unavailable readiness, with labels, while
    template selection stays disabled and `selected_template_id` stays `null`.
-4. **FORGE player-specific evidence → Level 3 (citation only).** Let the
-   existing Team Direction read *cite* its supporting/weakening evidence, without
-   changing the classification, thresholds, or any score.
+4. **FORGE player-specific evidence — formalize at Level 3 + add citation.**
+   The Team Direction classifier already consumes this evidence at Level 3; this
+   slice registers that existing consumer under the Level 3 gates (so the gate
+   model neither disallows it nor under-gates it) and adds explicit
+   supporting/weakening evidence *citation* behind the read, without changing the
+   classification, thresholds, or any score.
 5. **Teamstate movement v1 / Point scenarios → Level 2.** Add labeled
    supporting-context panels gated on governed-vs-fixture (G4) and freshness
    (G6), with no re-ranking and no scoring.
