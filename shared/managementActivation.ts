@@ -223,22 +223,31 @@ function clampToActivatable(level: number): ManagementActivationLevel {
  * result conjunctively (plan Section 2).
  *
  * Fail-closed rules enforced here:
+ *   - Only gate results scoped to this exact use (`result.use === use.useId`) are
+ *     considered. Results belonging to another use of the same source can neither
+ *     satisfy a required gate (fail open) nor impose a foreign cap — levels attach
+ *     to uses, so a combined results array must not cross-contaminate.
  *   - The effective level is the minimum of the requested level and every cap.
  *   - A failed gate caps at its `effectiveCap`, or Level 0 when none is given.
  *   - A passed gate may still cap (e.g. coverage below threshold).
  *   - A required gate with no result caps at Level 0 — absence cannot promote.
- *   - The result is always clamped to the activatable range, so it can never be
- *     the out-of-scope Level 4 regardless of the requested level.
+ *   - The requested level is reported verbatim (so an out-of-scope Level 4 request
+ *     stays visible/auditable as a capped request), while the effective level is
+ *     always clamped to the activatable range and can never be the out-of-scope
+ *     Level 4 regardless of what was requested.
  */
 export function resolveManagementUseActivation(
   use: ManagementSourceUse,
   options: ResolveUseActivationOptions = {},
 ): ResolvedManagementUseActivation {
-  const requestedLevel = clampToActivatable(use.requestedLevel);
+  // Preserve the original request (including an out-of-scope Level 4) so a
+  // misconfigured advice-level use stays distinguishable from an allowed Level 3.
+  const requestedLevel = use.requestedLevel;
   const caps: ManagementActivationCap[] = [];
   const failedGates: ReadinessGateId[] = [];
 
-  let effectiveLevel: ManagementActivationLevel = requestedLevel;
+  // The effective level starts clamped, so it can never resolve to Level 4.
+  let effectiveLevel: ManagementActivationLevel = clampToActivatable(requestedLevel);
   const applyCap = (gate: ReadinessGateId, rawCap: number, reason: string): void => {
     const cap = clampToActivatable(rawCap);
     caps.push({ gate, cap, reason });
@@ -249,6 +258,8 @@ export function resolveManagementUseActivation(
 
   const seenGates = new Set<ReadinessGateId>();
   for (const result of use.gateResults ?? []) {
+    // Levels attach to uses: ignore results that belong to a different use.
+    if (result.use !== use.useId) continue;
     seenGates.add(result.gate);
     if (!result.passed) {
       failedGates.push(result.gate);
@@ -260,7 +271,7 @@ export function resolveManagementUseActivation(
     }
   }
 
-  // Required gates with no result can never promote a source: fail closed.
+  // Required gates with no result for this use can never promote it: fail closed.
   for (const required of options.requiredGates ?? []) {
     if (!seenGates.has(required)) {
       failedGates.push(required);
