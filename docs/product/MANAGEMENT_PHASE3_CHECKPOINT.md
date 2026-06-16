@@ -155,3 +155,8 @@ Per the issue #223 Phase 4 guardrail, this checkpoint proves the Phase 3 safety
 invariants still hold against the expanded evidence base. Phase 4 activation work
 should begin only after this checkpoint and the FORGE season-unpin (TIBER-FORGE
 PR #44) land.
+
+The Phase 4 activation plan — activation levels, readiness gates,
+context-source eligibility, non-goals, and proposed (not built) implementation
+slices — is documented in
+`docs/product/MANAGEMENT_PHASE4_ACTIVATION_PLAN.md` (issue #227).
