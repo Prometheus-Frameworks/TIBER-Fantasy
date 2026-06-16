@@ -537,6 +537,34 @@ describe('GET /api/management/team-direction (endpoint)', () => {
   });
 
 
+  test('exposes additive read-only strategy_context_activation diagnostics without changing existing fields', async () => {
+    const app = buildApp(makeDeps());
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+
+    // Additive, clearly labeled diagnostic field.
+    expect(res.body.strategy_context_activation).toBeDefined();
+    const activation = res.body.strategy_context_activation;
+    expect(activation.diagnostic).toBe(true);
+    expect(activation.readOnly).toBe(true);
+    expect(activation.useId).toBe('strategy_context.readiness');
+    // Ontology available + direction/confidence present → inspectable but blocked,
+    // capped to read-only diagnostic visibility (Level 1) in this slice.
+    expect(activation.status).toBe('blocked');
+    expect(activation.effectiveLevel).toBe(1);
+    // Templates remain disabled — never activated by this diagnostic.
+    expect(activation.templateSelectionEnabled).toBe(false);
+    expect(activation.selectedTemplateId).toBeNull();
+    expect(res.body.forgeDiagnostics.strategyContextActivation).toEqual(activation);
+
+    // Existing behavior unchanged: classification + template diagnostics intact.
+    expect(['contender', 'rebuild', 'retool', 'uncertain']).toContain(res.body.direction);
+    expect(res.body.strategy_template_diagnostics.selected_template_id).toBeNull();
+    expect(res.body.management_strategy_context.selected_template_id).toBeNull();
+    // No rendered template content leaks through the new field.
+    expect(JSON.stringify(activation)).not.toMatch(/\{\{|\}\}/);
+  });
+
   test('strategy ontology diagnostics do not change Management classification output', async () => {
     const depsWithOntology = makeDeps();
     const depsWithoutOntology = makeDeps();

@@ -4,6 +4,7 @@ import { computeLeagueDashboard } from '../services/leagueDashboardService';
 import { classifyTeamDirection } from '../services/teamDirectionClassifier';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
 import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
+import { buildStrategyContextActivationDiagnostics } from '../modules/management/strategyContextActivationDiagnostics';
 
 type ManagementDeps = {
   storage: typeof storage;
@@ -100,6 +101,9 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
         diagnostics: dashboardPayload.diagnostics,
         strategyTemplateDiagnostics,
       });
+      // Slice 3: additive, read-only diagnostic visibility of Strategy Context
+      // activation readiness. Does not activate templates or change any behavior.
+      const strategyContextActivation = buildStrategyContextActivationDiagnostics(managementStrategyContext);
 
       res.json({
         success: true,
@@ -114,10 +118,12 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
               strategyOntology: dashboardPayload.diagnostics.strategyOntologyArtifact,
               strategyTemplateDiagnostics,
               managementStrategyContext,
+              strategyContextActivation,
             }
           : null,
         strategy_template_diagnostics: strategyTemplateDiagnostics,
         management_strategy_context: managementStrategyContext,
+        strategy_context_activation: strategyContextActivation,
         ...result,
       });
     } catch (error) {
