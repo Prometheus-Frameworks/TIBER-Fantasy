@@ -45,6 +45,15 @@ describe('team environment movement management readiness', () => {
     expect(hasUsableTeamEnvironmentMovementContext(buildResponse({ teams: [] }))).toBe(false);
   });
 
+  it('treats the team-state-only v1 artifact as usable read-only context', () => {
+    const v1Response = buildResponse({ artifact: 'team_environment_movement_v1' });
+    expect(v1Response.artifact).toBe('team_environment_movement_v1');
+    expect(hasUsableTeamEnvironmentMovementContext(v1Response)).toBe(true);
+    expect(getTeamEnvironmentMovementReadinessDetails(v1Response)).toEqual(expect.arrayContaining([
+      'Provenance status: fixture_scaffold.',
+    ]));
+  });
+
   it('surfaces provenance, warnings, errors, and present-but-empty artifact state', () => {
     expect(getTeamEnvironmentMovementReadinessDetails(buildResponse({
       ok: false,

@@ -1,6 +1,7 @@
 import {
   TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME,
-  TeamEnvironmentMovementArtifactV0,
+  TeamEnvironmentMovementArtifact,
+  TeamEnvironmentMovementArtifactName,
   TeamEnvironmentMovementClient,
   TeamEnvironmentMovementEntry,
   TeamEnvironmentMovementIntegrationError,
@@ -9,13 +10,13 @@ import {
 export type TeamEnvironmentMovementState = 'ready' | 'unavailable' | 'error';
 
 export interface TeamEnvironmentMovementResponse {
-  artifact: typeof TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME;
+  artifact: TeamEnvironmentMovementArtifactName;
   artifactAvailable: boolean;
   state: TeamEnvironmentMovementState;
   generatedAt: string | null;
   provenanceStatus: string | null;
   inputSources: unknown[];
-  coverage: TeamEnvironmentMovementArtifactV0['coverage'] | null;
+  coverage: TeamEnvironmentMovementArtifact['coverage'] | null;
   teams: TeamEnvironmentMovementEntry[];
   selectedTeam: TeamEnvironmentMovementEntry | null;
   warnings: string[];
@@ -28,7 +29,7 @@ export interface TeamEnvironmentMovementResponse {
   };
 }
 
-function conservativeWarnings(artifact: TeamEnvironmentMovementArtifactV0 | null, selectedTeam: TeamEnvironmentMovementEntry | null): string[] {
+function conservativeWarnings(artifact: TeamEnvironmentMovementArtifact | null, selectedTeam: TeamEnvironmentMovementEntry | null): string[] {
   const warnings = new Set<string>();
 
   if (artifact?.metadata.provenanceStatus === 'fixture_scaffold') {
@@ -75,7 +76,7 @@ export class TeamEnvironmentMovementService {
       }
 
       return {
-        artifact: TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME,
+        artifact: artifact.artifact,
         artifactAvailable: true,
         state: 'ready',
         generatedAt: artifact.generatedAt,
