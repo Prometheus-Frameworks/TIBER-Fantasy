@@ -41,6 +41,15 @@
  */
 export type ManagementActivationLevel = 0 | 1 | 2 | 3 | 4;
 
+/**
+ * The subset of levels that may ever be *resolved to* as an effective level
+ * (0–3). Level 4 is deliberately excluded: it is declared on
+ * {@link ManagementActivationLevel} so the ladder is complete, but it is never an
+ * effective/resolved state. Using this type for `effectiveLevel` and caps encodes
+ * the out-of-scope invariant in the type system, not just at runtime.
+ */
+export type ManagementActivatableLevel = 0 | 1 | 2 | 3;
+
 /** All declared activation levels, in ascending order. */
 export const MANAGEMENT_ACTIVATION_LEVELS: readonly ManagementActivationLevel[] = [0, 1, 2, 3, 4];
 
@@ -49,7 +58,7 @@ export const MANAGEMENT_ACTIVATION_LEVELS: readonly ManagementActivationLevel[] 
  * (so the ladder is complete) but is never an enabled/resolvable state; reaching
  * it requires a separate, explicitly named later gate and issue.
  */
-export const MANAGEMENT_MAX_ACTIVATABLE_LEVEL: ManagementActivationLevel = 3;
+export const MANAGEMENT_MAX_ACTIVATABLE_LEVEL: ManagementActivatableLevel = 3;
 
 /** The single out-of-scope advice level. Declared, never enabled. */
 export const MANAGEMENT_OUT_OF_SCOPE_LEVEL: ManagementActivationLevel = 4;
@@ -161,7 +170,7 @@ export interface ManagementSourceUse {
 /** A cap applied to a use, with the gate and reason that imposed it. */
 export interface ManagementActivationCap {
   gate: ReadinessGateId;
-  cap: ManagementActivationLevel;
+  cap: ManagementActivatableLevel;
   reason: string;
 }
 
@@ -174,7 +183,8 @@ export interface ResolvedManagementUseActivation {
   sourceId: string;
   useId: string;
   requestedLevel: ManagementActivationLevel;
-  effectiveLevel: ManagementActivationLevel;
+  /** Never the out-of-scope Level 4 — encoded via {@link ManagementActivatableLevel}. */
+  effectiveLevel: ManagementActivatableLevel;
   /** `true` when the effective level was demoted below the requested level. */
   capped: boolean;
   /** Gates that failed (including required gates whose result was missing). */
@@ -194,7 +204,7 @@ export interface ResolveUseActivationOptions {
 }
 
 /** Whether a level is a real, enabled (resolvable) activation state. */
-export function isActivatableLevel(level: ManagementActivationLevel): boolean {
+export function isActivatableLevel(level: ManagementActivationLevel): level is ManagementActivatableLevel {
   return level >= 0 && level <= MANAGEMENT_MAX_ACTIVATABLE_LEVEL;
 }
 
@@ -212,10 +222,10 @@ export function compareActivationLevels(a: ManagementActivationLevel, b: Managem
 }
 
 /** Clamp any number into the activatable range [0, MANAGEMENT_MAX_ACTIVATABLE_LEVEL]. */
-function clampToActivatable(level: number): ManagementActivationLevel {
+function clampToActivatable(level: number): ManagementActivatableLevel {
   if (!Number.isFinite(level)) return 0;
   const clamped = Math.max(0, Math.min(MANAGEMENT_MAX_ACTIVATABLE_LEVEL, Math.trunc(level)));
-  return clamped as ManagementActivationLevel;
+  return clamped as ManagementActivatableLevel;
 }
 
 /**
@@ -247,7 +257,7 @@ export function resolveManagementUseActivation(
   const failedGates: ReadinessGateId[] = [];
 
   // The effective level starts clamped, so it can never resolve to Level 4.
-  let effectiveLevel: ManagementActivationLevel = clampToActivatable(requestedLevel);
+  let effectiveLevel: ManagementActivatableLevel = clampToActivatable(requestedLevel);
   const applyCap = (gate: ReadinessGateId, rawCap: number, reason: string): void => {
     const cap = clampToActivatable(rawCap);
     caps.push({ gate, cap, reason });
