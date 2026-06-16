@@ -313,7 +313,10 @@ export interface TeamstateMovementGateInput {
   uiLabeled?: boolean;
 }
 
-const TEAMSTATE_MOVEMENT_REQUIRED_GATES: readonly ReadinessGateId[] = ['G1', 'G4', 'G6'];
+// G8 (UI labeling) is required because this use can resolve to Level 2: an
+// unlabeled source must not reach eligible-supporting context. Omitting
+// uiLabeled therefore fails closed via the missing-required-gate path.
+const TEAMSTATE_MOVEMENT_REQUIRED_GATES: readonly ReadinessGateId[] = ['G1', 'G4', 'G6', 'G8'];
 
 /**
  * Case 4: Teamstate movement v1 as read-only supporting context (Level 2

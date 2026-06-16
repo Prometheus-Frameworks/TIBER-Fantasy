@@ -117,14 +117,18 @@ describe('Strategy Context readiness (diagnostic only, no template activation)',
     expect(resolved.capped).toBe(false);
   });
 
-  it('caps inspectable statuses at Level 1 even when a higher level is requested', () => {
+  it('hard-caps blocked status at Level 1 even when Level 2 is requested', () => {
     const blocked = evaluateStrategyContextReadiness({ status: 'blocked', uiLabeled: true }, 2);
     expect(blocked.resolved.requestedLevel).toBe(2);
     expect(blocked.resolved.effectiveLevel).toBe(1);
     expect(blocked.resolved.capped).toBe(true);
+  });
 
-    const available = evaluateStrategyContextReadiness({ status: 'available', uiLabeled: true }, 3);
-    expect(available.resolved.effectiveLevel).toBe(1);
+  it('hard-caps available status at Level 1 when Level 2 or 3 is requested', () => {
+    const atTwo = evaluateStrategyContextReadiness({ status: 'available', uiLabeled: true }, 2);
+    expect(atTwo.resolved.effectiveLevel).toBe(1);
+    const atThree = evaluateStrategyContextReadiness({ status: 'available', uiLabeled: true }, 3);
+    expect(atThree.resolved.effectiveLevel).toBe(1);
   });
 
   it('fails closed to Level 0 when the context is unavailable', () => {
@@ -150,13 +154,31 @@ describe('Teamstate movement v1 (read-only supporting context)', () => {
     expect(resolved.failedGates).toContain('G4');
   });
 
-  it('allows governed, fresh, ready context up to the supporting-context level', () => {
+  it('allows governed, fresh, ready, labeled context up to the supporting-context level', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
       { promotedStatus: 'ready', governance: 'governed', fresh: true, uiLabeled: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(2);
     expect(resolved.capped).toBe(false);
+  });
+
+  it('caps unlabeled governed context below Level 2 (Level 1)', () => {
+    const { resolved } = evaluateTeamstateMovementSupportingContext(
+      { promotedStatus: 'ready', governance: 'governed', fresh: true, uiLabeled: false },
+      2,
+    );
+    expect(resolved.effectiveLevel).toBe(1);
+    expect(resolved.failedGates).toContain('G8');
+  });
+
+  it('fails closed to Level 0 when required UI labeling data is missing', () => {
+    const { resolved } = evaluateTeamstateMovementSupportingContext(
+      { promotedStatus: 'ready', governance: 'governed', fresh: true },
+      2,
+    );
+    expect(resolved.effectiveLevel).toBe(0);
+    expect(resolved.failedGates).toContain('G8');
   });
 
   it('fails closed to Level 0 when the promoted status is not ready', () => {
