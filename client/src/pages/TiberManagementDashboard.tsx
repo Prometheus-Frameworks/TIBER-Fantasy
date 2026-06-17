@@ -865,17 +865,22 @@ function safeStrategyContextNote(note: string): string {
 }
 
 // Activation-level labels for the read-only Management activation diagnostics.
-// Level 4 is declared but out of scope; only 0-3 are resolvable effective levels.
+// Effective levels are only resolvable in the activatable range 0-3. Level 4
+// ("out of scope") is a declared contract level but is NEVER a resolvable
+// effective level, so it — along with any malformed, out-of-range, or
+// non-integer value — fails closed to 0. This guarantees a deploy-skewed or
+// malformed payload claiming effectiveLevel 4 can never be displayed as citable
+// evidence by the `>= 3` checks below.
 const ACTIVATION_LEVEL_NAMES = [
   'Fail closed',
   'Read-only diagnostic',
   'Supporting context',
   'Non-prescriptive evidence',
-  'Out of scope',
 ] as const;
 
 function clampActivationLevel(level?: number | null): number {
-  return typeof level === 'number' && Number.isFinite(level) ? Math.max(0, Math.min(4, Math.trunc(level))) : 0;
+  if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 3) return 0;
+  return level;
 }
 
 function activationLevelName(level: number): string {

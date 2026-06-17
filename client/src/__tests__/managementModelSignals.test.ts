@@ -608,6 +608,37 @@ describe('Management model signal cards', () => {
     expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
   });
 
+  it('fails out-of-scope/malformed activation levels (Level 4, non-integer) closed instead of treating them as evidence', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      // Deploy-skewed/malformed payload: effectiveLevel 4 is out of scope and
+      // never a resolvable effective level; a non-integer is also invalid.
+      strategyContextActivation: {
+        diagnostic: true,
+        status: 'available',
+        effectiveLevel: 4,
+        templateSelectionEnabled: false,
+        selectedTemplateId: null,
+      },
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        playerSpecific: { scoreSource: 'player_specific', requestedLevel: 3, effectiveLevel: 4, failedGates: [] },
+        generatedBaseline: { scoreSource: null, requestedLevel: 1, effectiveLevel: 2.5 as unknown as number, failedGates: [] },
+      },
+    });
+
+    const strategyCard = signal(cards, 'Strategy Context Activation');
+    expect(strategyCard).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(strategyCard.details).toEqual(expect.arrayContaining(['Activation level: 0 (Fail closed).']));
+
+    const forgeCard = signal(cards, 'FORGE Evidence Activation');
+    expect(forgeCard).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(forgeCard.details).toEqual(expect.arrayContaining([
+      'Player-specific evidence level: 0 (Fail closed).',
+      'Player-specific cited as evidence: no.',
+    ]));
+  });
+
 
 
   it('keeps the client snapshot export wired to the shared strategy diagnostics helper', () => {
