@@ -42,6 +42,24 @@ import {
 /** Default Team Direction documented coverage gate (≥ 50% player-specific). */
 const DEFAULT_COVERAGE_MINIMUM_RATE = 0.5;
 
+/**
+ * Stable path suffix of the bundled, deploy-safe FORGE snapshot. Per the FORGE
+ * adapter README this file is a *pinned promoted* TIBER-FORGE snapshot (governed),
+ * packaged for hosts (e.g. Railway) without a sibling `TIBER-FORGE` checkout — not
+ * a fixture. The client falls back to it when no env override / promoted export is
+ * configured, so governance must recognize it as governed.
+ */
+const BUNDLED_PROMOTED_FORGE_SNAPSHOT_SUFFIX = 'server/artifacts/external/forge/forge_player_static_v1.json';
+
+/** A FORGE source path is governed when it is a promoted export or the bundled promoted snapshot. */
+function isGovernedForgeSourcePath(sourcePath: string): boolean {
+  const normalized = sourcePath.replace(/\\/g, '/');
+  // Sibling promoted export, or an env override pointing at a promoted export.
+  if (normalized.includes('/promoted/')) return true;
+  // Bundled, pinned promoted deploy-safe snapshot.
+  return normalized.endsWith(BUNDLED_PROMOTED_FORGE_SNAPSHOT_SUFFIX);
+}
+
 const KNOWN_ARTIFACT_STATES: readonly ForgePlayerStaticArtifactState[] = [
   'available',
   'missing',
@@ -143,8 +161,9 @@ function deriveGovernance(
   if (artifactState !== 'available') return undefined;
   const path = forgeArtifact?.sourcePath;
   if (typeof path !== 'string' || path.length === 0) return 'unknown';
-  // Governed status is read from the promoted-artifact boundary, never inferred.
-  if (path.includes('/promoted/')) return 'governed';
+  // Governed status is read from the promoted-artifact boundary (a promoted export
+  // or the bundled pinned promoted snapshot), never inferred from missing data.
+  if (isGovernedForgeSourcePath(path)) return 'governed';
   return 'fixture';
 }
 

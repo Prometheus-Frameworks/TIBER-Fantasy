@@ -79,6 +79,19 @@ describe('buildForgeEvidenceActivationDiagnostics', () => {
     expect(diag.playerSpecific.failedGates).toContain('G3');
   });
 
+  it('recognizes the bundled deploy-safe promoted snapshot as governed (Level 3)', () => {
+    const diag = buildForgeEvidenceActivationDiagnostics({
+      ...READY_PLAYER_SPECIFIC,
+      forgeArtifact: {
+        ...READY_PLAYER_SPECIFIC.forgeArtifact!,
+        // The default bundled snapshot path used when no env override / sibling checkout exists.
+        sourcePath: '/home/user/TIBER-Fantasy/server/artifacts/external/forge/forge_player_static_v1.json',
+      },
+    });
+    expect(diag.playerSpecific.effectiveLevel).toBe(3);
+    expect(diag.playerSpecific.failedGates).not.toContain('G4');
+  });
+
   it('caps a fixture-backed (non-promoted) artifact below Level 3', () => {
     const diag = buildForgeEvidenceActivationDiagnostics({
       ...READY_PLAYER_SPECIFIC,
