@@ -42,6 +42,9 @@ import {
 /** Default Team Direction documented coverage gate (≥ 50% player-specific). */
 const DEFAULT_COVERAGE_MINIMUM_RATE = 0.5;
 
+/** The pinned FORGE static contract/version this consumer expects (gate G2). */
+const EXPECTED_FORGE_CONTRACT_VERSION = 'forge_player_static_v1';
+
 /**
  * Stable path suffix of the bundled, deploy-safe FORGE snapshot. Per the FORGE
  * adapter README this file is a *pinned promoted* TIBER-FORGE snapshot (governed),
@@ -154,6 +157,38 @@ function derivePlayerSpecificScoreSource(
   return 'unknown';
 }
 
+/**
+ * The generated-baseline use is only evidence when generated-baseline rows
+ * actually exist in the diagnostics. With zero matches/counts it is non-evidence
+ * (`unknown`, → Level 0); with no diagnostics at all it is omitted (→ fail closed).
+ * Visibility is never inferred from artifact availability alone.
+ */
+function deriveGeneratedBaselineScoreSource(
+  input: ForgeEvidenceActivationInput,
+): ForgePlayerStaticScoreSource | undefined {
+  const matches = finiteOrNull(input.rosterMatching?.generatedBaselineRosterMatches);
+  const count = finiteOrNull(input.forgeArtifact?.generatedBaselineCount);
+  if ((matches !== null && matches > 0) || (count !== null && count > 0)) return 'generated_baseline';
+  // Diagnostics present but no generated-baseline rows → non-evidence.
+  if (input.rosterMatching || input.forgeArtifact) return 'unknown';
+  return undefined;
+}
+
+/**
+ * G2 contract/version match: passes only when the FORGE static artifact reports
+ * the pinned contract version. A missing/unknown/wrong version fails closed; with
+ * no artifact data at all the gate is omitted (and fails closed as a required gate).
+ */
+function deriveContractMatch(
+  forgeArtifact: ForgeEvidenceActivationInput['forgeArtifact'],
+  artifactState: ForgePlayerStaticArtifactState | undefined,
+): boolean | undefined {
+  if (artifactState === undefined) return undefined;
+  const version = forgeArtifact?.contractVersion;
+  if (typeof version !== 'string' || version.trim().length === 0) return false;
+  return version.trim().toLowerCase() === EXPECTED_FORGE_CONTRACT_VERSION;
+}
+
 function deriveGovernance(
   forgeArtifact: ForgeEvidenceActivationInput['forgeArtifact'],
   artifactState: ForgePlayerStaticArtifactState | undefined,
@@ -190,7 +225,7 @@ function explainUse(
   const reason = failedGates.length ? `failed/missing gates: ${failedGates.join(', ')}` : 'readiness inputs incomplete';
   return label === 'player_specific'
     ? `FORGE player-specific evidence is not currently citable at Level ${targetLevel} (effective Level ${effectiveLevel}; ${reason}). It does not influence the Team Direction classification.`
-    : `FORGE generated baselines remain visibility-only (effective Level ${effectiveLevel}; ${reason}); they never count as FORGE scoring, coverage, evidence, or confidence.`;
+    : `No FORGE generated-baseline visibility is shown (effective Level ${effectiveLevel}; ${reason}); generated baselines never count as FORGE scoring, coverage, evidence, or confidence.`;
 }
 
 /**
@@ -207,10 +242,11 @@ export function buildForgeEvidenceActivationDiagnostics(
   const rosterMatching = input?.rosterMatching ?? null;
 
   const artifactState = deriveArtifactState(forgeArtifact);
-  const contractMatch = artifactState === undefined ? undefined : artifactState === 'available';
+  const contractMatch = deriveContractMatch(forgeArtifact, artifactState);
   const governance = deriveGovernance(forgeArtifact, artifactState);
   const fresh = deriveFreshness(forgeArtifact);
   const playerSpecificScoreSource = derivePlayerSpecificScoreSource(rosterMatching);
+  const generatedBaselineScoreSource = deriveGeneratedBaselineScoreSource(input ?? {});
 
   const matched = finiteOrNull(input?.forgeCoverage?.matched);
   const total = finiteOrNull(input?.forgeCoverage?.total);
@@ -231,10 +267,12 @@ export function buildForgeEvidenceActivationDiagnostics(
   };
   const playerSpecificEval = evaluateForgePlayerSpecificTeamDirection(playerSpecificInput, 3);
 
-  // FORGE generated-baseline visibility (Level 1) — an independent use of the source.
+  // FORGE generated-baseline visibility (Level 1) — an independent use of the
+  // source. Only evidence when generated-baseline rows actually exist; otherwise
+  // it stays non-evidence (Level 0) and is never inferred from availability alone.
   const generatedBaselineInput: ForgeStaticGateInput = {
     artifactState,
-    scoreSource: 'generated_baseline',
+    scoreSource: generatedBaselineScoreSource,
     governance,
     uiLabeled: true,
   };
@@ -256,7 +294,7 @@ export function buildForgeEvidenceActivationDiagnostics(
   const generatedBaseline: ForgeUseActivationCitation = {
     sourceId: generatedBaselineEval.use.sourceId,
     useId: generatedBaselineEval.use.useId,
-    scoreSource: 'generated_baseline',
+    scoreSource: generatedBaselineScoreSource ?? null,
     requestedLevel: generatedBaselineEval.resolved.requestedLevel,
     effectiveLevel: generatedBaselineEval.resolved.effectiveLevel,
     capped: generatedBaselineEval.resolved.capped,

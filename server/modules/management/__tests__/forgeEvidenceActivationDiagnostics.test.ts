@@ -101,6 +101,73 @@ describe('buildForgeEvidenceActivationDiagnostics', () => {
     expect(diag.playerSpecific.failedGates).toContain('G4');
   });
 
+  describe('G2 contract/version matching', () => {
+    it('passes G2 and reaches Level 3 with the correct pinned contract version', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics(READY_PLAYER_SPECIFIC);
+      expect(diag.playerSpecific.effectiveLevel).toBe(3);
+      expect(diag.playerSpecific.failedGates).not.toContain('G2');
+    });
+
+    it('does not reach Level 3 when the contract version is missing', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics({
+        ...READY_PLAYER_SPECIFIC,
+        forgeArtifact: { ...READY_PLAYER_SPECIFIC.forgeArtifact!, contractVersion: null },
+      });
+      expect(diag.playerSpecific.effectiveLevel).toBeLessThan(3);
+      expect(diag.playerSpecific.failedGates).toContain('G2');
+    });
+
+    it('does not reach Level 3 when the contract version is wrong', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics({
+        ...READY_PLAYER_SPECIFIC,
+        forgeArtifact: { ...READY_PLAYER_SPECIFIC.forgeArtifact!, contractVersion: 'forge_player_static_v2' },
+      });
+      expect(diag.playerSpecific.effectiveLevel).toBeLessThan(3);
+      expect(diag.playerSpecific.failedGates).toContain('G2');
+    });
+  });
+
+  describe('generated-baseline visibility requires actual generated-baseline evidence', () => {
+    const governedArtifact = {
+      state: 'available' as const,
+      available: true,
+      sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json',
+      generatedAt: '2026-06-15T00:00:00.000Z',
+      freshness: { status: 'fresh' as const },
+      contractVersion: 'forge_player_static_v1',
+    };
+
+    it('resolves to Level 1 when generated-baseline matches/counts are present', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics({
+        forgeArtifact: { ...governedArtifact, generatedBaselineCount: 5 },
+        rosterMatching: { playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 5 },
+        forgeCoverage: { matched: 0, total: 30, rate: 0 },
+      });
+      expect(diag.generatedBaseline.scoreSource).toBe('generated_baseline');
+      expect(diag.generatedBaseline.effectiveLevel).toBe(1);
+    });
+
+    it('does not resolve to Level 1 when generated-baseline matches/counts are zero', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics({
+        forgeArtifact: { ...governedArtifact, generatedBaselineCount: 0 },
+        rosterMatching: { playerSpecificRosterMatches: 24, generatedBaselineRosterMatches: 0 },
+        forgeCoverage: { matched: 24, total: 30, rate: 0.8 },
+      });
+      expect(diag.generatedBaseline.effectiveLevel).toBe(0);
+      expect(diag.generatedBaseline.scoreSource).not.toBe('generated_baseline');
+    });
+
+    it('does not resolve to Level 1 when generated-baseline diagnostics are missing', () => {
+      const diag = buildForgeEvidenceActivationDiagnostics({
+        // No generatedBaselineCount / generatedBaselineRosterMatches fields at all.
+        forgeArtifact: governedArtifact,
+        rosterMatching: { playerSpecificRosterMatches: 24 },
+        forgeCoverage: { matched: 24, total: 30, rate: 0.8 },
+      });
+      expect(diag.generatedBaseline.effectiveLevel).toBe(0);
+    });
+  });
+
   it('emits no recommendation/advice language', () => {
     const diag = buildForgeEvidenceActivationDiagnostics(READY_PLAYER_SPECIFIC);
     const serialized = JSON.stringify(diag).toLowerCase();
