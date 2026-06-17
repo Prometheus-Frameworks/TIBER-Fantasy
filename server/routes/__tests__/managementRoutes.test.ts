@@ -565,6 +565,34 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(JSON.stringify(activation)).not.toMatch(/\{\{|\}\}/);
   });
 
+  test('exposes additive read-only forge_evidence_activation citation without changing classification', async () => {
+    const app = buildApp(makeDeps());
+    const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+    expect(res.status).toBe(200);
+
+    const forgeActivation = res.body.forge_evidence_activation;
+    expect(forgeActivation).toBeDefined();
+    expect(forgeActivation.diagnostic).toBe(true);
+    expect(forgeActivation.readOnly).toBe(true);
+    expect(forgeActivation.playerSpecific.useId).toBe('forge_player_specific.team_direction_classification');
+    expect(forgeActivation.generatedBaseline.useId).toBe('forge_generated_baseline.visibility');
+    // Artifact is missing in this fixture → player-specific evidence fails closed.
+    expect(forgeActivation.playerSpecific.effectiveLevel).toBe(0);
+    expect(forgeActivation.playerSpecific.failedGates).toContain('G1');
+    // Generated baselines are never promoted to evidence.
+    expect(forgeActivation.generatedBaseline.effectiveLevel).toBeLessThan(3);
+    expect(res.body.forgeDiagnostics.forgeEvidenceActivation).toEqual(forgeActivation);
+
+    // Existing classification output is unchanged and untouched by the citation.
+    expect(['contender', 'rebuild', 'retool', 'uncertain']).toContain(res.body.direction);
+    expect(res.body.forgeCoverage).toHaveProperty('rate');
+    // Slice 3 diagnostics remain present and unchanged.
+    expect(res.body.strategy_context_activation).toBeDefined();
+    expect(res.body.strategy_context_activation.useId).toBe('strategy_context.readiness');
+    // No advice/recommendation language leaks through the new field.
+    expect(JSON.stringify(forgeActivation).toLowerCase()).not.toMatch(/\brecommend|\badvis|you should|trade away/);
+  });
+
   test('strategy ontology diagnostics do not change Management classification output', async () => {
     const depsWithOntology = makeDeps();
     const depsWithoutOntology = makeDeps();
