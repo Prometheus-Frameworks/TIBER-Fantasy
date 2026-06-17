@@ -15,10 +15,10 @@
  *   - It performs no artifact reads and no I/O; every input is a value the caller
  *     already has from the Teamstate movement service.
  *   - Fail-closed: a non-ready promoted status, a wrong/missing artifact literal
- *     (legacy v0 vs the pinned v1 contract, gate G2), unknown/missing governance,
- *     stale data, or missing UI labeling cannot promote the source. Governed
- *     status is read from explicit provenance / the promoted-artifact boundary,
- *     never inferred from missing data.
+ *     (legacy v0 vs the pinned v1 contract, gate G2), unverified/missing
+ *     governance, stale data, or missing UI labeling cannot promote the source.
+ *     Governed status is recognized ONLY via the promoted-artifact path boundary,
+ *     never from a provenance-token allowlist and never inferred from missing data.
  *
  * NOT WIRED INTO A ROUTE IN THIS SLICE. `/api/management/team-direction` and the
  * league dashboard payload do not currently carry Teamstate movement v1 status
@@ -47,24 +47,29 @@ const DEFAULT_MAX_AGE_DAYS = 45;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Provenance tokens that denote a governed, production-promoted movement artifact.
- * The only concrete token shipped in-repo today is the fixture marker
- * (`fixture_scaffold`); governed tokens are allow-listed explicitly so governed
- * status is never inferred. The exact producer governed token should be confirmed
- * when route wiring lands.
+ * Known fixture/synthetic provenance tokens. The only concrete token shipped
+ * in-repo today is `fixture_scaffold`. These cap the source at Level 1 (fixture).
  */
-const GOVERNED_PROVENANCE_STATUSES: ReadonlySet<string> = new Set([
-  'governed',
-  'promoted',
-  'production',
-  'production_promoted',
-]);
 const FIXTURE_PROVENANCE_STATUSES: ReadonlySet<string> = new Set([
   'fixture_scaffold',
   'fixture',
   'synthetic',
   'seed',
 ]);
+
+/**
+ * IMPORTANT: governed status is NOT derived from a provenance-token allowlist.
+ * The producer's governed provenance token is not established in this repo yet
+ * (only `fixture_scaffold` exists), so governed-like tokens — `governed`,
+ * `promoted`, `production`, `production_promoted`, `governed_promoted`, etc. — are
+ * treated as unverified and fail closed (`unknown`). Governed is recognized only
+ * via the promoted-artifact *path boundary* (see {@link isPromotedPathBoundary}),
+ * which is a deployment/path signal, not a provenance-token claim. The real
+ * governed token will be wired in when a Teamstate artifact/contract proves it.
+ */
+function isPromotedPathBoundary(artifactPath: string | null | undefined): boolean {
+  return typeof artifactPath === 'string' && artifactPath.replace(/\\/g, '/').includes('/promoted/');
+}
 
 /** The Teamstate movement v1 readiness subset this builder consumes. */
 export interface TeamstateMovementActivationInput {
@@ -135,13 +140,12 @@ function derivePromotedStatus(state: TeamEnvironmentMovementState): PromotedOper
 
 function deriveGovernance(input: TeamstateMovementActivationInput): ManagementSourceGovernance {
   const status = input.provenanceStatus?.trim().toLowerCase();
-  if (status) {
-    if (FIXTURE_PROVENANCE_STATUSES.has(status)) return 'fixture';
-    if (GOVERNED_PROVENANCE_STATUSES.has(status)) return 'governed';
-  }
-  // Promoted-artifact boundary is a governed signal; never inferred from absence.
-  const path = input.artifactPath;
-  if (typeof path === 'string' && path.replace(/\\/g, '/').includes('/promoted/')) return 'governed';
+  // Known fixture/synthetic tokens are labeled fixture (caps at Level 1).
+  if (status && FIXTURE_PROVENANCE_STATUSES.has(status)) return 'fixture';
+  // Governed is recognized ONLY via the promoted-artifact path boundary — never
+  // from a provenance token. An unverified governed-like token by itself (no
+  // promoted path) is not enough and fails closed as unknown.
+  if (isPromotedPathBoundary(input.artifactPath)) return 'governed';
   return 'unknown';
 }
 

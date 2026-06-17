@@ -97,6 +97,50 @@ describe('buildTeamstateMovementActivationDiagnostics', () => {
     expect(diag.failedGates).toContain('G4');
   });
 
+  describe('governance is never derived from unverified provenance tokens', () => {
+    // A non-promoted path: governance can only come from a provenance token here.
+    const NON_PROMOTED_PATH = 'server/artifacts/external/teamstate/team_environment_movement_v1.json';
+
+    it('keeps fixture_scaffold as fixture (caps at Level 1)', () => {
+      const diag = build({ ...READY_GOVERNED, provenanceStatus: 'fixture_scaffold', artifactPath: NON_PROMOTED_PATH });
+      expect(diag.governance).toBe('fixture');
+      expect(diag.effectiveLevel).toBe(1);
+    });
+
+    it('does not accept a bare "governed" provenance token (fails closed as unknown)', () => {
+      const diag = build({ ...READY_GOVERNED, provenanceStatus: 'governed', artifactPath: NON_PROMOTED_PATH });
+      expect(diag.governance).toBe('unknown');
+      expect(diag.effectiveLevel).toBe(0);
+      expect(diag.failedGates).toContain('G4');
+    });
+
+    it.each(['promoted', 'production', 'production_promoted', 'governed_promoted'])(
+      'does not accept "%s" as governed without a promoted path boundary',
+      (token) => {
+        const diag = build({ ...READY_GOVERNED, provenanceStatus: token, artifactPath: NON_PROMOTED_PATH });
+        expect(diag.governance).toBe('unknown');
+        expect(diag.effectiveLevel).toBe(0);
+        expect(diag.failedGates).toContain('G4');
+      },
+    );
+
+    it('fails closed when provenance is missing and there is no promoted boundary', () => {
+      const diag = build({ ...READY_GOVERNED, provenanceStatus: null, artifactPath: NON_PROMOTED_PATH });
+      expect(diag.governance).toBe('unknown');
+      expect(diag.effectiveLevel).toBe(0);
+    });
+
+    it('reaches Level 2 only via the promoted-path boundary with full readiness', () => {
+      // Even an unverified governed-like token is ignored; the promoted path drives governance.
+      const diag = build({ ...READY_GOVERNED, provenanceStatus: 'governed_promoted' });
+      expect(diag.governance).toBe('governed');
+      expect(diag.promotedStatus).toBe('ready');
+      expect(diag.contractMatch).toBe(true);
+      expect(diag.fresh).toBe(true);
+      expect(diag.effectiveLevel).toBe(2);
+    });
+  });
+
   it('caps to Level 1 when UI labeling is explicitly absent', () => {
     const diag = build({ ...READY_GOVERNED, uiLabeled: false });
     expect(diag.effectiveLevel).toBe(1);
