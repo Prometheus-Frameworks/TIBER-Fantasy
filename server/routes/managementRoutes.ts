@@ -5,6 +5,7 @@ import { classifyTeamDirection } from '../services/teamDirectionClassifier';
 import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagnostics';
 import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
 import { buildStrategyContextActivationDiagnostics } from '../modules/management/strategyContextActivationDiagnostics';
+import { buildForgeEvidenceActivationDiagnostics } from '../modules/management/forgeEvidenceActivationDiagnostics';
 
 type ManagementDeps = {
   storage: typeof storage;
@@ -104,6 +105,17 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
       // Slice 3: additive, read-only diagnostic visibility of Strategy Context
       // activation readiness. Does not activate templates or change any behavior.
       const strategyContextActivation = buildStrategyContextActivationDiagnostics(managementStrategyContext);
+      // Slice 4: additive, read-only FORGE evidence activation/citation metadata.
+      // Citation only — does not change the Team Direction classifier or output.
+      const forgeEvidenceActivation = buildForgeEvidenceActivationDiagnostics(
+        dashboardPayload.diagnostics
+          ? {
+              forgeArtifact: dashboardPayload.diagnostics.forgeArtifact,
+              rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
+              forgeCoverage: result.forgeCoverage,
+            }
+          : null,
+      );
 
       res.json({
         success: true,
@@ -119,11 +131,13 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
               strategyTemplateDiagnostics,
               managementStrategyContext,
               strategyContextActivation,
+              forgeEvidenceActivation,
             }
           : null,
         strategy_template_diagnostics: strategyTemplateDiagnostics,
         management_strategy_context: managementStrategyContext,
         strategy_context_activation: strategyContextActivation,
+        forge_evidence_activation: forgeEvidenceActivation,
         ...result,
       });
     } catch (error) {
