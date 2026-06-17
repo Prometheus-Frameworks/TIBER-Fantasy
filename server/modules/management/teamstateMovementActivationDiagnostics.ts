@@ -14,10 +14,11 @@
  *     Strategy behavior, and emits no advice/recommendation language.
  *   - It performs no artifact reads and no I/O; every input is a value the caller
  *     already has from the Teamstate movement service.
- *   - Fail-closed: a non-ready promoted status, unknown/missing governance, stale
- *     data, or missing UI labeling cannot promote the source. Governed status is
- *     read from explicit provenance / the promoted-artifact boundary, never
- *     inferred from missing data.
+ *   - Fail-closed: a non-ready promoted status, a wrong/missing artifact literal
+ *     (legacy v0 vs the pinned v1 contract, gate G2), unknown/missing governance,
+ *     stale data, or missing UI labeling cannot promote the source. Governed
+ *     status is read from explicit provenance / the promoted-artifact boundary,
+ *     never inferred from missing data.
  *
  * NOT WIRED INTO A ROUTE IN THIS SLICE. `/api/management/team-direction` and the
  * league dashboard payload do not currently carry Teamstate movement v1 status
@@ -35,6 +36,7 @@ import type {
 } from '@shared/managementActivation';
 import type { PromotedOperationalState } from '../externalModels/promotedModelStatusService';
 import type { TeamEnvironmentMovementState } from '../externalModels/teamState/teamEnvironmentMovementService';
+import { TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1 } from '../externalModels/teamState/teamEnvironmentMovementClient';
 import {
   evaluateTeamstateMovementSupportingContext,
   type ManagementSourceGovernance,
@@ -68,6 +70,13 @@ const FIXTURE_PROVENANCE_STATUSES: ReadonlySet<string> = new Set([
 export interface TeamstateMovementActivationInput {
   /** Movement service state: 'ready' | 'unavailable' | 'error'. */
   state?: TeamEnvironmentMovementState | null;
+  /**
+   * The artifact literal the movement service resolved. The service can return
+   * `state: 'ready'` for either the v1 artifact or the legacy v0 artifact during
+   * the transition, so the contract gate (G2) only passes for the pinned v1
+   * literal; a v0/unknown literal fails closed.
+   */
+  artifact?: string | null;
   /** ISO timestamp the artifact was generated, for freshness. */
   generatedAt?: string | null;
   /** Provenance marker (e.g. 'fixture_scaffold' for fixtures). */
@@ -86,6 +95,9 @@ export interface TeamstateMovementActivationDiagnostics {
   useId: string;
   /** Mapped promoted operational status used for the availability gate. */
   promotedStatus: PromotedOperationalState | null;
+  /** The artifact literal observed, and whether it matched the pinned v1 contract (G2). */
+  artifact: string | null;
+  contractMatch: boolean | null;
   governance: ManagementSourceGovernance | null;
   fresh: boolean | null;
   provenanceStatus: string | null;
@@ -97,6 +109,16 @@ export interface TeamstateMovementActivationDiagnostics {
   caps: ManagementActivationCap[];
   gateResults: ReadinessGateResult[];
   explanation: string;
+}
+
+/**
+ * G2 contract literal: passes only for the pinned v1 movement artifact. A legacy
+ * v0 (or any other) literal fails closed; a missing literal is omitted and fails
+ * closed as a required gate. Governed status of the wrong artifact is never enough.
+ */
+function deriveContractMatch(artifact: string | null | undefined): boolean | undefined {
+  if (artifact === undefined || artifact === null) return undefined;
+  return artifact === TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1;
 }
 
 function derivePromotedStatus(state: TeamEnvironmentMovementState): PromotedOperationalState {
@@ -157,12 +179,14 @@ export function buildTeamstateMovementActivationDiagnostics(
 
   const state = input?.state ?? null;
   const promotedStatus = state ? derivePromotedStatus(state) : undefined;
+  const contractMatch = deriveContractMatch(input?.artifact);
   const governance = input ? deriveGovernance(input) : undefined;
   const fresh = deriveFreshness(input?.generatedAt, now, maxAgeDays);
 
   const { use, resolved } = evaluateTeamstateMovementSupportingContext(
     {
       promotedStatus,
+      contractMatch,
       governance,
       fresh,
       uiLabeled: input?.uiLabeled,
@@ -177,6 +201,8 @@ export function buildTeamstateMovementActivationDiagnostics(
     sourceId: use.sourceId,
     useId: use.useId,
     promotedStatus: promotedStatus ?? null,
+    artifact: input?.artifact ?? null,
+    contractMatch: contractMatch ?? null,
     governance: governance ?? null,
     fresh: fresh ?? null,
     provenanceStatus: input?.provenanceStatus ?? null,

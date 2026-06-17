@@ -5,9 +5,10 @@ import {
 
 const NOW = Date.parse('2026-06-17T00:00:00.000Z');
 
-// ready + governed + fresh + labeled.
+// ready + v1 contract + governed + fresh + labeled.
 const READY_GOVERNED: TeamstateMovementActivationInput = {
   state: 'ready',
+  artifact: 'team_environment_movement_v1',
   generatedAt: '2026-06-15T00:00:00.000Z',
   provenanceStatus: 'governed',
   artifactPath: '../TIBER-Teamstate/exports/promoted/team_environment_movement/team_environment_movement_v1.json',
@@ -28,15 +29,32 @@ describe('buildTeamstateMovementActivationDiagnostics', () => {
     expect(diag.sourceId).toBe('teamstate_movement_v1');
   });
 
-  it('resolves ready/governed/fresh/labeled to Level 2', () => {
+  it('resolves ready/v1-contract/governed/fresh/labeled to Level 2', () => {
     const diag = build(READY_GOVERNED);
     expect(diag.promotedStatus).toBe('ready');
+    expect(diag.contractMatch).toBe(true);
     expect(diag.governance).toBe('governed');
     expect(diag.fresh).toBe(true);
     expect(diag.effectiveLevel).toBe(2);
     expect(diag.capped).toBe(false);
     expect(diag.failedGates).toEqual([]);
     expect(diag.explanation).toMatch(/supporting context/i);
+  });
+
+  it('fails closed on the legacy v0 artifact literal (G2 contract gate)', () => {
+    const v0 = build({ ...READY_GOVERNED, artifact: 'team_environment_movement_v0' });
+    expect(v0.contractMatch).toBe(false);
+    expect(v0.effectiveLevel).toBe(0);
+    expect(v0.failedGates).toContain('G2');
+  });
+
+  it('fails closed when the artifact literal is missing', () => {
+    const { artifact, ...withoutArtifact } = READY_GOVERNED;
+    void artifact;
+    const diag = build(withoutArtifact);
+    expect(diag.contractMatch).toBeNull();
+    expect(diag.effectiveLevel).toBe(0);
+    expect(diag.failedGates).toContain('G2');
   });
 
   it('treats a promoted artifact path as governed even without a governed provenance token', () => {
