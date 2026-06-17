@@ -476,6 +476,169 @@ describe('Management model signal cards', () => {
     });
   });
 
+  const ADVICE_LANGUAGE = /\b(recommend|recommends|recommended|recommendation|advise|advises|you should|trade|trades|waiver|waivers|start|sit|drop)\b/i;
+
+  const baseSignalArgs = {
+    hasActiveTeam: true,
+    hasRosterData: true,
+    hasDashboardTotals: true,
+    rosterVisibility: {
+      total: 30,
+      identityCovered: 30,
+      baselineVisible: 0,
+      forgeScored: 24,
+      forgeBaseline: 0,
+      rookieAlphaFallback: 0,
+      knownUnscored: 6,
+      unresolved: 0,
+      evidenceCovered: 24,
+    },
+    teamstateQueryState: 'success' as const,
+    teamstateResponse: teamStateResponse(),
+    teamstateDetails: [],
+  };
+
+  it('labels Strategy Context activation as read-only diagnostic with templates disabled', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      strategyContextActivation: {
+        diagnostic: true,
+        readOnly: true,
+        status: 'blocked',
+        inspectable: true,
+        requestedLevel: 2,
+        effectiveLevel: 1,
+        capped: true,
+        failedGates: [],
+        blockedReasons: ['strategy_template_activation_deferred'],
+        missingInputs: [],
+        templateSelectionEnabled: false,
+        selectedTemplateId: null,
+      },
+    });
+
+    const card = signal(cards, 'Strategy Context Activation');
+    expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Read-only diagnostic' });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Activation level: 1 (Read-only diagnostic).',
+      'Status: blocked.',
+      'Templates disabled: yes.',
+      'Selected template: None.',
+      'Capped: yes.',
+    ]));
+    expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+  });
+
+  it('fails Strategy Context activation closed when diagnostics are missing', () => {
+    const cards = buildManagementModelSignals(baseSignalArgs);
+    const card = signal(cards, 'Strategy Context Activation');
+    expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Activation level: 0 (Fail closed).',
+      'Status: unavailable.',
+      'Templates disabled: yes.',
+    ]));
+  });
+
+  it('labels FORGE player-specific activation as non-prescriptive evidence at Level 3', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        readOnly: true,
+        playerSpecific: { useId: 'forge_player_specific.team_direction_classification', scoreSource: 'player_specific', requestedLevel: 3, effectiveLevel: 3, capped: false, failedGates: [] },
+        generatedBaseline: { useId: 'forge_generated_baseline.visibility', scoreSource: null, requestedLevel: 1, effectiveLevel: 0, capped: false, failedGates: ['G3'] },
+      },
+    });
+
+    const card = signal(cards, 'FORGE Evidence Activation');
+    expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Non-prescriptive evidence' });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Player-specific evidence level: 3 (Non-prescriptive evidence).',
+      'Player-specific provenance: player_specific.',
+      'Player-specific cited as evidence: yes.',
+      'Generated baseline: not present (visibility only, never evidence).',
+    ]));
+    expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+  });
+
+  it('labels FORGE generated baselines as visibility only and below evidence', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        readOnly: true,
+        playerSpecific: { scoreSource: 'generated_baseline', requestedLevel: 3, effectiveLevel: 1, capped: true, failedGates: ['G3'] },
+        generatedBaseline: { scoreSource: 'generated_baseline', requestedLevel: 1, effectiveLevel: 1, capped: false, failedGates: [] },
+      },
+    });
+
+    const card = signal(cards, 'FORGE Evidence Activation');
+    expect(card).toMatchObject({ status: 'partial', statusLabel: 'Visibility only' });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Player-specific cited as evidence: no.',
+      'Generated baseline: visibility only, not evidence.',
+    ]));
+    expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+  });
+
+  it('renders FORGE evidence failed gates without implying activation', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        readOnly: true,
+        playerSpecific: { scoreSource: 'unknown', requestedLevel: 3, effectiveLevel: 0, capped: true, failedGates: ['G1', 'G2', 'G3'] },
+        generatedBaseline: { scoreSource: null, requestedLevel: 1, effectiveLevel: 0, capped: true, failedGates: ['G1'] },
+      },
+    });
+
+    const card = signal(cards, 'FORGE Evidence Activation');
+    expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(card.details).toEqual(expect.arrayContaining([
+      'Player-specific evidence level: 0 (Fail closed).',
+      'Player-specific cited as evidence: no.',
+      'Player-specific failed gates: G1, G2, G3.',
+    ]));
+  });
+
+  it('fails FORGE evidence activation closed when diagnostics are missing', () => {
+    const cards = buildManagementModelSignals(baseSignalArgs);
+    const card = signal(cards, 'FORGE Evidence Activation');
+    expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+  });
+
+  it('fails out-of-scope/malformed activation levels (Level 4, non-integer) closed instead of treating them as evidence', () => {
+    const cards = buildManagementModelSignals({
+      ...baseSignalArgs,
+      // Deploy-skewed/malformed payload: effectiveLevel 4 is out of scope and
+      // never a resolvable effective level; a non-integer is also invalid.
+      strategyContextActivation: {
+        diagnostic: true,
+        status: 'available',
+        effectiveLevel: 4,
+        templateSelectionEnabled: false,
+        selectedTemplateId: null,
+      },
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        playerSpecific: { scoreSource: 'player_specific', requestedLevel: 3, effectiveLevel: 4, failedGates: [] },
+        generatedBaseline: { scoreSource: null, requestedLevel: 1, effectiveLevel: 2.5 as unknown as number, failedGates: [] },
+      },
+    });
+
+    const strategyCard = signal(cards, 'Strategy Context Activation');
+    expect(strategyCard).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(strategyCard.details).toEqual(expect.arrayContaining(['Activation level: 0 (Fail closed).']));
+
+    const forgeCard = signal(cards, 'FORGE Evidence Activation');
+    expect(forgeCard).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+    expect(forgeCard.details).toEqual(expect.arrayContaining([
+      'Player-specific evidence level: 0 (Fail closed).',
+      'Player-specific cited as evidence: no.',
+    ]));
+  });
+
 
 
   it('keeps the client snapshot export wired to the shared strategy diagnostics helper', () => {

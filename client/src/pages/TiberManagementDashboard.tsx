@@ -250,6 +250,40 @@ type TeamDirectionConfidenceInputs = {
   notes?: string[];
 };
 
+// Read-only activation diagnostics surfaced by /api/management/team-direction
+// (Slice 3 + Slice 4). These are display-facing mirrors of the server shapes;
+// every field is optional so a partial/absent payload fails closed in the UI.
+export type StrategyContextActivationDiagnostics = {
+  diagnostic?: boolean;
+  readOnly?: boolean;
+  status?: 'available' | 'blocked' | 'unavailable' | null;
+  inspectable?: boolean;
+  requestedLevel?: number | null;
+  effectiveLevel?: number | null;
+  capped?: boolean;
+  failedGates?: string[];
+  blockedReasons?: string[];
+  missingInputs?: string[];
+  templateSelectionEnabled?: boolean;
+  selectedTemplateId?: string | null;
+};
+
+export type ForgeUseActivationCitation = {
+  useId?: string;
+  scoreSource?: string | null;
+  requestedLevel?: number | null;
+  effectiveLevel?: number | null;
+  capped?: boolean;
+  failedGates?: string[];
+};
+
+export type ForgeEvidenceActivationDiagnostics = {
+  diagnostic?: boolean;
+  readOnly?: boolean;
+  playerSpecific?: ForgeUseActivationCitation | null;
+  generatedBaseline?: ForgeUseActivationCitation | null;
+};
+
 type TeamDirectionResponse = {
   success: boolean;
   available?: boolean;
@@ -267,6 +301,8 @@ type TeamDirectionResponse = {
   error?: string;
   strategy_template_diagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics>;
   management_strategy_context?: ManagementStrategyContext;
+  strategy_context_activation?: StrategyContextActivationDiagnostics;
+  forge_evidence_activation?: ForgeEvidenceActivationDiagnostics;
 };
 
 export type ModelSignalStatus = 'ready' | 'partial' | 'unavailable' | 'not wired' | 'inspection only';
@@ -828,6 +864,29 @@ function safeStrategyContextNote(note: string): string {
   return note.replace(/\brecommendations\b/gi, 'advice outputs').replace(/\brecommendation\b/gi, 'advice output');
 }
 
+// Activation-level labels for the read-only Management activation diagnostics.
+// Effective levels are only resolvable in the activatable range 0-3. Level 4
+// ("out of scope") is a declared contract level but is NEVER a resolvable
+// effective level, so it — along with any malformed, out-of-range, or
+// non-integer value — fails closed to 0. This guarantees a deploy-skewed or
+// malformed payload claiming effectiveLevel 4 can never be displayed as citable
+// evidence by the `>= 3` checks below.
+const ACTIVATION_LEVEL_NAMES = [
+  'Fail closed',
+  'Read-only diagnostic',
+  'Supporting context',
+  'Non-prescriptive evidence',
+] as const;
+
+function clampActivationLevel(level?: number | null): number {
+  if (typeof level !== 'number' || !Number.isInteger(level) || level < 0 || level > 3) return 0;
+  return level;
+}
+
+function activationLevelName(level: number): string {
+  return ACTIVATION_LEVEL_NAMES[level] ?? 'Unknown';
+}
+
 function artifactStatusClass(artifact?: ForgeArtifactDiagnostics | null) {
   if (artifact?.available) return 'tmd-status-ready';
   if (artifact?.state === 'missing' || artifact?.state === 'disabled') return 'tmd-status-unavailable';
@@ -971,6 +1030,8 @@ export function buildManagementModelSignals({
   teamstateDetails,
   strategyTemplateDiagnostics,
   managementStrategyContext,
+  strategyContextActivation,
+  forgeEvidenceActivation,
 }: {
   hasActiveTeam: boolean;
   hasRosterData: boolean;
@@ -981,6 +1042,8 @@ export function buildManagementModelSignals({
   teamstateDetails: string[];
   strategyTemplateDiagnostics?: ReturnType<typeof buildStrategyTemplateDiagnostics> | null;
   managementStrategyContext?: ManagementStrategyContext | null;
+  strategyContextActivation?: StrategyContextActivationDiagnostics | null;
+  forgeEvidenceActivation?: ForgeEvidenceActivationDiagnostics | null;
 }): ModelSignalCard[] {
   const forgeCoverageRate = rosterVisibility.total > 0 ? rosterVisibility.forgeScored / rosterVisibility.total : 0;
   const hasForgeAlphaTotals = hasDashboardTotals;
@@ -1042,6 +1105,39 @@ export function buildManagementModelSignals({
         'Selected template: None.',
         'Blocked by: management_strategy_context missing or malformed.',
       ];
+
+  // --- Strategy Context activation (Slice 3, strategy_context_activation) -----
+  // Read-only diagnostic visibility. Fail closed when the payload is absent or
+  // not a diagnostic object. Templates always read as disabled.
+  const sca = strategyContextActivation && strategyContextActivation.diagnostic === true ? strategyContextActivation : null;
+  const scaLevel = clampActivationLevel(sca?.effectiveLevel);
+  const scaInspectable = Boolean(sca) && scaLevel >= 1;
+  const strategyContextActivationDetails = [
+    `Activation level: ${scaLevel} (${activationLevelName(scaLevel)}).`,
+    `Status: ${sca?.status ?? 'unavailable'}.`,
+    'Templates disabled: yes.',
+    `Selected template: ${sca?.selectedTemplateId ?? 'None'}.`,
+    `Capped: ${yesNo(Boolean(sca?.capped))}.`,
+    `Failed gates: ${listOrNone(sca?.failedGates)}.`,
+    `Blocked by: ${listOrNone(sca?.blockedReasons)}.`,
+  ];
+
+  // --- FORGE evidence activation (Slice 4, forge_evidence_activation) ---------
+  const fea = forgeEvidenceActivation && forgeEvidenceActivation.diagnostic === true ? forgeEvidenceActivation : null;
+  const playerSpecificLevel = clampActivationLevel(fea?.playerSpecific?.effectiveLevel);
+  const generatedBaselineLevel = clampActivationLevel(fea?.generatedBaseline?.effectiveLevel);
+  const playerSpecificIsEvidence = playerSpecificLevel >= 3;
+  const forgeEvidenceInspectable = Boolean(fea) && (playerSpecificLevel >= 1 || generatedBaselineLevel >= 1);
+  const forgeEvidenceActivationDetails = [
+    `Player-specific evidence level: ${playerSpecificLevel} (${activationLevelName(playerSpecificLevel)}).`,
+    `Player-specific provenance: ${fea?.playerSpecific?.scoreSource ?? 'unknown'}.`,
+    `Player-specific cited as evidence: ${yesNo(playerSpecificIsEvidence)}.`,
+    `Player-specific failed gates: ${listOrNone(fea?.playerSpecific?.failedGates)}.`,
+    generatedBaselineLevel >= 1
+      ? 'Generated baseline: visibility only, not evidence.'
+      : 'Generated baseline: not present (visibility only, never evidence).',
+    `Generated baseline failed gates: ${listOrNone(fea?.generatedBaseline?.failedGates)}.`,
+  ];
 
   return [
     {
@@ -1122,6 +1218,32 @@ export function buildManagementModelSignals({
       linkLabel: 'Inspect Team Direction',
       provenance: 'Read-only Management Strategy Context from Management/Team Direction payloads. Visibility only; not an active advice engine.',
       details: strategyContextDetails,
+    },
+    {
+      title: 'Strategy Context Activation',
+      status: scaInspectable ? 'inspection only' : 'unavailable',
+      statusLabel: scaInspectable ? 'Read-only diagnostic' : 'Fail closed',
+      explanation: scaInspectable
+        ? 'Read-only diagnostic visibility of Strategy Context activation readiness. Strategy templates remain disabled; no template selection, rendering, or interpolation occurs, and no advice is produced.'
+        : 'Strategy Context activation diagnostics are unavailable or failed closed. Nothing is activated; strategy templates remain disabled.',
+      href: '#team-direction',
+      linkLabel: 'Inspect Team Direction',
+      provenance: 'Read-only strategy_context_activation diagnostics from /api/management/team-direction. Visibility only; templates disabled.',
+      details: strategyContextActivationDetails,
+    },
+    {
+      title: 'FORGE Evidence Activation',
+      status: playerSpecificIsEvidence ? 'inspection only' : forgeEvidenceInspectable ? 'partial' : 'unavailable',
+      statusLabel: playerSpecificIsEvidence ? 'Non-prescriptive evidence' : forgeEvidenceInspectable ? 'Visibility only' : 'Fail closed',
+      explanation: playerSpecificIsEvidence
+        ? 'FORGE player-specific evidence is cited as non-prescriptive Management evidence (Level 3) behind the read-only Team Direction classification. Generated baselines remain visibility only and are never counted as evidence.'
+        : forgeEvidenceInspectable
+          ? 'FORGE evidence activation is read-only citation metadata; player-specific evidence is not currently citable at Level 3. Generated baselines remain visibility only and are never counted as evidence.'
+          : 'FORGE evidence activation diagnostics are unavailable or failed closed. No evidence is cited and no scoring changes.',
+      href: '#team-direction',
+      linkLabel: 'Inspect Team Direction',
+      provenance: 'Read-only forge_evidence_activation citation from /api/management/team-direction. Generated baselines are visibility only, not evidence.',
+      details: forgeEvidenceActivationDetails,
     },
     {
       title: 'ROP / Opportunity',
@@ -1491,6 +1613,8 @@ export default function TiberManagementDashboard() {
     teamstateDetails,
     strategyTemplateDiagnostics: managementSnapshot.strategy_template_diagnostics,
     managementStrategyContext: managementSnapshot.management_strategy_context,
+    strategyContextActivation: teamDirectionQuery.data?.strategy_context_activation,
+    forgeEvidenceActivation: teamDirectionQuery.data?.forge_evidence_activation,
   });
 
   const actionSteps = activeTeam
