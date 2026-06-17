@@ -147,16 +147,16 @@ describe('Strategy Context readiness (diagnostic only, no template activation)',
 describe('Teamstate movement v1 (read-only supporting context)', () => {
   it('caps fixture-backed context at Level 1', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'ready', governance: 'fixture', fresh: true, uiLabeled: true },
+      { promotedStatus: 'ready', contractMatch: true, governance: 'fixture', fresh: true, uiLabeled: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(1);
     expect(resolved.failedGates).toContain('G4');
   });
 
-  it('allows governed, fresh, ready, labeled context up to the supporting-context level', () => {
+  it('allows governed, fresh, ready, labeled, contract-matched context up to the supporting-context level', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'ready', governance: 'governed', fresh: true, uiLabeled: true },
+      { promotedStatus: 'ready', contractMatch: true, governance: 'governed', fresh: true, uiLabeled: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(2);
@@ -165,7 +165,7 @@ describe('Teamstate movement v1 (read-only supporting context)', () => {
 
   it('caps unlabeled governed context below Level 2 (Level 1)', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'ready', governance: 'governed', fresh: true, uiLabeled: false },
+      { promotedStatus: 'ready', contractMatch: true, governance: 'governed', fresh: true, uiLabeled: false },
       2,
     );
     expect(resolved.effectiveLevel).toBe(1);
@@ -174,16 +174,32 @@ describe('Teamstate movement v1 (read-only supporting context)', () => {
 
   it('fails closed to Level 0 when required UI labeling data is missing', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'ready', governance: 'governed', fresh: true },
+      { promotedStatus: 'ready', contractMatch: true, governance: 'governed', fresh: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(0);
     expect(resolved.failedGates).toContain('G8');
   });
 
+  it('fails closed to Level 0 on a wrong/missing artifact contract literal (G2)', () => {
+    const wrong = evaluateTeamstateMovementSupportingContext(
+      { promotedStatus: 'ready', contractMatch: false, governance: 'governed', fresh: true, uiLabeled: true },
+      2,
+    );
+    expect(wrong.resolved.effectiveLevel).toBe(0);
+    expect(wrong.resolved.failedGates).toContain('G2');
+
+    const missing = evaluateTeamstateMovementSupportingContext(
+      { promotedStatus: 'ready', governance: 'governed', fresh: true, uiLabeled: true },
+      2,
+    );
+    expect(missing.resolved.effectiveLevel).toBe(0);
+    expect(missing.resolved.failedGates).toContain('G2');
+  });
+
   it('fails closed to Level 0 when the promoted status is not ready', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'missing_export_artifact', governance: 'governed', fresh: true, uiLabeled: true },
+      { promotedStatus: 'missing_export_artifact', contractMatch: true, governance: 'governed', fresh: true, uiLabeled: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(0);
@@ -192,7 +208,7 @@ describe('Teamstate movement v1 (read-only supporting context)', () => {
 
   it('fails closed to Level 0 when governance is unknown (never inferred)', () => {
     const { resolved } = evaluateTeamstateMovementSupportingContext(
-      { promotedStatus: 'ready', governance: 'unknown', fresh: true, uiLabeled: true },
+      { promotedStatus: 'ready', contractMatch: true, governance: 'unknown', fresh: true, uiLabeled: true },
       2,
     );
     expect(resolved.effectiveLevel).toBe(0);

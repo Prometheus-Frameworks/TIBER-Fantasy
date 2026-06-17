@@ -308,21 +308,25 @@ export function evaluateStrategyContextReadiness(
 
 export interface TeamstateMovementGateInput {
   promotedStatus?: PromotedOperationalState;
+  /** Whether the artifact literal/version matches the pinned movement contract (G2). */
+  contractMatch?: boolean;
   governance?: ManagementSourceGovernance;
   fresh?: boolean;
   uiLabeled?: boolean;
 }
 
-// G8 (UI labeling) is required because this use can resolve to Level 2: an
-// unlabeled source must not reach eligible-supporting context. Omitting
-// uiLabeled therefore fails closed via the missing-required-gate path.
-const TEAMSTATE_MOVEMENT_REQUIRED_GATES: readonly ReadinessGateId[] = ['G1', 'G4', 'G6', 'G8'];
+// G2 (contract/version) and G8 (UI labeling) are required because this use can
+// resolve to Level 2: the wrong artifact literal (e.g. legacy v0 vs v1) or an
+// unlabeled source must not reach eligible-supporting context. Omitting either
+// therefore fails closed via the missing-required-gate path.
+const TEAMSTATE_MOVEMENT_REQUIRED_GATES: readonly ReadinessGateId[] = ['G1', 'G2', 'G4', 'G6', 'G8'];
 
 /**
  * Case 4: Teamstate movement v1 as read-only supporting context (Level 2
- * ceiling). Gated only on status/governance/freshness inputs the caller already
- * has — no artifact read. Fixture-backed data caps at Level 1 (G4); a non-ready
- * promoted status fails closed (G1).
+ * ceiling). Gated only on status/contract/governance/freshness inputs the caller
+ * already has — no artifact read. A wrong artifact literal/version fails closed
+ * (G2); fixture-backed data caps at Level 1 (G4); a non-ready promoted status
+ * fails closed (G1).
  */
 export function evaluateTeamstateMovementSupportingContext(
   input: TeamstateMovementGateInput,
@@ -331,6 +335,7 @@ export function evaluateTeamstateMovementSupportingContext(
   const useId = TEAMSTATE_MOVEMENT_SUPPORTING_USE;
   const gateResults: ReadinessGateResult[] = [];
   if (input.promotedStatus !== undefined) gateResults.push(promotedAvailabilityGate(useId, input.promotedStatus));
+  if (input.contractMatch !== undefined) gateResults.push(contractMatchGate(useId, input.contractMatch));
   if (input.governance !== undefined) gateResults.push(governanceGate(useId, input.governance));
   if (input.fresh !== undefined) gateResults.push(freshnessGate(useId, input.fresh));
   if (input.uiLabeled !== undefined) gateResults.push(uiLabelingGate(useId, input.uiLabeled));
