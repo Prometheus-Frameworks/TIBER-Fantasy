@@ -3,74 +3,59 @@
  *
  * Implements proposed slice 2 of `docs/product/MANAGEMENT_PHASE4_ACTIVATION_PLAN.md`
  * ("Gate evaluator over existing services"): a pure, read-only mapping from
- * already-known Management source readiness signals (artifact/promoted status,
- * FORGE provenance, coverage, freshness, governed-vs-fixture, Strategy Context
- * status) into {@link ReadinessGateResult}s and a resolved activation, using the
- * Slice 1 model in `shared/managementActivation.ts`.
+ * already-known Management source readiness signals into {@link ReadinessGateResult}s
+ * and a resolved activation, using the Slice 1 model in `shared/managementActivation.ts`.
+ *
+ * Slice 5B note: the pure gate primitives and the Teamstate movement evaluator
+ * were lifted into `shared/managementGateEvaluator.ts` so the client bundle can
+ * resolve the same activation logic without duplicating gate rules. This module
+ * re-exports them (`export *` below) for back-compat and keeps the FORGE/Strategy
+ * domain evaluators here, since they depend on server-only FORGE types. Behavior
+ * is unchanged.
  *
  * Scope and guardrails (carried from the plan and the Slice 2 issue):
- *   - **Diagnostic only / not wired.** This module's output is NOT consumed by any
- *     UI, route, or runtime product behavior in this slice. It only translates
- *     status that callers already have into gate results for inspection/testing.
- *   - **Pure & read-only.** It performs no artifact reads, no I/O, and no network
- *     calls. Every input is a value the caller already computed elsewhere.
- *   - **Fail closed.** Missing/unknown signals never promote a source: a required
- *     gate with no input resolves to Level 0, unknown provenance is non-evidence,
- *     and fixture/ungoverned data cannot exceed read-only diagnostic.
- *   - **Levels attach to uses.** Each evaluator returns a {@link ManagementSourceUse}
- *     whose gate results are scoped to that use's id, so multiple uses of one
- *     source resolve independently (e.g. FORGE player-specific vs generated
- *     baseline are two uses of `forge_player_static_v1`).
- *   - **No contract/scoring/Team Direction/Strategy template changes.** The gate
- *     vocabulary reuses shipped status enums; it does not introduce new ones.
- *
- * Sources requiring new runtime artifact reads or integration plumbing are left
- * as documented future cases (see {@link FUTURE_EVALUATOR_CASES}) rather than
- * wired here.
+ *   - **Diagnostic only / not wired.** Output is NOT consumed by any runtime
+ *     product behavior in this slice; it translates status callers already have.
+ *   - **Pure & read-only.** No artifact reads, no I/O, no network.
+ *   - **Fail closed.** Missing/unknown signals never promote a source.
+ *   - **Levels attach to uses.** Each evaluator returns a {@link ManagementSourceUse}.
+ *   - **No contract/scoring/Team Direction/Strategy template changes.**
  */
+export * from '@shared/managementGateEvaluator';
+
 import {
   resolveManagementUseActivation,
   type ManagementActivationLevel,
   type ManagementSourceUse,
   type ReadinessGateId,
   type ReadinessGateResult,
-  type ResolvedManagementUseActivation,
 } from '@shared/managementActivation';
+import {
+  gateResult,
+  contractMatchGate,
+  governanceGate,
+  coverageGate,
+  freshnessGate,
+  consumerFailClosedGate,
+  uiLabelingGate,
+  FORGE_PLAYER_STATIC_SOURCE_ID,
+  STRATEGY_CONTEXT_SOURCE_ID,
+  FORGE_PLAYER_SPECIFIC_TEAM_DIRECTION_USE,
+  FORGE_GENERATED_BASELINE_VISIBILITY_USE,
+  STRATEGY_CONTEXT_READINESS_USE,
+  type ManagementSourceGovernance,
+  type ManagementUseEvaluation,
+} from '@shared/managementGateEvaluator';
 import type { ManagementStrategyContextStatus } from '@shared/managementStrategyContext';
-import type { PromotedOperationalState } from '../externalModels/promotedModelStatusService';
 import type {
   ForgePlayerStaticArtifactState,
   ForgePlayerStaticScoreSource,
 } from '../externalModels/forge/forgePlayerStaticTypes';
 
 /**
- * Whether a source is a governed promoted artifact, a fixture/seed, or unknown.
- * Mirrors gate G4 in the plan; governed status is never inferred, so `unknown`
- * fails closed.
- */
-export type ManagementSourceGovernance = 'governed' | 'fixture' | 'unknown';
-
-/** Canonical source ids used by the modeled evaluator cases. */
-export const FORGE_PLAYER_STATIC_SOURCE_ID = 'forge_player_static_v1';
-export const STRATEGY_CONTEXT_SOURCE_ID = 'management_strategy_context';
-export const TEAMSTATE_MOVEMENT_SOURCE_ID = 'teamstate_movement_v1';
-
-/** Canonical use ids. Each is a distinct *use*, gated independently. */
-export const FORGE_PLAYER_SPECIFIC_TEAM_DIRECTION_USE = 'forge_player_specific.team_direction_classification';
-export const FORGE_GENERATED_BASELINE_VISIBILITY_USE = 'forge_generated_baseline.visibility';
-export const STRATEGY_CONTEXT_READINESS_USE = 'strategy_context.readiness';
-export const TEAMSTATE_MOVEMENT_SUPPORTING_USE = 'teamstate_movement_v1.supporting_context';
-
-/** The result of evaluating one source use: the built use and its resolution. */
-export interface ManagementUseEvaluation {
-  use: ManagementSourceUse;
-  resolved: ResolvedManagementUseActivation;
-}
-
-/**
  * Future evaluator cases that need new runtime artifact reads / integration
- * plumbing and are intentionally NOT implemented in this slice. Documented here
- * so the omission is explicit rather than silent.
+ * plumbing and are intentionally NOT implemented. Documented here so the omission
+ * is explicit rather than silent.
  */
 export const FUTURE_EVALUATOR_CASES: readonly string[] = [
   'Point-prediction scenario outputs (requires reading promoted point-scenarios artifact)',
@@ -78,29 +63,13 @@ export const FUTURE_EVALUATOR_CASES: readonly string[] = [
   'Rookie Alpha fallback visibility (requires promoted rookie-alpha artifact reads)',
 ];
 
-// --- gate-result helpers -----------------------------------------------------
-
-function gateResult(
-  use: string,
-  gate: ReadinessGateId,
-  passed: boolean,
-  effectiveCap: ManagementActivationLevel | null,
-  reason: string,
-): ReadinessGateResult {
-  return { gate, use, passed, effectiveCap, reason };
-}
+// --- FORGE-specific gate helpers (depend on server-only FORGE types) ---------
 
 /** G1 from a FORGE static artifact state: only `available` clears availability. */
 function forgeArtifactAvailabilityGate(use: string, state: ForgePlayerStaticArtifactState): ReadinessGateResult {
   if (state === 'available') return gateResult(use, 'G1', true, null, 'FORGE static artifact available');
   // Any non-available state fails closed to Level 0 — never fabricate presence.
   return gateResult(use, 'G1', false, 0, `FORGE static artifact not available (${state})`);
-}
-
-/** G1 from a promoted operational state: only `ready` clears availability. */
-function promotedAvailabilityGate(use: string, state: PromotedOperationalState): ReadinessGateResult {
-  if (state === 'ready') return gateResult(use, 'G1', true, null, 'promoted artifact ready');
-  return gateResult(use, 'G1', false, 0, `promoted artifact not ready (${state})`);
 }
 
 /** G3 from FORGE provenance: only `player_specific` is evidence-bearing. */
@@ -115,59 +84,6 @@ function forgeProvenanceGate(use: string, scoreSource: ForgePlayerStaticScoreSou
       // fallback_default / unknown are non-evidence: fail closed.
       return gateResult(use, 'G3', false, 0, `non-evidence provenance (${scoreSource})`);
   }
-}
-
-/** G4 governed-vs-fixture: governed clears; fixture caps at Level 1; unknown fails closed. */
-function governanceGate(use: string, governance: ManagementSourceGovernance): ReadinessGateResult {
-  switch (governance) {
-    case 'governed':
-      return gateResult(use, 'G4', true, null, 'governed promoted artifact');
-    case 'fixture':
-      return gateResult(use, 'G4', false, 1, 'fixture-backed data may not exceed Level 1');
-    default:
-      return gateResult(use, 'G4', false, 0, 'governance unknown — governed status is never inferred');
-  }
-}
-
-/** G5 coverage completeness: below the documented rate caps confidence at Level 2. */
-function coverageGate(
-  use: string,
-  coverage: { covered: number; total: number; minimumRate: number },
-): ReadinessGateResult {
-  const { covered, total, minimumRate } = coverage;
-  const rate = total > 0 ? covered / total : 0;
-  if (rate >= minimumRate) {
-    return gateResult(use, 'G5', true, null, `coverage ${covered}/${total} meets ${minimumRate}`);
-  }
-  return gateResult(use, 'G5', false, 2, `coverage ${covered}/${total} below ${minimumRate} — cannot raise confidence`);
-}
-
-/** G6 freshness: stale data caps at Level 1 (shown as stale, never current certainty). */
-function freshnessGate(use: string, fresh: boolean): ReadinessGateResult {
-  return fresh
-    ? gateResult(use, 'G6', true, null, 'data is fresh')
-    : gateResult(use, 'G6', false, 1, 'data is stale — shown as stale, not current certainty');
-}
-
-/** G7 consumer fail-closed behavior: an unproven consumer cannot promote past Level 1. */
-function consumerFailClosedGate(use: string, failClosed: boolean): ReadinessGateResult {
-  return failClosed
-    ? gateResult(use, 'G7', true, null, 'consumer degrades safely on malformed input')
-    : gateResult(use, 'G7', false, 1, 'consumer fail-closed handling unproven');
-}
-
-/** G8 explicit UI labeling: hidden state caps at Level 1. */
-function uiLabelingGate(use: string, labeled: boolean): ReadinessGateResult {
-  return labeled
-    ? gateResult(use, 'G8', true, null, 'level/provenance/coverage/freshness labeled at point of use')
-    : gateResult(use, 'G8', false, 1, 'state not labeled — no label, no promotion');
-}
-
-/** G2 literal/version match: a contract mismatch is unsupported and fails closed. */
-function contractMatchGate(use: string, matches: boolean): ReadinessGateResult {
-  return matches
-    ? gateResult(use, 'G2', true, null, 'artifact_type / schema_version / model_version match the pinned contract')
-    : gateResult(use, 'G2', false, 0, 'contract mismatch — unsupported, fail closed');
 }
 
 // --- FORGE static evaluators -------------------------------------------------
@@ -301,53 +217,5 @@ export function evaluateStrategyContextReadiness(
   return {
     use,
     resolved: resolveManagementUseActivation(use, { requiredGates: STRATEGY_CONTEXT_REQUIRED_GATES }),
-  };
-}
-
-// --- Teamstate movement evaluator -------------------------------------------
-
-export interface TeamstateMovementGateInput {
-  promotedStatus?: PromotedOperationalState;
-  /** Whether the artifact literal/version matches the pinned movement contract (G2). */
-  contractMatch?: boolean;
-  governance?: ManagementSourceGovernance;
-  fresh?: boolean;
-  uiLabeled?: boolean;
-}
-
-// G2 (contract/version) and G8 (UI labeling) are required because this use can
-// resolve to Level 2: the wrong artifact literal (e.g. legacy v0 vs v1) or an
-// unlabeled source must not reach eligible-supporting context. Omitting either
-// therefore fails closed via the missing-required-gate path.
-const TEAMSTATE_MOVEMENT_REQUIRED_GATES: readonly ReadinessGateId[] = ['G1', 'G2', 'G4', 'G6', 'G8'];
-
-/**
- * Case 4: Teamstate movement v1 as read-only supporting context (Level 2
- * ceiling). Gated only on status/contract/governance/freshness inputs the caller
- * already has — no artifact read. A wrong artifact literal/version fails closed
- * (G2); fixture-backed data caps at Level 1 (G4); a non-ready promoted status
- * fails closed (G1).
- */
-export function evaluateTeamstateMovementSupportingContext(
-  input: TeamstateMovementGateInput,
-  requestedLevel: ManagementActivationLevel = 2,
-): ManagementUseEvaluation {
-  const useId = TEAMSTATE_MOVEMENT_SUPPORTING_USE;
-  const gateResults: ReadinessGateResult[] = [];
-  if (input.promotedStatus !== undefined) gateResults.push(promotedAvailabilityGate(useId, input.promotedStatus));
-  if (input.contractMatch !== undefined) gateResults.push(contractMatchGate(useId, input.contractMatch));
-  if (input.governance !== undefined) gateResults.push(governanceGate(useId, input.governance));
-  if (input.fresh !== undefined) gateResults.push(freshnessGate(useId, input.fresh));
-  if (input.uiLabeled !== undefined) gateResults.push(uiLabelingGate(useId, input.uiLabeled));
-
-  const use: ManagementSourceUse = {
-    sourceId: TEAMSTATE_MOVEMENT_SOURCE_ID,
-    useId,
-    requestedLevel,
-    gateResults,
-  };
-  return {
-    use,
-    resolved: resolveManagementUseActivation(use, { requiredGates: TEAMSTATE_MOVEMENT_REQUIRED_GATES }),
   };
 }

@@ -16,6 +16,12 @@ import {
   getTeamEnvironmentMovementReadinessDetails,
   hasUsableTeamEnvironmentMovementContext,
 } from '@/lib/teamEnvironmentMovement';
+import {
+  buildTeamstateMovementActivationDiagnostics,
+  type TeamstateMovementActivationDiagnostics,
+  type TeamstateMovementActivationInput,
+} from '@shared/teamstateMovementActivationDiagnostics';
+import type { TeamEnvironmentMovementState } from '@shared/managementGateEvaluator';
 
 type LeagueTeam = {
   id: string;
@@ -1020,6 +1026,43 @@ function summarizeTeamState(response: TeamEnvironmentMovementResponse | null | u
   return `${teamCount} team${teamCount === 1 ? '' : 's'} with TeamState movement context; ${latestWeekText}.`;
 }
 
+/**
+ * Map the already-fetched `/api/data-lab/team-environment-movement` response into
+ * the Slice 5A activation builder input — CLIENT-ONLY, no new reads. The data-lab
+ * route forwards `ok`/`artifactAvailable`/`errors` (not the raw tri-state), so the
+ * movement state is derived here. `generatedAt` is intentionally null: the route
+ * does not forward it in this slice, so freshness fails closed and Level 2 stays
+ * deferred. `uiLabeled` is true because this card is the explicit point-of-use label.
+ */
+export function mapTeamstateMovementResponseToActivationInput(
+  response: TeamEnvironmentMovementResponse | null | undefined,
+): TeamstateMovementActivationInput | null {
+  if (!response) return null;
+  const state: TeamEnvironmentMovementState = (response.errors?.length ?? 0) > 0
+    ? 'error'
+    : response.ok && response.artifactAvailable
+      ? 'ready'
+      : 'unavailable';
+  return {
+    state,
+    artifact: response.artifact ?? null,
+    generatedAt: null,
+    provenanceStatus: response.provenanceStatus ?? null,
+    artifactPath: response.source?.artifactPath ?? null,
+    uiLabeled: true,
+  };
+}
+
+/** Build the read-only Teamstate Movement Activation diagnostics from the client response. */
+export function buildTeamstateMovementActivationFromResponse(
+  response: TeamEnvironmentMovementResponse | null | undefined,
+  options?: { now?: number },
+): TeamstateMovementActivationDiagnostics | null {
+  const input = mapTeamstateMovementResponseToActivationInput(response);
+  if (!input) return null;
+  return buildTeamstateMovementActivationDiagnostics(input, options);
+}
+
 export function buildManagementModelSignals({
   hasActiveTeam,
   hasRosterData,
@@ -1032,6 +1075,7 @@ export function buildManagementModelSignals({
   managementStrategyContext,
   strategyContextActivation,
   forgeEvidenceActivation,
+  teamstateMovementActivation,
 }: {
   hasActiveTeam: boolean;
   hasRosterData: boolean;
@@ -1044,6 +1088,7 @@ export function buildManagementModelSignals({
   managementStrategyContext?: ManagementStrategyContext | null;
   strategyContextActivation?: StrategyContextActivationDiagnostics | null;
   forgeEvidenceActivation?: ForgeEvidenceActivationDiagnostics | null;
+  teamstateMovementActivation?: TeamstateMovementActivationDiagnostics | null;
 }): ModelSignalCard[] {
   const forgeCoverageRate = rosterVisibility.total > 0 ? rosterVisibility.forgeScored / rosterVisibility.total : 0;
   const hasForgeAlphaTotals = hasDashboardTotals;
@@ -1139,6 +1184,26 @@ export function buildManagementModelSignals({
     `Generated baseline failed gates: ${listOrNone(fea?.generatedBaseline?.failedGates)}.`,
   ];
 
+  // --- Teamstate movement activation (Slice 5B, client-only mapping) ----------
+  // Mapped from the already-fetched /api/data-lab/team-environment-movement
+  // response via the shared Slice 5A builder. No new reads. Caps low today:
+  // freshness is unavailable (generatedAt not forwarded) and provenance is
+  // fixture/non-promoted, so Level 2 stays deferred and fail-closed is honest.
+  const tma = teamstateMovementActivation ?? null;
+  const tmaLevel = clampActivationLevel(tma?.effectiveLevel);
+  const tmaInspectable = Boolean(tma) && tmaLevel >= 1;
+  const tmaFreshnessLabel = tma?.fresh === true ? 'fresh' : tma?.fresh === false ? 'stale' : 'unavailable';
+  const teamstateMovementActivationDetails = [
+    `Activation level: ${tmaLevel} (${activationLevelName(tmaLevel)}).`,
+    `Promoted status: ${tma?.promotedStatus ?? 'unavailable'}.`,
+    `Contract (v1) match: ${tma?.contractMatch === true ? 'yes' : tma?.contractMatch === false ? 'no' : 'unknown'}.`,
+    `Governance: ${tma?.governance ?? 'unknown'}${tma?.governance === 'fixture' ? ' (fixture capped)' : ''}.`,
+    `Freshness: ${tmaFreshnessLabel}.`,
+    `Provenance: ${tma?.provenanceStatus ?? 'unknown'}.`,
+    `Failed/capping gates: ${listOrNone(tma?.failedGates)}.`,
+    'Supporting context not active; Level 2 deferred (needs forwarded generatedAt and a governed/promoted artifact).',
+  ];
+
   return [
     {
       title: 'FORGE',
@@ -1194,6 +1259,20 @@ export function buildManagementModelSignals({
       linkLabel: 'Open Team Research',
       provenance: 'Read-only TeamState movement inspection. Does not affect roster scoring or Team Direction.',
       details: teamstateDetails,
+    },
+    {
+      title: 'Teamstate Movement Activation',
+      status: tmaLevel >= 2 ? 'inspection only' : tmaInspectable ? 'inspection only' : 'unavailable',
+      statusLabel: tmaLevel >= 2 ? 'Supporting context' : tmaLevel === 1 ? 'Read-only diagnostic' : 'Fail closed',
+      explanation: tmaLevel >= 2
+        ? 'Teamstate movement v1 is shown as read-only supporting context. It contextualizes roster/environment changes only; it does not re-rank players, alter scoring, or change Team Direction.'
+        : tmaLevel === 1
+          ? 'Teamstate movement v1 is shown at read-only diagnostic visibility and labeled as such; it is not eligible supporting context yet (fixture/freshness gates cap it).'
+          : 'Teamstate movement v1 activation fails closed: freshness is unavailable and/or governance is fixture/unknown, so it is not shown as supporting context. Shown as unavailable, never inferred as present.',
+      href: '/tiber-data-lab/team-research',
+      linkLabel: 'Open Team Research',
+      provenance: 'Read-only Teamstate movement v1 activation diagnostics, mapped from the already-fetched /api/data-lab/team-environment-movement response via the shared Slice 5A builder. No new artifact reads; supporting context only.',
+      details: teamstateMovementActivationDetails,
     },
     {
       title: 'Strategy Templates',
@@ -1615,6 +1694,7 @@ export default function TiberManagementDashboard() {
     managementStrategyContext: managementSnapshot.management_strategy_context,
     strategyContextActivation: teamDirectionQuery.data?.strategy_context_activation,
     forgeEvidenceActivation: teamDirectionQuery.data?.forge_evidence_activation,
+    teamstateMovementActivation: buildTeamstateMovementActivationFromResponse(teamstateQuery.data),
   });
 
   const actionSteps = activeTeam

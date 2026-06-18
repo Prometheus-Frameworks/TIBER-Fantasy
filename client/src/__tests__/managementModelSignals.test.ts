@@ -6,8 +6,11 @@ import {
   buildRosterVisibilitySummary,
   buildActiveTeamMatchingSummary,
   buildManagementSnapshotExport,
+  buildTeamstateMovementActivationFromResponse,
+  mapTeamstateMovementResponseToActivationInput,
   type ModelSignalCard,
 } from '@/pages/TiberManagementDashboard';
+import { buildTeamstateMovementActivationDiagnostics } from '@shared/teamstateMovementActivationDiagnostics';
 import type { TeamEnvironmentMovementResponse } from '@/lib/teamEnvironmentMovement';
 
 function signal(cards: ModelSignalCard[], title: string): ModelSignalCard {
@@ -640,6 +643,108 @@ describe('Management model signal cards', () => {
   });
 
 
+
+  describe('Teamstate Movement Activation card (Slice 5B, client-only)', () => {
+    function teamstateCard(args: Partial<Parameters<typeof buildManagementModelSignals>[0]> = {}) {
+      return signal(buildManagementModelSignals({ ...baseSignalArgs, ...args }), 'Teamstate Movement Activation');
+    }
+
+    it('maps the already-fetched client Teamstate response into activation input (no generatedAt, uiLabeled true)', () => {
+      const input = mapTeamstateMovementResponseToActivationInput(teamStateResponse({
+        artifact: 'team_environment_movement_v1',
+        provenanceStatus: 'fixture_scaffold',
+        source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: 'server/artifacts/fixtures/team_environment_movement_v1.json', readOnly: true },
+      }));
+      expect(input).toMatchObject({
+        state: 'ready',
+        artifact: 'team_environment_movement_v1',
+        generatedAt: null,
+        provenanceStatus: 'fixture_scaffold',
+        artifactPath: 'server/artifacts/fixtures/team_environment_movement_v1.json',
+        uiLabeled: true,
+      });
+    });
+
+    it('derives movement state from ok/artifactAvailable/errors', () => {
+      expect(mapTeamstateMovementResponseToActivationInput(null)).toBeNull();
+      expect(mapTeamstateMovementResponseToActivationInput(teamStateResponse({ errors: [{ code: 'X', message: 'boom' }] }))?.state).toBe('error');
+      expect(mapTeamstateMovementResponseToActivationInput(teamStateResponse({ ok: false, artifactAvailable: false }))?.state).toBe('unavailable');
+      expect(mapTeamstateMovementResponseToActivationInput(teamStateResponse())?.state).toBe('ready');
+    });
+
+    it('renders the card from the existing client Teamstate response (fixture provenance, no generatedAt) capped below Level 2', () => {
+      const activation = buildTeamstateMovementActivationFromResponse(teamStateResponse({
+        artifact: 'team_environment_movement_v1',
+        provenanceStatus: 'fixture_scaffold',
+        source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: 'server/artifacts/fixtures/team_environment_movement_v1.json', readOnly: true },
+      }));
+      expect(activation).not.toBeNull();
+      expect(activation!.effectiveLevel).toBeLessThan(2);
+
+      const card = teamstateCard({ teamstateMovementActivation: activation });
+      expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+      expect(card.details).toEqual(expect.arrayContaining([
+        'Contract (v1) match: yes.',
+        'Governance: fixture (fixture capped).',
+        'Freshness: unavailable.',
+        'Provenance: fixture_scaffold.',
+        'Supporting context not active; Level 2 deferred (needs forwarded generatedAt and a governed/promoted artifact).',
+      ]));
+    });
+
+    it('renders freshness unavailable / fail-closed when generatedAt is missing', () => {
+      const activation = buildTeamstateMovementActivationFromResponse(teamStateResponse({ artifact: 'team_environment_movement_v1' }));
+      const card = teamstateCard({ teamstateMovementActivation: activation });
+      expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+      expect(card.details).toEqual(expect.arrayContaining(['Activation level: 0 (Fail closed).', 'Freshness: unavailable.']));
+    });
+
+    it('fails closed when the Teamstate response is missing or malformed', () => {
+      expect(buildTeamstateMovementActivationFromResponse(null)).toBeNull();
+      const card = teamstateCard({ teamstateMovementActivation: null });
+      expect(card).toMatchObject({ status: 'unavailable', statusLabel: 'Fail closed' });
+      expect(card.details).toEqual(expect.arrayContaining(['Activation level: 0 (Fail closed).', 'Promoted status: unavailable.']));
+    });
+
+    it('labels Level 1 (read-only diagnostic) and Level 2 (supporting context) when the builder resolves them', () => {
+      // Stale but otherwise complete → G6 caps at Level 1.
+      const stale = buildTeamstateMovementActivationDiagnostics({
+        state: 'ready',
+        artifact: 'team_environment_movement_v1',
+        generatedAt: new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString(),
+        provenanceStatus: 'governed',
+        artifactPath: 'server/artifacts/external/teamstate/promoted/team_environment_movement_v1.json',
+        uiLabeled: true,
+      });
+      expect(stale.effectiveLevel).toBe(1);
+      expect(teamstateCard({ teamstateMovementActivation: stale })).toMatchObject({ status: 'inspection only', statusLabel: 'Read-only diagnostic' });
+
+      // Fresh, governed (promoted path), v1, ready, labeled → Level 2 supporting context.
+      const supporting = buildTeamstateMovementActivationDiagnostics({
+        state: 'ready',
+        artifact: 'team_environment_movement_v1',
+        generatedAt: new Date().toISOString(),
+        provenanceStatus: 'governed',
+        artifactPath: 'server/artifacts/external/teamstate/promoted/team_environment_movement_v1.json',
+        uiLabeled: true,
+      });
+      expect(supporting.effectiveLevel).toBe(2);
+      const card = teamstateCard({ teamstateMovementActivation: supporting });
+      expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Supporting context' });
+      expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+    });
+
+    it('leaves the existing TeamState availability card and the Point Prediction card unchanged', () => {
+      const cards = buildManagementModelSignals({ ...baseSignalArgs, teamstateMovementActivation: buildTeamstateMovementActivationFromResponse(teamStateResponse()) });
+      expect(signal(cards, 'TeamState')).toMatchObject({ status: 'ready', statusLabel: 'Ready' });
+      expect(signal(cards, 'Point Prediction')).toMatchObject({ status: 'not wired', statusLabel: 'Pending ingestion' });
+    });
+
+    it('emits no advice/recommendation/action language in the rendered card', () => {
+      const card = teamstateCard({ teamstateMovementActivation: buildTeamstateMovementActivationFromResponse(teamStateResponse({ artifact: 'team_environment_movement_v1' })) });
+      expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+    });
+  });
 
   it('keeps the client snapshot export wired to the shared strategy diagnostics helper', () => {
     const source = readFileSync(resolve(process.cwd(), 'client/src/pages/TiberManagementDashboard.tsx'), 'utf8');
