@@ -78,6 +78,30 @@ describe('data lab team environment movement routes', () => {
     expect(service.getMovement).toHaveBeenCalledWith('TB');
   });
 
+  it('forwards the already-read generatedAt timestamp for honest freshness', async () => {
+    const service = buildService();
+    const app = express();
+    app.use('/api/data-lab', createDataLabTeamEnvironmentMovementRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/team-environment-movement');
+
+    expect(res.status).toBe(200);
+    expect(res.body.generatedAt).toBe('2026-05-30T00:00:00.000Z');
+  });
+
+  it('forwards a null generatedAt when the artifact has none (fail-closed freshness input)', async () => {
+    const service = buildService({
+      getMovement: jest.fn().mockResolvedValue(buildResult({ generatedAt: null })),
+    });
+    const app = express();
+    app.use('/api/data-lab', createDataLabTeamEnvironmentMovementRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/team-environment-movement');
+
+    expect(res.status).toBe(200);
+    expect(res.body.generatedAt).toBeNull();
+  });
+
   it('surfaces missing artifacts as explicit unavailable state', async () => {
     const service = buildService({
       getMovement: jest.fn().mockResolvedValue(buildResult({

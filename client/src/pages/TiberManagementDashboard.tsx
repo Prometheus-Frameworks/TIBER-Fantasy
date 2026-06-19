@@ -1030,9 +1030,11 @@ function summarizeTeamState(response: TeamEnvironmentMovementResponse | null | u
  * Map the already-fetched `/api/data-lab/team-environment-movement` response into
  * the Slice 5A activation builder input — CLIENT-ONLY, no new reads. The data-lab
  * route forwards `ok`/`artifactAvailable`/`errors` (not the raw tri-state), so the
- * movement state is derived here. `generatedAt` is intentionally null: the route
- * does not forward it in this slice, so freshness fails closed and Level 2 stays
- * deferred. `uiLabeled` is true because this card is the explicit point-of-use label.
+ * movement state is derived here. `generatedAt` is forwarded from the already-read
+ * service value so the card can evaluate freshness (G6) honestly; when it is
+ * absent, freshness fails closed. Level 2 still stays deferred because governed
+ * artifact status is not explicit yet. `uiLabeled` is true because this card is
+ * the explicit point-of-use label.
  */
 export function mapTeamstateMovementResponseToActivationInput(
   response: TeamEnvironmentMovementResponse | null | undefined,
@@ -1046,7 +1048,7 @@ export function mapTeamstateMovementResponseToActivationInput(
   return {
     state,
     artifact: response.artifact ?? null,
-    generatedAt: null,
+    generatedAt: response.generatedAt ?? null,
     provenanceStatus: response.provenanceStatus ?? null,
     artifactPath: response.source?.artifactPath ?? null,
     uiLabeled: true,
@@ -1184,13 +1186,22 @@ export function buildManagementModelSignals({
     `Generated baseline failed gates: ${listOrNone(fea?.generatedBaseline?.failedGates)}.`,
   ];
 
-  // --- Teamstate movement activation (Slice 5B, client-only mapping) ----------
+  // --- Teamstate movement activation (Slice 5B card; freshness forwarded #242 PR A) ---
   // Mapped from the already-fetched /api/data-lab/team-environment-movement
-  // response via the shared Slice 5A builder. No new reads. Caps low today:
-  // freshness is unavailable (generatedAt not forwarded) and provenance is
-  // fixture/non-promoted, so Level 2 stays deferred and fail-closed is honest.
+  // response via the shared Slice 5A builder. No new reads.
+  //
+  // Display cap (PR A): the builder treats any `/promoted/` artifact path as
+  // governed, so once freshness is forwarded a promoted + fresh + v1 artifact
+  // could resolve to Level 2. PR A intentionally keeps Teamstate movement BELOW
+  // Level 2 until an explicit promotion gate exists (the promoted-path string is
+  // not yet an explicit promotion signal). We therefore hold the *displayed*
+  // level at <= 1 here while keeping freshness/governance details honest. The
+  // shared builder is unchanged; true Level 2 lands with the promotion-gate work
+  // tracked in #242.
+  const TEAMSTATE_MOVEMENT_DISPLAY_LEVEL_CAP = 1;
   const tma = teamstateMovementActivation ?? null;
-  const tmaLevel = clampActivationLevel(tma?.effectiveLevel);
+  const tmaResolvedLevel = clampActivationLevel(tma?.effectiveLevel);
+  const tmaLevel = Math.min(tmaResolvedLevel, TEAMSTATE_MOVEMENT_DISPLAY_LEVEL_CAP);
   const tmaInspectable = Boolean(tma) && tmaLevel >= 1;
   const tmaFreshnessLabel = tma?.fresh === true ? 'fresh' : tma?.fresh === false ? 'stale' : 'unavailable';
   const teamstateMovementActivationDetails = [
@@ -1201,7 +1212,7 @@ export function buildManagementModelSignals({
     `Freshness: ${tmaFreshnessLabel}.`,
     `Provenance: ${tma?.provenanceStatus ?? 'unknown'}.`,
     `Failed/capping gates: ${listOrNone(tma?.failedGates)}.`,
-    'Supporting context not active; Level 2 deferred (needs forwarded generatedAt and a governed/promoted artifact).',
+    'Supporting context not active; Level 2 held pending an explicit promotion gate (the promoted-artifact path alone is not yet treated as an explicit promotion signal).',
   ];
 
   return [
@@ -1262,13 +1273,11 @@ export function buildManagementModelSignals({
     },
     {
       title: 'Teamstate Movement Activation',
-      status: tmaLevel >= 2 ? 'inspection only' : tmaInspectable ? 'inspection only' : 'unavailable',
-      statusLabel: tmaLevel >= 2 ? 'Supporting context' : tmaLevel === 1 ? 'Read-only diagnostic' : 'Fail closed',
-      explanation: tmaLevel >= 2
-        ? 'Teamstate movement v1 is shown as read-only supporting context. It contextualizes roster/environment changes only; it does not re-rank players, alter scoring, or change Team Direction.'
-        : tmaLevel === 1
-          ? 'Teamstate movement v1 is shown at read-only diagnostic visibility and labeled as such; it is not eligible supporting context yet (fixture/freshness gates cap it).'
-          : 'Teamstate movement v1 activation fails closed: freshness is unavailable and/or governance is fixture/unknown, so it is not shown as supporting context. Shown as unavailable, never inferred as present.',
+      status: tmaInspectable ? 'inspection only' : 'unavailable',
+      statusLabel: tmaLevel === 1 ? 'Read-only diagnostic' : 'Fail closed',
+      explanation: tmaLevel === 1
+        ? 'Teamstate movement v1 is shown at read-only diagnostic visibility and labeled as such. Level 2 supporting context is held pending an explicit promotion gate, so it is not shown as eligible supporting context yet.'
+        : 'Teamstate movement v1 activation fails closed: freshness is unavailable and/or governance is fixture/unknown, so it is not shown as supporting context. Shown as unavailable, never inferred as present.',
       href: '/tiber-data-lab/team-research',
       linkLabel: 'Open Team Research',
       provenance: 'Read-only Teamstate movement v1 activation diagnostics, mapped from the already-fetched /api/data-lab/team-environment-movement response via the shared Slice 5A builder. No new artifact reads; supporting context only.',
