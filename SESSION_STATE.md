@@ -1,4 +1,13 @@
 # Session State Tracker
+
+> **STATUS: HISTORICAL — NOT CURRENT AUTHORITY.**
+> This file is January-2026-era session state, preserved as historical context
+> for prior ETL/data work. It does **not** describe current June 2026
+> architecture direction and must not be treated as authoritative. For current
+> direction, read `AGENT_README.md`, then
+> `docs/architecture/AGENT_NAVIGATION_MAP.md`, then the relevant current
+> architecture doc. See the doc status convention in the navigation map.
+
 > **Purpose**: Track progress across Claude Code sessions to resume work when rate limits hit
 
 **Last Updated**: 2026-01-27 (Snap Count Name Matching Fix)
