@@ -1,6 +1,14 @@
 # TIBER-Fantasy Module Classification Audit
 
-_Last updated: 2026-03-20_
+**Status: CURRENT** — _Last updated: 2026-03-20_
+
+> This audit is the detailed source of truth for module status. For the quick
+> read path and a compact bucket map, see
+> `docs/architecture/AGENT_NAVIGATION_MAP.md` (section 4). The navigation map's
+> buckets summarize the per-module classifications below:
+> `CORE` → CORE; `LEGACY_CORE_TEMP` → LEGACY_CORE_TEMP;
+> `EXTRACT` → EXTRACT_LATER; `DEPRECATE_NOW` / `DELETE_AFTER_REPLACEMENT` →
+> DEPRECATE_OR_FREEZE; `UNKNOWN` → UNKNOWN_DO_NOT_EXPAND.
 
 ## A. Executive Summary
 
