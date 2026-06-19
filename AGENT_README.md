@@ -20,14 +20,20 @@ If contradictions exist between current docs, **stop and ask**. Do not guess.
 
 ## 2. Current Data Status
 
+> **This table is a point-in-time snapshot, not part of the CURRENT-stamped
+> rules.** It goes stale as the pipeline ships. Before relying on a metric's
+> availability, verify against the live source of truth —
+> `shared/schema.ts` and `server/etl/goldDatadiveETL.ts` — not this table.
+
 | Phase | Status | Notes |
 |-------|--------|-------|
 | Phase 1 metrics | ✅ Complete | All weeks 1-17 |
 | Phase 2A metrics | ✅ Complete | All weeks 1-17 (RZ + 3rd Down) |
-| Phase 2B (Game Script) | ⛔ Not started | |
-| Phase 2C (Two-Minute Drill) | ⛔ Not started | |
+| Phase 2B (Game Script) | ⛔ Not started | No schema/ETL fields yet |
+| Phase 2C (Two-Minute Drill) | ✅ Complete | Weeks 1-17 backfilled; fields wired in `shared/schema.ts` + `server/etl/goldDatadiveETL.ts` |
 
-**Do not reference unavailable metrics (Phase 2B/2C).**
+**Do not reference Phase 2B (Game Script) metrics — not yet available.**
+Phase 2C two-minute/hurry-up metrics ARE available and safe to reference.
 
 ---
 
