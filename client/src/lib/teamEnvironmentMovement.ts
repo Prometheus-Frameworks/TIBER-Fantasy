@@ -31,6 +31,10 @@ export interface TeamEnvironmentMovementResponse {
   // Accepts the team-state-only v1 successor and the legacy v0 during the migration transition.
   artifact: 'team_environment_movement_v0' | 'team_environment_movement_v1';
   artifactAvailable: boolean;
+  // ISO timestamp the movement artifact was generated, forwarded from the
+  // already-read service value for honest freshness (G6). May be absent on older
+  // payloads or the invalid-request branch; absence is treated as not-fresh.
+  generatedAt?: string | null;
   provenanceStatus: string | null;
   inputSources: unknown[];
   coverage: TeamEnvironmentMovementCoverage | null;

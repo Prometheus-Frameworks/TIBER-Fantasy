@@ -649,7 +649,7 @@ describe('Management model signal cards', () => {
       return signal(buildManagementModelSignals({ ...baseSignalArgs, ...args }), 'Teamstate Movement Activation');
     }
 
-    it('maps the already-fetched client Teamstate response into activation input (no generatedAt, uiLabeled true)', () => {
+    it('maps the already-fetched client Teamstate response into activation input (uiLabeled true)', () => {
       const input = mapTeamstateMovementResponseToActivationInput(teamStateResponse({
         artifact: 'team_environment_movement_v1',
         provenanceStatus: 'fixture_scaffold',
@@ -663,6 +663,17 @@ describe('Management model signal cards', () => {
         artifactPath: 'server/artifacts/fixtures/team_environment_movement_v1.json',
         uiLabeled: true,
       });
+    });
+
+    it('forwards generatedAt from the response when present, and falls back to null when absent', () => {
+      const withTimestamp = mapTeamstateMovementResponseToActivationInput(teamStateResponse({
+        artifact: 'team_environment_movement_v1',
+        generatedAt: '2026-06-01T00:00:00.000Z',
+      }));
+      expect(withTimestamp?.generatedAt).toBe('2026-06-01T00:00:00.000Z');
+
+      const withoutTimestamp = mapTeamstateMovementResponseToActivationInput(teamStateResponse({ artifact: 'team_environment_movement_v1' }));
+      expect(withoutTimestamp?.generatedAt).toBeNull();
     });
 
     it('derives movement state from ok/artifactAvailable/errors', () => {
@@ -690,6 +701,28 @@ describe('Management model signal cards', () => {
         'Provenance: fixture_scaffold.',
         'Supporting context not active; Level 2 deferred (needs forwarded generatedAt and a governed/promoted artifact).',
       ]));
+    });
+
+    it('uses a forwarded recent generatedAt to evaluate freshness honestly, but stays below Level 2 (fixture governance)', () => {
+      const activation = buildTeamstateMovementActivationFromResponse(teamStateResponse({
+        artifact: 'team_environment_movement_v1',
+        generatedAt: new Date().toISOString(),
+        provenanceStatus: 'fixture_scaffold',
+        source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: 'server/artifacts/fixtures/team_environment_movement_v1.json', readOnly: true },
+      }));
+      // Freshness now evaluates true (no longer "unavailable"), but governed
+      // status is not explicit (fixture), so the card caps at Level 1.
+      expect(activation!.fresh).toBe(true);
+      expect(activation!.effectiveLevel).toBe(1);
+
+      const card = teamstateCard({ teamstateMovementActivation: activation });
+      expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Read-only diagnostic' });
+      expect(card.details).toEqual(expect.arrayContaining([
+        'Freshness: fresh.',
+        'Governance: fixture (fixture capped).',
+      ]));
+      // Level 2 remains deferred.
+      expect(card.statusLabel).not.toBe('Supporting context');
     });
 
     it('renders freshness unavailable / fail-closed when generatedAt is missing', () => {

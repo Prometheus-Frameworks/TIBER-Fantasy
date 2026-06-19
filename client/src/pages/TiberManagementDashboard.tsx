@@ -1030,9 +1030,11 @@ function summarizeTeamState(response: TeamEnvironmentMovementResponse | null | u
  * Map the already-fetched `/api/data-lab/team-environment-movement` response into
  * the Slice 5A activation builder input — CLIENT-ONLY, no new reads. The data-lab
  * route forwards `ok`/`artifactAvailable`/`errors` (not the raw tri-state), so the
- * movement state is derived here. `generatedAt` is intentionally null: the route
- * does not forward it in this slice, so freshness fails closed and Level 2 stays
- * deferred. `uiLabeled` is true because this card is the explicit point-of-use label.
+ * movement state is derived here. `generatedAt` is forwarded from the already-read
+ * service value so the card can evaluate freshness (G6) honestly; when it is
+ * absent, freshness fails closed. Level 2 still stays deferred because governed
+ * artifact status is not explicit yet. `uiLabeled` is true because this card is
+ * the explicit point-of-use label.
  */
 export function mapTeamstateMovementResponseToActivationInput(
   response: TeamEnvironmentMovementResponse | null | undefined,
@@ -1046,7 +1048,7 @@ export function mapTeamstateMovementResponseToActivationInput(
   return {
     state,
     artifact: response.artifact ?? null,
-    generatedAt: null,
+    generatedAt: response.generatedAt ?? null,
     provenanceStatus: response.provenanceStatus ?? null,
     artifactPath: response.source?.artifactPath ?? null,
     uiLabeled: true,
