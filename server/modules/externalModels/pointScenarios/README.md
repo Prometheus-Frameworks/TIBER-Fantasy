@@ -20,7 +20,7 @@ TIBER-Fantasy does **not** compute or author point scenarios. It only reads prom
 
 ## Upstream expectations
 
-Preferred upstream is a stable compatibility/API response from Point-prediction-Model. If no API is configured, the adapter can read a stable exported artifact at `POINT_SCENARIO_EXPORTS_PATH`.
+Preferred upstream is a stable compatibility/API response from Point-prediction-Model (PPM). If no API is configured, the adapter can read a stable exported artifact at `POINT_SCENARIO_EXPORTS_PATH`.
 
 Minimum normalized fields when available:
 
@@ -32,6 +32,19 @@ Minimum normalized fields when available:
 - scenario type / event type
 - notes / explanation
 - source metadata / provenance
+
+## Upstream contract status (confirmed)
+
+The upstream compatibility contract now exists in Point-prediction-Model:
+
+- PPM exposes **`GET /api/point-scenarios/lab`** as a compatibility / Data Lab route specifically for this adapter.
+- PPM also supports **on-demand `point_scenario_lab.json` export** for the artifact fallback (`POINT_SCENARIO_EXPORTS_PATH`).
+
+PPM itself remains **scoring-first**: its primary surfaces are `/api/scoring/*` and the TIBER scoring views under `/api/tiber/*`. The `/api/point-scenarios/lab` route (and the JSON export) are a **compatibility / Data Lab surface only** — not PPM's primary interface — and exist to keep this adapter's existing contract working.
+
+This adapter (client → adapter → service, normalizing into `CanonicalPointScenarioLabResponse` / the TIBER Point Scenario Lab contract) **remains the correct downstream boundary** for point scenarios in TIBER-Fantasy. The contract confirmation requires no adapter change by itself.
+
+**Management note:** Management receives **none** of this today, and Management point-scenario activation (**Slice 5C**) **remains deferred**. The upstream contract existing is necessary but not sufficient: the next blocker is on the Fantasy side — Management can only cite point-scenario readiness once there is a **governed + fresh readiness surface** around this lab contract (the same `generatedAt` / governance gap tracked for Teamstate movement in Slices 5A/5B).
 
 ## Guardrails
 
