@@ -123,7 +123,7 @@ The ceiling is a cap, not a commitment to build.
 | **Strategy Context readiness** (`shared/managementStrategyContext.ts`) | 1 (`status: blocked` shown; `unavailable` fails closed) | 2 (eligible supporting context: readiness/coverage visibility) | Template selection stays **disabled**; `selected_template_id` stays `null`. Reaching Level 2 means showing readiness, **not** activating templates. |
 | **Teamstate movement v1** (TIBER-Teamstate promoted movement) | 1 (read-only diagnostic) | 2 (eligible supporting context) | Gated on G1/G2/G4 (governed vs fixture) and G6 freshness. May contextualize, may not re-rank or score. |
 | **Player ownership / identity coverage** (crosswalk + identity map) | 2 (coverage accounting: 30/30 identity, 25/30 crosswalk) | 2 (coverage accounting only) | Identity coverage is accounting, not evidence; it may scope *what is knowable*, never *how good a player is*. |
-| **Point-prediction scenario outputs** (`point-scenarios`) | 1 (read-only diagnostic) | 2 (eligible supporting context) | Gated on G1/G5/G6. Scenarios are explanatory ranges, not predictions of outcomes; may not become a score or a recommendation. |
+| **Point-prediction scenario outputs** (`point-scenarios`) | 1 (read-only diagnostic) | 2 (eligible supporting context) | Gated on G1/G5/G6. Scenarios are explanatory ranges, not predictions of outcomes; may not become a score or a recommendation. **Upstream contract confirmed** (PPM `GET /api/point-scenarios/lab` + on-demand `point_scenario_lab.json`; PPM stays scoring-first via `/api/scoring/*` and `/api/tiber/*`). Management still consumes none of this; activation (**Slice 5C**) remains **deferred** until Fantasy has a governed/fresh readiness surface around the lab contract. |
 | **Rookie Alpha fallback evidence** (promoted `rookie-alpha`) | 1 (additive visibility fallback) | 1 (additive visibility fallback) | Capped at Level 1 by existing doctrine: never counts as FORGE coverage, never blends into roster strength, lineup totals, scoring, or rankings. |
 
 ### What each source may and may not influence
@@ -202,6 +202,14 @@ ordered so that gate machinery lands before any promotion uses it.
 5. **Teamstate movement v1 / Point scenarios → Level 2.** Add labeled
    supporting-context panels gated on governed-vs-fixture (G4) and freshness
    (G6), with no re-ranking and no scoring.
+   - *Status:* Teamstate movement shipped as a client-only read-only activation
+     card (Slices 5A/5B); it currently caps below Level 2 pending a forwarded
+     `generatedAt` / governed artifact. **Point scenarios (Slice 5C) remain
+     deferred.** The upstream PPM compatibility contract is now **confirmed**
+     (`GET /api/point-scenarios/lab` + on-demand `point_scenario_lab.json`, with
+     PPM staying scoring-first on `/api/scoring/*` and `/api/tiber/*`), so the
+     upstream boundary is settled — but Management still consumes none of it and
+     first needs a governed/fresh readiness surface around the lab contract.
 6. **Activation-state UI labeling pass.** Ensure every promoted source renders
    its level, provenance, coverage, and freshness at the point of use (G8), so
    no promotion ships unlabeled.
