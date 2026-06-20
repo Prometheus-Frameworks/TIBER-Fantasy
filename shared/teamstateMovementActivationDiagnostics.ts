@@ -34,6 +34,14 @@ import {
   type PromotedOperationalState,
   type TeamEnvironmentMovementState,
 } from './managementGateEvaluator';
+import {
+  evaluatePromotionGate,
+  type PromotionFreshnessScope,
+  type PromotionFreshnessStatus,
+  type PromotionGovernanceSource,
+  type PromotionGovernanceStatus,
+  type PromotionReadiness,
+} from './promotionGate';
 
 /**
  * Pinned Teamstate movement v1 artifact literal. Mirrors the server transport
@@ -70,10 +78,27 @@ function isPromotedPathBoundary(artifactPath: string | null | undefined): boolea
   return typeof artifactPath === 'string' && artifactPath.replace(/\\/g, '/').includes('/promoted/');
 }
 
+/**
+ * Producer-owned governance block from team_environment_movement_v1
+ * (TIBER-Teamstate PR #41). Drives the explicit promotion gate. Absent/malformed
+ * → the gate fails closed and Level 2 stays deferred.
+ */
+export interface TeamstateMovementGovernanceInput {
+  governanceStatus?: string | null;
+  governanceSource?: string | null;
+  contractVersion?: string | null;
+  /** Dataset-level generation timestamp (producer-owned). */
+  generatedAt?: string | null;
+  promotedAt?: string | null;
+  promotionNotes?: string | null;
+}
+
 /** The Teamstate movement v1 readiness subset this builder consumes. */
 export interface TeamstateMovementActivationInput {
   /** Movement service state: 'ready' | 'unavailable' | 'error'. */
   state?: TeamEnvironmentMovementState | null;
+  /** Producer-owned explicit governance block (PR #41); null when absent. */
+  governance?: TeamstateMovementGovernanceInput | null;
   /**
    * The artifact literal the movement service resolved. The service can return
    * `state: 'ready'` for either the v1 artifact or the legacy v0 artifact during
@@ -113,6 +138,13 @@ export interface TeamstateMovementActivationDiagnostics {
   caps: ManagementActivationCap[];
   gateResults: ReadinessGateResult[];
   explanation: string;
+  /**
+   * Explicit promotion-gate result (#249). Authoritative for Level 2: a consumer
+   * may display Level 2 supporting context only when `promotionReadiness.promotable`
+   * is true. `effectiveLevel` above is the source's raw operational readiness; the
+   * promotion gate (not the `/promoted/` path) decides eligibility for promotion.
+   */
+  promotionReadiness: PromotionReadiness;
 }
 
 /**
@@ -159,6 +191,95 @@ function deriveFreshness(
   return now - ts <= maxAgeDays * DAY_MS;
 }
 
+// --- explicit promotion-gate mapping (#249 PR 2) -----------------------------
+
+/** Map the producer governanceStatus token to the shared gate's governance enum. */
+function mapGovernanceStatus(status: string | null | undefined): PromotionGovernanceStatus {
+  switch ((status ?? '').trim().toLowerCase()) {
+    case 'governed':
+      return 'governed';
+    case 'fixture':
+    case 'fixture_scaffold':
+    case 'synthetic':
+    case 'seed':
+      return 'fixture';
+    case 'ungoverned':
+      return 'ungoverned';
+    default:
+      return 'unknown';
+  }
+}
+
+/**
+ * Map the producer governanceSource to the shared gate's source model. Only a
+ * recognized explicit producer marker counts as `explicit_marker`; a path-derived
+ * source is a `path_hint` (never sufficient); an absent block or unrecognized
+ * source is `missing` (fail closed). The `/promoted/` artifact path is NOT an
+ * explicit marker here — it is only a weak hint.
+ */
+function mapGovernanceSource(
+  governance: TeamstateMovementGovernanceInput | null | undefined,
+): PromotionGovernanceSource {
+  if (!governance) return 'missing';
+  switch ((governance.governanceSource ?? '').trim().toLowerCase()) {
+    case 'explicit_marker':
+    case 'explicit':
+    case 'producer':
+    case 'producer_attested':
+    case 'attested':
+    case 'promotion_pipeline':
+    case 'governed_marker':
+      return 'explicit_marker';
+    case 'path':
+    case 'path_hint':
+    case 'promoted_path':
+      return 'path_hint';
+    default:
+      return 'missing';
+  }
+}
+
+/** Dataset-level freshness status for the promotion gate (mirrors assessArtifactFreshness thresholds). */
+function deriveDatasetFreshnessStatus(generatedAt: string | null | undefined, now: number, maxAgeDays: number): PromotionFreshnessStatus {
+  if (!generatedAt) return 'unknown';
+  const ts = Date.parse(generatedAt);
+  if (Number.isNaN(ts)) return 'unknown';
+  const ageDays = (now - ts) / DAY_MS;
+  if (ageDays <= maxAgeDays) return 'fresh';
+  if (ageDays <= maxAgeDays * 2) return 'warning';
+  return 'stale';
+}
+
+/**
+ * Build the explicit promotion-gate readiness from the producer governance block.
+ * Dataset-level freshness uses the governance block's own generatedAt (falling
+ * back to the forwarded top-level generatedAt); freshnessScope is `dataset` only
+ * when such a dataset-level timestamp exists.
+ */
+function buildPromotionReadiness(
+  input: TeamstateMovementActivationInput,
+  now: number,
+  maxAgeDays: number,
+): PromotionReadiness {
+  const governance = input.governance ?? null;
+  const datasetGeneratedAt = governance?.generatedAt ?? input.generatedAt ?? null;
+  const freshnessScope: PromotionFreshnessScope = datasetGeneratedAt ? 'dataset' : 'none';
+  const freshnessStatus = datasetGeneratedAt
+    ? deriveDatasetFreshnessStatus(datasetGeneratedAt, now, maxAgeDays)
+    : 'unknown';
+  const contractObserved = governance?.contractVersion ?? null;
+  return evaluatePromotionGate({
+    governanceStatus: mapGovernanceStatus(governance?.governanceStatus),
+    governanceSource: mapGovernanceSource(governance),
+    contractMatch: contractObserved === TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1,
+    contractExpected: TEAM_ENVIRONMENT_MOVEMENT_ARTIFACT_NAME_V1,
+    contractObserved,
+    freshnessStatus,
+    freshnessScope,
+    freshnessTimestamp: datasetGeneratedAt,
+  });
+}
+
 function explain(effectiveLevel: ManagementActivatableLevel, failedGates: readonly ReadinessGateId[]): string {
   if (effectiveLevel >= 2) {
     return `Teamstate movement v1 is shown as read-only supporting context (Level ${effectiveLevel}). It contextualizes roster/environment changes only; it does not re-rank players, alter scoring, or drive any roster move.`;
@@ -185,6 +306,7 @@ export function buildTeamstateMovementActivationDiagnostics(
   const contractMatch = deriveContractMatch(input?.artifact);
   const governance = input ? deriveGovernance(input) : undefined;
   const fresh = deriveFreshness(input?.generatedAt, now, maxAgeDays);
+  const promotionReadiness = buildPromotionReadiness(input ?? {}, now, maxAgeDays);
 
   const { use, resolved } = evaluateTeamstateMovementSupportingContext(
     {
@@ -217,5 +339,6 @@ export function buildTeamstateMovementActivationDiagnostics(
     caps: resolved.caps,
     gateResults: [...use.gateResults],
     explanation: explain(resolved.effectiveLevel, resolved.failedGates),
+    promotionReadiness,
   };
 }

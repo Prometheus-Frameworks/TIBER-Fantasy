@@ -62,6 +62,21 @@ export interface TeamEnvironmentMovementMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * Producer-owned governance block on team_environment_movement_v1 (TIBER-Teamstate
+ * PR #41). Read-only passthrough — TIBER-Fantasy never authors or infers these.
+ * A `/promoted/` path is explicitly only a weak hint; this explicit block is what
+ * Fantasy's promotion gate consumes.
+ */
+export interface TeamEnvironmentMovementGovernance {
+  governanceStatus: string | null;
+  governanceSource: string | null;
+  contractVersion: string | null;
+  generatedAt: string | null;
+  promotedAt: string | null;
+  promotionNotes: string | null;
+}
+
 export interface TeamEnvironmentMovementCoverage {
   teams: string[];
   seasons: number[];
@@ -96,6 +111,8 @@ export interface TeamEnvironmentMovementArtifact {
   metadata: TeamEnvironmentMovementMetadata;
   coverage: TeamEnvironmentMovementCoverage;
   movements: TeamEnvironmentMovementEntry[];
+  /** Producer-owned governance block when present (v1); null when absent/malformed. */
+  governance: TeamEnvironmentMovementGovernance | null;
 }
 
 /** @deprecated Use {@link TeamEnvironmentMovementArtifact}. Retained for back-compat; v0/v1 normalize to the same shape. */
@@ -126,6 +143,26 @@ function normalizeTeam(value: Record<string, unknown>): string | null {
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+/**
+ * Normalize the producer-owned governance block. Read-only passthrough; missing
+ * or malformed input yields null so the consumer fails closed (no governance is
+ * ever fabricated). promotionNotes accepts a string or string[] (joined).
+ */
+function normalizeGovernance(value: unknown): TeamEnvironmentMovementGovernance | null {
+  if (!isRecord(value)) return null;
+  const promotionNotes = Array.isArray(value.promotionNotes)
+    ? value.promotionNotes.filter((note): note is string => typeof note === 'string').join(' ') || null
+    : stringOrNull(value.promotionNotes);
+  return {
+    governanceStatus: stringOrNull(value.governanceStatus),
+    governanceSource: stringOrNull(value.governanceSource),
+    contractVersion: stringOrNull(value.contractVersion),
+    generatedAt: stringOrNull(value.generatedAt),
+    promotedAt: stringOrNull(value.promotedAt),
+    promotionNotes,
+  };
 }
 
 function normalizeMovementEntry(value: unknown): TeamEnvironmentMovementEntry | null {
@@ -219,6 +256,7 @@ export function parseTeamEnvironmentMovementArtifact(raw: unknown): TeamEnvironm
     metadata: normalizeMetadata(raw.metadata),
     coverage: normalizeCoverage(isRecord(raw.metadata) ? raw.metadata.coverage : null),
     movements: movements as TeamEnvironmentMovementEntry[],
+    governance: normalizeGovernance(raw.governance),
   };
 }
 

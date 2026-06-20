@@ -26,6 +26,20 @@ export interface TeamEnvironmentMovementEntry {
   raw: Record<string, unknown>;
 }
 
+/**
+ * Producer-owned governance block forwarded from team_environment_movement_v1
+ * (TIBER-Teamstate PR #41). Optional: older payloads / v0 / the invalid-request
+ * branch omit it, in which case the promotion gate fails closed.
+ */
+export interface TeamEnvironmentMovementGovernance {
+  governanceStatus?: string | null;
+  governanceSource?: string | null;
+  contractVersion?: string | null;
+  generatedAt?: string | null;
+  promotedAt?: string | null;
+  promotionNotes?: string | null;
+}
+
 export interface TeamEnvironmentMovementResponse {
   ok: boolean;
   // Accepts the team-state-only v1 successor and the legacy v0 during the migration transition.
@@ -35,6 +49,8 @@ export interface TeamEnvironmentMovementResponse {
   // already-read service value for honest freshness (G6). May be absent on older
   // payloads or the invalid-request branch; absence is treated as not-fresh.
   generatedAt?: string | null;
+  // Producer-owned explicit governance block (v1); absent when not provided.
+  governance?: TeamEnvironmentMovementGovernance | null;
   provenanceStatus: string | null;
   inputSources: unknown[];
   coverage: TeamEnvironmentMovementCoverage | null;

@@ -1052,6 +1052,8 @@ export function mapTeamstateMovementResponseToActivationInput(
     provenanceStatus: response.provenanceStatus ?? null,
     artifactPath: response.source?.artifactPath ?? null,
     uiLabeled: true,
+    // Producer-owned explicit governance block (PR #41) drives the promotion gate.
+    governance: response.governance ?? null,
   };
 }
 
@@ -1194,16 +1196,18 @@ export function buildManagementModelSignals({
   // governed, so once freshness is forwarded a promoted + fresh + v1 artifact
   // could resolve to Level 2. PR A intentionally keeps Teamstate movement BELOW
   // Level 2 until an explicit promotion gate exists (the promoted-path string is
-  // not yet an explicit promotion signal). We therefore hold the *displayed*
-  // level at <= 1 here while keeping freshness/governance details honest. The
-  // shared builder is unchanged; true Level 2 lands with the promotion-gate work
-  // tracked in #242.
-  const TEAMSTATE_MOVEMENT_DISPLAY_LEVEL_CAP = 1;
+  // not yet an explicit promotion signal). Level 2 is authorized ONLY by the
+  // explicit promotion gate (#249): the displayed level is held at <= 1 unless
+  // promotionReadiness.promotable is true (explicit governed marker + v1 contract
+  // + fresh dataset-level freshness). Freshness/governance details stay honest;
+  // the shared builder's effectiveLevel is the raw operational readiness.
   const tma = teamstateMovementActivation ?? null;
   const tmaResolvedLevel = clampActivationLevel(tma?.effectiveLevel);
-  const tmaLevel = Math.min(tmaResolvedLevel, TEAMSTATE_MOVEMENT_DISPLAY_LEVEL_CAP);
+  const tmaPromotable = tma?.promotionReadiness?.promotable === true;
+  const tmaLevel = tmaPromotable ? tmaResolvedLevel : Math.min(tmaResolvedLevel, 1);
   const tmaInspectable = Boolean(tma) && tmaLevel >= 1;
   const tmaFreshnessLabel = tma?.fresh === true ? 'fresh' : tma?.fresh === false ? 'stale' : 'unavailable';
+  const tmaPromotionBlockers = tma?.promotionReadiness?.blockers ?? [];
   const teamstateMovementActivationDetails = [
     `Activation level: ${tmaLevel} (${activationLevelName(tmaLevel)}).`,
     `Promoted status: ${tma?.promotedStatus ?? 'unavailable'}.`,
@@ -1212,7 +1216,10 @@ export function buildManagementModelSignals({
     `Freshness: ${tmaFreshnessLabel}.`,
     `Provenance: ${tma?.provenanceStatus ?? 'unknown'}.`,
     `Failed/capping gates: ${listOrNone(tma?.failedGates)}.`,
-    'Supporting context not active; Level 2 held pending an explicit promotion gate (the promoted-artifact path alone is not yet treated as an explicit promotion signal).',
+    `Promotion gate: ${tmaPromotable ? 'satisfied (eligible for Level 2 supporting context)' : 'deferred'}.`,
+    tmaPromotable
+      ? 'Supporting context active via explicit promotion gate.'
+      : `Supporting context not active; Level 2 deferred — promotion-gate blockers: ${listOrNone(tmaPromotionBlockers)}.`,
   ];
 
   return [
@@ -1274,10 +1281,12 @@ export function buildManagementModelSignals({
     {
       title: 'Teamstate Movement Activation',
       status: tmaInspectable ? 'inspection only' : 'unavailable',
-      statusLabel: tmaLevel === 1 ? 'Read-only diagnostic' : 'Fail closed',
-      explanation: tmaLevel === 1
-        ? 'Teamstate movement v1 is shown at read-only diagnostic visibility and labeled as such. Level 2 supporting context is held pending an explicit promotion gate, so it is not shown as eligible supporting context yet.'
-        : 'Teamstate movement v1 activation fails closed: freshness is unavailable and/or governance is fixture/unknown, so it is not shown as supporting context. Shown as unavailable, never inferred as present.',
+      statusLabel: tmaLevel >= 2 ? 'Supporting context' : tmaLevel === 1 ? 'Read-only diagnostic' : 'Fail closed',
+      explanation: tmaLevel >= 2
+        ? 'Teamstate movement v1 is shown as read-only supporting context, authorized by the explicit producer promotion gate (governed marker + v1 contract + fresh dataset). It contextualizes roster/environment changes only; it does not re-rank players, alter scoring, or change Team Direction.'
+        : tmaLevel === 1
+          ? 'Teamstate movement v1 is shown at read-only diagnostic visibility and labeled as such. Level 2 supporting context is held pending the explicit promotion gate, so it is not shown as eligible supporting context yet.'
+          : 'Teamstate movement v1 activation fails closed: freshness is unavailable and/or governance is fixture/unknown, so it is not shown as supporting context. Shown as unavailable, never inferred as present.',
       href: '/tiber-data-lab/team-research',
       linkLabel: 'Open Team Research',
       provenance: 'Read-only Teamstate movement v1 activation diagnostics, mapped from the already-fetched /api/data-lab/team-environment-movement response via the shared Slice 5A builder. No new artifact reads; supporting context only.',

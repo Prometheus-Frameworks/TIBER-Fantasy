@@ -8,6 +8,14 @@ function buildResult(overrides: Partial<any> = {}) {
     artifactAvailable: true,
     state: 'ready',
     generatedAt: '2026-05-30T00:00:00.000Z',
+    governance: {
+      governanceStatus: 'governed',
+      governanceSource: 'explicit_marker',
+      contractVersion: 'team_environment_movement_v1',
+      generatedAt: '2026-05-30T00:00:00.000Z',
+      promotedAt: '2026-05-31T00:00:00.000Z',
+      promotionNotes: null,
+    },
     provenanceStatus: 'fixture_scaffold',
     inputSources: ['fixture.json'],
     coverage: { teams: ['TB'], seasons: [2025], weeks: [1, 2], latestWeek: 2, isFullLeague: false },
@@ -87,6 +95,35 @@ describe('data lab team environment movement routes', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.generatedAt).toBe('2026-05-30T00:00:00.000Z');
+  });
+
+  it('forwards the producer governance block (PR #41) for the explicit promotion gate', async () => {
+    const service = buildService();
+    const app = express();
+    app.use('/api/data-lab', createDataLabTeamEnvironmentMovementRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/team-environment-movement');
+
+    expect(res.status).toBe(200);
+    expect(res.body.governance).toEqual(expect.objectContaining({
+      governanceStatus: 'governed',
+      governanceSource: 'explicit_marker',
+      contractVersion: 'team_environment_movement_v1',
+      generatedAt: '2026-05-30T00:00:00.000Z',
+    }));
+  });
+
+  it('forwards a null governance block when the artifact has none', async () => {
+    const service = buildService({
+      getMovement: jest.fn().mockResolvedValue(buildResult({ governance: null })),
+    });
+    const app = express();
+    app.use('/api/data-lab', createDataLabTeamEnvironmentMovementRouter(service as any));
+
+    const res = await call(app, '/api/data-lab/team-environment-movement');
+
+    expect(res.status).toBe(200);
+    expect(res.body.governance).toBeNull();
   });
 
   it('forwards a null generatedAt when the artifact has none (fail-closed freshness input)', async () => {

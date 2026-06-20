@@ -24,6 +24,7 @@ function buildPayload(result: Awaited<ReturnType<TeamEnvironmentMovementService[
     artifact: result.artifact,
     artifactAvailable: result.artifactAvailable,
     generatedAt: result.generatedAt,
+    governance: result.governance,
     provenanceStatus: result.provenanceStatus,
     inputSources: result.inputSources,
     coverage: result.coverage,
