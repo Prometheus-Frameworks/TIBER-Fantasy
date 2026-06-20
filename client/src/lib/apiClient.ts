@@ -283,17 +283,6 @@ export class API {
     return this.get<RowsEnvelope<TrendSeries>>(`/api/trends/leaders?${q.toString()}`);
   }
 
-  // ---------- Compass ----------
-  compassPos(pos: Pos, params?: { search?: string; limit?: number }) {
-    const q = new URLSearchParams();
-    if (params?.search) q.set("search", params.search);
-    q.set("limit", String(params?.limit ?? 50));
-    return this.get<RowsEnvelope<CompassRow>>(`/api/compass/${pos}?${q.toString()}`);
-  }
-  compassPlayer(id: string) {
-    return this.get<RowEnvelope<CompassRow>>(`/api/compass/player/${encodeURIComponent(id)}`);
-  }
-
   // ---------- Rookies ----------
   rookies(params?: { classYear?: number; pos?: Pos }) {
     const q = new URLSearchParams();
@@ -360,14 +349,6 @@ export class API {
     if (params?.week) q.set("week", String(params.week));
     if (params?.pos) q.set("pos", params.pos);
     return this.get<RowsEnvelope<Record<string, number | string>>>(`/api/weekly?${q.toString()}`);
-  }
-
-  // ---------- Compass legacy alias ----------
-  compassWRLegacy(params?: { search?: string; limit?: number }) {
-    const q = new URLSearchParams();
-    if (params?.search) q.set("search", params.search);
-    q.set("limit", String(params?.limit ?? 50));
-    return this.get<RowsEnvelope<CompassRow>>(`/api/compass/wr?${q.toString()}`);
   }
 
   // ---------- Rookies TE subset ----------
