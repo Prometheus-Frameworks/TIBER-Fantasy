@@ -699,8 +699,8 @@ describe('Management model signal cards', () => {
         'Governance: fixture (fixture capped).',
         'Freshness: unavailable.',
         'Provenance: fixture_scaffold.',
-        'Supporting context not active; Level 2 held pending an explicit promotion gate (the promoted-artifact path alone is not yet treated as an explicit promotion signal).',
       ]));
+      expect(card.details.some((d) => d.startsWith('Supporting context not active; Level 2 deferred — promotion-gate blockers:'))).toBe(true);
     });
 
     it('uses a forwarded recent generatedAt to evaluate freshness honestly, but stays below Level 2 (fixture governance)', () => {
@@ -772,9 +772,128 @@ describe('Management model signal cards', () => {
         // Underlying readiness is still reported honestly.
         'Freshness: fresh.',
         'Governance: governed.',
-        'Supporting context not active; Level 2 held pending an explicit promotion gate (the promoted-artifact path alone is not yet treated as an explicit promotion signal).',
       ]));
+      // No explicit governance block → promotion gate not satisfied → blockers shown.
+      expect(card.details.some((d) => d.startsWith('Supporting context not active; Level 2 deferred — promotion-gate blockers:'))).toBe(true);
       expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+    });
+
+    describe('explicit promotion gate (#249 PR 2)', () => {
+      const PROMOTED_PATH = 'server/artifacts/external/teamstate/promoted/team_environment_movement_v1.json';
+
+      // A response that satisfies the builder's raw Level-2 gates (ready + v1 +
+      // promoted path + fresh top-level generatedAt + labeled). Promotion to
+      // Level 2 then depends ONLY on the explicit governance block.
+      function governedReadyResponse(governance: Record<string, unknown> | null, overrides: Partial<TeamEnvironmentMovementResponse> = {}): TeamEnvironmentMovementResponse {
+        return teamStateResponse({
+          artifact: 'team_environment_movement_v1',
+          provenanceStatus: 'governed',
+          generatedAt: new Date().toISOString(),
+          source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: PROMOTED_PATH, readOnly: true },
+          governance: governance as TeamEnvironmentMovementResponse['governance'],
+          ...overrides,
+        });
+      }
+
+      it('displays Level 2 only with an explicit governed marker + matching contract + fresh dataset freshness', () => {
+        const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date().toISOString(),
+        }));
+        expect(activation!.promotionReadiness.promotable).toBe(true);
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Supporting context' });
+        expect(card.details).toEqual(expect.arrayContaining([
+          'Activation level: 2 (Supporting context).',
+          'Promotion gate: satisfied (eligible for Level 2 supporting context).',
+        ]));
+        expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
+      });
+
+      it('honors an explicit governed marker on the normal (non-/promoted/) artifact path', () => {
+        // The default TIBER-Teamstate output path has no `/promoted/` segment, so the
+        // builder's raw effectiveLevel is 0; the explicit gate must still authorize Level 2.
+        const activation = buildTeamstateMovementActivationFromResponse(teamStateResponse({
+          artifact: 'team_environment_movement_v1',
+          provenanceStatus: null,
+          generatedAt: new Date().toISOString(),
+          source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: '../TIBER-Teamstate/output/team_environment_movement_v1.json', readOnly: true },
+          governance: {
+            governanceStatus: 'governed',
+            governanceSource: 'explicit_marker',
+            contractVersion: 'team_environment_movement_v1',
+            generatedAt: new Date().toISOString(),
+          },
+        }));
+        expect(activation!.effectiveLevel).toBe(0); // raw level is 0 on a non-/promoted/ path
+        expect(activation!.promotionReadiness.promotable).toBe(true);
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Supporting context' });
+        expect(card.details).toContain('Activation level: 2 (Supporting context).');
+      });
+
+      it('does not promote on the producer path_inference governance source (maps to path_hint)', () => {
+        const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'governed',
+          governanceSource: 'path_inference',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date().toISOString(),
+        }));
+        expect(activation!.promotionReadiness.governanceSource).toBe('path_hint');
+        expect(activation!.promotionReadiness.promotable).toBe(false);
+        expect(activation!.promotionReadiness.blockers).toContain('governance_path_hint_only');
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card.statusLabel).not.toBe('Supporting context');
+        expect(card).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+      });
+
+      it('does not promote on a contract mismatch', () => {
+        const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'team_environment_movement_v0',
+          generatedAt: new Date().toISOString(),
+        }));
+        expect(activation!.promotionReadiness.promotable).toBe(false);
+        expect(activation!.promotionReadiness.blockers).toContain('contract_mismatch');
+        expect(teamstateCard({ teamstateMovementActivation: activation })).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+      });
+
+      it('does not promote on stale or missing dataset freshness', () => {
+        const stale = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString(),
+        }));
+        expect(stale!.promotionReadiness.promotable).toBe(false);
+        expect(stale!.promotionReadiness.blockers).toContain('dataset_freshness_not_fresh');
+
+        const missing = buildTeamstateMovementActivationFromResponse(governedReadyResponse(
+          { governanceStatus: 'governed', governanceSource: 'explicit_marker', contractVersion: 'team_environment_movement_v1' },
+          { generatedAt: null },
+        ));
+        expect(missing!.promotionReadiness.promotable).toBe(false);
+        expect(missing!.promotionReadiness.blockers).toContain('dataset_freshness_missing');
+      });
+
+      it('keeps fixture governance and missing governance metadata below Level 2', () => {
+        const fixture = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'fixture',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date().toISOString(),
+        }));
+        expect(fixture!.promotionReadiness.promotable).toBe(false);
+        expect(fixture!.promotionReadiness.blockers).toContain('governance_not_governed');
+
+        const missingBlock = buildTeamstateMovementActivationFromResponse(governedReadyResponse(null));
+        expect(missingBlock!.promotionReadiness.promotable).toBe(false);
+        expect(missingBlock!.promotionReadiness.blockers).toContain('governance_marker_missing');
+        expect(teamstateCard({ teamstateMovementActivation: missingBlock })).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+      });
     });
 
     it('leaves the existing TeamState availability card and the Point Prediction card unchanged', () => {

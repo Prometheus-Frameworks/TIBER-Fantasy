@@ -4,6 +4,7 @@ import {
   TeamEnvironmentMovementArtifactName,
   TeamEnvironmentMovementClient,
   TeamEnvironmentMovementEntry,
+  TeamEnvironmentMovementGovernance,
   TeamEnvironmentMovementIntegrationError,
 } from './teamEnvironmentMovementClient';
 
@@ -14,6 +15,7 @@ export interface TeamEnvironmentMovementResponse {
   artifactAvailable: boolean;
   state: TeamEnvironmentMovementState;
   generatedAt: string | null;
+  governance: TeamEnvironmentMovementGovernance | null;
   provenanceStatus: string | null;
   inputSources: unknown[];
   coverage: TeamEnvironmentMovementArtifact['coverage'] | null;
@@ -55,6 +57,7 @@ export class TeamEnvironmentMovementService {
           artifactAvailable: false,
           state: 'unavailable',
           generatedAt: null,
+          governance: null,
           provenanceStatus: null,
           inputSources: [],
           coverage: null,
@@ -80,6 +83,7 @@ export class TeamEnvironmentMovementService {
         artifactAvailable: true,
         state: 'ready',
         generatedAt: artifact.generatedAt,
+        governance: artifact.governance,
         provenanceStatus: artifact.metadata.provenanceStatus,
         inputSources: artifact.metadata.inputSources,
         coverage: artifact.coverage,
@@ -96,6 +100,7 @@ export class TeamEnvironmentMovementService {
           artifactAvailable: false,
           state: 'error',
           generatedAt: null,
+          governance: null,
           provenanceStatus: null,
           inputSources: [],
           coverage: null,
@@ -112,6 +117,7 @@ export class TeamEnvironmentMovementService {
         artifactAvailable: false,
         state: 'error',
         generatedAt: null,
+        governance: null,
         provenanceStatus: null,
         inputSources: [],
         coverage: null,
