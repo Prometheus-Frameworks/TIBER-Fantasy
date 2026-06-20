@@ -238,23 +238,25 @@ export function PointScenariosView({
         </CardContent>
       </Card>
 
-      <Card className="mb-6 border border-gray-200 bg-white shadow-sm">
-        <CardContent className="p-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-gray-700">Readiness diagnostic</span>
-            <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">
-              Level {readiness.level} · {readiness.levelLabel}
-            </Badge>
-            <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-500">Read-only diagnostic</Badge>
-          </div>
-          <p className="mb-2 max-w-3xl text-sm leading-6 text-gray-600">{readiness.explanation}</p>
-          <ul className="grid grid-cols-1 gap-1 text-xs text-gray-500 md:grid-cols-2">
-            {readiness.details.map((detail) => (
-              <li key={detail}>{detail}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      {!isLoading && (
+        <Card className="mb-6 border border-gray-200 bg-white shadow-sm">
+          <CardContent className="p-4">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-gray-700">Readiness diagnostic</span>
+              <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-600">
+                Level {readiness.level} · {readiness.levelLabel}
+              </Badge>
+              <Badge variant="secondary" className="border-0 bg-gray-100 text-gray-500">Read-only diagnostic</Badge>
+            </div>
+            <p className="mb-2 max-w-3xl text-sm leading-6 text-gray-600">{readiness.explanation}</p>
+            <ul className="grid grid-cols-1 gap-1 text-xs text-gray-500 md:grid-cols-2">
+              {readiness.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-6">
         <PromotedModuleSystemCard

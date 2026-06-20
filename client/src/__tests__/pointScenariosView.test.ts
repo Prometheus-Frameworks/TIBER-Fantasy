@@ -294,6 +294,24 @@ describe('PointScenariosView', () => {
       expect(html).toContain('Source mode: artifact.');
       expect(html).not.toContain('Supporting context');
     });
+
+    it('hides the readiness diagnostic while the source is still loading (no misleading fail-closed)', () => {
+      const html = renderToStaticMarkup(
+        React.createElement(PointScenariosView, {
+          season: '2025',
+          availableSeasons: [2025],
+          rows: [],
+          isLoading: true,
+          error: null,
+          sourceProvider: null,
+          sourceMode: null,
+          onSeasonChange: jest.fn(),
+        }),
+      );
+      expect(html).toContain('Loading Point Scenario Lab');
+      expect(html).not.toContain('Readiness diagnostic');
+      expect(html).not.toContain('Fail closed');
+    });
   });
 
   it('renders malformed and empty states with operator hints', () => {
