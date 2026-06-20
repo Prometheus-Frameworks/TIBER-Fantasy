@@ -232,6 +232,7 @@ function mapGovernanceSource(
       return 'explicit_marker';
     case 'path':
     case 'path_hint':
+    case 'path_inference':
     case 'promoted_path':
       return 'path_hint';
     default:

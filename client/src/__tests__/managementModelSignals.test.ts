@@ -834,16 +834,19 @@ describe('Management model signal cards', () => {
         expect(card.details).toContain('Activation level: 2 (Supporting context).');
       });
 
-      it('does not promote on a path-hint-only governance source', () => {
+      it('does not promote on the producer path_inference governance source (maps to path_hint)', () => {
         const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
           governanceStatus: 'governed',
-          governanceSource: 'path_hint',
+          governanceSource: 'path_inference',
           contractVersion: 'team_environment_movement_v1',
           generatedAt: new Date().toISOString(),
         }));
+        expect(activation!.promotionReadiness.governanceSource).toBe('path_hint');
         expect(activation!.promotionReadiness.promotable).toBe(false);
         expect(activation!.promotionReadiness.blockers).toContain('governance_path_hint_only');
-        expect(teamstateCard({ teamstateMovementActivation: activation })).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card.statusLabel).not.toBe('Supporting context');
+        expect(card).toMatchObject({ statusLabel: 'Read-only diagnostic' });
       });
 
       it('does not promote on a contract mismatch', () => {
