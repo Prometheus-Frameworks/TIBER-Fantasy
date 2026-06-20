@@ -1204,7 +1204,16 @@ export function buildManagementModelSignals({
   const tma = teamstateMovementActivation ?? null;
   const tmaResolvedLevel = clampActivationLevel(tma?.effectiveLevel);
   const tmaPromotable = tma?.promotionReadiness?.promotable === true;
-  const tmaLevel = tmaPromotable ? tmaResolvedLevel : Math.min(tmaResolvedLevel, 1);
+  // The explicit promotion gate (#249) already validated governance + contract +
+  // freshness, so it — not the builder's path-based G4 — is the Level 2 authority.
+  // When promotable, Level 2 requires only operational readiness (source ready);
+  // the raw effectiveLevel can be 0 here because its G4 only treats `/promoted/`
+  // paths as governed, so it must NOT gate the promoted display. When not
+  // promotable, fall back to the honest raw diagnostic capped at Level 1.
+  const tmaOperationallyReady = tma?.promotedStatus === 'ready';
+  const tmaLevel = tmaPromotable
+    ? (tmaOperationallyReady ? 2 : 0)
+    : Math.min(tmaResolvedLevel, 1);
   const tmaInspectable = Boolean(tma) && tmaLevel >= 1;
   const tmaFreshnessLabel = tma?.fresh === true ? 'fresh' : tma?.fresh === false ? 'stale' : 'unavailable';
   const tmaPromotionBlockers = tma?.promotionReadiness?.blockers ?? [];

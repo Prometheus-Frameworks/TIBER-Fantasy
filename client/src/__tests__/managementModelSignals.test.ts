@@ -812,6 +812,28 @@ describe('Management model signal cards', () => {
         expect(JSON.stringify(card)).not.toMatch(ADVICE_LANGUAGE);
       });
 
+      it('honors an explicit governed marker on the normal (non-/promoted/) artifact path', () => {
+        // The default TIBER-Teamstate output path has no `/promoted/` segment, so the
+        // builder's raw effectiveLevel is 0; the explicit gate must still authorize Level 2.
+        const activation = buildTeamstateMovementActivationFromResponse(teamStateResponse({
+          artifact: 'team_environment_movement_v1',
+          provenanceStatus: null,
+          generatedAt: new Date().toISOString(),
+          source: { provider: 'tiber-teamstate', mode: 'artifact', artifactPath: '../TIBER-Teamstate/output/team_environment_movement_v1.json', readOnly: true },
+          governance: {
+            governanceStatus: 'governed',
+            governanceSource: 'explicit_marker',
+            contractVersion: 'team_environment_movement_v1',
+            generatedAt: new Date().toISOString(),
+          },
+        }));
+        expect(activation!.effectiveLevel).toBe(0); // raw level is 0 on a non-/promoted/ path
+        expect(activation!.promotionReadiness.promotable).toBe(true);
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card).toMatchObject({ status: 'inspection only', statusLabel: 'Supporting context' });
+        expect(card.details).toContain('Activation level: 2 (Supporting context).');
+      });
+
       it('does not promote on a path-hint-only governance source', () => {
         const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
           governanceStatus: 'governed',
