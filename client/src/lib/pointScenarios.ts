@@ -135,6 +135,125 @@ export function buildPointScenarioRowKey(row: PointScenarioLabRow): string {
   return row.scenarioId ?? [row.playerId ?? row.playerName, row.scenarioName, row.eventType ?? 'na', row.season ?? 'na', row.week ?? 'na'].join('::');
 }
 
+// --- Point Scenario Lab readiness diagnostic (Phase 4 #242 PR B) -------------
+// Read-only Level 0/1 readiness diagnostic built ONLY from data the Data Lab
+// view already has (adapter state, source mode/provider, row-level provenance).
+// No new reads, no Management wiring. Capped at Level 1: there is no governed /
+// promotion marker and no pinned dataset contract literal, and the contract
+// carries no dataset-level freshness — so Level 2 / Slice 5C stays deferred.
+
+/** 0 = fail closed (source unavailable); 1 = read-only diagnostic (source reachable). */
+export type PointScenarioReadinessLevel = 0 | 1;
+
+export interface PointScenarioReadinessInput {
+  /** True when the lab request errored (source unavailable). */
+  hasError?: boolean;
+  /** Resolved source transport, when known. */
+  sourceMode?: 'api' | 'artifact' | null;
+  sourceProvider?: string | null;
+  /** Already-fetched rows; only provenance.generatedAt is read for freshness. */
+  rows?: Array<{ provenance?: { generatedAt?: string | null } }> | null;
+}
+
+export interface PointScenarioReadinessDiagnostic {
+  diagnostic: true;
+  readOnly: true;
+  level: PointScenarioReadinessLevel;
+  levelLabel: 'Fail closed' | 'Read-only diagnostic';
+  /** Whether the lab source is reachable (no error + a known transport mode). */
+  available: boolean;
+  state: 'ready' | 'empty' | 'unavailable';
+  sourceMode: 'api' | 'artifact' | null;
+  sourceProvider: string | null;
+  rowCount: number;
+  /** Newest parseable row-level provenance.generated_at, or null. */
+  rowGeneratedAt: string | null;
+  /** Row-level only: the contract exposes no dataset-level freshness, never invented. */
+  freshness: 'row-level' | 'unavailable';
+  failedReasons: string[];
+  /** Always true at this stage — the blockers below must all be satisfied for Level 2. */
+  level2Deferred: true;
+  level2Blockers: string[];
+  details: string[];
+  explanation: string;
+}
+
+const POINT_SCENARIO_LEVEL2_BLOCKERS = [
+  'governed_or_promotion_marker',
+  'dataset_contract_literal',
+  'reliable_dataset_freshness',
+];
+
+export function buildPointScenarioReadinessDiagnostic(
+  input: PointScenarioReadinessInput | null | undefined,
+): PointScenarioReadinessDiagnostic {
+  const rows = input?.rows ?? [];
+  const rowCount = rows.length;
+  const sourceMode = input?.sourceMode === 'api' || input?.sourceMode === 'artifact' ? input.sourceMode : null;
+  const sourceProvider = input?.sourceProvider ?? null;
+
+  // Source reachable = no error AND a known transport mode. Missing source fails closed.
+  const available = !input?.hasError && sourceMode !== null;
+
+  // Newest parseable row-level generated_at; freshness is never invented.
+  let rowGeneratedAt: string | null = null;
+  let newestTs = Number.NEGATIVE_INFINITY;
+  for (const row of rows) {
+    const candidate = row?.provenance?.generatedAt;
+    if (typeof candidate === 'string') {
+      const ts = Date.parse(candidate);
+      if (!Number.isNaN(ts) && ts > newestTs) {
+        newestTs = ts;
+        rowGeneratedAt = candidate;
+      }
+    }
+  }
+  const freshness: 'row-level' | 'unavailable' = rowGeneratedAt ? 'row-level' : 'unavailable';
+
+  const state: 'ready' | 'empty' | 'unavailable' = !available ? 'unavailable' : rowCount > 0 ? 'ready' : 'empty';
+  const level: PointScenarioReadinessLevel = available ? 1 : 0;
+  const levelLabel = level === 1 ? 'Read-only diagnostic' : 'Fail closed';
+
+  const failedReasons: string[] = [];
+  if (input?.hasError) failedReasons.push('source_error');
+  if (sourceMode === null) failedReasons.push('source_mode_unknown');
+  if (available && rowCount === 0) failedReasons.push('empty_dataset');
+
+  const details = [
+    `Readiness level: ${level} (${levelLabel}).`,
+    `Source state: ${state}.`,
+    `Source mode: ${sourceMode ?? 'unknown'}.`,
+    `Source provider: ${sourceProvider ?? 'unknown'}.`,
+    `Scenario rows: ${rowCount}.`,
+    `Row-level generated_at: ${rowGeneratedAt ?? 'unavailable'}.`,
+    `Dataset freshness: ${freshness === 'row-level' ? 'row-level only (no dataset-level freshness in contract)' : 'unavailable'}.`,
+    `Level 2 deferred: requires ${POINT_SCENARIO_LEVEL2_BLOCKERS.join(', ')} (Slice 5C).`,
+  ];
+
+  const explanation = level === 1
+    ? 'Point Scenario Lab is reachable and shown as a read-only readiness diagnostic (visibility only). It is not supporting context and is not cited in Team Direction.'
+    : 'Point Scenario Lab readiness fails closed: the source is unavailable, so no readiness is claimed (never inferred as present).';
+
+  return {
+    diagnostic: true,
+    readOnly: true,
+    level,
+    levelLabel,
+    available,
+    state,
+    sourceMode,
+    sourceProvider,
+    rowCount,
+    rowGeneratedAt,
+    freshness,
+    failedReasons,
+    level2Deferred: true,
+    level2Blockers: POINT_SCENARIO_LEVEL2_BLOCKERS,
+    details,
+    explanation,
+  };
+}
+
 export function formatProjection(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) {
     return '—';

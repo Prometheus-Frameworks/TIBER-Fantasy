@@ -5,6 +5,7 @@ import {
   DEFAULT_POINT_SCENARIO_SORT,
   POINT_SCENARIO_COLUMNS,
   buildPointScenarioDetailSections,
+  buildPointScenarioReadinessDiagnostic,
   buildPointScenarioRowKey,
   filterPointScenarioRows,
   formatConfidence,
@@ -217,6 +218,100 @@ describe('PointScenariosView', () => {
     expect(html).toContain('/tiber-data-lab/role-opportunity?playerId=00-0036322&amp;playerName=Justin+Jefferson&amp;season=2025');
     expect(html).toContain('/tiber-data-lab/age-curves?playerId=00-0036322&amp;playerName=Justin+Jefferson&amp;season=2025');
     expect(html).toContain('Provenance');
+  });
+
+  describe('point scenario readiness diagnostic (PR B)', () => {
+    it('resolves Level 1 when the source is available but governance/freshness are insufficient for Level 2', () => {
+      const diagnostic = buildPointScenarioReadinessDiagnostic({
+        hasError: false,
+        sourceMode: 'artifact',
+        sourceProvider: 'point-prediction-model',
+        rows,
+      });
+      expect(diagnostic).toMatchObject({
+        level: 1,
+        levelLabel: 'Read-only diagnostic',
+        available: true,
+        state: 'ready',
+        sourceMode: 'artifact',
+        rowCount: 3,
+        level2Deferred: true,
+      });
+      // Row-level provenance.generated_at is surfaced honestly; no dataset freshness invented.
+      expect(diagnostic.rowGeneratedAt).toBe('2026-03-23T00:00:00.000Z');
+      expect(diagnostic.freshness).toBe('row-level');
+      expect(diagnostic.level2Blockers).toEqual([
+        'governed_or_promotion_marker',
+        'dataset_contract_literal',
+        'reliable_dataset_freshness',
+      ]);
+      expect(diagnostic.details).toEqual(expect.arrayContaining(['Source mode: artifact.']));
+      // Never claims supporting context / Level 2.
+      expect(JSON.stringify(diagnostic)).not.toContain('Supporting context');
+    });
+
+    it('fails closed when the source is unavailable (error or unknown mode)', () => {
+      const errored = buildPointScenarioReadinessDiagnostic({ hasError: true, sourceMode: null, sourceProvider: null, rows: [] });
+      expect(errored).toMatchObject({ level: 0, levelLabel: 'Fail closed', available: false, state: 'unavailable' });
+      expect(errored.failedReasons).toEqual(expect.arrayContaining(['source_error', 'source_mode_unknown']));
+
+      const noMode = buildPointScenarioReadinessDiagnostic({ hasError: false, sourceMode: null, sourceProvider: 'point-prediction-model', rows });
+      expect(noMode).toMatchObject({ level: 0, available: false, state: 'unavailable' });
+    });
+
+    it('reports row-level freshness as unavailable when no provenance.generated_at exists, without inventing dataset freshness', () => {
+      const diagnostic = buildPointScenarioReadinessDiagnostic({
+        hasError: false,
+        sourceMode: 'api',
+        sourceProvider: 'point-prediction-model',
+        rows: [{ provenance: { generatedAt: null } }],
+      });
+      expect(diagnostic).toMatchObject({ level: 1, sourceMode: 'api', rowGeneratedAt: null, freshness: 'unavailable' });
+      expect(diagnostic.details).toEqual(expect.arrayContaining(['Dataset freshness: unavailable.']));
+    });
+
+    it('marks a reachable but empty dataset at Level 1 with an explicit empty reason', () => {
+      const diagnostic = buildPointScenarioReadinessDiagnostic({ hasError: false, sourceMode: 'artifact', sourceProvider: 'point-prediction-model', rows: [] });
+      expect(diagnostic).toMatchObject({ level: 1, state: 'empty', rowCount: 0 });
+      expect(diagnostic.failedReasons).toContain('empty_dataset');
+    });
+
+    it('renders the readiness diagnostic in the view (preserving source mode) without promoting to Level 2', () => {
+      const html = renderToStaticMarkup(
+        React.createElement(PointScenariosView, {
+          season: '2025',
+          availableSeasons: [2025],
+          rows,
+          isLoading: false,
+          error: null,
+          sourceProvider: 'point-prediction-model',
+          sourceMode: 'artifact',
+          onSeasonChange: jest.fn(),
+        }),
+      );
+      expect(html).toContain('Readiness diagnostic');
+      expect(html).toContain('Level 1');
+      expect(html).toContain('Source mode: artifact.');
+      expect(html).not.toContain('Supporting context');
+    });
+
+    it('hides the readiness diagnostic while the source is still loading (no misleading fail-closed)', () => {
+      const html = renderToStaticMarkup(
+        React.createElement(PointScenariosView, {
+          season: '2025',
+          availableSeasons: [2025],
+          rows: [],
+          isLoading: true,
+          error: null,
+          sourceProvider: null,
+          sourceMode: null,
+          onSeasonChange: jest.fn(),
+        }),
+      );
+      expect(html).toContain('Loading Point Scenario Lab');
+      expect(html).not.toContain('Readiness diagnostic');
+      expect(html).not.toContain('Fail closed');
+    });
   });
 
   it('renders malformed and empty states with operator hints', () => {
