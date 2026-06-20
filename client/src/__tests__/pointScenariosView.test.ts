@@ -372,6 +372,52 @@ describe('PointScenariosView', () => {
         expect(missing.level2Blockers).toContain('dataset_freshness_missing');
       });
 
+      it('holds an empty dataset at Level 1 even when the promotion gate is satisfied', () => {
+        const diagnostic = buildPointScenarioReadinessDiagnostic({
+          hasError: false,
+          sourceMode: 'artifact',
+          sourceProvider: 'point-prediction-model',
+          rows: [],
+          metadata: {
+            governanceStatus: 'governed',
+            governanceSource: 'explicit_marker',
+            contractVersion: 'point_scenario_lab_v1',
+            generatedAt: new Date().toISOString(),
+          },
+        });
+        // The pure gate may be satisfied...
+        expect(diagnostic.promotionReadiness.promotable).toBe(true);
+        // ...but an empty dataset stays Level 1 read-only diagnostic (not supporting context).
+        expect(diagnostic).toMatchObject({ level: 1, levelLabel: 'Read-only diagnostic', state: 'empty', level2Deferred: true });
+        expect(diagnostic.failedReasons).toContain('empty_dataset');
+        expect(diagnostic.details).toEqual(expect.arrayContaining([
+          'Promotion gate: satisfied, but dataset is empty — held at Level 1 (empty_dataset).',
+        ]));
+      });
+
+      it('does not render Supporting context in the view for a promotable but empty dataset', () => {
+        const html = renderToStaticMarkup(
+          React.createElement(PointScenariosView, {
+            season: '2025',
+            availableSeasons: [2025],
+            rows: [],
+            isLoading: false,
+            error: null,
+            sourceProvider: 'point-prediction-model',
+            sourceMode: 'artifact',
+            datasetMetadata: {
+              governanceStatus: 'governed',
+              governanceSource: 'explicit_marker',
+              contractVersion: 'point_scenario_lab_v1',
+              generatedAt: new Date().toISOString(),
+            },
+            onSeasonChange: jest.fn(),
+          }),
+        );
+        expect(html).toContain('Level 1');
+        expect(html).not.toContain('Supporting context');
+      });
+
       it('renders Level 2 supporting context in the view when promotable', () => {
         const html = renderToStaticMarkup(
           React.createElement(PointScenariosView, {

@@ -314,7 +314,10 @@ export function buildPointScenarioReadinessDiagnostic(
     freshnessScope,
     freshnessTimestamp: datasetGeneratedAt,
   });
-  const promoted = available && promotionReadiness.promotable;
+  // The pure gate (governance + contract + freshness) may be satisfied, but an
+  // empty dataset must not display as supporting context — hold at Level 1.
+  const gateSatisfied = available && promotionReadiness.promotable;
+  const promoted = gateSatisfied && rowCount > 0;
 
   const state: 'ready' | 'empty' | 'unavailable' = !available ? 'unavailable' : rowCount > 0 ? 'ready' : 'empty';
   const level: PointScenarioReadinessLevel = !available ? 0 : promoted ? 2 : 1;
@@ -324,6 +327,12 @@ export function buildPointScenarioReadinessDiagnostic(
   if (input?.hasError) failedReasons.push('source_error');
   if (sourceMode === null) failedReasons.push('source_mode_unknown');
   if (available && rowCount === 0) failedReasons.push('empty_dataset');
+
+  const promotionDetail = !gateSatisfied
+    ? `Promotion gate: deferred — blockers: ${promotionReadiness.blockers.length ? promotionReadiness.blockers.join(', ') : 'none'}.`
+    : promoted
+      ? 'Promotion gate: satisfied (eligible for Level 2 supporting context).'
+      : 'Promotion gate: satisfied, but dataset is empty — held at Level 1 (empty_dataset).';
 
   const details = [
     `Readiness level: ${level} (${levelLabel}).`,
@@ -335,9 +344,7 @@ export function buildPointScenarioReadinessDiagnostic(
     `Dataset governance: ${promotionReadiness.governanceStatus} (source: ${promotionReadiness.governanceSource}).`,
     `Dataset contract (${POINT_SCENARIO_CONTRACT_VERSION}) match: ${promotionReadiness.contractMatch ? 'yes' : 'no'}.`,
     `Dataset freshness: ${datasetGeneratedAt ? `${freshnessStatus} (dataset-level)` : 'unavailable'}.`,
-    promoted
-      ? 'Promotion gate: satisfied (eligible for Level 2 supporting context).'
-      : `Promotion gate: deferred — blockers: ${promotionReadiness.blockers.length ? promotionReadiness.blockers.join(', ') : 'none'}.`,
+    promotionDetail,
   ];
 
   const explanation = level === 2
