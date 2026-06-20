@@ -217,6 +217,10 @@ function toCanonicalLabResponse(payload: unknown): CanonicalPointScenarioLabResp
       location: pickString(sourceRecord, ['location']) ?? null,
       mode: pickString(sourceRecord, ['mode']) === 'api' ? 'api' : 'artifact',
     },
+    // Pass the producer dataset-level metadata block through untouched (top-level
+    // or nested under `data`); it is normalized/validated later by
+    // normalizeDatasetMetadata so a missing/malformed block fails closed.
+    metadata: record.metadata ?? dataRecord.metadata,
   };
 }
 
