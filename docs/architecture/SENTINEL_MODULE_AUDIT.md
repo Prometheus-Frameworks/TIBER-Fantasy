@@ -16,7 +16,7 @@ dormant. The module is absent from the API registry.
 | Audit question | Answer |
 | --- | --- |
 | Is Sentinel mounted? | **Yes** — `server/routes.ts:2890` |
-| Does `/sentinel` work? | **Yes, wired end-to-end** (frontend route + all 5 backend endpoints exist) |
+| Does `/sentinel` work? | **Statically wired end-to-end** (frontend route + all 5 backend endpoints exist); runtime DB-backed behavior not verified here |
 | Who produces data? | `forge/routes.ts` (score + batch), `personnelRoutes.ts` (profile single + batch) |
 | Who consumes data? | `SentinelDashboard.tsx` (issues / events / health / mute / run) |
 | Is `block` passive or enforcing? | **Passive** — data is always returned; blocks are metadata only |
@@ -47,8 +47,10 @@ The route is wired end-to-end:
   - `POST /api/sentinel/run/:module` (built-in test scenarios)
 
 All five are implemented in `server/routes/sentinelRoutes.ts` (plus an undocumented
-`POST /api/sentinel/run/rule/:ruleId`). **The page is functional**; actual content
-depends on the `sentinel_events` / `sentinel_mutes` tables being present and populated.
+`POST /api/sentinel/run/rule/:ruleId`). The dashboard is **statically wired
+end-to-end**; runtime DB-backed behavior (live dashboard rendering, real query
+results) was **not verified in this environment** — it depends on the
+`sentinel_events` / `sentinel_mutes` tables being present and populated.
 
 ## 3. Producers and consumers
 
@@ -148,3 +150,29 @@ and `personnel`; `datalab`/`system` rows only if someone exercised the manual
 5. The `MODULE.md` integration pattern claims `_sentinel` metadata is included —
    true for forge/personnel, but the broader "integrate `evaluate()` in the target
    route" guidance is only half-adopted.
+
+## Recommendation
+
+**Freeze as diagnostic, then harden selectively.** Suggested status: `FROZEN_DIAGNOSTIC`.
+
+**Decision: keep (do not retire), but do not yet treat as full core safety
+infrastructure.** Sentinel is real, mounted, unit-tested, and already wired into
+the FORGE and personnel paths, so deleting it would discard working scaffolding.
+At the same time it is not yet load-bearing safety infrastructure: `block` is
+passive, the API registry omits it, `datalab`/`system`/`rolebank` coverage is
+dormant, and no route-level integration test exercises the real Sentinel endpoints.
+Freeze the current surface (no expansion of scope) and harden it deliberately via
+follow-up work rather than letting it drift.
+
+Suggested follow-ups (each a small, independent change — out of scope for this
+audit-only PR):
+
+1. Add the `/api/sentinel/*` endpoints to `apiRegistry.ts`, or explicitly document
+   them as internal/admin-only.
+2. Add a small route integration smoke test for `GET /api/sentinel/health`.
+3. Clarify `block` as diagnostic-only in `MODULE.md`/types, or defer opt-in
+   enforcement to a later issue.
+4. Mark the dormant modules (`datalab`, `system`, `rolebank`) as dormant/test-only
+   unless they are intentionally wired in later.
+5. Consider admin/dev-gating the manual `POST /api/sentinel/run/*` endpoints if they
+   are reachable in production.
