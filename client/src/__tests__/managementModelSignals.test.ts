@@ -894,6 +894,42 @@ describe('Management model signal cards', () => {
         expect(missingBlock!.promotionReadiness.blockers).toContain('governance_marker_missing');
         expect(teamstateCard({ teamstateMovementActivation: missingBlock })).toMatchObject({ statusLabel: 'Read-only diagnostic' });
       });
+
+      // Target 2 / #260 case 8: a present-but-unrecognized governance token must fail
+      // closed. Even with the raw Level-2 gates satisfied (ready + v1 + /promoted/ path
+      // + fresh + labeled), an unknown token cannot be read as an explicit marker and
+      // cannot promote — proving there is no source-specific shortcut to Level 2.
+      it('fails closed when the producer governanceSource token is unrecognized (not treated as explicit_marker)', () => {
+        const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'governed',
+          governanceSource: 'promoted_by_vibes',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date().toISOString(),
+        }));
+        // Unrecognized source normalizes to 'missing', never 'explicit_marker'.
+        expect(activation!.promotionReadiness.governanceSource).toBe('missing');
+        expect(activation!.promotionReadiness.governanceSource).not.toBe('explicit_marker');
+        expect(activation!.promotionReadiness.promotable).toBe(false);
+        expect(activation!.promotionReadiness.blockers).toContain('governance_marker_missing');
+        const card = teamstateCard({ teamstateMovementActivation: activation });
+        expect(card.statusLabel).not.toBe('Supporting context');
+        expect(card).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+      });
+
+      it('fails closed when the producer governanceStatus token is unrecognized (normalizes to unknown)', () => {
+        const activation = buildTeamstateMovementActivationFromResponse(governedReadyResponse({
+          governanceStatus: 'super_governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'team_environment_movement_v1',
+          generatedAt: new Date().toISOString(),
+        }));
+        // Unrecognized status normalizes to 'unknown'; an explicit marker that does not
+        // assert a governed status still cannot promote.
+        expect(activation!.promotionReadiness.governanceStatus).toBe('unknown');
+        expect(activation!.promotionReadiness.promotable).toBe(false);
+        expect(activation!.promotionReadiness.blockers).toContain('governance_not_governed');
+        expect(teamstateCard({ teamstateMovementActivation: activation })).toMatchObject({ statusLabel: 'Read-only diagnostic' });
+      });
     });
 
     it('leaves the existing TeamState availability card and the Point Prediction card unchanged', () => {

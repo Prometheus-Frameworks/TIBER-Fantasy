@@ -418,6 +418,39 @@ describe('PointScenariosView', () => {
         expect(html).not.toContain('Supporting context');
       });
 
+      // Target 2 / #260 case 8: a present-but-unrecognized governance token must fail
+      // closed. The source is reachable and non-empty, but an unknown token cannot be
+      // read as an explicit marker and cannot promote — no source-specific shortcut.
+      it('fails closed when the governanceSource token is unrecognized (not treated as explicit_marker)', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'promoted_by_vibes',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date().toISOString(),
+        });
+        // Unrecognized source normalizes to 'missing', never 'explicit_marker'.
+        expect(diagnostic.promotionReadiness.governanceSource).toBe('missing');
+        expect(diagnostic.promotionReadiness.governanceSource).not.toBe('explicit_marker');
+        expect(diagnostic.promotionReadiness.promotable).toBe(false);
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.level2Blockers).toContain('governance_marker_missing');
+      });
+
+      it('fails closed when the governanceStatus token is unrecognized (normalizes to unknown)', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'super_governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date().toISOString(),
+        });
+        // Unrecognized status normalizes to 'unknown'; an explicit marker that does not
+        // assert a governed status still cannot promote.
+        expect(diagnostic.promotionReadiness.governanceStatus).toBe('unknown');
+        expect(diagnostic.promotionReadiness.promotable).toBe(false);
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.level2Blockers).toContain('governance_not_governed');
+      });
+
       it('renders Level 2 supporting context in the view when promotable', () => {
         const html = renderToStaticMarkup(
           React.createElement(PointScenariosView, {
