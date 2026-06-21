@@ -112,4 +112,51 @@ describe('pointScenariosAdapter', () => {
       }),
     ).toThrow(PointScenarioIntegrationError);
   });
+
+  it('forwards the producer dataset-level metadata block (PR #48) through to the TIBER contract', () => {
+    const result = adaptPointScenarioLab({
+      ...payload,
+      metadata: {
+        governanceStatus: 'governed',
+        governanceSource: 'explicit_marker',
+        contractVersion: 'point_scenario_lab_v1',
+        generatedAt: '2026-03-23T00:00:00.000Z',
+        promotedAt: '2026-03-24T00:00:00.000Z',
+        promotionNotes: 'promoted via pipeline',
+      },
+    });
+    expect(result.metadata).toEqual({
+      governanceStatus: 'governed',
+      governanceSource: 'explicit_marker',
+      contractVersion: 'point_scenario_lab_v1',
+      generatedAt: '2026-03-23T00:00:00.000Z',
+      promotedAt: '2026-03-24T00:00:00.000Z',
+      promotionNotes: 'promoted via pipeline',
+    });
+  });
+
+  it('forwards dataset metadata nested under data and snake_case keys', () => {
+    const result = adaptPointScenarioLab({
+      data: {
+        ...payload,
+        metadata: {
+          governance_status: 'fixture',
+          governance_source: 'path_inference',
+          contract_version: 'point_scenario_lab_v1',
+          generated_at: '2026-03-23T00:00:00.000Z',
+        },
+      },
+    });
+    expect(result.metadata).toMatchObject({
+      governanceStatus: 'fixture',
+      governanceSource: 'path_inference',
+      contractVersion: 'point_scenario_lab_v1',
+      generatedAt: '2026-03-23T00:00:00.000Z',
+    });
+  });
+
+  it('fails closed to null metadata when the producer block is absent or malformed', () => {
+    expect(adaptPointScenarioLab(payload).metadata).toBeNull();
+    expect(adaptPointScenarioLab({ ...payload, metadata: 'not-an-object' }).metadata).toBeNull();
+  });
 });

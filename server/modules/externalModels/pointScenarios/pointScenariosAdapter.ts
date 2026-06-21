@@ -4,10 +4,34 @@ import {
   CanonicalPointScenarioLabResponse,
   CanonicalPointScenarioLabRow,
   PointScenarioIntegrationError,
+  TiberPointScenarioDatasetMetadata,
   TiberPointScenarioLab,
   TiberPointScenarioLabRow,
   canonicalPointScenarioLabResponseSchema,
 } from './types';
+
+/**
+ * Normalize the producer-owned dataset-level metadata block (PR #48). Read-only
+ * passthrough; a missing/malformed block yields null so the promotion gate fails
+ * closed. Accepts camelCase (preferred) and snake_case keys. promotionNotes
+ * accepts a string or string[] (joined).
+ */
+function normalizeDatasetMetadata(value: unknown): TiberPointScenarioDatasetMetadata | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const notesRaw = record.promotionNotes ?? record.promotion_notes;
+  const promotionNotes = Array.isArray(notesRaw)
+    ? notesRaw.filter((note): note is string => typeof note === 'string').join(' ') || null
+    : (typeof notesRaw === 'string' ? notesRaw : null);
+  return {
+    governanceStatus: pickString(record, ['governanceStatus', 'governance_status']),
+    governanceSource: pickString(record, ['governanceSource', 'governance_source']),
+    contractVersion: pickString(record, ['contractVersion', 'contract_version']),
+    generatedAt: pickString(record, ['generatedAt', 'generated_at']),
+    promotedAt: pickString(record, ['promotedAt', 'promoted_at']),
+    promotionNotes,
+  };
+}
 
 function toRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...(value as Record<string, unknown>) } : {};
@@ -193,6 +217,10 @@ function toCanonicalLabResponse(payload: unknown): CanonicalPointScenarioLabResp
       location: pickString(sourceRecord, ['location']) ?? null,
       mode: pickString(sourceRecord, ['mode']) === 'api' ? 'api' : 'artifact',
     },
+    // Pass the producer dataset-level metadata block through untouched (top-level
+    // or nested under `data`); it is normalized/validated later by
+    // normalizeDatasetMetadata so a missing/malformed block fails closed.
+    metadata: record.metadata ?? dataRecord.metadata,
   };
 }
 
@@ -276,5 +304,6 @@ export function adaptPointScenarioLab(
       artifact: 'point_scenario_lab',
       generatedAt: pickNewestTimestamp(canonical.rows.map((row) => row.provenance.generated_at)),
     }),
+    metadata: normalizeDatasetMetadata(canonical.metadata),
   };
 }

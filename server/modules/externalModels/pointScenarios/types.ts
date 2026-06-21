@@ -42,6 +42,10 @@ export const canonicalPointScenarioLabResponseSchema = z.object({
     location: z.string().min(1).nullable().optional(),
     mode: z.enum(['api', 'artifact']),
   }),
+  // Producer-owned dataset-level metadata block (PPM PR #48). Left as unknown so a
+  // missing/malformed block never breaks payload parsing; normalized defensively in
+  // the adapter (fail closed to null).
+  metadata: z.unknown().optional(),
 });
 
 export type CanonicalPointScenarioLabRow = z.infer<typeof canonicalPointScenarioLabRowSchema>;
@@ -79,6 +83,20 @@ export interface TiberPointScenarioLabRow {
   rawCanonical?: CanonicalPointScenarioLabRow;
 }
 
+/**
+ * Producer-owned dataset-level metadata (PPM PR #48). Read-only passthrough;
+ * normalized defensively (missing/malformed → null). Drives Fantasy's explicit
+ * promotion gate. A `/promoted/` path / row-level provenance is never sufficient.
+ */
+export interface TiberPointScenarioDatasetMetadata {
+  governanceStatus: string | null;
+  governanceSource: string | null;
+  contractVersion: string | null;
+  generatedAt: string | null;
+  promotedAt: string | null;
+  promotionNotes: string | null;
+}
+
 export interface TiberPointScenarioLab {
   season: number | null;
   availableSeasons: number[];
@@ -90,6 +108,8 @@ export interface TiberPointScenarioLab {
   };
   /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
   freshness?: ArtifactFreshness;
+  /** Producer-owned dataset-level metadata (PR #48); null when absent/malformed. */
+  metadata: TiberPointScenarioDatasetMetadata | null;
 }
 
 export type PointScenarioErrorCode =

@@ -11,6 +11,7 @@ import { DataLabPlayerCarryContext, formatPromotedModuleProvenance } from '@/lib
 import {
   DEFAULT_POINT_SCENARIO_SORT,
   POINT_SCENARIO_COLUMNS,
+  PointScenarioDatasetMetadata,
   PointScenarioLabApiError,
   PointScenarioLabRow,
   PointScenarioSortState,
@@ -34,6 +35,8 @@ interface PointScenariosViewProps {
   sourceProvider?: string | null;
   sourceMode?: 'api' | 'artifact' | null;
   sourceLocation?: string | null;
+  /** Producer-owned dataset-level metadata (PR #48); drives the promotion gate. */
+  datasetMetadata?: PointScenarioDatasetMetadata | null;
   defaultSelectedScenarioKey?: string | null;
   initialPlayerContext?: DataLabPlayerCarryContext | null;
   onSeasonChange: (season: string) => void;
@@ -83,6 +86,7 @@ export function PointScenariosView({
   sourceProvider,
   sourceMode,
   sourceLocation,
+  datasetMetadata = null,
   defaultSelectedScenarioKey = null,
   initialPlayerContext = null,
   onSeasonChange,
@@ -101,8 +105,8 @@ export function PointScenariosView({
   const hints = useMemo(() => getPointScenarioStateHints(error ?? null), [error]);
   // Read-only Level 0/1 readiness diagnostic from already-fetched state only (PR B).
   const readiness = useMemo(
-    () => buildPointScenarioReadinessDiagnostic({ hasError: Boolean(error), sourceMode: sourceMode ?? null, sourceProvider: sourceProvider ?? null, rows }),
-    [error, rows, sourceMode, sourceProvider],
+    () => buildPointScenarioReadinessDiagnostic({ hasError: Boolean(error), sourceMode: sourceMode ?? null, sourceProvider: sourceProvider ?? null, rows, metadata: datasetMetadata }),
+    [datasetMetadata, error, rows, sourceMode, sourceProvider],
   );
   const provenanceLabel = useMemo(
     () => formatPromotedModuleProvenance({

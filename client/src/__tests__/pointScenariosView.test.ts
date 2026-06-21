@@ -7,6 +7,7 @@ import {
   buildPointScenarioDetailSections,
   buildPointScenarioReadinessDiagnostic,
   buildPointScenarioRowKey,
+  type PointScenarioDatasetMetadataInput,
   filterPointScenarioRows,
   formatConfidence,
   formatDelta,
@@ -240,10 +241,13 @@ describe('PointScenariosView', () => {
       // Row-level provenance.generated_at is surfaced honestly; no dataset freshness invented.
       expect(diagnostic.rowGeneratedAt).toBe('2026-03-23T00:00:00.000Z');
       expect(diagnostic.freshness).toBe('row-level');
+      // With no producer metadata, the explicit promotion gate fails closed.
+      expect(diagnostic.level2Deferred).toBe(true);
+      expect(diagnostic.promotionReadiness.promotable).toBe(false);
       expect(diagnostic.level2Blockers).toEqual([
-        'governed_or_promotion_marker',
-        'dataset_contract_literal',
-        'reliable_dataset_freshness',
+        'governance_marker_missing',
+        'contract_literal_missing',
+        'dataset_freshness_missing',
       ]);
       expect(diagnostic.details).toEqual(expect.arrayContaining(['Source mode: artifact.']));
       // Never claims supporting context / Level 2.
@@ -274,6 +278,169 @@ describe('PointScenariosView', () => {
       const diagnostic = buildPointScenarioReadinessDiagnostic({ hasError: false, sourceMode: 'artifact', sourceProvider: 'point-prediction-model', rows: [] });
       expect(diagnostic).toMatchObject({ level: 1, state: 'empty', rowCount: 0 });
       expect(diagnostic.failedReasons).toContain('empty_dataset');
+    });
+
+    describe('explicit promotion gate via PPM dataset metadata (#249 PR 3)', () => {
+      function readiness(metadata: PointScenarioDatasetMetadataInput | null) {
+        return buildPointScenarioReadinessDiagnostic({
+          hasError: false,
+          sourceMode: 'artifact',
+          sourceProvider: 'point-prediction-model',
+          rows,
+          metadata,
+        });
+      }
+
+      it('promotes to Level 2 with explicit governed marker + point_scenario_lab_v1 + fresh dataset generatedAt', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date().toISOString(),
+        });
+        expect(diagnostic.promotionReadiness.promotable).toBe(true);
+        expect(diagnostic).toMatchObject({ level: 2, levelLabel: 'Supporting context', level2Deferred: false });
+        expect(diagnostic.details).toEqual(expect.arrayContaining([
+          'Dataset contract (point_scenario_lab_v1) match: yes.',
+          'Promotion gate: satisfied (eligible for Level 2 supporting context).',
+        ]));
+        // Row-level provenance + source mode remain visible.
+        expect(diagnostic.rowGeneratedAt).toBe('2026-03-23T00:00:00.000Z');
+        expect(diagnostic.sourceMode).toBe('artifact');
+      });
+
+      it('keeps fixture governance below Level 2', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'fixture',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date().toISOString(),
+        });
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.promotionReadiness.promotable).toBe(false);
+        expect(diagnostic.level2Blockers).toContain('governance_not_governed');
+      });
+
+      it('keeps missing metadata below Level 2', () => {
+        const diagnostic = readiness(null);
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.level2Blockers).toContain('governance_marker_missing');
+      });
+
+      it('maps governanceSource path_inference to a weak path hint that does not promote', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'path_inference',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date().toISOString(),
+        });
+        expect(diagnostic.promotionReadiness.governanceSource).toBe('path_hint');
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.level2Blockers).toContain('governance_path_hint_only');
+      });
+
+      it('keeps a contract mismatch below Level 2', () => {
+        const diagnostic = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v0',
+          generatedAt: new Date().toISOString(),
+        });
+        expect(diagnostic.level).toBe(1);
+        expect(diagnostic.level2Blockers).toContain('contract_mismatch');
+      });
+
+      it('keeps missing/stale dataset freshness below Level 2 (row-level never promotes)', () => {
+        const stale = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v1',
+          generatedAt: new Date(Date.now() - 400 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+        expect(stale.level).toBe(1);
+        expect(stale.level2Blockers).toContain('dataset_freshness_not_fresh');
+
+        // Explicit governed + contract, but NO dataset-level generatedAt — row-level
+        // provenance must not satisfy freshness.
+        const missing = readiness({
+          governanceStatus: 'governed',
+          governanceSource: 'explicit_marker',
+          contractVersion: 'point_scenario_lab_v1',
+        });
+        expect(missing.level).toBe(1);
+        expect(missing.promotionReadiness.promotable).toBe(false);
+        expect(missing.level2Blockers).toContain('dataset_freshness_missing');
+      });
+
+      it('holds an empty dataset at Level 1 even when the promotion gate is satisfied', () => {
+        const diagnostic = buildPointScenarioReadinessDiagnostic({
+          hasError: false,
+          sourceMode: 'artifact',
+          sourceProvider: 'point-prediction-model',
+          rows: [],
+          metadata: {
+            governanceStatus: 'governed',
+            governanceSource: 'explicit_marker',
+            contractVersion: 'point_scenario_lab_v1',
+            generatedAt: new Date().toISOString(),
+          },
+        });
+        // The pure gate may be satisfied...
+        expect(diagnostic.promotionReadiness.promotable).toBe(true);
+        // ...but an empty dataset stays Level 1 read-only diagnostic (not supporting context).
+        expect(diagnostic).toMatchObject({ level: 1, levelLabel: 'Read-only diagnostic', state: 'empty', level2Deferred: true });
+        expect(diagnostic.failedReasons).toContain('empty_dataset');
+        expect(diagnostic.details).toEqual(expect.arrayContaining([
+          'Promotion gate: satisfied, but dataset is empty — held at Level 1 (empty_dataset).',
+        ]));
+      });
+
+      it('does not render Supporting context in the view for a promotable but empty dataset', () => {
+        const html = renderToStaticMarkup(
+          React.createElement(PointScenariosView, {
+            season: '2025',
+            availableSeasons: [2025],
+            rows: [],
+            isLoading: false,
+            error: null,
+            sourceProvider: 'point-prediction-model',
+            sourceMode: 'artifact',
+            datasetMetadata: {
+              governanceStatus: 'governed',
+              governanceSource: 'explicit_marker',
+              contractVersion: 'point_scenario_lab_v1',
+              generatedAt: new Date().toISOString(),
+            },
+            onSeasonChange: jest.fn(),
+          }),
+        );
+        expect(html).toContain('Level 1');
+        expect(html).not.toContain('Supporting context');
+      });
+
+      it('renders Level 2 supporting context in the view when promotable', () => {
+        const html = renderToStaticMarkup(
+          React.createElement(PointScenariosView, {
+            season: '2025',
+            availableSeasons: [2025],
+            rows,
+            isLoading: false,
+            error: null,
+            sourceProvider: 'point-prediction-model',
+            sourceMode: 'artifact',
+            datasetMetadata: {
+              governanceStatus: 'governed',
+              governanceSource: 'explicit_marker',
+              contractVersion: 'point_scenario_lab_v1',
+              generatedAt: new Date().toISOString(),
+            },
+            onSeasonChange: jest.fn(),
+          }),
+        );
+        expect(html).toContain('Readiness diagnostic');
+        expect(html).toContain('Level 2');
+        expect(html).toContain('Supporting context');
+      });
     });
 
     it('renders the readiness diagnostic in the view (preserving source mode) without promoting to Level 2', () => {

@@ -76,6 +76,7 @@ export default function PointScenariosLab() {
       sourceProvider={query.data?.data.source.provider ?? null}
       sourceMode={query.data?.data.source.mode ?? null}
       sourceLocation={query.data?.data.source.location ?? query.error?.operator?.configuredSource ?? null}
+      datasetMetadata={query.data?.data.metadata ?? null}
       defaultSelectedScenarioKey={defaultSelectedScenarioKey}
       initialPlayerContext={initialPlayerContext}
       onSeasonChange={setSeason}
