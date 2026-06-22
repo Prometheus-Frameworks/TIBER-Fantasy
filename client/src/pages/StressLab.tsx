@@ -1,3 +1,21 @@
+/**
+ * Observatory surface (user-facing product name: "TIBER Observatory").
+ *
+ * Naming boundary (PR A, #264):
+ * - The user-facing name is "Observatory" everywhere in visible copy and nav.
+ * - The implementation file/component (`StressLab`) and its heuristic lib
+ *   (`stressLab.ts`) keep their legacy/internal names for now. A file/symbol
+ *   rename touches imports and tests, so it is deferred to a later mechanical
+ *   pass to keep PR A copy/naming/route-label only.
+ * - Routes `/`, `/observatory`, and `/stress-lab` intentionally resolve to this
+ *   same surface today (`/stress-lab` is a legacy alias). See client/src/App.tsx.
+ *
+ * Behavior is deliberately unchanged by PR A: this page makes NO backend, DB,
+ * artifact, LLM, RAG, or external API calls. It is a deterministic client-side
+ * v0 take-triage scaffold. A real live signal inventory (replacing the declared
+ * system map below) is future work in PR C of #264; migrating the Management
+ * operator diagnostics here is PR B; take-checker upgrades are PR D.
+ */
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -24,14 +42,15 @@ const SAMPLE_NOTE =
 
 type ExportStatus = "idle" | "copied" | "downloaded" | "failed";
 
-type OnlineSystem = {
+type DeclaredSystem = {
   name: string;
   description: string;
   role: string;
+  // Declared/static label only — NOT a live health probe or measured uptime.
   status: "online" | "routing-only" | "heuristic-v0" | "partial" | "planned";
 };
 
-const ONLINE_SYSTEMS: OnlineSystem[] = [
+const DECLARED_SYSTEMS: DeclaredSystem[] = [
   {
     name: "TIBER-Data",
     description: "Canonical contracts, IDs, source metadata, and governed handoff artifacts.",
@@ -78,14 +97,16 @@ function SystemStatusSection() {
   return (
     <section className="mt-5 sm:mt-8">
       <div className="mb-3 flex flex-col gap-1 sm:mb-4">
-        <h2 className="text-base font-semibold text-slate-100">Online systems</h2>
+        <h2 className="text-base font-semibold text-slate-100">Declared systems &amp; roles</h2>
         <p className="text-sm leading-6 text-slate-400">
-          Only real downstream repos or domains are shown. No uptime, confidence,
-          or performance metrics are fabricated here.
+          A static map of real downstream repos/domains and their intended roles —
+          not a live health check. The status labels below are declared, not measured
+          from running services, and no uptime, confidence, or performance metrics are
+          produced here. A live signal inventory is future work (PR C of #264).
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {ONLINE_SYSTEMS.map((system) => (
+        {DECLARED_SYSTEMS.map((system) => (
           <Card
             key={system.name}
             className="border-slate-800 bg-slate-950/70 text-slate-100 shadow-none"
@@ -549,7 +570,7 @@ export default function StressLab() {
                 Read-only control surface
               </div>
               <p className="mt-2 leading-6 text-amber-100/85">
-                No LLM call, external API call, backend write route, ranking service, waiver workflow, or projection engine is invoked by this page.
+                No backend, database, artifact, LLM, RAG, or external API call is made by this page. Everything shown is computed client-side from the text you paste; no rankings, projections, waivers, or upstream truth are read or mutated.
               </p>
             </div>
           </div>

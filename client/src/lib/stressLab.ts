@@ -1,3 +1,12 @@
+/**
+ * Observatory take-triage heuristics (internal/legacy name: "stressLab").
+ *
+ * v0 client-side scaffold: deterministic regex/keyword heuristics only. It makes
+ * NO backend, DB, artifact, LLM, RAG, or external API calls. It produces an
+ * `operator_signal_note_v0` artifact and *suggested* repo handoffs; it does not
+ * read live TIBER signals or verify claims against real sources. See
+ * client/src/pages/StressLab.tsx for the Observatory naming-boundary note (PR A, #264).
+ */
 export type OperatorSignalNoteEntity = {
   label: string;
   entity_type: "player" | "team" | "division" | "season";
