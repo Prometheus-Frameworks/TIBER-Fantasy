@@ -128,33 +128,57 @@ export type TeamEnvironmentMovementSignalStatus =
   | 'missing'
   | 'unavailable';
 
+// The service's normal "artifact absent" path returns artifactAvailable:false
+// with this code (HTTP 200); other error-state branches report a different code
+// (HTTP 502). Used to distinguish a genuine absence (missing) from a failure.
+const TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND_CODE = 'TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND';
+
 /**
  * Read-only signal-inventory status for the Teamstate Movement artifact, derived
  * ONLY from the existing /api/data-lab/team-environment-movement payload — no new
- * reads, no scoring/threshold logic. Truthful mapping for the Observatory live
- * signal inventory (#264 PR C):
- *  - unavailable : no response, or the endpoint returned errors
- *  - missing     : reachable but the artifact is not available
+ * reads, no scoring/threshold logic. Truthful, fail-closed mapping for the
+ * Observatory live signal inventory (#264 PR C):
+ *  - missing     : artifact reported absent (NOT_FOUND, or artifactAvailable:false
+ *                  without a hard-failure error code)
+ *  - unavailable : no response, or a reported failure (error code != NOT_FOUND,
+ *                  or an error alongside an artifact that claims to be available)
  *  - fixture-only: present but provenance is a fixture/synthetic scaffold
- *  - governed    : present with a producer governance block (status + contract version)
- *  - available   : present, governance not explicitly declared
+ *  - governed    : present AND governanceStatus is explicitly 'governed' (matching
+ *                  the shared promotion-gate semantics) WITH a contract version
+ *  - available   : present, governance not explicitly 'governed'
  *
- * Freshness ("stale") is intentionally NOT decided here; the inventory surfaces
- * the raw generatedAt timestamp instead of inventing a freshness verdict.
+ * Any other/unrecognized governance token fails closed to `available` (never
+ * `governed`). Freshness ("stale") is intentionally NOT decided here; the
+ * inventory surfaces the raw generatedAt timestamp instead of inventing a verdict.
  */
 export function getTeamEnvironmentMovementSignalStatus(
   response: TeamEnvironmentMovementResponse | null | undefined,
 ): { status: TeamEnvironmentMovementSignalStatus; label: string } {
-  if (!response || (response.errors?.length ?? 0) > 0) {
+  if (!response) {
     return { status: 'unavailable', label: 'Unavailable' };
   }
   if (!response.artifactAvailable) {
-    return { status: 'missing', label: 'Missing' };
+    // Reserve `unavailable` for a reported failure; a plain absence is `missing`.
+    const hardFailure = (response.errors ?? []).some(
+      (error) => error.code !== TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND_CODE,
+    );
+    return hardFailure
+      ? { status: 'unavailable', label: 'Unavailable' }
+      : { status: 'missing', label: 'Missing' };
+  }
+  // Artifact claims to be available; an error alongside that is anomalous.
+  if ((response.errors?.length ?? 0) > 0) {
+    return { status: 'unavailable', label: 'Unavailable' };
   }
   if (response.provenanceStatus === 'fixture_scaffold') {
     return { status: 'fixture-only', label: 'Fixture-only' };
   }
-  if (response.governance?.governanceStatus && response.governance?.contractVersion) {
+  // Only an explicit 'governed' status may render as governed; everything else
+  // (fixture/ungoverned/unrecognized) fails closed.
+  if (
+    (response.governance?.governanceStatus ?? '').trim().toLowerCase() === 'governed'
+    && Boolean(response.governance?.contractVersion)
+  ) {
     return { status: 'governed', label: 'Governed' };
   }
   return { status: 'available', label: 'Available' };

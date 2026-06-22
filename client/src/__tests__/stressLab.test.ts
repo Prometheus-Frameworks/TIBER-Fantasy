@@ -729,10 +729,27 @@ describe("getTeamEnvironmentMovementSignalStatus", () => {
     ).toBe("unavailable");
   });
 
-  it("returns missing when the artifact is not available", () => {
+  it("returns missing for a genuine absence (NOT_FOUND, HTTP 200)", () => {
     expect(
       getTeamEnvironmentMovementSignalStatus({ ...base, artifactAvailable: false }).status,
     ).toBe("missing");
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        artifactAvailable: false,
+        errors: [{ code: "TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND", message: "absent" }],
+      }).status,
+    ).toBe("missing");
+  });
+
+  it("returns unavailable for a reported failure (non-NOT_FOUND error code)", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        artifactAvailable: false,
+        errors: [{ code: "TEAM_ENVIRONMENT_MOVEMENT_UNAVAILABLE", message: "boom" }],
+      }).status,
+    ).toBe("unavailable");
   });
 
   it("returns fixture-only for a fixture/synthetic scaffold", () => {
@@ -741,13 +758,24 @@ describe("getTeamEnvironmentMovementSignalStatus", () => {
     ).toBe("fixture-only");
   });
 
-  it("returns governed only with a producer governance block (status + contract)", () => {
+  it("returns governed only for an explicit 'governed' status with a contract version", () => {
     expect(
       getTeamEnvironmentMovementSignalStatus({
         ...base,
-        governance: { governanceStatus: "promoted", contractVersion: "v1" },
+        governance: { governanceStatus: "governed", contractVersion: "v1" },
       }).status,
     ).toBe("governed");
+  });
+
+  it("does NOT show governed for non-'governed' tokens, even with a contract version", () => {
+    for (const token of ["promoted", "fixture", "ungoverned", "weird"]) {
+      expect(
+        getTeamEnvironmentMovementSignalStatus({
+          ...base,
+          governance: { governanceStatus: token, contractVersion: "v1" },
+        }).status,
+      ).toBe("available");
+    }
   });
 
   it("returns available when present without an explicit governance block", () => {
