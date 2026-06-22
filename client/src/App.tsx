@@ -60,6 +60,14 @@ function Router() {
             <Switch>
               <Route path="/management" component={TiberManagementDashboard} />
               <Route path="/team-management" component={TiberManagementDashboard} />
+              {/*
+                Observatory surface (user-facing name). The implementation component is
+                still named `StressLab` (legacy/internal name retained — see the naming
+                boundary note in StressLab.tsx). `/`, `/observatory`, and `/stress-lab`
+                (below) intentionally resolve to the same Observatory surface today;
+                `/stress-lab` is a legacy alias. PR A (#264) is naming/route/copy-label
+                hygiene only — no route rewrite.
+              */}
               <Route path="/" component={StressLab} />
               <Route path="/observatory" component={StressLab} />
               <Route path="/dashboard" component={Dashboard} />
@@ -80,6 +88,7 @@ function Router() {
               <Route path="/tiber-data-lab/player-research" component={PlayerResearchLab} />
               <Route path="/tiber-data-lab/team-research" component={TeamResearchLab} />
               <Route path="/tiber-data-lab/command-center" component={DataLabCommandCenterLab} />
+              {/* Legacy alias for the Observatory surface (see route note above). */}
               <Route path="/stress-lab" component={StressLab} />
               <Route path="/personnel">
                 {() => <Redirect to="/tiber-data-lab/personnel" />}

@@ -672,7 +672,9 @@ describe("Stress Lab v0 mock artifact builder", () => {
 
     expect(html).toContain("TIBER Observatory");
     expect(html).toContain("Operator-facing inspection and routing surface");
-    expect(html).toContain("Online systems");
+    // PR A (#264): the declared system map must not overclaim live status.
+    expect(html).toContain("Declared systems");
+    expect(html).toContain("not a live health check");
     expect(html).toContain("TIBER-Data");
     expect(html).toContain("Repo boundary awareness");
     expect(html).toContain("Read-only control surface");
