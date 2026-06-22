@@ -1944,10 +1944,27 @@ export default function TiberManagementDashboard() {
         )}
 
         {hasRosterData && (
-          <ForgeArtifactDiagnosticsPanel diagnostics={dashboardQuery.data?.diagnostics} activeRosterVisibility={rosterVisibility} activeTeamMatching={activeTeamMatching} />
+          <details className="tmd-operator-disclosure">
+            <summary>
+              Operator diagnostics · FORGE artifact runtime
+              <span className="tmd-operator-tag">System inspection · not roster guidance</span>
+            </summary>
+            <p className="tmd-operator-note">
+              Internal artifact/identity runtime state for operators. Nothing here changes your roster, scoring, or Team Direction. Collapsed by default (audience separation, #264 PR B); system diagnostics may move to Observatory in a later pass.
+            </p>
+            <ForgeArtifactDiagnosticsPanel diagnostics={dashboardQuery.data?.diagnostics} activeRosterVisibility={rosterVisibility} activeTeamMatching={activeTeamMatching} />
+          </details>
         )}
 
         {hasRosterData && (
+          <details className="tmd-operator-disclosure">
+            <summary>
+              Operator diagnostics · Management exports (JSON)
+              <span className="tmd-operator-tag">System inspection · not roster guidance</span>
+            </summary>
+            <p className="tmd-operator-note">
+              Copy/download utilities and raw JSON for operators and TIBER-Data crosswalk review. Read-only; nothing here changes your roster, scoring, or Team Direction. Collapsed by default (audience separation, #264 PR B).
+            </p>
           <div className="tmd-identity-seed-export" aria-label="Management identity seed export">
             <div className="tmd-identity-seed-export-header">
               <div>
@@ -1978,6 +1995,7 @@ export default function TiberManagementDashboard() {
               <pre>{identitySeedReportJson}</pre>
             </details>
           </div>
+          </details>
         )}
 
         {hasRosterData && (
@@ -2122,11 +2140,16 @@ export default function TiberManagementDashboard() {
       <section className="tmd-card">
         <div className="tmd-card-header">
           <div>
-            <h2>Model Stack / Model Signals</h2>
-            <p>Operator readiness for model layers connected to this Management context.</p>
+            <h2>Operator diagnostics · Model &amp; signal readiness</h2>
+            <p>System-inspection view of model/artifact readiness behind this Management context — not roster guidance and not advice. Collapsed by default (audience separation, #264 PR B).</p>
           </div>
           <ShieldCheck size={20} />
         </div>
+        <details className="tmd-operator-disclosure">
+          <summary>
+            Show model &amp; signal readiness ({modelSignals.length})
+            <span className="tmd-operator-tag">System inspection · not roster guidance</span>
+          </summary>
         <div className="tmd-signal-grid">
           {modelSignals.map((signal) => (
             <article className="tmd-signal-card" key={signal.title}>
@@ -2149,6 +2172,7 @@ export default function TiberManagementDashboard() {
             </article>
           ))}
         </div>
+        </details>
       </section>
 
       <section className="tmd-grid tmd-grid-two">
