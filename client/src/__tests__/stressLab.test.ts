@@ -1,11 +1,23 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import StressLab from "@/pages/StressLab";
 import {
   buildMockOperatorSignalNoteArtifact,
   buildSuggestedTiberHandoffs,
   serializeOperatorSignalNoteArtifactToCsv,
 } from "@/lib/stressLab";
+import {
+  getTeamEnvironmentMovementSignalStatus,
+  type TeamEnvironmentMovementResponse,
+} from "@/lib/teamEnvironmentMovement";
+
+function renderStressLab(): string {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderToStaticMarkup(
+    React.createElement(QueryClientProvider, { client }, React.createElement(StressLab)),
+  );
+}
 
 describe("Stress Lab v0 mock artifact builder", () => {
   it("builds deterministic operator_signal_note_v0 artifacts with contract-aligned metrics and guardrails", () => {
@@ -668,7 +680,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
   });
 
   it("renders the read-only Observatory stance", () => {
-    const html = renderToStaticMarkup(React.createElement(StressLab));
+    const html = renderStressLab();
 
     expect(html).toContain("TIBER Observatory");
     expect(html).toContain("Operator-facing inspection and routing surface");
@@ -679,5 +691,66 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("Repo boundary awareness");
     expect(html).toContain("Read-only control surface");
     expect(html).toContain("Inspect note");
+  });
+
+  // PR C (#264): the live signal inventory is a real read-only data path.
+  it("renders the live signal inventory section", () => {
+    const html = renderStressLab();
+
+    expect(html).toContain("TIBER signal inventory (live)");
+    expect(html).toContain("Teamstate Movement artifact");
+    expect(html).toContain("/api/data-lab/team-environment-movement");
+  });
+});
+
+describe("getTeamEnvironmentMovementSignalStatus", () => {
+  const base: TeamEnvironmentMovementResponse = {
+    ok: true,
+    artifact: "team_environment_movement_v1",
+    artifactAvailable: true,
+    generatedAt: "2026-06-01T00:00:00.000Z",
+    governance: null,
+    provenanceStatus: null,
+    inputSources: [],
+    coverage: null,
+    teams: [],
+    selectedTeam: null,
+    warnings: [],
+    errors: [],
+  };
+
+  it("returns unavailable with no response or when errors are present", () => {
+    expect(getTeamEnvironmentMovementSignalStatus(null).status).toBe("unavailable");
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        errors: [{ code: "X", message: "boom" }],
+      }).status,
+    ).toBe("unavailable");
+  });
+
+  it("returns missing when the artifact is not available", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({ ...base, artifactAvailable: false }).status,
+    ).toBe("missing");
+  });
+
+  it("returns fixture-only for a fixture/synthetic scaffold", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({ ...base, provenanceStatus: "fixture_scaffold" }).status,
+    ).toBe("fixture-only");
+  });
+
+  it("returns governed only with a producer governance block (status + contract)", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "promoted", contractVersion: "v1" },
+      }).status,
+    ).toBe("governed");
+  });
+
+  it("returns available when present without an explicit governance block", () => {
+    expect(getTeamEnvironmentMovementSignalStatus(base).status).toBe("available");
   });
 });

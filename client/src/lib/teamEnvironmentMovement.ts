@@ -120,3 +120,42 @@ export function getTeamEnvironmentMovementReadinessDetails(response: TeamEnviron
 
   return Array.from(details);
 }
+
+export type TeamEnvironmentMovementSignalStatus =
+  | 'available'
+  | 'governed'
+  | 'fixture-only'
+  | 'missing'
+  | 'unavailable';
+
+/**
+ * Read-only signal-inventory status for the Teamstate Movement artifact, derived
+ * ONLY from the existing /api/data-lab/team-environment-movement payload — no new
+ * reads, no scoring/threshold logic. Truthful mapping for the Observatory live
+ * signal inventory (#264 PR C):
+ *  - unavailable : no response, or the endpoint returned errors
+ *  - missing     : reachable but the artifact is not available
+ *  - fixture-only: present but provenance is a fixture/synthetic scaffold
+ *  - governed    : present with a producer governance block (status + contract version)
+ *  - available   : present, governance not explicitly declared
+ *
+ * Freshness ("stale") is intentionally NOT decided here; the inventory surfaces
+ * the raw generatedAt timestamp instead of inventing a freshness verdict.
+ */
+export function getTeamEnvironmentMovementSignalStatus(
+  response: TeamEnvironmentMovementResponse | null | undefined,
+): { status: TeamEnvironmentMovementSignalStatus; label: string } {
+  if (!response || (response.errors?.length ?? 0) > 0) {
+    return { status: 'unavailable', label: 'Unavailable' };
+  }
+  if (!response.artifactAvailable) {
+    return { status: 'missing', label: 'Missing' };
+  }
+  if (response.provenanceStatus === 'fixture_scaffold') {
+    return { status: 'fixture-only', label: 'Fixture-only' };
+  }
+  if (response.governance?.governanceStatus && response.governance?.contractVersion) {
+    return { status: 'governed', label: 'Governed' };
+  }
+  return { status: 'available', label: 'Available' };
+}
