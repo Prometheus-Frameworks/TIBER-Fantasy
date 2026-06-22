@@ -3626,6 +3626,45 @@ html, body {
   gap: 6px;
 }
 
+/* Operator-facing diagnostics, collapsed by default (audience separation, #264 PR B). */
+.tmd-operator-disclosure {
+  margin-top: 14px;
+  border: 1px solid var(--tmd-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tmd-operator-disclosure > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px 14px;
+  color: var(--tmd-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tmd-operator-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tmd-text-dim);
+  border: 1px solid var(--tmd-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.tmd-operator-note {
+  margin: 0;
+  padding: 0 14px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--tmd-text-dim);
+}
+
 @media (max-width: 760px) {
   .tmd-identity-seed-export-header {
     flex-direction: column;
