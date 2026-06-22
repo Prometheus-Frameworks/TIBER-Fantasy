@@ -16,10 +16,10 @@ Madden-style 1–99 player ratings that aggregate multiple data sources into a s
 
 | File | Purpose |
 |------|---------|
-| `server/services/ovrEngine.ts` | Dynamic OVR calculation engine. Uses compass directions (NORTH/EAST/SOUTH/WEST), delta rules, decay config. **Live.** |
-| `server/routes/ovrRoutes.ts` | Routes mounted at `/api/ovr/*`. **Live.** |
+| `server/services/ovrEngine.ts` | Dynamic OVR calculation engine (compass directions NORTH/EAST/SOUTH/WEST, delta rules, decay config). Backs the **inline** `/api/ovr` seed/update/compass/player engine endpoints in `server/routes.ts`; not used by the primary `ovrRoutes.ts` read routes. **Live.** |
+| `server/routes/ovrRoutes.ts` | Primary `/api/ovr` read routes (`GET /api/ovr`, `/:playerId`, `/health`); computes from the `players` table (`avgPoints` + `calculateSimpleOVR` fallback). **Live.** |
 
-The live `/api/ovr` surface is served by `ovrRoutes.ts` (mounted in `server/routes.ts`) together with inline `/api/ovr/*` endpoints defined directly in `server/routes.ts`. `ovrEngine.ts`, `ovrRoutes.ts`, and the `/api/ovr` endpoints remain live and protected.
+The live `/api/ovr` surface is served by `ovrRoutes.ts` (mounted first in `server/routes.ts`) together with inline `/api/ovr/*` endpoints defined directly in `server/routes.ts`. `ovrEngine.ts`, `ovrRoutes.ts`, and the `/api/ovr` endpoints remain live and protected. See "How OVR is Calculated" below for which path each uses.
 
 The `server/modules/ovr/` directory itself now contains only this `MODULE.md`; there are no remaining `.ts` files in it.
 
@@ -36,7 +36,11 @@ The `server/modules/ovr/` directory itself now contains only this `MODULE.md`; t
 ## How OVR is Calculated
 
 > [!NOTE]
-> The blended multi-source flow below documents the **legacy** `ovrService` pipeline, which was removed in PR #262 (see the "Removed in PR #262" table above). It is retained here as historical reference only and names files that no longer exist (`sleeperOvrScorer`, `ovrService`, `ovrForgeAdapter`). The live calculation path now runs through `ovrEngine.ts` behind `/api/ovr`.
+> The blended multi-source flow below documents the **legacy** `ovrService` pipeline, which was removed in PR #262 (see the "Removed in PR #262" table above). It is retained here as historical reference only, names files that no longer exist (`sleeperOvrScorer`, `ovrService`, `ovrForgeAdapter`), and does **not** describe either live compute path.
+>
+> The live `/api/ovr` surface today has two distinct compute paths:
+> - **Primary read routes** in `server/routes/ovrRoutes.ts` (`GET /api/ovr`, `GET /api/ovr/:playerId`, `GET /api/ovr/health`) compute OVR directly from the `players` table — `avgPoints`, with a `calculateSimpleOVR` position/age baseline fallback. These do **not** import `ovrEngine`.
+> - **Inline engine endpoints** in `server/routes.ts` (`POST /api/ovr/seed`, `POST /api/ovr/update`, `POST /api/ovr/compass`, `GET /api/ovr/player/:playerId`) use `ovrEngine.ts` (compass directions, delta rules, decay).
 
 ```
 [1] Gather input data from all sources:
