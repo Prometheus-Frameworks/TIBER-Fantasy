@@ -701,6 +701,19 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("Teamstate Movement artifact");
     expect(html).toContain("/api/data-lab/team-environment-movement");
   });
+
+  // PR D (#264): take-triage area is explicit about what it does NOT do.
+  it("renders take-triage clarity copy", () => {
+    const html = renderStressLab();
+
+    expect(html).toContain("client-side v0 triage scaffold");
+    expect(html).toContain("What this does not do");
+    expect(html).toContain("Does not verify the analyst claim");
+    expect(html).toContain("Does not check live NFL data");
+    expect(html).toContain("No LLM or RAG");
+    expect(html).toContain("does not generate fantasy advice");
+    expect(html).toContain("remain responsible for the final judgment");
+  });
 });
 
 describe("getTeamEnvironmentMovementSignalStatus", () => {
