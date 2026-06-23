@@ -120,3 +120,74 @@ export function getTeamEnvironmentMovementReadinessDetails(response: TeamEnviron
 
   return Array.from(details);
 }
+
+export type TeamEnvironmentMovementSignalStatus =
+  | 'available'
+  | 'governed'
+  | 'fixture-only'
+  | 'missing'
+  | 'unavailable';
+
+// The service's normal "artifact absent" path returns artifactAvailable:false
+// with this code (HTTP 200); other error-state branches report a different code
+// (HTTP 502). Used to distinguish a genuine absence (missing) from a failure.
+const TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND_CODE = 'TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND';
+
+/**
+ * Read-only signal-inventory status for the Teamstate Movement artifact, derived
+ * ONLY from the existing /api/data-lab/team-environment-movement payload — no new
+ * reads, no scoring/threshold logic. Truthful, fail-closed mapping for the
+ * Observatory live signal inventory (#264 PR C):
+ *  - missing     : artifact reported absent (NOT_FOUND, or artifactAvailable:false
+ *                  without a hard-failure error code)
+ *  - unavailable : no response, or a reported failure (error code != NOT_FOUND,
+ *                  or an error alongside an artifact that claims to be available)
+ *  - fixture-only: present but provenance is a fixture/synthetic scaffold
+ *  - governed    : present AND the producer attests governance with an EXPLICIT
+ *                  marker — governanceStatus === 'governed' AND
+ *                  governanceSource === 'explicit_marker' AND a contract version.
+ *                  This matches the Phase 4 promotion-gate doctrine (explicit-marker
+ *                  sensitive); a path-inferred / missing / non-explicit source must
+ *                  NOT render as governed.
+ *  - available   : present, but governance is not an explicit governed attestation
+ *
+ * Any missing, unrecognized, path-inferred, fixture, or non-explicit governance
+ * source fails closed to `available` (never `governed`). Freshness ("stale") is
+ * intentionally NOT decided here; the inventory surfaces the raw generatedAt
+ * timestamp instead of inventing a verdict.
+ */
+export function getTeamEnvironmentMovementSignalStatus(
+  response: TeamEnvironmentMovementResponse | null | undefined,
+): { status: TeamEnvironmentMovementSignalStatus; label: string } {
+  if (!response) {
+    return { status: 'unavailable', label: 'Unavailable' };
+  }
+  if (!response.artifactAvailable) {
+    // Reserve `unavailable` for a reported failure; a plain absence is `missing`.
+    const hardFailure = (response.errors ?? []).some(
+      (error) => error.code !== TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND_CODE,
+    );
+    return hardFailure
+      ? { status: 'unavailable', label: 'Unavailable' }
+      : { status: 'missing', label: 'Missing' };
+  }
+  // Artifact claims to be available; an error alongside that is anomalous.
+  if ((response.errors?.length ?? 0) > 0) {
+    return { status: 'unavailable', label: 'Unavailable' };
+  }
+  if (response.provenanceStatus === 'fixture_scaffold') {
+    return { status: 'fixture-only', label: 'Fixture-only' };
+  }
+  // Governed requires an EXPLICIT producer attestation (status + explicit_marker
+  // source + contract version), matching promotion-gate doctrine. Everything else
+  // (fixture / ungoverned / path-inferred / missing / unrecognized) fails closed.
+  const governance = response.governance;
+  if (
+    (governance?.governanceStatus ?? '').trim().toLowerCase() === 'governed'
+    && (governance?.governanceSource ?? '').trim().toLowerCase() === 'explicit_marker'
+    && Boolean(governance?.contractVersion)
+  ) {
+    return { status: 'governed', label: 'Governed' };
+  }
+  return { status: 'available', label: 'Available' };
+}

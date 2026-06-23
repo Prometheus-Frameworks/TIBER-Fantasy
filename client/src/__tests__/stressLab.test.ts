@@ -1,11 +1,23 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import StressLab from "@/pages/StressLab";
 import {
   buildMockOperatorSignalNoteArtifact,
   buildSuggestedTiberHandoffs,
   serializeOperatorSignalNoteArtifactToCsv,
 } from "@/lib/stressLab";
+import {
+  getTeamEnvironmentMovementSignalStatus,
+  type TeamEnvironmentMovementResponse,
+} from "@/lib/teamEnvironmentMovement";
+
+function renderStressLab(): string {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return renderToStaticMarkup(
+    React.createElement(QueryClientProvider, { client }, React.createElement(StressLab)),
+  );
+}
 
 describe("Stress Lab v0 mock artifact builder", () => {
   it("builds deterministic operator_signal_note_v0 artifacts with contract-aligned metrics and guardrails", () => {
@@ -668,7 +680,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
   });
 
   it("renders the read-only Observatory stance", () => {
-    const html = renderToStaticMarkup(React.createElement(StressLab));
+    const html = renderStressLab();
 
     expect(html).toContain("TIBER Observatory");
     expect(html).toContain("Operator-facing inspection and routing surface");
@@ -679,5 +691,131 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("Repo boundary awareness");
     expect(html).toContain("Read-only control surface");
     expect(html).toContain("Inspect note");
+  });
+
+  // PR C (#264): the live signal inventory is a real read-only data path.
+  it("renders the live signal inventory section", () => {
+    const html = renderStressLab();
+
+    expect(html).toContain("TIBER signal inventory (live)");
+    expect(html).toContain("Teamstate Movement artifact");
+    expect(html).toContain("/api/data-lab/team-environment-movement");
+  });
+});
+
+describe("getTeamEnvironmentMovementSignalStatus", () => {
+  const base: TeamEnvironmentMovementResponse = {
+    ok: true,
+    artifact: "team_environment_movement_v1",
+    artifactAvailable: true,
+    generatedAt: "2026-06-01T00:00:00.000Z",
+    governance: null,
+    provenanceStatus: null,
+    inputSources: [],
+    coverage: null,
+    teams: [],
+    selectedTeam: null,
+    warnings: [],
+    errors: [],
+  };
+
+  it("returns unavailable with no response or when errors are present", () => {
+    expect(getTeamEnvironmentMovementSignalStatus(null).status).toBe("unavailable");
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        errors: [{ code: "X", message: "boom" }],
+      }).status,
+    ).toBe("unavailable");
+  });
+
+  it("returns missing for a genuine absence (NOT_FOUND, HTTP 200)", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({ ...base, artifactAvailable: false }).status,
+    ).toBe("missing");
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        artifactAvailable: false,
+        errors: [{ code: "TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND", message: "absent" }],
+      }).status,
+    ).toBe("missing");
+  });
+
+  it("returns unavailable for a reported failure (non-NOT_FOUND error code)", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        artifactAvailable: false,
+        errors: [{ code: "TEAM_ENVIRONMENT_MOVEMENT_UNAVAILABLE", message: "boom" }],
+      }).status,
+    ).toBe("unavailable");
+  });
+
+  it("returns fixture-only for a fixture/synthetic scaffold (wins over governance)", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({ ...base, provenanceStatus: "fixture_scaffold" }).status,
+    ).toBe("fixture-only");
+    // fixture_scaffold still wins even if an explicit governed block is present.
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        provenanceStatus: "fixture_scaffold",
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker", contractVersion: "v1" },
+      }).status,
+    ).toBe("fixture-only");
+  });
+
+  it("returns governed for explicit_marker + governed + contract version", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker", contractVersion: "v1" },
+      }).status,
+    ).toBe("governed");
+  });
+
+  it("fails closed to available when the governance source is missing", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "governed", contractVersion: "v1" },
+      }).status,
+    ).toBe("available");
+  });
+
+  it("fails closed to available for non-explicit governance sources (e.g. path_inference)", () => {
+    for (const source of ["path_inference", "inferred", "producer", "promotion_pipeline", ""]) {
+      expect(
+        getTeamEnvironmentMovementSignalStatus({
+          ...base,
+          governance: { governanceStatus: "governed", governanceSource: source, contractVersion: "v1" },
+        }).status,
+      ).toBe("available");
+    }
+  });
+
+  it("fails closed to available when explicit_marker is set but contract version is missing", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker" },
+      }).status,
+    ).toBe("available");
+  });
+
+  it("does NOT show governed for non-'governed' status tokens, even with explicit_marker + contract", () => {
+    for (const token of ["promoted", "fixture", "ungoverned", "weird"]) {
+      expect(
+        getTeamEnvironmentMovementSignalStatus({
+          ...base,
+          governance: { governanceStatus: token, governanceSource: "explicit_marker", contractVersion: "v1" },
+        }).status,
+      ).toBe("available");
+    }
+  });
+
+  it("returns available when present without an explicit governance block", () => {
+    expect(getTeamEnvironmentMovementSignalStatus(base).status).toBe("available");
   });
 });

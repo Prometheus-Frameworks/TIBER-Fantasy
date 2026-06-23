@@ -10,13 +10,16 @@
  * - Routes `/`, `/observatory`, and `/stress-lab` intentionally resolve to this
  *   same surface today (`/stress-lab` is a legacy alias). See client/src/App.tsx.
  *
- * Behavior is deliberately unchanged by PR A: this page makes NO backend, DB,
- * artifact, LLM, RAG, or external API calls. It is a deterministic client-side
- * v0 take-triage scaffold. A real live signal inventory (replacing the declared
- * system map below) is future work in PR C of #264; migrating the Management
- * operator diagnostics here is PR B; take-checker upgrades are PR D.
+ * Behavior (PR C, #264): the take-triage scaffold below is still a deterministic
+ * client-side v0 — it makes NO backend, DB, LLM, RAG, or external API call. PR C
+ * adds a read-only "TIBER signal inventory" that performs a single GET to the
+ * existing /api/data-lab/team-environment-movement status endpoint (already used
+ * by Management) to show real artifact state — no writes, no new model/artifact
+ * layer. The declared system map remains static/declared (PR A); take-checker
+ * upgrades remain PR D.
  */
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Clipboard,
@@ -36,6 +39,12 @@ import {
   type OperatorSignalNoteV0,
   type SuggestedTiberHandoff,
 } from "@/lib/stressLab";
+import {
+  getTeamEnvironmentMovementReadinessDetails,
+  getTeamEnvironmentMovementSignalStatus,
+  type TeamEnvironmentMovementResponse,
+  type TeamEnvironmentMovementSignalStatus,
+} from "@/lib/teamEnvironmentMovement";
 
 const SAMPLE_NOTE =
   "WR note: Red Zone usage looks interesting, but target share may be inflated by game script. Check EPA/Play and Catchable Target context before trusting route role in the NFC North.";
@@ -134,6 +143,96 @@ function SystemStatusSection() {
           </Card>
         ))}
       </div>
+    </section>
+  );
+}
+
+const SIGNAL_STATUS_STYLES: Record<TeamEnvironmentMovementSignalStatus, string> = {
+  available: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+  governed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
+  "fixture-only": "border-amber-400/30 bg-amber-400/10 text-amber-200",
+  missing: "border-slate-600 bg-slate-800 text-slate-300",
+  unavailable: "border-slate-600 bg-slate-800 text-slate-300",
+};
+
+/**
+ * Live signal inventory (PR C, #264). Reads ONLY the existing
+ * /api/data-lab/team-environment-movement status endpoint (already used by
+ * Management) and renders truthful artifact state. No new backend/artifact/model
+ * layer, no writes. Other model/artifact diagnostics (FORGE, identity crosswalk,
+ * strategy ontology) stay roster-scoped in Management and are not surfaced here.
+ */
+function SignalInventorySection() {
+  const movementQuery = useQuery<TeamEnvironmentMovementResponse, Error>({
+    queryKey: ["/api/data-lab/team-environment-movement"],
+    queryFn: async () => {
+      const response = await fetch("/api/data-lab/team-environment-movement");
+      return (await response.json()) as TeamEnvironmentMovementResponse;
+    },
+    retry: false,
+  });
+
+  const response = movementQuery.isError ? null : movementQuery.data ?? null;
+  const { status, label } = getTeamEnvironmentMovementSignalStatus(response);
+  const detailLines = movementQuery.isError
+    ? ["Team environment movement status endpoint could not be reached in this deployment."]
+    : getTeamEnvironmentMovementReadinessDetails(response);
+
+  return (
+    <section className="mt-5 sm:mt-8">
+      <div className="mb-3 flex flex-col gap-1 sm:mb-4">
+        <h2 className="text-base font-semibold text-slate-100">TIBER signal inventory (live)</h2>
+        <p className="text-sm leading-6 text-slate-400">
+          The live portion of this board. Each row reflects a single read-only
+          request to an existing TIBER data-lab status endpoint — real artifact
+          state, not a declared label. Today only the Teamstate Movement artifact
+          is wired here; other model/artifact diagnostics remain roster-scoped in
+          Management and are not yet surfaced operator-wide.
+        </p>
+      </div>
+      <Card className="border-slate-800 bg-slate-950/70 text-slate-100 shadow-none">
+        <CardHeader className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <CardTitle className="text-sm font-semibold text-slate-100">
+                Teamstate Movement artifact
+              </CardTitle>
+              <p className="mt-1 break-all font-mono text-[11px] text-slate-500">
+                team_environment_movement_v1 · /api/data-lab/team-environment-movement
+              </p>
+            </div>
+            <Badge
+              variant="secondary"
+              className={`border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${SIGNAL_STATUS_STYLES[status]}`}
+            >
+              {movementQuery.isLoading ? "Checking" : label}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0 text-xs leading-5 text-slate-400">
+          {movementQuery.isLoading ? (
+            <p>Checking artifact status…</p>
+          ) : (
+            <>
+              <div className="grid gap-1 sm:grid-cols-2">
+                <div>Artifact available: <span className="text-slate-200">{response?.artifactAvailable ? "yes" : "no"}</span></div>
+                <div>Provenance: <span className="text-slate-200">{response?.provenanceStatus ?? "unknown"}</span></div>
+                <div>Governance: <span className="text-slate-200">{response?.governance?.governanceStatus ?? "none"}</span></div>
+                <div>Contract version: <span className="text-slate-200">{response?.governance?.contractVersion ?? "unknown"}</span></div>
+                <div>Generated at: <span className="text-slate-200">{response?.generatedAt ?? "unknown"}</span></div>
+                <div>Source path: <span className="break-all font-mono text-slate-300">{response?.source?.artifactPath ?? "unknown"}</span></div>
+              </div>
+              {detailLines.length > 0 ? (
+                <ul className="mt-3 space-y-1">
+                  {detailLines.map((line) => (
+                    <li key={line}>• {line}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </section>
   );
 }
@@ -570,13 +669,15 @@ export default function StressLab() {
                 Read-only control surface
               </div>
               <p className="mt-2 leading-6 text-amber-100/85">
-                No backend, database, artifact, LLM, RAG, or external API call is made by this page. Everything shown is computed client-side from the text you paste; no rankings, projections, waivers, or upstream truth are read or mutated.
+                The take-checker is computed entirely client-side from the text you paste — no backend, database, LLM, RAG, or external API call. The live signal inventory makes a single read-only status request to an existing TIBER data-lab endpoint; nothing on this page writes, re-ranks, projects, or mutates upstream truth.
               </p>
             </div>
           </div>
         </header>
 
         <SystemStatusSection />
+
+        <SignalInventorySection />
 
         <section className="mt-5 grid min-w-0 gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.35fr)]">
           <Card className="min-w-0 border-slate-800 bg-slate-950/80 text-slate-100 shadow-none">
