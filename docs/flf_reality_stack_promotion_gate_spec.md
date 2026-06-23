@@ -125,7 +125,7 @@ level is the minimum cap across all of them.
 |---|---|---|---|
 | 1 | **Availability** | Does the signal/artifact exist and load at all? | G1; `ForgePlayerStaticArtifactState` (`available`/`missing`/`malformed`/…) |
 | 2 | **Contract / version match** | Do the signal's declared type, schema version, and model version match the pinned contract? | G2; `contractMatch` + `promotionGate.ts` (`contract_literal_missing` / `contract_mismatch`) |
-| 3 | **Provenance / governance** | Is the signal's origin the *evidence-bearing* kind, and is it explicitly governed (not merely path-hinted)? | G3 + `forgeProvenanceGate`; `promotionGate.ts` requires `governanceStatus === 'governed'` **and** `governanceSource === 'explicit_marker'` |
+| 3 | **Provenance / governance** | Is the signal's origin the *evidence-bearing* kind, and is it explicitly governed (not merely path-hinted)? | G3 + `forgeProvenanceGate`. **Strict variant:** `promotionGate.ts` requires `governanceStatus === 'governed'` **and** `governanceSource === 'explicit_marker'` (a `/promoted/` path is "only a hint, never sufficient"). **Weaker variant (see honesty note 2):** the FORGE Management evaluator `deriveGovernance` (`forgeEvidenceActivationDiagnostics.ts`) still treats a `/promoted/` path *as* governed. |
 | 4 | **Fixture-vs-governed boundary** | Is this a real promoted artifact, or a fixture/seed/test sample? | G4; `PromotionGovernanceStatus = 'governed' | 'fixture' | …` |
 | 5 | **Freshness** | Is the signal recent enough to still describe reality? | G6; `artifactFreshness.ts` (`fresh`/`warning`/`stale`/`unknown`) — **warn-only today** |
 | 6 | **Coverage** | What fraction of the relevant population does the signal actually cover? | G5; `coverageGate` / `forgeEvidenceActivationDiagnostics.ts` |
@@ -133,8 +133,20 @@ level is the minimum cap across all of them.
 | 8 | **Honest user-facing labeling** | Is the signal's level, provenance, coverage, and freshness visible at the point of use? | G8 (`uiLabelingGate`) |
 | 9 | **Human final authority** | Is a human, not the signal, the one who decides? | Advice level unreachable: `ManagementActivatableLevel = 0|1|2|3`; doctrine in `SECURITY_POLICY.md` |
 
-**Two notes on honesty:**
+**Three notes on honesty:**
 
+- Gate 3 (Provenance / governance) is enforced at **two different strengths**
+  today, and the strict version is *not* uniform across consumers. The strict
+  promotion gate (`shared/promotionGate.ts`) treats a `/promoted/` path as only a
+  hint and demands an `explicit_marker`. But the FORGE Management evaluator
+  (`server/modules/management/forgeEvidenceActivationDiagnostics.ts`,
+  `deriveGovernance` / `isGovernedForgeSourcePath`) currently marks any path
+  containing `/promoted/` as `governed`, which is enough to clear its
+  fixture-vs-governed check. So a path-hint-only FORGE artifact with matching
+  contract / freshness / coverage *can* reach active evidence on that path. The
+  explicit-marker guarantee is therefore a property of the strict gate, **not a
+  system-wide invariant yet** — converging the two onto the strict rule is a
+  legitimate future follow-up, not something this spec may claim is already done.
 - Gate 5 (Freshness) is 🟢 *assessed* but 🔵 *not yet enforced* — it currently
   logs warnings and never rejects a signal (`artifactFreshness.ts`: "fail-closed
   enforcement is a future phase"). This spec describes it as a gate **and flags
@@ -192,7 +204,7 @@ Level 3, active non-prescriptive evidence). A consumer asks the Reality Stack:
 |---|---|---|
 | 1 Availability | Artifact loads. ✅ | — |
 | 2 Contract / version match | Declared `schema_version` matches the pinned contract. ✅ | — |
-| 3 Provenance / governance | Origin is marked, but governance came from a **path hint**, not an explicit governed marker. ❌ | Cap to Level 1 (`governance_path_hint_only`) |
+| 3 Provenance / governance | Origin is marked, but governance came from a **path hint**, not an explicit governed marker. ❌ (under the strict gate) | Cap to Level 1 (`governance_path_hint_only`) |
 | 5 Freshness | Newest timestamp is well past the max age → **stale**. ❌ | Would cap toward diagnostic |
 | 6 Coverage | Covers only a small fraction of the relevant population. ❌ | Would cap toward diagnostic |
 | 8 Honest labeling | Provenance/coverage/freshness are surfaced to the user. ✅ | — |
@@ -214,6 +226,12 @@ unreachable, so a human still makes the call.
 (`shared/promotionGate.ts`) and `resolveManagementUseActivation`
 (`shared/managementActivation.ts`): deterministic blockers, a minimum-cap
 resolution, and a hard ceiling below advice.
+
+> **Caveat (per §4 honesty note 1):** the gate-3 cap above is the **strict**
+> gate's behavior. On the current FORGE Management path, `deriveGovernance` would
+> instead accept the `/promoted/` path hint as governed, so that gate would *not*
+> cap there — freshness and coverage would still cap the signal, but this shows
+> why the explicit-marker guarantee cannot yet be claimed system-wide.
 
 ---
 
@@ -243,6 +261,11 @@ resolution, and a hard ceiling below advice.
   (`artifactFreshness.ts`). It is a gate in *design*, not yet in *enforcement*.
 - That the promotion gate is **automatically wired into promotion everywhere** —
   it is diagnostic / not-wired in several slices by design.
+- That the **explicit-governed-marker rule is enforced uniformly** — only the
+  strict gate (`shared/promotionGate.ts`) treats a `/promoted/` path as
+  insufficient; the FORGE Management evaluator
+  (`forgeEvidenceActivationDiagnostics.ts`) still accepts a `/promoted/` path as
+  governed. The strict rule is not yet a system-wide invariant.
 - That TIBER has **end-to-end provenance over all data** — loose, un-provenanced
   data files exist outside the governed pipeline.
 - That TIBER does **claim-level or general-purpose natural-language epistemics** —
