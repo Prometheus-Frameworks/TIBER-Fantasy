@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && sh build.sh"
+buildCommand = "npm install --include=dev && sh build.sh"
 
 [deploy]
 startCommand = "node dist/index.mjs"
