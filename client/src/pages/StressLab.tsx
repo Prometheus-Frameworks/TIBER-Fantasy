@@ -329,8 +329,9 @@ function SuggestedHandoffsPanel({
           Suggested TIBER handoffs
         </CardTitle>
         <p className="text-xs leading-5 text-gray-500">
-          Read-only Observatory routing. These suggestions do not call repo
-          APIs, mutate projections, or apply rankings.
+          Routing suggestions only — where a claim could be verified next — not
+          recommendations. Read-only: they do not call repo APIs, mutate
+          projections, or apply rankings.
         </p>
         <p className="text-xs leading-5 text-gray-500">
           Artifact names are planning scaffolds unless already defined in
@@ -464,6 +465,9 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
               <CardTitle className="mt-1 text-base font-semibold text-gray-900 sm:text-lg">
                 Heuristic structured artifact
               </CardTitle>
+              <p className="mt-1 text-xs leading-5 text-gray-500">
+                Triage scaffold output — routes and structures the note for operator review. Not a verified claim and not fantasy advice.
+              </p>
             </div>
             <Badge
               variant="secondary"
@@ -686,7 +690,7 @@ export default function StressLab() {
                 Observatory input
               </CardTitle>
               <p className="text-sm leading-6 text-slate-400">
-                Deterministic client-side heuristics only. Extraction confidence describes keyword matching, not source-truth confidence.
+                A client-side v0 triage scaffold: it routes and inspects an operator note into a structured artifact. It does not verify the claim, does not use an LLM/RAG, and does not generate fantasy advice. Extraction confidence describes keyword matching, not source-truth confidence.
               </p>
             </CardHeader>
             <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
@@ -706,12 +710,14 @@ export default function StressLab() {
               <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
                   <AlertTriangle className="h-4 w-4 text-amber-400" />
-                  What TIBER cannot see yet
+                  What this does not do
                 </div>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
-                  <li>• Canonical player/team IDs are not resolved in this v0 scaffold.</li>
-                  <li>• Source metadata and film/stat verification are not attached.</li>
-                  <li>• No downstream model, ranking, projection, or waiver state is changed.</li>
+                  <li>• Does not verify the analyst claim — it structures and routes the note for operator review.</li>
+                  <li>• Does not check live NFL data, rankings, projections, injuries, betting lines, or social posts.</li>
+                  <li>• No LLM or RAG: deterministic keyword heuristics only, and canonical player/team IDs are not resolved.</li>
+                  <li>• Does not change any model, ranking, or projection state, and does not generate fantasy advice.</li>
+                  <li>• You — the operator — remain responsible for the final judgment.</li>
                 </ul>
               </div>
             </CardContent>
@@ -728,7 +734,7 @@ export default function StressLab() {
                     Inspect a note to build a heuristic artifact
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    The Observatory output will show entities, signal tags, detected metrics, claim classifications, suggested repo handoffs, likely required artifacts, uncertainty, follow-ups, and export actions.
+                    The Observatory output will show entities, signal tags, detected metrics, claim classifications, suggested repo handoffs, likely required artifacts, uncertainty, follow-ups, and export actions. It routes and inspects the note for operator review; it does not verify the take against live sources.
                   </p>
                 </CardContent>
               </Card>
