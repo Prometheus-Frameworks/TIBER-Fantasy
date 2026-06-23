@@ -143,13 +143,18 @@ const TEAM_ENVIRONMENT_MOVEMENT_NOT_FOUND_CODE = 'TEAM_ENVIRONMENT_MOVEMENT_NOT_
  *  - unavailable : no response, or a reported failure (error code != NOT_FOUND,
  *                  or an error alongside an artifact that claims to be available)
  *  - fixture-only: present but provenance is a fixture/synthetic scaffold
- *  - governed    : present AND governanceStatus is explicitly 'governed' (matching
- *                  the shared promotion-gate semantics) WITH a contract version
- *  - available   : present, governance not explicitly 'governed'
+ *  - governed    : present AND the producer attests governance with an EXPLICIT
+ *                  marker — governanceStatus === 'governed' AND
+ *                  governanceSource === 'explicit_marker' AND a contract version.
+ *                  This matches the Phase 4 promotion-gate doctrine (explicit-marker
+ *                  sensitive); a path-inferred / missing / non-explicit source must
+ *                  NOT render as governed.
+ *  - available   : present, but governance is not an explicit governed attestation
  *
- * Any other/unrecognized governance token fails closed to `available` (never
- * `governed`). Freshness ("stale") is intentionally NOT decided here; the
- * inventory surfaces the raw generatedAt timestamp instead of inventing a verdict.
+ * Any missing, unrecognized, path-inferred, fixture, or non-explicit governance
+ * source fails closed to `available` (never `governed`). Freshness ("stale") is
+ * intentionally NOT decided here; the inventory surfaces the raw generatedAt
+ * timestamp instead of inventing a verdict.
  */
 export function getTeamEnvironmentMovementSignalStatus(
   response: TeamEnvironmentMovementResponse | null | undefined,
@@ -173,11 +178,14 @@ export function getTeamEnvironmentMovementSignalStatus(
   if (response.provenanceStatus === 'fixture_scaffold') {
     return { status: 'fixture-only', label: 'Fixture-only' };
   }
-  // Only an explicit 'governed' status may render as governed; everything else
-  // (fixture/ungoverned/unrecognized) fails closed.
+  // Governed requires an EXPLICIT producer attestation (status + explicit_marker
+  // source + contract version), matching promotion-gate doctrine. Everything else
+  // (fixture / ungoverned / path-inferred / missing / unrecognized) fails closed.
+  const governance = response.governance;
   if (
-    (response.governance?.governanceStatus ?? '').trim().toLowerCase() === 'governed'
-    && Boolean(response.governance?.contractVersion)
+    (governance?.governanceStatus ?? '').trim().toLowerCase() === 'governed'
+    && (governance?.governanceSource ?? '').trim().toLowerCase() === 'explicit_marker'
+    && Boolean(governance?.contractVersion)
   ) {
     return { status: 'governed', label: 'Governed' };
   }

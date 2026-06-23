@@ -752,27 +752,64 @@ describe("getTeamEnvironmentMovementSignalStatus", () => {
     ).toBe("unavailable");
   });
 
-  it("returns fixture-only for a fixture/synthetic scaffold", () => {
+  it("returns fixture-only for a fixture/synthetic scaffold (wins over governance)", () => {
     expect(
       getTeamEnvironmentMovementSignalStatus({ ...base, provenanceStatus: "fixture_scaffold" }).status,
     ).toBe("fixture-only");
+    // fixture_scaffold still wins even if an explicit governed block is present.
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        provenanceStatus: "fixture_scaffold",
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker", contractVersion: "v1" },
+      }).status,
+    ).toBe("fixture-only");
   });
 
-  it("returns governed only for an explicit 'governed' status with a contract version", () => {
+  it("returns governed for explicit_marker + governed + contract version", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker", contractVersion: "v1" },
+      }).status,
+    ).toBe("governed");
+  });
+
+  it("fails closed to available when the governance source is missing", () => {
     expect(
       getTeamEnvironmentMovementSignalStatus({
         ...base,
         governance: { governanceStatus: "governed", contractVersion: "v1" },
       }).status,
-    ).toBe("governed");
+    ).toBe("available");
   });
 
-  it("does NOT show governed for non-'governed' tokens, even with a contract version", () => {
+  it("fails closed to available for non-explicit governance sources (e.g. path_inference)", () => {
+    for (const source of ["path_inference", "inferred", "producer", "promotion_pipeline", ""]) {
+      expect(
+        getTeamEnvironmentMovementSignalStatus({
+          ...base,
+          governance: { governanceStatus: "governed", governanceSource: source, contractVersion: "v1" },
+        }).status,
+      ).toBe("available");
+    }
+  });
+
+  it("fails closed to available when explicit_marker is set but contract version is missing", () => {
+    expect(
+      getTeamEnvironmentMovementSignalStatus({
+        ...base,
+        governance: { governanceStatus: "governed", governanceSource: "explicit_marker" },
+      }).status,
+    ).toBe("available");
+  });
+
+  it("does NOT show governed for non-'governed' status tokens, even with explicit_marker + contract", () => {
     for (const token of ["promoted", "fixture", "ungoverned", "weird"]) {
       expect(
         getTeamEnvironmentMovementSignalStatus({
           ...base,
-          governance: { governanceStatus: token, contractVersion: "v1" },
+          governance: { governanceStatus: token, governanceSource: "explicit_marker", contractVersion: "v1" },
         }).status,
       ).toBe("available");
     }
