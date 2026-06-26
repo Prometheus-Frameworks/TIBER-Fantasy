@@ -45,7 +45,8 @@ backup_*.sql
 *.swp
 
 # TIBER Cowork plugin local config (contains API key)
-tiber-cowork-plugin/plugin-config.json
+# Broad, unanchored pattern so nested/duplicate copies cannot slip through.
+**/plugin-config.json
 
 # test coverage artifacts
 coverage/
