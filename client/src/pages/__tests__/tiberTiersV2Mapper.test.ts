@@ -1,4 +1,4 @@
-import { mapRankingsV2ItemsToTiersPlayers } from '../tiberTiersV2Mapper';
+import { mapRankingsV2ItemsToTiersPlayers, resolveRankingsSourceView } from '../tiberTiersV2Mapper';
 
 describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('uses structured uiMeta fields instead of explanation/trust text parsing', () => {
@@ -116,5 +116,32 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
     expect(rows[0].trajectory).toBeNull();
     expect(rows[0].footballLensIssues).toEqual([]);
     expect(rows[0].lensAdjustment).toBeNull();
+  });
+});
+
+describe('resolveRankingsSourceView', () => {
+  it('labels Expected/VORP when the scoring service (promoted_artifact) produced the items', () => {
+    const view = resolveRankingsSourceView([
+      { layer: 'promoted_artifact' },
+      { layer: 'confidence_stability' },
+    ]);
+
+    expect(view).toMatchObject({ layer: 'promoted_artifact', expectedLabel: 'Expected', valueLabel: 'VORP' });
+  });
+
+  it('does not label FORGE alpha as Expected/VORP when the forge cache fallback served the items', () => {
+    const view = resolveRankingsSourceView([{ layer: 'forge' }, { layer: 'confidence_stability' }]);
+
+    expect(view.layer).toBe('forge');
+    expect(view.expectedLabel).not.toBe('Expected');
+    expect(view.valueLabel).not.toBe('VORP');
+    expect(view.expectedLabel).toBe('FORGE Alpha');
+    expect(view.valueLabel).toBe('Raw Alpha');
+    expect(view.sourceNote).toMatch(/unavailable/i);
+  });
+
+  it('falls back to a neutral label when sourceStack is missing or empty', () => {
+    expect(resolveRankingsSourceView(undefined).layer).toBe('unknown');
+    expect(resolveRankingsSourceView([]).layer).toBe('unknown');
   });
 });

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import {
   ScoringRosPlayerCard,
   ScoringServiceClientConfig,
@@ -13,6 +14,23 @@ import {
   scoringWeeklyPlayerCardSchema,
   scoringWeeklyRankingsSchema,
 } from './types';
+
+// Malformed upstream data (fails schema validation) is a distinct failure mode from
+// connectivity/timeout errors and must not be bucketed with them — callers rely on the
+// error `code` to tell "scoring service is down" apart from "scoring service replied with
+// garbage," and the latter must never be silently treated as an empty/successful result.
+function parseOrThrowInvalidPayload<S extends z.ZodTypeAny>(schema: S, data: unknown, context: string): z.infer<S> {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    throw new ScoringServiceIntegrationError(
+      'invalid_payload',
+      `Scoring service returned a malformed ${context} payload: ${result.error.message}`,
+      502,
+      result.error,
+    );
+  }
+  return result.data;
+}
 
 const DEFAULT_TIMEOUT_MS = 5000;
 
@@ -130,7 +148,7 @@ export class ScoringServiceClient {
       league_context: toUpstreamLeagueContext(request.leagueContext),
     });
     const envelope = unwrapServiceEnvelope(payload);
-    return scoringWeeklyPlayerCardSchema.parse(normalizePlayerCard(envelope.card));
+    return parseOrThrowInvalidPayload(scoringWeeklyPlayerCardSchema, normalizePlayerCard(envelope.card), 'weekly player-card');
   }
 
   async getWeeklyRankings(request: ScoringWeeklyRankingsRequest): Promise<ScoringWeeklyRankings> {
@@ -139,7 +157,7 @@ export class ScoringServiceClient {
       league_context: toUpstreamLeagueContext(request.leagueContext),
     });
     const envelope = unwrapServiceEnvelope(payload);
-    return scoringWeeklyRankingsSchema.parse(normalizeRankings(envelope.view));
+    return parseOrThrowInvalidPayload(scoringWeeklyRankingsSchema, normalizeRankings(envelope.view), 'weekly rankings');
   }
 
   async getRosPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringRosPlayerCard> {
@@ -149,7 +167,7 @@ export class ScoringServiceClient {
       remaining_weeks: request.remainingWeeks,
     });
     const envelope = unwrapServiceEnvelope(payload);
-    return scoringRosPlayerCardSchema.parse(normalizePlayerCard(envelope.card));
+    return parseOrThrowInvalidPayload(scoringRosPlayerCardSchema, normalizePlayerCard(envelope.card), 'ROS player-card');
   }
 
   async getWeeklyCompare(request: ScoringWeeklyCompareRequest): Promise<ScoringWeeklyCompare> {
@@ -160,21 +178,25 @@ export class ScoringServiceClient {
     });
     const envelope = unwrapServiceEnvelope(payload);
     const source = (envelope.view && typeof envelope.view === 'object' ? envelope.view : envelope) as Record<string, unknown>;
-    return scoringWeeklyCompareSchema.parse({
-      asOf: asStringOrNull(source.asOf ?? source.generatedAt),
-      view: {
-        verdict: asStringOrNull(source.verdict),
-        playerA: asStringOrNull(source.player_a ?? source.playerA),
-        playerB: asStringOrNull(source.player_b ?? source.playerB),
-        deltas: {
-          expectedPoints: toNumberOrNull(
-            source.expectedPointsDelta ?? source.expected_points_delta ?? (source.deltas as any)?.expected_points,
-          ),
-          vorp: toNumberOrNull(source.vorpDelta ?? source.vorp_delta ?? (source.deltas as any)?.vorp),
+    return parseOrThrowInvalidPayload(
+      scoringWeeklyCompareSchema,
+      {
+        asOf: asStringOrNull(source.asOf ?? source.generatedAt),
+        view: {
+          verdict: asStringOrNull(source.verdict),
+          playerA: asStringOrNull(source.player_a ?? source.playerA),
+          playerB: asStringOrNull(source.player_b ?? source.playerB),
+          deltas: {
+            expectedPoints: toNumberOrNull(
+              source.expectedPointsDelta ?? source.expected_points_delta ?? (source.deltas as any)?.expected_points,
+            ),
+            vorp: toNumberOrNull(source.vorpDelta ?? source.vorp_delta ?? (source.deltas as any)?.vorp),
+          },
+          recommendation: asStringOrNull(source.recommendation ?? source.summary),
         },
-        recommendation: asStringOrNull(source.recommendation ?? source.summary),
       },
-    });
+      'weekly compare',
+    );
   }
 
   private async postJson(path: string, body: unknown): Promise<unknown> {

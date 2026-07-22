@@ -7,13 +7,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
-import { Position, RankingsV2Item } from './tiberTiersV2Mapper';
+import { Position, RankingsV2Item, resolveRankingsSourceView } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
 
 interface TiersApiResponse {
   asOf: string;
-  sourceStack: Array<{ asOf?: string | null }>;
+  sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
     sampleNote?: string | null;
     stabilityNote?: string | null;
@@ -47,15 +47,21 @@ export default function TiberTiers() {
   const { currentWeek, season } = useCurrentNFLWeek();
   const asOfWeek = currentWeek || 17;
 
-  const { data, isLoading, refetch, isFetching } = useQuery<TiersApiResponse>({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
     queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
     queryFn: async () => {
       const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch weekly rankings');
+      if (!res.ok) {
+        // Malformed/failed upstream responses must surface as a genuine error, not
+        // silently resolve into an empty rankings list that renders as "no players".
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Failed to fetch weekly rankings (HTTP ${res.status}).`);
+      }
       return res.json();
     },
     staleTime: 60_000,
+    retry: 1,
   });
 
   const players = useMemo(() => {
@@ -72,6 +78,7 @@ export default function TiberTiers() {
     item.explanation.pillarNotes.find((note) => note.pillar === pillar)?.note ?? null;
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
+  const sourceView = resolveRankingsSourceView(data?.sourceStack);
 
   return (
     <TooltipProvider>
@@ -126,11 +133,30 @@ export default function TiberTiers() {
             <Info className="h-3.5 w-3.5" />
             <span>{players.length} players</span>
             {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
+            {!isError && !isLoading && data && <span>• Source: {sourceView.sourceNote}</span>}
           </div>
 
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
             {isLoading ? (
               <div className="p-10 text-center text-slate-400">Loading FORGE tiers...</div>
+            ) : isError ? (
+              <div className="p-10 text-center">
+                <div className="flex items-center justify-center gap-2 text-lg font-semibold text-red-400 mb-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Unable to load rankings
+                </div>
+                <p className="text-slate-400 text-sm">
+                  {error instanceof Error ? error.message : 'The rankings request failed. This is an error, not an empty result.'}
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => refetch()}
+                  className="mt-4 border-slate-700 bg-slate-900/60"
+                  data-testid="retry-tiers"
+                >
+                  Retry
+                </Button>
+              </div>
             ) : isCacheUncomputed ? (
               <div className="p-10 text-center">
                 <div className="text-lg font-semibold text-amber-300 mb-2">FORGE grades are being computed...</div>
@@ -139,7 +165,7 @@ export default function TiberTiers() {
                 </p>
               </div>
             ) : players.length === 0 ? (
-              <div className="p-10 text-center text-slate-400">No rankings available yet for this filter.</div>
+              <div className="p-10 text-center text-slate-400">No players match this filter yet.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1200px]" data-testid="tiers-table">
@@ -149,8 +175,8 @@ export default function TiberTiers() {
                       <th className="py-3 px-3 text-left">Player</th>
                       <th className="py-3 px-3 text-center">Team</th>
                       <th className="py-3 px-3 text-center">Pos</th>
-                      <th className="py-3 px-3 text-center">Expected</th>
-                      <th className="py-3 px-3 text-center">VORP</th>
+                      <th className="py-3 px-3 text-center">{sourceView.expectedLabel}</th>
+                      <th className="py-3 px-3 text-center">{sourceView.valueLabel}</th>
                       <th className="py-3 px-3 text-center">Floor</th>
                       <th className="py-3 px-3 text-center">Ceiling</th>
                       <th className="py-3 px-3 text-center">Confidence Band</th>

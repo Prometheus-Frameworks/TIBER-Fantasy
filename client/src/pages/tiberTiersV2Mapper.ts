@@ -65,6 +65,51 @@ function asTier(tier?: string | null): 'T1' | 'T2' | 'T3' | 'T4' | 'T5' {
   return 'T5';
 }
 
+export interface RankingsSourceStackItem {
+  layer?: string | null;
+}
+
+export interface RankingsSourceView {
+  layer: 'promoted_artifact' | 'forge' | 'unknown';
+  expectedLabel: string;
+  valueLabel: string;
+  sourceNote: string;
+}
+
+// The API's `score`/`value` fields mean different things depending on which layer produced
+// them: scoring-service rankings put Expected Points/VORP there, but the FORGE-cache fallback
+// puts FORGE alpha/rawAlpha there instead. Rendering both under fixed "Expected"/"VORP" labels
+// silently misrepresents a 0-100 alpha score as a points projection, so the column labels (and
+// a visible source note) must track which layer actually produced the current items.
+export function resolveRankingsSourceView(sourceStack: RankingsSourceStackItem[] | null | undefined): RankingsSourceView {
+  const layers = new Set((sourceStack ?? []).map((item) => item.layer));
+
+  if (layers.has('promoted_artifact')) {
+    return {
+      layer: 'promoted_artifact',
+      expectedLabel: 'Expected',
+      valueLabel: 'VORP',
+      sourceNote: 'Weekly Forecast scoring',
+    };
+  }
+
+  if (layers.has('forge')) {
+    return {
+      layer: 'forge',
+      expectedLabel: 'FORGE Alpha',
+      valueLabel: 'Raw Alpha',
+      sourceNote: 'FORGE Alpha (weekly Forecast scoring unavailable)',
+    };
+  }
+
+  return {
+    layer: 'unknown',
+    expectedLabel: 'Score',
+    valueLabel: 'Value',
+    sourceNote: 'Unknown source',
+  };
+}
+
 export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): TiersApiPlayer[] {
   return items.map((item, idx) => {
     const tier = asTier(item.tier);

@@ -86,6 +86,30 @@ describe('ScoringServiceClient', () => {
     ).rejects.toMatchObject<ScoringServiceIntegrationError>({ code: 'upstream_error' });
   });
 
+  it('classifies a schema-invalid weekly rankings payload as invalid_payload, not upstream_unavailable', async () => {
+    // Malformed upstream data (e.g. a garbage rank) must be distinguishable from the
+    // scoring service simply being down — collapsing both into the same error code would
+    // make a real data-integrity problem indistinguishable from a connectivity outage.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        data: {
+          view: {
+            asOf: '2026-04-12T00:00:00.000Z',
+            items: [{ rank: 'not-a-number', playerId: '00-1', playerName: 'Bad Row' }],
+          },
+        },
+      }),
+    });
+
+    const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
+
+    await expect(
+      client.getWeeklyRankings({ leagueContext: { season: 2025, week: 9 }, players: [] }),
+    ).rejects.toMatchObject<Partial<ScoringServiceIntegrationError>>({ code: 'invalid_payload' });
+  });
+
   it('falls back to default timeout when env timeout is non-numeric', () => {
     const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test', timeoutMs: Number('5s') as any });
     expect(client.getConfig().timeoutMs).toBe(5000);
