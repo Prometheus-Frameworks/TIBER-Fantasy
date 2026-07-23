@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
 export interface TiersApiPlayer {
@@ -110,38 +112,104 @@ export function resolveRankingsSourceView(sourceStack: RankingsSourceStackItem[]
   };
 }
 
-export interface RankingsV2WeeklyResponseShape {
-  asOf: string;
-  sourceStack: RankingsSourceStackItem[];
-  items: unknown[];
-  [key: string]: unknown;
-}
+const rankingsSourceStackItemSchema = z
+  .object({
+    layer: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+const rankingsPillarNoteSchema = z.object({
+  pillar: z.string(),
+  note: z.string().nullable().optional(),
+});
+
+// `getPillarNote` in TiberTiers.tsx dereferences `item.explanation.pillarNotes` without an
+// optional-chain guard, so both must be validated as present (not merely typed as optional)
+// or a malformed item crashes the render instead of failing at the boundary.
+const rankingsItemExplanationSchema = z
+  .object({
+    placementSummary: z.string().nullable().optional(),
+    pillarNotes: z.array(rankingsPillarNoteSchema),
+  })
+  .passthrough();
+
+// `uiMeta` fields are only ever read through optional chaining in the page, so this stays
+// nullable/optional — but its shape is still constrained when present.
+const rankingsItemUiMetaSchema = z
+  .object({
+    subscores: z
+      .object({
+        volume: z.number().nullable().optional(),
+        efficiency: z.number().nullable().optional(),
+        teamContext: z.number().nullable().optional(),
+        stability: z.number().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+    confidence: z.number().nullable().optional(),
+    gamesPlayed: z.number().nullable().optional(),
+    trajectory: z.enum(['rising', 'flat', 'declining']).nullable().optional(),
+    footballLensIssues: z.array(z.string()).nullable().optional(),
+    lensAdjustment: z.number().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
+const rankingsItemSchema = z.object({
+  rank: z.number(),
+  playerId: z.string(),
+  playerName: z.string(),
+  position: z.string().nullable().optional(),
+  team: z.string().nullable().optional(),
+  tier: z.string().nullable().optional(),
+  // `.toFixed(1)` is called on these through optional chaining, which only guards against
+  // null/undefined — a wrong-typed truthy value (e.g. a string) would still throw.
+  score: z.number().nullable().optional(),
+  value: z.number().nullable().optional(),
+  explanation: rankingsItemExplanationSchema,
+  trust: z
+    .object({
+      confidence: z.number().nullable().optional(),
+      sampleNote: z.string().nullable().optional(),
+      stabilityNote: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  uiMeta: rankingsItemUiMetaSchema,
+});
+
+const rankingsV2WeeklyResponseSchema = z
+  .object({
+    asOf: z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), {
+      message: 'asOf must be a valid timestamp',
+    }),
+    sourceStack: z.array(rankingsSourceStackItemSchema),
+    trust: z
+      .object({
+        sampleNote: z.string().nullable().optional(),
+        stabilityNote: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+    items: z.array(rankingsItemSchema),
+  })
+  .passthrough();
+
+export type RankingsV2WeeklyResponseShape = z.infer<typeof rankingsV2WeeklyResponseSchema>;
 
 // A 2xx HTTP response is not the same thing as a well-formed one. Without this check,
 // `data?.items ?? []` at the call site would quietly turn a malformed body (`{}`, `null`,
-// `{ items: null }`, etc.) into "0 players" — indistinguishable from a genuine empty
-// ranking. Throwing here routes malformed successful responses into the query's error
-// state instead. Only an explicit, well-formed `items: []` is a genuine empty result.
+// `{ items: null }`, a `sourceStack` entry of `null`, an item missing `explanation`, etc.)
+// into "0 players" — indistinguishable from a genuine empty ranking, or worse, a runtime
+// crash further down the render tree. This validates every field the page actually
+// dereferences or formats, not just the top-level array shape, and throws for anything
+// unsafe. Only an explicit, well-formed `items: []` is a genuine empty result.
 export function validateRankingsV2WeeklyResponse(payload: unknown): RankingsV2WeeklyResponseShape {
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-    throw new Error('Rankings response was not a JSON object.');
+  const result = rankingsV2WeeklyResponseSchema.safeParse(payload);
+  if (!result.success) {
+    throw new Error(`Rankings response failed validation: ${result.error.message}`);
   }
-
-  const record = payload as Record<string, unknown>;
-
-  if (!Array.isArray(record.items)) {
-    throw new Error('Rankings response is missing a valid items array.');
-  }
-
-  if (!Array.isArray(record.sourceStack)) {
-    throw new Error('Rankings response is missing a valid sourceStack array.');
-  }
-
-  if (typeof record.asOf !== 'string' || Number.isNaN(new Date(record.asOf).getTime())) {
-    throw new Error('Rankings response is missing a valid asOf timestamp.');
-  }
-
-  return record as RankingsV2WeeklyResponseShape;
+  return result.data;
 }
 
 // Neutral until a response actually tells us which layer produced the rows — the page

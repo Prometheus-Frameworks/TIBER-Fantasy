@@ -267,8 +267,9 @@ export default function TiberTiers() {
       }
       // A 2xx status does not guarantee a well-formed body — validate before handing it
       // to the UI, so a malformed successful response also throws into the error state
-      // instead of silently rendering as a genuine empty ranking.
-      return validateRankingsV2WeeklyResponse(await res.json()) as unknown as TiersApiResponse;
+      // instead of silently rendering as a genuine empty ranking. The validated shape is
+      // assignable to TiersApiResponse on its own; no unchecked cast needed.
+      return validateRankingsV2WeeklyResponse(await res.json());
     },
     staleTime: 60_000,
     retry: 1,

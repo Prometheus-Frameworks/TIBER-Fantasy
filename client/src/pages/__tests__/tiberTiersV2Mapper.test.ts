@@ -201,8 +201,25 @@ describe('resolveTiersViewState', () => {
 describe('validateRankingsV2WeeklyResponse', () => {
   const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
 
+  const wellFormedItem = {
+    rank: 1,
+    playerId: '00-1',
+    playerName: 'Justin Jefferson',
+    position: 'WR',
+    team: 'MIN',
+    tier: 'T1',
+    score: 20.1,
+    value: 3.4,
+    explanation: { placementSummary: 'Strong outlook.', pillarNotes: [{ pillar: 'volume', note: '12.0' }] },
+  };
+
   it('accepts a well-formed response, including an explicit empty items array as a genuine result', () => {
     expect(validateRankingsV2WeeklyResponse(wellFormed)).toEqual(wellFormed);
+  });
+
+  it('accepts a well-formed item with valid nested explanation/pillarNotes', () => {
+    const payload = { ...wellFormed, items: [wellFormedItem] };
+    expect(validateRankingsV2WeeklyResponse(payload)).toEqual(payload);
   });
 
   it.each([
@@ -216,6 +233,26 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['a non-array sourceStack value', { ...wellFormed, sourceStack: 'garbage' }],
     ['a missing asOf', { ...wellFormed, asOf: undefined }],
     ['an invalid asOf', { ...wellFormed, asOf: 'not-a-real-timestamp' }],
+    // Nested shapes the page actually dereferences/formats — a top-level-array-only check
+    // would accept every one of these and let it crash further down the render tree.
+    ['a null sourceStack entry', { ...wellFormed, sourceStack: [null] }],
+    ['a non-object sourceStack entry', { ...wellFormed, sourceStack: ['garbage'] }],
+    ['a sourceStack entry with an unsafe layer type', { ...wellFormed, sourceStack: [{ layer: 123 }] }],
+    ['a non-object item', { ...wellFormed, items: [{}] }],
+    ['an item with a null explanation', { ...wellFormed, items: [{ ...wellFormedItem, explanation: null }] }],
+    ['an item missing explanation.pillarNotes', { ...wellFormed, items: [{ ...wellFormedItem, explanation: {} }] }],
+    [
+      'an item with a non-array explanation.pillarNotes',
+      { ...wellFormed, items: [{ ...wellFormedItem, explanation: { pillarNotes: 'garbage' } }] },
+    ],
+    [
+      'an item with a malformed pillar-note entry',
+      { ...wellFormed, items: [{ ...wellFormedItem, explanation: { pillarNotes: [{ note: 'missing pillar field' }] } }] },
+    ],
+    ['an item with a non-numeric score', { ...wellFormed, items: [{ ...wellFormedItem, score: 'twenty' }] }],
+    ['an item with a non-numeric value', { ...wellFormed, items: [{ ...wellFormedItem, value: {} }] }],
+    ['an item with a wrong-typed playerId', { ...wellFormed, items: [{ ...wellFormedItem, playerId: 12345 }] }],
+    ['an item missing playerName', { ...wellFormed, items: [{ ...wellFormedItem, playerName: undefined }] }],
   ])('throws for %s — a 2xx body must not silently become a genuine empty result', (_label, payload) => {
     expect(() => validateRankingsV2WeeklyResponse(payload)).toThrow();
   });
