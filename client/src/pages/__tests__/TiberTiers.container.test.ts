@@ -127,6 +127,27 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(screen.queryByText('No players match this filter yet.')).toBeNull();
   });
 
+  it('renders the error state for a malformed 2xx response with a non-contract asOf timestamp', async () => {
+    // "2026-02-30" is not a real calendar date; permissive Date coercion previously
+    // accepted it (silently normalized into March) instead of rejecting it at the boundary.
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          asOf: '2026-02-30',
+          sourceStack: [{ layer: 'forge' }],
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByText('Unable to load rankings')).toBeTruthy();
+    expect(screen.queryByText('No players match this filter yet.')).toBeNull();
+    expect(screen.queryByText(/\d+ players/)).toBeNull();
+  });
+
   it('renders the unavailable state for an uncomputed FORGE cache', async () => {
     mockFetch(() =>
       Promise.resolve({

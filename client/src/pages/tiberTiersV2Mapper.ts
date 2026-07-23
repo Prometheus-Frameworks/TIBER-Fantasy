@@ -180,9 +180,12 @@ const rankingsItemSchema = z.object({
 
 const rankingsV2WeeklyResponseSchema = z
   .object({
-    asOf: z.string().refine((value) => !Number.isNaN(new Date(value).getTime()), {
-      message: 'asOf must be a valid timestamp',
-    }),
+    // Matches the canonical Rankings v2 contract's `z.string().datetime()` (see
+    // server/contracts/rankingsV2.ts) exactly — same method, same zod version — so the
+    // client rejects anything the server contract would: date-only strings, non-ISO
+    // values, and calendar-invalid dates (e.g. "2026-02-30"), not just whatever
+    // `new Date(...)` happens to coerce.
+    asOf: z.string().datetime(),
     sourceStack: z.array(rankingsSourceStackItemSchema),
     trust: z
       .object({

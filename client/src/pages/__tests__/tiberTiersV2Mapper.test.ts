@@ -233,6 +233,11 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['a non-array sourceStack value', { ...wellFormed, sourceStack: 'garbage' }],
     ['a missing asOf', { ...wellFormed, asOf: undefined }],
     ['an invalid asOf', { ...wellFormed, asOf: 'not-a-real-timestamp' }],
+    // Matches the canonical z.string().datetime() contract exactly: permissive Date
+    // coercion previously accepted all three of these non-contract timestamps.
+    ['a bare-number asOf', { ...wellFormed, asOf: '1' }],
+    ['a date-only asOf (no time component)', { ...wellFormed, asOf: '2026-04-12' }],
+    ['a calendar-invalid asOf (February 30th does not exist)', { ...wellFormed, asOf: '2026-02-30' }],
     // Nested shapes the page actually dereferences/formats — a top-level-array-only check
     // would accept every one of these and let it crash further down the render tree.
     ['a null sourceStack entry', { ...wellFormed, sourceStack: [null] }],
