@@ -1,4 +1,9 @@
-import { mapRankingsV2ItemsToTiersPlayers, resolveRankingsSourceView } from '../tiberTiersV2Mapper';
+import {
+  mapRankingsV2ItemsToTiersPlayers,
+  resolveRankingsSourceView,
+  resolveTiersHeadline,
+  resolveTiersViewState,
+} from '../tiberTiersV2Mapper';
 
 describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('uses structured uiMeta fields instead of explanation/trust text parsing', () => {
@@ -143,5 +148,51 @@ describe('resolveRankingsSourceView', () => {
   it('falls back to a neutral label when sourceStack is missing or empty', () => {
     expect(resolveRankingsSourceView(undefined).layer).toBe('unknown');
     expect(resolveRankingsSourceView([]).layer).toBe('unknown');
+  });
+});
+
+describe('resolveTiersHeadline', () => {
+  it('does not assert "Canonical FORGE Alpha ranks" when the scoring service produced the rows', () => {
+    expect(resolveTiersHeadline('promoted_artifact')).toBe('Weekly Forecast Rankings');
+  });
+
+  it('labels FORGE-sourced rankings distinctly', () => {
+    expect(resolveTiersHeadline('forge')).toBe('Canonical FORGE Alpha ranks');
+  });
+
+  it('uses neutral copy before the source is known', () => {
+    expect(resolveTiersHeadline('unknown')).toBe('Weekly Rankings');
+  });
+});
+
+describe('resolveTiersViewState', () => {
+  it('prioritizes loading over every other signal', () => {
+    expect(
+      resolveTiersViewState({ isLoading: true, isError: true, isCacheUncomputed: true, playersCount: 5 }),
+    ).toBe('loading');
+  });
+
+  it('treats a failed request as an error, not a genuine empty result', () => {
+    expect(
+      resolveTiersViewState({ isLoading: false, isError: true, isCacheUncomputed: false, playersCount: 0 }),
+    ).toBe('error');
+  });
+
+  it('reports an uncomputed FORGE cache as unavailable, distinct from a genuinely empty ranking', () => {
+    expect(
+      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: true, playersCount: 0 }),
+    ).toBe('unavailable');
+  });
+
+  it('reports zero players with no error/uncomputed signal as a genuinely empty result', () => {
+    expect(
+      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 0 }),
+    ).toBe('empty');
+  });
+
+  it('reports data once players are present and nothing else is wrong', () => {
+    expect(
+      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 12 }),
+    ).toBe('data');
   });
 });

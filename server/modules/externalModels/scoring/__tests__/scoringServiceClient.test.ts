@@ -110,6 +110,44 @@ describe('ScoringServiceClient', () => {
     ).rejects.toMatchObject<Partial<ScoringServiceIntegrationError>>({ code: 'invalid_payload' });
   });
 
+  it.each([
+    ['missing entirely', {}],
+    ['null', { items: null }],
+    ['a non-array value', { items: 'garbage' }],
+  ])('rejects with invalid_payload when the weekly rankings collection is %s', async (_label, viewOverrides) => {
+    // Missing/null/non-array items must be malformed data (invalid_payload), not a
+    // genuine empty ranking — collapsing the two would render a broken upstream response
+    // as "0 players" instead of surfacing as an error.
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        data: { view: { asOf: '2026-04-12T00:00:00.000Z', ...viewOverrides } },
+      }),
+    });
+
+    const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
+
+    await expect(
+      client.getWeeklyRankings({ leagueContext: { season: 2025, week: 9 }, players: [] }),
+    ).rejects.toMatchObject<Partial<ScoringServiceIntegrationError>>({ code: 'invalid_payload' });
+  });
+
+  it('treats an explicit empty items array as a genuine empty result, not an error', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        data: { view: { asOf: '2026-04-12T00:00:00.000Z', items: [] } },
+      }),
+    });
+
+    const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
+    const result = await client.getWeeklyRankings({ leagueContext: { season: 2025, week: 9 }, players: [] });
+
+    expect(result.items).toEqual([]);
+  });
+
   it('falls back to default timeout when env timeout is non-numeric', () => {
     const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test', timeoutMs: Number('5s') as any });
     expect(client.getConfig().timeoutMs).toBe(5000);

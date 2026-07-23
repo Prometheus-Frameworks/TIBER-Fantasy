@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Crown, Info, RefreshCw, TrendingDown, TrendingUp, Minus, AlertTriangle } from 'lucide-react';
@@ -7,7 +7,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
-import { Position, RankingsV2Item, resolveRankingsSourceView } from './tiberTiersV2Mapper';
+import {
+  Position,
+  RankingsV2Item,
+  resolveRankingsSourceView,
+  resolveTiersHeadline,
+  resolveTiersViewState,
+  TIERS_GENERIC_ERROR_MESSAGE,
+  TIERS_LOADING_LABEL,
+} from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -79,6 +87,14 @@ export default function TiberTiers() {
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
+  const viewState = resolveTiersViewState({ isLoading, isError, isCacheUncomputed, playersCount: players.length });
+  const showMetaLine = viewState === 'data' || viewState === 'empty';
+
+  useEffect(() => {
+    // The technical failure detail is for developers, not end users — log it here instead
+    // of rendering it, so the UI's error copy stays generic while debugging stays possible.
+    if (isError) console.error('[TiberTiers] weekly rankings request failed:', error);
+  }, [isError, error]);
 
   return (
     <TooltipProvider>
@@ -91,7 +107,7 @@ export default function TiberTiers() {
                 Tiber Tiers
               </h1>
               <p className="text-slate-400 mt-1 text-sm md:text-base">
-                Canonical FORGE Alpha ranks ({season}, through week {asOfWeek}).
+                {resolveTiersHeadline(sourceView.layer)} ({season}, through week {asOfWeek}).
               </p>
             </div>
             <Button
@@ -125,29 +141,29 @@ export default function TiberTiers() {
               className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-900 text-slate-300 border border-slate-700"
               data-testid="toggle-sort-alpha"
             >
-              Alpha {sortDirection === 'desc' ? '↓' : '↑'}
+              {sourceView.expectedLabel} {sortDirection === 'desc' ? '↓' : '↑'}
             </button>
           </div>
 
-          <div className="text-xs text-slate-400 flex items-center gap-2 mb-4">
-            <Info className="h-3.5 w-3.5" />
-            <span>{players.length} players</span>
-            {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
-            {!isError && !isLoading && data && <span>• Source: {sourceView.sourceNote}</span>}
-          </div>
+          {showMetaLine && (
+            <div className="text-xs text-slate-400 flex items-center gap-2 mb-4">
+              <Info className="h-3.5 w-3.5" />
+              <span>{players.length} players</span>
+              {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
+              <span>• Source: {sourceView.sourceNote}</span>
+            </div>
+          )}
 
           <div className="bg-[#141824] border border-gray-800 rounded-xl overflow-hidden">
-            {isLoading ? (
-              <div className="p-10 text-center text-slate-400">Loading FORGE tiers...</div>
-            ) : isError ? (
+            {viewState === 'loading' ? (
+              <div className="p-10 text-center text-slate-400">{TIERS_LOADING_LABEL}</div>
+            ) : viewState === 'error' ? (
               <div className="p-10 text-center">
                 <div className="flex items-center justify-center gap-2 text-lg font-semibold text-red-400 mb-2">
                   <AlertTriangle className="h-5 w-5" />
                   Unable to load rankings
                 </div>
-                <p className="text-slate-400 text-sm">
-                  {error instanceof Error ? error.message : 'The rankings request failed. This is an error, not an empty result.'}
-                </p>
+                <p className="text-slate-400 text-sm">{TIERS_GENERIC_ERROR_MESSAGE}</p>
                 <Button
                   variant="outline"
                   onClick={() => refetch()}
@@ -157,14 +173,14 @@ export default function TiberTiers() {
                   Retry
                 </Button>
               </div>
-            ) : isCacheUncomputed ? (
+            ) : viewState === 'unavailable' ? (
               <div className="p-10 text-center">
                 <div className="text-lg font-semibold text-amber-300 mb-2">FORGE grades are being computed...</div>
                 <p className="text-slate-400 text-sm">
                   {data?.trust?.sampleNote ?? 'Please run POST /api/forge/compute-grades and refresh this page.'}
                 </p>
               </div>
-            ) : players.length === 0 ? (
+            ) : viewState === 'empty' ? (
               <div className="p-10 text-center text-slate-400">No players match this filter yet.</div>
             ) : (
               <div className="overflow-x-auto">
