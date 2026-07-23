@@ -3,6 +3,7 @@ import {
   resolveRankingsSourceView,
   resolveTiersHeadline,
   resolveTiersViewState,
+  validateRankingsV2WeeklyResponse,
 } from '../tiberTiersV2Mapper';
 
 describe('mapRankingsV2ItemsToTiersPlayers', () => {
@@ -194,5 +195,28 @@ describe('resolveTiersViewState', () => {
     expect(
       resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 12 }),
     ).toBe('data');
+  });
+});
+
+describe('validateRankingsV2WeeklyResponse', () => {
+  const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
+
+  it('accepts a well-formed response, including an explicit empty items array as a genuine result', () => {
+    expect(validateRankingsV2WeeklyResponse(wellFormed)).toEqual(wellFormed);
+  });
+
+  it.each([
+    ['a non-object payload', 'not-json'],
+    ['null', null],
+    ['an array instead of an object', []],
+    ['missing items entirely', { ...wellFormed, items: undefined }],
+    ['a null items value', { ...wellFormed, items: null }],
+    ['a non-array items value', { ...wellFormed, items: 'garbage' }],
+    ['missing sourceStack entirely', { ...wellFormed, sourceStack: undefined }],
+    ['a non-array sourceStack value', { ...wellFormed, sourceStack: 'garbage' }],
+    ['a missing asOf', { ...wellFormed, asOf: undefined }],
+    ['an invalid asOf', { ...wellFormed, asOf: 'not-a-real-timestamp' }],
+  ])('throws for %s — a 2xx body must not silently become a genuine empty result', (_label, payload) => {
+    expect(() => validateRankingsV2WeeklyResponse(payload)).toThrow();
   });
 });

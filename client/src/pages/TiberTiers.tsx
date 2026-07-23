@@ -13,13 +13,14 @@ import {
   resolveRankingsSourceView,
   resolveTiersHeadline,
   resolveTiersViewState,
+  validateRankingsV2WeeklyResponse,
   TIERS_GENERIC_ERROR_MESSAGE,
   TIERS_LOADING_LABEL,
 } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
 
-interface TiersApiResponse {
+export interface TiersApiResponse {
   asOf: string;
   sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
@@ -46,32 +47,36 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
   return <Minus className="h-4 w-4 text-slate-500" />;
 }
 
-export default function TiberTiers() {
-  // Rankings surface status: CANONICAL (current public rankings UI).
-  // Rankings v2 migration note: future public ranking payloads should align to
-  // server/contracts/rankingsV2.ts through /api/rankings/v2/weekly.
-  const [position, setPosition] = useState<Position>('WR');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const { currentWeek, season } = useCurrentNFLWeek();
-  const asOfWeek = currentWeek || 17;
+export interface TiberTiersViewProps {
+  season: number;
+  asOfWeek: number;
+  position: Position;
+  onPositionChange: (position: Position) => void;
+  sortDirection: SortDirection;
+  onToggleSortDirection: () => void;
+  data: TiersApiResponse | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  onRefetch: () => void;
+}
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
-    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
-    queryFn: async () => {
-      const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        // Malformed/failed upstream responses must surface as a genuine error, not
-        // silently resolve into an empty rankings list that renders as "no players".
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? `Failed to fetch weekly rankings (HTTP ${res.status}).`);
-      }
-      return res.json();
-    },
-    staleTime: 60_000,
-    retry: 1,
-  });
-
+// The presentational half of /tiers: all rendering/state-resolution logic lives here so it
+// can be exercised directly in tests without a live network request, QueryClient, or router —
+// TiberTiers (below) owns only the data fetching and wires its result into this component.
+export function TiberTiersView({
+  season,
+  asOfWeek,
+  position,
+  onPositionChange,
+  sortDirection,
+  onToggleSortDirection,
+  data,
+  isLoading,
+  isError,
+  isFetching,
+  onRefetch,
+}: TiberTiersViewProps) {
   const players = useMemo(() => {
     const list = [...(data?.items ?? [])];
     list.sort((a, b) => {
@@ -90,12 +95,6 @@ export default function TiberTiers() {
   const viewState = resolveTiersViewState({ isLoading, isError, isCacheUncomputed, playersCount: players.length });
   const showMetaLine = viewState === 'data' || viewState === 'empty';
 
-  useEffect(() => {
-    // The technical failure detail is for developers, not end users — log it here instead
-    // of rendering it, so the UI's error copy stays generic while debugging stays possible.
-    if (isError) console.error('[TiberTiers] weekly rankings request failed:', error);
-  }, [isError, error]);
-
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-[#0a0e1a] text-white p-4 md:p-8">
@@ -112,7 +111,7 @@ export default function TiberTiers() {
             </div>
             <Button
               variant="outline"
-              onClick={() => refetch()}
+              onClick={onRefetch}
               disabled={isFetching}
               className="border-slate-700 bg-slate-900/60"
               data-testid="refresh-tiers"
@@ -126,7 +125,7 @@ export default function TiberTiers() {
             {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
               <button
                 key={pos}
-                onClick={() => setPosition(pos)}
+                onClick={() => onPositionChange(pos)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   position === pos ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                 }`}
@@ -137,7 +136,7 @@ export default function TiberTiers() {
             ))}
 
             <button
-              onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              onClick={onToggleSortDirection}
               className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-900 text-slate-300 border border-slate-700"
               data-testid="toggle-sort-alpha"
             >
@@ -166,7 +165,7 @@ export default function TiberTiers() {
                 <p className="text-slate-400 text-sm">{TIERS_GENERIC_ERROR_MESSAGE}</p>
                 <Button
                   variant="outline"
-                  onClick={() => refetch()}
+                  onClick={onRefetch}
                   className="mt-4 border-slate-700 bg-slate-900/60"
                   data-testid="retry-tiers"
                 >
@@ -175,10 +174,9 @@ export default function TiberTiers() {
               </div>
             ) : viewState === 'unavailable' ? (
               <div className="p-10 text-center">
-                <div className="text-lg font-semibold text-amber-300 mb-2">FORGE grades are being computed...</div>
-                <p className="text-slate-400 text-sm">
-                  {data?.trust?.sampleNote ?? 'Please run POST /api/forge/compute-grades and refresh this page.'}
-                </p>
+                <div className="text-lg font-semibold text-amber-300 mb-2">Rankings are not available yet</div>
+                {/* Public, read-only copy only — no operator/admin mutation instructions here. */}
+                <p className="text-slate-400 text-sm">FORGE grades for this filter have not been computed yet. Please check back shortly.</p>
               </div>
             ) : viewState === 'empty' ? (
               <div className="p-10 text-center text-slate-400">No players match this filter yet.</div>
@@ -244,5 +242,57 @@ export default function TiberTiers() {
         </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+export default function TiberTiers() {
+  // Rankings surface status: CANONICAL (current public rankings UI).
+  // Rankings v2 migration note: future public ranking payloads should align to
+  // server/contracts/rankingsV2.ts through /api/rankings/v2/weekly.
+  const [position, setPosition] = useState<Position>('WR');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const { currentWeek, season } = useCurrentNFLWeek();
+  const asOfWeek = currentWeek || 17;
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
+    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
+    queryFn: async () => {
+      const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        // Malformed/failed upstream responses must surface as a genuine error, not
+        // silently resolve into an empty rankings list that renders as "no players".
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Failed to fetch weekly rankings (HTTP ${res.status}).`);
+      }
+      // A 2xx status does not guarantee a well-formed body — validate before handing it
+      // to the UI, so a malformed successful response also throws into the error state
+      // instead of silently rendering as a genuine empty ranking.
+      return validateRankingsV2WeeklyResponse(await res.json()) as unknown as TiersApiResponse;
+    },
+    staleTime: 60_000,
+    retry: 1,
+  });
+
+  useEffect(() => {
+    // The technical failure detail is for developers, not end users — log it here instead
+    // of rendering it, so the UI's error copy stays generic while debugging stays possible.
+    if (isError) console.error('[TiberTiers] weekly rankings request failed:', error);
+  }, [isError, error]);
+
+  return (
+    <TiberTiersView
+      season={season}
+      asOfWeek={asOfWeek}
+      position={position}
+      onPositionChange={setPosition}
+      sortDirection={sortDirection}
+      onToggleSortDirection={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+      data={data}
+      isLoading={isLoading}
+      isError={isError}
+      isFetching={isFetching}
+      onRefetch={() => refetch()}
+    />
   );
 }

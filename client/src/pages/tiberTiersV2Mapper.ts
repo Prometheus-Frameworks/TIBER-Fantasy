@@ -110,6 +110,40 @@ export function resolveRankingsSourceView(sourceStack: RankingsSourceStackItem[]
   };
 }
 
+export interface RankingsV2WeeklyResponseShape {
+  asOf: string;
+  sourceStack: RankingsSourceStackItem[];
+  items: unknown[];
+  [key: string]: unknown;
+}
+
+// A 2xx HTTP response is not the same thing as a well-formed one. Without this check,
+// `data?.items ?? []` at the call site would quietly turn a malformed body (`{}`, `null`,
+// `{ items: null }`, etc.) into "0 players" — indistinguishable from a genuine empty
+// ranking. Throwing here routes malformed successful responses into the query's error
+// state instead. Only an explicit, well-formed `items: []` is a genuine empty result.
+export function validateRankingsV2WeeklyResponse(payload: unknown): RankingsV2WeeklyResponseShape {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new Error('Rankings response was not a JSON object.');
+  }
+
+  const record = payload as Record<string, unknown>;
+
+  if (!Array.isArray(record.items)) {
+    throw new Error('Rankings response is missing a valid items array.');
+  }
+
+  if (!Array.isArray(record.sourceStack)) {
+    throw new Error('Rankings response is missing a valid sourceStack array.');
+  }
+
+  if (typeof record.asOf !== 'string' || Number.isNaN(new Date(record.asOf).getTime())) {
+    throw new Error('Rankings response is missing a valid asOf timestamp.');
+  }
+
+  return record as RankingsV2WeeklyResponseShape;
+}
+
 // Neutral until a response actually tells us which layer produced the rows — the page
 // must not assert "FORGE Alpha" while data is still loading or a request has failed.
 export const TIERS_LOADING_LABEL = 'Loading rankings...';

@@ -289,7 +289,7 @@ export function createRankingsV2Router(): Router {
             source: 'forge cache confidence + trajectory metadata',
             asOf: toIso(cache.computedAt),
             notes: isCacheEmpty
-              ? 'FORGE grades not yet computed for this filter; operator action available.'
+              ? 'FORGE grades not yet computed for this filter.'
               : cache.computedAt
                 ? 'Freshness derived from cache computedAt.'
                 : 'No cache timestamp; using current server time as asOf fallback.',
@@ -304,9 +304,9 @@ export function createRankingsV2Router(): Router {
             : cache.computedAt
               ? 'Freshness based on forge cache computedAt.'
               : 'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
-          sampleNote: isCacheEmpty
-            ? 'Run POST /api/forge/compute-grades to generate cache rows, then refresh /tiers.'
-            : null,
+          // Public, read-only copy only — operator mutation instructions (e.g. which
+          // endpoint recomputes grades) belong in operator/admin diagnostics, not here.
+          sampleNote: isCacheEmpty ? 'FORGE grades for this filter have not been computed yet. Please check back shortly.' : null,
           stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
       };
