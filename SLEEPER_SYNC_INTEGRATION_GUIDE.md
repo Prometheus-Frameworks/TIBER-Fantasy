@@ -1,6 +1,13 @@
 # Sleeper API Integration Guide
 **Complete Implementation Package for On The Clock (TIBER) Fantasy Football Platform**
 
+> [!IMPORTANT]
+> **Historical onboarding guide.** Do not build the current integration from
+> the file paths below. The active implementation is
+> `server/integrations/sleeperClient.ts` with
+> `server/routes/sleeperSyncV2Routes.ts`. Confirm current contracts and routes
+> before making changes.
+
 ---
 
 ## Overview

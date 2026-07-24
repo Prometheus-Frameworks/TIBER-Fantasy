@@ -1,6 +1,12 @@
 # FOLLOW-UP DIAGNOSTIC RESULTS
 ## Critical Issues Identified - Sleeper + NFLfastR Focus
 
+> [!WARNING]
+> **Historical incident record.** The job timestamp captured in this report is
+> from 2025-10-08. It does not describe current service health. Re-run current
+> diagnostics and inspect the active adapter architecture before acting on any
+> finding or “immediate action” below.
+
 ---
 
 ## 1. SCHEMA DRIFT ERROR ❌ CRITICAL

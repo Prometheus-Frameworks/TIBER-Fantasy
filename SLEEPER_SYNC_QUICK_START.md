@@ -1,6 +1,13 @@
 # Sleeper Sync Quick Start
 **30-Minute Integration Guide**
 
+> [!IMPORTANT]
+> **Historical onboarding guide.** Do not build the current integration from
+> the file paths below. The active implementation is
+> `server/integrations/sleeperClient.ts` with
+> `server/routes/sleeperSyncV2Routes.ts`. Confirm current contracts and routes
+> before making changes.
+
 ## 🚀 Fastest Path to Live Sleeper Data
 
 ### 1. Install Dependencies (2 minutes)

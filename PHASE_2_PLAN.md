@@ -1,8 +1,16 @@
 # Phase 2 Metrics Implementation Plan
 
-**Status**: Ready to Start
+**Status**: Partially shipped — Categories 1, 2, and 4 are implemented; the
+Category 3 game-script metrics remain planned
 **Created**: 2026-01-06
 **Prerequisites**: ✅ Phase 1 Complete (22 metrics added)
+
+> [!NOTE]
+> This is a historical implementation plan, not the current product roadmap.
+> Current schema and ETL code contain the red-zone, down-and-distance, and
+> two-minute/hurry-up fields described below. The game-script fields beginning
+> with `trailingSnaps`, `leadingSnaps`, and `neutralSnaps` are not present on
+> current `main`; retain that section as unimplemented planning context.
 
 ---
 
