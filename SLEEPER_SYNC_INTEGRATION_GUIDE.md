@@ -3,10 +3,13 @@
 
 > [!IMPORTANT]
 > **Historical onboarding guide.** Do not build the current integration from
-> the file paths below. The active implementation is
-> `server/integrations/sleeperClient.ts` with
-> `server/routes/sleeperSyncV2Routes.ts`. Confirm current contracts and routes
-> before making changes.
+> the file paths below. The user-facing league connection runs from
+> `client/src/components/SyncLeagueModal.tsx` through
+> `POST /api/league-sync/sleeper` to
+> `server/routes/leagueSyncRoutes.ts`. The separate
+> `server/routes/sleeperSyncV2Routes.ts` surface provides manual roster
+> synchronization and ownership analytics. Confirm current contracts and
+> routes before making changes.
 
 ---
 
