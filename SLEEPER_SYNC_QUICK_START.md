@@ -3,10 +3,11 @@
 
 > [!IMPORTANT]
 > **Historical onboarding guide.** Do not build the current integration from
-> the file paths below. The user-facing league connection runs from
-> `client/src/components/SyncLeagueModal.tsx` through
-> `POST /api/league-sync/sleeper` to
-> `server/routes/leagueSyncRoutes.ts`. The separate
+> the file paths below. `client/src/App.tsx` mounts
+> `client/src/pages/TiberManagementDashboard.tsx`; its visible sync control
+> posts to `POST /api/league-sync/sync`, which
+> `server/routes/leagueSyncRoutes.ts` handles alongside
+> `POST /api/league-sync/sleeper` as an alias. The separate
 > `server/routes/sleeperSyncV2Routes.ts` surface provides manual roster
 > synchronization and ownership analytics. Confirm current contracts and
 > routes before making changes.
