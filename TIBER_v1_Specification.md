@@ -1,6 +1,14 @@
 # TIBER v1 Specification
 **Tactical Index for Breakout Efficiency and Regression**
 
+> [!IMPORTANT]
+> **Superseded historical specification.** The service described here was
+> implemented, and its `/api/tiber/*` routes are now deprecated with a
+> 2026-09-01 sunset target. Current consumers should use `/api/v1/*` and the
+> scoring adapters under `server/modules/externalModels/scoring/`. Preserve
+> this document as design history; do not use it as current implementation
+> guidance.
+
 ---
 
 ## Overview

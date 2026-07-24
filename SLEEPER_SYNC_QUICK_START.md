@@ -1,6 +1,17 @@
 # Sleeper Sync Quick Start
 **30-Minute Integration Guide**
 
+> [!IMPORTANT]
+> **Historical onboarding guide.** Do not build the current integration from
+> the file paths below. `client/src/App.tsx` mounts
+> `client/src/pages/TiberManagementDashboard.tsx`; its visible sync control
+> posts to `POST /api/league-sync/sync`, which
+> `server/routes/leagueSyncRoutes.ts` handles alongside
+> `POST /api/league-sync/sleeper` as an alias. The separate
+> `server/routes/sleeperSyncV2Routes.ts` surface provides manual roster
+> synchronization and ownership analytics. Confirm current contracts and
+> routes before making changes.
+
 ## 🚀 Fastest Path to Live Sleeper Data
 
 ### 1. Install Dependencies (2 minutes)

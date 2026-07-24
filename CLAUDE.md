@@ -121,6 +121,11 @@ Unified resolution across fantasy platforms (Sleeper, ESPN, Yahoo, MySportsFeeds
 - TanStack Query for data fetching/caching
 - shadcn/ui components with Tailwind
 
+The interface is mid-migration to the v2 light system documented in
+`replit.md` and `client/src/index.css`: white/grey surfaces with Ember
+`#e2640d` accents. Legacy dark-navy classes remain in parts of the client, so
+verify the target surface before extending either visual system.
+
 ## External Data Sources
 
 - **Sleeper API**: Player projections, ADP data, league sync
