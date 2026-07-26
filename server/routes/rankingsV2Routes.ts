@@ -195,6 +195,10 @@ export function createRankingsV2Router(): Router {
       });
       const meaningfulInputCount = scoringInputs.filter(hasMeaningfulScoringInputs).length;
       const hasMeaningfulCoverage = meaningfulInputCount >= Math.max(10, Math.floor(scoringInputs.length * 0.6));
+      // Populated whenever the FORGE-cache path below is reached instead of scoring rankings,
+      // so the response can say *why* it is serving FORGE alpha instead of Expected/VORP —
+      // rather than silently presenting one as the other.
+      let scoringFallbackReason: string | null = null;
 
       if (hasMeaningfulCoverage) {
         const scoringRankings = await scoringService.getWeeklyRankings({
@@ -237,10 +241,21 @@ export function createRankingsV2Router(): Router {
           if (parsed.success) {
             return res.json(parsed.data);
           }
+
+          // The scoring service replied ok:true but the payload it produced does not
+          // satisfy our own response contract (e.g. a malformed asOf/score). This is
+          // malformed upstream data, not a genuine empty result — it must be logged as
+          // an error and must not be silently re-presented as FORGE alpha with no trace.
+          scoringFallbackReason = 'invalid_scoring_payload';
+          console.error(
+            `[RankingsV2/Routes] scoring payload failed contract validation, falling back to FORGE cache: ${JSON.stringify(parsed.error.flatten())}`,
+          );
         } else {
+          scoringFallbackReason = scoringRankings.code;
           console.warn(`[RankingsV2/Routes] scoring fallback engaged (${scoringRankings.code}): ${scoringRankings.message}`);
         }
       } else {
+        scoringFallbackReason = 'insufficient_coverage';
         console.info(
           `[RankingsV2/Routes] skipping scoring preference due to limited scoring inputs (${meaningfulInputCount}/${scoringInputs.length}).`,
         );
@@ -262,16 +277,19 @@ export function createRankingsV2Router(): Router {
             layer: 'forge' as const,
             source: 'api/forge/tiers cache (forge_grade_cache)',
             asOf: toIso(cache.computedAt),
+            // score/value below are FORGE alpha/rawAlpha, NOT scoring-service Expected Points/VORP.
+            // scoringFallbackReason records why this layer is serving instead of the scoring service,
+            // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
             notes: isCacheEmpty
-              ? `status=${CACHE_EMPTY_STATUS}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`
-              : `season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
+              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`
+              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
           },
           {
             layer: 'confidence_stability' as const,
             source: 'forge cache confidence + trajectory metadata',
             asOf: toIso(cache.computedAt),
             notes: isCacheEmpty
-              ? 'FORGE grades not yet computed for this filter; operator action available.'
+              ? 'FORGE grades not yet computed for this filter.'
               : cache.computedAt
                 ? 'Freshness derived from cache computedAt.'
                 : 'No cache timestamp; using current server time as asOf fallback.',
@@ -286,9 +304,9 @@ export function createRankingsV2Router(): Router {
             : cache.computedAt
               ? 'Freshness based on forge cache computedAt.'
               : 'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
-          sampleNote: isCacheEmpty
-            ? 'Run POST /api/forge/compute-grades to generate cache rows, then refresh /tiers.'
-            : null,
+          // Public, read-only copy only — operator mutation instructions (e.g. which
+          // endpoint recomputes grades) belong in operator/admin diagnostics, not here.
+          sampleNote: isCacheEmpty ? 'FORGE grades for this filter have not been computed yet. Please check back shortly.' : null,
           stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
       };

@@ -125,6 +125,77 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
     expect(mockedCache).toHaveBeenCalled();
+    // The FORGE-cache fallback must be traceable back to *why* it engaged, so a real
+    // scoring-service failure is never indistinguishable from a genuinely empty ranking.
+    const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
+    expect(forgeLayer.notes).toContain('scoringFallbackReason=upstream_unavailable');
+  });
+
+  it('falls back to FORGE cache and traces the reason when the scoring client rejects a malformed rankings collection', async () => {
+    // Simulates scoringServiceClient's normalizeRankings classifying a missing/null/
+    // non-array items collection as invalid_payload (rather than a genuine empty result).
+    mockedScoringService.getWeeklyRankings.mockResolvedValue({
+      ok: false,
+      code: 'invalid_payload',
+      message: 'Scoring service weekly rankings payload is missing an items/rankings array.',
+    } as any);
+    mockedCache.mockResolvedValue({
+      players: [
+        { playerId: '00-0036322', playerName: 'Justin Jefferson', position: 'WR', nflTeam: 'MIN', tier: 'T1', alpha: 90, rawAlpha: 88 },
+      ],
+      computedAt: new Date('2026-04-12T00:00:00.000Z'),
+      asOfWeek: 5,
+    } as any);
+
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+
+    expect(res.status).toBe(200);
+    expect(res.body.items[0].playerName).toBe('Justin Jefferson');
+    const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
+    expect(forgeLayer.notes).toContain('scoringFallbackReason=invalid_payload');
+  });
+
+  it('logs and falls back to FORGE cache when the scoring service returns a schema-invalid payload', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      mockedScoringService.getWeeklyRankings.mockResolvedValue({
+        ok: true,
+        data: {
+          // Not a valid ISO datetime -> fails rankingsV2ResponseSchema's asOf validation.
+          // This is malformed upstream data, not a genuine empty result, and must not be
+          // silently absorbed without a trace.
+          asOf: 'not-a-real-timestamp',
+          items: [
+            {
+              rank: 1,
+              playerId: '00-0036322',
+              playerName: 'Justin Jefferson',
+              team: 'MIN',
+              position: 'WR',
+              expectedPoints: 20.1,
+              vorp: 3.4,
+            },
+          ],
+        },
+      } as any);
+      mockedCache.mockResolvedValue({
+        players: [
+          { playerId: '00-0036322', playerName: 'Justin Jefferson', position: 'WR', nflTeam: 'MIN', tier: 'T1', alpha: 90, rawAlpha: 88 },
+        ],
+        computedAt: new Date('2026-04-12T00:00:00.000Z'),
+        asOfWeek: 5,
+      } as any);
+
+      const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+
+      expect(res.status).toBe(200);
+      expect(res.body.items[0].playerName).toBe('Justin Jefferson');
+      const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
+      expect(forgeLayer.notes).toContain('scoringFallbackReason=invalid_scoring_payload');
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('scoring payload failed contract validation'));
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it('does not prefer scoring rankings when mapped inputs are not meaningful', async () => {
@@ -143,5 +214,7 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Thin Input WR');
     expect(mockedScoringService.getWeeklyRankings).not.toHaveBeenCalled();
+    const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
+    expect(forgeLayer.notes).toContain('scoringFallbackReason=insufficient_coverage');
   });
 });

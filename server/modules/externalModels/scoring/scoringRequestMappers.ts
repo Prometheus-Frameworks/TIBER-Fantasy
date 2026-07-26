@@ -137,7 +137,7 @@ export async function buildRankingsScoringInputs(input: {
       ),
     )
     .groupBy(weeklyStats.playerId)
-    .orderBy(sql`avg(${weeklyStats.fantasy_points_ppr}) desc`)
+    .orderBy(sql`avg(${weeklyStats.fantasyPointsPpr}) desc`)
     .limit(input.limit);
 
   return rows.map((row) => ({
