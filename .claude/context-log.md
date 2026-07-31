@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-07-31 — Codex: Active Node admin route authentication hardening
+- **What changed:** Protected all active Node RAG maintenance routes under `/rag/admin/*` with the existing fail-closed `requireAdminAuth` middleware, required the existing FORGE admin key for `/api/admin/forge/status`, and removed the invalid bare `modules` Python dependency.
+- **Files modified:** `server/routes/ragRoutes.ts`, `server/routes/adminForge.ts`, `requirements.txt`, `server/routes/__tests__/ragAdminAuth.test.ts`, `server/routes/__tests__/adminForgeAuth.test.ts`
+- **Validation:** Focused admin-auth suites passed 11/11; production server build passed with the existing duplicate `applyAdjusters` warning; repository-wide Jest run passed 105 suites and 796 tests, with six pre-existing suite-load failures; `npm run typecheck` remains blocked by broad pre-existing errors outside the touched files; `git diff --check` passed.
+- **Notes:** Rejected RAG ingest tests use no-network sentinels and verify article/index state is unchanged. Public RAG health remains open. Debug week-summary and the inactive legacy Flask RAG server were deliberately untouched.
+
 ### 2026-03-24 — Codex: Production root now serves frontend SPA shell
 - **What changed:** Updated `server/index.ts` production root handling so `GET /` serves `dist/public/index.html` when available, retained `GET /health` JSON health checks, and added an explicit safe JSON fallback when static assets are missing. Added reusable `mountProductionFrontend` helper for production static + SPA fallback wiring.
 - **Files modified:** `server/index.ts`, `server/__tests__/productionRootRouting.test.ts`, `README.md`, `replit.md`, `.claude/context-log.md`, `.claude/agents/codex.md`
