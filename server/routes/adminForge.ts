@@ -83,9 +83,17 @@ router.post('/api/admin/forge/rebuild', async (req: Request, res: Response) => {
 /**
  * GET /api/admin/forge/status
  * 
- * Returns current FORGE data status (no auth required for status check).
+ * Returns current FORGE data status for authorized operators.
  */
 router.get('/api/admin/forge/status', async (req: Request, res: Response) => {
+  if (!isAuthorized(req)) {
+    console.log('[FORGE Admin] Unauthorized status attempt');
+    return res.status(401).json({
+      ok: false,
+      error: 'Unauthorized - invalid or missing X-FORGE-ADMIN-KEY header'
+    });
+  }
+
   try {
     const { db } = await import('../infra/db');
     const { sql } = await import('drizzle-orm');
