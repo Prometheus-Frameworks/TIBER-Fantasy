@@ -14,6 +14,7 @@ import * as cheerio from "cheerio";
 // @ts-ignore
 import bm25Factory from "wink-bm25-text-search";
 import { createHash } from "crypto";
+import { requireAdminAuth } from "../middleware/adminAuth";
 // @ts-ignore
 import { loadLexicon, loadSynonyms, loadTeamSynonyms, enrichText } from "./rag_lexicon_enricher_team.js";
 
@@ -391,6 +392,9 @@ export function createRagRouter() {
       res.status(500).json({ error: e.message });
     }
   });
+
+  // All maintenance routes under /admin fail closed before their handlers run.
+  router.use("/admin", requireAdminAuth);
 
   // admin: ingest
   router.post("/admin/ingest", async (req, res) => {
