@@ -83,3 +83,9 @@ TIBER Management Dashboard is now the first product-shell step toward “sync my
 - Additive `rookieAsset` context can expose Rookie Alpha rank/score, position rank, talent score, consensus delta, and a transaction-safe interpretation string when present upstream.
 - Team Direction counts matched Rookie Alpha assets as Management evidence coverage only. A separate FORGE scoring-coverage gate must pass before roster strength can be classified; Rookie Alpha is never blended into FORGE roster strength, lineup totals, scoring, or rankings.
 - Configure the promoted directory with `ROOKIE_ALPHA_PROMOTED_DIR`; do not depend on TIBER-Rookies runtime routes or `/cards/rookies/*`.
+
+### Management FORGE G6 request-time freshness gate (August 2026)
+- Team Direction evaluates `team_direction_forge_player_static_freshness_v1` on every request from the `FORGE_PLAYER_STATIC_V1` root `generated_at` clock.
+- Evidence is eligible through exactly 45 elapsed UTC days. Warning, stale, unknown, missing, malformed, future, or unavailable states fail closed; `promoted_at` is retained only for diagnostics and cannot refresh eligibility.
+- One versioned receipt drives the classifier and backend diagnostics and is exposed to Management UI and snapshot export. Rejected raw observations remain inspectable but cannot affect FORGE coverage, direction, or confidence.
+- This boundary does not alter artifact bytes, scoring/direction thresholds, databases, auth, or deployment.

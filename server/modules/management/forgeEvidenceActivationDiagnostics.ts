@@ -1,5 +1,5 @@
 /**
- * FORGE evidence activation diagnostics (Phase 4 Slice 4) — citation only.
+ * FORGE evidence activation diagnostics (Phase 4 Slice 4 + W6 G6 enforcement).
  *
  * Implements proposed slice 4 of `docs/product/MANAGEMENT_PHASE4_ACTIVATION_PLAN.md`
  * ("FORGE player-specific evidence — formalize at Level 3 + add citation"). It
@@ -10,9 +10,8 @@
  *   - FORGE player-specific evidence behind the Team Direction read (Level 3).
  *   - FORGE generated-baseline visibility (capped at Level 1).
  *
- * This is *citation/diagnostic formalization only*:
- *   - It does NOT change the Team Direction classifier — no scoring, thresholds,
- *     weighting, confidence, blockers, reasons, or classification inputs.
+ * W6 keeps this output diagnostic/read-only, but its G6 and G7 gates now cite
+ * the same request-time receipt that the classifier enforces:
  *   - It performs no artifact reads and no I/O; it only re-reads diagnostics the
  *     caller already computed.
  *   - Generated baselines stay visibility-only and never count as FORGE scoring,
@@ -32,6 +31,10 @@ import type {
   ForgePlayerStaticArtifactState,
   ForgePlayerStaticScoreSource,
 } from '../externalModels/forge/forgePlayerStaticTypes';
+import {
+  isAcceptedTeamDirectionForgeFreshnessReceipt,
+  type TeamDirectionForgeFreshnessReceiptV1,
+} from './forgeTeamDirectionFreshnessPolicy';
 import {
   evaluateForgeGeneratedBaselineVisibility,
   evaluateForgePlayerSpecificTeamDirection,
@@ -92,6 +95,10 @@ export interface ForgeEvidenceActivationInput {
   } | null;
   /** Player-specific FORGE coverage from the classifier result (already computed). */
   forgeCoverage?: { matched?: number | null; total?: number | null; rate?: number | null } | null;
+  /** The exact request-time G6 receipt consumed by the classifier. */
+  freshnessReceipt?: TeamDirectionForgeFreshnessReceiptV1 | null;
+  /** True only when the caller passed this same receipt into the classifier. */
+  classifierFreshnessEnforced?: boolean;
 }
 
 /** Read-only activation/citation metadata for one FORGE use. */
@@ -126,6 +133,8 @@ export interface ForgeEvidenceActivationDiagnostics {
   };
   /** Coverage counts carried from the existing diagnostics (unchanged). */
   coverage: { matched: number | null; total: number | null; rate: number | null } | null;
+  /** Full W6 receipt retained for backend/operator inspection. */
+  freshnessReceipt: TeamDirectionForgeFreshnessReceiptV1 | null;
   explanation: string;
 }
 
@@ -203,12 +212,10 @@ function deriveGovernance(
 }
 
 function deriveFreshness(
-  forgeArtifact: ForgeEvidenceActivationInput['forgeArtifact'],
+  receipt: TeamDirectionForgeFreshnessReceiptV1 | null | undefined,
 ): boolean | undefined {
-  const status = forgeArtifact?.freshness?.status;
-  if (status === 'fresh') return true;
-  if (status === 'warning' || status === 'stale') return false;
-  return undefined; // 'unknown' / missing → omit, fail closed
+  if (!receipt) return undefined;
+  return isAcceptedTeamDirectionForgeFreshnessReceipt(receipt);
 }
 
 function explainUse(
@@ -229,9 +236,9 @@ function explainUse(
 }
 
 /**
- * Build read-only FORGE evidence activation/citation diagnostics from the FORGE
- * diagnostics already present on the Management route payload. Additive only —
- * it changes nothing about the classifier or its output.
+ * Build read-only FORGE evidence activation/citation diagnostics from the same
+ * W6 receipt enforced by the classifier. This function does not make a second
+ * clock decision and cannot override the classifier.
  */
 export function buildForgeEvidenceActivationDiagnostics(
   input: ForgeEvidenceActivationInput | null | undefined,
@@ -244,7 +251,8 @@ export function buildForgeEvidenceActivationDiagnostics(
   const artifactState = deriveArtifactState(forgeArtifact);
   const contractMatch = deriveContractMatch(forgeArtifact, artifactState);
   const governance = deriveGovernance(forgeArtifact, artifactState);
-  const fresh = deriveFreshness(forgeArtifact);
+  const freshnessReceipt = input?.freshnessReceipt ?? null;
+  const fresh = deriveFreshness(freshnessReceipt);
   const playerSpecificScoreSource = derivePlayerSpecificScoreSource(rosterMatching);
   const generatedBaselineScoreSource = deriveGeneratedBaselineScoreSource(input ?? {});
 
@@ -260,8 +268,9 @@ export function buildForgeEvidenceActivationDiagnostics(
     governance,
     coverage,
     fresh,
-    // The FORGE adapter + Team Direction classifier are proven fail-closed.
-    consumerFailClosed: true,
+    // G7 is asserted only when the route explicitly confirms it passed this
+    // exact receipt through the classifier.
+    consumerFailClosed: input?.classifierFreshnessEnforced,
     // This citation field labels level/provenance/coverage/freshness at the point of use.
     uiLabeled: true,
   };
@@ -319,7 +328,8 @@ export function buildForgeEvidenceActivationDiagnostics(
     coverage: matched !== null || total !== null
       ? { matched, total, rate: finiteOrNull(input?.forgeCoverage?.rate) }
       : null,
+    freshnessReceipt,
     explanation:
-      `FORGE evidence activation is read-only citation metadata: player-specific evidence is cited at Level ${playerSpecific.effectiveLevel} and generated baselines stay visibility-only at Level ${generatedBaseline.effectiveLevel}. This does not change Team Direction scoring, thresholds, or classification.`,
+      `FORGE evidence activation cites the enforced ${freshnessReceipt?.policyId ?? 'missing G6 freshness policy'} receipt: player-specific evidence resolves at Level ${playerSpecific.effectiveLevel} and generated baselines stay visibility-only at Level ${generatedBaseline.effectiveLevel}. Scoring and direction thresholds are unchanged.`,
   };
 }

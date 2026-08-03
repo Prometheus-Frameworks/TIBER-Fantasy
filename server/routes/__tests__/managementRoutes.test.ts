@@ -5,7 +5,11 @@ jest.mock('../../storage', () => ({ storage: {} }));
 import express from 'express';
 import request from 'supertest';
 import { createManagementRouter } from '../managementRoutes';
-import { classifyTeamDirection, type ClassifierOptions } from '../../services/teamDirectionClassifier';
+import {
+  classifyTeamDirection as classifyTeamDirectionWithoutReceipt,
+  type ClassifierOptions,
+} from '../../services/teamDirectionClassifier';
+import { buildTeamDirectionForgeFreshnessReceipt } from '../../modules/management/forgeTeamDirectionFreshnessPolicy';
 
 function buildApp(overrides: Parameters<typeof createManagementRouter>[0]) {
   const app = express();
@@ -25,9 +29,41 @@ function rosterOf(players: { name?: string; pos: string; alpha: number | null; m
     pos: p.pos,
     alpha: p.alpha,
     missingReason: p.missingReason ?? (p.alpha === null ? 'missing_forge_row' : undefined),
-    forgeScoreSource: p.forgeScoreSource,
+    forgeScoreSource: p.forgeScoreSource === undefined && typeof p.alpha === 'number'
+      ? 'player_specific'
+      : p.forgeScoreSource,
     rookieAsset: p.rookieAsset,
   }));
+}
+
+const CLASSIFIER_NOW = new Date('2026-08-01T00:00:00.000Z');
+
+function acceptedReceiptForRoster(roster: ReturnType<typeof rosterOf>) {
+  return buildTeamDirectionForgeFreshnessReceipt({
+    artifact: {
+      state: 'available',
+      available: true,
+      code: null,
+      sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json',
+      contractVersion: 'forge_player_static_v1',
+      generatedAt: '2026-07-31T00:00:00.000Z',
+      generatedAtSource: 'root_generated_at',
+      promotedAt: null,
+    },
+    rosterPlayers: roster,
+    now: CLASSIFIER_NOW,
+  });
+}
+
+function classifyTeamDirection(
+  roster: ReturnType<typeof rosterOf>,
+  picks: any[],
+  options: ClassifierOptions = {},
+) {
+  return classifyTeamDirectionWithoutReceipt(roster, picks, {
+    ...options,
+    forgeFreshnessReceipt: options.forgeFreshnessReceipt ?? acceptedReceiptForRoster(roster),
+  });
 }
 
 describe('classifyTeamDirection (pure unit tests)', () => {
@@ -312,6 +348,158 @@ describe('classifyTeamDirection (pure unit tests)', () => {
     expect(result.coverage).toHaveProperty('matched');
     expect(result.coverage).toHaveProperty('total');
     expect(result.coverage).toHaveProperty('rate');
+    expect(result.classificationAvailable).toBe(false);
+  });
+
+  test('fails closed when the named freshness receipt is missing', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 65 },
+    ]);
+
+    const result = classifyTeamDirectionWithoutReceipt(roster, []);
+
+    expect(result).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      confidence: 'low',
+      forgeCoverage: { matched: 0, total: 4, rate: 0 },
+      confidenceInputs: { scoredPlayers: 0 },
+      classificationFailure: { code: 'forge_freshness_receipt_missing_or_invalid' },
+    });
+    expect(result.reasons).toEqual([]);
+  });
+
+  test('fails closed on an unsupported freshness receipt version', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 65 },
+    ]);
+    const unsupported = {
+      ...acceptedReceiptForRoster(roster),
+      receiptVersion: 'team_direction_forge_player_static_freshness_receipt_v2',
+    } as any;
+
+    const result = classifyTeamDirectionWithoutReceipt(roster, [], { forgeFreshnessReceipt: unsupported });
+
+    expect(result).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      forgeCoverage: { matched: 0, total: 4, rate: 0 },
+      classificationFailure: { code: 'forge_freshness_receipt_missing_or_invalid' },
+    });
+  });
+
+  test.each([
+    ['unavailable artifact', (receipt: ReturnType<typeof acceptedReceiptForRoster>) => ({
+      ...receipt,
+      artifact: { ...receipt.artifact, available: false, state: 'missing' },
+    })],
+    ['future root clock', (receipt: ReturnType<typeof acceptedReceiptForRoster>) => ({
+      ...receipt,
+      clocks: { ...receipt.clocks, generatedAt: '2026-08-02T00:00:00.000Z' },
+    })],
+  ])('fails closed when an accepted-looking receipt has a contradictory %s', (_label, mutate) => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70 },
+      { pos: 'RB', alpha: 68 },
+      { pos: 'WR', alpha: 72 },
+      { pos: 'WR', alpha: 65 },
+    ]);
+    const contradictory = mutate(acceptedReceiptForRoster(roster));
+
+    const result = classifyTeamDirectionWithoutReceipt(roster, [], {
+      forgeFreshnessReceipt: contradictory as any,
+    });
+
+    expect(result).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      confidence: 'low',
+      forgeCoverage: { matched: 0, total: 4, rate: 0 },
+      confidenceInputs: { scoredPlayers: 0 },
+    });
+  });
+
+  test('requires explicit player_specific provenance even when the receipt is fresh', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 70, forgeScoreSource: null },
+      { pos: 'RB', alpha: 68, forgeScoreSource: null },
+      { pos: 'WR', alpha: 72, forgeScoreSource: null },
+      { pos: 'WR', alpha: 65, forgeScoreSource: null },
+    ]);
+
+    const result = classifyTeamDirection(roster, []);
+
+    expect(result).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      confidence: 'low',
+      forgeCoverage: { matched: 0, total: 4, rate: 0 },
+    });
+  });
+
+  test('does not count NaN or Infinity as player-specific FORGE evidence', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: Number.NaN, forgeScoreSource: 'player_specific' },
+      { pos: 'RB', alpha: Number.POSITIVE_INFINITY, forgeScoreSource: 'player_specific' },
+      { pos: 'WR', alpha: 72, forgeScoreSource: 'player_specific' },
+      { pos: 'WR', alpha: null },
+    ]);
+
+    const result = classifyTeamDirection(roster, []);
+
+    expect(result.forgeCoverage).toEqual({ matched: 1, total: 4, rate: 0.25 });
+    expect(result.direction).toBe('uncertain');
+  });
+
+  test('rejects high Alpha rows without leaking them into direction, confidence, or eligible coverage', () => {
+    const roster = rosterOf([
+      { pos: 'QB', alpha: 99 },
+      { pos: 'RB', alpha: 98 },
+      { pos: 'WR', alpha: 97 },
+      { pos: 'WR', alpha: 96 },
+    ]);
+    const rejectedReceipt = buildTeamDirectionForgeFreshnessReceipt({
+      artifact: {
+        state: 'available',
+        available: true,
+        generatedAt: '2026-01-08T00:00:00.000Z',
+        generatedAtSource: 'root_generated_at',
+        promotedAt: null,
+      },
+      rosterPlayers: roster,
+      now: CLASSIFIER_NOW,
+    });
+
+    const result = classifyTeamDirectionWithoutReceipt(roster, [], { forgeFreshnessReceipt: rejectedReceipt });
+
+    expect(result).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      confidence: 'low',
+      forgeCoverage: { matched: 0, total: 4, rate: 0 },
+      visibilityCounts: { forgeScored: 0 },
+      confidenceInputs: {
+        scoredPlayers: 0,
+        scoredPositionCounts: { QB: 0, RB: 0, WR: 0, TE: 0, Other: 0 },
+      },
+      classificationFailure: { code: 'forge_freshness_receipt_rejected', reasonCode: 'root_generated_at_stale' },
+    });
+    expect(result.visibilityCounts.knownUnscored).toBe(4);
+    expect(
+      result.visibilityCounts.forgeScored
+      + result.visibilityCounts.forgeBaseline
+      + result.visibilityCounts.rookieAlphaFallback
+      + result.visibilityCounts.knownUnscored
+      + result.visibilityCounts.unresolved,
+    ).toBe(result.visibilityCounts.total);
+    expect(result.reasons).toEqual([]);
+    expect([...result.reasons, ...result.blockers].join(' ')).not.toContain('99');
   });
 
   test('contender with null QB adds blocker instead of silently passing in 1QB', () => {
@@ -419,10 +607,26 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     context?: Partial<typeof baseContext>;
     roster?: typeof goodRoster;
     picks?: any[];
+    forgeArtifact?: any;
   } = {}) {
     const context = { ...baseContext, ...overrides.context } as typeof baseContext;
     const roster = overrides.roster ?? goodRoster;
     const picks = overrides.picks ?? [];
+    const playerSpecificMatches = roster.filter((player) => player.forgeScoreSource === 'player_specific' && typeof player.alpha === 'number').length;
+    const forgeArtifact = overrides.forgeArtifact ?? {
+      state: 'available',
+      available: true,
+      reason: null,
+      code: null,
+      sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json',
+      contractVersion: 'forge_player_static_v1',
+      generatedAt: '2026-07-31T00:00:00.000Z',
+      generatedAtSource: 'root_generated_at',
+      promotedAt: null,
+      playerSpecificCount: 45,
+      generatedBaselineCount: 14,
+      freshness: { status: 'fresh', ageDays: 1, timestamp: '2026-07-31T00:00:00.000Z', maxAgeDays: 45 },
+    };
     return {
       storage: {
         getUserLeagueContext: jest.fn().mockResolvedValue(context),
@@ -430,9 +634,9 @@ describe('GET /api/management/team-direction (endpoint)', () => {
       } as any,
       computeLeagueDashboard: jest.fn().mockResolvedValue({
         diagnostics: {
-          forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
-          forgeRosterMatching: { rosterCanonicalIdsChecked: roster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
-          rosterVisibility: { total: roster.length, identityCovered: roster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: roster.length, unresolved: 0, evidenceCovered: 0 },
+          forgeArtifact,
+          forgeRosterMatching: { rosterCanonicalIdsChecked: roster.length, rosterCanonicalIdsMatched: playerSpecificMatches, playerSpecificRosterMatches: playerSpecificMatches, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: [], sampleMatchedCanonicalIds: ['p1'] },
+          rosterVisibility: { total: roster.length, identityCovered: roster.length, baselineVisible: 0, forgeScored: playerSpecificMatches, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: roster.length - playerSpecificMatches, unresolved: 0, evidenceCovered: playerSpecificMatches },
           strategyOntologyArtifact: {
             state: 'available',
             available: true,
@@ -467,6 +671,7 @@ describe('GET /api/management/team-direction (endpoint)', () => {
         ],
       }),
       classifyTeamDirection,
+      now: () => CLASSIFIER_NOW,
     };
   }
 
@@ -503,7 +708,7 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(res.body.evidenceCoverage).toHaveProperty('rate');
     expect(res.body.forgeCoverage).toHaveProperty('rate');
     expect(res.body.forgeDiagnostics).toEqual(expect.objectContaining({
-      artifact: expect.objectContaining({ state: 'missing', available: false }),
+      artifact: expect.objectContaining({ state: 'available', available: true }),
       rosterMatching: expect.objectContaining({ rosterCanonicalIdsChecked: goodRoster.length }),
       strategyOntology: expect.objectContaining({
         available: true,
@@ -521,6 +726,14 @@ describe('GET /api/management/team-direction (endpoint)', () => {
       evidenceCoverage: expect.objectContaining({ rate: expect.any(Number) }),
       scoredPositionCounts: expect.any(Object),
     }));
+    expect(res.body).toMatchObject({
+      classificationAvailable: true,
+      forge_freshness_receipt: {
+        policyId: 'team_direction_forge_player_static_freshness_v1',
+        decision: 'accepted',
+        status: 'fresh',
+      },
+    });
     expect(res.body.strategy_template_diagnostics).toMatchObject({
       available: true,
       template_selection_enabled: false,
@@ -565,7 +778,7 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(JSON.stringify(activation)).not.toMatch(/\{\{|\}\}/);
   });
 
-  test('exposes additive read-only forge_evidence_activation citation without changing classification', async () => {
+  test('uses the enforced G6 receipt in read-only forge_evidence_activation diagnostics', async () => {
     const app = buildApp(makeDeps());
     const res = await request(app).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
     expect(res.status).toBe(200);
@@ -576,15 +789,15 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(forgeActivation.readOnly).toBe(true);
     expect(forgeActivation.playerSpecific.useId).toBe('forge_player_specific.team_direction_classification');
     expect(forgeActivation.generatedBaseline.useId).toBe('forge_generated_baseline.visibility');
-    // Artifact is missing in this fixture → player-specific evidence fails closed.
-    expect(forgeActivation.playerSpecific.effectiveLevel).toBe(0);
-    expect(forgeActivation.playerSpecific.failedGates).toContain('G1');
+    expect(forgeActivation.playerSpecific.effectiveLevel).toBe(3);
+    expect(forgeActivation.playerSpecific.failedGates).not.toContain('G6');
+    expect(forgeActivation.freshnessReceipt).toEqual(res.body.forge_freshness_receipt);
     // Generated baselines are never promoted to evidence.
     expect(forgeActivation.generatedBaseline.effectiveLevel).toBeLessThan(3);
     expect(res.body.forgeDiagnostics.forgeEvidenceActivation).toEqual(forgeActivation);
 
-    // Existing classification output is unchanged and untouched by the citation.
-    expect(['contender', 'rebuild', 'retool', 'uncertain']).toContain(res.body.direction);
+    expect(res.body.classificationAvailable).toBe(true);
+    expect(['contender', 'rebuild', 'retool']).toContain(res.body.direction);
     expect(res.body.forgeCoverage).toHaveProperty('rate');
     // Slice 3 diagnostics remain present and unchanged.
     expect(res.body.strategy_context_activation).toBeDefined();
@@ -593,20 +806,101 @@ describe('GET /api/management/team-direction (endpoint)', () => {
     expect(JSON.stringify(forgeActivation).toLowerCase()).not.toMatch(/\brecommend|\badvis|you should|trade away/);
   });
 
+  test('recomputes stale cached evidence per request and fails Team Direction closed', async () => {
+    const deps = makeDeps({
+      forgeArtifact: {
+        state: 'available',
+        available: true,
+        reason: null,
+        code: null,
+        sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json',
+        contractVersion: 'forge_player_static_v1',
+        generatedAt: '2026-01-08T00:00:00.000Z',
+        generatedAtSource: 'root_generated_at',
+        promotedAt: '2026-07-31T00:00:00.000Z',
+        // Cached generic metadata deliberately disagrees with the named policy.
+        freshness: { status: 'fresh', ageDays: 1, timestamp: '2026-07-31T00:00:00.000Z', maxAgeDays: 45 },
+        playerSpecificCount: 45,
+        generatedBaselineCount: 14,
+      },
+    });
+    const res = await request(buildApp(deps)).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      available: true,
+      classificationAvailable: false,
+      direction: 'uncertain',
+      confidence: 'low',
+      forgeCoverage: { matched: 0, total: goodRoster.length, rate: 0 },
+      confidenceInputs: { scoredPlayers: 0 },
+      classificationFailure: {
+        code: 'forge_freshness_receipt_rejected',
+        reasonCode: 'root_generated_at_stale',
+      },
+      forge_freshness_receipt: {
+        decision: 'rejected',
+        status: 'stale',
+        reasonCode: 'root_generated_at_stale',
+        clocks: { promotedAtCanRefreshClock: false },
+        evidence: {
+          observedPlayerSpecificRows: goodRoster.length,
+          eligiblePlayerSpecificRows: 0,
+          rejectedPlayerSpecificRows: goodRoster.length,
+        },
+      },
+    });
+    expect(res.body.reasons).toEqual([]);
+    expect(res.body.forge_evidence_activation.playerSpecific.failedGates).toContain('G6');
+    expect(res.body.forge_evidence_activation.freshnessReceipt).toEqual(res.body.forge_freshness_receipt);
+    expect(res.body.forge_freshness_receipt.conflicts).toEqual(expect.arrayContaining([
+      'warn_only_freshness_disagrees_with_named_policy',
+      'promoted_at_present_but_ineligible_to_refresh_clock',
+    ]));
+  });
+
+  test('preserves the same rejected receipt in backend diagnostics when dashboard diagnostics are absent', async () => {
+    const deps = makeDeps();
+    const baseDashboardPayload = await deps.computeLeagueDashboard({} as any);
+    deps.computeLeagueDashboard = jest.fn().mockResolvedValue({
+      ...baseDashboardPayload,
+      diagnostics: undefined,
+    });
+
+    const res = await request(buildApp(deps)).get('/api/management/team-direction?user_id=default_user&league_id=league-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      classificationAvailable: false,
+      direction: 'uncertain',
+      forge_freshness_receipt: {
+        decision: 'rejected',
+        status: 'unknown',
+        reasonCode: 'artifact_unavailable',
+      },
+      forge_evidence_activation: {
+        playerSpecific: { failedGates: expect.arrayContaining(['G6']) },
+      },
+      forgeDiagnostics: {
+        artifact: null,
+        forgeFreshnessReceipt: { decision: 'rejected', status: 'unknown' },
+      },
+    });
+    expect(res.body.forge_evidence_activation.freshnessReceipt).toEqual(res.body.forge_freshness_receipt);
+    expect(res.body.forgeDiagnostics.forgeEvidenceActivation.freshnessReceipt).toEqual(res.body.forge_freshness_receipt);
+  });
+
   test('strategy ontology diagnostics do not change Management classification output', async () => {
     const depsWithOntology = makeDeps();
     const depsWithoutOntology = makeDeps();
+    const baseDashboardPayload = await depsWithoutOntology.computeLeagueDashboard({} as any);
     depsWithoutOntology.computeLeagueDashboard = jest.fn().mockResolvedValue({
+      ...baseDashboardPayload,
       diagnostics: {
-        forgeArtifact: { state: 'missing', available: false, reason: 'missing artifact', code: 'not_found', sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json' },
-        forgeRosterMatching: { rosterCanonicalIdsChecked: goodRoster.length, rosterCanonicalIdsMatched: 0, playerSpecificRosterMatches: 0, generatedBaselineRosterMatches: 0, sampleUnmatchedCanonicalIds: ['p1'], sampleMatchedCanonicalIds: [] },
-        rosterVisibility: { total: goodRoster.length, identityCovered: goodRoster.length, baselineVisible: 0, forgeScored: 0, forgeBaseline: 0, generatedBaselineVisibility: 0, rookieAlphaFallback: 0, knownUnscored: goodRoster.length, unresolved: 0, evidenceCovered: 0 },
+        ...baseDashboardPayload.diagnostics,
         strategyOntologyArtifact: { available: false, state: 'missing', reason: 'missing artifact', artifactType: null, contractVersion: null, modelVersion: null, generatedAt: null, futureContractInputs: [], archetypeAssignmentEnabled: false, templateSelectionEnabled: false },
         strategyOntologyTemplates: [],
       },
-      teams: [
-        { team_id: 'team-1', display_name: 'Test Team', roster: goodRoster, totals: {}, overall_total: 0 },
-      ],
     });
 
     const withRes = await request(buildApp(depsWithOntology)).get('/api/management/team-direction?user_id=default_user&league_id=league-1');

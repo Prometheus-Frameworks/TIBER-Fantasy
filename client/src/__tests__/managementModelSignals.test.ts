@@ -6,9 +6,11 @@ import {
   buildRosterVisibilitySummary,
   buildActiveTeamMatchingSummary,
   buildManagementSnapshotExport,
+  effectiveTeamDirectionVerdict,
   buildTeamstateMovementActivationFromResponse,
   mapTeamstateMovementResponseToActivationInput,
   type ModelSignalCard,
+  type TeamDirectionForgeFreshnessReceipt,
 } from '@/pages/TiberManagementDashboard';
 import { buildTeamstateMovementActivationDiagnostics } from '@shared/teamstateMovementActivationDiagnostics';
 import type { TeamEnvironmentMovementResponse } from '@/lib/teamEnvironmentMovement';
@@ -17,6 +19,55 @@ function signal(cards: ModelSignalCard[], title: string): ModelSignalCard {
   const found = cards.find((card) => card.title === title);
   if (!found) throw new Error(`Missing signal card: ${title}`);
   return found;
+}
+
+function forgeFreshnessReceipt(
+  observedPlayerSpecificRows: number,
+  overrides: Partial<TeamDirectionForgeFreshnessReceipt> = {},
+): TeamDirectionForgeFreshnessReceipt {
+  return {
+    receiptVersion: 'team_direction_forge_player_static_freshness_receipt_v1',
+    policyId: 'team_direction_forge_player_static_freshness_v1',
+    useId: 'forge_player_specific.team_direction_classification',
+    decision: 'accepted',
+    status: 'fresh',
+    reasonCode: 'accepted_fresh',
+    clocks: {
+      clockSource: 'root.generated_at',
+      generatedAtSource: 'root_generated_at',
+      evaluatedAt: '2026-06-09T00:00:00.000Z',
+      generatedAt: '2026-06-08T00:00:00.000Z',
+      promotedAt: null,
+      promotedAtCanRefreshClock: false,
+      acceptedThrough: '2026-07-23T00:00:00.000Z',
+      ageSeconds: 86400,
+      ageDays: 1,
+      maximumAgeDays: 45,
+      boundary: 'elapsed_utc_time',
+    },
+    artifact: {
+      state: 'available',
+      available: true,
+      sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json',
+      contractVersion: 'forge_player_static_v1',
+      warnOnlyFreshnessStatus: 'fresh',
+    },
+    provenance: {
+      requiredScoreSource: 'player_specific',
+      explicitPlayerSpecificRequired: true,
+    },
+    evidence: {
+      rosterTotal: 30,
+      observedForgeRows: observedPlayerSpecificRows,
+      observedPlayerSpecificRows,
+      eligiblePlayerSpecificRows: observedPlayerSpecificRows,
+      rejectedPlayerSpecificRows: 0,
+      rows: [],
+    },
+    gaps: [],
+    conflicts: [],
+    ...overrides,
+  };
 }
 
 
@@ -197,6 +248,8 @@ describe('Management model signal cards', () => {
       teamstateQueryState: 'success',
       teamstateResponse: teamStateResponse(),
       teamstateDetails: ['Provenance status: governed_promoted.'],
+      forgeFreshnessReceipt: forgeFreshnessReceipt(2),
+      freshnessEvaluatedAtMs: Date.parse('2026-06-09T00:00:00.000Z'),
     });
 
     expect(signal(cards, 'FORGE')).toMatchObject({
@@ -204,9 +257,10 @@ describe('Management model signal cards', () => {
       statusLabel: 'Partial',
     });
     expect(signal(cards, 'FORGE').details).toEqual(expect.arrayContaining([
-      'Player-specific FORGE coverage: 2/4.',
+      'Eligible player-specific FORGE coverage: 2/4.',
+      'Observed raw player-specific rows: 2/4.',
       'Generated/default FORGE baselines excluded from coverage: 0/4.',
-      'FORGE alpha totals: available.',
+      'FORGE alpha totals: eligible.',
       'Team Direction confidence still uses FORGE scoring coverage, not fallback visibility.',
     ]));
     expect(signal(cards, 'Rookie Alpha')).toMatchObject({
@@ -215,8 +269,63 @@ describe('Management model signal cards', () => {
     });
     expect(signal(cards, 'Rookie Alpha').details).toEqual(expect.arrayContaining([
       'Fallback count: 1/4.',
-      'Evidence-covered roster rows: 3/4.',
+      'Eligible evidence-covered roster rows: 3/4.',
     ]));
+  });
+
+  it('marks stale FORGE rows as diagnostic-only with zero eligible coverage', () => {
+    const staleReceipt = forgeFreshnessReceipt(2, {
+      decision: 'rejected',
+      status: 'stale',
+      reasonCode: 'root_generated_at_stale',
+      evidence: {
+        rosterTotal: 4,
+        observedForgeRows: 2,
+        observedPlayerSpecificRows: 2,
+        eligiblePlayerSpecificRows: 0,
+        rejectedPlayerSpecificRows: 2,
+        rows: [],
+      },
+    });
+    const cards = buildManagementModelSignals({
+      hasActiveTeam: true,
+      hasRosterData: true,
+      hasDashboardTotals: true,
+      rosterVisibility: {
+        total: 4,
+        identityCovered: 4,
+        baselineVisible: 0,
+        forgeScored: 2,
+        forgeBaseline: 0,
+        rookieAlphaFallback: 1,
+        knownUnscored: 1,
+        unresolved: 0,
+        evidenceCovered: 3,
+      },
+      teamstateQueryState: 'success',
+      teamstateResponse: teamStateResponse(),
+      teamstateDetails: [],
+      forgeFreshnessReceipt: staleReceipt,
+      forgeEvidenceActivation: {
+        diagnostic: true,
+        readOnly: true,
+        playerSpecific: { scoreSource: 'player_specific', effectiveLevel: 3, failedGates: [] },
+        generatedBaseline: { scoreSource: null, effectiveLevel: 0, failedGates: [] },
+      },
+    });
+
+    expect(signal(cards, 'FORGE')).toMatchObject({
+      status: 'inspection only',
+      statusLabel: 'Rejected for Team Direction',
+    });
+    expect(signal(cards, 'FORGE').details).toEqual(expect.arrayContaining([
+      'Eligible player-specific FORGE coverage: 0/4.',
+      'Observed raw player-specific rows: 2/4.',
+      'FORGE alpha totals: raw observation only; excluded from Team Direction.',
+      'G6 status/reason: stale / root_generated_at_stale.',
+    ]));
+    expect(signal(cards, 'Rookie Alpha').details).toContain('Eligible evidence-covered roster rows: 1/4.');
+    expect(signal(cards, 'FORGE Evidence Activation').statusLabel).not.toBe('Non-prescriptive evidence');
   });
 
   it('surfaces read-only Strategy Template Diagnostics without rendering template text or slots', () => {
@@ -499,6 +608,8 @@ describe('Management model signal cards', () => {
     teamstateQueryState: 'success' as const,
     teamstateResponse: teamStateResponse(),
     teamstateDetails: [],
+    forgeFreshnessReceipt: forgeFreshnessReceipt(24),
+    freshnessEvaluatedAtMs: Date.parse('2026-06-09T00:00:00.000Z'),
   };
 
   it('labels Strategy Context activation as read-only diagnostic with templates disabled', () => {
@@ -981,14 +1092,16 @@ describe('Management model signal cards', () => {
       teamDirection: {
         success: true,
         available: true,
+        classificationAvailable: true,
         direction: 'rebuild',
         confidence: 'high',
         blockers: [],
+        forge_freshness_receipt: forgeFreshnessReceipt(24),
       },
       diagnostics: {
         rosterCount: 352,
         resolvedCanonicalCount: 352,
-        forgeArtifact: { available: true, sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json', rowCount: 59, playerSpecificCount: 45, generatedBaselineCount: 14, contractVersion: 'forge_player_static_v1', generatedAt: '2026-01-08T00:00:00.000Z' },
+        forgeArtifact: { available: true, sourcePath: 'server/artifacts/external/forge/forge_player_static_v1.json', rowCount: 59, playerSpecificCount: 45, generatedBaselineCount: 14, contractVersion: 'forge_player_static_v1', generatedAt: '2026-06-08T00:00:00.000Z', generatedAtSource: 'root_generated_at', promotedAt: null, freshness: { status: 'fresh', ageDays: 1, timestamp: '2026-06-08T00:00:00.000Z', maxAgeDays: 45 } },
         identityCrosswalkArtifact: { available: true, sourcePath: 'server/artifacts/external/identity/tiber_identity_crosswalk_v1.json', rowCount: 25, providerMappingCount: 25, providerCount: 1, contractVersion: 'v1' },
         strategyOntologyArtifact: {
           available: true,
@@ -1029,13 +1142,22 @@ describe('Management model signal cards', () => {
     expect(snapshot).toMatchObject({
       artifact_type: 'TIBER_MANAGEMENT_SNAPSHOT_EXPORT',
       generated_at: '2026-06-09T00:00:00.000Z',
+      forge_freshness_receipt: {
+        decision: 'accepted',
+        status: 'fresh',
+        policyId: 'team_direction_forge_player_static_freshness_v1',
+      },
+      team_direction: {
+        classification_available: true,
+        classification_failure: null,
+      },
       active_roster_summary: {
         roster_count: 30,
         identity_coverage: { matched: 30, total: 30 },
         baseline_visibility: { matched: 0, total: 30 },
-        player_specific_forge_evidence: { matched: 24, total: 30 },
+        player_specific_forge_evidence: { matched: 24, eligible: 24, observed_raw: 24, rejected: 0, total: 30, classification_eligible: true },
         rookie_alpha_fallback: { matched: 0, total: 30 },
-        evidence_coverage: { matched: 24, total: 30 },
+        evidence_coverage: { matched: 24, eligible: 24, observed_raw: 24, total: 30 },
         unresolved: { matched: 0, total: 30 },
       },
       active_team_matching: {
@@ -1043,6 +1165,10 @@ describe('Management model signal cards', () => {
         forge_row_matched: 24,
         direct_canonical_matches: 0,
         player_specific_evidence_matched: 24,
+        eligible_player_specific_rows: 24,
+        observed_raw_player_specific_rows: 24,
+        rejected_player_specific_rows: 0,
+        classification_eligible: true,
         generated_baseline_visibility_matched: 0,
         non_evidence_roster_matches: 0,
       },
@@ -1164,8 +1290,8 @@ describe('Management model signal cards', () => {
       available: false,
       template_selection_enabled: false,
       selected_template_id: null,
-      current_team_direction: 'Rebuild',
-      current_confidence: 'High',
+      current_team_direction: 'Uncertain',
+      current_confidence: 'Low',
       evaluated_template_count: 0,
       classification_compatible_template_ids: [],
       blocked_reasons: [],
@@ -1181,6 +1307,142 @@ describe('Management model signal cards', () => {
       selected_template_id: null,
       blocked_reasons: ['strategy_ontology_unavailable'],
     });
+  });
+
+  it('exports stale FORGE evidence as observed raw with zero eligible coverage', () => {
+    const roster = managementFixtureRoster();
+    const staleReceipt = forgeFreshnessReceipt(24, {
+      decision: 'rejected',
+      status: 'stale',
+      reasonCode: 'root_generated_at_stale',
+      evidence: {
+        rosterTotal: 30,
+        observedForgeRows: 24,
+        observedPlayerSpecificRows: 24,
+        eligiblePlayerSpecificRows: 0,
+        rejectedPlayerSpecificRows: 24,
+        rows: [{
+          rosterIndex: 0,
+          rosterKey: 'player-0',
+          canonicalId: 'tiber-data-player-2025-justin-herbert',
+          playerName: 'Justin Herbert',
+          position: 'QB',
+          alpha: 70,
+          scoreSource: 'player_specific',
+          provenance: { source: 'player_specific' },
+        }],
+      },
+    });
+    const snapshot = buildManagementSnapshotExport({
+      generatedAt: '2026-08-02T00:00:00.000Z',
+      dashboardTeam: {
+        team_id: 'team-1',
+        display_name: 'Garbage Time',
+        roster,
+        totals: { QB: 100, RB: 200, WR: 300, TE: 50 },
+        overall_total: 650,
+      },
+      teamDirection: {
+        success: true,
+        available: true,
+        // Deliberately contradictory deploy-skew payload: presentation/export
+        // must still follow the rejected receipt and fail closed.
+        classificationAvailable: true,
+        classificationFailure: {
+          code: 'forge_freshness_receipt_rejected',
+          policyId: 'team_direction_forge_player_static_freshness_v1',
+          receiptVersion: 'team_direction_forge_player_static_freshness_receipt_v1',
+          reasonCode: 'root_generated_at_stale',
+        },
+        direction: 'rebuild',
+        confidence: 'high',
+        blockers: ['FORGE rejected by G6 freshness.'],
+        forge_freshness_receipt: staleReceipt,
+        strategy_template_diagnostics: {
+          available: true,
+          artifact_type: 'DYNASTY_STRATEGY_ONTOLOGY_V1',
+          contract_version: 'dynasty_strategy_ontology_v1',
+          model_version: 'dynasty-strategy-ontology-v1.0.0',
+          generated_at: '2026-06-10T00:00:00.000Z',
+          template_selection_enabled: false,
+          selected_template_id: null,
+          current_team_direction: 'Rebuild',
+          current_confidence: 'High',
+          evaluated_template_count: 1,
+          classification_compatible_template_ids: ['rebuild_low_alpha_concentration'],
+          blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+          missing_future_contract_inputs: ['age_band'],
+          templates: [{
+            template_id: 'rebuild_low_alpha_concentration',
+            classification_compatible: true,
+            eligibility_state: 'blocked',
+            blocked_reasons: ['template_selection_disabled', 'missing_future_contract_inputs'],
+            missing_inputs: ['age_band'],
+          }],
+          unavailable_reason: null,
+        },
+      },
+    });
+
+    expect(snapshot).toMatchObject({
+      team_direction: {
+        classification: 'Uncertain',
+        confidence: 'Low',
+        classification_available: false,
+        classification_failure: { reasonCode: 'root_generated_at_stale' },
+      },
+      forge_freshness_receipt: {
+        decision: 'rejected',
+        status: 'stale',
+        evidence: {
+          observedPlayerSpecificRows: 24,
+          eligiblePlayerSpecificRows: 0,
+          rejectedPlayerSpecificRows: 24,
+          rows: [expect.objectContaining({ playerName: 'Justin Herbert', alpha: 70 })],
+        },
+      },
+      active_roster_summary: {
+        player_specific_forge_evidence: {
+          matched: 0,
+          eligible: 0,
+          observed_raw: 24,
+          rejected: 24,
+          classification_eligible: false,
+        },
+        evidence_coverage: { matched: 0, eligible: 0, observed_raw: 24 },
+      },
+      active_team_matching: {
+        player_specific_evidence_matched: 0,
+        eligible_player_specific_rows: 0,
+        observed_raw_player_specific_rows: 24,
+        rejected_player_specific_rows: 24,
+        classification_eligible: false,
+      },
+      observed_raw_forge_totals: {
+        classification_eligible: false,
+        position_totals: { QB: 100, RB: 200, WR: 300, TE: 50 },
+        overall_total: 650,
+      },
+      strategy_template_diagnostics: {
+        current_team_direction: 'Uncertain',
+        current_confidence: 'Low',
+        classification_compatible_template_ids: [],
+      },
+      management_strategy_context: {
+        team_direction: 'uncertain',
+        team_direction_confidence: 'low',
+        forge_coverage: { matched: 0, total: 30, rate: 0 },
+      },
+    });
+    expect(effectiveTeamDirectionVerdict({
+      success: true,
+      available: true,
+      classificationAvailable: true,
+      direction: 'rebuild',
+      confidence: 'high',
+      forge_freshness_receipt: staleReceipt,
+    })).toEqual({ classificationAvailable: false, direction: 'uncertain', confidence: 'low' });
+    expect(snapshot.identity_seed_report_note).toContain('identity/row matching only');
   });
 });
 

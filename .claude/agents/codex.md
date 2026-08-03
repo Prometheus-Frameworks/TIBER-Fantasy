@@ -728,3 +728,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added read-only Management Strategy Context model-signal card near Strategy Templates diagnostics.
 - Extended targeted Management model-signal tests for present and missing/fail-closed context states.
 - Validation: targeted Jest passed, diff check passed, repo typecheck failed on existing unrelated errors outside touched files.
+
+### 2026-08-02 — W6 FORGE G6 Team Direction freshness enforcement
+- Added a pure request-time `team_direction_forge_player_static_freshness_v1` receipt sourced only from the artifact root `generated_at`, accepting through 45 elapsed UTC days and rejecting all non-fresh/unknown clock states.
+- Passed the same receipt through Team Direction classification, FORGE activation diagnostics, Management presentation, and the agent-readable snapshot export.
+- Rejected raw FORGE observations remain inspectable and explicitly labeled; eligible FORGE coverage, scored-position counts, direction influence, and confidence influence are zero.
+- Preserved W6 scope: no artifact-byte, scoring-threshold, direction-threshold, G4/#277, FC1/#291, database, auth, or deployment changes.
+
+### 2026-08-03 — Management G6 mounted-receipt expiry review fix
+- Added render-time and scheduled `acceptedThrough` enforcement to the Management client, including exact inclusive-boundary behavior, long-timeout chunking, focus/visibility recovery, and one deduplicated authoritative refetch.
+- Copy/download and agent-readable snapshots now rebuild against the action clock, preserve the immutable raw receipt, and expose a separately labeled client evaluation while zeroing eligible FORGE coverage after expiry.
+- Suppressed cached Alpha rationale, blockers, stale classification failures, and scored-position diagnostics whenever an otherwise accepted receipt becomes locally rejected.
+- Validation: six focused Management/FORGE Jest suites passed (133 tests); server and Vite builds passed; diff check passed; repository typecheck retained 505 pre-existing errors with zero touched-file matches.

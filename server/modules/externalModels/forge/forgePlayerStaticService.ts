@@ -16,6 +16,8 @@ function unavailableLookup(error: ForgePlayerStaticIntegrationError, sourcePath:
       artifactId: 'FORGE_PLAYER_STATIC_V1',
       contractVersion: null,
       generatedAt: null,
+      generatedAtSource: null,
+      promotedAt: null,
       rowCount: 0,
       playerSpecificCount: 0,
       generatedBaselineCount: 0,

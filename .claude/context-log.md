@@ -521,3 +521,15 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementModelSignals.test.ts`
 - **Validation:** `npm run test -- client/src/__tests__/managementModelSignals.test.ts` passed; `git diff --check` passed; `npm run typecheck` still fails from pre-existing unrelated repo-wide TypeScript errors outside touched files.
 - **Notes:** Phase 3B remains visibility-only: no strategy template selection, template rendering, slot interpolation, advice output, or Team Direction recalculation.
+
+### 2026-08-02 — Codex: W6 FORGE G6 Team Direction freshness enforcement
+- **What changed:** Added `team_direction_forge_player_static_freshness_v1`, evaluated from root `generated_at` on every Team Direction request with an inclusive 45 elapsed UTC-day limit. Rejected clocks fail classification closed with uncertain/low output and zero eligible FORGE coverage while a shared versioned receipt preserves raw evidence for diagnostics, Management UI, and agent export.
+- **Files modified:** FORGE static adapter/types, Management freshness policy and activation diagnostics, Team Direction route/classifier, Management dashboard/export, focused tests, and operator docs.
+- **Validation:** Focused adapter/policy/diagnostics/route/UI Jest suites; build; filtered typecheck review; diff check. Full results are recorded in the draft PR.
+- **Notes:** Root `promoted_at` is diagnostic only. Artifact bytes, scoring and direction thresholds, G4/#277, FC1/#291, databases, auth, and deployment remain unchanged.
+
+### 2026-08-03 — Codex: Management G6 mounted-receipt expiry review fix
+- **What changed:** Made the Management client re-evaluate an accepted FORGE G6 receipt through its exact inclusive `acceptedThrough` boundary, fail closed at boundary + 1 ms, and issue one deduplicated Team Direction refetch on expiry or focus/visibility recovery. UI diagnostics, copy/download exports, and agent-readable snapshots immediately become uncertain/low with zero eligible FORGE coverage while preserving the immutable raw receipt.
+- **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementForgeFreshnessExpiry.test.ts`, `client/src/__tests__/managementModelSignals.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Six focused Management/FORGE Jest suites passed (133 tests); server and Vite production builds passed; `git diff --check` passed. Repository typecheck still reports 505 pre-existing errors, with zero matches in the touched page/tests.
+- **Notes:** Cached Alpha reasons, blockers, scored-position diagnostics, and stale classification failures cannot leak into the locally rejected verdict/export. No backend policy, artifact bytes, scoring/direction thresholds, database, auth, or deployment behavior changed.

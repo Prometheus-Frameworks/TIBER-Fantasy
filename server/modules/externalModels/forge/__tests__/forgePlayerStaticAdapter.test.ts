@@ -6,7 +6,8 @@ import { ForgePlayerStaticService } from '../forgePlayerStaticService';
 import { ForgePlayerStaticIntegrationError } from '../forgePlayerStaticTypes';
 
 const validPayload = {
-  meta: { artifact_id: 'FORGE_PLAYER_STATIC_V1', contract_version: 'v1', generated_at: '2026-06-07T00:00:00.000Z' },
+  generated_at: '2026-06-07T00:00:00.000Z',
+  meta: { artifact_id: 'FORGE_PLAYER_STATIC_V1', contract_version: 'v1' },
   rows: [
     {
       player_id: 'tdp:player:1',
@@ -100,6 +101,42 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
       isPlayerSpecificEvidence: false,
       isGeneratedBaselineVisibility: true,
     }));
+  });
+
+  it('keeps root generated_at separate and never substitutes promoted_at or metadata clocks', () => {
+    const lookup = adaptForgePlayerStaticArtifact({
+      artifact_type: 'FORGE_PLAYER_STATIC_V1',
+      schema_version: 'forge_player_static_v1',
+      promoted_at: '2026-08-01T00:00:00.000Z',
+      meta: { generated_at: '2026-07-31T00:00:00.000Z' },
+      rows: [
+        { player_id: 'tdp:player:clock', alpha: 70, provenance: { score_source: 'player_specific' } },
+      ],
+    }, '/tmp/promoted-only.json');
+
+    expect(lookup.artifact.generatedAt).toBeNull();
+    expect(lookup.artifact.generatedAtSource).toBeNull();
+    expect(lookup.artifact.promotedAt).toBe('2026-08-01T00:00:00.000Z');
+    // The generic helper may observe promoted_at, but the named Team Direction
+    // policy receives generatedAt=null and therefore rejects it.
+    expect(lookup.artifact.freshness?.timestamp).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  it.each([
+    ['camelCase alias only', { generatedAt: '2026-08-01T00:00:00.000Z' }],
+    ['malformed generated_at plus valid alias', { generated_at: 1234, generatedAt: '2026-08-01T00:00:00.000Z' }],
+  ])('does not label %s as root generated_at provenance', (_label, clocks) => {
+    const lookup = adaptForgePlayerStaticArtifact({
+      artifact_type: 'FORGE_PLAYER_STATIC_V1',
+      schema_version: 'forge_player_static_v1',
+      ...clocks,
+      rows: [
+        { player_id: 'tdp:player:clock-alias', alpha: 70, provenance: { score_source: 'player_specific' } },
+      ],
+    }, '/tmp/alias-clock.json');
+
+    expect(lookup.artifact.generatedAt).toBeNull();
+    expect(lookup.artifact.generatedAtSource).toBeNull();
   });
 
   it('defaults to the bundled deploy-safe forge_player_static artifact path', () => {

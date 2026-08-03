@@ -196,7 +196,11 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
   const playerSpecificCount = Array.from(rowsByPlayerId.values()).filter((row) => row.isPlayerSpecificEvidence).length;
   const generatedBaselineCount = Array.from(rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility).length;
 
-  const generatedAt = pickString({ ...record, ...meta, ...manifest }, ['generated_at', 'generatedAt', 'promoted_at', 'promotedAt']);
+  // Team Direction's named freshness policy is explicitly rooted at the
+  // artifact's top-level generated_at. Do not collapse metadata/manifest or
+  // promoted_at fallbacks into this field.
+  const generatedAt = pickString(record, ['generated_at']);
+  const promotedAt = pickString(record, ['promoted_at', 'promotedAt']);
 
   return {
     artifact: {
@@ -208,7 +212,9 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
       artifactId: 'FORGE_PLAYER_STATIC_V1',
       contractVersion: pickString({ ...record, ...meta, ...manifest }, ['contract_version', 'contractVersion', 'version', 'schema_version', 'schemaVersion']),
       generatedAt,
-      freshness: assessAndLogArtifactFreshness({ artifact: 'forge_player_static_v1', generatedAt }),
+      generatedAtSource: generatedAt === null ? null : 'root_generated_at',
+      promotedAt,
+      freshness: assessAndLogArtifactFreshness({ artifact: 'forge_player_static_v1', generatedAt, promotedAt }),
       rowCount: rowsByPlayerId.size,
       playerSpecificCount,
       generatedBaselineCount,
