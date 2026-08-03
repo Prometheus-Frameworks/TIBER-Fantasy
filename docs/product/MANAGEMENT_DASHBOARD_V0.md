@@ -37,7 +37,11 @@ direction: "contender" | "rebuild" | "retool" | "uncertain"
 confidence: "high" | "medium" | "low"
 ```
 
-The classifier uses available FORGE alpha and pick context. It is coverage-gated: incomplete FORGE scoring coverage keeps the result `uncertain` with low confidence rather than overstating roster strength. Promoted Rookie Alpha matches improve evidence visibility but do not count as FORGE scoring coverage and are not blended into FORGE roster strength, lineup totals, scoring, or rankings.
+The classifier uses eligible FORGE alpha and pick context. It is coverage-gated: incomplete FORGE scoring coverage keeps the result `uncertain` with low confidence rather than overstating roster strength. Promoted Rookie Alpha matches improve evidence visibility but do not count as FORGE scoring coverage and are not blended into FORGE roster strength, lineup totals, scoring, or rankings.
+
+W6 adds the Fantasy-owned `team_direction_forge_player_static_freshness_v1` gate. Every Team Direction request evaluates the artifact root `generated_at` against an inclusive limit of 45 elapsed UTC days. `promoted_at` is diagnostic only and cannot refresh that clock. Warning, stale, unknown, missing, malformed, and future clocks reject the player-specific FORGE input. Rejection returns `classificationAvailable: false`, `direction: "uncertain"`, low confidence, and zero eligible FORGE coverage without hiding the observed rows.
+
+The request emits one `team_direction_forge_player_static_freshness_receipt_v1` receipt for the classifier, backend diagnostics, Management UI, and Management snapshot export. The receipt keeps clocks, decision reason, gaps/conflicts, and raw observed evidence separate from eligible evidence. This gate does not change FORGE artifact bytes, scoring thresholds, direction thresholds, G4 governance work, or the separate FC1 freshness/source repair.
 
 ## Team Delta / transaction attribution
 

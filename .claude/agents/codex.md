@@ -728,3 +728,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added read-only Management Strategy Context model-signal card near Strategy Templates diagnostics.
 - Extended targeted Management model-signal tests for present and missing/fail-closed context states.
 - Validation: targeted Jest passed, diff check passed, repo typecheck failed on existing unrelated errors outside touched files.
+
+### 2026-08-02 — W6 FORGE G6 Team Direction freshness enforcement
+- Added a pure request-time `team_direction_forge_player_static_freshness_v1` receipt sourced only from the artifact root `generated_at`, accepting through 45 elapsed UTC days and rejecting all non-fresh/unknown clock states.
+- Passed the same receipt through Team Direction classification, FORGE activation diagnostics, Management presentation, and the agent-readable snapshot export.
+- Rejected raw FORGE observations remain inspectable and explicitly labeled; eligible FORGE coverage, scored-position counts, direction influence, and confidence influence are zero.
+- Preserved W6 scope: no artifact-byte, scoring-threshold, direction-threshold, G4/#277, FC1/#291, database, auth, or deployment changes.

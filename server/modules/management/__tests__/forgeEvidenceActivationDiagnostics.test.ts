@@ -2,6 +2,25 @@ import {
   buildForgeEvidenceActivationDiagnostics,
   type ForgeEvidenceActivationInput,
 } from '../forgeEvidenceActivationDiagnostics';
+import { buildTeamDirectionForgeFreshnessReceipt } from '../forgeTeamDirectionFreshnessPolicy';
+
+const READY_RECEIPT = buildTeamDirectionForgeFreshnessReceipt({
+  artifact: {
+    state: 'available',
+    available: true,
+    sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json',
+    contractVersion: 'forge_player_static_v1',
+    generatedAt: '2026-06-15T00:00:00.000Z',
+    generatedAtSource: 'root_generated_at',
+    promotedAt: null,
+  },
+  rosterPlayers: Array.from({ length: 24 }, (_, index) => ({
+    rosterKey: `player-${index}`,
+    alpha: 60 + index / 10,
+    forgeScoreSource: 'player_specific',
+  })),
+  now: new Date('2026-06-16T00:00:00.000Z'),
+});
 
 // A complete, passing set of FORGE readiness inputs: available governed promoted
 // artifact, fresh, with player-specific evidence covering ≥ 50% of the roster.
@@ -23,6 +42,8 @@ const READY_PLAYER_SPECIFIC: ForgeEvidenceActivationInput = {
     rosterCanonicalIdsMatched: 24,
   },
   forgeCoverage: { matched: 24, total: 30, rate: 0.8 },
+  freshnessReceipt: READY_RECEIPT,
+  classifierFreshnessEnforced: true,
 };
 
 describe('buildForgeEvidenceActivationDiagnostics', () => {
@@ -66,6 +87,61 @@ describe('buildForgeEvidenceActivationDiagnostics', () => {
     expect(diag.playerSpecific.effectiveLevel).toBe(0);
     expect(diag.playerSpecific.failedGates).toContain('G1');
     expect(diag.generatedBaseline.effectiveLevel).toBe(0);
+  });
+
+  it('uses the enforced receipt for G6 even when warn-only freshness metadata disagrees', () => {
+    const rejectedReceipt = buildTeamDirectionForgeFreshnessReceipt({
+      artifact: {
+        state: 'available',
+        available: true,
+        sourcePath: '../TIBER-FORGE/exports/promoted/forge_player_static/forge_player_static_v1.json',
+        contractVersion: 'forge_player_static_v1',
+        generatedAt: '2026-01-08T00:00:00.000Z',
+        generatedAtSource: 'root_generated_at',
+        promotedAt: null,
+        freshness: { status: 'fresh', ageDays: 1, timestamp: null, maxAgeDays: 45 },
+      },
+      rosterPlayers: READY_RECEIPT.evidence.rows.map((row) => ({
+        alpha: row.alpha,
+        forgeScoreSource: row.scoreSource,
+      })),
+      now: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    const diag = buildForgeEvidenceActivationDiagnostics({
+      ...READY_PLAYER_SPECIFIC,
+      forgeCoverage: { matched: 0, total: 30, rate: 0 },
+      freshnessReceipt: rejectedReceipt,
+      classifierFreshnessEnforced: true,
+    });
+
+    expect(diag.freshnessReceipt).toBe(rejectedReceipt);
+    expect(diag.playerSpecific.effectiveLevel).toBeLessThan(3);
+    expect(diag.playerSpecific.failedGates).toContain('G6');
+  });
+
+  it('fails G6 for an accepted-looking receipt whose artifact state is contradictory', () => {
+    const contradictoryReceipt = {
+      ...READY_RECEIPT,
+      artifact: { ...READY_RECEIPT.artifact, available: false, state: 'missing' },
+    };
+    const diag = buildForgeEvidenceActivationDiagnostics({
+      ...READY_PLAYER_SPECIFIC,
+      freshnessReceipt: contradictoryReceipt,
+      classifierFreshnessEnforced: true,
+    });
+
+    expect(diag.playerSpecific.failedGates).toContain('G6');
+    expect(diag.playerSpecific.effectiveLevel).toBeLessThan(3);
+  });
+
+  it('does not assert consumer fail-closed when classifier enforcement is unconfirmed', () => {
+    const diag = buildForgeEvidenceActivationDiagnostics({
+      ...READY_PLAYER_SPECIFIC,
+      classifierFreshnessEnforced: undefined,
+    });
+
+    expect(diag.playerSpecific.effectiveLevel).toBeLessThan(3);
+    expect(diag.playerSpecific.failedGates).toContain('G7');
   });
 
   it('does not treat unknown/fallback provenance as evidence', () => {

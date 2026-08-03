@@ -1,3 +1,9 @@
+import {
+  isAcceptedTeamDirectionForgeFreshnessReceipt,
+  isSupportedTeamDirectionForgeFreshnessReceipt,
+  type TeamDirectionForgeFreshnessReceiptV1,
+} from '../modules/management/forgeTeamDirectionFreshnessPolicy';
+
 type TeamDirectionCoverage = { matched: number; total: number; rate: number };
 type TeamDirectionEvidenceCoverage = TeamDirectionCoverage & { rookieAlphaMatched: number };
 type RosterVisibilityCounts = {
@@ -28,6 +34,13 @@ export type TeamDirectionConfidenceInputs = {
 };
 
 export type TeamDirectionResult = {
+  classificationAvailable: boolean;
+  classificationFailure: {
+    code: 'forge_freshness_receipt_rejected' | 'forge_freshness_receipt_missing_or_invalid' | 'roster_unavailable' | 'insufficient_forge_coverage';
+    policyId: string | null;
+    receiptVersion: string | null;
+    reasonCode: string;
+  } | null;
   direction: 'contender' | 'rebuild' | 'retool' | 'uncertain';
   confidence: 'high' | 'medium' | 'low';
   reasons: string[];
@@ -41,6 +54,7 @@ export type TeamDirectionResult = {
 
 export type ClassifierOptions = {
   superflex?: boolean;
+  forgeFreshnessReceipt?: TeamDirectionForgeFreshnessReceiptV1 | null;
 };
 
 type ClassifierPlayer = {
@@ -63,13 +77,15 @@ const MIN_HIGH_CONFIDENCE_PLAYERS = 10;
 const SCORED_POSITIONS: ScoredPosition[] = ['QB', 'RB', 'WR', 'TE'];
 
 function hasPlayerSpecificForgeScore(player: ClassifierPlayer): boolean {
-  if (typeof player.alpha !== 'number') return false;
-  // Backward-compatible default for direct unit fixtures that predate provenance.
-  return player.forgeScoreSource === undefined || player.forgeScoreSource === null || player.forgeScoreSource === 'player_specific';
+  return typeof player.alpha === 'number'
+    && Number.isFinite(player.alpha)
+    && player.forgeScoreSource === 'player_specific';
 }
 
 function hasGeneratedBaselineForgeVisibility(player: ClassifierPlayer): boolean {
-  return typeof player.alpha === 'number' && player.forgeScoreSource === 'generated_baseline';
+  return typeof player.alpha === 'number'
+    && Number.isFinite(player.alpha)
+    && player.forgeScoreSource === 'generated_baseline';
 }
 
 function posAlphas(players: ClassifierPlayer[], pos: string): number[] {
@@ -165,10 +181,12 @@ export function classifyTeamDirection(
   picks: ClassifierPick[],
   options: ClassifierOptions = {}
 ): TeamDirectionResult {
-  const { superflex = false } = options;
+  const { superflex = false, forgeFreshnessReceipt = null } = options;
+  const freshnessAccepted = isAcceptedTeamDirectionForgeFreshnessReceipt(forgeFreshnessReceipt);
 
   const total = rosterPlayers.length;
-  const forgeMatched = rosterPlayers.filter(hasPlayerSpecificForgeScore).length;
+  const observedPlayerSpecificForgePlayers = rosterPlayers.filter(hasPlayerSpecificForgeScore);
+  const forgeMatched = freshnessAccepted ? observedPlayerSpecificForgePlayers.length : 0;
   const baselineMatched = rosterPlayers.filter(hasGeneratedBaselineForgeVisibility).length;
   const rookieAlphaMatched = rosterPlayers.filter((p) => !hasPlayerSpecificForgeScore(p) && typeof p.alpha !== 'number' && Boolean(p.rookieAsset)).length;
   const matched = forgeMatched + rookieAlphaMatched;
@@ -176,9 +194,19 @@ export function classifyTeamDirection(
   const forgeRate = total === 0 ? 0 : forgeMatched / total;
   const evidenceCoverage = { matched, total, rate, rookieAlphaMatched };
   const forgeCoverage = { matched: forgeMatched, total, rate: forgeRate };
-  const scoredPositionCounts = buildScoredPositionCounts(rosterPlayers);
+  const scoredPositionCounts = buildScoredPositionCounts(
+    freshnessAccepted ? observedPlayerSpecificForgePlayers : [],
+  );
   const missingScoredPositions = SCORED_POSITIONS.filter((position) => scoredPositionCounts[position] === 0);
-  const visibilityCounts = buildVisibilityCounts(rosterPlayers);
+  const observedVisibilityCounts = buildVisibilityCounts(rosterPlayers);
+  const visibilityCounts = freshnessAccepted
+    ? observedVisibilityCounts
+    : {
+        ...observedVisibilityCounts,
+        forgeScored: 0,
+        knownUnscored: observedVisibilityCounts.knownUnscored + observedVisibilityCounts.forgeScored,
+        evidenceCovered: observedVisibilityCounts.rookieAlphaFallback,
+      };
   const confidenceInputs: TeamDirectionConfidenceInputs = {
     driver: 'forge_scoring_coverage_and_position_quality',
     forgeCoverage,
@@ -193,14 +221,48 @@ export function classifyTeamDirection(
       'Direction confidence is derived from FORGE scoring coverage and scored positional data quality.',
       'Promoted Rookie Alpha fallback contributes to evidence completeness only; it does not raise direction confidence.',
       'Generated/default/baseline FORGE values are kept visible but excluded from scored coverage and confidence.',
+      'FORGE eligibility is recomputed from the named request-time freshness receipt; rejected evidence remains diagnostic only.',
     ],
   };
   // Preserve the original additive coverage shape for existing Management consumers.
   const coverage = { ...evidenceCoverage, forgeMatched, rookieAlphaMatched };
   const coverageDetails = { coverage, evidenceCoverage, forgeCoverage, visibilityCounts, confidenceInputs };
 
+  if (!freshnessAccepted) {
+    const receiptIsSupported = isSupportedTeamDirectionForgeFreshnessReceipt(forgeFreshnessReceipt);
+    const reasonCode = receiptIsSupported
+      ? forgeFreshnessReceipt.reasonCode
+      : 'freshness_receipt_missing_or_invalid';
+    const status = receiptIsSupported ? forgeFreshnessReceipt.status : 'unknown';
+    return {
+      classificationAvailable: false,
+      classificationFailure: {
+        code: receiptIsSupported
+          ? 'forge_freshness_receipt_rejected'
+          : 'forge_freshness_receipt_missing_or_invalid',
+        policyId: receiptIsSupported ? forgeFreshnessReceipt.policyId : null,
+        receiptVersion: receiptIsSupported ? forgeFreshnessReceipt.receiptVersion : null,
+        reasonCode,
+      },
+      direction: 'uncertain',
+      confidence: 'low',
+      reasons: [],
+      blockers: [
+        `FORGE player-specific evidence is unavailable for Team Direction because the request-time freshness check failed (${status}: ${reasonCode}). Observed rows remain visible in the freshness receipt, but eligible FORGE coverage is zero.`,
+      ],
+      ...coverageDetails,
+    };
+  }
+
   if (total === 0) {
     return {
+      classificationAvailable: false,
+      classificationFailure: {
+        code: 'roster_unavailable',
+        policyId: forgeFreshnessReceipt.policyId,
+        receiptVersion: forgeFreshnessReceipt.receiptVersion,
+        reasonCode: 'roster_empty',
+      },
       direction: 'uncertain',
       confidence: 'low',
       reasons: [],
@@ -230,7 +292,20 @@ export function classifyTeamDirection(
       blockers.push(
         `${baselineMatched} player${baselineMatched > 1 ? 's have' : ' has'} only generated/default FORGE baseline values, not player-specific scoring evidence.`
       );
-    return { direction: 'uncertain', confidence: 'low', reasons: [], blockers, ...coverageDetails };
+    return {
+      classificationAvailable: false,
+      classificationFailure: {
+        code: 'insufficient_forge_coverage',
+        policyId: forgeFreshnessReceipt.policyId,
+        receiptVersion: forgeFreshnessReceipt.receiptVersion,
+        reasonCode: 'forge_coverage_below_minimum',
+      },
+      direction: 'uncertain',
+      confidence: 'low',
+      reasons: [],
+      blockers,
+      ...coverageDetails,
+    };
   }
 
   const matchedPlayers = rosterPlayers.filter(hasPlayerSpecificForgeScore);
@@ -431,5 +506,13 @@ export function classifyTeamDirection(
     );
   }
 
-  return { direction, confidence, reasons, blockers, ...coverageDetails };
+  return {
+    classificationAvailable: true,
+    classificationFailure: null,
+    direction,
+    confidence,
+    reasons,
+    blockers,
+    ...coverageDetails,
+  };
 }

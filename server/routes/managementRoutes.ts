@@ -6,11 +6,13 @@ import { buildStrategyTemplateDiagnostics } from '@shared/strategyTemplateDiagno
 import { buildManagementStrategyContext } from '@shared/managementStrategyContext';
 import { buildStrategyContextActivationDiagnostics } from '../modules/management/strategyContextActivationDiagnostics';
 import { buildForgeEvidenceActivationDiagnostics } from '../modules/management/forgeEvidenceActivationDiagnostics';
+import { buildTeamDirectionForgeFreshnessReceipt } from '../modules/management/forgeTeamDirectionFreshnessPolicy';
 
 type ManagementDeps = {
   storage: typeof storage;
   computeLeagueDashboard: typeof computeLeagueDashboard;
   classifyTeamDirection: typeof classifyTeamDirection;
+  now?: () => Date;
 };
 
 const defaultDeps: ManagementDeps = {
@@ -86,7 +88,18 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
         (p: string) => String(p).toUpperCase() === 'SUPER_FLEX'
       );
 
-      const result = deps.classifyTeamDirection(teamData.roster ?? [], teamPicks, { superflex });
+      // W6 / G6: evaluate the named Fantasy-owned policy on every Team
+      // Direction request. The receipt is constructed once and consumed by the
+      // classifier, backend diagnostics, Management UI response, and export.
+      const forgeFreshnessReceipt = buildTeamDirectionForgeFreshnessReceipt({
+        artifact: dashboardPayload.diagnostics?.forgeArtifact ?? null,
+        rosterPlayers: teamData.roster ?? [],
+        now: deps.now?.() ?? new Date(),
+      });
+      const result = deps.classifyTeamDirection(teamData.roster ?? [], teamPicks, {
+        superflex,
+        forgeFreshnessReceipt,
+      });
       const strategyTemplateDiagnostics = buildStrategyTemplateDiagnostics(
         dashboardPayload.diagnostics
           ? {
@@ -107,37 +120,35 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
       const strategyContextActivation = buildStrategyContextActivationDiagnostics(managementStrategyContext);
       // Slice 4: additive, read-only FORGE evidence activation/citation metadata.
       // Citation only — does not change the Team Direction classifier or output.
-      const forgeEvidenceActivation = buildForgeEvidenceActivationDiagnostics(
-        dashboardPayload.diagnostics
-          ? {
-              forgeArtifact: dashboardPayload.diagnostics.forgeArtifact,
-              rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
-              forgeCoverage: result.forgeCoverage,
-            }
-          : null,
-      );
+      const forgeEvidenceActivation = buildForgeEvidenceActivationDiagnostics({
+        forgeArtifact: dashboardPayload.diagnostics?.forgeArtifact,
+        rosterMatching: dashboardPayload.diagnostics?.forgeRosterMatching,
+        forgeCoverage: result.forgeCoverage,
+        freshnessReceipt: forgeFreshnessReceipt,
+        classifierFreshnessEnforced: true,
+      });
 
       res.json({
         success: true,
         available: true,
         teamId: activeTeam.id,
         teamName: (activeTeam as any).displayName ?? (activeTeam as any).display_name ?? 'Team',
-        forgeDiagnostics: dashboardPayload.diagnostics
-          ? {
-              artifact: dashboardPayload.diagnostics.forgeArtifact,
-              rosterMatching: dashboardPayload.diagnostics.forgeRosterMatching,
-              rosterVisibility: dashboardPayload.diagnostics.rosterVisibility,
-              strategyOntology: dashboardPayload.diagnostics.strategyOntologyArtifact,
-              strategyTemplateDiagnostics,
-              managementStrategyContext,
-              strategyContextActivation,
-              forgeEvidenceActivation,
-            }
-          : null,
+        forgeDiagnostics: {
+          artifact: dashboardPayload.diagnostics?.forgeArtifact ?? null,
+          rosterMatching: dashboardPayload.diagnostics?.forgeRosterMatching ?? null,
+          rosterVisibility: dashboardPayload.diagnostics?.rosterVisibility ?? null,
+          strategyOntology: dashboardPayload.diagnostics?.strategyOntologyArtifact ?? null,
+          strategyTemplateDiagnostics,
+          managementStrategyContext,
+          strategyContextActivation,
+          forgeEvidenceActivation,
+          forgeFreshnessReceipt,
+        },
         strategy_template_diagnostics: strategyTemplateDiagnostics,
         management_strategy_context: managementStrategyContext,
         strategy_context_activation: strategyContextActivation,
         forge_evidence_activation: forgeEvidenceActivation,
+        forge_freshness_receipt: forgeFreshnessReceipt,
         ...result,
       });
     } catch (error) {

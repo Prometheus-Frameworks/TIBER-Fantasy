@@ -39,6 +39,10 @@ export interface ForgePlayerStaticLookup {
     artifactId: 'FORGE_PLAYER_STATIC_V1';
     contractVersion: string | null;
     generatedAt: string | null;
+    /** Provenance marker proving generatedAt came from the artifact root. */
+    generatedAtSource: 'root_generated_at' | null;
+    /** Root promoted_at, retained for diagnostics only; it cannot refresh Team Direction freshness. */
+    promotedAt: string | null;
     /** Warn-only artifact age assessment (Issue #192 M3); additive, not enforced. */
     freshness?: ArtifactFreshness;
     rowCount: number;

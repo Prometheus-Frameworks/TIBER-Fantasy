@@ -521,3 +521,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementModelSignals.test.ts`
 - **Validation:** `npm run test -- client/src/__tests__/managementModelSignals.test.ts` passed; `git diff --check` passed; `npm run typecheck` still fails from pre-existing unrelated repo-wide TypeScript errors outside touched files.
 - **Notes:** Phase 3B remains visibility-only: no strategy template selection, template rendering, slot interpolation, advice output, or Team Direction recalculation.
+
+### 2026-08-02 — Codex: W6 FORGE G6 Team Direction freshness enforcement
+- **What changed:** Added `team_direction_forge_player_static_freshness_v1`, evaluated from root `generated_at` on every Team Direction request with an inclusive 45 elapsed UTC-day limit. Rejected clocks fail classification closed with uncertain/low output and zero eligible FORGE coverage while a shared versioned receipt preserves raw evidence for diagnostics, Management UI, and agent export.
+- **Files modified:** FORGE static adapter/types, Management freshness policy and activation diagnostics, Team Direction route/classifier, Management dashboard/export, focused tests, and operator docs.
+- **Validation:** Focused adapter/policy/diagnostics/route/UI Jest suites; build; filtered typecheck review; diff check. Full results are recorded in the draft PR.
+- **Notes:** Root `promoted_at` is diagnostic only. Artifact bytes, scoring and direction thresholds, G4/#277, FC1/#291, databases, auth, and deployment remain unchanged.
