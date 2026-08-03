@@ -9,6 +9,17 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ## Completed Tasks
 
+### Unreleased — 2026-07-31: Active Node admin route authentication hardening
+- **Branch:** `codex/protect-active-admin-routes`
+- **Summary:** Applied fail-closed authentication to the active Node RAG maintenance boundary, protected FORGE status with its existing shared-secret scheme, and removed the invalid bare `modules` Python dependency without changing debug week-summary or legacy Flask behavior.
+- **Key Files:**
+  - `server/routes/ragRoutes.ts` — mounts `requireAdminAuth` across `/rag/admin/*`
+  - `server/routes/adminForge.ts` — requires `X-FORGE-ADMIN-KEY` before status DB reads
+  - `server/routes/__tests__/ragAdminAuth.test.ts` — boundary, public-health, and no-side-effect regression coverage
+  - `server/routes/__tests__/adminForgeAuth.test.ts` — missing/invalid/unconfigured/valid status coverage
+  - `requirements.txt` — removes bare `modules`
+- **Validation:** Focused tests passed 11/11; `npm run build` passed with the existing duplicate-member warning; full Jest run passed 105 suites/796 tests with six pre-existing suite-load failures; repo-wide typecheck remains blocked by existing unrelated errors.
+
 ### Unreleased — 2026-03-24: Production root serves frontend + health endpoint contract
 - **Branch:** current working branch
 - **Summary:** Updated production Express routing so `/` now serves the frontend SPA shell when `dist/public/index.html` exists, while `/health` remains the canonical JSON health probe endpoint. Added an explicit production-safe JSON fallback when frontend assets are absent.
