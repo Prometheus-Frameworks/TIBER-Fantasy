@@ -249,6 +249,7 @@ describe('Management model signal cards', () => {
       teamstateResponse: teamStateResponse(),
       teamstateDetails: ['Provenance status: governed_promoted.'],
       forgeFreshnessReceipt: forgeFreshnessReceipt(2),
+      freshnessEvaluatedAtMs: Date.parse('2026-06-09T00:00:00.000Z'),
     });
 
     expect(signal(cards, 'FORGE')).toMatchObject({
@@ -608,6 +609,7 @@ describe('Management model signal cards', () => {
     teamstateResponse: teamStateResponse(),
     teamstateDetails: [],
     forgeFreshnessReceipt: forgeFreshnessReceipt(24),
+    freshnessEvaluatedAtMs: Date.parse('2026-06-09T00:00:00.000Z'),
   };
 
   it('labels Strategy Context activation as read-only diagnostic with templates disabled', () => {

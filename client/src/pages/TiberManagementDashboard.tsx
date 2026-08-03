@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { AlertCircle, ArrowRight, CheckCircle2, CircleDashed, Copy, Download, ExternalLink, Loader2, ShieldCheck, TrendingUp, TrendingDown, RefreshCw, HelpCircle } from 'lucide-react';
@@ -392,9 +392,19 @@ const DEFAULT_USER_ID = 'default_user';
 const FORGE_FRESHNESS_POLICY_ID = 'team_direction_forge_player_static_freshness_v1';
 const FORGE_FRESHNESS_RECEIPT_VERSION = 'team_direction_forge_player_static_freshness_receipt_v1';
 const FORGE_TEAM_DIRECTION_USE_ID = 'forge_player_specific.team_direction_classification';
+const MAX_FORGE_FRESHNESS_RECHECK_DELAY_MS = 24 * 60 * 60 * 1000;
 const positionGroups = ['QB', 'RB', 'WR', 'TE'] as const;
 
-function isAcceptedForgeFreshnessReceipt(
+export type ForgeFreshnessClientEvaluationReason =
+  | 'accepted'
+  | 'receipt_missing'
+  | 'receipt_rejected_or_unsupported'
+  | 'accepted_through_missing'
+  | 'accepted_through_malformed'
+  | 'accepted_through_expired'
+  | 'evaluation_time_invalid';
+
+function hasAcceptedForgeFreshnessReceiptShape(
   receipt?: TeamDirectionForgeFreshnessReceipt | null,
 ): boolean {
   return receipt?.receiptVersion === FORGE_FRESHNESS_RECEIPT_VERSION
@@ -409,15 +419,142 @@ function isAcceptedForgeFreshnessReceipt(
     && receipt.provenance.explicitPlayerSpecificRequired === true;
 }
 
-function forgeFreshnessDecisionLabel(receipt?: TeamDirectionForgeFreshnessReceipt | null): string {
-  if (isAcceptedForgeFreshnessReceipt(receipt)) return 'Fresh · accepted for Team Direction';
+function parseCanonicalUtcTimestampMs(value?: string | null): number | null {
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+  try {
+    return new Date(parsed).toISOString() === value ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function evaluateForgeFreshnessReceipt(
+  receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
+): {
+  accepted: boolean;
+  reason: ForgeFreshnessClientEvaluationReason;
+  acceptedThrough: string | null;
+  acceptedThroughMs: number | null;
+} {
+  const acceptedThrough = receipt?.clocks?.acceptedThrough ?? null;
+  if (!receipt) return { accepted: false, reason: 'receipt_missing', acceptedThrough, acceptedThroughMs: null };
+  if (!hasAcceptedForgeFreshnessReceiptShape(receipt)) {
+    return { accepted: false, reason: 'receipt_rejected_or_unsupported', acceptedThrough, acceptedThroughMs: null };
+  }
+  if (typeof acceptedThrough !== 'string' || acceptedThrough.trim() === '') {
+    return { accepted: false, reason: 'accepted_through_missing', acceptedThrough, acceptedThroughMs: null };
+  }
+  const acceptedThroughMs = parseCanonicalUtcTimestampMs(acceptedThrough);
+  if (acceptedThroughMs === null) {
+    return { accepted: false, reason: 'accepted_through_malformed', acceptedThrough, acceptedThroughMs: null };
+  }
+  if (!Number.isFinite(evaluatedAtMs)) {
+    return { accepted: false, reason: 'evaluation_time_invalid', acceptedThrough, acceptedThroughMs };
+  }
+  if (evaluatedAtMs > acceptedThroughMs) {
+    return { accepted: false, reason: 'accepted_through_expired', acceptedThrough, acceptedThroughMs };
+  }
+  return { accepted: true, reason: 'accepted', acceptedThrough, acceptedThroughMs };
+}
+
+export function isAcceptedForgeFreshnessReceipt(
+  receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
+): boolean {
+  return evaluateForgeFreshnessReceipt(receipt, evaluatedAtMs).accepted;
+}
+
+export function forgeFreshnessRevalidationDelayMs(
+  receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
+): number | null {
+  if (!hasAcceptedForgeFreshnessReceiptShape(receipt) || !Number.isFinite(evaluatedAtMs)) return null;
+  const acceptedThroughMs = parseCanonicalUtcTimestampMs(receipt?.clocks?.acceptedThrough);
+  if (acceptedThroughMs === null) return null;
+  if (evaluatedAtMs > acceptedThroughMs) return 0;
+  return Math.min(acceptedThroughMs - evaluatedAtMs + 1, MAX_FORGE_FRESHNESS_RECHECK_DELAY_MS);
+}
+
+export function useForgeFreshnessRevalidation(
+  receipt: TeamDirectionForgeFreshnessReceipt | null | undefined,
+  refetch: () => unknown,
+  scopeKey = 'management',
+): number {
+  const [evaluatedAtMs, setEvaluatedAtMs] = useState(() => Date.now());
+  const refetchedExpiryKey = useRef<string | null>(null);
+
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    const acceptedThrough = receipt?.clocks?.acceptedThrough ?? null;
+    const expiryKey = acceptedThrough
+      ? `${scopeKey}:${receipt?.receiptVersion ?? 'unknown'}:${acceptedThrough}`
+      : null;
+
+    const clearScheduledCheck = () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+      timeoutId = null;
+    };
+
+    const scheduleCheck = (refreshRenderedClock: boolean) => {
+      clearScheduledCheck();
+      const nowMs = Date.now();
+      if (refreshRenderedClock) setEvaluatedAtMs(nowMs);
+      const delayMs = forgeFreshnessRevalidationDelayMs(receipt, nowMs);
+      if (delayMs === null) return;
+      if (delayMs === 0) {
+        setEvaluatedAtMs(nowMs);
+        if (expiryKey && refetchedExpiryKey.current !== expiryKey) {
+          refetchedExpiryKey.current = expiryKey;
+          void Promise.resolve(refetch()).catch(() => undefined);
+        }
+        return;
+      }
+      timeoutId = window.setTimeout(() => scheduleCheck(false), delayMs);
+    };
+
+    const handleFocus = () => scheduleCheck(true);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') scheduleCheck(true);
+    };
+
+    scheduleCheck(true);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearScheduledCheck();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [receipt, refetch, scopeKey]);
+
+  // A receipt can arrive after the clock captured by the previous render. Use
+  // the later value immediately so that render never waits for the effect to
+  // fail a newly received, already-expired receipt closed.
+  return Math.max(evaluatedAtMs, Date.now());
+}
+
+function forgeFreshnessDecisionLabel(
+  receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
+): string {
+  const evaluation = evaluateForgeFreshnessReceipt(receipt, evaluatedAtMs);
+  if (evaluation.accepted) return 'Fresh · accepted for Team Direction';
   if (!receipt) return 'Receipt missing · rejected for Team Direction';
+  if (evaluation.reason === 'accepted_through_expired') return 'Acceptance window expired · rejected for Team Direction';
+  if (evaluation.reason === 'accepted_through_missing') return 'Acceptance window missing · rejected for Team Direction';
+  if (evaluation.reason === 'accepted_through_malformed') return 'Acceptance window malformed · rejected for Team Direction';
   return `${receipt.status ?? 'unknown'} · rejected for Team Direction`;
 }
 
-export function effectiveTeamDirectionVerdict(data?: TeamDirectionResponse | null) {
+export function effectiveTeamDirectionVerdict(
+  data?: TeamDirectionResponse | null,
+  evaluatedAtMs = Date.now(),
+) {
   const classificationAvailable = data?.classificationAvailable === true
-    && isAcceptedForgeFreshnessReceipt(data.forge_freshness_receipt);
+    && isAcceptedForgeFreshnessReceipt(data.forge_freshness_receipt, evaluatedAtMs);
   return {
     classificationAvailable,
     direction: classificationAvailable ? (data?.direction ?? 'uncertain') : 'uncertain',
@@ -717,14 +854,37 @@ export function buildManagementSnapshotExport({
   const activeMatching = buildActiveTeamMatchingSummary(roster);
   const seedReport = identitySeedReport ?? buildManagementIdentitySeedReport({ league, team, dashboardTeam, generatedAt });
   const freshnessReceipt = teamDirection?.forge_freshness_receipt ?? null;
-  const forgeFreshnessAccepted = isAcceptedForgeFreshnessReceipt(freshnessReceipt);
-  const effectiveVerdict = effectiveTeamDirectionVerdict(teamDirection);
+  const freshnessEvaluatedAtMs = parseCanonicalUtcTimestampMs(generatedAt) ?? Number.NaN;
+  const freshnessEvaluation = evaluateForgeFreshnessReceipt(freshnessReceipt, freshnessEvaluatedAtMs);
+  const forgeFreshnessAccepted = freshnessEvaluation.accepted;
+  const effectiveVerdict = effectiveTeamDirectionVerdict(teamDirection, freshnessEvaluatedAtMs);
+  const clientFreshnessOverride = teamDirection?.classificationAvailable === true
+    && hasAcceptedForgeFreshnessReceiptShape(freshnessReceipt)
+    && !freshnessEvaluation.accepted;
   const observedPlayerSpecificRows = freshnessReceipt?.evidence?.observedPlayerSpecificRows ?? visibility.forgeScored;
   const eligiblePlayerSpecificRows = forgeFreshnessAccepted
     ? (freshnessReceipt?.evidence?.eligiblePlayerSpecificRows ?? visibility.forgeScored)
     : 0;
   const eligibleEvidenceRows = eligiblePlayerSpecificRows + visibility.rookieAlphaFallback;
-  const blockingReason = teamDirection?.blockers?.[0] ?? teamDirection?.reasons?.[0] ?? teamDirection?.reason ?? teamDirection?.error ?? null;
+  const clientFreshnessBlockingReason = clientFreshnessOverride
+    ? `Client freshness evaluation rejected FORGE: ${freshnessEvaluation.reason}.`
+    : null;
+  const blockingReason = clientFreshnessBlockingReason
+    ?? teamDirection?.blockers?.[0]
+    ?? teamDirection?.reasons?.[0]
+    ?? teamDirection?.reason
+    ?? teamDirection?.error
+    ?? null;
+  const classificationFailure = clientFreshnessOverride
+    ? {
+        code: 'client_freshness_evaluation_rejected',
+        policyId: freshnessReceipt?.policyId ?? null,
+        receiptVersion: freshnessReceipt?.receiptVersion ?? null,
+        reasonCode: freshnessEvaluation.reason,
+      }
+    : effectiveVerdict.classificationAvailable
+      ? null
+      : teamDirection?.classificationFailure ?? null;
   // A precomputed Strategy diagnostic can carry a verdict from an older or
   // skewed response. Rebuild it from the fail-closed effective verdict unless
   // Team Direction itself is currently accepted and available.
@@ -760,10 +920,16 @@ export function buildManagementSnapshotExport({
       classification: titleCaseNullable(effectiveVerdict.direction) ?? 'Uncertain',
       confidence: titleCaseNullable(effectiveVerdict.confidence) ?? 'Low',
       classification_available: effectiveVerdict.classificationAvailable,
-      classification_failure: teamDirection?.classificationFailure ?? null,
+      classification_failure: classificationFailure,
       blocking_reason: blockingReason,
     },
     forge_freshness_receipt: freshnessReceipt,
+    forge_freshness_client_evaluation: {
+      evaluated_at: generatedAt,
+      accepted: freshnessEvaluation.accepted,
+      reason: freshnessEvaluation.reason,
+      accepted_through: freshnessEvaluation.acceptedThrough,
+    },
     active_roster_summary: {
       roster_count: visibility.total,
       identity_coverage: { matched: visibility.identityCovered, total: visibility.total },
@@ -791,7 +957,7 @@ export function buildManagementSnapshotExport({
       overall_total: dashboardTeam?.overall_total ?? null,
       note: forgeFreshnessAccepted
         ? 'Observed player-specific FORGE totals are eligible under the G6 freshness receipt.'
-        : 'Raw artifact observations only; excluded from Team Direction by the G6 freshness receipt.',
+        : 'Raw artifact observations only; excluded from Team Direction by the current client freshness evaluation. The immutable receipt remains preserved above.',
     },
     artifact_diagnostics: {
       forge_player_static_v1: {
@@ -891,7 +1057,7 @@ export function buildManagementSnapshotExport({
       sample_unmatched_roster_canonical_ids: activeMatching.sampleUnmatchedRosterCanonicalIds,
     },
     identity_seed_report: seedReport,
-    identity_seed_report_note: 'forge_status describes identity/row matching only; Team Direction eligibility is governed by forge_freshness_receipt.',
+    identity_seed_report_note: 'forge_status describes identity/row matching only; Team Direction eligibility is governed by the immutable receipt plus the current client freshness evaluation.',
   };
 }
 
@@ -1063,8 +1229,9 @@ function activationLevelName(level: number): string {
 function artifactStatusClass(
   artifact?: ForgeArtifactDiagnostics | null,
   receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
 ) {
-  if (artifact?.available && isAcceptedForgeFreshnessReceipt(receipt)) return 'tmd-status-ready';
+  if (artifact?.available && isAcceptedForgeFreshnessReceipt(receipt, evaluatedAtMs)) return 'tmd-status-ready';
   if (artifact?.available) return 'tmd-status-unavailable';
   if (artifact?.state === 'missing' || artifact?.state === 'disabled') return 'tmd-status-unavailable';
   return 'tmd-status-partial';
@@ -1074,14 +1241,15 @@ function forgeArtifactNarrative(
   artifact?: ForgeArtifactDiagnostics | null,
   matching?: ForgeRosterMatchingDiagnostics | null,
   receipt?: TeamDirectionForgeFreshnessReceipt | null,
+  evaluatedAtMs = Date.now(),
 ) {
   if (!artifact) return 'No FORGE_PLAYER_STATIC_V1 diagnostics were returned by the dashboard payload.';
   if (!artifact.available) {
     if (artifact.state === 'missing') return 'Artifact missing/unavailable. Management is failing closed and not fabricating scores.';
     return `Artifact unavailable (${artifact.state ?? 'unknown'}). Management is failing closed and preserving strict contract semantics.`;
   }
-  if (!isAcceptedForgeFreshnessReceipt(receipt)) {
-    return `Artifact rows are preserved for inspection, but the G6 freshness decision rejected them for Team Direction (${receipt?.status ?? 'unknown'}: ${receipt?.reasonCode ?? 'receipt_missing'}).`;
+  if (!isAcceptedForgeFreshnessReceipt(receipt, evaluatedAtMs)) {
+    return `Artifact rows are preserved for inspection, but the G6 freshness decision rejected them for Team Direction (${forgeFreshnessDecisionLabel(receipt, evaluatedAtMs)}).`;
   }
   if ((matching?.rosterCanonicalIdsChecked ?? 0) > 0 && (matching?.rosterCanonicalIdsMatched ?? 0) === 0) {
     return 'Artifact is available, but none of this roster’s canonical IDs match FORGE_PLAYER_STATIC_V1 rows.';
@@ -1113,26 +1281,32 @@ function ForgeArtifactDiagnosticsPanel({
   activeRosterVisibility,
   activeTeamMatching,
   freshnessReceipt,
+  freshnessEvaluatedAtMs,
 }: {
   diagnostics?: LeagueDashboardResponse['diagnostics'];
   activeRosterVisibility: RosterCoverageCounts;
   activeTeamMatching: ActiveTeamMatchingSummary;
   freshnessReceipt?: TeamDirectionForgeFreshnessReceipt | null;
+  freshnessEvaluatedAtMs: number;
 }) {
   const artifact = diagnostics?.forgeArtifact;
   const matching = diagnostics?.forgeRosterMatching;
   const identityArtifact = diagnostics?.identityCrosswalkArtifact;
+  const freshnessEvaluation = evaluateForgeFreshnessReceipt(freshnessReceipt, freshnessEvaluatedAtMs);
+  const eligiblePlayerSpecificRows = freshnessEvaluation.accepted
+    ? (freshnessReceipt?.evidence?.eligiblePlayerSpecificRows ?? 0)
+    : 0;
 
   return (
     <div className="tmd-forge-diagnostics" aria-label="FORGE_PLAYER_STATIC_V1 artifact diagnostics">
       <div className="tmd-forge-diagnostics-topline">
         <div>
           <h3>FORGE_PLAYER_STATIC_V1 runtime diagnostics</h3>
-          <p>{forgeArtifactNarrative(artifact, matching, freshnessReceipt)}</p>
+          <p>{forgeArtifactNarrative(artifact, matching, freshnessReceipt, freshnessEvaluatedAtMs)}</p>
         </div>
-        <span className={`tmd-status ${artifactStatusClass(artifact, freshnessReceipt)}`}>
+        <span className={`tmd-status ${artifactStatusClass(artifact, freshnessReceipt, freshnessEvaluatedAtMs)}`}>
           {artifact?.available
-            ? isAcceptedForgeFreshnessReceipt(freshnessReceipt)
+            ? freshnessEvaluation.accepted
               ? 'Fresh for Team Direction'
               : 'Rejected for Team Direction'
             : artifact?.state ? String(artifact.state) : 'Unavailable'}
@@ -1144,10 +1318,11 @@ function ForgeArtifactDiagnosticsPanel({
         <div><span>Receipt version</span><code>{diagnosticValue(freshnessReceipt?.receiptVersion)}</code></div>
         <div><span>G6 decision</span><strong>{diagnosticValue(freshnessReceipt?.decision)}</strong><small>{diagnosticValue(freshnessReceipt?.reasonCode)}</small></div>
         <div><span>G6 status</span><strong>{diagnosticValue(freshnessReceipt?.status)}</strong></div>
+        <div><span>Current client evaluation</span><strong>{freshnessEvaluation.accepted ? 'accepted' : 'rejected'}</strong><small>{freshnessEvaluation.reason}</small></div>
         <div><span>Root generated_at</span><strong>{diagnosticValue(freshnessReceipt?.clocks?.generatedAt)}</strong><small>{diagnosticValue(freshnessReceipt?.clocks?.generatedAtSource)}</small></div>
         <div><span>Evaluated at</span><strong>{diagnosticValue(freshnessReceipt?.clocks?.evaluatedAt)}</strong></div>
         <div><span>Age / limit</span><strong>{freshnessReceipt?.clocks?.ageDays == null ? 'Unavailable' : `${freshnessReceipt.clocks.ageDays.toFixed(3)} days`}</strong><small>Maximum {diagnosticValue(freshnessReceipt?.clocks?.maximumAgeDays)} elapsed UTC days</small></div>
-        <div><span>Eligible player-specific rows</span><strong>{diagnosticValue(freshnessReceipt?.evidence?.eligiblePlayerSpecificRows)}</strong><small>{diagnosticValue(freshnessReceipt?.evidence?.observedPlayerSpecificRows)} observed raw</small></div>
+        <div><span>Eligible player-specific rows</span><strong>{diagnosticValue(eligiblePlayerSpecificRows)}</strong><small>{diagnosticValue(freshnessReceipt?.evidence?.observedPlayerSpecificRows)} observed raw</small></div>
       </div>
 
       <div className="tmd-forge-diagnostics-grid">
@@ -1185,7 +1360,7 @@ function ForgeArtifactDiagnosticsPanel({
         <div><span>FORGE row matched</span><strong>{diagnosticValue(activeTeamMatching.forgeRowMatched)}</strong><small>Active-team FORGE_PLAYER_STATIC_V1 rows, evidence or visibility</small></div>
         <div><span>Direct canonical matches</span><strong>{diagnosticValue(activeTeamMatching.directCanonicalMatches)}</strong></div>
         <div><span>Observed raw player_specific rows matched</span><strong>{diagnosticValue(activeTeamMatching.playerSpecificEvidenceMatched)}</strong></div>
-        <div><span>Eligible player_specific rows</span><strong>{diagnosticValue(freshnessReceipt?.evidence?.eligiblePlayerSpecificRows ?? 0)}</strong></div>
+        <div><span>Eligible player_specific rows</span><strong>{diagnosticValue(eligiblePlayerSpecificRows)}</strong></div>
         <div><span>generated_baseline visibility matched</span><strong>{diagnosticValue(activeTeamMatching.generatedBaselineVisibilityMatched)}</strong><small>Not counted as player-specific evidence</small></div>
         <div><span>non-evidence roster matches</span><strong>{diagnosticValue(activeTeamMatching.nonEvidenceRosterMatches)}</strong></div>
       </div>
@@ -1278,6 +1453,7 @@ export function buildManagementModelSignals({
   strategyContextActivation,
   forgeEvidenceActivation,
   forgeFreshnessReceipt,
+  freshnessEvaluatedAtMs = Date.now(),
   teamstateMovementActivation,
 }: {
   hasActiveTeam: boolean;
@@ -1292,9 +1468,11 @@ export function buildManagementModelSignals({
   strategyContextActivation?: StrategyContextActivationDiagnostics | null;
   forgeEvidenceActivation?: ForgeEvidenceActivationDiagnostics | null;
   forgeFreshnessReceipt?: TeamDirectionForgeFreshnessReceipt | null;
+  freshnessEvaluatedAtMs?: number;
   teamstateMovementActivation?: TeamstateMovementActivationDiagnostics | null;
 }): ModelSignalCard[] {
-  const forgeFreshnessAccepted = isAcceptedForgeFreshnessReceipt(forgeFreshnessReceipt);
+  const freshnessEvaluation = evaluateForgeFreshnessReceipt(forgeFreshnessReceipt, freshnessEvaluatedAtMs);
+  const forgeFreshnessAccepted = freshnessEvaluation.accepted;
   const observedForgeRows = forgeFreshnessReceipt?.evidence?.observedPlayerSpecificRows ?? rosterVisibility.forgeScored;
   const eligibleForgeRows = forgeFreshnessAccepted
     ? (forgeFreshnessReceipt?.evidence?.eligiblePlayerSpecificRows ?? rosterVisibility.forgeScored)
@@ -1383,7 +1561,7 @@ export function buildManagementModelSignals({
   const playerSpecificIsEvidence = playerSpecificLevel >= 3 && forgeFreshnessAccepted;
   const forgeEvidenceInspectable = Boolean(fea) && (playerSpecificLevel >= 1 || generatedBaselineLevel >= 1);
   const forgeEvidenceActivationDetails = [
-    `G6 freshness decision: ${forgeFreshnessDecisionLabel(forgeFreshnessReceipt)}.`,
+    `G6 freshness decision: ${forgeFreshnessDecisionLabel(forgeFreshnessReceipt, freshnessEvaluatedAtMs)}.`,
     `Player-specific evidence level: ${playerSpecificLevel} (${activationLevelName(playerSpecificLevel)}).`,
     `Player-specific provenance: ${fea?.playerSpecific?.scoreSource ?? 'unknown'}.`,
     `Player-specific cited as evidence: ${yesNo(playerSpecificIsEvidence)}.`,
@@ -1463,7 +1641,7 @@ export function buildManagementModelSignals({
       explanation: hasRosterData
         ? forgeFreshnessAccepted
           ? `FORGE has ${eligibleForgeRows}/${rosterVisibility.total} eligible player-specific rows (${pct(forgeCoverageRate)}) under the named G6 freshness decision.`
-          : `${observedForgeRows} player-specific row${observedForgeRows === 1 ? ' is' : 's are'} preserved as raw diagnostics, but zero are eligible for Team Direction (${forgeFreshnessDecisionLabel(forgeFreshnessReceipt)}).`
+          : `${observedForgeRows} player-specific row${observedForgeRows === 1 ? ' is' : 's are'} preserved as raw diagnostics, but zero are eligible for Team Direction (${forgeFreshnessDecisionLabel(forgeFreshnessReceipt, freshnessEvaluatedAtMs)}).`
         : 'Connect an active team with roster rows before inspecting FORGE coverage.',
       href: '#roster-snapshot',
       linkLabel: 'Inspect Roster Snapshot',
@@ -1475,6 +1653,7 @@ export function buildManagementModelSignals({
         `FORGE alpha totals: ${hasForgeAlphaTotals ? 'eligible' : hasDashboardTotals ? 'raw observation only; excluded from Team Direction' : 'unavailable'}.`,
         `G6 policy: ${forgeFreshnessReceipt?.policyId ?? 'missing receipt'}.`,
         `G6 status/reason: ${forgeFreshnessReceipt?.status ?? 'unknown'} / ${forgeFreshnessReceipt?.reasonCode ?? 'receipt_missing'}.`,
+        `Current client evaluation: ${freshnessEvaluation.reason}.`,
         `Root generated_at: ${forgeFreshnessReceipt?.clocks?.generatedAt ?? 'missing'}; evaluated_at: ${forgeFreshnessReceipt?.clocks?.evaluatedAt ?? 'missing'}.`,
         'Team Direction confidence still uses FORGE scoring coverage, not fallback visibility.',
       ],
@@ -1596,14 +1775,20 @@ export function buildManagementModelSignals({
   ];
 }
 
-function TeamDirectionInputs({ data }: { data: TeamDirectionResponse }) {
+function TeamDirectionInputs({
+  data,
+  freshnessEvaluatedAtMs,
+}: {
+  data: TeamDirectionResponse;
+  freshnessEvaluatedAtMs: number;
+}) {
   const observedEvidenceCoverage = data.evidenceCoverage ?? data.coverage;
   const forgeCoverage = data.forgeCoverage ?? data.confidenceInputs?.forgeCoverage;
   const rookieAlphaMatched = observedEvidenceCoverage?.rookieAlphaMatched ?? data.coverage?.rookieAlphaMatched ?? 0;
   const confidenceInputs = data.confidenceInputs;
   const freshnessReceipt = data.forge_freshness_receipt;
-  const effectiveVerdict = effectiveTeamDirectionVerdict(data);
-  const freshnessAccepted = isAcceptedForgeFreshnessReceipt(freshnessReceipt);
+  const effectiveVerdict = effectiveTeamDirectionVerdict(data, freshnessEvaluatedAtMs);
+  const freshnessAccepted = isAcceptedForgeFreshnessReceipt(freshnessReceipt, freshnessEvaluatedAtMs);
   const eligibleForgeCoverage = freshnessAccepted
     ? forgeCoverage
     : { matched: 0, total: forgeCoverage?.total ?? freshnessReceipt?.evidence?.rosterTotal ?? 0, rate: 0 };
@@ -1626,7 +1811,7 @@ function TeamDirectionInputs({ data }: { data: TeamDirectionResponse }) {
     <div className="tmd-dir-inputs" aria-label="Team Direction confidence inputs">
       <div>
         <span>G6 freshness decision</span>
-        <strong>{forgeFreshnessDecisionLabel(freshnessReceipt)}</strong>
+        <strong>{forgeFreshnessDecisionLabel(freshnessReceipt, freshnessEvaluatedAtMs)}</strong>
         <small>
           Policy {freshnessReceipt?.policyId ?? 'missing'} · root generated_at {freshnessReceipt?.clocks?.generatedAt ?? 'missing'} · evaluated {freshnessReceipt?.clocks?.evaluatedAt ?? 'missing'}
         </small>
@@ -1642,7 +1827,7 @@ function TeamDirectionInputs({ data }: { data: TeamDirectionResponse }) {
         <strong>{effectiveVerdict.confidence.charAt(0).toUpperCase()}{effectiveVerdict.confidence.slice(1)}</strong>
         <small>{positionSummary ?? 'Based on FORGE scoring coverage and scored positional data quality.'}</small>
       </div>
-      {confidenceInputs?.missingScoredPositions && confidenceInputs.missingScoredPositions.length > 0 && (
+      {freshnessAccepted && confidenceInputs?.missingScoredPositions && confidenceInputs.missingScoredPositions.length > 0 && (
         <div className="tmd-dir-inputs-note">
           Missing scored position data: {confidenceInputs.missingScoredPositions.join(', ')}
         </div>
@@ -1661,14 +1846,20 @@ function directionMeta(direction?: string | null) {
 function TeamDirectionCard({
   query,
   activeTeam,
+  freshnessEvaluatedAtMs,
 }: {
   query: ReturnType<typeof useQuery<TeamDirectionResponse>>;
   activeTeam?: LeagueTeam | null;
+  freshnessEvaluatedAtMs: number;
 }) {
   const data = query.data;
-  const effectiveVerdict = effectiveTeamDirectionVerdict(data);
+  const effectiveVerdict = effectiveTeamDirectionVerdict(data, freshnessEvaluatedAtMs);
   const meta = directionMeta(effectiveVerdict.direction);
-  const freshnessRejected = Boolean(data) && !isAcceptedForgeFreshnessReceipt(data?.forge_freshness_receipt);
+  const freshnessRejected = Boolean(data)
+    && !isAcceptedForgeFreshnessReceipt(data?.forge_freshness_receipt, freshnessEvaluatedAtMs);
+  const clientFreshnessOverride = data?.classificationAvailable === true
+    && hasAcceptedForgeFreshnessReceiptShape(data.forge_freshness_receipt)
+    && freshnessRejected;
 
   return (
     <section className="tmd-card">
@@ -1704,10 +1895,10 @@ function TeamDirectionCard({
         <div className="tmd-dir-body">
           <div className="tmd-callout tmd-callout-warn">
             {freshnessRejected
-              ? `FORGE is rejected for Team Direction by the G6 freshness decision (${data.forge_freshness_receipt?.status ?? 'unknown'}: ${data.classificationFailure?.reasonCode ?? data.forge_freshness_receipt?.reasonCode ?? 'receipt_missing'}). Raw evidence remains visible below.`
+              ? `FORGE is rejected for Team Direction by the G6 freshness decision (${forgeFreshnessDecisionLabel(data.forge_freshness_receipt, freshnessEvaluatedAtMs)}). Raw evidence remains visible below.`
               : 'Not enough eligible scoring evidence to classify this roster.'}
           </div>
-          {data.blockers && data.blockers.length > 0 && (
+          {!clientFreshnessOverride && data.blockers && data.blockers.length > 0 && (
             <div className="tmd-dir-section">
               <div className="tmd-dir-section-label">What's blocking this</div>
               <ul className="tmd-dir-list tmd-dir-list-blockers">
@@ -1715,7 +1906,7 @@ function TeamDirectionCard({
               </ul>
             </div>
           )}
-          <TeamDirectionInputs data={data} />
+          <TeamDirectionInputs data={data} freshnessEvaluatedAtMs={freshnessEvaluatedAtMs} />
         </div>
       ) : (
         <div className="tmd-dir-body">
@@ -1747,7 +1938,7 @@ function TeamDirectionCard({
             </div>
           )}
 
-          <TeamDirectionInputs data={data} />
+          <TeamDirectionInputs data={data} freshnessEvaluatedAtMs={freshnessEvaluatedAtMs} />
 
           <div className="tmd-provenance">
             Read-only classifier. Uses FORGE alpha scores and draft pick capital for direction. Promoted Rookie Alpha only improves evidence coverage and visibility — it is never blended into FORGE scoring or rankings.
@@ -1805,7 +1996,15 @@ export default function TiberManagementDashboard() {
   const teamDirectionQuery = useQuery<TeamDirectionResponse>({
     queryKey: [`/api/management/team-direction?user_id=${DEFAULT_USER_ID}&league_id=${activeLeagueId ?? ''}`],
     enabled: Boolean(activeLeagueId && activeTeam?.id),
+    // The freshness hook owns focus/visibility recovery so expiry refetches
+    // remain deduplicated and the UI fails closed before the request returns.
+    refetchOnWindowFocus: false,
   });
+  const forgeFreshnessEvaluatedAtMs = useForgeFreshnessRevalidation(
+    teamDirectionQuery.data?.forge_freshness_receipt,
+    teamDirectionQuery.refetch,
+    `${activeLeagueId ?? 'no-league'}:${activeTeam?.id ?? 'no-team'}`,
+  );
 
   const rosterCounts = useMemo(() => buildRosterCounts(activeDashboardTeam), [activeDashboardTeam]);
   const rosterVisibility = useMemo(
@@ -1815,7 +2014,10 @@ export default function TiberManagementDashboard() {
   const hasRosterData = Boolean(activeDashboardTeam?.roster?.length);
   const hasDashboardTotals = Boolean(activeDashboardTeam?.totals);
   const forgeFreshnessReceipt = teamDirectionQuery.data?.forge_freshness_receipt ?? null;
-  const forgeFreshnessAccepted = isAcceptedForgeFreshnessReceipt(forgeFreshnessReceipt);
+  const forgeFreshnessAccepted = isAcceptedForgeFreshnessReceipt(
+    forgeFreshnessReceipt,
+    forgeFreshnessEvaluatedAtMs,
+  );
   const eligiblePlayerSpecificRows = forgeFreshnessAccepted
     ? (forgeFreshnessReceipt?.evidence?.eligiblePlayerSpecificRows ?? rosterVisibility.forgeScored)
     : 0;
@@ -1836,8 +2038,21 @@ export default function TiberManagementDashboard() {
     teamDirection: teamDirectionQuery.data,
     diagnostics: dashboardQuery.data?.diagnostics,
     identitySeedReport,
-  }), [activeLeague, activeTeam, activeDashboardTeam, teamDirectionQuery.data, dashboardQuery.data?.diagnostics, identitySeedReport]);
+    generatedAt: new Date(forgeFreshnessEvaluatedAtMs).toISOString(),
+  }), [activeLeague, activeTeam, activeDashboardTeam, teamDirectionQuery.data, dashboardQuery.data?.diagnostics, identitySeedReport, forgeFreshnessEvaluatedAtMs]);
   const managementSnapshotJson = useMemo(() => JSON.stringify(managementSnapshot, null, 2), [managementSnapshot]);
+
+  function currentManagementSnapshotJson() {
+    return JSON.stringify(buildManagementSnapshotExport({
+      league: activeLeague,
+      team: activeTeam,
+      dashboardTeam: activeDashboardTeam,
+      teamDirection: teamDirectionQuery.data,
+      diagnostics: dashboardQuery.data?.diagnostics,
+      identitySeedReport,
+      generatedAt: new Date().toISOString(),
+    }), null, 2);
+  }
 
   async function copyIdentitySeedReport() {
     try {
@@ -1865,11 +2080,12 @@ export default function TiberManagementDashboard() {
 
   async function copyManagementSnapshot() {
     try {
+      const currentSnapshotJson = currentManagementSnapshotJson();
       if (navigator?.clipboard?.writeText) {
-        await navigator.clipboard.writeText(managementSnapshotJson);
+        await navigator.clipboard.writeText(currentSnapshotJson);
       } else {
         const textarea = document.createElement('textarea');
-        textarea.value = managementSnapshotJson;
+        textarea.value = currentSnapshotJson;
         textarea.setAttribute('readonly', 'true');
         textarea.style.position = 'fixed';
         textarea.style.opacity = '0';
@@ -1887,7 +2103,7 @@ export default function TiberManagementDashboard() {
   }
 
   function downloadManagementSnapshot() {
-    const blob = new Blob([managementSnapshotJson], { type: 'application/json' });
+    const blob = new Blob([currentManagementSnapshotJson()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -1975,6 +2191,7 @@ export default function TiberManagementDashboard() {
     strategyContextActivation: teamDirectionQuery.data?.strategy_context_activation,
     forgeEvidenceActivation: teamDirectionQuery.data?.forge_evidence_activation,
     forgeFreshnessReceipt: teamDirectionQuery.data?.forge_freshness_receipt,
+    freshnessEvaluatedAtMs: forgeFreshnessEvaluatedAtMs,
     teamstateMovementActivation: buildTeamstateMovementActivationFromResponse(teamstateQuery.data),
   });
 
@@ -2151,7 +2368,11 @@ export default function TiberManagementDashboard() {
         </article>
       </section>
 
-      <TeamDirectionCard query={teamDirectionQuery} activeTeam={activeTeam} />
+      <TeamDirectionCard
+        query={teamDirectionQuery}
+        activeTeam={activeTeam}
+        freshnessEvaluatedAtMs={forgeFreshnessEvaluatedAtMs}
+      />
 
       <section className="tmd-card">
         <div className="tmd-card-header">
@@ -2192,7 +2413,7 @@ export default function TiberManagementDashboard() {
             <div>
               <span>Eligible player-specific FORGE evidence</span>
               <strong>{eligiblePlayerSpecificRows}/{rosterVisibility.total}</strong>
-              <small>{forgeFreshnessDecisionLabel(forgeFreshnessReceipt)}</small>
+              <small>{forgeFreshnessDecisionLabel(forgeFreshnessReceipt, forgeFreshnessEvaluatedAtMs)}</small>
             </div>
             <div>
               <span>Rookie Alpha fallback</span>
@@ -2225,6 +2446,7 @@ export default function TiberManagementDashboard() {
               activeRosterVisibility={rosterVisibility}
               activeTeamMatching={activeTeamMatching}
               freshnessReceipt={teamDirectionQuery.data?.forge_freshness_receipt}
+              freshnessEvaluatedAtMs={forgeFreshnessEvaluatedAtMs}
             />
           </details>
         )}
