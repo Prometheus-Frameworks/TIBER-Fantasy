@@ -49,6 +49,7 @@ export function createManagementRouter(deps: ManagementDeps = defaultDeps) {
         dashboardPayload = await deps.computeLeagueDashboard({
           userId: user_id as string,
           leagueId: league_id as string,
+          refresh: true,
         });
       } catch (err) {
         return res.status(404).json({
