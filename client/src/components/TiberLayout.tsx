@@ -20,6 +20,7 @@ const navSections: NavSectionConfig[] = [
     label: "Primary",
     description: "Inspectable systems only.",
     items: [
+      { label: "Post-Cutoff Ledger", path: "/observatory/post-cutoff-ledger", badge: "NEW" },
       { label: "Management", path: "/management", badge: "NEW" },
       { label: "Rankings", path: "/tiers", badge: "LIVE" },
       { label: "Rookie Board", path: "/rookies", badge: "2026" },

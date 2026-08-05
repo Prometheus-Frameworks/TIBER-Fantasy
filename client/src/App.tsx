@@ -43,6 +43,7 @@ import TeamResearchLab from "@/pages/TeamResearchLab";
 import DataLabCommandCenterLab from "@/pages/DataLabCommandCenterLab";
 import TiberManagementDashboard from "@/pages/TiberManagementDashboard";
 import StressLab from "@/pages/StressLab";
+import PostCutoffLedger from "@/pages/PostCutoffLedger";
 import FantasyLab from "@/pages/FantasyLab";
 import IdpLab from "@/pages/IdpLab";
 import CatalystLab from "@/pages/CatalystLab";
@@ -70,6 +71,8 @@ function Router() {
               */}
               <Route path="/" component={StressLab} />
               <Route path="/observatory" component={StressLab} />
+              {/* Observatory sub-surface: post-cutoff signal ledger intake/review (#297). */}
+              <Route path="/observatory/post-cutoff-ledger" component={PostCutoffLedger} />
               <Route path="/dashboard" component={Dashboard} />
               {/* CANONICAL (current): user-visible rankings surface until Rankings v2 route wiring lands. */}
               <Route path="/tiers" component={TiberTiers} />

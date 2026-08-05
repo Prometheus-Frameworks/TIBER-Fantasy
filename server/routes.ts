@@ -99,6 +99,7 @@ import { dataLabTeamStateRouter } from './routes/dataLabTeamStateRoutes';
 import { dataLabTeamEnvironmentMovementRouter } from './routes/dataLabTeamEnvironmentMovementRoutes';
 import { rookiesPromotedRouter } from './routes/rookiesPromotedRoutes';
 import { createRankingsV2Router } from './routes/rankingsV2Routes';
+import { postCutoffLedgerRouter } from './routes/postCutoffLedgerRoutes';
 import consensusRoutes from './consensus';
 import consensusSeedingRoutes from './consensusSeeding';
 import articleRoutes from './routes/articleRoutes';
@@ -251,6 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/data-lab', dataLabTeamEnvironmentMovementRouter);
   app.use('/api/rookies', rookiesPromotedRouter);
   app.use('/api/rankings/v2', createRankingsV2Router());
+  // Post-cutoff signal ledger (#297): append-only operator evidence; reads open, writes admin-authed.
+  app.use('/api/post-cutoff-ledger', postCutoffLedgerRouter);
 
   // ========================================
   // MONITORING ENDPOINTS - HEALTH & METRICS

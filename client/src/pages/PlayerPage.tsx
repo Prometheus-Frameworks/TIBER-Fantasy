@@ -15,6 +15,7 @@ import CompareDrawerContent from '@/components/player/CompareDrawerContent';
 import { ScoringSnapshotCard, type PlayerCardSnapshot } from '@/components/player/ScoringSnapshotCard';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import { PlayerResearchSummaryBlock } from '@/components/data-lab/PlayerResearchSummaryBlock';
+import PostCutoffLedgerPanel from '@/components/PostCutoffLedgerPanel';
 import type { CompareTarget } from '@/components/player/CompareDrawerContent';
 import { addRecentPlayer } from '@/lib/recentPlayers';
 import { computePulse, computeTrendDeltas, getTopDrivers, formatWeekRange, getDeltaArrow, getPulseColor, type WeekData } from '@/lib/pulseUtils';
@@ -666,6 +667,9 @@ export default function PlayerPage() {
         />
 
         <ScoringSnapshotCard weekly={player.scoring?.weekly} ros={player.scoring?.ros} />
+
+        {/* Post-cutoff signal ledger evidence linked to this player (#297); renders nothing when empty. */}
+        <PostCutoffLedgerPanel playerName={player.fullName} canonicalPlayerId={nflfastrId} />
 
         {/* Controls Row */}
         <div className="flex flex-wrap items-center gap-3">
