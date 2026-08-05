@@ -751,3 +751,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Copy/download and agent-readable snapshots now rebuild against the action clock, preserve the immutable raw receipt, and expose a separately labeled client evaluation while zeroing eligible FORGE coverage after expiry.
 - Suppressed cached Alpha rationale, blockers, stale classification failures, and scored-position diagnostics whenever an otherwise accepted receipt becomes locally rejected.
 - Validation: six focused Management/FORGE Jest suites passed (133 tests); server and Vite builds passed; diff check passed; repository typecheck retained 505 pre-existing errors with zero touched-file matches.
+
+### 2026-08-05 — Data Lab SQL parameterization
+- Bound anonymous Data Lab/xFPTS filter values through Drizzle SQL parameters instead of composing raw query fragments.
+- Hardened the dormant legacy Data Lab router alongside the live shared service to prevent a future remount from restoring the unsafe pattern.
+- Added compiled-query regressions for the mounted `/usage-agg` call path, player/week filters, and a source guard against interpolated `sql.raw` templates.
+- Validation: focused security tests 6/6 passed; build passed with the existing OLC warning; full Jest run executed 850 passing tests while six unrelated baseline suites failed to load; typecheck retained 505 existing errors with zero changed-file matches; diff check passed.

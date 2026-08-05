@@ -423,13 +423,13 @@ export async function getPlayerExpectedFantasy(
   weekFrom?: number,
   weekTo?: number
 ): Promise<PlayerExpectedFantasyWeek[]> {
-  let weekFilter = sql.raw('');
+  let weekFilter = sql``;
   if (weekFrom !== undefined && weekTo !== undefined) {
-    weekFilter = sql.raw(`AND week BETWEEN ${weekFrom} AND ${weekTo}`);
+    weekFilter = sql`AND week BETWEEN ${weekFrom} AND ${weekTo}`;
   } else if (weekFrom !== undefined) {
-    weekFilter = sql.raw(`AND week >= ${weekFrom}`);
+    weekFilter = sql`AND week >= ${weekFrom}`;
   } else if (weekTo !== undefined) {
-    weekFilter = sql.raw(`AND week <= ${weekTo}`);
+    weekFilter = sql`AND week <= ${weekTo}`;
   }
 
   const result = await db.execute(sql`
@@ -482,8 +482,8 @@ export async function getAggregatedExpectedFantasy(
   position?: string
 ): Promise<Map<string, { xPpr: number; xfpgoe: number; gamesWithData: number }>> {
   const posFilter = position && position !== 'ALL' 
-    ? sql.raw(`AND position = '${position}'`)
-    : sql.raw('');
+    ? sql`AND position = ${position}`
+    : sql``;
 
   const result = await db.execute(sql`
     SELECT 
