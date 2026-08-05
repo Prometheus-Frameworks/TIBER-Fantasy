@@ -539,3 +539,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberManagementDashboard.tsx`, `client/src/__tests__/managementForgeFreshnessExpiry.test.ts`, `client/src/__tests__/managementModelSignals.test.ts`, `.claude/context-log.md`, `.claude/agents/codex.md`.
 - **Validation:** Six focused Management/FORGE Jest suites passed (133 tests); server and Vite production builds passed; `git diff --check` passed. Repository typecheck still reports 505 pre-existing errors, with zero matches in the touched page/tests.
 - **Notes:** Cached Alpha reasons, blockers, scored-position diagnostics, and stale classification failures cannot leak into the locally rejected verdict/export. No backend policy, artifact bytes, scoring/direction thresholds, database, auth, or deployment behavior changed.
+
+### 2026-08-05 — Codex: Data Lab SQL parameterization
+- **What changed:** Replaced caller-derived raw SQL fragments in the shared xFPTS service and legacy Data Lab router with Drizzle-bound parameters. Added compiled-query coverage for the mounted anonymous `/usage-agg` path plus a raw-template regression guard.
+- **Files modified:** `server/services/xFptsService.ts`, `server/routes/dataLabRoutes.ts`, `server/services/__tests__/xFptsSqlSafety.test.ts`
+- **Validation:** Focused security suite passed (6 tests); production build passed with the existing OLC duplicate-member warning; repo test run executed 850 tests successfully with six unrelated baseline suite-load failures; repo typecheck retained 505 existing errors with zero changed-file matches; `git diff --check` passed.
+- **Notes:** Production mounts `server/modules/datalab/snapshots/snapshotRoutes.ts`, whose local request filters were already parameterized; the live defect was its call into `getAggregatedExpectedFantasy()`. The unmounted legacy router was hardened to prevent remount regression. No API response, schema, or deployment change.
