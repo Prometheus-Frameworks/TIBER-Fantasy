@@ -3674,3 +3674,12 @@ html, body {
     justify-content: flex-start;
   }
 }
+
+/* Post-cutoff ledger (#297) is a v2-light surface inside the dark shell:
+   restore dark form-control text that the shell-level
+   `.tiber-main input/select/textarea` light-grey rule would otherwise force. */
+.tiber-main .pcl-light-surface input,
+.tiber-main .pcl-light-surface select,
+.tiber-main .pcl-light-surface textarea {
+  color: #111827;
+}
