@@ -735,7 +735,7 @@ export default function PostCutoffLedger() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5 px-3 py-5 sm:px-6 sm:py-8">
+    <div className="pcl-light-surface mx-auto w-full max-w-5xl space-y-5 px-3 py-5 sm:px-6 sm:py-8">
       <header>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
           Observatory · post_cutoff_ledger_v0
