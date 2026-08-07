@@ -37,6 +37,10 @@ if (!VALID_FORMATS.includes(format)) {
   console.error(`Unknown format "${format}" (expected ${VALID_FORMATS.join('|')})`);
   process.exit(1);
 }
+if (!Number.isInteger(teams) || teams < 2 || !Number.isInteger(year) || year < 2000) {
+  console.error(`Bad --teams (${args.teams}) or --year (${args.year}) — a flag passed without a value parses to NaN`);
+  process.exit(1);
+}
 
 const url = `https://fantasyfootballcalculator.com/api/v1/adp/${format}?teams=${teams}&year=${year}`;
 
