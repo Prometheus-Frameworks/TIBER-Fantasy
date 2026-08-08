@@ -6,6 +6,7 @@
 import axios from 'axios';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getNewestCacheTimestamp, warnIfCacheStale } from '../config/season';
 
 // Centralized axios instance
 const http = axios.create({ 
@@ -27,6 +28,7 @@ export interface SleeperPlayer {
   fantasy_positions: string[];
   injury_status?: string;
   search_full_name?: string;
+  news_updated?: number | null;
 }
 
 export interface SleeperProjection {
@@ -133,6 +135,11 @@ class SleeperSyncService {
     }
   }
 
+  private warnIfPlayersCacheIsStale(players: SleeperPlayer[]): void {
+    const newestTimestamp = getNewestCacheTimestamp(players.map((player) => player.news_updated));
+    warnIfCacheStale(this.PLAYERS_CACHE_FILE, newestTimestamp);
+  }
+
   /**
    * Sync all NFL players from Sleeper API
    */
@@ -175,6 +182,7 @@ class SleeperSyncService {
       const cachedPlayers = await this.readCache<SleeperPlayer[]>(this.PLAYERS_CACHE_FILE);
       
       if (cachedPlayers) {
+        this.warnIfPlayersCacheIsStale(cachedPlayers);
         logInfo('Using cached players', { players_count: cachedPlayers.length });
         return {
           success: true,
@@ -200,6 +208,7 @@ class SleeperSyncService {
     
     const players = await this.readCache<SleeperPlayer[]>(this.PLAYERS_CACHE_FILE);
     if (players) {
+      this.warnIfPlayersCacheIsStale(players);
       // Update in-memory cache
       this.playersCache.data = players;
       try {
