@@ -44,12 +44,55 @@ interface Site {
   needsHoverText: boolean;
 }
 
+/**
+ * Yield each complete `<Button ...>` opening tag.
+ *
+ * A `[^>]*?>` regex cannot do this: an arrow callback such as
+ * `onClick={(e) => ...}` contains a `>`, which ends the match early and hides
+ * everything after it — including `className`. The audit would then silently
+ * skip a dark-surface button and still claim repository-wide coverage.
+ *
+ * So track brace depth and quoting, and only accept `>` as the tag terminator
+ * at depth 0 outside a string.
+ */
+function* openingTags(source: string): Generator<string> {
+  const OPEN = '<Button';
+  let index = source.indexOf(OPEN);
+
+  while (index !== -1) {
+    // Require a tag boundary so `<ButtonGroup` is not treated as `<Button`.
+    if (!/[\s/>]/.test(source[index + OPEN.length] ?? '')) {
+      index = source.indexOf(OPEN, index + OPEN.length);
+      continue;
+    }
+
+    let depth = 0;
+    let quote: string | null = null;
+    let end = -1;
+
+    for (let i = index + OPEN.length; i < source.length; i += 1) {
+      const char = source[i];
+      if (quote) {
+        if (char === quote && source[i - 1] !== '\\') quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'" || char === '`') { quote = char; continue; }
+      if (char === '{') { depth += 1; continue; }
+      if (char === '}') { depth -= 1; continue; }
+      if (char === '>' && depth === 0) { end = i; break; }
+    }
+
+    if (end === -1) return; // Unterminated tag; nothing further is parseable.
+    yield source.slice(index, end + 1);
+    index = source.indexOf(OPEN, end);
+  }
+}
+
 function auditOutlineButtons(): Site[] {
   const sites: Site[] = [];
   for (const file of walk(CLIENT_SRC)) {
     const source = fs.readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/<Button\b[^>]*?>/gs)) {
-      const tag = match[0];
+    for (const tag of openingTags(source)) {
       if (!tag.includes('variant="outline"')) continue;
 
       const darkBase = DARK_BG.test(tag.replace(/hover:bg-[^\s"]+/g, ''));

@@ -224,7 +224,7 @@ function PlayerResultRow({ player, onCopy }: { player: PlayerMappingResult; onCo
                   e.stopPropagation();
                   onCopy(jsonData);
                 }}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-gray-100"
                 data-testid={`button-copy-${player.playerId}`}
               >
                 <Copy className="h-3 w-3 mr-1" />

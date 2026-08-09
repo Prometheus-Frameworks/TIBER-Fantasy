@@ -199,10 +199,19 @@ describe('outline button — the 1.27:1 Back to Tiers defect', () => {
     expect(contrast(hex(cssToken('accent-foreground')), hex(cssToken('accent')))).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
-  test('disabled keeps an explicit foreground rather than inheriting', () => {
+  test('disabled does not pin a foreground that call sites cannot override', () => {
+    // Rev 2 added `disabled:text-foreground` here. It was redundant on the light
+    // surface — the base `text-foreground` already applies when disabled — and it
+    // broke every dark call site: `disabled:` sits later in Tailwind's cascade and
+    // twMerge does not merge across variant prefixes, so it beat the Rankings
+    // Refresh button's `text-slate-100` and rendered near-black on
+    // `bg-slate-900/60` for the entire fetch. An accessibility regression
+    // introduced by the accessibility fix.
     const outline = BUTTON.match(/outline:\s*\n?\s*"([^"]+)"/)?.[1] ?? '';
-    expect(outline).toContain('disabled:text-foreground');
-    // disabled:opacity-50 composites the foreground toward the background.
+    expect(outline).not.toContain('disabled:text-');
+    // The disabled affordance is opacity, which composites the inherited
+    // foreground toward the background and still clears the non-text threshold.
+    expect(BUTTON).toContain('disabled:opacity-50');
     expect(contrast(over(FOREGROUND, 0.5, BACKGROUND), BACKGROUND)).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 

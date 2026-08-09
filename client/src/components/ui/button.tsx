@@ -28,8 +28,15 @@ const buttonVariants = cva(
         //
         // `ghost` is deliberately NOT changed: it declares no background, so
         // inheriting the surrounding surface's text colour is correct for it.
+        // No `disabled:text-*` here. It was redundant on the light surface (the
+        // base `text-foreground` already applies when disabled) and broke dark
+        // call sites: `disabled:` sits later in Tailwind's cascade and twMerge
+        // does not merge across variant prefixes, so `disabled:text-foreground`
+        // beat a call site's `text-slate-100` and turned the Rankings Refresh
+        // button near-black on `bg-slate-900/60` for the whole fetch. The
+        // disabled affordance is `disabled:opacity-50` in the base classes.
         outline:
-          "border border-btn-outline bg-background text-foreground hover:bg-accent hover:text-accent-foreground disabled:text-foreground",
+          "border border-btn-outline bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
