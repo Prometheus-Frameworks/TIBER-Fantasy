@@ -39,12 +39,12 @@ describe('TiberIdentityCrosswalkService', () => {
 
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
-      rowCount: 68,
-      providerMappingCount: 68,
+      rowCount: 25,
+      providerMappingCount: 25,
       providerCount: 1,
     }));
-    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11635')).toBe('00-0039915');
-    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11624')).toBe('00-0039894');
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11635')).toBe('tiber-data-player-2025-ladd-mcconkey');
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:11624')).toBe('tiber-data-player-2025-xavier-worthy');
   });
 
 });

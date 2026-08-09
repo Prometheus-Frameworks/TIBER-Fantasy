@@ -90,25 +90,23 @@ describe('TIBER_IDENTITY_CROSSWALK_V1 adapter', () => {
       available: true,
       artifactId: 'TIBER_IDENTITY_CROSSWALK_V1',
       contractVersion: 'v1',
-      rowCount: 68,
-      providerMappingCount: 68,
+      rowCount: 25,
+      providerMappingCount: 25,
       providerCount: 1,
     }));
     expect(expandedProducerPayload).toEqual(expect.objectContaining({
       schema_version: 'v1',
-      coverage: 'operator_promoted_slice_gsis_vocabulary_not_full_player_universe',
-      record_count: 68,
+      coverage: 'seeded_operator_verified_mappings_only_not_full_player_universe',
+      record_count: 25,
     }));
-    expect(expandedProducerPayload.records).toHaveLength(68);
+    expect(expandedProducerPayload.records).toHaveLength(25);
   });
 
-  // tiber_player_id is a GSIS id: the promoted crosswalk shares FORGE's vocabulary
-  // so a resolved provider key lands on a real FORGE_PLAYER_STATIC_V1 row.
   it.each([
-    ['sleeper:11635', '00-0039915'],
-    ['sleeper:11624', '00-0039894'],
-    ['sleeper:3198', '00-0032764'],
-    ['sleeper:4034', '00-0033280'],
+    ['sleeper:11635', 'tiber-data-player-2025-ladd-mcconkey'],
+    ['sleeper:11624', 'tiber-data-player-2025-xavier-worthy'],
+    ['sleeper:3198', 'tiber-data-player-2025-derrick-henry'],
+    ['sleeper:4034', 'tiber-data-player-2025-christian-mccaffrey'],
   ])('resolves expanded bundled mapping %s to %s', (lookupKey, expectedTiberPlayerId) => {
     const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
 
@@ -196,5 +194,45 @@ describe('TIBER_IDENTITY_CROSSWALK_V1 adapter', () => {
       schema_version: 'v1',
       records: [{ provider: 'sleeper', provider_player_id: '1', provider_canonical_id: 'sleeper:1', tiber_player_id: 'p1' }],
     }, '/tmp/tiber_identity_crosswalk_v1.json')).toThrow(/Unsupported TIBER identity crosswalk artifact/);
+  });
+});
+
+const bundledV2ArtifactPath = path.join(process.cwd(), 'server/artifacts/external/identity/tiber_identity_crosswalk_v2.json');
+const v2ProducerPayload = JSON.parse(fs.readFileSync(bundledV2ArtifactPath, 'utf8'));
+
+describe('TIBER_IDENTITY_CROSSWALK_V2 adapter', () => {
+  it('accepts the V2 contract and exposes every provider mapping', () => {
+    const lookup = adaptTiberIdentityCrosswalkArtifact(v2ProducerPayload, bundledV2ArtifactPath);
+
+    expect(v2ProducerPayload).toEqual(expect.objectContaining({
+      artifact_id: 'TIBER_IDENTITY_CROSSWALK_V2',
+      schema_version: 'v2',
+      id_vocabulary: 'gsis',
+      record_count: 68,
+    }));
+    expect(lookup.artifact).toEqual(expect.objectContaining({
+      available: true,
+      rowCount: 68,
+      providerMappingCount: 68,
+      providerCount: 1,
+    }));
+  });
+
+  it('resolves provider keys to GSIS ids, the vocabulary FORGE rows are keyed by', () => {
+    const lookup = adaptTiberIdentityCrosswalkArtifact(v2ProducerPayload, bundledV2ArtifactPath);
+
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:4034')).toBe('00-0033280');
+    expect(lookup.tiberPlayerIdsByProviderKey.get('sleeper:9493')).toBe('00-0039075');
+    for (const tiberPlayerId of lookup.tiberPlayerIdsByProviderKey.values()) {
+      expect(tiberPlayerId).toMatch(/^00-\d{7}$/);
+    }
+  });
+
+  it('still fails closed for a genuinely foreign artifact id', () => {
+    expect(() => adaptTiberIdentityCrosswalkArtifact({
+      artifact_id: 'SOME_OTHER_CROSSWALK_V2',
+      schema_version: 'v2',
+      records: [{ provider: 'sleeper', provider_player_id: '1', provider_canonical_id: 'sleeper:1', tiber_player_id: '00-0000001' }],
+    }, bundledV2ArtifactPath)).toThrow(/Unsupported TIBER identity crosswalk artifact/);
   });
 });
