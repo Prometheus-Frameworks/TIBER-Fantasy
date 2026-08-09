@@ -90,23 +90,25 @@ describe('TIBER_IDENTITY_CROSSWALK_V1 adapter', () => {
       available: true,
       artifactId: 'TIBER_IDENTITY_CROSSWALK_V1',
       contractVersion: 'v1',
-      rowCount: 25,
-      providerMappingCount: 25,
+      rowCount: 68,
+      providerMappingCount: 68,
       providerCount: 1,
     }));
     expect(expandedProducerPayload).toEqual(expect.objectContaining({
       schema_version: 'v1',
-      coverage: 'seeded_operator_verified_mappings_only_not_full_player_universe',
-      record_count: 25,
+      coverage: 'operator_promoted_slice_gsis_vocabulary_not_full_player_universe',
+      record_count: 68,
     }));
-    expect(expandedProducerPayload.records).toHaveLength(25);
+    expect(expandedProducerPayload.records).toHaveLength(68);
   });
 
+  // tiber_player_id is a GSIS id: the promoted crosswalk shares FORGE's vocabulary
+  // so a resolved provider key lands on a real FORGE_PLAYER_STATIC_V1 row.
   it.each([
-    ['sleeper:11635', 'tiber-data-player-2025-ladd-mcconkey'],
-    ['sleeper:11624', 'tiber-data-player-2025-xavier-worthy'],
-    ['sleeper:3198', 'tiber-data-player-2025-derrick-henry'],
-    ['sleeper:4034', 'tiber-data-player-2025-christian-mccaffrey'],
+    ['sleeper:11635', '00-0039915'],
+    ['sleeper:11624', '00-0039894'],
+    ['sleeper:3198', '00-0032764'],
+    ['sleeper:4034', '00-0033280'],
   ])('resolves expanded bundled mapping %s to %s', (lookupKey, expectedTiberPlayerId) => {
     const lookup = adaptTiberIdentityCrosswalkArtifact(expandedProducerPayload, bundledArtifactPath);
 
