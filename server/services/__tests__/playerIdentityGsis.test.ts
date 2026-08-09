@@ -72,7 +72,11 @@ jest.mock('../../../src/data/cache', () => ({
   setCache: (key: string, value: unknown) => mockIdentityCache.set(key, value),
 }));
 
-import { PlayerIdentityService } from '../PlayerIdentityService';
+import {
+  PLATFORM_COLUMNS,
+  PlayerIdentityService,
+  WRITABLE_PLATFORM_COLUMNS,
+} from '../PlayerIdentityService';
 
 const service = PlayerIdentityService.getInstance();
 const AMON_RA_GSIS = '00-0036963';
@@ -279,6 +283,25 @@ describe('duplicate GSIS fails closed on every public path, not just the helper'
   });
 });
 
+describe('GSIS is resolvable but not writable while uniqueness is unenforced', () => {
+  test('GSIS is absent from the writable map but present for resolution', () => {
+    expect(PLATFORM_COLUMNS.gsis).toBe('gsisId');
+    expect(WRITABLE_PLATFORM_COLUMNS.gsis).toBeUndefined();
+  });
+
+  test('every writable column is one the database can enforce', () => {
+    // The write map must never regain gsis without a unique index landing
+    // first — otherwise an admin write can mint the duplicates the resolvers
+    // then fail closed on, silently disabling links for that player.
+    for (const platform of Object.keys(WRITABLE_PLATFORM_COLUMNS)) {
+      expect(platform).not.toBe('gsis');
+    }
+    expect(Object.keys(WRITABLE_PLATFORM_COLUMNS)).toHaveLength(
+      Object.keys(PLATFORM_COLUMNS).length - 1,
+    );
+  });
+});
+
 describe('externalIds envelope', () => {
   test('surfaces gsis and fantasy_data alongside the other platforms', async () => {
     TABLE = [{
@@ -312,6 +335,37 @@ describe('censusGsisIdentity — pre-migration safety check', () => {
       duplicateGsisValues: 0,
       uniqueIndexSafe: true,
     });
+  });
+
+  test('duplicate blank values block the index the census recommends', async () => {
+    // '' is NOT NULL, so `CREATE UNIQUE INDEX ... WHERE gsis_id IS NOT NULL`
+    // includes both rows and fails. Trimming first counted them as null and
+    // reported the migration safe — the verdict disagreeing with its own index.
+    TABLE = [
+      { canonicalId: 'a', gsisId: '' },
+      { canonicalId: 'b', gsisId: '   ' },
+      { canonicalId: 'c', gsisId: '00-0000003' },
+    ];
+
+    const census = await service.censusGsisIdentity();
+
+    expect(census.nullGsis).toBe(0);
+    expect(census.blankOrPaddedGsis).toBe(2);
+    expect(census.uniqueIndexSafe).toBe(false);
+  });
+
+  test('a whitespace-padded id is malformed, not healthy', async () => {
+    // Trimming reported this valid; exact runtime lookups cannot resolve it.
+    TABLE = [
+      { canonicalId: 'a', gsisId: ` ${AMON_RA_GSIS} ` },
+      { canonicalId: 'b', gsisId: '00-0000003' },
+    ];
+
+    const census = await service.censusGsisIdentity();
+
+    expect(census.blankOrPaddedGsis).toBe(1);
+    expect(census.malformedGsis).toBe(1);
+    expect(census.uniqueIndexSafe).toBe(false);
   });
 
   test('duplicates block the unique index and are sampled', async () => {

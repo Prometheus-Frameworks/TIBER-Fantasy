@@ -82,6 +82,32 @@ export const PLATFORM_COLUMNS: Record<SupportedPlatform, keyof PlayerIdentityMap
   nfl_data_py: 'nflDataPyId'
 };
 
+/**
+ * Columns an authenticated admin write may set. **`gsis` is deliberately absent.**
+ *
+ * Every other column here carries a unique index, so the database itself refuses
+ * a second owner. `gsis_id` does not — applying that index is the operator step
+ * this PR documents and deliberately does not perform.
+ *
+ * Until it exists, allowing GSIS through the write paths would let
+ * `addIdentityMapping({ overwrite: true })` assign an identifier to a new owner
+ * without clearing the previous one, and `createPlayerIdentity()` insert a second
+ * row carrying the same identifier. Either produces exactly the duplicate state
+ * the duplicate-aware resolvers must fail closed on — so an admin write would
+ * silently disable ranking and player links for that player. Read resolution
+ * stays on `PLATFORM_COLUMNS`; only writes are restricted.
+ */
+export const WRITABLE_PLATFORM_COLUMNS: Partial<Record<SupportedPlatform, keyof PlayerIdentityMap>> = {
+  sleeper: 'sleeperId',
+  espn: 'espnId',
+  yahoo: 'yahooId',
+  rotowire: 'rotowireId',
+  fantasypros: 'fantasyprosId',
+  fantasy_data: 'fantasyDataId',
+  mysportsfeeds: 'mysportsfeedsId',
+  nfl_data_py: 'nflDataPyId'
+};
+
 /** Shape of a GSIS identifier: `00-` followed by seven digits. */
 export const GSIS_ID_PATTERN = /^00-\d{7}$/;
 
@@ -334,6 +360,7 @@ export class PlayerIdentityService {
     duplicateGsisValues: number;
     duplicateRowCount: number;
     malformedGsis: number;
+    blankOrPaddedGsis: number;
     uniqueIndexSafe: boolean;
     samples: { duplicates: Array<{ gsisId: string; canonicalIds: string[] }>; malformed: string[] };
   }> {
@@ -341,20 +368,38 @@ export class PlayerIdentityService {
       .select({ canonicalId: playerIdentityMap.canonicalId, gsisId: playerIdentityMap.gsisId })
       .from(playerIdentityMap);
 
+    // Group by the RAW stored value, because that is exactly what
+    // `CREATE UNIQUE INDEX ... WHERE gsis_id IS NOT NULL` sees.
+    //
+    // Trimming first made the verdict disagree with the index it recommends:
+    // two rows holding '' or whitespace were both counted as null and skipped,
+    // so `uniqueIndexSafe` reported true while index creation would fail on the
+    // duplicate non-null empty strings. A whitespace-padded but otherwise valid
+    // id was likewise reported healthy even though exact runtime lookups
+    // (`eq(gsisId, id)`) cannot resolve it.
     const byGsis = new Map<string, string[]>();
     const malformed: string[] = [];
     let nullGsis = 0;
+    let blankOrPaddedGsis = 0;
 
     for (const row of rows) {
-      const value = row.gsisId?.trim();
-      if (!value) {
+      const raw = row.gsisId;
+      if (raw === null || raw === undefined) {
         nullGsis += 1;
         continue;
       }
-      if (!looksLikeGsisId(value)) malformed.push(value);
-      const list = byGsis.get(value) ?? [];
+      const trimmed = raw.trim();
+      // Non-null but blank, or valid-only-after-trimming: present to the index,
+      // unresolvable at runtime. Both block the index rather than passing quietly.
+      if (trimmed.length === 0 || trimmed !== raw) {
+        blankOrPaddedGsis += 1;
+        malformed.push(raw);
+      } else if (!looksLikeGsisId(raw)) {
+        malformed.push(raw);
+      }
+      const list = byGsis.get(raw) ?? [];
       list.push(row.canonicalId);
-      byGsis.set(value, list);
+      byGsis.set(raw, list);
     }
 
     const duplicates = Array.from(byGsis.entries()).filter(([, ids]) => ids.length > 1);
@@ -368,9 +413,11 @@ export class PlayerIdentityService {
       duplicateGsisValues: duplicates.length,
       duplicateRowCount,
       malformedGsis: malformed.length,
-      // A partial unique index (`WHERE gsis_id IS NOT NULL`) tolerates nulls, so
-      // only genuine duplicates block it.
-      uniqueIndexSafe: duplicates.length === 0,
+      blankOrPaddedGsis,
+      // A partial unique index (`WHERE gsis_id IS NOT NULL`) tolerates real
+      // NULLs, but blank and whitespace-padded values are non-null: they enter
+      // the index and are unresolvable at runtime, so they block it too.
+      uniqueIndexSafe: duplicates.length === 0 && blankOrPaddedGsis === 0,
       samples: {
         duplicates: duplicates.slice(0, 10).map(([gsisId, canonicalIds]) => ({ gsisId, canonicalIds })),
         malformed: Array.from(new Set(malformed)).slice(0, 10),
@@ -465,9 +512,14 @@ export class PlayerIdentityService {
    */
   async addIdentityMapping(mapping: IdentityMappingInput): Promise<boolean> {
     try {
-      const columnName = PLATFORM_COLUMNS[mapping.platform];
+      // Writes use the restricted map: GSIS has no unique index yet, so it must
+      // not be settable through an admin path (see WRITABLE_PLATFORM_COLUMNS).
+      const columnName = WRITABLE_PLATFORM_COLUMNS[mapping.platform];
       if (!columnName) {
-        console.warn(`[PlayerIdentityService] Unsupported platform: ${mapping.platform}`);
+        console.warn(
+          `[PlayerIdentityService] Platform not writable: ${mapping.platform}. ` +
+          `GSIS is read-only until a unique index enforces single ownership.`,
+        );
         return false;
       }
 
@@ -558,9 +610,13 @@ export class PlayerIdentityService {
       // Add external IDs if provided
       if (playerData.externalIds) {
         for (const [platform, externalId] of Object.entries(playerData.externalIds)) {
-          const columnName = PLATFORM_COLUMNS[platform as SupportedPlatform];
+          const columnName = WRITABLE_PLATFORM_COLUMNS[platform as SupportedPlatform];
           if (columnName) {
             insertData[columnName] = externalId;
+          } else {
+            console.warn(
+              `[PlayerIdentityService] Ignoring non-writable platform id on create: ${platform}.`,
+            );
           }
         }
       }
