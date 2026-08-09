@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
+import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'docs/audits/assets/310-cache-audit-manifest.json');
@@ -23,6 +24,49 @@ const cohortText = fs.readFileSync(COHORT_PATH, 'utf8');
 const cohort = JSON.parse(cohortText);
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+describe('only forge_grade_cache rows are accepted as cache evidence', () => {
+  const forgeNotes = 'scoringFallbackReason=none; season=2025, asOfWeek=18, position=QB';
+  const forgeBody = {
+    asOf: '2026-08-09T00:00:00.000Z',
+    sourceStack: [{ layer: 'forge', source: 'api/forge/tiers cache (forge_grade_cache)', notes: forgeNotes }],
+  };
+
+  test('accepts a genuine FORGE cache response', () => {
+    const observed = assertForgeCacheResponse('QB', forgeBody);
+    expect(observed.layer).toBe('forge');
+    expect(observed.fallbackReason).toBe('none');
+  });
+
+  test('refuses promoted scoring-service items rather than mislabelling the lineage', () => {
+    // The exact scenario: SCORING_SERVICE_BASE_URL configured and succeeding, so
+    // the endpoint serves Expected Points / VORP instead of FORGE alpha.
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        sourceStack: [{ layer: 'promoted_artifact', source: 'scoring service', notes: forgeNotes }],
+      }),
+    ).toThrow(/expected the forge_grade_cache layer/);
+  });
+
+  test('refuses a response with no source layer at all', () => {
+    expect(() => assertForgeCacheResponse('QB', { asOf: 'x', sourceStack: [] }))
+      .toThrow(/expected the forge_grade_cache layer/);
+  });
+
+  test('refuses a response served at a different scope than requested', () => {
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        sourceStack: [{
+          layer: 'forge',
+          source: 'cache',
+          notes: 'scoringFallbackReason=none; season=2024, asOfWeek=18, position=QB',
+        }],
+      }),
+    ).toThrow(/does not match the requested scope/);
+  });
+});
 
 describe('the two committed artifacts describe one observation', () => {
   test('the manifest links the cohort by committed path and digest', () => {

@@ -34,6 +34,12 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { ALPHA_CALIBRATION } from '../../server/modules/forge/types';
+import {
+  AUDIT_SEASON,
+  AUDIT_WEEK,
+  assertForgeCacheResponse,
+  type ObservedPositionSource,
+} from './forgeCacheResponseGuard';
 
 // This file runs as ESM under tsx, so __dirname is unavailable.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -44,8 +50,6 @@ const COHORT_RELATIVE_PATH = 'docs/audits/assets/310-live-cohort-observed.json';
 const MANIFEST_RELATIVE_PATH = 'docs/audits/assets/310-cache-audit-manifest.json';
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 const GSIS_SHAPE = /^00-\d{7}$/;
-const AUDIT_SEASON = 2025;
-const AUDIT_WEEK = 18;
 
 interface LiveRow {
   position: string;
@@ -78,7 +82,7 @@ function normaliseName(name: string): string {
 
 async function fetchLiveCohort(baseUrl: string) {
   const rows: LiveRow[] = [];
-  const perPosition: Record<string, { asOf: string; fallbackReason: string | null }> = {};
+  const perPosition: Record<string, ObservedPositionSource> = {};
 
   for (const position of POSITIONS) {
     const url =
@@ -88,11 +92,7 @@ async function fetchLiveCohort(baseUrl: string) {
     if (!response.ok) throw new Error(`${position}: HTTP ${response.status}`);
     const body: any = await response.json();
 
-    const notes: string = body.sourceStack?.[0]?.notes ?? '';
-    perPosition[position] = {
-      asOf: body.asOf,
-      fallbackReason: notes.match(/scoringFallbackReason=([a-z_]+)/)?.[1] ?? null,
-    };
+    perPosition[position] = assertForgeCacheResponse(position, body);
 
     for (const item of body.items ?? []) {
       rows.push({
@@ -180,8 +180,24 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
     Object.values(row.components ?? {}).some((c: any) => c?.evidence_status === 'generated_baseline'),
   );
 
+  const directIdIntersection = staticIds.filter((id) => liveIds.has(id)).length;
+
+  // Derived, not asserted. Emitting a literal `joinable: false` alongside a
+  // freshly measured intersection makes the manifest contradict itself the
+  // moment the producer artifact gains real identifiers — and would keep
+  // suppressing a comparison that had become defensible.
+  const joinBlockers: string[] = [];
+  if (directIdIntersection === 0) {
+    joinBlockers.push('zero direct identifier intersection between the two artifacts');
+  }
+  if (ambiguousNames.length > 0) {
+    joinBlockers.push(
+      'static artifact repeats player names across cohorts, so name is not a unique key within it either',
+    );
+  }
+
   return {
-    directIdIntersection: staticIds.filter((id) => liveIds.has(id)).length,
+    directIdIntersection,
     liveNamespace: 'gsis',
     staticNamespaces: {
       fixture: staticIds.filter((id: string) => id.endsWith('-fixture')).length,
@@ -194,12 +210,9 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
       .sort((a, b) => b.forge_alpha - a.forge_alpha)
       .slice(0, 5)
       .map((r) => ({ name: r.player_name, alpha: r.forge_alpha, evidence: 'generated_baseline_not_player_evidence' })),
-    // Both conditions must be false for a defensible join.
-    joinable: false,
-    joinBlockers: [
-      'zero direct identifier intersection between the two artifacts',
-      'static artifact repeats player names across cohorts, so name is not a unique key within it either',
-    ],
+    // A join is defensible only when no measured blocker remains.
+    joinable: joinBlockers.length === 0,
+    joinBlockers,
   };
 }
 
@@ -238,7 +251,7 @@ function auditProvenance() {
 }
 
 /** Observation envelope shared by both artifacts, so neither is an unexplained blob. */
-function observationEnvelope(baseUrl: string, observedAt: string, perPosition: Record<string, { asOf: string; fallbackReason: string | null }>) {
+function observationEnvelope(baseUrl: string, observedAt: string, perPosition: Record<string, ObservedPositionSource>) {
   return {
     audit: 'railway_forge_grade_cache_lineage',
     issue: 'Prometheus-Frameworks/TIBER-Fantasy#310',
