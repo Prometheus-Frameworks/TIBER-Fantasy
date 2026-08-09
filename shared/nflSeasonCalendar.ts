@@ -55,6 +55,24 @@ const WEEK_END_OFFSET_MS = 5 * DAY_MS + 8 * HOUR_MS;
 const MONDAY_NIGHT_OFFSET_MS = 4 * DAY_MS + 5 * HOUR_MS + 15 * 60 * 1000;
 
 /**
+ * Approximate wall-clock length of a Monday night game, kickoff to final whistle.
+ *
+ * `mondayNightDate` is the **kickoff**, not the finish. Treating kickoff as
+ * completion reports a finished week — and a full slate of completed games —
+ * while the last game of the week is still being played.
+ *
+ * This is an explicit, documented approximation. It is deliberately generous:
+ * over-waiting briefly reports an in-progress week that has just ended, which is
+ * recoverable, whereas under-waiting reports results that do not exist yet.
+ */
+export const MONDAY_NIGHT_APPROX_DURATION_MS = 3 * HOUR_MS + 45 * 60 * 1000;
+
+/** Approximate instant the Monday night game finishes. */
+export function mondayNightEndMs(window: NflWeekWindow): number {
+  return new Date(window.mondayNightDate).getTime() + MONDAY_NIGHT_APPROX_DURATION_MS;
+}
+
+/**
  * Derive week windows from a Week 1 Thursday kickoff anchor.
  *
  * These are cadence approximations, adequate for phase/week-boundary detection

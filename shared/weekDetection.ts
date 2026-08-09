@@ -29,6 +29,7 @@ import {
   NflWeekWindow,
   getConfiguredSeasons,
   getSeasonCalendar,
+  mondayNightEndMs,
 } from './nflSeasonCalendar';
 
 export type NflPhase = 'offseason' | 'preseason' | 'regular_season' | 'postseason';
@@ -120,7 +121,15 @@ function lastWeek(calendar: NflSeasonCalendar): NflWeekWindow {
 
 function weekStatusAt(window: NflWeekWindow, nowMs: number): NflWeekStatus {
   if (nowMs < ms(window.startDate)) return 'not_started';
-  if (nowMs < ms(window.mondayNightDate)) return 'in_progress';
+  // Branching on `mondayNightDate` reported the week completed from the moment
+  // the Monday night game kicked off, while it was still being played.
+  //
+  // The boundary is game completion, not the administrative `endDate`: the week
+  // is over once the last game finishes (Tuesday ~05:00Z), whereas `endDate` is
+  // the Wednesday roll into the next week's prep. Using `endDate` here would
+  // trade one dishonesty for another, holding the week "in progress" for roughly
+  // a day after the final whistle.
+  if (nowMs < mondayNightEndMs(window)) return 'in_progress';
   return 'completed';
 }
 
@@ -301,7 +310,11 @@ function estimateGamesCompleted(currentDate: Date, window: NflWeekWindow): numbe
   const currentTime = currentDate.getTime();
 
   if (currentTime < startTime) return 0;
-  if (currentTime >= mondayNightTime) return TOTAL_GAMES_PER_WEEK;
+  // Kickoff is not completion: during the Monday night game 15 of 16 are done
+  // and one is in progress. Reporting 16 here claimed a full completed slate
+  // while the week's last game was live.
+  if (currentTime >= mondayNightEndMs(window)) return TOTAL_GAMES_PER_WEEK;
+  if (currentTime >= mondayNightTime) return TOTAL_GAMES_PER_WEEK - 1;
 
   const dayOfWeek = currentDate.getUTCDay();
   const hour = currentDate.getUTCHours();
@@ -341,7 +354,7 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
 
   const weekStatus: NflWeekStatus =
     phase.weekStatus ?? (window ? weekStatusAt(window, now.getTime()) : 'not_started');
-  const mondayNightCompleted = window ? now.getTime() >= ms(window.mondayNightDate) : false;
+  const mondayNightCompleted = window ? now.getTime() >= mondayNightEndMs(window) : false;
   const calendar = getSeasonCalendar(displaySeason);
   const nextWindow = calendar?.weeks.find((w) => w.week === displayWeek + 1);
 
@@ -384,7 +397,7 @@ export function getWeekInfo(week: number, season?: number, currentDate?: Date): 
   if (!calendar || !window) return null;
 
   const status = weekStatusAt(window, now.getTime());
-  const mondayNightCompleted = now.getTime() >= ms(window.mondayNightDate);
+  const mondayNightCompleted = now.getTime() >= mondayNightEndMs(window);
   const phase = resolveSeasonPhase(now);
   const nextWindow = calendar.weeks.find((w) => w.week === week + 1);
 

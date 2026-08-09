@@ -18,6 +18,38 @@ import { NFL_SEASON_CALENDARS, deriveWeekWindowsFromAnchor, getSeasonCalendar } 
 
 const at = (iso: string) => new Date(iso);
 
+describe('a week is not complete while its last game is being played', () => {
+  // Week 11 2025: MNF kicks off 2025-11-18T01:15Z and finishes ~05:00Z.
+  // The defect: kickoff was treated as completion, so for the several hours the
+  // game was live the API reported a completed week, a completed MNF, and a full
+  // 16/16 slate — then rolled the forward target to Week 12.
+  const DURING_MNF = at('2025-11-18T02:30:00Z');
+  const AFTER_MNF = at('2025-11-18T06:00:00Z');
+
+  test('mid-MNF the week is still in progress and does not roll forward', () => {
+    const phase = resolveSeasonPhase(DURING_MNF);
+    expect(phase.regularSeasonWeek).toBe(11);
+    expect(phase.weekStatus).toBe('in_progress');
+    expect(phase.targetWeek).toBe(11);
+  });
+
+  test('mid-MNF the slate is not reported as fully played', () => {
+    const info = getCurrentWeek(DURING_MNF);
+    expect(info?.mondayNightCompleted).toBe(false);
+    expect(info?.gamesCompleted).toBe(15);
+    expect(info?.gamesCompleted).toBeLessThan(info!.totalGames);
+  });
+
+  test('once the game finishes the week completes and rolls forward', () => {
+    const phase = resolveSeasonPhase(AFTER_MNF);
+    expect(phase.weekStatus).toBe('completed');
+    expect(phase.targetWeek).toBe(12);
+    const info = getCurrentWeek(AFTER_MNF);
+    expect(info?.mondayNightCompleted).toBe(true);
+    expect(info?.gamesCompleted).toBe(16);
+  });
+});
+
 describe('resolveSeasonPhase — 2025 postseason → 2026 offseason/preseason → 2026 Week 1', () => {
   test('mid-2025 regular season reports the live week', () => {
     const phase = resolveSeasonPhase(at('2025-11-16T18:00:00Z')); // Week 11, Sunday
