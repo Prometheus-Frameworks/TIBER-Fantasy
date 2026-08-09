@@ -7,6 +7,16 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### Unreleased — 2026-08-09: Rankings season-honesty review corrections
+- **Branch:** `codex/pr311-correction-round`
+- **Summary:** Closed the remaining Fantasy #307 Phase A review findings across postseason defaults/archive labels and stale-calendar API/UI behavior, including a real mounted fresh-to-stale container regression.
+- **Key Files:**
+  - `client/src/pages/TiberTiers.tsx` — forward-season archive suffix, retained-selection fail-close, stale-aware query key, calendar-specific unavailable render
+  - `client/src/pages/tiberTiersV2Mapper.ts` — distinct calendar-unavailable state and public copy
+  - `server/routes/rankingsV2Routes.ts` — target-season default and configured-history-only stale gate
+  - focused container, rendered-output, mapper, and Express-route regressions
+- **Validation:** Eight focused suites passed 128/128 with `--coverage=false`; build passed with the existing OLC warning; typecheck stayed at the reviewed head's 505 diagnostics with zero new normalized errors; diff check passed.
+
 ## Completed Tasks
 
 ### Unreleased — 2026-07-31: Active Node admin route authentication hardening

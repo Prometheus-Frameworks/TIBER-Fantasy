@@ -169,31 +169,73 @@ describe('resolveTiersHeadline', () => {
 describe('resolveTiersViewState', () => {
   it('prioritizes loading over every other signal', () => {
     expect(
-      resolveTiersViewState({ isLoading: true, isError: true, isCacheUncomputed: true, playersCount: 5 }),
+      resolveTiersViewState({
+        isLoading: true,
+        isError: true,
+        isCalendarStale: true,
+        isCacheUncomputed: true,
+        playersCount: 5,
+      }),
     ).toBe('loading');
   });
 
   it('treats a failed request as an error, not a genuine empty result', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: true, isCacheUncomputed: false, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: true,
+        isCalendarStale: true,
+        isCacheUncomputed: false,
+        playersCount: 0,
+      }),
     ).toBe('error');
+  });
+
+  it('reports a stale season calendar as its own unavailable state before cache/empty signals', () => {
+    expect(
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: true,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
+    ).toBe('calendar_unavailable');
   });
 
   it('reports an uncomputed FORGE cache as unavailable, distinct from a genuinely empty ranking', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: true, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
     ).toBe('unavailable');
   });
 
   it('reports zero players with no error/uncomputed signal as a genuinely empty result', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: false,
+        playersCount: 0,
+      }),
     ).toBe('empty');
   });
 
   it('reports data once players are present and nothing else is wrong', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 12 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: false,
+        playersCount: 12,
+      }),
     ).toBe('data');
   });
 });

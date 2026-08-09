@@ -15,36 +15,74 @@
  * (not on the R2 dependency allowlist) — assertions use plain Jest/DOM APIs instead.
  */
 import React from 'react';
-import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TiberTiers from '../TiberTiers';
 
-function currentWeekResponse() {
+type MockHttpResponse = {
+  ok: boolean;
+  status?: number;
+  json: () => Promise<unknown>;
+};
+
+const FRESH_CURRENT_WEEK = {
+  currentWeek: 1,
+  season: 2026,
+  weekStatus: 'not_started',
+  mondayNightCompleted: false,
+  weekStartDate: '2026-09-10T20:00:00.000Z',
+  weekEndDate: '2026-09-16T04:00:00.000Z',
+  gamesCompleted: 0,
+  totalGames: 16,
+  upcomingWeek: 1,
+  success: true,
+  phase: 'preseason',
+  phaseLabel: 'Preseason',
+  seasonPhaseLabel: '2026 · Preseason',
+  regularSeasonWeek: null,
+  targetSeason: 2026,
+  targetWeek: 1,
+  targetLabel: 'Target: Week 1',
+  scheduleSource: 'anchor_derived',
+  configStatus: 'ok',
+  configNote: null,
+};
+
+const STALE_CURRENT_WEEK = {
+  ...FRESH_CURRENT_WEEK,
+  season: 2027,
+  upcomingWeek: null,
+  phase: 'offseason',
+  phaseLabel: 'Offseason',
+  seasonPhaseLabel: '2027 · Offseason',
+  targetSeason: null,
+  targetWeek: null,
+  targetLabel: null,
+  scheduleSource: null,
+  configStatus: 'stale_calendar_config',
+  configNote: 'NFL season calendar ends after 2026.',
+};
+
+function currentWeekResponse(payload: Record<string, unknown> = FRESH_CURRENT_WEEK) {
   return Promise.resolve({
     ok: true,
     status: 200,
-    json: async () => ({
-      currentWeek: 5,
-      season: 2025,
-      weekStatus: 'in_progress',
-      mondayNightCompleted: false,
-      weekStartDate: '2026-04-06',
-      weekEndDate: '2026-04-12',
-      gamesCompleted: 8,
-      totalGames: 16,
-      upcomingWeek: 6,
-      success: true,
-    }),
+    json: async () => payload,
   });
 }
 
-function mockFetch(rankingsResponse: () => Promise<{ ok: boolean; status?: number; json: () => Promise<unknown> }>) {
-  (global as any).fetch = jest.fn((input: unknown) => {
+function mockFetch(
+  rankingsResponse: (url: string) => Promise<MockHttpResponse>,
+  currentWeekPayload: Record<string, unknown> = FRESH_CURRENT_WEEK,
+) {
+  const fetchMock = jest.fn((input: unknown) => {
     const url = String(input);
-    if (url.includes('/api/system/current-week')) return currentWeekResponse();
-    if (url.includes('/api/rankings/v2/weekly')) return rankingsResponse();
+    if (url.includes('/api/system/current-week')) return currentWeekResponse(currentWeekPayload);
+    if (url.includes('/api/rankings/v2/weekly')) return rankingsResponse(url);
     return Promise.reject(new Error(`Unexpected fetch call in test: ${url}`));
   });
+  (global as any).fetch = fetchMock;
+  return fetchMock;
 }
 
 function renderContainer() {
@@ -53,9 +91,10 @@ function renderContainer() {
   // not `retryDelay`, so keeping that at 0 keeps the one retry from adding TanStack Query's
   // exponential backoff wait to every error-path test.
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
-  return render(
+  const renderResult = render(
     React.createElement(QueryClientProvider, { client: queryClient }, React.createElement(TiberTiers)),
   );
+  return { queryClient, renderResult };
 }
 
 const SEASON_META = {
@@ -76,6 +115,26 @@ const SEASON_META = {
   isArchiveView: true,
   status: 'archive_season_not_current',
   statusDetail: 'Showing 2025 evidence while the league is in 2026 · Preseason.',
+};
+
+const STALE_SEASON_META = {
+  ...SEASON_META,
+  currentSeason: 2027,
+  forwardRankingSeason: 2027,
+  currentPhase: 'offseason' as const,
+  currentPhaseLabel: '2027 · Offseason',
+  targetSeason: null,
+  targetWeek: null,
+  targetLabel: null,
+  scheduleSource: null,
+  configStatus: 'stale_calendar_config' as const,
+  configNote: 'NFL season calendar ends after 2026.',
+  evidenceSeason: null,
+  evidenceWeek: null,
+  generatedAt: null,
+  isArchiveView: false,
+  status: 'season_calendar_config_stale',
+  statusDetail: 'NFL season calendar ends after 2026.',
 };
 
 function wellFormedItem(overrides: Record<string, unknown> = {}) {
@@ -187,6 +246,99 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
 
     expect(await screen.findByText('Rankings are not available yet')).toBeTruthy();
     expect(screen.queryByText('compute-grades', { exact: false })).toBeNull();
+  });
+
+  it('clears a retained season and omits it from the actual request when the mounted page becomes stale', async () => {
+    const fetchMock = mockFetch(async (url) => {
+      const request = new URL(url, 'http://localhost');
+      const requestedSeason = request.searchParams.get('season');
+
+      if (requestedSeason === null) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            asOf: '2031-10-01T12:00:00.000Z',
+            seasonMeta: STALE_SEASON_META,
+            sourceStack: [],
+            trust: {
+              sampleNote: 'NFL season calendar ends after 2026.',
+              stabilityNote: 'season_calendar_config_stale',
+            },
+            items: [],
+          }),
+        };
+      }
+
+      const evidenceSeason = Number(requestedSeason);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          asOf: '2026-08-09T12:00:00.000Z',
+          seasonMeta: {
+            ...SEASON_META,
+            evidenceSeason,
+            evidenceWeek: evidenceSeason === 2025 ? 18 : 1,
+            isArchiveView: evidenceSeason !== 2026,
+            status: evidenceSeason === 2026 ? null : 'archive_season_not_current',
+            statusDetail:
+              evidenceSeason === 2026
+                ? null
+                : 'Showing 2025 evidence while the forward board targets 2026 (2026 · Preseason).',
+          },
+          sourceStack: [{ layer: 'forge' }],
+          trust: { sampleNote: null, stabilityNote: null },
+          items: [wellFormedItem()],
+        }),
+      };
+    });
+    const { queryClient } = renderContainer();
+
+    expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('season-2025'));
+    await waitFor(() => {
+      expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url = String(input);
+          return (
+            url.includes('/api/rankings/v2/weekly') &&
+            new URL(url, 'http://localhost').searchParams.get('season') === '2025'
+          );
+        }),
+      ).toBe(true);
+    });
+
+    const rankingsCallCountBeforeStale = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes('/api/rankings/v2/weekly'),
+    ).length;
+
+    await act(async () => {
+      queryClient.setQueryData(['/api/system/current-week'], STALE_CURRENT_WEEK);
+    });
+
+    expect(await screen.findByText('Season calendar unavailable')).toBeTruthy();
+    const rankingsUrls = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url.includes('/api/rankings/v2/weekly'));
+    const staleTransitionUrls = rankingsUrls.slice(rankingsCallCountBeforeStale);
+    expect(staleTransitionUrls).toHaveLength(1);
+    expect(new URL(staleTransitionUrls[0], 'http://localhost').searchParams.has('season')).toBe(false);
+    expect(screen.queryByText('No players match this filter yet.')).toBeNull();
+    expect(screen.queryByText('0 players')).toBeNull();
+    expect(screen.queryByText('Rankings are not available yet')).toBeNull();
+    expect(screen.queryByText(/FORGE grades for this filter/i)).toBeNull();
+
+    // The effect clears the retained 2025 choice, not merely masks it while
+    // stale. Once configured state returns, the detected 2026 season wins.
+    await act(async () => {
+      queryClient.setQueryData(['/api/system/current-week'], FRESH_CURRENT_WEEK);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('season-2026').getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('false');
+    });
   });
 
   it('renders the genuine-empty state for a valid, explicitly empty response', async () => {

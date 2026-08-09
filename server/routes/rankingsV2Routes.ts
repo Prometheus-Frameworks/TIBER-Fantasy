@@ -275,7 +275,11 @@ export function createRankingsV2Router(): Router {
       // (Fantasy #307 Phase A).
       const phase = resolveSeasonPhase();
       const requestedSeason = parseInt(req.query.season as string, 10);
-      const season = Number.isFinite(requestedSeason) ? requestedSeason : phase.season;
+      const hasExplicitSeason = Number.isFinite(requestedSeason);
+      // Outside the regular season the live weekly board is about the forward
+      // target, not necessarily the phase-owning season. During the 2025
+      // postseason this correctly defaults a parameterless request to 2026.
+      const season = hasExplicitSeason ? requestedSeason : phase.targetSeason ?? phase.season;
 
       const asOfWeekParam = req.query.asOfWeek as string | undefined;
       const requestedWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : NaN;
@@ -292,16 +296,27 @@ export function createRankingsV2Router(): Router {
         return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
       }
 
-      if (phase.configStatus === 'stale_calendar_config' && !Number.isFinite(requestedSeason)) {
-        return res.json(
-          buildUnavailablePayload({
-            season: null,
-            status: SEASON_CONFIG_STALE_STATUS,
-            detail: phase.configNote ?? 'NFL season calendar is out of date.',
-            phase,
-            position,
-          }),
-        );
+      if (phase.configStatus === 'stale_calendar_config') {
+        // A stale clock may still serve an explicitly requested, configured
+        // historical archive. Any absent or unconfigured season (including the
+        // invented next year carried by legacy numeric accessors) fails closed
+        // before a cache/scoring read.
+        const isConfiguredHistoricalSeason =
+          hasExplicitSeason && phase.configuredSeasons.includes(requestedSeason);
+        if (!isConfiguredHistoricalSeason) {
+          const detail = hasExplicitSeason
+            ? `Season ${requestedSeason} is not present in the configured NFL season calendar; current rankings are unavailable.`
+            : phase.configNote ?? 'NFL season calendar is out of date.';
+          return res.json(
+            buildUnavailablePayload({
+              season: null,
+              status: SEASON_CONFIG_STALE_STATUS,
+              detail,
+              phase,
+              position,
+            }),
+          );
+        }
       }
 
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);

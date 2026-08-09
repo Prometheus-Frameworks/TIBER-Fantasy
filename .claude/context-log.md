@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-08-09 — Codex: Rankings season-honesty review corrections
+- **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.
+- **Files modified:** `client/src/pages/TiberTiers.tsx`, `client/src/pages/tiberTiersV2Mapper.ts`, `server/routes/rankingsV2Routes.ts`, and focused rendered/container/route tests.
+- **Validation:** Eight focused suites passed 128/128 with `--coverage=false`; server build passed with the existing OLC duplicate-member warning; typecheck retained the exact 505-diagnostic pre-correction baseline with zero new normalized diagnostics; `git diff --check` passed.
+- **Notes:** The mounted container regression exercises the actual hook, query key, URL construction, response validation, and render state. Direct API consumers may still request configured historical seasons while the public mounted page fails closed on stale calendar state.
+
 ### 2026-07-31 — Codex: Active Node admin route authentication hardening
 - **What changed:** Protected all active Node RAG maintenance routes under `/rag/admin/*` with the existing fail-closed `requireAdminAuth` middleware, required the existing FORGE admin key for `/api/admin/forge/status`, and removed the invalid bare `modules` Python dependency.
 - **Files modified:** `server/routes/ragRoutes.ts`, `server/routes/adminForge.ts`, `requirements.txt`, `server/routes/__tests__/ragAdminAuth.test.ts`, `server/routes/__tests__/adminForgeAuth.test.ts`

@@ -20,6 +20,7 @@ import {
   validateRankingsV2WeeklyResponse,
   TIERS_GENERIC_ERROR_MESSAGE,
   TIERS_LOADING_LABEL,
+  TIERS_STALE_CALENDAR_MESSAGE,
 } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
@@ -102,8 +103,15 @@ export function TiberTiersView({
     item.explanation.pillarNotes.find((note) => note.pillar === pillar)?.note ?? null;
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
+  const isCalendarStale = data?.seasonMeta.configStatus === 'stale_calendar_config';
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
-  const viewState = resolveTiersViewState({ isLoading, isError, isCacheUncomputed, playersCount: players.length });
+  const viewState = resolveTiersViewState({
+    isLoading,
+    isError,
+    isCalendarStale,
+    isCacheUncomputed,
+    playersCount: players.length,
+  });
   const showMetaLine = viewState === 'data' || viewState === 'empty';
   const seasonMeta = data?.seasonMeta ?? null;
   const archiveNotice = seasonMeta ? resolveArchiveNotice(seasonMeta) : null;
@@ -169,7 +177,7 @@ export function TiberTiersView({
                   data-testid={`season-${option}`}
                 >
                   {option}
-                  {seasonMeta && option !== seasonMeta.currentSeason ? ' · archive' : ''}
+                  {seasonMeta && option !== seasonMeta.forwardRankingSeason ? ' · archive' : ''}
                 </button>
               ))}
             </div>
@@ -235,6 +243,11 @@ export function TiberTiersView({
                 >
                   Retry
                 </Button>
+              </div>
+            ) : viewState === 'calendar_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-calendar-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">Season calendar unavailable</div>
+                <p className="text-slate-400 text-sm">{TIERS_STALE_CALENDAR_MESSAGE}</p>
               </div>
             ) : viewState === 'unavailable' ? (
               <div className="p-10 text-center">
@@ -317,16 +330,24 @@ export default function TiberTiers() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   // `resolvedSeason` (not the legacy `season`) so an unresolved season stays
   // null instead of becoming a plausible-but-unverified calendar year.
-  const { resolvedSeason: detectedSeason, regularSeasonWeek, phase } = useCurrentNFLWeek();
+  const { resolvedSeason: detectedSeason, regularSeasonWeek, phase, configStatus } = useCurrentNFLWeek();
 
   // Explicit user season choice wins; otherwise follow detection. Neither path
   // falls back to a hardcoded season or the old `currentWeek || 17` guess — an
   // unresolved season simply omits the parameter and lets the server answer with
   // its own typed phase state.
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const season = selectedSeason ?? detectedSeason;
+  // A mounted page can retain a user-selected season while the current-week
+  // query rolls from a configured calendar into `stale_calendar_config`. Do
+  // not let that stale local selection become an explicit query-string bypass:
+  // fail closed immediately, then clear it for the next configured state.
+  const season = configStatus === 'stale_calendar_config' ? null : selectedSeason ?? detectedSeason;
   const isCurrentSeasonSelected = season !== null && season === detectedSeason;
   const asOfWeek = isCurrentSeasonSelected && phase === 'regular_season' ? regularSeasonWeek : null;
+
+  useEffect(() => {
+    if (configStatus === 'stale_calendar_config') setSelectedSeason(null);
+  }, [configStatus]);
 
   const availableSeasons = useMemo(() => {
     if (detectedSeason === null) return [];
@@ -336,7 +357,11 @@ export default function TiberTiers() {
   }, [detectedSeason]);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
-    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
+    // `configStatus` distinguishes the initial unresolved season-null request
+    // from a later stale-calendar season-null request. Without it, React Query
+    // can reuse the initial cached response during a mounted fresh → stale
+    // transition and never ask the route for its typed unavailable payload.
+    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek, configStatus],
     queryFn: async () => {
       const params = new URLSearchParams({ position, limit: '75' });
       if (season !== null) params.set('season', String(season));

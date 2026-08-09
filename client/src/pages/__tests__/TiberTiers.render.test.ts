@@ -233,27 +233,68 @@ describe('TiberTiersView rendered output', () => {
     expect(html).toContain('2025 · archive');
   });
 
-  it('surfaces a stale calendar as a visible notice rather than a silent guess', () => {
+  it('marks archive options against the forward board season during the postseason', () => {
+    const postseasonMeta = {
+      ...SEASON_META,
+      currentSeason: 2025,
+      forwardRankingSeason: 2026,
+      currentPhase: 'postseason' as const,
+      currentPhaseLabel: '2025 · Postseason',
+      targetSeason: 2026,
+      evidenceSeason: 2026,
+      evidenceWeek: 1,
+      isArchiveView: false,
+      status: null,
+      statusDetail: null,
+    };
+    const data: TiersApiResponse = {
+      asOf: '2026-01-20T00:00:00.000Z',
+      seasonMeta: postseasonMeta,
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [makeItem()],
+    };
+
+    const html = render(baseProps({ data, season: 2026, availableSeasons: [2025, 2026] }));
+
+    expect(html).toContain('2025 · archive');
+    expect(html).not.toContain('2026 · archive');
+  });
+
+  it('renders a stale calendar as calendar-specific unavailable, never empty or FORGE-uncomputed', () => {
     const staleMeta = {
       ...SEASON_META,
       configStatus: 'stale_calendar_config' as const,
       configNote: 'NFL season calendar ends after 2026.',
+      evidenceSeason: null,
+      evidenceWeek: null,
+      generatedAt: null,
       targetWeek: null,
       targetLabel: null,
       isArchiveView: false,
+      status: 'season_calendar_config_stale',
+      statusDetail: 'NFL season calendar ends after 2026.',
     };
     const data: TiersApiResponse = {
       asOf: '2026-08-08T19:04:15.325Z',
       seasonMeta: staleMeta,
-      sourceStack: [{ layer: 'forge' }],
-      trust: { sampleNote: null, stabilityNote: null },
-      items: [makeItem()],
+      sourceStack: [],
+      trust: {
+        sampleNote: 'NFL season calendar ends after 2026.',
+        stabilityNote: 'season_calendar_config_stale',
+      },
+      items: [],
     };
 
     const html = render(baseProps({ data }));
 
     expect(html).toContain('Season state unavailable');
     expect(html).toContain('NFL season calendar ends after 2026.');
+    expect(html).toContain('Season calendar unavailable');
+    expect(html).toContain('cannot determine which season or week');
+    expect(html).not.toContain('No players match this filter yet.');
+    expect(html).not.toMatch(/\d+ players/);
+    expect(html).not.toContain('FORGE grades for this filter have not been computed yet');
   });
 
   it('proves malformed 2xx JSON is rejected before it can render as a genuine empty result', () => {

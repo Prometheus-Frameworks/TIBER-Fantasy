@@ -283,13 +283,16 @@ export const TIERS_LOADING_LABEL = 'Loading rankings...';
 export const TIERS_GENERIC_ERROR_MESSAGE =
   'Unable to load rankings right now. This is an error, not an empty result — please retry or check back shortly.';
 
+export const TIERS_STALE_CALENDAR_MESSAGE =
+  'The NFL season calendar is out of date, so TIBER cannot determine which season or week these rankings should represent. No rankings were loaded.';
+
 export function resolveTiersHeadline(layer: RankingsSourceView['layer']): string {
   if (layer === 'promoted_artifact') return 'Weekly Forecast Rankings';
   if (layer === 'forge') return 'Canonical FORGE Alpha ranks';
   return 'Weekly Rankings';
 }
 
-export type TiersViewState = 'loading' | 'error' | 'unavailable' | 'empty' | 'data';
+export type TiersViewState = 'loading' | 'error' | 'calendar_unavailable' | 'unavailable' | 'empty' | 'data';
 
 // Single source of truth for which panel the page renders, so "truthful state" logic is
 // unit-testable independent of JSX. Priority: a failed/loading request always wins over
@@ -297,11 +300,13 @@ export type TiersViewState = 'loading' | 'error' | 'unavailable' | 'empty' | 'da
 export function resolveTiersViewState(input: {
   isLoading: boolean;
   isError: boolean;
+  isCalendarStale: boolean;
   isCacheUncomputed: boolean;
   playersCount: number;
 }): TiersViewState {
   if (input.isLoading) return 'loading';
   if (input.isError) return 'error';
+  if (input.isCalendarStale) return 'calendar_unavailable';
   if (input.isCacheUncomputed) return 'unavailable';
   if (input.playersCount === 0) return 'empty';
   return 'data';
