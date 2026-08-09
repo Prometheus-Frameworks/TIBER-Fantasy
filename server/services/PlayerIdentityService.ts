@@ -10,7 +10,7 @@
 
 import { db } from '../infra/db';
 import { playerIdentityMap, type PlayerIdentityMap } from '@shared/schema';
-import { eq, and, sql, or, ilike, desc } from 'drizzle-orm';
+import { eq, and, sql, or, ilike, desc, inArray } from 'drizzle-orm';
 import { cacheKey, getCache, setCache } from '../../src/data/cache';
 
 export interface ExternalIdMapping {
@@ -47,17 +47,47 @@ export interface IdentityMappingInput {
   overwrite?: boolean;
 }
 
-type SupportedPlatform = 'sleeper' | 'espn' | 'yahoo' | 'rotowire' | 'fantasypros' | 'mysportsfeeds' | 'nfl_data_py';
+export type SupportedPlatform =
+  | 'gsis'
+  | 'sleeper'
+  | 'espn'
+  | 'yahoo'
+  | 'rotowire'
+  | 'fantasypros'
+  | 'fantasy_data'
+  | 'mysportsfeeds'
+  | 'nfl_data_py';
 
-const PLATFORM_COLUMNS: Record<SupportedPlatform, keyof PlayerIdentityMap> = {
+/**
+ * Source-ID columns consulted when resolving an unknown identifier.
+ *
+ * `gsis` is listed first because GSIS is the NFL's primary player identifier and
+ * the namespace the FORGE grade cache actually emits; it was previously absent
+ * entirely, so `/player/00-0036963` (Amon-Ra St. Brown, rank 1 on the live WR
+ * board) returned "Player Not Found" (Fantasy #308). `fantasy_data` was likewise
+ * absent despite `fantasy_data_id` existing in the schema with a unique index.
+ *
+ * Every entry here is an **exact** column match. No fuzzy or name-based
+ * resolution is performed by these lookups.
+ */
+export const PLATFORM_COLUMNS: Record<SupportedPlatform, keyof PlayerIdentityMap> = {
+  gsis: 'gsisId',
   sleeper: 'sleeperId',
   espn: 'espnId',
   yahoo: 'yahooId',
   rotowire: 'rotowireId',
   fantasypros: 'fantasyprosId',
+  fantasy_data: 'fantasyDataId',
   mysportsfeeds: 'mysportsfeedsId',
   nfl_data_py: 'nflDataPyId'
 };
+
+/** Shape of a GSIS identifier: `00-` followed by seven digits. */
+export const GSIS_ID_PATTERN = /^00-\d{7}$/;
+
+export function looksLikeGsisId(value: string): boolean {
+  return GSIS_ID_PATTERN.test(value.trim());
+}
 
 /**
  * Core Player Identity Service
@@ -147,6 +177,142 @@ export class PlayerIdentityService {
       console.error(`[PlayerIdentityService] Error getting player by any ID ${id}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Exact GSIS → canonical lookup.
+   *
+   * Deliberately narrow: an exact `gsis_id` column match, no fuzzy fallback. If
+   * more than one row carries the same GSIS the lookup is **ambiguous and fails
+   * closed** rather than picking one arbitrarily — there is no unique index on
+   * `gsis_id` today (see `censusGsisIdentity`), so a duplicate is possible and
+   * silently choosing a winner would fabricate an identity decision.
+   */
+  async getCanonicalIdByGsisId(gsisId: string): Promise<
+    { status: 'resolved'; canonicalId: string } | { status: 'not_found' } | { status: 'ambiguous'; matches: number }
+  > {
+    const id = gsisId.trim();
+    if (!id) return { status: 'not_found' };
+
+    try {
+      const rows = await db
+        .select({ canonicalId: playerIdentityMap.canonicalId })
+        .from(playerIdentityMap)
+        .where(eq(playerIdentityMap.gsisId, id))
+        .limit(2);
+
+      if (rows.length === 0) return { status: 'not_found' };
+      if (rows.length > 1) return { status: 'ambiguous', matches: rows.length };
+      return { status: 'resolved', canonicalId: rows[0].canonicalId };
+    } catch (error) {
+      console.error(`[PlayerIdentityService] GSIS lookup failed for ${id}:`, error);
+      return { status: 'not_found' };
+    }
+  }
+
+  /**
+   * Batch exact GSIS → canonical resolution for a cohort.
+   *
+   * One query for the whole set rather than N round trips, so the ranking
+   * boundary can resolve a full board without a per-row cost. Duplicate GSIS
+   * values are reported as ambiguous and are *not* resolved.
+   */
+  async resolveCanonicalIdsByGsis(gsisIds: string[]): Promise<{
+    resolved: Map<string, string>;
+    ambiguous: Set<string>;
+  }> {
+    const unique = Array.from(new Set(gsisIds.map((id) => id.trim()).filter(Boolean)));
+    const resolved = new Map<string, string>();
+    const ambiguous = new Set<string>();
+    if (unique.length === 0) return { resolved, ambiguous };
+
+    try {
+      const rows = await db
+        .select({ canonicalId: playerIdentityMap.canonicalId, gsisId: playerIdentityMap.gsisId })
+        .from(playerIdentityMap)
+        .where(inArray(playerIdentityMap.gsisId, unique));
+
+      const seen = new Map<string, string[]>();
+      for (const row of rows) {
+        if (!row.gsisId) continue;
+        const list = seen.get(row.gsisId) ?? [];
+        list.push(row.canonicalId);
+        seen.set(row.gsisId, list);
+      }
+
+      // Array.from rather than direct Map iteration: this repo's tsconfig target
+      // predates downlevelIteration.
+      for (const [gsisId, canonicalIds] of Array.from(seen.entries())) {
+        if (canonicalIds.length === 1) {
+          resolved.set(gsisId, canonicalIds[0]);
+        } else {
+          ambiguous.add(gsisId);
+        }
+      }
+    } catch (error) {
+      console.error('[PlayerIdentityService] Batch GSIS resolution failed:', error);
+    }
+
+    return { resolved, ambiguous };
+  }
+
+  /**
+   * Read-only census of `player_identity_map.gsis_id`.
+   *
+   * Fantasy #308 requires this **before** any uniqueness migration: there is no
+   * unique index on `gsis_id` today, so a `CREATE UNIQUE INDEX` could fail on
+   * live data. This performs no writes and no DDL — it only counts.
+   */
+  async censusGsisIdentity(): Promise<{
+    totalRows: number;
+    nonNullGsis: number;
+    nullGsis: number;
+    distinctGsis: number;
+    duplicateGsisValues: number;
+    duplicateRowCount: number;
+    malformedGsis: number;
+    uniqueIndexSafe: boolean;
+    samples: { duplicates: Array<{ gsisId: string; canonicalIds: string[] }>; malformed: string[] };
+  }> {
+    const rows = await db
+      .select({ canonicalId: playerIdentityMap.canonicalId, gsisId: playerIdentityMap.gsisId })
+      .from(playerIdentityMap);
+
+    const byGsis = new Map<string, string[]>();
+    const malformed: string[] = [];
+    let nullGsis = 0;
+
+    for (const row of rows) {
+      const value = row.gsisId?.trim();
+      if (!value) {
+        nullGsis += 1;
+        continue;
+      }
+      if (!looksLikeGsisId(value)) malformed.push(value);
+      const list = byGsis.get(value) ?? [];
+      list.push(row.canonicalId);
+      byGsis.set(value, list);
+    }
+
+    const duplicates = Array.from(byGsis.entries()).filter(([, ids]) => ids.length > 1);
+    const duplicateRowCount = duplicates.reduce((sum, [, ids]) => sum + ids.length, 0);
+
+    return {
+      totalRows: rows.length,
+      nonNullGsis: rows.length - nullGsis,
+      nullGsis,
+      distinctGsis: byGsis.size,
+      duplicateGsisValues: duplicates.length,
+      duplicateRowCount,
+      malformedGsis: malformed.length,
+      // A partial unique index (`WHERE gsis_id IS NOT NULL`) tolerates nulls, so
+      // only genuine duplicates block it.
+      uniqueIndexSafe: duplicates.length === 0,
+      samples: {
+        duplicates: duplicates.slice(0, 10).map(([gsisId, canonicalIds]) => ({ gsisId, canonicalIds })),
+        malformed: Array.from(new Set(malformed)).slice(0, 10),
+      },
+    };
   }
 
   /**

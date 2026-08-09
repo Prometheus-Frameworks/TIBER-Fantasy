@@ -14,8 +14,18 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { TiberTiersView, TiberTiersViewProps, TiersApiResponse } from '../TiberTiers';
 import { RankingsV2Item, validateRankingsV2WeeklyResponse } from '../tiberTiersV2Mapper';
 
+const IDENTITY = {
+  status: 'resolved' as const,
+  canonicalId: 'tiber-amon-ra-st-brown',
+  sourceId: '00-0036963',
+  sourceType: 'gsis' as const,
+  reason: null,
+  linkable: true,
+};
+
 function makeItem(overrides: Partial<RankingsV2Item> = {}): RankingsV2Item {
   return {
+    identity: IDENTITY,
     rank: 1,
     playerId: '00-1',
     playerName: 'Justin Jefferson',

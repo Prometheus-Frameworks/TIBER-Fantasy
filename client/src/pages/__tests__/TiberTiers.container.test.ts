@@ -58,8 +58,18 @@ function renderContainer() {
   );
 }
 
+const IDENTITY = {
+    status: 'resolved' as const,
+    canonicalId: 'tiber-amon-ra-st-brown',
+    sourceId: '00-0036963',
+    sourceType: 'gsis' as const,
+    reason: null,
+    linkable: true,
+  };
+
 function wellFormedItem(overrides: Record<string, unknown> = {}) {
   return {
+    identity: IDENTITY,
     rank: 1,
     playerId: '00-0036322',
     playerName: 'Justin Jefferson',

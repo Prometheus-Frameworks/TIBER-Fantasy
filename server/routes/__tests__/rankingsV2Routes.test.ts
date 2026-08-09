@@ -1,6 +1,12 @@
 import express from 'express';
 import { AddressInfo } from 'net';
 
+// The route now resolves producer IDs to canonical keys at the ranking boundary
+// (Fantasy #308), so it imports the identity resolver and therefore `infra/db`,
+// which throws at import time without DATABASE_URL. Identity resolution itself is
+// covered by rankingIdentityResolver.test.ts and rankingsIdentityCrossSurface.test.ts.
+jest.mock('../../infra/db', () => ({ db: {} }));
+
 jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
   scoringService: {
     getWeeklyRankings: jest.fn(),

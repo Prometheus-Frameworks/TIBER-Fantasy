@@ -201,7 +201,17 @@ describe('resolveTiersViewState', () => {
 describe('validateRankingsV2WeeklyResponse', () => {
   const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
 
+  const IDENTITY = {
+    status: 'resolved' as const,
+    canonicalId: 'tiber-amon-ra-st-brown',
+    sourceId: '00-0036963',
+    sourceType: 'gsis' as const,
+    reason: null,
+    linkable: true,
+  };
+
   const wellFormedItem = {
+    identity: IDENTITY,
     rank: 1,
     playerId: '00-1',
     playerName: 'Justin Jefferson',
@@ -226,6 +236,8 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['a non-object payload', 'not-json'],
     ['null', null],
     ['an array instead of an object', []],
+    ['an item missing identity', { ...wellFormed, items: [{ ...wellFormedItem, identity: undefined }] }],
+    ['an item whose identity omits linkable', { ...wellFormed, items: [{ ...wellFormedItem, identity: { ...IDENTITY, linkable: undefined } }] }],
     ['missing items entirely', { ...wellFormed, items: undefined }],
     ['a null items value', { ...wellFormed, items: null }],
     ['a non-array items value', { ...wellFormed, items: 'garbage' }],

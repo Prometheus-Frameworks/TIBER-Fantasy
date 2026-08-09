@@ -126,7 +126,40 @@ export const rankingsV2ItemUiMetaSchema = z.object({
 });
 export type RankingsV2ItemUiMeta = z.infer<typeof rankingsV2ItemUiMetaSchema>;
 
-export const rankingsV2ItemSchema = z.object({
+/**
+ * Per-item identity envelope (Fantasy #308).
+ *
+ * `playerId` on a ranking item is the **canonical public key** and nothing else.
+ * The producer's own identifier is preserved here as typed provenance rather
+ * than being allowed to masquerade as the public key — which is what produced
+ * the `/player/00-0036963` → "Player Not Found" regression.
+ *
+ * `linkable: false` means the consumer must render the row but must not build a
+ * player deep link from it.
+ */
+export const rankingsV2ItemIdentitySchema = z.object({
+  status: z.enum(['canonical', 'resolved', 'unresolved']),
+  canonicalId: z.string().nullable(),
+  sourceId: z.string(),
+  sourceType: z.enum(['canonical', 'gsis', 'unknown']),
+  reason: z.string().nullable(),
+  linkable: z.boolean(),
+});
+export type RankingsV2ItemIdentity = z.infer<typeof rankingsV2ItemIdentitySchema>;
+
+/** Cohort-level identity coverage, reported alongside every ranking response. */
+export const rankingsV2IdentityCoverageSchema = z.object({
+  total: z.number(),
+  canonical: z.number(),
+  resolved: z.number(),
+  unresolved: z.number(),
+  ambiguous: z.number(),
+  coverageRatio: z.number(),
+  byReason: z.record(z.string(), z.number()),
+});
+export type RankingsV2IdentityCoverage = z.infer<typeof rankingsV2IdentityCoverageSchema>;
+
+const rankingsV2ItemSchema = z.object({
   rank: z.number().int().positive(),
   playerId: z.string(),
   playerName: z.string(),
@@ -138,6 +171,7 @@ export const rankingsV2ItemSchema = z.object({
   explanation: rankingsV2ItemExplanationSchema,
   trust: rankingsV2TrustSchema,
   uiMeta: rankingsV2ItemUiMetaSchema.optional(),
+  identity: rankingsV2ItemIdentitySchema,
 });
 export type RankingsV2Item = z.infer<typeof rankingsV2ItemSchema>;
 
@@ -150,5 +184,6 @@ export const rankingsV2ResponseSchema = z.object({
   sourceStack: z.array(rankingsV2SourceStackItemSchema),
   items: z.array(rankingsV2ItemSchema),
   trust: rankingsV2TrustSchema,
+  identityCoverage: rankingsV2IdentityCoverageSchema,
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;

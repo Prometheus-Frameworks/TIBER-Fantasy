@@ -4,6 +4,7 @@ export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
 export interface TiersApiPlayer {
   playerId: string;
+  identity: RankingsV2ItemIdentity;
   playerName: string;
   position: Position;
   nflTeam?: string | null;
@@ -30,9 +31,20 @@ export interface TiersApiPlayer {
   };
 }
 
+export interface RankingsV2ItemIdentity {
+  status: 'canonical' | 'resolved' | 'unresolved';
+  canonicalId: string | null;
+  sourceId: string;
+  sourceType: 'canonical' | 'gsis' | 'unknown';
+  reason: string | null;
+  /** False → render the row but do not build a player deep link from it. */
+  linkable: boolean;
+}
+
 export interface RankingsV2Item {
   rank: number;
   playerId: string;
+  identity: RankingsV2ItemIdentity;
   playerName: string;
   position?: string | null;
   team?: string | null;
@@ -158,6 +170,16 @@ const rankingsItemUiMetaSchema = z
 const rankingsItemSchema = z.object({
   rank: z.number(),
   playerId: z.string(),
+  // The page decides whether to render a deep link from this, so a response
+  // missing it must fail validation rather than let the UI guess (#308).
+  identity: z.object({
+    status: z.enum(['canonical', 'resolved', 'unresolved']),
+    canonicalId: z.string().nullable(),
+    sourceId: z.string(),
+    sourceType: z.enum(['canonical', 'gsis', 'unknown']),
+    reason: z.string().nullable(),
+    linkable: z.boolean(),
+  }),
   playerName: z.string(),
   position: z.string().nullable().optional(),
   team: z.string().nullable().optional(),
@@ -254,6 +276,7 @@ export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): Tiers
     const tier = asTier(item.tier);
     return {
       playerId: item.playerId,
+      identity: item.identity,
       playerName: item.playerName,
       position: (item.position as Position) || 'WR',
       nflTeam: item.team ?? null,
