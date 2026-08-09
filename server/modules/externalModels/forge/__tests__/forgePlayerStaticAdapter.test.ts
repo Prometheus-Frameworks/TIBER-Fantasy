@@ -169,44 +169,48 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     expect(payload).toEqual(expect.objectContaining({
       artifact_type: 'FORGE_PLAYER_STATIC_V1',
       schema_version: 'forge_player_static_v1',
-      row_count: 59,
+      row_count: 50,
       score_source_policy: expect.objectContaining({
         generated_baseline: expect.any(String),
       }),
       consumer_manifest: expect.objectContaining({
         evidence_gate: expect.any(Object),
       }),
-      source_artifacts: [
-        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.cohort.v1.json',
-        'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
-        'tests/fixtures/artifacts/forge_season_player_input_2025.real_players_sample.json',
-      ],
+      content_digest: expect.objectContaining({
+        algorithm: 'sha256',
+        scope: 'rows',
+      }),
+      source_artifacts: ['data/source-backed/forge_player_weekly_ppr_2025.cohort.v1.json'],
     }));
     expect(lookup.artifact).toEqual(expect.objectContaining({
       available: true,
-      rowCount: 59,
-      playerSpecificCount: 45,
-      generatedBaselineCount: 14,
+      rowCount: 50,
+      playerSpecificCount: 50,
+      generatedBaselineCount: 0,
     }));
     expect(payload.rows.some((row: any) => row?.components && typeof row.components === 'object')).toBe(true);
-    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-puka-nacua')).toEqual(expect.objectContaining({
-      alpha: 30.24,
-      tier: 'low',
+    // Rows are keyed by GSIS player id, matching the promoted identity crosswalk.
+    expect(lookup.rowsByPlayerId.get('00-0039075')).toEqual(expect.objectContaining({
+      alpha: 97.9,
+      tier: 'elite',
       scoreSource: 'player_specific',
       isPlayerSpecificEvidence: true,
     }));
-    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-ladd-mcconkey')).toEqual(expect.objectContaining({
+    expect(lookup.rowsByPlayerId.get('00-0033280')).toEqual(expect.objectContaining({
+      alpha: 100,
+      tier: 'elite',
       scoreSource: 'player_specific',
       isPlayerSpecificEvidence: true,
       isGeneratedBaselineVisibility: false,
       provenance: expect.objectContaining({
         source_artifacts: expect.arrayContaining([
-          'tests/fixtures/artifacts/forge_player_weekly_ppr_2025.management_mapped_source_backfill.v1.json',
+          'data/source-backed/forge_player_weekly_ppr_2025.cohort.v1.json',
         ]),
       }),
     }));
-    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-frank-gore-jr')).toBeUndefined();
-    expect(Array.from(lookup.rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility)).toHaveLength(14);
+    // Legacy tiber-data-* identifiers are no longer a vocabulary this artifact speaks.
+    expect(lookup.rowsByPlayerId.get('tiber-data-player-2025-puka-nacua')).toBeUndefined();
+    expect(Array.from(lookup.rowsByPlayerId.values()).filter((row) => row.isGeneratedBaselineVisibility)).toHaveLength(0);
   });
 
   it('reports the attempted JSON source path when configured with an artifact directory', () => {
