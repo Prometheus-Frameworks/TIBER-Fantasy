@@ -1,9 +1,17 @@
 # Railway `forge_grade_cache` lineage audit
 
 **Tracker:** [Fantasy #310](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/310)
-**Date:** 2026-08-09 · **Method:** read-only · **Base:** `main` @ `93e2682`
-**Machine-readable manifest:** [`assets/310-cache-audit-manifest.json`](assets/310-cache-audit-manifest.json)
+**Date:** 2026-08-09
+**Method:** read-only **with respect to production and the database** — public HTTP
+GETs plus repository reads, no DB connection, no DDL, no Railway/Replit mutation.
+The audit script does write its own local artifacts under `docs/audits/assets/`;
+that is its deliverable.
+
+**Artifacts:** [`assets/310-cache-audit-manifest.json`](assets/310-cache-audit-manifest.json)
+· [`assets/310-live-cohort-observed.json`](assets/310-live-cohort-observed.json)
 **Reproduce:** `npx tsx scripts/audit/forgeCacheAudit.ts`
+**Verify:** `npx tsx scripts/audit/forgeCacheAudit.ts --check` (asserts the two
+committed artifacts agree on counts, positions, timestamps and digest)
 
 ## Terminal finding
 
@@ -11,10 +19,15 @@
 legacy_forge_cache_quarantined_insufficient_provenance
 ```
 
-The Railway `forge_grade_cache` **cannot be shown to be reproducible or
-source-attributable from available evidence**, so it fails closed. It remains
-usable only as legacy historical/diagnostic data for 2025, clearly labelled, and
-must not occupy a canonical or current ranking mode.
+This is an **audit classification and a required disposition — not an
+already-enforced runtime state.** Nothing in this audit changes the production
+consumer; the Rankings surface still reads the cache today. Enforcement belongs
+to Fantasy #307 Phase B.
+
+Read it as: the Railway `forge_grade_cache` **cannot be shown to be reproducible
+or source-attributable from available evidence**, so it is **classified for
+quarantine**. It **must not** occupy a canonical or current ranking mode. It may
+remain reachable as clearly labelled 2025 legacy diagnostic/review data.
 
 This is a statement about *evidence*, not about score quality. Nothing here says
 the scores are wrong; it says their lineage cannot be established, which is the
@@ -244,20 +257,27 @@ fabricated precision.
 Per #310's fail-closed rule, provenance and reproducibility are both
 insufficient, so:
 
+These are **required dispositions this audit records**, not changes it makes.
+
 - ❌ **No cache manifest/digest is added.** That is conditional on lineage and
   reproducibility being sufficient; neither is.
-- ✅ **Quarantined** from canonical/current ranking modes with the typed reason
-  `legacy_forge_cache_quarantined_insufficient_provenance`.
-- ✅ **Retained for 2025 history**, labelled legacy diagnostic/review data, with
-  these limitations stated: unrecoverable source window, no deterministic
-  recompute, and 32.5% of rows pinned at the calibration floor.
+- ⛔ **Must be quarantined** from canonical/current ranking modes with the typed
+  reason `legacy_forge_cache_quarantined_insufficient_provenance`. *Not yet
+  enforced — #307 Phase B owns the consumer change.*
+- 📌 **May be retained for 2025 history**, labelled legacy diagnostic/review
+  data, with these limitations stated: unrecoverable source window, no
+  deterministic recompute, and 32.5% of rows pinned at the calibration floor.
 - ✅ **No score was synced** into or out of the static artifact in either
-  direction.
+  direction — this one *is* a property of the work done here.
 
 This aligns with #307: 2025 FORGE may remain reachable in a clearly labelled
 archive, but must not silently occupy the current 2026 surface. #307 Phase A adds
 the `seasonMeta.isArchiveView` signal that makes that labelling possible; the
-final archive semantics are Phase B and depend on this finding.
+final archive semantics and the actual quarantine enforcement are Phase B and
+depend on this finding.
+
+**To be unambiguous: this PR is additive — a report, two linked artifacts, one
+script, and their tests. It changes no runtime path and no production consumer.**
 
 **Authority unchanged:** Fantasy #291 remains the authority for the bundled
 artifact's byte parity; FORGE #49 remains the authority for producer cohort scale

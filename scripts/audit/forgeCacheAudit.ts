@@ -1,16 +1,27 @@
 /**
  * Railway `forge_grade_cache` lineage audit (Fantasy #310).
  *
- * READ-ONLY. Performs no writes, no DDL, no promotion, no artifact sync. It
- * reads the public Rankings v2 API (which serves the cache), the bundled
- * `FORGE_PLAYER_STATIC_V1` artifact, and the in-repo legacy engine constants,
- * then emits a machine-readable manifest.
+ * **Read-only with respect to production**: no database connection, no DDL, no
+ * promotion, no artifact sync, no Railway/Replit mutation. It issues public HTTP
+ * GETs against the Rankings v2 API (which serves the cache) and reads
+ * repository files.
  *
- *   npx tsx scripts/audit/forgeCacheAudit.ts
- *   npx tsx scripts/audit/forgeCacheAudit.ts --base-url https://<host> --out <path>
+ * It *does* write local audit artifacts under `docs/audits/assets/` — that is
+ * its deliverable. "Read-only" here means read-only against production and the
+ * database, not that the script writes nothing.
  *
- * Regenerates `docs/audits/assets/310-cache-audit-manifest.json`, which backs
- * the findings in `docs/audits/2026-08-09-railway-forge-cache-audit.md`.
+ *   npx tsx scripts/audit/forgeCacheAudit.ts            # regenerate both artifacts
+ *   npx tsx scripts/audit/forgeCacheAudit.ts --check    # verify committed artifacts agree
+ *   npx tsx scripts/audit/forgeCacheAudit.ts --base-url https://<host>
+ *
+ * Regenerates **both** committed outputs, which back the findings in
+ * `docs/audits/2026-08-09-railway-forge-cache-audit.md`:
+ *   - `docs/audits/assets/310-cache-audit-manifest.json`
+ *   - `docs/audits/assets/310-live-cohort-observed.json`
+ *
+ * The two are linked: the manifest records the cohort artifact's committed path
+ * and its canonical SHA-256, and both carry the same observation timestamp and
+ * source description, so a reader can tell they describe one observation.
  *
  * Scope note: the cache's *source* tables (position role banks,
  * `datadive_snapshot_player_week`) are not in this repository and this script
@@ -29,6 +40,8 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '../..');
 
 const DEFAULT_BASE_URL = 'https://tiber-fantasy-production.up.railway.app';
+const COHORT_RELATIVE_PATH = 'docs/audits/assets/310-live-cohort-observed.json';
+const MANIFEST_RELATIVE_PATH = 'docs/audits/assets/310-cache-audit-manifest.json';
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 const GSIS_SHAPE = /^00-\d{7}$/;
 const AUDIT_SEASON = 2025;
@@ -43,6 +56,15 @@ interface LiveRow {
   rawAlpha: number | null;
   tier: string | null;
   gamesPlayed: number | null;
+}
+
+/** Canonical JSON so the cohort digest is stable across runs. */
+function canonicalJson(value: unknown): string {
+  return JSON.stringify(value, null, 2) + '\n';
+}
+
+function sha256(text: string): string {
+  return createHash('sha256').update(text).digest('hex');
 }
 
 function arg(name: string, fallback: string): string {
@@ -215,22 +237,50 @@ function auditProvenance() {
   };
 }
 
-async function main() {
-  const baseUrl = arg('base-url', DEFAULT_BASE_URL);
-  const out = arg('out', path.join(REPO_ROOT, 'docs/audits/assets/310-cache-audit-manifest.json'));
-
-  const staticPath = path.join(REPO_ROOT, 'server/artifacts/external/forge/forge_player_static_v1.json');
-  const staticRaw = fs.readFileSync(staticPath);
-  const staticArtifact = JSON.parse(staticRaw.toString());
-
-  const { rows, perPosition } = await fetchLiveCohort(baseUrl);
-
-  const manifest = {
+/** Observation envelope shared by both artifacts, so neither is an unexplained blob. */
+function observationEnvelope(baseUrl: string, observedAt: string, perPosition: Record<string, { asOf: string; fallbackReason: string | null }>) {
+  return {
     audit: 'railway_forge_grade_cache_lineage',
     issue: 'Prometheus-Frameworks/TIBER-Fantasy#310',
-    readOnly: true,
-    observedAt: new Date().toISOString(),
-    source: { baseUrl, season: AUDIT_SEASON, asOfWeek: AUDIT_WEEK, perPosition },
+    observation: {
+      observed_at: observedAt,
+      source_description:
+        'Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) ' +
+        `for QB/RB/WR/TE at season=${AUDIT_SEASON}, asOfWeek=${AUDIT_WEEK}, limit=300.`,
+      base_url: baseUrl,
+      season: AUDIT_SEASON,
+      as_of_week: AUDIT_WEEK,
+      positions: [...POSITIONS],
+      per_position: perPosition,
+      production_mutations: 'none',
+      database_access: 'none',
+    },
+  };
+}
+
+function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], perPosition: any, staticRaw: Buffer, staticArtifact: any) {
+  const envelope = observationEnvelope(baseUrl, observedAt, perPosition);
+
+  const cohort = {
+    ...envelope,
+    artifact: 'observed_cache_cohort',
+    row_count: rows.length,
+    by_position: Object.fromEntries(POSITIONS.map((p) => [p, rows.filter((r) => r.position === p).length])),
+    rows,
+  };
+  const cohortJson = canonicalJson(cohort);
+  const cohortSha256 = sha256(cohortJson);
+
+  const manifest = {
+    ...envelope,
+    artifact: 'cache_audit_manifest',
+    // Link to the companion artifact by committed path *and* content digest, so
+    // the two cannot silently drift apart.
+    cohort_artifact: {
+      committed_path: COHORT_RELATIVE_PATH,
+      sha256: cohortSha256,
+      row_count: rows.length,
+    },
     cacheCohort: {
       rows: rows.length,
       byPosition: Object.fromEntries(POSITIONS.map((p) => [p, rows.filter((r) => r.position === p).length])),
@@ -246,12 +296,97 @@ async function main() {
     },
     comparability: auditComparability(rows, staticArtifact),
     provenance: auditProvenance(),
+    disposition: {
+      // An audit classification, not an enforced runtime state. Nothing in this
+      // PR changes the production consumer; enforcement is Fantasy #307 Phase B.
+      terminal_finding: 'legacy_forge_cache_quarantined_insufficient_provenance',
+      status: 'classified_for_quarantine',
+      enforced_by_this_audit: false,
+      enforcement_owner: 'Prometheus-Frameworks/TIBER-Fantasy#307 Phase B',
+      required_disposition:
+        'Must not occupy a canonical or current ranking mode; may remain reachable as clearly labelled 2025 legacy diagnostic/review data.',
+    },
   };
 
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  fs.writeFileSync(out, JSON.stringify(manifest, null, 2) + '\n');
-  console.log(`Wrote ${out}`);
-  console.log(`cohort=${rows.length} joinable=${manifest.comparability.joinable} reproducible=${manifest.provenance.deterministicRecomputePossible}`);
+  return { cohortJson, cohortSha256, manifestJson: canonicalJson(manifest), manifest };
+}
+
+/** Checks the two committed artifacts agree with each other. */
+function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } {
+  const problems: string[] = [];
+  const manifestPath = path.join(repoRoot, MANIFEST_RELATIVE_PATH);
+  const cohortPath = path.join(repoRoot, COHORT_RELATIVE_PATH);
+
+  if (!fs.existsSync(manifestPath) || !fs.existsSync(cohortPath)) {
+    return { ok: false, problems: ['one or both committed artifacts are missing'] };
+  }
+
+  const cohortText = fs.readFileSync(cohortPath, 'utf8');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const cohort = JSON.parse(cohortText);
+
+  if (sha256(cohortText) !== manifest.cohort_artifact?.sha256) {
+    problems.push('cohort digest recorded in the manifest does not match the committed cohort bytes');
+  }
+  if (manifest.cohort_artifact?.committed_path !== COHORT_RELATIVE_PATH) {
+    problems.push('manifest does not point at the committed cohort path');
+  }
+  if (manifest.cohort_artifact?.row_count !== cohort.row_count || cohort.rows.length !== cohort.row_count) {
+    problems.push('row counts disagree between manifest, cohort envelope and cohort rows');
+  }
+  if (manifest.cacheCohort?.rows !== cohort.row_count) {
+    problems.push('manifest cacheCohort.rows disagrees with the cohort row count');
+  }
+  for (const position of POSITIONS) {
+    if (manifest.cacheCohort?.byPosition?.[position] !== cohort.by_position?.[position]) {
+      problems.push(`position count disagrees for ${position}`);
+    }
+  }
+  if (manifest.observation?.observed_at !== cohort.observation?.observed_at) {
+    problems.push('observation timestamps disagree between the two artifacts');
+  }
+  if (manifest.observation?.source_description !== cohort.observation?.source_description) {
+    problems.push('source descriptions disagree between the two artifacts');
+  }
+
+  return { ok: problems.length === 0, problems };
+}
+
+async function main() {
+  const baseUrl = arg('base-url', DEFAULT_BASE_URL);
+  const check = process.argv.includes('--check');
+
+  if (check) {
+    const result = verifyCommitted(REPO_ROOT);
+    if (result.ok) {
+      console.log('committed audit artifacts agree: counts, positions, timestamps and digest all match.');
+      process.exit(0);
+    }
+    console.error('committed audit artifacts DISAGREE:');
+    for (const problem of result.problems) console.error(`  - ${problem}`);
+    process.exit(1);
+    return;
+  }
+
+  const staticPath = path.join(REPO_ROOT, 'server/artifacts/external/forge/forge_player_static_v1.json');
+  const staticRaw = fs.readFileSync(staticPath);
+  const staticArtifact = JSON.parse(staticRaw.toString());
+
+  const { rows, perPosition } = await fetchLiveCohort(baseUrl);
+  const observedAt = new Date().toISOString();
+
+  const { cohortJson, cohortSha256, manifestJson } = buildArtifacts(
+    baseUrl, observedAt, rows, perPosition, staticRaw, staticArtifact,
+  );
+
+  fs.mkdirSync(path.join(REPO_ROOT, 'docs/audits/assets'), { recursive: true });
+  fs.writeFileSync(path.join(REPO_ROOT, COHORT_RELATIVE_PATH), cohortJson);
+  fs.writeFileSync(path.join(REPO_ROOT, MANIFEST_RELATIVE_PATH), manifestJson);
+
+  console.log(`Wrote ${MANIFEST_RELATIVE_PATH}`);
+  console.log(`Wrote ${COHORT_RELATIVE_PATH}`);
+  console.log(`cohort=${rows.length} cohort_sha256=${cohortSha256}`);
+  console.log('terminal_finding=legacy_forge_cache_quarantined_insufficient_provenance (classified, not enforced)');
 }
 
 main().catch((error) => {
