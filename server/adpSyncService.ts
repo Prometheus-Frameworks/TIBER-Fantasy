@@ -6,6 +6,7 @@
 import { db } from './infra/db';
 import { players } from '../shared/schema';
 import { eq, sql } from 'drizzle-orm';
+import { CURRENT_SEASON } from './config/season';
 
 export interface ADPUpdate {
   playerId: string;
@@ -162,7 +163,7 @@ export class ADPSyncService {
    */
   private async fetchESPNADP(): Promise<ADPUpdate[]> {
     // ESPN's fantasy API for ADP data
-    const response = await fetch('https://fantasy.espn.com/apis/v3/games/ffl/seasons/2025/segments/0/leagues/0?view=kona_player_info');
+    const response = await fetch(`https://fantasy.espn.com/apis/v3/games/ffl/seasons/${CURRENT_SEASON}/segments/0/leagues/0?view=kona_player_info`);
     if (!response.ok) {
       throw new Error(`ESPN API error: ${response.status}`);
     }

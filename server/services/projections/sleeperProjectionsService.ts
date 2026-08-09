@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { CURRENT_SEASON } from '../../config/season';
 
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const cache = { 
@@ -41,9 +42,9 @@ export interface LeagueSettings {
  * Source API URLs for projection comparison and verification
  */
 export const SLEEPER_API_SOURCES = {
-  BASE_PROJECTIONS: 'https://api.sleeper.com/projections/nfl/2024?season_type=regular&position=QB,RB,WR,TE',
-  WEEKLY_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/{{week}}',
-  WORKING_PROJECTIONS: 'https://api.sleeper.app/v1/projections/nfl/2024/regular/11', // Live data source
+  BASE_PROJECTIONS: `https://api.sleeper.com/projections/nfl/${CURRENT_SEASON}?season_type=regular&position=QB,RB,WR,TE`,
+  WEEKLY_PROJECTIONS: `https://api.sleeper.app/v1/projections/nfl/${CURRENT_SEASON}/regular/{{week}}`,
+  WORKING_PROJECTIONS: `https://api.sleeper.app/v1/projections/nfl/${CURRENT_SEASON}/regular/11`, // Live data source
   LEAGUE_MATCHUPS: 'https://api.sleeper.app/v1/league/{{league_id}}/matchups/{{week}}',
   PLAYER_DATA: 'https://api.sleeper.app/v1/players/nfl',
   LEAGUE_SETTINGS: 'https://api.sleeper.app/v1/league/{{league_id}}'
