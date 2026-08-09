@@ -199,7 +199,31 @@ describe('resolveTiersViewState', () => {
 });
 
 describe('validateRankingsV2WeeklyResponse', () => {
-  const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
+  const SEASON_META = {
+  currentSeason: 2026,
+  currentPhase: 'preseason' as const,
+  currentPhaseLabel: '2026 · Preseason',
+  currentRegularSeasonWeek: null,
+  targetSeason: 2026,
+  targetWeek: 1,
+  targetLabel: 'Target: Week 1',
+  scheduleSource: 'anchor_derived' as const,
+  configStatus: 'ok' as const,
+  configNote: null,
+  evidenceSeason: 2025,
+  evidenceWeek: 18,
+  generatedAt: '2026-08-08T19:04:15.325Z',
+  isArchiveView: true,
+  status: 'archive_season_not_current',
+  statusDetail: 'Showing 2025 evidence while the league is in 2026 · Preseason.',
+};
+
+  const wellFormed = {
+    asOf: '2026-04-12T00:00:00.000Z',
+    sourceStack: [{ layer: 'forge' }],
+    items: [],
+    seasonMeta: SEASON_META,
+  };
 
   const wellFormedItem = {
     rank: 1,
@@ -226,6 +250,10 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['a non-object payload', 'not-json'],
     ['null', null],
     ['an array instead of an object', []],
+    ['missing seasonMeta entirely', { ...wellFormed, seasonMeta: undefined }],
+    ['a null seasonMeta', { ...wellFormed, seasonMeta: null }],
+    ['a seasonMeta with an unknown phase', { ...wellFormed, seasonMeta: { ...SEASON_META, currentPhase: 'bye_week' } }],
+    ['a seasonMeta with a non-ISO generatedAt', { ...wellFormed, seasonMeta: { ...SEASON_META, generatedAt: 'yesterday' } }],
     ['missing items entirely', { ...wellFormed, items: undefined }],
     ['a null items value', { ...wellFormed, items: null }],
     ['a non-array items value', { ...wellFormed, items: 'garbage' }],

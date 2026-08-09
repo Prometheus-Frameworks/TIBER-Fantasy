@@ -10,7 +10,11 @@ import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickL
 import {
   Position,
   RankingsV2Item,
+  RankingsSeasonMeta,
+  resolveArchiveNotice,
+  resolveEvidenceLine,
   resolveRankingsSourceView,
+  resolveSeasonPhaseHeadline,
   resolveTiersHeadline,
   resolveTiersViewState,
   validateRankingsV2WeeklyResponse,
@@ -28,6 +32,7 @@ export interface TiersApiResponse {
     stabilityNote?: string | null;
   } | null;
   items: RankingsV2Item[];
+  seasonMeta: RankingsSeasonMeta;
 }
 
 function tierClass(tier: string) {
@@ -48,8 +53,12 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
 }
 
 export interface TiberTiersViewProps {
-  season: number;
-  asOfWeek: number;
+  /** Season whose rows are being requested. Null until season state resolves. */
+  season: number | null;
+  /** Week filter for the request, or null for "whole season so far". */
+  asOfWeek: number | null;
+  availableSeasons: number[];
+  onSeasonChange: (season: number) => void;
   position: Position;
   onPositionChange: (position: Position) => void;
   sortDirection: SortDirection;
@@ -67,6 +76,8 @@ export interface TiberTiersViewProps {
 export function TiberTiersView({
   season,
   asOfWeek,
+  availableSeasons,
+  onSeasonChange,
   position,
   onPositionChange,
   sortDirection,
@@ -94,6 +105,8 @@ export function TiberTiersView({
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
   const viewState = resolveTiersViewState({ isLoading, isError, isCacheUncomputed, playersCount: players.length });
   const showMetaLine = viewState === 'data' || viewState === 'empty';
+  const seasonMeta = data?.seasonMeta ?? null;
+  const archiveNotice = seasonMeta ? resolveArchiveNotice(seasonMeta) : null;
 
   return (
     <TooltipProvider>
@@ -105,8 +118,14 @@ export function TiberTiersView({
                 <Crown className="h-8 w-8 text-purple-400" />
                 Tiber Tiers
               </h1>
-              <p className="text-slate-400 mt-1 text-sm md:text-base">
-                {resolveTiersHeadline(sourceView.layer)} ({season}, through week {asOfWeek}).
+              {/* Three separate facts, deliberately not collapsed into one line:
+                  where the league is, what the rows are, and what produced them. */}
+              <p className="text-slate-300 mt-1 text-sm md:text-base" data-testid="tiers-phase-line">
+                {seasonMeta ? resolveSeasonPhaseHeadline(seasonMeta) : 'Resolving season state…'}
+              </p>
+              <p className="text-slate-400 mt-0.5 text-sm" data-testid="tiers-evidence-line">
+                {resolveTiersHeadline(sourceView.layer)}
+                {seasonMeta ? ` — ${resolveEvidenceLine(seasonMeta)}` : ''}
               </p>
             </div>
             <Button
@@ -120,6 +139,41 @@ export function TiberTiersView({
               Refresh
             </Button>
           </div>
+
+          {archiveNotice && (
+            <div
+              className="mb-4 flex items-start gap-2 rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-100"
+              data-testid="tiers-archive-notice"
+              role="status"
+            >
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{archiveNotice}</span>
+            </div>
+          )}
+
+          {/* Explicit season control — the surface must never imply that the only
+              season it can show is the current one (Fantasy #307 Phase A). */}
+          {availableSeasons.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3" data-testid="tiers-season-control">
+              <span className="text-xs uppercase tracking-wide text-slate-300">Season</span>
+              {availableSeasons.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => onSeasonChange(option)}
+                  aria-pressed={season === option}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    season === option
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  data-testid={`season-${option}`}
+                >
+                  {option}
+                  {seasonMeta && option !== seasonMeta.currentSeason ? ' · archive' : ''}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 mb-4">
             {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
@@ -148,7 +202,17 @@ export function TiberTiersView({
             <div className="text-xs text-slate-400 flex items-center gap-2 mb-4">
               <Info className="h-3.5 w-3.5" />
               <span>{players.length} players</span>
-              {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
+              {/* "Computed" is when the score was produced; the evidence line above
+                  says what football it is about. A recent computation over old
+                  evidence must not read as fresh evidence (Fantasy #307). */}
+              {seasonMeta?.generatedAt && (
+                <span data-testid="tiers-generated-at">
+                  • Computed {new Date(seasonMeta.generatedAt).toLocaleString()}
+                </span>
+              )}
+              {seasonMeta && (
+                <span data-testid="tiers-evidence-meta">• Evidence: {resolveEvidenceLine(seasonMeta)}</span>
+              )}
               <span>• Source: {sourceView.sourceNote}</span>
             </div>
           )}
@@ -251,13 +315,33 @@ export default function TiberTiers() {
   // server/contracts/rankingsV2.ts through /api/rankings/v2/weekly.
   const [position, setPosition] = useState<Position>('WR');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const { currentWeek, season } = useCurrentNFLWeek();
-  const asOfWeek = currentWeek || 17;
+  // `resolvedSeason` (not the legacy `season`) so an unresolved season stays
+  // null instead of becoming a plausible-but-unverified calendar year.
+  const { resolvedSeason: detectedSeason, regularSeasonWeek, phase } = useCurrentNFLWeek();
+
+  // Explicit user season choice wins; otherwise follow detection. Neither path
+  // falls back to a hardcoded season or the old `currentWeek || 17` guess — an
+  // unresolved season simply omits the parameter and lets the server answer with
+  // its own typed phase state.
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+  const season = selectedSeason ?? detectedSeason;
+  const isCurrentSeasonSelected = season !== null && season === detectedSeason;
+  const asOfWeek = isCurrentSeasonSelected && phase === 'regular_season' ? regularSeasonWeek : null;
+
+  const availableSeasons = useMemo(() => {
+    if (detectedSeason === null) return [];
+    // Current season plus the immediately preceding one, which is the archive
+    // that #307 requires to remain reachable.
+    return [detectedSeason - 1, detectedSeason];
+  }, [detectedSeason]);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
     queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
     queryFn: async () => {
-      const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
+      const params = new URLSearchParams({ position, limit: '75' });
+      if (season !== null) params.set('season', String(season));
+      if (asOfWeek !== null) params.set('asOfWeek', String(asOfWeek));
+      const url = `/api/rankings/v2/weekly?${params.toString()}`;
       const res = await fetch(url);
       if (!res.ok) {
         // Malformed/failed upstream responses must surface as a genuine error, not
@@ -285,6 +369,8 @@ export default function TiberTiers() {
     <TiberTiersView
       season={season}
       asOfWeek={asOfWeek}
+      availableSeasons={availableSeasons}
+      onSeasonChange={setSelectedSeason}
       position={position}
       onPositionChange={setPosition}
       sortDirection={sortDirection}

@@ -141,6 +141,38 @@ export const rankingsV2ItemSchema = z.object({
 });
 export type RankingsV2Item = z.infer<typeof rankingsV2ItemSchema>;
 
+export const rankingsV2PhaseSchema = z.enum(['offseason', 'preseason', 'regular_season', 'postseason']);
+
+/**
+ * Season/phase + freshness envelope (Fantasy #307 Phase A).
+ *
+ * The current league phase, the forward target week, and the evidence actually
+ * behind the returned rows are three separate things. `generatedAt` (when the
+ * score was computed) is deliberately distinct from `evidenceSeason`/
+ * `evidenceWeek` (what football the score is about) so a recent computation over
+ * old evidence cannot read as current-season evidence.
+ */
+export const rankingsV2SeasonMetaSchema = z.object({
+  currentSeason: z.number(),
+  currentPhase: rankingsV2PhaseSchema,
+  currentPhaseLabel: z.string(),
+  currentRegularSeasonWeek: z.number().nullable(),
+  targetSeason: z.number().nullable(),
+  targetWeek: z.number().nullable(),
+  targetLabel: z.string().nullable(),
+  scheduleSource: z.enum(['explicit_schedule', 'anchor_derived']).nullable(),
+  configStatus: z.enum(['ok', 'stale_calendar_config']),
+  configNote: z.string().nullable(),
+
+  evidenceSeason: z.number().nullable(),
+  evidenceWeek: z.number().nullable(),
+  generatedAt: z.string().datetime().nullable(),
+  isArchiveView: z.boolean(),
+  status: z.string().nullable(),
+  statusDetail: z.string().nullable(),
+});
+export type RankingsV2SeasonMeta = z.infer<typeof rankingsV2SeasonMetaSchema>;
+
 export const rankingsV2ResponseSchema = z.object({
   contractVersion: z.literal(RANKINGS_V2_CONTRACT_VERSION),
   mode: rankingsV2ModeSchema,
@@ -150,5 +182,6 @@ export const rankingsV2ResponseSchema = z.object({
   sourceStack: z.array(rankingsV2SourceStackItemSchema),
   items: z.array(rankingsV2ItemSchema),
   trust: rankingsV2TrustSchema,
+  seasonMeta: rankingsV2SeasonMetaSchema,
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;

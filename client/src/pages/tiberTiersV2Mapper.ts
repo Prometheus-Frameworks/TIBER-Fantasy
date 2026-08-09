@@ -178,6 +178,62 @@ const rankingsItemSchema = z.object({
   uiMeta: rankingsItemUiMetaSchema,
 });
 
+// Mirrors `rankingsV2SeasonMetaSchema` in server/contracts/rankingsV2.ts. The page
+// dereferences these fields to decide what season/phase it is allowed to claim, so
+// a response missing them must reach the error state rather than let the UI fall
+// back to a guess — that guess is the #307 defect.
+export const seasonMetaSchema = z.object({
+  currentSeason: z.number(),
+  currentPhase: z.enum(['offseason', 'preseason', 'regular_season', 'postseason']),
+  currentPhaseLabel: z.string(),
+  currentRegularSeasonWeek: z.number().nullable(),
+  targetSeason: z.number().nullable(),
+  targetWeek: z.number().nullable(),
+  targetLabel: z.string().nullable(),
+  scheduleSource: z.enum(['explicit_schedule', 'anchor_derived']).nullable(),
+  configStatus: z.enum(['ok', 'stale_calendar_config']),
+  configNote: z.string().nullable(),
+  evidenceSeason: z.number().nullable(),
+  evidenceWeek: z.number().nullable(),
+  generatedAt: z.string().datetime().nullable(),
+  isArchiveView: z.boolean(),
+  status: z.string().nullable(),
+  statusDetail: z.string().nullable(),
+});
+export type RankingsSeasonMeta = z.infer<typeof seasonMetaSchema>;
+
+/**
+ * Header line describing *where the league is*, independent of what evidence the
+ * rows carry. On 2026-08-09 this reads "2026 · Preseason — Target: Week 1".
+ */
+export function resolveSeasonPhaseHeadline(meta: RankingsSeasonMeta): string {
+  if (meta.configStatus === 'stale_calendar_config') return 'Season state unavailable';
+  return meta.targetLabel ? `${meta.currentPhaseLabel} — ${meta.targetLabel}` : meta.currentPhaseLabel;
+}
+
+/**
+ * Description of *what evidence the rows are*, kept separate from the phase line
+ * and from the computation timestamp.
+ */
+export function resolveEvidenceLine(meta: RankingsSeasonMeta): string {
+  if (meta.evidenceSeason === null) return 'No ranking evidence available.';
+  const week = meta.evidenceWeek === null ? 'full season' : `through week ${meta.evidenceWeek}`;
+  const scope = `${meta.evidenceSeason} evidence, ${week}`;
+  return meta.isArchiveView ? `Archive: ${scope}` : scope;
+}
+
+/** Banner copy when the rows are not from the season the league is currently in. */
+export function resolveArchiveNotice(meta: RankingsSeasonMeta): string | null {
+  if (meta.configStatus === 'stale_calendar_config') {
+    return meta.configNote ?? 'The NFL season calendar is out of date; season state cannot be determined.';
+  }
+  if (!meta.isArchiveView) return null;
+  return (
+    meta.statusDetail ??
+    `Showing ${meta.evidenceSeason} evidence while the league is in ${meta.currentPhaseLabel}.`
+  );
+}
+
 const rankingsV2WeeklyResponseSchema = z
   .object({
     // Matches the canonical Rankings v2 contract's `z.string().datetime()` (see
@@ -195,6 +251,7 @@ const rankingsV2WeeklyResponseSchema = z
       .nullable()
       .optional(),
     items: z.array(rankingsItemSchema),
+    seasonMeta: seasonMetaSchema,
   })
   .passthrough();
 

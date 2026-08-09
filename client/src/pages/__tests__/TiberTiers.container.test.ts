@@ -58,6 +58,25 @@ function renderContainer() {
   );
 }
 
+const SEASON_META = {
+  currentSeason: 2026,
+  currentPhase: 'preseason' as const,
+  currentPhaseLabel: '2026 · Preseason',
+  currentRegularSeasonWeek: null,
+  targetSeason: 2026,
+  targetWeek: 1,
+  targetLabel: 'Target: Week 1',
+  scheduleSource: 'anchor_derived' as const,
+  configStatus: 'ok' as const,
+  configNote: null,
+  evidenceSeason: 2025,
+  evidenceWeek: 18,
+  generatedAt: '2026-08-08T19:04:15.325Z',
+  isArchiveView: true,
+  status: 'archive_season_not_current',
+  statusDetail: 'Showing 2025 evidence while the league is in 2026 · Preseason.',
+};
+
 function wellFormedItem(overrides: Record<string, unknown> = {}) {
   return {
     rank: 1,
@@ -116,6 +135,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         status: 200,
         json: async () => ({
           asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
           sourceStack: [null],
           items: [{}],
         }),
@@ -155,6 +175,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         status: 200,
         json: async () => ({
           asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],
           trust: { sampleNote: null, stabilityNote: 'forge_cache_empty_uncomputed' },
           items: [],
@@ -174,6 +195,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         status: 200,
         json: async () => ({
           asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],
           trust: { sampleNote: null, stabilityNote: null },
           items: [],
@@ -193,6 +215,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         status: 200,
         json: async () => ({
           asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'promoted_artifact' }],
           trust: { sampleNote: null, stabilityNote: null },
           items: [wellFormedItem()],
@@ -215,6 +238,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         status: 200,
         json: async () => ({
           asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],
           trust: { sampleNote: null, stabilityNote: null },
           items: [wellFormedItem()],

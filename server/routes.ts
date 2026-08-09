@@ -340,17 +340,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current week info
       const currentWeekInfo = getCurrentWeek();
+      // Outside the regular season there is no completed week to compare against,
+      // so `best_week` is null rather than a fabricated week number.
       const bestRisersFallersWeek = getBestRisersFallersWeek();
-      const risersFallersAvailable = isRisersFallersDataAvailable(bestRisersFallersWeek);
-      
+      const risersFallersAvailable =
+        bestRisersFallersWeek !== null &&
+        isRisersFallersDataAvailable(bestRisersFallersWeek, currentWeekInfo.season);
+
       const response = {
         ...currentWeekInfo,
         risers_fallers: {
           best_week: bestRisersFallersWeek,
           data_available: risersFallersAvailable,
-          note: risersFallersAvailable 
+          note: risersFallersAvailable
             ? `Week ${bestRisersFallersWeek} risers/fallers data ready`
-            : 'Waiting for more games to complete'
+            : currentWeekInfo.phase === 'regular_season'
+              ? 'Waiting for more games to complete'
+              : `No completed regular-season week is available during ${currentWeekInfo.seasonPhaseLabel}.`
         },
         api_usage: {
           recommended_week_param: currentWeekInfo.currentWeek,
@@ -2916,10 +2922,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({
       success: true,
       ...weekInfo,
-      // For convenience, include the week to use for upcoming games
-      upcomingWeek: weekInfo.weekStatus === 'completed' 
-        ? Math.min(weekInfo.currentWeek + 1, 18)
-        : weekInfo.currentWeek
+      // `upcomingWeek` is the phase-aware target week. It is null outside the
+      // regular season / when the calendar is stale, instead of being clamped
+      // to the final configured week (Fantasy #307).
+      upcomingWeek: weekInfo.targetWeek,
     });
   });
   console.log('⏰ System current week endpoint mounted at /api/system/current-week');

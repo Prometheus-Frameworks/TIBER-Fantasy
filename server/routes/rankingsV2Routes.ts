@@ -10,9 +10,95 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
+import { resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
+export const SEASON_CONFIG_STALE_STATUS = 'season_calendar_config_stale';
+/** Serving rows from a season other than the one the league is currently in. */
+export const ARCHIVE_SEASON_STATUS = 'archive_season_not_current';
+
+/**
+ * Phase/freshness envelope attached to every weekly rankings response.
+ *
+ * `generatedAt` is when the score was computed; `evidenceSeason`/`evidenceWeek`
+ * describe the football evidence behind it. Keeping them apart is the point of
+ * Fantasy #307 — a 2026 computation timestamp over 2025 Week 18 evidence must
+ * not read as current-season evidence.
+ */
+function buildSeasonMeta(input: {
+  phase: SeasonPhaseInfo;
+  evidenceSeason: number | null;
+  evidenceWeek: number | null;
+  generatedAt: string | null;
+  status: string | null;
+  statusDetail: string | null;
+}) {
+  const isArchive =
+    input.evidenceSeason !== null &&
+    input.phase.configStatus === 'ok' &&
+    input.evidenceSeason !== input.phase.season;
+
+  return {
+    currentSeason: input.phase.season,
+    currentPhase: input.phase.phase,
+    currentPhaseLabel: input.phase.seasonPhaseLabel,
+    currentRegularSeasonWeek: input.phase.regularSeasonWeek,
+    targetSeason: input.phase.targetSeason,
+    targetWeek: input.phase.targetWeek,
+    targetLabel: input.phase.targetLabel,
+    scheduleSource: input.phase.scheduleSource,
+    configStatus: input.phase.configStatus,
+    configNote: input.phase.configNote,
+
+    // Evidence vs computation — deliberately separate fields.
+    evidenceSeason: input.evidenceSeason,
+    evidenceWeek: input.evidenceWeek,
+    generatedAt: input.generatedAt,
+    isArchiveView: isArchive,
+    status: input.status ?? (isArchive ? ARCHIVE_SEASON_STATUS : null),
+    statusDetail:
+      input.statusDetail ??
+      (isArchive
+        ? `Showing ${input.evidenceSeason} evidence while the league is in ${input.phase.seasonPhaseLabel}.`
+        : null),
+  };
+}
+
+/** Fail-closed payload used when no rankable state can be resolved. */
+function buildUnavailablePayload(input: {
+  season: number | null;
+  status: string;
+  detail: string;
+  phase: SeasonPhaseInfo;
+  position: SupportedPosition;
+}) {
+  const nowIso = new Date().toISOString();
+  return {
+    contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+    mode: 'weekly' as const,
+    lens: 'lineup_decision' as const,
+    horizon: 'week' as const,
+    asOf: nowIso,
+    sourceStack: [],
+    items: [],
+    trust: {
+      confidence: null,
+      asOf: null,
+      freshnessNote: null,
+      sampleNote: input.detail,
+      stabilityNote: input.status,
+    },
+    seasonMeta: buildSeasonMeta({
+      phase: input.phase,
+      evidenceSeason: input.season,
+      evidenceWeek: null,
+      generatedAt: null,
+      status: input.status,
+      statusDetail: input.detail,
+    }),
+  };
+}
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -176,9 +262,22 @@ export function createRankingsV2Router(): Router {
   // Explanation evolution guardrail: docs/architecture/TIBER_RANKINGS_V2_EXPLANATION_SURFACE.md
   router.get('/weekly', async (req: Request, res: Response) => {
     try {
-      const season = parseInt(req.query.season as string, 10) || 2025;
+      // Season/week are no longer pinned to 2025/18. When the caller does not
+      // supply them we resolve the live phase; if the calendar cannot produce a
+      // target week we fail closed with a typed state rather than inventing one
+      // (Fantasy #307 Phase A).
+      const phase = resolveSeasonPhase();
+      const requestedSeason = parseInt(req.query.season as string, 10);
+      const season = Number.isFinite(requestedSeason) ? requestedSeason : phase.season;
+
       const asOfWeekParam = req.query.asOfWeek as string | undefined;
-      const asOfWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : undefined;
+      const requestedWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : NaN;
+      const asOfWeek = Number.isFinite(requestedWeek)
+        ? requestedWeek
+        : season === phase.season
+          ? phase.regularSeasonWeek ?? undefined
+          : undefined;
+
       const position = ((req.query.position as string) || 'ALL').toUpperCase() as SupportedPosition;
       const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 300);
 
@@ -186,10 +285,24 @@ export function createRankingsV2Router(): Router {
         return res.status(400).json({ error: 'Invalid position. Use QB, RB, WR, TE, or ALL.' });
       }
 
+      if (phase.configStatus === 'stale_calendar_config' && !Number.isFinite(requestedSeason)) {
+        return res.json(
+          buildUnavailablePayload({
+            season: null,
+            status: SEASON_CONFIG_STALE_STATUS,
+            detail: phase.configNote ?? 'NFL season calendar is out of date.',
+            phase,
+            position,
+          }),
+        );
+      }
+
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
       const scoringInputs = await buildRankingsScoringInputs({
         season,
-        throughWeek: asOfWeek ?? 18,
+        // No week filter means "everything recorded for this season so far",
+        // which is correct pre-Week-1 (nothing) and mid-season (weeks to date).
+        throughWeek: asOfWeek ?? phase.regularSeasonWeek ?? 0,
         position,
         limit,
       });
@@ -235,6 +348,14 @@ export function createRankingsV2Router(): Router {
               sampleNote: null,
               stabilityNote: null,
             },
+            seasonMeta: buildSeasonMeta({
+              phase,
+              evidenceSeason: season,
+              evidenceWeek: asOfWeek ?? null,
+              generatedAt: scoringAsOf,
+              status: null,
+              statusDetail: null,
+            }),
           };
 
           const parsed = rankingsV2ResponseSchema.safeParse(payload);
@@ -309,6 +430,20 @@ export function createRankingsV2Router(): Router {
           sampleNote: isCacheEmpty ? 'FORGE grades for this filter have not been computed yet. Please check back shortly.' : null,
           stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
+        // `generatedAt` is the cache computation time; `evidenceSeason`/
+        // `evidenceWeek` describe the football the scores are about. A 2026
+        // computedAt over 2025 Week 18 rows surfaces as an archive view here
+        // rather than as current-season evidence.
+        seasonMeta: buildSeasonMeta({
+          phase,
+          evidenceSeason: season,
+          evidenceWeek: cache.asOfWeek ?? asOfWeek ?? null,
+          generatedAt: toIso(cache.computedAt),
+          status: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
+          statusDetail: isCacheEmpty
+            ? 'FORGE grades for this filter have not been computed yet.'
+            : null,
+        }),
       };
 
       const parsed = rankingsV2ResponseSchema.safeParse(payload);
