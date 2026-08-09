@@ -39,4 +39,14 @@ describe('season-aware ingestion URLs', () => {
       `https://fantasy.espn.com/apis/v3/games/ffl/seasons/${CURRENT_SEASON}/segments/0/leagues/0?view=kona_player_info`,
     );
   });
+
+  test('players cache staleness warning tolerates malformed cache shapes', async () => {
+    const { sleeperSyncService } = await import('../sleeperSyncService');
+    const warn = (players: unknown) =>
+      (sleeperSyncService as unknown as { warnIfPlayersCacheIsStale(players: unknown): void })
+        .warnIfPlayersCacheIsStale(players);
+
+    expect(() => warn({ '4034': { news_updated: 1700000000000 } })).not.toThrow();
+    expect(() => warn([null, { news_updated: 1700000000000 }, {}])).not.toThrow();
+  });
 });

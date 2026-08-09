@@ -136,7 +136,13 @@ class SleeperSyncService {
   }
 
   private warnIfPlayersCacheIsStale(players: SleeperPlayer[]): void {
-    const newestTimestamp = getNewestCacheTimestamp(players.map((player) => player.news_updated));
+    // readCache does no shape validation, so a legacy object-shaped cache or a
+    // null row must not let this observability-only warning throw and break
+    // the cache-fallback path it is observing.
+    if (!Array.isArray(players)) {
+      return;
+    }
+    const newestTimestamp = getNewestCacheTimestamp(players.map((player) => player?.news_updated));
     warnIfCacheStale(this.PLAYERS_CACHE_FILE, newestTimestamp);
   }
 
