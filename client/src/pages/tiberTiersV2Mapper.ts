@@ -3,7 +3,8 @@ import { z } from 'zod';
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
 export interface TiersApiPlayer {
-  playerId: string;
+  /** Canonical key, or null when unresolved. Never a raw source id. */
+  playerId: string | null;
   identity: RankingsV2ItemIdentity;
   playerName: string;
   position: Position;
@@ -43,7 +44,8 @@ export interface RankingsV2ItemIdentity {
 
 export interface RankingsV2Item {
   rank: number;
-  playerId: string;
+  /** Canonical key, or null when unresolved. Never a raw source id. */
+  playerId: string | null;
   identity: RankingsV2ItemIdentity;
   playerName: string;
   position?: string | null;
@@ -169,7 +171,7 @@ const rankingsItemUiMetaSchema = z
 
 const rankingsItemSchema = z.object({
   rank: z.number(),
-  playerId: z.string(),
+  playerId: z.string().nullable(),
   // The page decides whether to render a deep link from this, so a response
   // missing it must fail validation rather than let the UI guess (#308).
   identity: z.object({

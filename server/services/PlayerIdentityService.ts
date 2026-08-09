@@ -120,6 +120,18 @@ export class PlayerIdentityService {
       return null;
     }
 
+    // `gsis_id` has no unique index, so a `.limit(1)` here could return an
+    // arbitrary player when two rows share a GSIS. Every GSIS-shaped lookup
+    // goes through the single duplicate-aware implementation instead, so this
+    // method, getByAnyId(), the public player route and the batched ranking
+    // resolver all share one collision policy (Fantasy #308).
+    if (platform === 'gsis') {
+      const result = await this.getCanonicalIdByGsisId(externalId);
+      if (result.status !== 'resolved') return null;
+      setCache(cacheKeyStr, result.canonicalId, this.defaultCacheTtl);
+      return result.canonicalId;
+    }
+
     try {
       const result = await db
         .select({ canonicalId: playerIdentityMap.canonicalId })
@@ -157,8 +169,30 @@ export class PlayerIdentityService {
         return player;
       }
 
-      // Try each platform ID column
+      // Try each platform ID column.
+      //
+      // `gsis_id` is duplicate-prone (no unique index), so it is resolved
+      // through the shared duplicate-aware path rather than `.limit(1)`. An
+      // ambiguous GSIS returns null — never an arbitrary first row. The other
+      // columns each carry a unique index, so their existing single-row
+      // behaviour is preserved unchanged.
       for (const [platform, columnName] of Object.entries(PLATFORM_COLUMNS)) {
+        if (platform === 'gsis') {
+          if (!looksLikeGsisId(id)) continue;
+          const resolution = await this.getCanonicalIdByGsisId(id);
+          if (resolution.status === 'ambiguous') {
+            console.warn(`[PlayerIdentityService] Ambiguous GSIS ${id} (${resolution.matches} matches); refusing to guess.`);
+            return null;
+          }
+          if (resolution.status === 'not_found') continue;
+          player = await this.getByCanonicalId(resolution.canonicalId);
+          if (player) {
+            setCache(cacheKeyStr, player, this.defaultCacheTtl);
+            return player;
+          }
+          continue;
+        }
+
         const result = await db
           .select()
           .from(playerIdentityMap)
@@ -613,12 +647,16 @@ export class PlayerIdentityService {
   private mapToPlayerIdentityResult(player: PlayerIdentityMap): PlayerIdentityResult {
     const externalIds: Record<string, string> = {};
     
-    // Collect all external IDs
+    // Collect all external IDs. Keys match PLATFORM_COLUMNS, so a consumer that
+    // can resolve by a platform can also read that platform's id back — gsis and
+    // fantasy_data were previously resolvable but never surfaced (Fantasy #308).
+    if (player.gsisId) externalIds.gsis = player.gsisId;
     if (player.sleeperId) externalIds.sleeper = player.sleeperId;
     if (player.espnId) externalIds.espn = player.espnId;
     if (player.yahooId) externalIds.yahoo = player.yahooId;
     if (player.rotowireId) externalIds.rotowire = player.rotowireId;
     if (player.fantasyprosId) externalIds.fantasypros = player.fantasyprosId;
+    if (player.fantasyDataId) externalIds.fantasy_data = player.fantasyDataId;
     if (player.mysportsfeedsId) externalIds.mysportsfeeds = player.mysportsfeedsId;
     if (player.nflDataPyId) externalIds.nfl_data_py = player.nflDataPyId;
 

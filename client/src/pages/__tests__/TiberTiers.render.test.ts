@@ -152,6 +152,67 @@ describe('TiberTiersView rendered output', () => {
     expect(html).not.toContain('>VORP<');
   });
 
+  it('renders an unresolved row with no player link and no player-research link (Fantasy #308)', () => {
+    const unresolved = makeItem({
+      playerId: null,
+      playerName: 'Unmapped Player',
+      identity: {
+        status: 'unresolved',
+        canonicalId: null,
+        sourceId: '00-0099999',
+        sourceType: 'gsis',
+        reason: 'gsis_not_in_identity_map',
+        linkable: false,
+      },
+    });
+    const data: TiersApiResponse = {
+      asOf: '2026-08-08T19:04:15.325Z',
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [unresolved],
+    };
+
+    const html = render(baseProps({ data }));
+
+    // The row is still on the board.
+    expect(html).toContain('Unmapped Player');
+    // No player deep link, and no link built from the raw source id.
+    expect(html).not.toContain('/player/00-0099999');
+    expect(html).not.toContain('/player/null');
+    expect(html).toContain('player-unresolved-00-0099999');
+    // Player Research is absent; team/command-center research remain.
+    expect(html).not.toContain('link-player-research');
+    expect(html).toContain('link-team-research');
+  });
+
+  it('renders a resolved row with a canonical link and a player-research link', () => {
+    const resolved = makeItem({
+      playerId: 'tiber-amon-ra-st-brown',
+      playerName: 'Amon-Ra St. Brown',
+      identity: {
+        status: 'resolved',
+        canonicalId: 'tiber-amon-ra-st-brown',
+        sourceId: '00-0036963',
+        sourceType: 'gsis',
+        reason: null,
+        linkable: true,
+      },
+    });
+    const data: TiersApiResponse = {
+      asOf: '2026-08-08T19:04:15.325Z',
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [resolved],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('/player/tiber-amon-ra-st-brown');
+    // Never the raw GSIS.
+    expect(html).not.toContain('/player/00-0036963');
+    expect(html).toContain('link-player-research');
+  });
+
   it('proves malformed 2xx JSON is rejected before it can render as a genuine empty result', () => {
     // This is the client-boundary half of the "malformed vs. genuine empty" requirement:
     // the validator (wired into TiberTiers' queryFn) must throw for these shapes so React

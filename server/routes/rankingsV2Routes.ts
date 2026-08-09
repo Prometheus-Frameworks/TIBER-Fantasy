@@ -110,10 +110,10 @@ export function mapForgeCacheRowToRankingsV2Item(
 
   return {
     rank,
-    // The canonical public key only. An unresolved row keeps its source ID
-    // visible via `identity.sourceId` but is explicitly non-linkable, so a raw
-    // producer ID can never be mistaken for a resolvable public key (#308).
-    playerId: identity.canonicalId ?? identity.sourceId,
+    // Canonical public key only — null when unresolved. The producer key stays
+    // visible via `identity.sourceId`, so a raw source ID can never be mistaken
+    // for a resolvable public key (#308).
+    playerId: identity.canonicalId,
     identity: {
       status: identity.status,
       canonicalId: identity.canonicalId,
@@ -172,7 +172,7 @@ function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string, identity: 
 
   return {
     rank: Number(row.rank),
-    playerId: identity.canonicalId ?? identity.sourceId,
+    playerId: identity.canonicalId,
     identity: {
       status: identity.status,
       canonicalId: identity.canonicalId,

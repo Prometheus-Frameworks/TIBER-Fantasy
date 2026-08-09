@@ -161,7 +161,14 @@ export type RankingsV2IdentityCoverage = z.infer<typeof rankingsV2IdentityCovera
 
 const rankingsV2ItemSchema = z.object({
   rank: z.number().int().positive(),
-  playerId: z.string(),
+  /**
+   * The canonical public key, or **null** when identity could not be resolved.
+   *
+   * It is never a raw producer/source identifier: the contract says this field
+   * is canonical-only, so an unresolved row carries null here and keeps its
+   * producer key in `identity.sourceId` (Fantasy #308).
+   */
+  playerId: z.string().nullable(),
   playerName: z.string(),
   position: z.string().nullable().optional(),
   team: z.string().nullable().optional(),

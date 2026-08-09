@@ -71,9 +71,17 @@ const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFr
 const mockedBuild = buildRankingsScoringInputs as jest.MockedFunction<typeof buildRankingsScoringInputs>;
 const mockedMeaningful = hasMeaningfulScoringInputs as jest.MockedFunction<typeof hasMeaningfulScoringInputs>;
 
-/** Stand-in for `/api/player-identity/player/:id`, backed by the same crosswalk. */
-function lookupPlayerIdentity(id: string): { found: boolean; canonicalId?: string } {
+/** GSIS values deliberately duplicated in the fake crosswalk. */
+const DUPLICATED_GSIS = '00-0077777';
+
+/**
+ * Stand-in for `/api/player-identity/player/:id`, backed by the same crosswalk
+ * and — critically — the same collision policy as the service: a duplicated
+ * GSIS resolves to nothing rather than to an arbitrary first row.
+ */
+function lookupPlayerIdentity(id: string): { found: boolean; canonicalId?: string; reason?: string } {
   if (Object.values(CROSSWALK).includes(id)) return { found: true, canonicalId: id };
+  if (id === DUPLICATED_GSIS) return { found: false, reason: 'gsis_ambiguous' };
   const viaSource = CROSSWALK[id];
   if (viaSource) return { found: true, canonicalId: viaSource };
   return { found: false };
@@ -200,6 +208,36 @@ describe('Rankings v2 → player identity, cross-surface', () => {
     expect(body.items).toHaveLength(1);
     expect(body.identityCoverage.coverageRatio).toBe(0);
     expect(body.identityCoverage.byReason.gsis_not_in_identity_map).toBe(1);
+  });
+
+  test('the public player route refuses a duplicated GSIS instead of guessing', () => {
+    const lookup = lookupPlayerIdentity(DUPLICATED_GSIS);
+    expect(lookup.found).toBe(false);
+    expect(lookup.canonicalId).toBeUndefined();
+    expect(lookup.reason).toBe('gsis_ambiguous');
+  });
+
+  test('unresolved rows expose a null canonical playerId, never the raw source id', async () => {
+    const { body } = await fetchRankings('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    const orphan = body.items.find((item: any) => item.identity.sourceId === ORPHAN_GSIS);
+    // The contract says playerId is canonical-only, so an unresolved row carries null.
+    expect(orphan.playerId).toBeNull();
+    expect(orphan.playerId).not.toBe(ORPHAN_GSIS);
+    // Provenance still available for display/debugging.
+    expect(orphan.identity.sourceId).toBe(ORPHAN_GSIS);
+  });
+
+  test('no linked row ever carries a null or raw-source playerId', async () => {
+    const { body } = await fetchRankings('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+    for (const item of body.items) {
+      if (item.identity.linkable) {
+        expect(typeof item.playerId).toBe('string');
+        expect(item.playerId).not.toMatch(/^00-\d{7}$/);
+      } else {
+        expect(item.playerId).toBeNull();
+      }
+    }
   });
 
   test('identity survives contract validation rather than being stripped', async () => {

@@ -203,7 +203,7 @@ export function TiberTiersView({
                       const floor = getPillarNote(player, 'floor');
                       const ceiling = getPillarNote(player, 'ceiling');
                       return (
-                        <tr key={player.playerId} className="border-t border-gray-800 hover:bg-slate-900/25">
+                        <tr key={player.identity.sourceId} className="border-t border-gray-800 hover:bg-slate-900/25">
                           <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
@@ -240,7 +240,11 @@ export function TiberTiersView({
                             </div>
                             <CoreResearchQuickLinks
                               season={String(season)}
-                              playerId={player.playerId}
+                              // Canonical id only when the row actually resolved.
+                              // An unresolved row must not produce a player-specific
+                              // research link built from a raw source id (#308);
+                              // team/command-center links stay available.
+                              playerId={player.identity.linkable ? player.playerId : null}
                               playerName={player.playerName}
                               team={player.team ?? null}
                               compact
