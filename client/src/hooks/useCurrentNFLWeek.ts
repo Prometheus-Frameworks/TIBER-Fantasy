@@ -57,7 +57,13 @@ export function useCurrentNFLWeek() {
 
     // --- Honest, phase-aware state (Fantasy #307) -------------------------
     // Null until the server actually reports it — no client-side guessing.
-    resolvedSeason: data?.season ?? null,
+    //
+    // A stale calendar must also yield null. `getCurrentWeek()` keeps returning
+    // a number there for the legacy accessors above, but that number is the
+    // *invented* next year — surfacing it as resolved phase-aware state is what
+    // let /tiers send an explicit season and bypass the route's fail-closed path.
+    resolvedSeason:
+      data?.configStatus === 'stale_calendar_config' ? null : data?.season ?? null,
     phase: data?.phase ?? null,
     phaseLabel: data?.phaseLabel ?? null,
     seasonPhaseLabel: data?.seasonPhaseLabel ?? null,

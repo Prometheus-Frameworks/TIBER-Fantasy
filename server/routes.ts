@@ -121,7 +121,8 @@ import {
 import { TIBER_SIGNATURE } from '../shared/tiberSignature';
 import fs from 'fs';
 import path from 'path';
-import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
+import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection, checkSeasonConfigAgreement } from '../shared/weekDetection';
+import { CURRENT_SEASON } from './config/season';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import dataLabRoutes from './modules/datalab/snapshots/snapshotRoutes';
@@ -2919,6 +2920,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Universal current week detection endpoint
   app.get('/api/system/current-week', (req, res) => {
     const weekInfo = getCurrentWeek();
+    // PR #306 landed the ingestion season config, so the two can now be
+    // reconciled for real rather than left as a seam (Fantasy #307 AC:
+    // "ingestion season config and presentation season/phase cannot silently
+    // disagree"). Reported, never silently reconciled.
+    const seasonAgreement = checkSeasonConfigAgreement(CURRENT_SEASON);
+    if (!seasonAgreement.agrees) {
+      console.warn(`[Week API] season config disagreement: ${seasonAgreement.reason}`);
+    }
+
     res.json({
       success: true,
       ...weekInfo,
@@ -2926,6 +2936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // regular season / when the calendar is stale, instead of being clamped
       // to the final configured week (Fantasy #307).
       upcomingWeek: weekInfo.targetWeek,
+      seasonConfigAgreement: seasonAgreement,
     });
   });
   console.log('⏰ System current week endpoint mounted at /api/system/current-week');

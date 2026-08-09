@@ -184,6 +184,7 @@ const rankingsItemSchema = z.object({
 // back to a guess — that guess is the #307 defect.
 export const seasonMetaSchema = z.object({
   currentSeason: z.number(),
+  forwardRankingSeason: z.number(),
   currentPhase: z.enum(['offseason', 'preseason', 'regular_season', 'postseason']),
   currentPhaseLabel: z.string(),
   currentRegularSeasonWeek: z.number().nullable(),

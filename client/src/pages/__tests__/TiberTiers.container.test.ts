@@ -60,6 +60,7 @@ function renderContainer() {
 
 const SEASON_META = {
   currentSeason: 2026,
+  forwardRankingSeason: 2026,
   currentPhase: 'preseason' as const,
   currentPhaseLabel: '2026 · Preseason',
   currentRegularSeasonWeek: null,

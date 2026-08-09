@@ -154,6 +154,12 @@ export const rankingsV2PhaseSchema = z.enum(['offseason', 'preseason', 'regular_
  */
 export const rankingsV2SeasonMetaSchema = z.object({
   currentSeason: z.number(),
+  /**
+   * The season the forward board is about, which is not always the season the
+   * league is in — during the 2025 postseason the phase is 2025 while the
+   * forward board targets 2026. Archive status is computed against this.
+   */
+  forwardRankingSeason: z.number(),
   currentPhase: rankingsV2PhaseSchema,
   currentPhaseLabel: z.string(),
   currentRegularSeasonWeek: z.number().nullable(),

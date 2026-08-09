@@ -34,13 +34,20 @@ function buildSeasonMeta(input: {
   status: string | null;
   statusDetail: string | null;
 }) {
+  // The season the league is *in* and the season the forward board is *about*
+  // are different facts. During the 2025 postseason the phase season is 2025
+  // while the forward board targets 2026, so archive status must be computed
+  // against the board's target season — otherwise a valid 2026 Week 1 board
+  // would be mislabelled as a 2025 archive.
+  const forwardRankingSeason = input.phase.targetSeason ?? input.phase.season;
   const isArchive =
     input.evidenceSeason !== null &&
     input.phase.configStatus === 'ok' &&
-    input.evidenceSeason !== input.phase.season;
+    input.evidenceSeason !== forwardRankingSeason;
 
   return {
     currentSeason: input.phase.season,
+    forwardRankingSeason,
     currentPhase: input.phase.phase,
     currentPhaseLabel: input.phase.seasonPhaseLabel,
     currentRegularSeasonWeek: input.phase.regularSeasonWeek,
@@ -60,7 +67,7 @@ function buildSeasonMeta(input: {
     statusDetail:
       input.statusDetail ??
       (isArchive
-        ? `Showing ${input.evidenceSeason} evidence while the league is in ${input.phase.seasonPhaseLabel}.`
+        ? `Showing ${input.evidenceSeason} evidence while the forward board targets ${forwardRankingSeason} (${input.phase.seasonPhaseLabel}).`
         : null),
   };
 }

@@ -127,7 +127,10 @@ describe('Rankings v2 season/phase contract', () => {
 
     expect(body.seasonMeta.isArchiveView).toBe(true);
     expect(body.seasonMeta.status).toBe('archive_season_not_current');
-    expect(body.seasonMeta.statusDetail).toMatch(/2025 evidence while the league is in 2026 · Preseason/);
+    // The detail now names the board's target season, not just the phase, so a
+    // 2026 forward board during the 2025 postseason is not mislabelled.
+    expect(body.seasonMeta.statusDetail).toMatch(/2025 evidence while the forward board targets 2026/);
+    expect(body.seasonMeta.forwardRankingSeason).toBe(2026);
   });
 
   test('current-season rows in season are not flagged as an archive', async () => {
