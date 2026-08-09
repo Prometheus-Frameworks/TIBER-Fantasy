@@ -77,3 +77,17 @@ Sites fixed when the rule was introduced:
 
 The last four were **pre-existing** hover defects — the variant already carried
 `hover:text-accent-foreground` before this change — surfaced by the audit.
+
+### Token repair must change the `:root` declarations
+
+`--tmd-text-muted` and `--tmd-text-dim` appear twice in `index.css`: once as real
+`:root` declarations (in the Command Deck block) and many times as inline
+`var(--token, rgba(...))` fallbacks. **Only the `:root` declarations take
+effect** wherever the variables are defined — editing the fallbacks alone is
+inert.
+
+The first pass at #309 changed only the fallbacks, so the shipped contrast was
+unchanged. Both are now accessible, and
+`client/src/__tests__/contrastAudit.test.ts` reads the **root** declarations,
+whitespace-insensitively, so `rgba(226, 228, 232, 0.45)` cannot slip past a
+spacing-exact pattern the way it did the first time.

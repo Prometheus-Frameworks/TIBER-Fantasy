@@ -51,9 +51,27 @@ function cssToken(name: string): string {
   return match[1].trim();
 }
 
-/** Read the alpha of the first `var(--name, rgba(r,g,b,A))` fallback. */
+/**
+ * Alpha of the **actual `:root` declaration**, not an inline fallback.
+ *
+ * The earlier version of this test read `var(--name, rgba(...))` fallbacks,
+ * which are inert wherever `:root` defines the variable — so the tokens could
+ * (and did) sit at the old inaccessible values while the test passed. Whitespace
+ * is tolerated so `rgba(226, 228, 232, 0.45)` cannot slip past a spacing-exact
+ * pattern.
+ */
+function rootTokenAlpha(name: string): number {
+  const declaration = cssToken(name);
+  const match = declaration.match(/rgba\(\s*226\s*,\s*228\s*,\s*232\s*,\s*([0-9.]+)\s*\)/);
+  if (!match) throw new Error(`--${name} is not an rgba(226,228,232,A) declaration: "${declaration}"`);
+  return Number(match[1]);
+}
+
+/** Alpha of an inline `var(--name, rgba(...))` fallback, whitespace-tolerant. */
 function tokenFallbackAlpha(name: string): number {
-  const match = CSS.match(new RegExp(`var\\(--${name},\\s*rgba\\(226,228,232,([0-9.]+)\\)\\)`));
+  const match = CSS.match(
+    new RegExp(`var\\(\\s*--${name}\\s*,\\s*rgba\\(\\s*226\\s*,\\s*228\\s*,\\s*232\\s*,\\s*([0-9.]+)\\s*\\)\\s*\\)`),
+  );
   if (!match) throw new Error(`fallback for --${name} not found in index.css`);
   return Number(match[1]);
 }
@@ -70,7 +88,7 @@ const AA_NON_TEXT = 3;
 
 describe('dark-shell text tokens meet AA', () => {
   test('nav / secondary labels (--tmd-text-muted) reach 4.5:1', () => {
-    const alpha = tokenFallbackAlpha('tmd-text-muted');
+    const alpha = rootTokenAlpha('tmd-text-muted');
     const ratio = contrast(over(SHELL_TEXT, alpha, SHELL), SHELL);
     expect(ratio).toBeGreaterThanOrEqual(AA_TEXT);
   });
@@ -78,28 +96,49 @@ describe('dark-shell text tokens meet AA', () => {
   test('tiny uppercase section labels / badges (--tmd-text-dim) reach 4.5:1', () => {
     // These convey navigation and status, so they are not decorative and do not
     // get the relaxed treatment.
-    const alpha = tokenFallbackAlpha('tmd-text-dim');
+    const alpha = rootTokenAlpha('tmd-text-dim');
     const ratio = contrast(over(SHELL_TEXT, alpha, SHELL), SHELL);
     expect(ratio).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
   test('both tokens also pass over the darker table surface', () => {
     for (const name of ['tmd-text-muted', 'tmd-text-dim']) {
-      const alpha = tokenFallbackAlpha(name);
+      const alpha = rootTokenAlpha(name);
       expect(contrast(over(SHELL_TEXT, alpha, TABLE_SURFACE), TABLE_SURFACE)).toBeGreaterThanOrEqual(AA_TEXT);
     }
   });
 
   test('the visual hierarchy survives the repair — dim stays dimmer than muted', () => {
-    const dim = tokenFallbackAlpha('tmd-text-dim');
-    const muted = tokenFallbackAlpha('tmd-text-muted');
+    const dim = rootTokenAlpha('tmd-text-dim');
+    const muted = rootTokenAlpha('tmd-text-muted');
     expect(dim).toBeLessThan(muted);
     expect(muted).toBeLessThan(1);
   });
 
-  test('regression: the previously-failing alphas are gone', () => {
-    expect(CSS).not.toContain('rgba(226,228,232,0.45)'); // was 3.75:1
-    expect(CSS).not.toContain('rgba(226,228,232,0.28)'); // was 2.11:1
+  test('the inline fallbacks are accessible too, so both paths agree', () => {
+    expect(contrast(over(SHELL_TEXT, tokenFallbackAlpha('tmd-text-muted'), SHELL), SHELL)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrast(over(SHELL_TEXT, tokenFallbackAlpha('tmd-text-dim'), SHELL), SHELL)).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  test('regression: no sub-AA near-white alpha survives anywhere, in any spacing', () => {
+    // Whitespace-insensitive: `rgba(226, 228, 232, 0.45)` must not escape a
+    // spacing-exact pattern, which is exactly how the root declarations were
+    // missed the first time.
+    const subAa = CSS.match(
+      /rgba\(\s*226\s*,\s*228\s*,\s*232\s*,\s*0\.(?:0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|50)\s*\)/g,
+    );
+    expect(subAa ?? []).toEqual([]);
+  });
+
+  test('the root declarations themselves would fail if reverted', () => {
+    // Guards the guard: this is the assertion that the old test lacked, so a
+    // revert of the real :root values fails even if the fallbacks stay good.
+    const revertedMuted = contrast(over(SHELL_TEXT, 0.45, SHELL), SHELL);
+    const revertedDim = contrast(over(SHELL_TEXT, 0.28, SHELL), SHELL);
+    expect(revertedMuted).toBeLessThan(AA_TEXT);
+    expect(revertedDim).toBeLessThan(AA_TEXT);
+    expect(rootTokenAlpha('tmd-text-muted')).toBeGreaterThan(0.45);
+    expect(rootTokenAlpha('tmd-text-dim')).toBeGreaterThan(0.28);
   });
 });
 
