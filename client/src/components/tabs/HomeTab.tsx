@@ -86,7 +86,7 @@ export default function HomeTab() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-gray-700 hover:bg-gray-800"
+                className="border-gray-700 hover:bg-gray-800 hover:text-white"
                 data-testid="button-analyze-matchups"
               >
                 Analyze Matchups

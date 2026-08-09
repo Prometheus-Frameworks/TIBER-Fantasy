@@ -12,8 +12,24 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        // `outline` is the only variant that sets an explicit background
+        // (`bg-background`, white) without setting a foreground. It therefore
+        // inherited the global `html, body { color: var(--tmd-text, #e2e4e8) }`
+        // rule and rendered near-white text on white — 1.27:1 (Fantasy #309).
+        //
+        // `text-foreground` pairs the foreground with the background this variant
+        // already declares (19.8:1). `border-btn-outline` replaces `border-input`,
+        // whose #e5e5e5 gives a 1.26:1 boundary against white and fails the 3:1
+        // requirement for meaningful UI boundaries.
+        //
+        // Call sites that override `bg-*` for a dark surface must also set their
+        // own `text-*`; twMerge lets the call site win. See the audit in
+        // docs/dev/dark-shell-ui-notes.md for the enumerated sites.
+        //
+        // `ghost` is deliberately NOT changed: it declares no background, so
+        // inheriting the surrounding surface's text colour is correct for it.
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-btn-outline bg-background text-foreground hover:bg-accent hover:text-accent-foreground disabled:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",

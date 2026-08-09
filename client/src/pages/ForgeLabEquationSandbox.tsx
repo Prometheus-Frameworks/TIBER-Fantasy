@@ -186,7 +186,7 @@ function JsonExportCard({
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-gray-100"
             data-testid="button-copy-json"
           >
             {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}

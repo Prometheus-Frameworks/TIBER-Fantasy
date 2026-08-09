@@ -52,6 +52,10 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --input: #e5e5e5;
+  /* Outline-button border: 4.54:1 against --background, clearing the 3:1
+     WCAG 2.2 AA requirement for meaningful UI boundaries (Fantasy #309).
+     --input itself is left alone so text inputs are not restyled. */
+  --btn-outline-border: #767676;
   --ring: #e2640d;
 }
 
@@ -138,7 +142,7 @@ html, body {
 .tiber-topbar-section {
   font-size: 13px;
   font-weight: 600;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   letter-spacing: 0.02em;
 }
 
@@ -216,7 +220,7 @@ html, body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
   padding: 20px 8px 6px;
 }
 
@@ -229,7 +233,7 @@ html, body {
   cursor: pointer;
   transition: all 0.15s ease;
   font-size: 13px;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   font-weight: 450;
   text-decoration: none;
   min-height: auto;
@@ -250,7 +254,7 @@ html, body {
 .nav-badge {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .nav-item.active .nav-badge { color: var(--tmd-ember, #e2640d); }
@@ -276,7 +280,7 @@ html, body {
   font-size: 11.5px;
   font-family: var(--font-serif);
   font-style: italic;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   line-height: 1.45;
 }
 
@@ -297,8 +301,8 @@ html, body {
 }
 
 .user-pill:hover { background: rgba(255, 255, 255, 0.05); }
-.user-name { font-size: 13px; font-weight: 500; color: var(--tmd-text-muted, rgba(226,228,232,0.45)); }
-.user-league { font-size: 11px; color: var(--tmd-text-dim, rgba(226,228,232,0.28)); }
+.user-name { font-size: 13px; font-weight: 500; color: var(--tmd-text-muted, rgba(226,228,232,0.65)); }
+.user-league { font-size: 11px; color: var(--tmd-text-dim, rgba(226,228,232,0.52)); }
 
 /* ===== HERO ===== */
 .tiber-hero {
@@ -1013,7 +1017,7 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   padding: 4px;
   border-radius: 4px;
   line-height: 0;
@@ -1146,7 +1150,7 @@ html, body {
 }
 
 .tiber-main table thead th {
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -3271,7 +3275,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .tmd-dir-list {
@@ -3321,7 +3325,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .tmd-dir-inputs strong {
@@ -3353,7 +3357,7 @@ html, body {
 .tmd-dir-coverage {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
   padding-top: 4px;
 }
 

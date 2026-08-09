@@ -931,7 +931,7 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
               data-testid="button-cancel-create"
               variant="outline"
               onClick={onClose}
-              className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700/50"
+              className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100"
             >
               Cancel
             </Button>
