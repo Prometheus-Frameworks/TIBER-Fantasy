@@ -6,6 +6,8 @@
 type Row = Record<string, string | null | undefined> & { canonicalId: string };
 
 let TABLE: Row[] = [];
+let QUERY_ERROR: Error | null = null;
+const mockIdentityCache = new Map<string, unknown>();
 /** Records how the last query filtered, so tests can assert exactness. */
 let lastWhere: { kind: 'eq' | 'in'; column: string; values: unknown[] } | null = null;
 
@@ -51,8 +53,12 @@ jest.mock('../../infra/db', () => ({
             lastWhere = { kind: 'eq', column: clause?.column, values: [clause?.value] };
             rows = TABLE.filter((r) => r[field] === clause?.value);
           }
-          const result: any = Promise.resolve(rows);
-          result.limit = (n: number) => Promise.resolve(rows.slice(0, n));
+          const result: any = {
+            then: (resolve: any, reject: any) =>
+              (QUERY_ERROR ? Promise.reject(QUERY_ERROR) : Promise.resolve(rows)).then(resolve, reject),
+          };
+          result.limit = (n: number) =>
+            QUERY_ERROR ? Promise.reject(QUERY_ERROR) : Promise.resolve(rows.slice(0, n));
           return result;
         },
       }),
@@ -62,8 +68,8 @@ jest.mock('../../infra/db', () => ({
 
 jest.mock('../../../src/data/cache', () => ({
   cacheKey: (parts: unknown[]) => parts.join(':'),
-  getCache: () => null,
-  setCache: () => undefined,
+  getCache: (key: string) => mockIdentityCache.get(key) ?? null,
+  setCache: (key: string, value: unknown) => mockIdentityCache.set(key, value),
 }));
 
 import { PlayerIdentityService } from '../PlayerIdentityService';
@@ -74,7 +80,9 @@ const AMON_RA_CANONICAL = 'tiber-amon-ra-st-brown';
 
 beforeEach(() => {
   TABLE = [];
+  QUERY_ERROR = null;
   lastWhere = null;
+  mockIdentityCache.clear();
 });
 
 describe('getCanonicalIdByGsisId', () => {
@@ -109,6 +117,16 @@ describe('getCanonicalIdByGsisId', () => {
     await expect(service.getCanonicalIdByGsisId('   ')).resolves.toEqual({ status: 'not_found' });
     expect(lastWhere).toBeNull();
   });
+
+  test('reports unavailable rather than not_found when the query fails', async () => {
+    QUERY_ERROR = new Error('identity database offline');
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await expect(service.getCanonicalIdByGsisId(AMON_RA_GSIS)).resolves.toEqual({ status: 'unavailable' });
+    } finally {
+      error.mockRestore();
+    }
+  });
 });
 
 describe('resolveCanonicalIdsByGsis', () => {
@@ -118,11 +136,12 @@ describe('resolveCanonicalIdsByGsis', () => {
       { canonicalId: 'tiber-jamarr-chase', gsisId: '00-0036900' },
     ];
 
-    const { resolved, ambiguous } = await service.resolveCanonicalIdsByGsis([AMON_RA_GSIS, '00-0036900']);
+    const { resolved, ambiguous, lookupStatus } = await service.resolveCanonicalIdsByGsis([AMON_RA_GSIS, '00-0036900']);
 
     expect(resolved.get(AMON_RA_GSIS)).toBe(AMON_RA_CANONICAL);
     expect(resolved.get('00-0036900')).toBe('tiber-jamarr-chase');
     expect(ambiguous.size).toBe(0);
+    expect(lookupStatus).toBe('available');
     expect(lastWhere?.kind).toBe('in');
   });
 
@@ -141,9 +160,25 @@ describe('resolveCanonicalIdsByGsis', () => {
   });
 
   test('an empty input does not query', async () => {
-    const { resolved } = await service.resolveCanonicalIdsByGsis([]);
+    const { resolved, lookupStatus } = await service.resolveCanonicalIdsByGsis([]);
     expect(resolved.size).toBe(0);
+    expect(lookupStatus).toBe('available');
     expect(lastWhere).toBeNull();
+  });
+
+  test('reports an unavailable batch separately from a successful empty result', async () => {
+    QUERY_ERROR = new Error('identity database offline');
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const result = await service.resolveCanonicalIdsByGsis([AMON_RA_GSIS]);
+      expect(result).toEqual({
+        resolved: new Map(),
+        ambiguous: new Set(),
+        lookupStatus: 'unavailable',
+      });
+    } finally {
+      error.mockRestore();
+    }
   });
 });
 
@@ -174,6 +209,56 @@ describe('duplicate GSIS fails closed on every public path, not just the helper'
     } finally {
       warn.mockRestore();
     }
+  });
+
+  test('a same-text canonical_id cannot bypass a duplicated gsis_id', async () => {
+    TABLE = [
+      { canonicalId: AMON_RA_GSIS, gsisId: AMON_RA_GSIS },
+      { canonicalId: 'dupe-b', gsisId: AMON_RA_GSIS },
+    ];
+
+    await expect(service.getByAnyId(AMON_RA_GSIS)).resolves.toBeNull();
+  });
+
+  test('a GSIS query failure cannot fall through to a same-text canonical_id', async () => {
+    TABLE = [{ canonicalId: AMON_RA_GSIS, gsisId: null }];
+    QUERY_ERROR = new Error('identity database offline');
+    const canonicalLookup = jest.spyOn(service, 'getByCanonicalId');
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      await expect(service.getByAnyId(AMON_RA_GSIS)).resolves.toBeNull();
+      expect(canonicalLookup).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('refusing namespace fallback'));
+    } finally {
+      canonicalLookup.mockRestore();
+      error.mockRestore();
+      warn.mockRestore();
+    }
+  });
+
+  test('a GSIS canonical lookup is rechecked when a unique mapping becomes duplicated', async () => {
+    TABLE = [{ canonicalId: AMON_RA_CANONICAL, gsisId: AMON_RA_GSIS }];
+    await expect(service.getCanonicalId(AMON_RA_GSIS, 'gsis')).resolves.toBe(AMON_RA_CANONICAL);
+
+    TABLE.push({ canonicalId: 'late-duplicate', gsisId: AMON_RA_GSIS });
+
+    // A positive result cached at T0 must not survive the duplicate at T1.
+    await expect(service.getCanonicalId(AMON_RA_GSIS, 'gsis')).resolves.toBeNull();
+  });
+
+  test('a GSIS by-any-id lookup is rechecked when a unique mapping becomes duplicated', async () => {
+    TABLE = [{
+      canonicalId: AMON_RA_CANONICAL,
+      gsisId: AMON_RA_GSIS,
+      fullName: 'Amon-Ra St. Brown',
+      position: 'WR',
+    }];
+    await expect(service.getByAnyId(AMON_RA_GSIS)).resolves.toMatchObject({ canonicalId: AMON_RA_CANONICAL });
+
+    TABLE.push({ canonicalId: 'late-duplicate', gsisId: AMON_RA_GSIS });
+
+    await expect(service.getByAnyId(AMON_RA_GSIS)).resolves.toBeNull();
   });
 
   test('getByAnyId resolves a unique GSIS through the canonical row', async () => {

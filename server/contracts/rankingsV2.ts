@@ -8,7 +8,15 @@ import { z } from 'zod';
  * - Allows nullable/optional fields for data that is not populated yet.
  * - Does not imply that every current rankings surface already conforms.
  */
-export const RANKINGS_V2_CONTRACT_VERSION = 'v2-scaffold-2026-04-02' as const;
+/**
+ * Breaking public-contract revision.
+ *
+ * `playerId` changed from an assumed string to a canonical-only nullable key,
+ * and the identity envelope now carries enforced state invariants. Consumers
+ * must negotiate this exact revision rather than interpreting an older v2
+ * payload under the new nullable semantics.
+ */
+export const RANKINGS_V2_CONTRACT_VERSION = 'v2-canonical-identity-2026-08-09' as const;
 
 export const rankingsV2StatusTags = ['CANONICAL', 'LEGACY', 'EXPERIMENTAL', 'INTERNAL_ONLY'] as const;
 export type RankingsSurfaceStatus = (typeof rankingsV2StatusTags)[number];
@@ -137,14 +145,32 @@ export type RankingsV2ItemUiMeta = z.infer<typeof rankingsV2ItemUiMetaSchema>;
  * `linkable: false` means the consumer must render the row but must not build a
  * player deep link from it.
  */
-export const rankingsV2ItemIdentitySchema = z.object({
-  status: z.enum(['canonical', 'resolved', 'unresolved']),
-  canonicalId: z.string().nullable(),
-  sourceId: z.string(),
-  sourceType: z.enum(['canonical', 'gsis', 'unknown']),
-  reason: z.string().nullable(),
-  linkable: z.boolean(),
-});
+export const rankingsV2ItemIdentitySchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('canonical'),
+    canonicalId: z.string().trim().min(1),
+    sourceId: z.string().trim().min(1),
+    sourceType: z.literal('canonical'),
+    reason: z.null(),
+    linkable: z.literal(true),
+  }),
+  z.object({
+    status: z.literal('resolved'),
+    canonicalId: z.string().trim().min(1),
+    sourceId: z.string().trim().min(1),
+    sourceType: z.literal('gsis'),
+    reason: z.null(),
+    linkable: z.literal(true),
+  }),
+  z.object({
+    status: z.literal('unresolved'),
+    canonicalId: z.null(),
+    sourceId: z.string(),
+    sourceType: z.enum(['canonical', 'gsis', 'unknown']),
+    reason: z.string().min(1),
+    linkable: z.literal(false),
+  }),
+]);
 export type RankingsV2ItemIdentity = z.infer<typeof rankingsV2ItemIdentitySchema>;
 
 /** Cohort-level identity coverage, reported alongside every ranking response. */
@@ -159,7 +185,7 @@ export const rankingsV2IdentityCoverageSchema = z.object({
 });
 export type RankingsV2IdentityCoverage = z.infer<typeof rankingsV2IdentityCoverageSchema>;
 
-const rankingsV2ItemSchema = z.object({
+export const rankingsV2ItemSchema = z.object({
   rank: z.number().int().positive(),
   /**
    * The canonical public key, or **null** when identity could not be resolved.
@@ -179,6 +205,33 @@ const rankingsV2ItemSchema = z.object({
   trust: rankingsV2TrustSchema,
   uiMeta: rankingsV2ItemUiMetaSchema.optional(),
   identity: rankingsV2ItemIdentitySchema,
+}).superRefine((item, ctx) => {
+  if (item.identity.status === 'canonical' && item.identity.sourceId !== item.identity.canonicalId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['identity', 'sourceId'],
+      message: 'Canonical identity requires sourceId to equal canonicalId.',
+    });
+  }
+
+  if (item.identity.linkable) {
+    if (item.playerId !== item.identity.canonicalId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['playerId'],
+        message: 'Linkable ranking identity requires playerId to equal identity.canonicalId.',
+      });
+    }
+    return;
+  }
+
+  if (item.playerId !== null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['playerId'],
+      message: 'Unresolved ranking identity requires a null playerId.',
+    });
+  }
 });
 export type RankingsV2Item = z.infer<typeof rankingsV2ItemSchema>;
 
@@ -192,5 +245,22 @@ export const rankingsV2ResponseSchema = z.object({
   items: z.array(rankingsV2ItemSchema),
   trust: rankingsV2TrustSchema,
   identityCoverage: rankingsV2IdentityCoverageSchema,
+}).superRefine((response, ctx) => {
+  // Rank is part of the UI's deterministic composite row key. Reject duplicate
+  // ranks at the public boundary so repeated producer source IDs remain visible
+  // and still cannot collide in React.
+  const seenRanks = new Map<number, number>();
+  response.items.forEach((item, index) => {
+    const firstIndex = seenRanks.get(item.rank);
+    if (firstIndex !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items', index, 'rank'],
+        message: `Duplicate ranking rank (first seen at items[${firstIndex}]).`,
+      });
+      return;
+    }
+    seenRanks.set(item.rank, index);
+  });
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;

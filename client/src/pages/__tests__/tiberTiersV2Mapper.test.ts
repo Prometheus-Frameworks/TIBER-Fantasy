@@ -1,17 +1,30 @@
 import {
+  buildRankingRowKey,
+  getLinkablePlayerId,
   mapRankingsV2ItemsToTiersPlayers,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   resolveRankingsSourceView,
   resolveTiersHeadline,
   resolveTiersViewState,
   validateRankingsV2WeeklyResponse,
 } from '../tiberTiersV2Mapper';
 
+const CANONICAL_IDENTITY = {
+  status: 'canonical' as const,
+  canonicalId: 'structured-player',
+  sourceId: 'structured-player',
+  sourceType: 'canonical' as const,
+  reason: null,
+  linkable: true as const,
+};
+
 describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('uses structured uiMeta fields instead of explanation/trust text parsing', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: CANONICAL_IDENTITY,
         rank: 1,
-        playerId: '00-structured',
+        playerId: 'structured-player',
         playerName: 'Structured Player',
         position: 'WR',
         team: 'MIA',
@@ -63,8 +76,9 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('maps nullable explanation/trust fields without crashing', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: { ...CANONICAL_IDENTITY, canonicalId: 'nullable-player', sourceId: 'nullable-player' },
         rank: 1,
-        playerId: '00-nullable',
+        playerId: 'nullable-player',
         playerName: 'Nullable Player',
         position: 'WR',
         team: 'BUF',
@@ -78,7 +92,7 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      playerId: '00-nullable',
+      playerId: 'nullable-player',
       playerName: 'Nullable Player',
       tier: 'T2',
       alpha: 77.2,
@@ -96,8 +110,9 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('degrades safely when uiMeta is missing or partial', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: { ...CANONICAL_IDENTITY, canonicalId: 'partial-player', sourceId: 'partial-player' },
         rank: 2,
-        playerId: '00-partial',
+        playerId: 'partial-player',
         playerName: 'Partial Meta',
         position: 'RB',
         team: 'DET',
@@ -199,7 +214,12 @@ describe('resolveTiersViewState', () => {
 });
 
 describe('validateRankingsV2WeeklyResponse', () => {
-  const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
+  const wellFormed = {
+    contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+    asOf: '2026-04-12T00:00:00.000Z',
+    sourceStack: [{ layer: 'forge' }],
+    items: [],
+  };
 
   const IDENTITY = {
     status: 'resolved' as const,
@@ -213,7 +233,7 @@ describe('validateRankingsV2WeeklyResponse', () => {
   const wellFormedItem = {
     identity: IDENTITY,
     rank: 1,
-    playerId: '00-1',
+    playerId: 'tiber-amon-ra-st-brown',
     playerName: 'Justin Jefferson',
     position: 'WR',
     team: 'MIN',
@@ -238,6 +258,81 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['an array instead of an object', []],
     ['an item missing identity', { ...wellFormed, items: [{ ...wellFormedItem, identity: undefined }] }],
     ['an item whose identity omits linkable', { ...wellFormed, items: [{ ...wellFormedItem, identity: { ...IDENTITY, linkable: undefined } }] }],
+    ['the previous public contract revision', { ...wellFormed, contractVersion: 'v2-scaffold-2026-04-02' }],
+    ['a missing contract version', { ...wellFormed, contractVersion: undefined }],
+    ['a linkable identity with a mismatched playerId', { ...wellFormed, items: [{ ...wellFormedItem, playerId: 'someone-else' }] }],
+    ['a linkable identity with a null playerId', { ...wellFormed, items: [{ ...wellFormedItem, playerId: null }] }],
+    [
+      'a resolved identity carrying an unresolved reason',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          identity: { ...IDENTITY, reason: 'gsis_ambiguous_duplicate_crosswalk_rows' },
+        }],
+      },
+    ],
+    [
+      'a canonical identity whose sourceId differs from canonicalId',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: 'canonical-player',
+          identity: {
+            status: 'canonical',
+            canonicalId: 'canonical-player',
+            sourceId: 'different-source',
+            sourceType: 'canonical',
+            reason: null,
+            linkable: true,
+          },
+        }],
+      },
+    ],
+    [
+      'two rows with the same rank',
+      {
+        ...wellFormed,
+        items: [wellFormedItem, { ...wellFormedItem, playerName: 'Different Player' }],
+      },
+    ],
+    [
+      'an unresolved identity with a non-null playerId',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: 'someone-else',
+          identity: {
+            status: 'unresolved',
+            canonicalId: null,
+            sourceId: '00-0099999',
+            sourceType: 'gsis',
+            reason: 'gsis_not_in_identity_map',
+            linkable: false,
+          },
+        }],
+      },
+    ],
+    [
+      'an unresolved identity that claims linkable true',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: null,
+          identity: {
+            status: 'unresolved',
+            canonicalId: null,
+            sourceId: '00-0099999',
+            sourceType: 'gsis',
+            reason: 'gsis_not_in_identity_map',
+            linkable: true,
+          },
+        }],
+      },
+    ],
     ['missing items entirely', { ...wellFormed, items: undefined }],
     ['a null items value', { ...wellFormed, items: null }],
     ['a non-array items value', { ...wellFormed, items: 'garbage' }],
@@ -272,5 +367,33 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['an item missing playerName', { ...wellFormed, items: [{ ...wellFormedItem, playerName: undefined }] }],
   ])('throws for %s — a 2xx body must not silently become a genuine empty result', (_label, payload) => {
     expect(() => validateRankingsV2WeeklyResponse(payload)).toThrow();
+  });
+});
+
+describe('identity-safe rendering helpers', () => {
+  const coherent = {
+    rank: 1,
+    position: 'WR',
+    playerId: 'tiber-amon-ra-st-brown',
+    identity: {
+      status: 'resolved' as const,
+      canonicalId: 'tiber-amon-ra-st-brown',
+      sourceId: '00-0036963',
+      sourceType: 'gsis' as const,
+      reason: null,
+      linkable: true as const,
+    },
+  };
+
+  it('returns a link only for the same non-null canonical key', () => {
+    expect(getLinkablePlayerId(coherent)).toBe('tiber-amon-ra-st-brown');
+    expect(getLinkablePlayerId({ ...coherent, playerId: null })).toBeNull();
+    expect(getLinkablePlayerId({ ...coherent, playerId: 'different-player' })).toBeNull();
+  });
+
+  it('uses a composite row key when the producer repeats a source id', () => {
+    expect(buildRankingRowKey(coherent)).not.toBe(buildRankingRowKey({ ...coherent, rank: 2 }));
+    expect(buildRankingRowKey(coherent)).toContain('00-0036963');
+    expect(buildRankingRowKey(coherent)).toContain('WR');
   });
 });

@@ -17,15 +17,61 @@ const CHASE_CANONICAL = 'tiber-jamarr-chase';
 /** Present in the ranking cohort but deliberately absent from the crosswalk. */
 const ORPHAN_GSIS = '00-0099999';
 
-const CROSSWALK: Record<string, string> = {
-  [AMON_RA_GSIS]: AMON_RA_CANONICAL,
-  [CHASE_GSIS]: CHASE_CANONICAL,
-};
+/** GSIS values deliberately duplicated in the shared fake identity table. */
+const DUPLICATED_GSIS = '00-0077777';
+
+const mockIdentityRows = [
+  { canonicalId: AMON_RA_CANONICAL, gsisId: AMON_RA_GSIS, fullName: 'Amon-Ra St. Brown' },
+  { canonicalId: CHASE_CANONICAL, gsisId: CHASE_GSIS, fullName: "Ja'Marr Chase" },
+  { canonicalId: 'duplicate-a', gsisId: DUPLICATED_GSIS, fullName: 'Duplicate A' },
+  { canonicalId: 'duplicate-b', gsisId: DUPLICATED_GSIS, fullName: 'Duplicate B' },
+];
+
+function mockResolveIdentity(id: string):
+  | { status: 'resolved'; row: (typeof mockIdentityRows)[number] }
+  | { status: 'ambiguous' }
+  | { status: 'not_found' } {
+  const gsisMatches = mockIdentityRows.filter((row) => row.gsisId === id);
+  if (gsisMatches.length > 1) return { status: 'ambiguous' };
+  if (gsisMatches.length === 1) return { status: 'resolved', row: gsisMatches[0] };
+  const canonical = mockIdentityRows.find((row) => row.canonicalId === id);
+  return canonical ? { status: 'resolved', row: canonical } : { status: 'not_found' };
+}
 
 // `requireActual` on the resolver pulls in the real db module, which throws at
 // import time without DATABASE_URL. The crosswalk below is the only data source
 // this test needs.
 jest.mock('../../infra/db', () => ({ db: {} }));
+
+// Mount the real playerIdentityRoutes router while driving it with the same
+// collision-aware identity fixture used by the ranking resolver below. This is
+// an HTTP route regression, not a local stand-in for route behaviour.
+jest.mock('../../services/PlayerIdentityService', () => {
+  const actual = jest.requireActual('../../services/PlayerIdentityService');
+  return {
+    ...actual,
+    playerIdentityService: {
+      getByAnyId: jest.fn(async (id: string) => {
+        const result = mockResolveIdentity(id);
+        if (result.status !== 'resolved') return null;
+        return {
+          canonicalId: result.row.canonicalId,
+          fullName: result.row.fullName,
+          position: 'WR',
+          nflTeam: 'DET',
+          confidence: 1,
+          externalIds: { gsis: result.row.gsisId },
+          isActive: true,
+          lastVerified: new Date('2026-08-09T00:00:00.000Z'),
+        };
+      }),
+    },
+  };
+});
+
+jest.mock('../../modules/externalModels/playerDetailEnrichment/playerDetailEnrichmentOrchestrator', () => ({
+  orchestratePlayerDetailEnrichment: jest.fn(async () => ({})),
+}));
 
 jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
   scoringService: { getWeeklyRankings: jest.fn() },
@@ -49,43 +95,36 @@ jest.mock('../../services/identity/rankingIdentityResolver', () => {
       const identities = new Map();
       for (const raw of sourceIds) {
         const sourceId = (raw ?? '').trim();
-        const canonicalId = CROSSWALK[sourceId] ?? null;
+        const resolution = mockResolveIdentity(sourceId);
+        const canonicalId = resolution.status === 'resolved' ? resolution.row.canonicalId : null;
         identities.set(sourceId, {
           status: canonicalId ? 'resolved' : 'unresolved',
           canonicalId,
           sourceId,
           sourceType: /^00-\d{7}$/.test(sourceId) ? 'gsis' : 'unknown',
-          reason: canonicalId ? null : 'gsis_not_in_identity_map',
+          reason: canonicalId
+            ? null
+            : resolution.status === 'ambiguous'
+              ? 'gsis_ambiguous_duplicate_crosswalk_rows'
+              : 'gsis_not_in_identity_map',
         });
       }
-      return { identities, coverage: actual.measureCoverage(sourceIds, identities) };
+      const ambiguous = new Set(
+        sourceIds.filter((sourceId) => mockResolveIdentity(sourceId).status === 'ambiguous'),
+      );
+      return { identities, coverage: actual.measureCoverage(sourceIds, identities, ambiguous) };
     },
   };
 });
 
 import { createRankingsV2Router } from '../rankingsV2Routes';
+import playerIdentityRouter from '../playerIdentityRoutes';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
 const mockedBuild = buildRankingsScoringInputs as jest.MockedFunction<typeof buildRankingsScoringInputs>;
 const mockedMeaningful = hasMeaningfulScoringInputs as jest.MockedFunction<typeof hasMeaningfulScoringInputs>;
-
-/** GSIS values deliberately duplicated in the fake crosswalk. */
-const DUPLICATED_GSIS = '00-0077777';
-
-/**
- * Stand-in for `/api/player-identity/player/:id`, backed by the same crosswalk
- * and — critically — the same collision policy as the service: a duplicated
- * GSIS resolves to nothing rather than to an arbitrary first row.
- */
-function lookupPlayerIdentity(id: string): { found: boolean; canonicalId?: string; reason?: string } {
-  if (Object.values(CROSSWALK).includes(id)) return { found: true, canonicalId: id };
-  if (id === DUPLICATED_GSIS) return { found: false, reason: 'gsis_ambiguous' };
-  const viaSource = CROSSWALK[id];
-  if (viaSource) return { found: true, canonicalId: viaSource };
-  return { found: false };
-}
 
 function cacheRow(playerId: string, playerName: string, alpha: number) {
   return {
@@ -111,10 +150,24 @@ function cacheRow(playerId: string, playerName: string, alpha: number) {
 async function fetchRankings(path: string) {
   const app = express();
   app.use('/api/rankings/v2', createRankingsV2Router());
+  app.use('/api/player-identity', playerIdentityRouter);
   const server = app.listen(0);
   const { port } = server.address() as AddressInfo;
   try {
     const res = await fetch(`http://127.0.0.1:${port}${path}`);
+    return { status: res.status, body: await res.json() };
+  } finally {
+    server.close();
+  }
+}
+
+async function fetchPlayer(id: string) {
+  const app = express();
+  app.use('/api/player-identity', playerIdentityRouter);
+  const server = app.listen(0);
+  const { port } = server.address() as AddressInfo;
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/api/player-identity/player/${encodeURIComponent(id)}`);
     return { status: res.status, body: await res.json() };
   } finally {
     server.close();
@@ -144,9 +197,9 @@ describe('Rankings v2 → player identity, cross-surface', () => {
     expect(linked.length).toBeGreaterThan(0);
 
     for (const item of linked) {
-      const lookup = lookupPlayerIdentity(item.playerId);
-      expect(lookup.found).toBe(true);
-      expect(lookup.canonicalId).toBe(item.playerId);
+      const lookup = await fetchPlayer(item.playerId);
+      expect(lookup.status).toBe(200);
+      expect(lookup.body.data.canonicalId).toBe(item.playerId);
     }
   });
 
@@ -162,7 +215,9 @@ describe('Rankings v2 → player identity, cross-surface', () => {
     // Provenance survives.
     expect(amonRa.identity.sourceId).toBe(AMON_RA_GSIS);
     expect(amonRa.identity.sourceType).toBe('gsis');
-    expect(lookupPlayerIdentity(amonRa.playerId).found).toBe(true);
+    const playerResponse = await fetchPlayer(amonRa.playerId);
+    expect(playerResponse.status).toBe(200);
+    expect(playerResponse.body.data.canonicalId).toBe(AMON_RA_CANONICAL);
   });
 
   test('the exact reported regression no longer occurs', async () => {
@@ -210,11 +265,10 @@ describe('Rankings v2 → player identity, cross-surface', () => {
     expect(body.identityCoverage.byReason.gsis_not_in_identity_map).toBe(1);
   });
 
-  test('the public player route refuses a duplicated GSIS instead of guessing', () => {
-    const lookup = lookupPlayerIdentity(DUPLICATED_GSIS);
-    expect(lookup.found).toBe(false);
-    expect(lookup.canonicalId).toBeUndefined();
-    expect(lookup.reason).toBe('gsis_ambiguous');
+  test('the mounted public player route returns HTTP 404 for a duplicated GSIS', async () => {
+    const lookup = await fetchPlayer(DUPLICATED_GSIS);
+    expect(lookup.status).toBe(404);
+    expect(lookup.body).toEqual({ success: false, message: 'Player not found' });
   });
 
   test('unresolved rows expose a null canonical playerId, never the raw source id', async () => {

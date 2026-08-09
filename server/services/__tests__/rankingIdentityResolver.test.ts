@@ -78,7 +78,11 @@ describe('looksLikeGsisId', () => {
 describe('resolveRankingIdentities', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockResolveByGsis.mockResolvedValue({ resolved: new Map(), ambiguous: new Set() });
+    mockResolveByGsis.mockResolvedValue({
+      resolved: new Map(),
+      ambiguous: new Set(),
+      lookupStatus: 'available',
+    });
   });
 
   test('resolves an exact GSIS to the canonical key', async () => {
@@ -86,9 +90,10 @@ describe('resolveRankingIdentities', () => {
     mockResolveByGsis.mockResolvedValue({
       resolved: new Map([[AMON_RA_GSIS, AMON_RA_CANONICAL]]),
       ambiguous: new Set(),
+      lookupStatus: 'available',
     });
 
-    const { identities, coverage } = await resolveRankingIdentities([AMON_RA_GSIS]);
+    const { identities, coverage } = await resolveRankingIdentities([AMON_RA_GSIS], 'gsis');
 
     expect(identities.get(AMON_RA_GSIS)).toEqual({
       status: 'resolved',
@@ -104,7 +109,7 @@ describe('resolveRankingIdentities', () => {
   test('passes an already-canonical ID straight through', async () => {
     canonicalRowsAre([AMON_RA_CANONICAL]);
 
-    const { identities } = await resolveRankingIdentities([AMON_RA_CANONICAL]);
+    const { identities } = await resolveRankingIdentities([AMON_RA_CANONICAL], 'canonical');
 
     expect(identities.get(AMON_RA_CANONICAL)?.status).toBe('canonical');
     expect(identities.get(AMON_RA_CANONICAL)?.canonicalId).toBe(AMON_RA_CANONICAL);
@@ -115,7 +120,7 @@ describe('resolveRankingIdentities', () => {
   test('a GSIS absent from the crosswalk stays unresolved and non-linkable', async () => {
     canonicalRowsAre([]);
 
-    const { identities, coverage } = await resolveRankingIdentities(['00-0099999']);
+    const { identities, coverage } = await resolveRankingIdentities(['00-0099999'], 'gsis');
 
     const identity = identities.get('00-0099999');
     expect(identity?.status).toBe('unresolved');
@@ -132,9 +137,10 @@ describe('resolveRankingIdentities', () => {
     mockResolveByGsis.mockResolvedValue({
       resolved: new Map(),
       ambiguous: new Set([AMON_RA_GSIS]),
+      lookupStatus: 'available',
     });
 
-    const { identities, coverage } = await resolveRankingIdentities([AMON_RA_GSIS]);
+    const { identities, coverage } = await resolveRankingIdentities([AMON_RA_GSIS], 'gsis');
 
     expect(identities.get(AMON_RA_GSIS)?.status).toBe('unresolved');
     expect(identities.get(AMON_RA_GSIS)?.reason).toBe(UNRESOLVED_REASONS.GSIS_AMBIGUOUS);
@@ -144,9 +150,10 @@ describe('resolveRankingIdentities', () => {
   test('an unrecognised namespace is typed, not fuzzily matched', async () => {
     canonicalRowsAre([]);
 
-    const { identities } = await resolveRankingIdentities([
-      'real-player-2025-amon-ra-st-brown-strong-wr2-fixture',
-    ]);
+    const { identities } = await resolveRankingIdentities(
+      ['real-player-2025-amon-ra-st-brown-strong-wr2-fixture'],
+      'gsis',
+    );
 
     const identity = identities.get('real-player-2025-amon-ra-st-brown-strong-wr2-fixture');
     expect(identity?.status).toBe('unresolved');
@@ -161,10 +168,11 @@ describe('resolveRankingIdentities', () => {
     mockResolveByGsis.mockResolvedValue({
       resolved: new Map([[AMON_RA_GSIS, AMON_RA_CANONICAL]]),
       ambiguous: new Set(),
+      lookupStatus: 'available',
     });
 
     const cohort = [AMON_RA_GSIS, '00-0099999', '00-0088888'];
-    const { identities, coverage } = await resolveRankingIdentities(cohort);
+    const { identities, coverage } = await resolveRankingIdentities(cohort, 'gsis');
 
     expect(identities.size).toBe(3);
     expect(coverage.total).toBe(3);
@@ -175,13 +183,13 @@ describe('resolveRankingIdentities', () => {
     for (const id of cohort) expect(identities.get(id)).toBeDefined();
   });
 
-  test('batches: one canonical pre-check plus one GSIS resolve for any cohort size', async () => {
+  test('batches a declared GSIS cohort without an unsafe canonical pre-check', async () => {
     canonicalRowsAre([]);
     const cohort = Array.from({ length: 150 }, (_, i) => `00-00${String(10000 + i)}`);
 
-    await resolveRankingIdentities(cohort);
+    await resolveRankingIdentities(cohort, 'gsis');
 
-    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockSelect).not.toHaveBeenCalled();
     expect(mockResolveByGsis).toHaveBeenCalledTimes(1);
     expect(mockResolveByGsis).toHaveBeenCalledWith(cohort);
   });
@@ -189,7 +197,7 @@ describe('resolveRankingIdentities', () => {
   test('deduplicates repeated source IDs before querying', async () => {
     canonicalRowsAre([]);
 
-    await resolveRankingIdentities([AMON_RA_GSIS, AMON_RA_GSIS, AMON_RA_GSIS]);
+    await resolveRankingIdentities([AMON_RA_GSIS, AMON_RA_GSIS, AMON_RA_GSIS], 'gsis');
 
     expect(mockResolveByGsis).toHaveBeenCalledWith([AMON_RA_GSIS]);
   });
@@ -197,16 +205,56 @@ describe('resolveRankingIdentities', () => {
   test('an empty producer identifier is a typed unresolved case', async () => {
     canonicalRowsAre([]);
 
-    const { identities, coverage } = await resolveRankingIdentities(['']);
+    const { identities, coverage } = await resolveRankingIdentities([''], 'gsis');
 
     expect(identities.get('')?.reason).toBe(UNRESOLVED_REASONS.EMPTY);
     expect(coverage.coverageRatio).toBe(0);
   });
 
   test('an empty cohort is fully covered, not zero-covered', async () => {
-    const { coverage } = await resolveRankingIdentities([]);
+    const { coverage } = await resolveRankingIdentities([], 'gsis');
     expect(coverage.total).toBe(0);
     expect(coverage.coverageRatio).toBe(1);
+  });
+
+  test('a duplicated GSIS cannot bypass collision handling via a same-text canonical_id', async () => {
+    // This canonical pre-check result models canonical_id == duplicated gsis_id.
+    // Declared GSIS provenance must never consult it.
+    canonicalRowsAre([AMON_RA_GSIS]);
+    mockResolveByGsis.mockResolvedValue({
+      resolved: new Map(),
+      ambiguous: new Set([AMON_RA_GSIS]),
+      lookupStatus: 'available',
+    });
+
+    const { identities } = await resolveRankingIdentities([AMON_RA_GSIS], 'gsis');
+
+    expect(identities.get(AMON_RA_GSIS)).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: UNRESOLVED_REASONS.GSIS_AMBIGUOUS,
+    });
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
+
+  test('a GSIS lookup outage is visible and never mislabeled as a missing crosswalk row', async () => {
+    canonicalRowsAre([AMON_RA_GSIS]);
+    mockResolveByGsis.mockResolvedValue({
+      resolved: new Map(),
+      ambiguous: new Set(),
+      lookupStatus: 'unavailable',
+    });
+
+    const { identities, coverage } = await resolveRankingIdentities([AMON_RA_GSIS], 'gsis');
+
+    expect(identities.get(AMON_RA_GSIS)).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: UNRESOLVED_REASONS.GSIS_LOOKUP_UNAVAILABLE,
+    });
+    expect(coverage.byReason[UNRESOLVED_REASONS.GSIS_LOOKUP_UNAVAILABLE]).toBe(1);
+    expect(coverage.byReason[UNRESOLVED_REASONS.GSIS_NOT_IN_CROSSWALK]).toBeUndefined();
+    expect(mockSelect).not.toHaveBeenCalled();
   });
 });
 

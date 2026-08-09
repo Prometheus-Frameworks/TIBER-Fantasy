@@ -12,7 +12,11 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TiberTiersView, TiberTiersViewProps, TiersApiResponse } from '../TiberTiers';
-import { RankingsV2Item, validateRankingsV2WeeklyResponse } from '../tiberTiersV2Mapper';
+import {
+  RankingsV2Item,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+  validateRankingsV2WeeklyResponse,
+} from '../tiberTiersV2Mapper';
 
 const IDENTITY = {
   status: 'resolved' as const,
@@ -27,7 +31,7 @@ function makeItem(overrides: Partial<RankingsV2Item> = {}): RankingsV2Item {
   return {
     identity: IDENTITY,
     rank: 1,
-    playerId: '00-1',
+    playerId: 'tiber-amon-ra-st-brown',
     playerName: 'Justin Jefferson',
     position: 'WR',
     team: 'MIN',
@@ -87,6 +91,7 @@ describe('TiberTiersView rendered output', () => {
 
   it('renders the uncomputed-cache state without any operator/admin mutation instruction', () => {
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-04-12T00:00:00.000Z',
       sourceStack: [{ layer: 'forge' }],
       trust: { sampleNote: 'FORGE grades for this filter have not been computed yet. Please check back shortly.', stabilityNote: 'forge_cache_empty_uncomputed' },
@@ -104,6 +109,7 @@ describe('TiberTiersView rendered output', () => {
 
   it('renders the genuine-empty state distinctly, with metadata visible', () => {
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-04-12T00:00:00.000Z',
       sourceStack: [{ layer: 'forge' }],
       trust: { sampleNote: null, stabilityNote: null },
@@ -119,6 +125,7 @@ describe('TiberTiersView rendered output', () => {
 
   it('labels Expected/VORP and a Forecast headline when the scoring service produced the rows', () => {
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-04-12T00:00:00.000Z',
       sourceStack: [{ layer: 'promoted_artifact' }],
       trust: { sampleNote: null, stabilityNote: null },
@@ -137,6 +144,7 @@ describe('TiberTiersView rendered output', () => {
 
   it('labels FORGE Alpha/Raw Alpha and a FORGE headline when the cache fallback produced the rows', () => {
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-04-12T00:00:00.000Z',
       sourceStack: [{ layer: 'forge' }],
       trust: { sampleNote: null, stabilityNote: null },
@@ -166,6 +174,7 @@ describe('TiberTiersView rendered output', () => {
       },
     });
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-08-08T19:04:15.325Z',
       sourceStack: [{ layer: 'forge' }],
       trust: { sampleNote: null, stabilityNote: null },
@@ -185,6 +194,35 @@ describe('TiberTiersView rendered output', () => {
     expect(html).toContain('link-team-research');
   });
 
+  it('independently refuses /player/null when contradictory fields bypass validation', () => {
+    const contradictory = makeItem({
+      playerId: null,
+      playerName: 'Contradictory Fixture',
+      identity: {
+        status: 'resolved',
+        canonicalId: 'tiber-contradictory-fixture',
+        sourceId: '00-0036000',
+        sourceType: 'gsis',
+        reason: null,
+        linkable: true,
+      },
+    });
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-08-08T19:04:15.325Z',
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [contradictory],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('Contradictory Fixture');
+    expect(html).not.toContain('/player/null');
+    expect(html).not.toContain('/player/tiber-contradictory-fixture');
+    expect(html).not.toContain('link-player-research');
+  });
+
   it('renders a resolved row with a canonical link and a player-research link', () => {
     const resolved = makeItem({
       playerId: 'tiber-amon-ra-st-brown',
@@ -199,6 +237,7 @@ describe('TiberTiersView rendered output', () => {
       },
     });
     const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-08-08T19:04:15.325Z',
       sourceStack: [{ layer: 'forge' }],
       trust: { sampleNote: null, stabilityNote: null },
@@ -224,6 +263,11 @@ describe('TiberTiersView rendered output', () => {
     expect(() => validateRankingsV2WeeklyResponse({ items: [], sourceStack: null, asOf: '2026-04-12T00:00:00.000Z' })).toThrow();
     expect(() => validateRankingsV2WeeklyResponse({ items: [], sourceStack: [], asOf: 'not-a-date' })).toThrow();
     // An explicit, well-formed empty array is the only genuine empty result.
-    expect(() => validateRankingsV2WeeklyResponse({ items: [], sourceStack: [], asOf: '2026-04-12T00:00:00.000Z' })).not.toThrow();
+    expect(() => validateRankingsV2WeeklyResponse({
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      items: [],
+      sourceStack: [],
+      asOf: '2026-04-12T00:00:00.000Z',
+    })).not.toThrow();
   });
 });

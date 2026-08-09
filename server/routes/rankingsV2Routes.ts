@@ -39,6 +39,60 @@ function identityFor(identities: Map<string, RankingIdentity>, sourceId: string)
   );
 }
 
+/**
+ * Normalize an internal resolution into one of the public contract's coherent
+ * discriminated states. Any contradictory internal state fails closed to an
+ * unresolved, non-linkable row instead of relying on contract parsing to catch
+ * it after a linkable playerId has already been constructed.
+ */
+function toPublicIdentity(identity: RankingIdentity): RankingsV2Item['identity'] {
+  const canonicalId = identity.canonicalId?.trim() ?? '';
+  const sourceId = identity.sourceId.trim();
+
+  if (
+    identity.status === 'canonical' &&
+    canonicalId &&
+    sourceId === canonicalId &&
+    identity.sourceType === 'canonical' &&
+    identity.reason === null
+  ) {
+    return {
+      status: 'canonical',
+      canonicalId,
+      sourceId,
+      sourceType: 'canonical',
+      reason: null,
+      linkable: true,
+    };
+  }
+
+  if (
+    identity.status === 'resolved' &&
+    canonicalId &&
+    sourceId &&
+    identity.sourceType === 'gsis' &&
+    identity.reason === null
+  ) {
+    return {
+      status: 'resolved',
+      canonicalId,
+      sourceId,
+      sourceType: 'gsis',
+      reason: null,
+      linkable: true,
+    };
+  }
+
+  return {
+    status: 'unresolved',
+    canonicalId: null,
+    sourceId: identity.sourceId,
+    sourceType: identity.sourceType,
+    reason: identity.reason ?? 'identity_state_incoherent',
+    linkable: false,
+  };
+}
+
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString();
@@ -99,6 +153,7 @@ export function mapForgeCacheRowToRankingsV2Item(
   asOfIso: string,
   identity: RankingIdentity,
 ): RankingsV2Item {
+  const publicIdentity = toPublicIdentity(identity);
   const confidence = toNumberOrNull(row.confidence);
   const gamesPlayed = toNumberOrNull(row.gamesPlayed);
   const trajectory =
@@ -113,15 +168,8 @@ export function mapForgeCacheRowToRankingsV2Item(
     // Canonical public key only — null when unresolved. The producer key stays
     // visible via `identity.sourceId`, so a raw source ID can never be mistaken
     // for a resolvable public key (#308).
-    playerId: identity.canonicalId,
-    identity: {
-      status: identity.status,
-      canonicalId: identity.canonicalId,
-      sourceId: identity.sourceId,
-      sourceType: identity.sourceType,
-      reason: identity.reason,
-      linkable: identity.canonicalId !== null,
-    },
+    playerId: publicIdentity.canonicalId,
+    identity: publicIdentity,
     playerName: String(row.playerName ?? 'Unknown Player'),
     position: typeof row.position === 'string' ? row.position : null,
     team: typeof row.nflTeam === 'string' ? row.nflTeam : null,
@@ -165,6 +213,7 @@ export function mapForgeCacheRowToRankingsV2Item(
 }
 
 function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string, identity: RankingIdentity): RankingsV2Item {
+  const publicIdentity = toPublicIdentity(identity);
   const confidenceBand = typeof row.confidenceBand === 'string' ? row.confidenceBand : null;
   const weeklyOutlook = typeof row.weeklyOutlook === 'string' ? row.weeklyOutlook : null;
   const floor = toNumberOrNull(row.floor);
@@ -172,15 +221,8 @@ function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string, identity: 
 
   return {
     rank: Number(row.rank),
-    playerId: identity.canonicalId,
-    identity: {
-      status: identity.status,
-      canonicalId: identity.canonicalId,
-      sourceId: identity.sourceId,
-      sourceType: identity.sourceType,
-      reason: identity.reason,
-      linkable: identity.canonicalId !== null,
-    },
+    playerId: publicIdentity.canonicalId,
+    identity: publicIdentity,
     playerName: String(row.playerName ?? 'Unknown Player'),
     position: typeof row.position === 'string' ? row.position : null,
     team: typeof row.team === 'string' ? row.team : null,
@@ -266,6 +308,7 @@ export function createRankingsV2Router(): Router {
           // is emitted, for the scoring path as well as the FORGE path (#308).
           const scoringResolution = await resolveRankingIdentities(
             scoringRankings.data.items.map((row: any) => String(row.playerId ?? '')),
+            'gsis',
           );
           const payload = {
             contractVersion: RANKINGS_V2_CONTRACT_VERSION,
@@ -329,6 +372,7 @@ export function createRankingsV2Router(): Router {
       // queries) before any row is emitted.
       const resolution = await resolveRankingIdentities(
         cache.players.map((row: any) => String(row.playerId ?? '')),
+        'gsis',
       );
       const items = cache.players.map((row: any, idx: number) =>
         mapForgeCacheRowToRankingsV2Item(

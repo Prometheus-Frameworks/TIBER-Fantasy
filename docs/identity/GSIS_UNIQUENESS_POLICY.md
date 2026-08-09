@@ -70,25 +70,59 @@ Do **not** apply the index. Deterministic collision policy, in order:
    the `ambiguous` set. Neither picks a winner. At the ranking boundary such a
    row is emitted as `identity.status: 'unresolved'` with
    `reason: 'gsis_ambiguous_duplicate_crosswalk_rows'` — visible, non-linkable,
-   never silently mapped to an arbitrary player.
+   never silently mapped to an arbitrary player. Query failures are separately
+   typed as `unavailable` / `gsis_identity_lookup_unavailable`; they are never
+   treated as evidence that a GSIS is absent and never permit a same-text
+   canonical fallback.
 3. **Re-run the census after each repair** until it exits `0`, then apply the
    index.
 
 This means correctness does not depend on the index existing. The index is a
 durability guarantee; the fail-closed runtime is the safety guarantee.
 
-## Coverage gate before fail-closed non-linking
+## Operator activation gates — no unmeasured production claims
 
-100% of the live ranking cohort (357 rows observed 2026-08-09) is GSIS-shaped, so
-enabling fail-closed non-linking against a sparse crosswalk would blank the board.
-Every ranking response therefore reports `identityCoverage`:
+This change was built without `DATABASE_URL`. No database-wide GSIS census and
+no production ranking-cohort coverage figure is recorded by this PR. In
+particular, example counts must not be copied into an operator decision as if
+they were live measurements.
 
-```json
-{ "total": 357, "canonical": 0, "resolved": 340, "unresolved": 17,
-  "ambiguous": 0, "coverageRatio": 0.952,
-  "byReason": { "gsis_not_in_identity_map": 17 } }
+Two separate gates apply:
+
+1. **Runtime visibility gate (already fail-safe):** every actual Rankings v2
+   response measures its own returned cohort in `identityCoverage`. Unresolved
+   or ambiguous rows remain visibly present and keep their producer ID in
+   `identity.sourceId`; only the player deep link is withheld. A sparse
+   crosswalk therefore cannot blank the board.
+2. **Database uniqueness gate (operator activation required):** do not create a
+   unique GSIS index, declare production identity coverage sufficient, or add a
+   stricter row-hiding policy until an operator runs the census above against
+   the target environment, records its output, inspects all position cohorts,
+   and disposes any duplicates. Repository tests and request-local coverage are
+   not substitutes for that production evidence.
+
+A request-local coverage envelope has this shape; the values below are labels,
+not fabricated sample counts:
+
+```text
+total, canonical, resolved, unresolved, ambiguous, coverageRatio, byReason
 ```
 
-Unresolved rows still render — they lose only their deep link. Check
-`coverageRatio` against production before treating unresolved rows more strictly
-than that.
+Activation record checklist:
+
+- target environment and observation timestamp;
+- census output and exit code;
+- Rankings v2 season/week/position query for each measured cohort;
+- returned `identityCoverage` envelopes;
+- duplicate disposition or explicit confirmation that none were observed;
+- operator decision on the uniqueness migration and any stricter policy.
+
+Until that record exists, the current visible/non-linked unresolved behavior is
+the terminal safe state.
+
+## Rankings v2 compatibility revision
+
+Canonical-only nullable `playerId` is a consumer-visible contract change. The
+public version is `v2-canonical-identity-2026-08-09`; clients must validate that
+exact revision before interpreting the identity envelope. Older
+`v2-scaffold-2026-04-02` payloads are not silently coerced into the new shape.

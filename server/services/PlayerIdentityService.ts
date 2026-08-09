@@ -63,9 +63,9 @@ export type SupportedPlatform =
  *
  * `gsis` is listed first because GSIS is the NFL's primary player identifier and
  * the namespace the FORGE grade cache actually emits; it was previously absent
- * entirely, so `/player/00-0036963` (Amon-Ra St. Brown, rank 1 on the live WR
- * board) returned "Player Not Found" (Fantasy #308). `fantasy_data` was likewise
- * absent despite `fantasy_data_id` existing in the schema with a unique index.
+ * entirely, so the reported `/player/00-0036963` Amon-Ra St. Brown deep link
+ * returned "Player Not Found" (Fantasy #308). `fantasy_data` was likewise absent
+ * despite `fantasy_data_id` existing in the schema with a unique index.
  *
  * Every entry here is an **exact** column match. No fuzzy or name-based
  * resolution is performed by these lookups.
@@ -89,6 +89,19 @@ export function looksLikeGsisId(value: string): boolean {
   return GSIS_ID_PATTERN.test(value.trim());
 }
 
+export type GsisCanonicalIdResolution =
+  | { status: 'resolved'; canonicalId: string }
+  | { status: 'not_found' }
+  | { status: 'ambiguous'; matches: number }
+  | { status: 'unavailable' };
+
+export interface GsisBatchResolution {
+  resolved: Map<string, string>;
+  ambiguous: Set<string>;
+  /** Distinguishes a successful empty result from a failed crosswalk query. */
+  lookupStatus: 'available' | 'unavailable';
+}
+
 /**
  * Core Player Identity Service
  * Manages cross-platform player identity resolution and mapping
@@ -110,6 +123,15 @@ export class PlayerIdentityService {
    * Core method for identity resolution
    */
   async getCanonicalId(externalId: string, platform: SupportedPlatform): Promise<string | null> {
+    // Until `gsis_id` is protected by a database uniqueness constraint, a
+    // positive GSIS result must be re-checked on every read. Otherwise a
+    // unique lookup cached at T0 can keep resolving after a duplicate row is
+    // introduced at T1. The duplicate-aware query is deliberately uncached.
+    if (platform === 'gsis') {
+      const result = await this.getCanonicalIdByGsisId(externalId);
+      return result.status === 'resolved' ? result.canonicalId : null;
+    }
+
     const cacheKeyStr = cacheKey([this.cachePrefix, 'canonical', platform, externalId]);
     const cached = getCache<string>(cacheKeyStr);
     if (cached) return cached;
@@ -118,18 +140,6 @@ export class PlayerIdentityService {
     if (!columnName) {
       console.warn(`[PlayerIdentityService] Unsupported platform: ${platform}`);
       return null;
-    }
-
-    // `gsis_id` has no unique index, so a `.limit(1)` here could return an
-    // arbitrary player when two rows share a GSIS. Every GSIS-shaped lookup
-    // goes through the single duplicate-aware implementation instead, so this
-    // method, getByAnyId(), the public player route and the batched ranking
-    // resolver all share one collision policy (Fantasy #308).
-    if (platform === 'gsis') {
-      const result = await this.getCanonicalIdByGsisId(externalId);
-      if (result.status !== 'resolved') return null;
-      setCache(cacheKeyStr, result.canonicalId, this.defaultCacheTtl);
-      return result.canonicalId;
     }
 
     try {
@@ -157,15 +167,48 @@ export class PlayerIdentityService {
    * Returns full player object with all known platform IDs
    */
   async getByAnyId(id: string): Promise<PlayerIdentityResult | null> {
-    const cacheKeyStr = cacheKey([this.cachePrefix, 'by_any_id', id]);
-    const cached = getCache<PlayerIdentityResult>(cacheKeyStr);
-    if (cached) return cached;
+    const normalizedId = id.trim();
+    const isGsisShaped = looksLikeGsisId(normalizedId);
+    const cacheKeyStr = cacheKey([this.cachePrefix, 'by_any_id', normalizedId]);
+
+    // A GSIS-shaped identifier is a source identifier first. Resolve it
+    // through the duplicate-aware GSIS column before considering an exact
+    // canonical-id fallback. This prevents a canonical_id whose text happens
+    // to equal a duplicated GSIS from bypassing the fail-closed collision
+    // policy. Positive GSIS-shaped lookups are not cached while uniqueness is
+    // not database-enforced (see getCanonicalId above).
+    if (!isGsisShaped) {
+      const cached = getCache<PlayerIdentityResult>(cacheKeyStr);
+      if (cached) return cached;
+    }
 
     try {
-      // Try canonical ID first
-      let player = await this.getByCanonicalId(id);
+      let player: PlayerIdentityResult | null = null;
+
+      if (isGsisShaped) {
+        const resolution = await this.getCanonicalIdByGsisId(normalizedId);
+        if (resolution.status === 'ambiguous') {
+          console.warn(`[PlayerIdentityService] Ambiguous GSIS ${normalizedId} (${resolution.matches} matches); refusing to guess.`);
+          return null;
+        }
+        if (resolution.status === 'unavailable') {
+          // A query failure is not evidence that the GSIS namespace is empty.
+          // Never fall through to a same-text canonical_id on an outage.
+          console.warn(`[PlayerIdentityService] GSIS lookup unavailable for ${normalizedId}; refusing namespace fallback.`);
+          return null;
+        }
+        if (resolution.status === 'resolved') {
+          return this.getByCanonicalId(resolution.canonicalId);
+        }
+        // A GSIS-shaped canonical key is still supported when no gsis_id row
+        // claims that value. The fallback is safe only after the source-column
+        // query has proved `not_found`.
+      }
+
+      // Try canonical ID after the GSIS collision check.
+      player = await this.getByCanonicalId(normalizedId);
       if (player) {
-        setCache(cacheKeyStr, player, this.defaultCacheTtl);
+        if (!isGsisShaped) setCache(cacheKeyStr, player, this.defaultCacheTtl);
         return player;
       }
 
@@ -178,25 +221,15 @@ export class PlayerIdentityService {
       // behaviour is preserved unchanged.
       for (const [platform, columnName] of Object.entries(PLATFORM_COLUMNS)) {
         if (platform === 'gsis') {
-          if (!looksLikeGsisId(id)) continue;
-          const resolution = await this.getCanonicalIdByGsisId(id);
-          if (resolution.status === 'ambiguous') {
-            console.warn(`[PlayerIdentityService] Ambiguous GSIS ${id} (${resolution.matches} matches); refusing to guess.`);
-            return null;
-          }
-          if (resolution.status === 'not_found') continue;
-          player = await this.getByCanonicalId(resolution.canonicalId);
-          if (player) {
-            setCache(cacheKeyStr, player, this.defaultCacheTtl);
-            return player;
-          }
+          // GSIS-shaped values were handled before the canonical lookup. A
+          // non-GSIS-shaped value cannot be an exact governed GSIS id.
           continue;
         }
 
         const result = await db
           .select()
           .from(playerIdentityMap)
-          .where(eq(playerIdentityMap[columnName], id))
+          .where(eq(playerIdentityMap[columnName], normalizedId))
           .limit(1);
 
         if (result[0]) {
@@ -208,7 +241,7 @@ export class PlayerIdentityService {
 
       return null;
     } catch (error) {
-      console.error(`[PlayerIdentityService] Error getting player by any ID ${id}:`, error);
+      console.error(`[PlayerIdentityService] Error getting player by any ID ${normalizedId}:`, error);
       return null;
     }
   }
@@ -222,9 +255,7 @@ export class PlayerIdentityService {
    * `gsis_id` today (see `censusGsisIdentity`), so a duplicate is possible and
    * silently choosing a winner would fabricate an identity decision.
    */
-  async getCanonicalIdByGsisId(gsisId: string): Promise<
-    { status: 'resolved'; canonicalId: string } | { status: 'not_found' } | { status: 'ambiguous'; matches: number }
-  > {
+  async getCanonicalIdByGsisId(gsisId: string): Promise<GsisCanonicalIdResolution> {
     const id = gsisId.trim();
     if (!id) return { status: 'not_found' };
 
@@ -240,7 +271,7 @@ export class PlayerIdentityService {
       return { status: 'resolved', canonicalId: rows[0].canonicalId };
     } catch (error) {
       console.error(`[PlayerIdentityService] GSIS lookup failed for ${id}:`, error);
-      return { status: 'not_found' };
+      return { status: 'unavailable' };
     }
   }
 
@@ -251,14 +282,11 @@ export class PlayerIdentityService {
    * boundary can resolve a full board without a per-row cost. Duplicate GSIS
    * values are reported as ambiguous and are *not* resolved.
    */
-  async resolveCanonicalIdsByGsis(gsisIds: string[]): Promise<{
-    resolved: Map<string, string>;
-    ambiguous: Set<string>;
-  }> {
+  async resolveCanonicalIdsByGsis(gsisIds: string[]): Promise<GsisBatchResolution> {
     const unique = Array.from(new Set(gsisIds.map((id) => id.trim()).filter(Boolean)));
     const resolved = new Map<string, string>();
     const ambiguous = new Set<string>();
-    if (unique.length === 0) return { resolved, ambiguous };
+    if (unique.length === 0) return { resolved, ambiguous, lookupStatus: 'available' };
 
     try {
       const rows = await db
@@ -285,9 +313,10 @@ export class PlayerIdentityService {
       }
     } catch (error) {
       console.error('[PlayerIdentityService] Batch GSIS resolution failed:', error);
+      return { resolved, ambiguous, lookupStatus: 'unavailable' };
     }
 
-    return { resolved, ambiguous };
+    return { resolved, ambiguous, lookupStatus: 'available' };
   }
 
   /**

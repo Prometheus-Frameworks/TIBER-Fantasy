@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import {
+  buildRankingRowKey,
+  getLinkablePlayerId,
   Position,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   RankingsV2Item,
   resolveRankingsSourceView,
   resolveTiersHeadline,
@@ -21,6 +24,7 @@ import {
 type SortDirection = 'asc' | 'desc';
 
 export interface TiersApiResponse {
+  contractVersion: typeof RANKINGS_V2_EXPECTED_CONTRACT_VERSION;
   asOf: string;
   sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
@@ -202,19 +206,20 @@ export function TiberTiersView({
                       const confidenceBand = player.tier ?? getPillarNote(player, 'confidence_band');
                       const floor = getPillarNote(player, 'floor');
                       const ceiling = getPillarNote(player, 'ceiling');
+                      const linkablePlayerId = getLinkablePlayerId(player);
                       return (
-                        <tr key={player.identity.sourceId} className="border-t border-gray-800 hover:bg-slate-900/25">
+                        <tr key={buildRankingRowKey(player)} className="border-t border-gray-800 hover:bg-slate-900/25">
                           <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
                               {/* Only a resolved canonical key becomes a deep link. An
                                   unresolved row stays fully visible — the board is never
                                   blanked by sparse crosswalk coverage (#308). */}
-                              {player.identity?.linkable ? (
+                              {linkablePlayerId ? (
                                 <Link
-                                  href={`/player/${player.playerId}`}
+                                  href={`/player/${linkablePlayerId}`}
                                   className="text-white hover:text-purple-400 text-sm font-medium"
-                                  data-testid={`player-link-${player.playerId}`}
+                                  data-testid={`player-link-${linkablePlayerId}`}
                                 >
                                   {player.playerName}
                                 </Link>
@@ -244,7 +249,7 @@ export function TiberTiersView({
                               // An unresolved row must not produce a player-specific
                               // research link built from a raw source id (#308);
                               // team/command-center links stay available.
-                              playerId={player.identity.linkable ? player.playerId : null}
+                              playerId={linkablePlayerId}
                               playerName={player.playerName}
                               team={player.team ?? null}
                               compact

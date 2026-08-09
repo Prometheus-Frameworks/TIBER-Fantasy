@@ -23,15 +23,64 @@ jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
   hasMeaningfulScoringInputs: jest.fn(),
 }));
 
-import { createRankingsV2Router } from '../rankingsV2Routes';
+import { createRankingsV2Router, mapForgeCacheRowToRankingsV2Item } from '../rankingsV2Routes';
 import { scoringService } from '../../modules/externalModels/scoring/scoringService';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
+import { RANKINGS_V2_CONTRACT_VERSION } from '../../contracts/rankingsV2';
 
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
 const mockedBuildRankingsScoringInputs = buildRankingsScoringInputs as jest.MockedFunction<typeof buildRankingsScoringInputs>;
 const mockedHasMeaningfulScoringInputs = hasMeaningfulScoringInputs as jest.MockedFunction<typeof hasMeaningfulScoringInputs>;
+
+describe('rankings identity public-state normalization', () => {
+  const row = {
+    playerId: '00-0036963',
+    playerName: 'Amon-Ra St. Brown',
+    position: 'WR',
+    nflTeam: 'DET',
+    tier: 'T1',
+    alpha: 95,
+    rawAlpha: 77.2,
+  };
+
+  it('does not erase an ambiguity reason to promote a contradictory resolved state', () => {
+    const item = mapForgeCacheRowToRankingsV2Item(row, 1, '2026-08-09T00:00:00.000Z', {
+      status: 'resolved',
+      canonicalId: 'tiber-amon-ra-st-brown',
+      sourceId: '00-0036963',
+      sourceType: 'gsis',
+      reason: 'gsis_ambiguous_duplicate_crosswalk_rows',
+    });
+
+    expect(item.playerId).toBeNull();
+    expect(item.identity).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: 'gsis_ambiguous_duplicate_crosswalk_rows',
+      linkable: false,
+    });
+  });
+
+  it('fails closed when a canonical state has a different source id', () => {
+    const item = mapForgeCacheRowToRankingsV2Item(row, 1, '2026-08-09T00:00:00.000Z', {
+      status: 'canonical',
+      canonicalId: 'canonical-player',
+      sourceId: 'different-source',
+      sourceType: 'canonical',
+      reason: null,
+    });
+
+    expect(item.playerId).toBeNull();
+    expect(item.identity).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: 'identity_state_incoherent',
+      linkable: false,
+    });
+  });
+});
 
 async function call(path: string) {
   const app = express();
@@ -91,6 +140,7 @@ describe('rankingsV2Routes scoring integration', () => {
     const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
 
     expect(res.status).toBe(200);
+    expect(res.body.contractVersion).toBe(RANKINGS_V2_CONTRACT_VERSION);
     expect(res.body.items[0].score).toBe(20.1);
     expect(res.body.items[0].value).toBe(3.4);
     expect(res.body.items[0].explanation.placementSummary).toContain('WR1');

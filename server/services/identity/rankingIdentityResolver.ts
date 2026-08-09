@@ -1,11 +1,10 @@
 /**
  * Ranking → canonical identity boundary (Fantasy #308).
  *
- * `forge_grade_cache.player_id` holds whatever the position role-bank tables
- * used, which in the live cohort is GSIS (`00-0036963`). That value was being
+ * Rankings routes declare their producer `player_id` fields as GSIS provenance.
+ * Before this boundary existed, a GSIS value such as `00-0036963` could be
  * emitted straight out of the public Rankings v2 API as `playerId`, and the UI
- * built `/player/${playerId}` from it — but `PlayerIdentityService.getByAnyId()`
- * never consulted `gsis_id`, so the deep link 404'd for the player ranked #1.
+ * built `/player/${playerId}` from it even when no canonical page resolved.
  *
  * This module is the single place where a source identifier becomes (or fails to
  * become) a canonical public key. Rules:
@@ -59,13 +58,28 @@ export interface RankingIdentityResolution {
   coverage: RankingIdentityCoverage;
 }
 
+/**
+ * Declared namespace of the producer field being resolved.
+ *
+ * Rankings currently ingest `player_id` from GSIS-governed producer lanes, so
+ * callers must pass `gsis`. `auto` exists only for generic compatibility and
+ * still gives a GSIS-shaped value collision precedence over a same-text
+ * canonical_id. Namespace is provenance, not a guess derived from whichever
+ * database row happens to match first.
+ */
+export type RankingIdentityInputNamespace = 'gsis' | 'canonical' | 'auto';
+
 export const UNRESOLVED_REASONS = {
   /** Looks like a GSIS ID but no crosswalk row carries it. */
   GSIS_NOT_IN_CROSSWALK: 'gsis_not_in_identity_map',
   /** More than one crosswalk row carries this GSIS; refusing to pick one. */
   GSIS_AMBIGUOUS: 'gsis_ambiguous_duplicate_crosswalk_rows',
+  /** The crosswalk query failed; absence must not be inferred from an outage. */
+  GSIS_LOOKUP_UNAVAILABLE: 'gsis_identity_lookup_unavailable',
   /** Not a canonical key and not a recognised source-ID shape. */
   UNRECOGNISED_NAMESPACE: 'unrecognised_identifier_namespace',
+  /** A declared canonical key is absent from the identity map. */
+  CANONICAL_NOT_IN_CROSSWALK: 'canonical_not_in_identity_map',
   /** Producer emitted an empty identifier. */
   EMPTY: 'empty_identifier',
 } as const;
@@ -77,10 +91,14 @@ function emptyCoverage(): RankingIdentityCoverage {
 /**
  * Resolve a cohort of producer-emitted identifiers to canonical public keys.
  *
- * Two batched queries regardless of cohort size: one to find which IDs are
- * already canonical, one to resolve the GSIS-shaped remainder.
+ * At most two batched queries regardless of cohort size. GSIS resolution runs
+ * first; a GSIS-shaped value can never bypass collision detection merely
+ * because an identical string also exists in `canonical_id`.
  */
-export async function resolveRankingIdentities(sourceIds: string[]): Promise<RankingIdentityResolution> {
+export async function resolveRankingIdentities(
+  sourceIds: string[],
+  namespace: RankingIdentityInputNamespace = 'auto',
+): Promise<RankingIdentityResolution> {
   const identities = new Map<string, RankingIdentity>();
   const cleaned = sourceIds.map((id) => (id ?? '').trim());
   const distinct = Array.from(new Set(cleaned.filter(Boolean)));
@@ -104,36 +122,41 @@ export async function resolveRankingIdentities(sourceIds: string[]): Promise<Ran
     return { identities, coverage };
   }
 
-  // Pass 1 — which of these are already canonical keys?
+  // Pass 1 — resolve the producer's GSIS namespace. In auto mode, the shape is
+  // authoritative enough to require duplicate detection before any canonical
+  // fallback; this closes canonical_id == duplicated gsis_id bypasses.
+  const gsisCandidates = distinct.filter((id) => namespace !== 'canonical' && looksLikeGsisId(id));
+  const { resolved, ambiguous, lookupStatus } = gsisCandidates.length
+    ? await PlayerIdentityService.getInstance().resolveCanonicalIdsByGsis(gsisCandidates)
+    : {
+        resolved: new Map<string, string>(),
+        ambiguous: new Set<string>(),
+        lookupStatus: 'available' as const,
+      };
+
+  // Pass 2 — exact canonical lookup only when the producer declared canonical
+  // provenance, or in auto mode for values that are not GSIS-shaped. A
+  // declared GSIS field never silently changes namespace to make a link work.
+  const canonicalCandidates =
+    namespace === 'canonical'
+      ? distinct
+      : namespace === 'auto'
+        ? distinct.filter((id) => !looksLikeGsisId(id))
+        : [];
   let canonicalSet = new Set<string>();
-  try {
-    const rows = await db
-      .select({ canonicalId: playerIdentityMap.canonicalId })
-      .from(playerIdentityMap)
-      .where(inArray(playerIdentityMap.canonicalId, distinct));
-    canonicalSet = new Set(rows.map((row) => row.canonicalId));
-  } catch (error) {
-    console.error('[RankingIdentityResolver] canonical pre-check failed:', error);
+  if (canonicalCandidates.length > 0) {
+    try {
+      const rows = await db
+        .select({ canonicalId: playerIdentityMap.canonicalId })
+        .from(playerIdentityMap)
+        .where(inArray(playerIdentityMap.canonicalId, canonicalCandidates));
+      canonicalSet = new Set(rows.map((row) => row.canonicalId));
+    } catch (error) {
+      console.error('[RankingIdentityResolver] canonical pre-check failed:', error);
+    }
   }
 
-  // Pass 2 — resolve GSIS-shaped leftovers through the crosswalk.
-  const gsisCandidates = distinct.filter((id) => !canonicalSet.has(id) && looksLikeGsisId(id));
-  const { resolved, ambiguous } = gsisCandidates.length
-    ? await PlayerIdentityService.getInstance().resolveCanonicalIdsByGsis(gsisCandidates)
-    : { resolved: new Map<string, string>(), ambiguous: new Set<string>() };
-
   for (const sourceId of distinct) {
-    if (canonicalSet.has(sourceId)) {
-      identities.set(sourceId, {
-        status: 'canonical',
-        canonicalId: sourceId,
-        sourceId,
-        sourceType: 'canonical',
-        reason: null,
-      });
-      continue;
-    }
-
     const isGsisShaped = looksLikeGsisId(sourceId);
     const canonicalId = resolved.get(sourceId);
     if (canonicalId) {
@@ -147,15 +170,50 @@ export async function resolveRankingIdentities(sourceIds: string[]): Promise<Ran
       continue;
     }
 
+    if (ambiguous.has(sourceId)) {
+      identities.set(sourceId, {
+        status: 'unresolved',
+        canonicalId: null,
+        sourceId,
+        sourceType: 'gsis',
+        reason: UNRESOLVED_REASONS.GSIS_AMBIGUOUS,
+      });
+      continue;
+    }
+
+    if (isGsisShaped && lookupStatus === 'unavailable') {
+      identities.set(sourceId, {
+        status: 'unresolved',
+        canonicalId: null,
+        sourceId,
+        sourceType: 'gsis',
+        reason: UNRESOLVED_REASONS.GSIS_LOOKUP_UNAVAILABLE,
+      });
+      continue;
+    }
+
+    if (canonicalSet.has(sourceId)) {
+      identities.set(sourceId, {
+        status: 'canonical',
+        canonicalId: sourceId,
+        sourceId,
+        sourceType: 'canonical',
+        reason: null,
+      });
+      continue;
+    }
+
+    const declaredCanonical = namespace === 'canonical';
+
     identities.set(sourceId, {
       status: 'unresolved',
       canonicalId: null,
       sourceId,
-      sourceType: isGsisShaped ? 'gsis' : 'unknown',
-      reason: ambiguous.has(sourceId)
-        ? UNRESOLVED_REASONS.GSIS_AMBIGUOUS
-        : isGsisShaped
-          ? UNRESOLVED_REASONS.GSIS_NOT_IN_CROSSWALK
+      sourceType: isGsisShaped ? 'gsis' : declaredCanonical ? 'canonical' : 'unknown',
+      reason: isGsisShaped
+        ? UNRESOLVED_REASONS.GSIS_NOT_IN_CROSSWALK
+        : declaredCanonical
+          ? UNRESOLVED_REASONS.CANONICAL_NOT_IN_CROSSWALK
           : UNRESOLVED_REASONS.UNRECOGNISED_NAMESPACE,
     });
   }
@@ -177,9 +235,9 @@ export async function resolveRankingIdentities(sourceIds: string[]): Promise<Ran
 /**
  * Cohort-level identity coverage.
  *
- * #308 requires this to be measured before any fail-closed non-linking is
- * enabled: 100% of the live ranking cohort is GSIS-shaped, so switching to
- * fail-closed against a sparse crosswalk would empty the board.
+ * Every response measures only the cohort it actually returns. This request-
+ * local envelope is visibility evidence, not a database census or a claim
+ * about production-wide crosswalk coverage. Unresolved rows remain rendered.
  */
 export function measureCoverage(
   sourceIds: string[],
