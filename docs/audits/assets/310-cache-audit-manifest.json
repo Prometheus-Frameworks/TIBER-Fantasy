@@ -1,0 +1,184 @@
+{
+  "audit": "railway_forge_grade_cache_lineage",
+  "issue": "Prometheus-Frameworks/TIBER-Fantasy#310",
+  "readOnly": true,
+  "observedAt": "2026-08-09T18:24:43.564Z",
+  "source": {
+    "baseUrl": "https://tiber-fantasy-production.up.railway.app",
+    "season": 2025,
+    "asOfWeek": 18,
+    "perPosition": {
+      "QB": {
+        "asOf": "2026-08-08T19:03:54.986Z",
+        "fallbackReason": "config_error"
+      },
+      "RB": {
+        "asOf": "2026-08-08T19:04:04.858Z",
+        "fallbackReason": "config_error"
+      },
+      "WR": {
+        "asOf": "2026-08-08T19:04:15.325Z",
+        "fallbackReason": "config_error"
+      },
+      "TE": {
+        "asOf": "2026-08-08T19:04:29.742Z",
+        "fallbackReason": "config_error"
+      }
+    }
+  },
+  "cacheCohort": {
+    "rows": 357,
+    "byPosition": {
+      "QB": 38,
+      "RB": 95,
+      "WR": 146,
+      "TE": 78
+    },
+    "identity": {
+      "totalRows": 357,
+      "distinctIds": 357,
+      "duplicateIds": [],
+      "gsisShaped": 357,
+      "gsisShapedPct": 100,
+      "nonGsisSamples": [],
+      "crossSurfaceResolvability": "unavailable_requires_database"
+    }
+  },
+  "clamping": {
+    "verdict": "designed_calibration_bound_not_cohort_artifact",
+    "evidence": "server/modules/forge/types.ts ALPHA_CALIBRATION; applied by calibrateAlpha() in server/modules/forge/forgeGrading.ts",
+    "byPosition": {
+      "QB": {
+        "n": 38,
+        "min": 33.8,
+        "max": 86.5,
+        "declaredBounds": {
+          "outMin": 25,
+          "outMax": 95,
+          "p10": 35,
+          "p90": 73
+        },
+        "atFloor": 0,
+        "atFloorPct": 0,
+        "atCeiling": 0
+      },
+      "RB": {
+        "n": 95,
+        "min": 25,
+        "max": 95,
+        "declaredBounds": {
+          "outMin": 25,
+          "outMax": 95,
+          "p10": 23,
+          "p90": 68
+        },
+        "atFloor": 20,
+        "atFloorPct": 21.1,
+        "atCeiling": 5
+      },
+      "WR": {
+        "n": 146,
+        "min": 25,
+        "max": 95,
+        "declaredBounds": {
+          "outMin": 25,
+          "outMax": 95,
+          "p10": 31,
+          "p90": 76
+        },
+        "atFloor": 59,
+        "atFloorPct": 40.4,
+        "atCeiling": 1
+      },
+      "TE": {
+        "n": 78,
+        "min": 25,
+        "max": 95,
+        "declaredBounds": {
+          "outMin": 25,
+          "outMax": 95,
+          "p10": 29,
+          "p90": 64
+        },
+        "atFloor": 37,
+        "atFloorPct": 47.4,
+        "atCeiling": 1
+      }
+    }
+  },
+  "staticArtifact": {
+    "path": "server/artifacts/external/forge/forge_player_static_v1.json",
+    "sha256": "cc2254a8d712976184ce370ecc2f932831d65925773b9e5dde924948d9b5cf14",
+    "generatedAt": "2026-01-08T00:00:00.000Z",
+    "modelVersion": "forge-player-static-v1.0.0",
+    "rowCount": 59
+  },
+  "comparability": {
+    "directIdIntersection": 0,
+    "liveNamespace": "gsis",
+    "staticNamespaces": {
+      "fixture": 14,
+      "other": 45
+    },
+    "staticAmbiguousNames": 7,
+    "staticRowsUnderAmbiguousNames": 14,
+    "generatedBaselineRows": 14,
+    "generatedBaselineTopAlphas": [
+      {
+        "name": "Brock Bowers",
+        "alpha": 100,
+        "evidence": "generated_baseline_not_player_evidence"
+      },
+      {
+        "name": "Ja'Marr Chase",
+        "alpha": 99.91,
+        "evidence": "generated_baseline_not_player_evidence"
+      },
+      {
+        "name": "Bijan Robinson",
+        "alpha": 97.56,
+        "evidence": "generated_baseline_not_player_evidence"
+      },
+      {
+        "name": "Josh Allen",
+        "alpha": 92.69,
+        "evidence": "generated_baseline_not_player_evidence"
+      },
+      {
+        "name": "Amon-Ra St. Brown",
+        "alpha": 88.07,
+        "evidence": "generated_baseline_not_player_evidence"
+      }
+    ],
+    "joinable": false,
+    "joinBlockers": [
+      "zero direct identifier intersection between the two artifacts",
+      "static artifact repeats player names across cohorts, so name is not a unique key within it either"
+    ]
+  },
+  "provenance": {
+    "requiredForReproducibility": [
+      "input manifest",
+      "source table snapshot identity",
+      "source content hash",
+      "evidence-freshness attestation",
+      "builder commit / engine version pin"
+    ],
+    "persistedByCacheSchema": {
+      "computedAt": true,
+      "version": true,
+      "inputManifest": false,
+      "sourceHash": false,
+      "snapshotIdentity": false,
+      "evidenceFreshness": false,
+      "builderCommit": false
+    },
+    "canSeparateComputationFromEvidenceTime": false,
+    "deterministicRecomputePossible": false,
+    "deterministicRecomputeBlockers": [
+      "no builder commit or engine version pinned in the cache",
+      "source tables (position role banks, datadive_snapshot_player_week) are not in this repository",
+      "no source snapshot identity or content hash persisted"
+    ]
+  }
+}
