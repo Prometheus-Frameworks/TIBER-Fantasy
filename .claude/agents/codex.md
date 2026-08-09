@@ -757,3 +757,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Hardened the dormant legacy Data Lab router alongside the live shared service to prevent a future remount from restoring the unsafe pattern.
 - Added compiled-query regressions for the mounted `/usage-agg` call path, player/week filters, and a source guard against interpolated `sql.raw` templates.
 - Validation: focused security tests 6/6 passed; build passed with the existing OLC warning; full Jest run executed 850 passing tests while six unrelated baseline suites failed to load; typecheck retained 505 existing errors with zero changed-file matches; diff check passed.
+
+### 2026-08-09 — Observatory human-readable workflow redesign
+- Reframed the Observatory as a two-step human workflow: add an observation, then review the route.
+- Replaced white result cards with a restrained dark surface and organized the artifact into plain-language detection, required checks, repo handoffs, uncertainty, and advanced details.
+- Collapsed architecture, guardrails, provenance, exports, and raw JSON behind disclosures; removed the prefilled note and unmeasured declared-system status badges.
+- Preserved the deterministic client-side heuristic, truthful Teamstate live status, explicit unavailable states, export formats, and no-write/no-ranking boundary.
+- Validation: focused Observatory Jest suite 22/22 ✅; full production build ✅ with the existing OLC duplicate-member warning; `git diff --check` ✅; repo-wide typecheck ⚠️ existing unrelated backlog, no `StressLab.tsx` error.

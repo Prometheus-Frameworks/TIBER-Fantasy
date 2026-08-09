@@ -1,22 +1,17 @@
 /**
  * Observatory surface (user-facing product name: "TIBER Observatory").
  *
- * Naming boundary (PR A, #264):
+ * Naming boundary (#264):
  * - The user-facing name is "Observatory" everywhere in visible copy and nav.
  * - The implementation file/component (`StressLab`) and its heuristic lib
- *   (`stressLab.ts`) keep their legacy/internal names for now. A file/symbol
- *   rename touches imports and tests, so it is deferred to a later mechanical
- *   pass to keep PR A copy/naming/route-label only.
+ *   (`stressLab.ts`) keep their legacy/internal names for now.
  * - Routes `/`, `/observatory`, and `/stress-lab` intentionally resolve to this
  *   same surface today (`/stress-lab` is a legacy alias). See client/src/App.tsx.
  *
- * Behavior (PR C, #264): the take-triage scaffold below is still a deterministic
- * client-side v0 — it makes NO backend, DB, LLM, RAG, or external API call. PR C
- * adds a read-only "TIBER signal inventory" that performs a single GET to the
- * existing /api/data-lab/team-environment-movement status endpoint (already used
- * by Management) to show real artifact state — no writes, no new model/artifact
- * layer. The declared system map remains static/declared (PR A); take-checker
- * upgrades remain PR D.
+ * Behavior boundary (#264): the take-triage scaffold remains deterministic and
+ * client-side. It makes no backend, DB, LLM, RAG, or external API call. The live
+ * signal inventory performs one read-only GET against the existing Teamstate
+ * Movement status endpoint. This page never writes, re-ranks, or mutates truth.
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +20,7 @@ import {
   Clipboard,
   Download,
   FileJson,
+  Route,
   ShieldCheck,
   Telescope,
 } from "lucide-react";
@@ -55,8 +51,6 @@ type DeclaredSystem = {
   name: string;
   description: string;
   role: string;
-  // Declared/static label only — NOT a live health probe or measured uptime.
-  status: "online" | "routing-only" | "heuristic-v0" | "partial" | "planned";
 };
 
 const DECLARED_SYSTEMS: DeclaredSystem[] = [
@@ -64,31 +58,26 @@ const DECLARED_SYSTEMS: DeclaredSystem[] = [
     name: "TIBER-Data",
     description: "Canonical contracts, IDs, source metadata, and governed handoff artifacts.",
     role: "Truth and contract authority for downstream interpretation.",
-    status: "routing-only",
   },
   {
     name: "TIBER-Teamstate",
     description: "Team context and environment interpretation surfaced as handoff targets.",
     role: "Owns team-level interpretation after source truth is verified.",
-    status: "routing-only",
   },
   {
     name: "TIBER-Rookies",
-    description: "Promoted rookie/prospect evaluation consumed as read-only handoff artifacts.",
+    description: "Promoted rookie and prospect evaluation consumed as read-only artifacts.",
     role: "Owns rookie model output and prospect evaluation framing.",
-    status: "partial",
   },
   {
     name: "TIBER-FORGE",
-    description: "Fantasy signal and scoring surface behind the live rankings lane.",
-    role: "Owns deterministic fantasy scoring/ranking interpretation over canonical inputs.",
-    status: "online",
+    description: "Fantasy signal and scoring surface behind the rankings lane.",
+    role: "Owns deterministic fantasy scoring over canonical inputs.",
   },
   {
     name: "Role & Opportunity",
-    description: "Usage, role, route, and red-zone signal domain for note routing.",
-    role: "Owns role/opportunity checks before fantasy implication is applied.",
-    status: "heuristic-v0",
+    description: "Usage, route, and red-zone signal domain for note routing.",
+    role: "Owns role checks before fantasy implications are applied.",
   },
 ];
 
@@ -101,67 +90,14 @@ const REPO_BOUNDARIES = [
   "TIBER-Fantasy = operator-facing synthesis/inspection",
 ];
 
-
-function SystemStatusSection() {
-  return (
-    <section className="mt-5 sm:mt-8">
-      <div className="mb-3 flex flex-col gap-1 sm:mb-4">
-        <h2 className="text-base font-semibold text-slate-100">Declared systems &amp; roles</h2>
-        <p className="text-sm leading-6 text-slate-400">
-          A static map of real downstream repos/domains and their intended roles —
-          not a live health check. The status labels below are declared, not measured
-          from running services, and no uptime, confidence, or performance metrics are
-          produced here. A live signal inventory is future work (PR C of #264).
-        </p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {DECLARED_SYSTEMS.map((system) => (
-          <Card
-            key={system.name}
-            className="border-slate-800 bg-slate-950/70 text-slate-100 shadow-none"
-          >
-            <CardHeader className="space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-slate-100">
-                  {system.name}
-                </CardTitle>
-                <Badge
-                  variant="secondary"
-                  className="border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-300"
-                >
-                  {system.status}
-                </Badge>
-              </div>
-              <p className="text-xs leading-5 text-slate-400">{system.description}</p>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Current role
-              </div>
-              <p className="mt-1 text-xs leading-5 text-slate-300">{system.role}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 const SIGNAL_STATUS_STYLES: Record<TeamEnvironmentMovementSignalStatus, string> = {
   available: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
   governed: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
   "fixture-only": "border-amber-400/30 bg-amber-400/10 text-amber-200",
-  missing: "border-slate-600 bg-slate-800 text-slate-300",
-  unavailable: "border-slate-600 bg-slate-800 text-slate-300",
+  missing: "border-white/10 bg-white/5 text-slate-300",
+  unavailable: "border-white/10 bg-white/5 text-slate-300",
 };
 
-/**
- * Live signal inventory (PR C, #264). Reads ONLY the existing
- * /api/data-lab/team-environment-movement status endpoint (already used by
- * Management) and renders truthful artifact state. No new backend/artifact/model
- * layer, no writes. Other model/artifact diagnostics (FORGE, identity crosswalk,
- * strategy ontology) stay roster-scoped in Management and are not surfaced here.
- */
 function SignalInventorySection() {
   const movementQuery = useQuery<TeamEnvironmentMovementResponse, Error>({
     queryKey: ["/api/data-lab/team-environment-movement"],
@@ -179,42 +115,40 @@ function SignalInventorySection() {
     : getTeamEnvironmentMovementReadinessDetails(response);
 
   return (
-    <section className="mt-5 sm:mt-8">
-      <div className="mb-3 flex flex-col gap-1 sm:mb-4">
-        <h2 className="text-base font-semibold text-slate-100">TIBER signal inventory (live)</h2>
-        <p className="text-sm leading-6 text-slate-400">
-          The live portion of this board. Each row reflects a single read-only
-          request to an existing TIBER data-lab status endpoint — real artifact
-          state, not a declared label. Today only the Teamstate Movement artifact
-          is wired here; other model/artifact diagnostics remain roster-scoped in
-          Management and are not yet surfaced operator-wide.
-        </p>
-      </div>
-      <Card className="border-slate-800 bg-slate-950/70 text-slate-100 shadow-none">
-        <CardHeader className="space-y-3 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-sm font-semibold text-slate-100">
-                Teamstate Movement artifact
-              </CardTitle>
-              <p className="mt-1 break-all font-mono text-[11px] text-slate-500">
-                team_environment_movement_v1 · /api/data-lab/team-environment-movement
-              </p>
+    <Card className="border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+      <CardHeader className="p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              TIBER signal inventory (live)
             </div>
-            <Badge
-              variant="secondary"
-              className={`border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${SIGNAL_STATUS_STYLES[status]}`}
-            >
-              {movementQuery.isLoading ? "Checking" : label}
-            </Badge>
+            <CardTitle className="mt-1 text-sm font-semibold text-slate-100">
+              Teamstate Movement artifact
+            </CardTitle>
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              The only operator-wide artifact status currently measured here.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 pt-0 text-xs leading-5 text-slate-400">
-          {movementQuery.isLoading ? (
-            <p>Checking artifact status…</p>
-          ) : (
-            <>
-              <div className="grid gap-1 sm:grid-cols-2">
+          <Badge
+            variant="secondary"
+            className={`w-fit border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${SIGNAL_STATUS_STYLES[status]}`}
+          >
+            {movementQuery.isLoading ? "Checking" : label}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+        {movementQuery.isLoading ? (
+          <p className="text-xs text-slate-400">Checking artifact status…</p>
+        ) : (
+          <details className="rounded-lg border border-white/[0.07] bg-black/10">
+            <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-slate-300">
+              View provenance and contract detail
+              <span className="float-right font-normal text-slate-500">Technical detail</span>
+            </summary>
+            <div className="border-t border-white/[0.07] px-3 py-3 text-xs leading-5 text-slate-400">
+              <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
                 <div>Artifact available: <span className="text-slate-200">{response?.artifactAvailable ? "yes" : "no"}</span></div>
                 <div>Provenance: <span className="text-slate-200">{response?.provenanceStatus ?? "unknown"}</span></div>
                 <div>Governance: <span className="text-slate-200">{response?.governance?.governanceStatus ?? "none"}</span></div>
@@ -223,43 +157,84 @@ function SignalInventorySection() {
                 <div>Source path: <span className="break-all font-mono text-slate-300">{response?.source?.artifactPath ?? "unknown"}</span></div>
               </div>
               {detailLines.length > 0 ? (
-                <ul className="mt-3 space-y-1">
+                <ul className="mt-3 space-y-1 border-t border-white/[0.07] pt-3">
                   {detailLines.map((line) => (
                     <li key={line}>• {line}</li>
                   ))}
                 </ul>
               ) : null}
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </section>
+              <p className="mt-3 break-all font-mono text-[10px] text-slate-600">
+                team_environment_movement_v1 · /api/data-lab/team-environment-movement
+              </p>
+            </div>
+          </details>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
 function RepoBoundaryPanel() {
   return (
-    <Card className="mt-5 border-slate-800 bg-slate-950/70 text-slate-100 shadow-none sm:mt-8">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-slate-100">
-          Repo boundary awareness
-        </CardTitle>
-        <p className="text-sm leading-6 text-slate-400">
-          Route before reasoning. Preserve uncertainty. Do not patch upstream data
-          problems with frontend assumptions.
-        </p>
-      </CardHeader>
-      <CardContent className="grid gap-2 pt-0 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="border-t border-white/[0.07] px-4 py-4 sm:px-5">
+      <h3 className="text-sm font-semibold text-slate-200">Repo boundary awareness</h3>
+      <p className="mt-1 text-xs leading-5 text-slate-500">
+        Route before reasoning. Preserve uncertainty. Do not patch upstream data problems with frontend assumptions.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {REPO_BOUNDARIES.map((boundary) => (
           <div
             key={boundary}
-            className="rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2 font-mono text-xs text-slate-300"
+            className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2 font-mono text-[11px] text-slate-400"
           >
             {boundary}
           </div>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+}
+
+function SystemStatusSection() {
+  return (
+    <section aria-labelledby="system-context-title" className="mt-8 sm:mt-10">
+      <div className="mb-3">
+        <h2 id="system-context-title" className="text-base font-semibold text-slate-100">
+          System context
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Live availability first; architecture detail when you need it.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <SignalInventorySection />
+
+        <details className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0e11]">
+          <summary className="cursor-pointer list-none px-4 py-3.5 text-sm font-semibold text-slate-300 sm:px-5">
+            Declared systems &amp; roles
+            <span className="float-right text-xs font-normal text-slate-600">Static map</span>
+          </summary>
+          <div className="border-t border-white/[0.07] px-4 py-4 sm:px-5">
+            <p className="max-w-3xl text-xs leading-5 text-slate-500">
+              A static ownership map, not a live health check. It makes no uptime, confidence, readiness, or performance claim.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {DECLARED_SYSTEMS.map((system) => (
+                <div key={system.name} className="rounded-lg border border-white/[0.07] bg-[#111316] p-3.5">
+                  <h3 className="text-sm font-semibold text-slate-200">{system.name}</h3>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{system.description}</p>
+                  <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-400">
+                    {system.role}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <RepoBoundaryPanel />
+        </details>
+      </div>
+    </section>
   );
 }
 
@@ -280,151 +255,148 @@ function downloadTextFile(contents: string, filename: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-function ListPanel({
+function ReviewList({
   title,
   items,
   emptyLabel,
+  tone = "neutral",
 }: {
   title: string;
   items: string[];
   emptyLabel: string;
+  tone?: "neutral" | "warning";
 }) {
   return (
-    <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
-      <CardHeader className="pb-2 sm:pb-3">
-        <CardTitle className="text-sm font-semibold text-gray-900">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        {items.length > 0 ? (
-          <ul className="space-y-2 text-sm text-gray-600">
-            {items.map((item) => (
-              <li key={item} className="flex min-w-0 gap-2">
-                <span
-                  className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#e2640d]"
-                  aria-hidden
-                />
-                <span className="min-w-0 break-words">{item}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-gray-500">{emptyLabel}</p>
-        )}
-      </CardContent>
-    </Card>
+    <section
+      className={`rounded-xl border p-4 ${
+        tone === "warning"
+          ? "border-amber-400/15 bg-amber-400/[0.05]"
+          : "border-white/[0.07] bg-black/10"
+      }`}
+    >
+      <h3 className="text-sm font-semibold text-slate-200">{title}</h3>
+      {items.length > 0 ? (
+        <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
+          {items.map((item) => (
+            <li key={item} className="flex min-w-0 gap-2.5">
+              <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-[#e2640d]" aria-hidden />
+              <span className="min-w-0 break-words">{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">{emptyLabel}</p>
+      )}
+    </section>
   );
 }
 
-function SuggestedHandoffsPanel({
-  handoffs,
-}: {
-  handoffs: SuggestedTiberHandoff[];
-}) {
+function FriendlyChips({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-slate-500">{emptyLabel}</p>;
+  }
+
   return (
-    <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold text-gray-900">
-          Suggested TIBER handoffs
-        </CardTitle>
-        <p className="text-xs leading-5 text-gray-500">
-          Routing suggestions only — where a claim could be verified next — not
-          recommendations. Read-only: they do not call repo APIs, mutate
-          projections, or apply rankings.
-        </p>
-        <p className="text-xs leading-5 text-gray-500">
-          Artifact names are planning scaffolds unless already defined in
-          TIBER-Data.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-0">
-        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-3 text-sm text-orange-950">
-          <div className="font-semibold">Current repo boundary model</div>
-          <ul className="mt-2 space-y-1 leading-6">
-            <li>TIBER-Data = truth/contracts</li>
-            <li>TIBER-Teamstate = team interpretation</li>
-            <li>TIBER-FORGE = fantasy signal/scoring</li>
-            <li>TIBER-Rookies = rookie/prospect evaluation</li>
-            <li>Role &amp; Opportunity = usage/role signal</li>
-            <li>TIBER-Fantasy = operator-facing inspection/synthesis</li>
-          </ul>
+    <ul className="flex flex-wrap gap-2">
+      {items.map((item) => (
+        <li
+          key={item}
+          className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-xs text-slate-300"
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SuggestedHandoffsPanel({ handoffs }: { handoffs: SuggestedTiberHandoff[] }) {
+  return (
+    <section aria-labelledby="handoff-title">
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg border border-orange-400/15 bg-orange-500/10 p-2 text-orange-300">
+          <Route className="h-4 w-4" />
         </div>
-        <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-2">
-          {handoffs.map((handoff) => (
-            <div
-              key={`${handoff.repo}-${handoff.domain}`}
-              className="min-w-0 rounded-2xl border border-gray-200 bg-[#fafafa] p-3 sm:p-4"
-            >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <div className="break-words text-sm font-semibold text-gray-900">
-                    {handoff.repo.replace("TIBER-Fantasy / Stress Lab", "TIBER-Fantasy / Observatory")}
-                  </div>
-                  <div className="mt-0.5 text-xs text-gray-500">
-                    {handoff.domain}
-                  </div>
-                </div>
-                <Badge
-                  variant="secondary"
-                  className="w-fit border-0 bg-gray-200 text-gray-700"
-                >
-                  {handoff.status}
-                </Badge>
+        <div>
+          <h3 id="handoff-title" className="text-sm font-semibold text-slate-100">
+            Where should it go?
+          </h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            Suggested verification owners, not recommendations or automated repo calls.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+        {handoffs.map((handoff) => (
+          <article
+            key={`${handoff.repo}-${handoff.domain}`}
+            className="min-w-0 rounded-xl border border-white/[0.08] bg-[#0d0e11] p-4"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h4 className="break-words text-sm font-semibold text-slate-200">
+                  {handoff.repo.replace("TIBER-Fantasy / Stress Lab", "TIBER-Fantasy / Observatory")}
+                </h4>
+                <p className="mt-0.5 text-xs text-slate-500">{handoff.domain}</p>
               </div>
-              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Claim class
-              </div>
-              <div className="mt-1 break-all font-mono text-xs text-gray-700">
-                {handoff.claim_classification}
-              </div>
-              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Likely required artifacts
-              </div>
-              <ul className="mt-1 flex flex-wrap gap-2">
-                {handoff.required_artifact_types.map((artifactType) => (
-                  <li
-                    key={artifactType}
-                    className="rounded-full border border-gray-200 bg-white px-2 py-1 font-mono text-[11px] text-gray-700"
-                  >
-                    {artifactType}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                Why it matters
-              </div>
-              <p className="mt-1 break-words text-sm leading-6 text-gray-600">
-                {handoff.reason}
-              </p>
-              <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+              <Badge
+                variant="secondary"
+                className="w-fit border border-white/[0.08] bg-white/[0.05] text-[10px] uppercase tracking-[0.12em] text-slate-400"
+              >
+                {handoff.status}
+              </Badge>
+            </div>
+
+            <div className="mt-3 border-l-2 border-orange-500/40 pl-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
                 Next check
               </div>
-              <p className="mt-1 break-words text-sm leading-6 text-gray-600">
-                {handoff.next_check}
-              </p>
+              <p className="mt-1 break-words text-sm leading-6 text-slate-300">{handoff.next_check}</p>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+
+            <details className="mt-3 border-t border-white/[0.07] pt-3">
+              <summary className="cursor-pointer list-none text-xs font-medium text-slate-500">
+                Why this route and what it may require
+              </summary>
+              <div className="mt-3 space-y-3 text-xs leading-5 text-slate-500">
+                <p>{handoff.reason}</p>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                    Claim class
+                  </div>
+                  <div className="mt-1 break-all font-mono text-slate-400">{handoff.claim_classification}</div>
+                </div>
+                <ul className="flex flex-wrap gap-2">
+                  {handoff.required_artifact_types.map((artifactType) => (
+                    <li
+                      key={artifactType}
+                      className="rounded-full border border-white/[0.07] px-2 py-1 font-mono text-[10px] text-slate-500"
+                    >
+                      {artifactType}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 
 function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   const [exportStatus, setExportStatus] = useState<ExportStatus>("idle");
-  const metricLabels = artifact.detected_metrics.map(
-    (metric) =>
-      `${metric.metric} (${metric.confidence}; ${metric.context}; sample filter: ${metric.sample_filter})`,
-  );
   const entityLabels = artifact.entities.map(
     (entity) => `${entity.label} · ${entity.entity_type}`,
   );
-  const rawJson = useMemo(() => JSON.stringify(artifact, null, 2), [artifact]);
-  const handoffs = useMemo(
-    () => buildSuggestedTiberHandoffs(artifact),
-    [artifact],
+  const metricLabels = artifact.detected_metrics.map((metric) =>
+    metric.metric.replace(/_/g, " "),
   );
+  const signalLabels = artifact.signal_tags.map((tag) => tag.replace(/_/g, " "));
+  const rawJson = useMemo(() => JSON.stringify(artifact, null, 2), [artifact]);
+  const handoffs = useMemo(() => buildSuggestedTiberHandoffs(artifact), [artifact]);
 
   async function copyJson() {
     try {
@@ -436,11 +408,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   }
 
   function downloadJson() {
-    downloadTextFile(
-      rawJson,
-      buildJsonFilename(artifact),
-      "application/json;charset=utf-8",
-    );
+    downloadTextFile(rawJson, buildJsonFilename(artifact), "application/json;charset=utf-8");
     setExportStatus("downloaded");
   }
 
@@ -454,76 +422,129 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   }
 
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-5">
-      <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <div className="break-words text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400 sm:tracking-[0.18em]">
-                operator_signal_note_v0
-              </div>
-              <CardTitle className="mt-1 text-base font-semibold text-gray-900 sm:text-lg">
-                Heuristic structured artifact
-              </CardTitle>
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                Triage scaffold output — routes and structures the note for operator review. Not a verified claim and not fantasy advice.
-              </p>
+    <Card className="min-w-0 overflow-hidden border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+      <CardHeader className="border-b border-white/[0.07] p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300/70">
+              2 · Review the route
             </div>
-            <Badge
-              variant="secondary"
-              className="w-fit border-0 bg-amber-100 text-amber-800"
-            >
-              {artifact.reasoning_status}
-            </Badge>
+            <CardTitle className="mt-1.5 text-lg font-semibold text-slate-100">
+              TIBER found a review path
+            </CardTitle>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Structured from your note. Still unverified and not fantasy advice.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="grid min-w-0 gap-3 text-sm text-gray-600 sm:gap-4 md:grid-cols-3">
-          <div className="min-w-0 rounded-xl border border-gray-100 bg-[#fafafa] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Note ID
-            </div>
-            <div className="mt-1 break-all font-mono text-xs text-gray-900">
-              {artifact.note_id}
-            </div>
-          </div>
-          <div className="min-w-0 rounded-xl border border-gray-100 bg-[#fafafa] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Source type
-            </div>
-            <div className="mt-1 break-all font-mono text-xs text-gray-900">
-              {artifact.source_type}
-            </div>
-          </div>
-          <div className="min-w-0 rounded-xl border border-gray-100 bg-[#fafafa] p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-              Created at
-            </div>
-            <div className="mt-1 break-all font-mono text-xs text-gray-900">
-              {artifact.created_at}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <Badge
+            variant="secondary"
+            className="w-fit border border-amber-400/20 bg-amber-400/10 text-[10px] uppercase tracking-[0.12em] text-amber-200"
+          >
+            {artifact.reasoning_status.replace(/_/g, " ")}
+          </Badge>
+        </div>
+      </CardHeader>
 
-      <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <CardContent className="space-y-6 p-4 sm:p-5">
+        <section className="rounded-xl border border-orange-400/15 bg-orange-500/[0.06] p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300/70">
+            Plain-language read
+          </div>
+          <p className="mt-2 break-words text-sm leading-6 text-slate-200">
+            {artifact.interpretation_summary}
+          </p>
+        </section>
+
+        <section aria-labelledby="heard-title">
+          <h3 id="heard-title" className="text-sm font-semibold text-slate-100">
+            What did TIBER hear?
+          </h3>
+          <div className="mt-3 space-y-4">
             <div>
-              <CardTitle className="text-sm font-semibold text-gray-900">
-                Export for review
-              </CardTitle>
-              <p className="mt-1 text-xs leading-5 text-gray-500">
-                Copy or download the generated artifact client-side. No backend
-                write or LLM call is made.
-              </p>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                Entities
+              </div>
+              <FriendlyChips
+                items={entityLabels}
+                emptyLabel="No player, team, division, or season entity was resolved."
+              />
             </div>
+            <div>
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                Metric cues
+              </div>
+              <FriendlyChips items={metricLabels} emptyLabel="No conservative metric cues were detected." />
+            </div>
+            <details>
+              <summary className="cursor-pointer list-none text-xs font-medium text-slate-500">
+                View {signalLabels.length} signal tags
+              </summary>
+              <div className="mt-2">
+                <FriendlyChips items={signalLabels} emptyLabel="No signal tags were emitted." />
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <ReviewList
+          title="What needs checking next?"
+          items={artifact.required_followups}
+          emptyLabel="No follow-ups were emitted."
+        />
+
+        <SuggestedHandoffsPanel handoffs={handoffs} />
+
+        <ReviewList
+          title="Why is it still uncertain?"
+          items={artifact.uncertainty}
+          emptyLabel="No uncertainty statements were emitted."
+          tone="warning"
+        />
+
+        <details className="overflow-hidden rounded-xl border border-white/[0.07] bg-black/10">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-300">
+            Guardrails
+            <span className="float-right text-xs font-normal text-slate-600">Do not apply</span>
+          </summary>
+          <div className="border-t border-white/[0.07] p-4">
+            <ReviewList
+              title="Do-not-apply guardrails"
+              items={artifact.do_not_apply}
+              emptyLabel="No guardrails were emitted."
+            />
+          </div>
+        </details>
+
+        <details className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#0d0e11]">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-300">
+            Artifact details &amp; export
+            <span className="float-right font-mono text-[10px] font-normal text-slate-600">
+              operator_signal_note_v0
+            </span>
+          </summary>
+          <div className="space-y-4 border-t border-white/[0.07] p-4">
+            <div className="grid gap-3 text-xs sm:grid-cols-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Note ID</div>
+                <div className="mt-1 break-all font-mono text-slate-400">{artifact.note_id}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Source</div>
+                <div className="mt-1 break-all font-mono text-slate-400">{artifact.source_type}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Created</div>
+                <div className="mt-1 break-all font-mono text-slate-400">{artifact.created_at}</div>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={copyJson}
-                className="justify-center gap-2"
+                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Clipboard className="h-4 w-4" />
                 Copy JSON
@@ -533,7 +554,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
                 variant="outline"
                 size="sm"
                 onClick={downloadJson}
-                className="justify-center gap-2"
+                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Download className="h-4 w-4" />
                 Download JSON
@@ -543,206 +564,185 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
                 variant="outline"
                 size="sm"
                 onClick={downloadCsv}
-                className="justify-center gap-2"
+                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Download className="h-4 w-4" />
                 Download CSV
               </Button>
             </div>
+
+            {exportStatus !== "idle" ? (
+              <p className={`text-xs ${exportStatus === "failed" ? "text-red-300" : "text-emerald-300"}`}>
+                {exportStatus === "copied"
+                  ? "Artifact JSON copied to clipboard."
+                  : exportStatus === "downloaded"
+                    ? "Artifact download started."
+                    : "Clipboard copy failed. Use Download JSON instead."}
+              </p>
+            ) : null}
+
+            <details className="border-t border-white/[0.07] pt-3">
+              <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-slate-500">
+                <FileJson className="h-4 w-4 text-orange-300/70" />
+                Raw JSON viewer
+              </summary>
+              <pre className="mt-3 max-h-[420px] max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/[0.07] bg-black/30 p-3 text-[11px] leading-5 text-slate-300">
+                {rawJson}
+              </pre>
+            </details>
           </div>
-          {exportStatus !== "idle" ? (
-            <p
-              className={`text-xs ${exportStatus === "failed" ? "text-red-600" : "text-emerald-700"}`}
-            >
-              {exportStatus === "copied"
-                ? "Artifact JSON copied to clipboard."
-                : exportStatus === "downloaded"
-                  ? "Artifact download started."
-                  : "Clipboard copy failed. Use Download JSON instead."}
-            </p>
-          ) : null}
-        </CardHeader>
-      </Card>
-
-      <Card className="min-w-0 border-gray-200 bg-white shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-gray-900">
-            Human-readable interpretation summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="break-words text-sm leading-6 text-gray-600">
-            {artifact.interpretation_summary}
-          </p>
-        </CardContent>
-      </Card>
-
-      <SuggestedHandoffsPanel handoffs={handoffs} />
-
-      <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-2">
-        <ListPanel
-          title="Do-not-apply guardrails"
-          items={artifact.do_not_apply}
-          emptyLabel="No guardrails emitted."
-        />
-        <ListPanel
-          title="Required follow-ups"
-          items={artifact.required_followups}
-          emptyLabel="No follow-ups emitted."
-        />
-        <ListPanel
-          title="Uncertainty"
-          items={artifact.uncertainty}
-          emptyLabel="No uncertainty emitted."
-        />
-        <ListPanel
-          title="Detected entities"
-          items={entityLabels}
-          emptyLabel="No player, team, or division entity was resolved by the v0 heuristic scaffold."
-        />
-        <ListPanel
-          title="Detected metrics"
-          items={metricLabels}
-          emptyLabel="No conservative metric cues were detected."
-        />
-        <ListPanel
-          title="Signal tags"
-          items={artifact.signal_tags}
-          emptyLabel="No signal tags emitted."
-        />
-      </div>
-
-      <Card className="min-w-0 border-gray-200 bg-[#111827] text-white shadow-sm">
-        <details>
-          <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold sm:px-6">
-            <FileJson className="h-4 w-4 text-orange-300" />
-            Raw JSON viewer
-            <span className="ml-auto text-xs font-normal text-gray-300">
-              Tap to expand
-            </span>
-          </summary>
-          <CardContent className="pt-0">
-            <pre className="max-h-[420px] max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/10 bg-black/30 p-3 text-[11px] leading-5 text-gray-100 sm:max-h-[520px] sm:p-4 sm:text-xs">
-              {rawJson}
-            </pre>
-          </CardContent>
         </details>
-      </Card>
-    </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyReviewState() {
+  return (
+    <Card className="flex min-h-[360px] min-w-0 items-center border-white/[0.08] bg-[#0d0e11] text-slate-100 shadow-none">
+      <CardContent className="w-full p-5 sm:p-7">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+          2 · Review the route
+        </div>
+        <Telescope className="mt-6 h-8 w-8 text-slate-600" />
+        <h2 className="mt-4 text-lg font-semibold text-slate-200">
+          Your review path will appear here
+        </h2>
+        <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+          Inspect a note and TIBER will organize the next human questions without deciding whether the claim is true.
+        </p>
+        <ol className="mt-6 grid gap-2 text-sm text-slate-400 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+          {[
+            "What TIBER detected",
+            "What still needs proof",
+            "Which system owns the next check",
+          ].map((step, index) => (
+            <li key={step} className="rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+              <span className="mr-2 font-mono text-xs text-orange-300/70">0{index + 1}</span>
+              {step}
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function StressLab() {
-  const [rawNote, setRawNote] = useState(SAMPLE_NOTE);
+  const [rawNote, setRawNote] = useState("");
   const [artifact, setArtifact] = useState<OperatorSignalNoteV0 | null>(null);
 
   function inspectNote() {
+    if (!rawNote.trim()) return;
     setArtifact(buildMockOperatorSignalNoteArtifact(rawNote));
   }
 
   return (
-    <div className="min-h-screen bg-[#070b12] px-4 py-5 text-slate-100 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-7xl overflow-x-hidden">
-        <header className="rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(226,100,13,0.16),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(2,6,23,0.98))] p-5 shadow-2xl shadow-black/30 sm:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 max-w-3xl">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="shrink-0 rounded-2xl border border-orange-400/20 bg-orange-500/10 p-3">
-                  <Telescope className="h-6 w-6 text-orange-300" />
+    <div className="min-h-screen bg-[#07080a] px-4 py-6 text-slate-100 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-[1180px] overflow-x-hidden">
+        <header className="border-b border-white/[0.07] pb-6 sm:pb-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0 max-w-2xl">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl border border-orange-400/15 bg-orange-500/10 p-2.5">
+                  <Telescope className="h-5 w-5 text-orange-300" />
                 </div>
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-200/80">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-orange-300/60">
                     Inspectable reality only
                   </div>
-                  <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-100 sm:text-3xl">
                     TIBER Observatory
                   </h1>
                 </div>
               </div>
-              <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base sm:leading-7">
-                Operator-facing inspection and routing surface for governed football intelligence systems.
+              <p className="mt-4 text-base leading-7 text-slate-300">
+                Turn a football observation into an explicit review path.
               </p>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-                Paste a football note to inspect deterministic routing signals. The Observatory preserves uncertainty, exports JSON, and suggests repo handoffs without mutating rankings, projections, waivers, or upstream truth.
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                TIBER separates what it detected from what still needs evidence, then routes the claim to the system that owns the next check.
               </p>
             </div>
 
-            <div className="min-w-0 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-100 lg:max-w-sm">
-              <div className="flex items-center gap-2 font-semibold">
-                <ShieldCheck className="h-4 w-4" />
+            <details className="w-full max-w-md rounded-xl border border-white/[0.08] bg-[#0d0e11] lg:w-[360px]">
+              <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-slate-300">
+                <ShieldCheck className="h-4 w-4 text-emerald-300" />
                 Read-only control surface
-              </div>
-              <p className="mt-2 leading-6 text-amber-100/85">
-                The take-checker is computed entirely client-side from the text you paste — no backend, database, LLM, RAG, or external API call. The live signal inventory makes a single read-only status request to an existing TIBER data-lab endpoint; nothing on this page writes, re-ranks, projects, or mutates upstream truth.
+                <span className="ml-auto text-xs font-normal text-slate-600">How it works</span>
+              </summary>
+              <p className="border-t border-white/[0.07] px-4 py-3 text-xs leading-5 text-slate-500">
+                The take-checker is computed entirely client-side from the text you paste — no backend, database, LLM, RAG, or external API call. The live signal inventory makes one read-only status request. Nothing on this page writes, re-ranks, projects, or mutates upstream truth.
               </p>
-            </div>
+            </details>
           </div>
         </header>
 
-        <SystemStatusSection />
-
-        <SignalInventorySection />
-
-        <section className="mt-5 grid min-w-0 gap-4 sm:mt-8 sm:gap-6 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.35fr)]">
-          <Card className="min-w-0 border-slate-800 bg-slate-950/80 text-slate-100 shadow-none">
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg font-semibold text-slate-100">
-                Observatory input
+        <section className="mt-6 grid min-w-0 gap-4 lg:grid-cols-[minmax(320px,0.82fr),minmax(0,1.45fr)] lg:items-start">
+          <Card className="min-w-0 border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+            <CardHeader className="p-4 sm:p-5">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300/70">
+                1 · Add an observation
+              </div>
+              <CardTitle className="mt-1 text-lg font-semibold text-slate-100">
+                What are you seeing?
               </CardTitle>
-              <p className="text-sm leading-6 text-slate-400">
-                A client-side v0 triage scaffold: it routes and inspects an operator note into a structured artifact. It does not verify the claim, does not use an LLM/RAG, and does not generate fantasy advice. Extraction confidence describes keyword matching, not source-truth confidence.
+              <p className="text-sm leading-6 text-slate-500">
+                Paste a camp report, role note, matchup idea, or player take.
               </p>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+            <CardContent className="space-y-3 px-4 pb-4 pt-0 sm:px-5 sm:pb-5">
+              <label htmlFor="observatory-note" className="sr-only">Football observation</label>
               <Textarea
+                id="observatory-note"
                 value={rawNote}
                 onChange={(event) => setRawNote(event.target.value)}
-                className="min-h-[220px] resize-y border-slate-700 bg-slate-900 text-base leading-6 text-slate-100 placeholder:text-slate-500 focus-visible:ring-orange-400 sm:min-h-[260px] sm:text-sm"
-                placeholder="Paste a football note here..."
+                className="min-h-[180px] resize-y border-white/10 bg-[#090c12] text-sm leading-6 text-slate-100 placeholder:text-slate-600 focus-visible:ring-[#e2640d] focus-visible:ring-offset-[#111316]"
+                placeholder="Paste your football observation here…"
               />
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRawNote(SAMPLE_NOTE)}
+                  className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                >
+                  Use an example
+                </button>
+                <span className="text-xs text-slate-600">{rawNote.trim().length} characters</span>
+              </div>
               <Button
                 type="button"
                 onClick={inspectNote}
+                disabled={!rawNote.trim()}
                 className="w-full bg-[#e2640d] text-white hover:bg-[#c7530b]"
               >
                 Inspect note
               </Button>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-100">
-                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <p className="text-center text-[11px] text-slate-600">
+                Local heuristic · no write · no ranking change
+              </p>
+
+              <details className="border-t border-white/[0.07] pt-3">
+                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-slate-500">
+                  <AlertTriangle className="h-4 w-4 text-amber-400/70" />
                   What this does not do
-                </div>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">
+                </summary>
+                <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-500">
                   <li>• Does not verify the analyst claim — it structures and routes the note for operator review.</li>
                   <li>• Does not check live NFL data, rankings, projections, injuries, betting lines, or social posts.</li>
-                  <li>• No LLM or RAG: deterministic keyword heuristics only, and canonical player/team IDs are not resolved.</li>
-                  <li>• Does not change any model, ranking, or projection state, and does not generate fantasy advice.</li>
-                  <li>• You — the operator — remain responsible for the final judgment.</li>
+                  <li>• No LLM or RAG: deterministic keyword heuristics only; canonical player and team IDs are not resolved.</li>
+                  <li>• It does not generate fantasy advice or change any model, ranking, or projection state.</li>
+                  <li>• You remain responsible for the final judgment.</li>
                 </ul>
-              </div>
+              </details>
             </CardContent>
           </Card>
 
           <div className="min-w-0">
-            {artifact ? (
-              <ArtifactSummary artifact={artifact} />
-            ) : (
-              <Card className="flex min-h-[300px] min-w-0 items-center justify-center border-dashed border-slate-700 bg-slate-950/60 text-slate-100 shadow-none sm:min-h-[420px]">
-                <CardContent className="max-w-md p-5 text-center sm:p-8">
-                  <Telescope className="mx-auto h-10 w-10 text-slate-500" />
-                  <h2 className="mt-4 text-lg font-semibold text-slate-100">
-                    Inspect a note to build a heuristic artifact
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    The Observatory output will show entities, signal tags, detected metrics, claim classifications, suggested repo handoffs, likely required artifacts, uncertainty, follow-ups, and export actions. It routes and inspects the note for operator review; it does not verify the take against live sources.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+            {artifact ? <ArtifactSummary artifact={artifact} /> : <EmptyReviewState />}
           </div>
         </section>
 
-        <RepoBoundaryPanel />
+        <SystemStatusSection />
       </div>
     </div>
   );

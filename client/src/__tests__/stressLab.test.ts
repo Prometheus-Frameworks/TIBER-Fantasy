@@ -683,7 +683,9 @@ describe("Stress Lab v0 mock artifact builder", () => {
     const html = renderStressLab();
 
     expect(html).toContain("TIBER Observatory");
-    expect(html).toContain("Operator-facing inspection and routing surface");
+    expect(html).toContain("Turn a football observation into an explicit review path");
+    expect(html).toContain("What are you seeing?");
+    expect(html).toContain("Your review path will appear here");
     // PR A (#264): the declared system map must not overclaim live status.
     expect(html).toContain("Declared systems");
     expect(html).toContain("not a live health check");
@@ -691,6 +693,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("Repo boundary awareness");
     expect(html).toContain("Read-only control surface");
     expect(html).toContain("Inspect note");
+    expect(html).not.toContain("bg-white shadow-sm");
   });
 
   // PR C (#264): the live signal inventory is a real read-only data path.
@@ -699,14 +702,14 @@ describe("Stress Lab v0 mock artifact builder", () => {
 
     expect(html).toContain("TIBER signal inventory (live)");
     expect(html).toContain("Teamstate Movement artifact");
-    expect(html).toContain("/api/data-lab/team-environment-movement");
+    expect(html).toContain("only operator-wide artifact status currently measured here");
   });
 
   // PR D (#264): take-triage area is explicit about what it does NOT do.
   it("renders take-triage clarity copy", () => {
     const html = renderStressLab();
 
-    expect(html).toContain("client-side v0 triage scaffold");
+    expect(html).toContain("Local heuristic");
     expect(html).toContain("What this does not do");
     expect(html).toContain("Does not verify the analyst claim");
     expect(html).toContain("Does not check live NFL data");
@@ -714,6 +717,7 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("does not generate fantasy advice");
     expect(html).toContain("remain responsible for the final judgment");
   });
+
 });
 
 describe("getTeamEnvironmentMovementSignalStatus", () => {
