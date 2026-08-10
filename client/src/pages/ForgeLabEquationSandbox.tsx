@@ -186,7 +186,7 @@ function JsonExportCard({
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-gray-100"
+            className="bg-transparent border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-gray-100"
             data-testid="button-copy-json"
           >
             {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
@@ -559,7 +559,7 @@ export default function ForgeLabEquationSandbox() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-purple-600 text-purple-400 hover:bg-purple-600/20 hover:text-purple-200"
+                            className="bg-transparent border-purple-600 text-purple-400 hover:bg-purple-600/20 hover:text-purple-200"
                             data-testid="button-save-preset"
                           >
                             <Save className="h-4 w-4 mr-1" />

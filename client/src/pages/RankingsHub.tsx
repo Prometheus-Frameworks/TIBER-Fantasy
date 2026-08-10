@@ -576,7 +576,7 @@ export default function RankingsHub() {
             size="sm" 
             onClick={() => position === 'DST' ? dstRefetch() : refetch()}
             disabled={position === 'DST' ? dstLoading : isLoading}
-            className="border-gray-700 text-gray-300 hover:text-white px-2 sm:px-3"
+            className="bg-transparent border-gray-700 text-gray-300 hover:text-white px-2 sm:px-3"
             data-testid="button-refresh"
           >
             <RefreshCw className={`h-4 w-4 sm:mr-2 ${(position === 'DST' ? dstLoading : isLoading) ? 'animate-spin' : ''}`} />

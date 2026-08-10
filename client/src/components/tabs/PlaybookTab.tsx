@@ -411,7 +411,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
                       <Button
                         key={outcome}
                         variant={pendingOutcome === outcome ? 'default' : 'outline'}
-                        className={pendingOutcome === outcome ? 'bg-green-600 text-white' : 'text-gray-300 border-gray-700'}
+                        className={pendingOutcome === outcome ? 'bg-green-600 text-white' : 'bg-transparent text-gray-300 border-gray-700'}
                         onClick={() => setPendingOutcome(outcome)}
                       >
                         {outcome.toUpperCase()}
@@ -794,28 +794,28 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
         <div className="flex gap-2">
           <Button
             variant={activeView === 'journal' ? 'default' : 'outline'}
-            className={activeView === 'journal' ? 'bg-purple-600 text-white' : 'text-gray-300 border-purple-500/40'}
+            className={activeView === 'journal' ? 'bg-purple-600 text-white' : 'bg-transparent text-gray-300 border-purple-500/40'}
             onClick={() => setActiveView('journal')}
           >
             Journal
           </Button>
           <Button
             variant={activeView === 'war_room' ? 'default' : 'outline'}
-            className={activeView === 'war_room' ? 'bg-blue-600 text-white' : 'text-gray-300 border-blue-500/40'}
+            className={activeView === 'war_room' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-300 border-blue-500/40'}
             onClick={() => setActiveView('war_room')}
           >
             War Room
           </Button>
           <Button
             variant={activeView === 'review' ? 'default' : 'outline'}
-            className={activeView === 'review' ? 'bg-emerald-600 text-white' : 'text-gray-300 border-emerald-500/40'}
+            className={activeView === 'review' ? 'bg-emerald-600 text-white' : 'bg-transparent text-gray-300 border-emerald-500/40'}
             onClick={() => setActiveView('review')}
           >
             Review Mode
           </Button>
           <Button
             variant={activeView === 'insights' ? 'default' : 'outline'}
-            className={activeView === 'insights' ? 'bg-amber-600 text-white' : 'text-gray-300 border-amber-500/40'}
+            className={activeView === 'insights' ? 'bg-amber-600 text-white' : 'bg-transparent text-gray-300 border-amber-500/40'}
             onClick={() => setActiveView('insights')}
           >
             Insights
@@ -910,7 +910,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-amber-300 border-amber-500/50 hover:bg-amber-500/10"
+                      className="bg-transparent text-amber-300 border-amber-500/50 hover:bg-amber-500/10"
                       onClick={() => handleSaveChatEntry(msg)}
                       disabled={saveChatEntryMutation.isPending}
                     >
