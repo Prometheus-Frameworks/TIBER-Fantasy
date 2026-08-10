@@ -62,27 +62,41 @@ function assertSupportedArtifact(payload: Record<string, unknown>) {
   const declaredVersion = pickString({ ...payload, ...meta, ...manifest }, ['version', 'contract_version', 'contractVersion', 'schema_version', 'schemaVersion']);
   const normalizedDeclaredId = declaredId?.toUpperCase();
 
+  // V2 carries the same row shape as V1; it differs only in that tiber_player_id
+  // is a GSIS id, which is what FORGE_PLAYER_STATIC_V1 rows are keyed by. Both
+  // contracts are accepted so a consumer can be migrated independently of the
+  // producer's promotion.
   if (
     normalizedDeclaredId
     && normalizedDeclaredId !== 'TIBER_IDENTITY_CROSSWALK_V1'
+    && normalizedDeclaredId !== 'TIBER_IDENTITY_CROSSWALK_V2'
     && normalizedDeclaredId !== 'TIBER_IDENTITY_CROSSWALK'
     && !normalizedDeclaredId.includes('TIBER_IDENTITY_CROSSWALK_V1')
+    && !normalizedDeclaredId.includes('TIBER_IDENTITY_CROSSWALK_V2')
   ) {
     throw new TiberIdentityCrosswalkIntegrationError(
       'unsupported',
-      `Unsupported TIBER identity crosswalk artifact (${declaredId}); expected TIBER_IDENTITY_CROSSWALK_V1.`,
+      `Unsupported TIBER identity crosswalk artifact (${declaredId}); expected TIBER_IDENTITY_CROSSWALK_V1 or _V2.`,
       422,
       'unsupported',
     );
   }
 
-  if (declaredVersion && !String(declaredVersion).toLowerCase().includes('v1') && !String(declaredVersion).startsWith('1')) {
-    throw new TiberIdentityCrosswalkIntegrationError(
-      'unsupported',
-      `Unsupported TIBER identity crosswalk artifact version (${declaredVersion}); expected v1.`,
-      422,
-      'unsupported',
-    );
+  if (declaredVersion) {
+    const normalizedVersion = String(declaredVersion).toLowerCase();
+    const supportedVersion =
+      normalizedVersion.includes('v1')
+      || normalizedVersion.includes('v2')
+      || normalizedVersion.startsWith('1')
+      || normalizedVersion.startsWith('2');
+    if (!supportedVersion) {
+      throw new TiberIdentityCrosswalkIntegrationError(
+        'unsupported',
+        `Unsupported TIBER identity crosswalk artifact version (${declaredVersion}); expected v1 or v2.`,
+        422,
+        'unsupported',
+      );
+    }
   }
 }
 
