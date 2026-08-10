@@ -6,11 +6,11 @@ interface WeekInfo {
   currentWeek: number;
   season: number;
   weekStatus: 'not_started' | 'in_progress' | 'completed';
-  mondayNightCompleted: boolean;
+  mondayNightCompleted: boolean | null;
   weekStartDate: string;
   weekEndDate: string;
   nextWeekStartDate?: string;
-  gamesCompleted: number;
+  gamesCompleted: number | null;
   totalGames: number;
   /** Phase-aware target week. Null outside the regular season / when config is stale. */
   upcomingWeek: number | null;
@@ -53,7 +53,9 @@ export function useCurrentNFLWeek() {
     upcomingWeek: data?.upcomingWeek || data?.currentWeek || 1,
     season: data?.season || new Date().getFullYear(),
     weekStatus: data?.weekStatus || 'not_started',
-    mondayNightCompleted: data?.mondayNightCompleted || false,
+    // Legacy accessor keeps its boolean shape for existing consumers, but a
+    // null (completion unverified) must not be coerced into "not completed".
+    mondayNightCompleted: data?.mondayNightCompleted ?? null,
 
     // --- Honest, phase-aware state (Fantasy #307) -------------------------
     // Null until the server actually reports it — no client-side guessing.

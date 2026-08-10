@@ -31,27 +31,42 @@ describe('a week is not complete while its last game is being played', () => {
   const LONG_GAME_STILL_LIVE = at('2025-11-18T07:30:00Z');
   const AFTER_WEEK_END = at('2025-11-19T05:00:00Z');
 
-  test('mid-MNF the week is still in progress and does not roll forward', () => {
+  test('mid-MNF the week is neither complete nor assertably still running', () => {
     const phase = resolveSeasonPhase(DURING_MNF);
     expect(phase.regularSeasonWeek).toBe(11);
-    expect(phase.weekStatus).toBe('in_progress');
-    expect(phase.targetWeek).toBe(11);
+    expect(phase.weekStatus).toBe('completion_unverified');
   });
 
-  test('mid-MNF the slate is not reported as fully played', () => {
+  test('mid-MNF no definite MNF or game-count claim is emitted', () => {
+    // Neither 16/16 (the original defect) nor 15/16 (its mirror image). We have
+    // no completion signal, so the contract says so instead of guessing.
     const info = getCurrentWeek(DURING_MNF);
-    expect(info?.mondayNightCompleted).toBe(false);
-    expect(info?.gamesCompleted).toBe(15);
-    expect(info?.gamesCompleted).toBeLessThan(info!.totalGames);
+    expect(info?.mondayNightCompleted).toBeNull();
+    expect(info?.gamesCompleted).toBeNull();
   });
 
-  test('a game running long does not complete the week', () => {
+  test('the forward target rolls at kickoff, decoupled from result finalization', () => {
+    // Start/sit, waivers and the board have nothing left to decide about this
+    // week once its last game has kicked off; they should not wait on evidence
+    // that only result publication needs.
+    expect(resolveSeasonPhase(DURING_MNF).targetWeek).toBe(12);
+    expect(resolveSeasonPhase(LONG_GAME_STILL_LIVE).targetWeek).toBe(12);
+  });
+
+  test('a game running long still does not finalize the week', () => {
     const phase = resolveSeasonPhase(LONG_GAME_STILL_LIVE);
-    expect(phase.weekStatus).toBe('in_progress');
-    expect(phase.targetWeek).toBe(11);
+    expect(phase.weekStatus).toBe('completion_unverified');
     const info = getCurrentWeek(LONG_GAME_STILL_LIVE);
-    expect(info?.mondayNightCompleted).toBe(false);
-    expect(info?.gamesCompleted).toBe(15);
+    expect(info?.mondayNightCompleted).toBeNull();
+    expect(info?.gamesCompleted).toBeNull();
+  });
+
+  test('result-dependent admission stays conservative through the whole window', () => {
+    // Risers/fallers must not admit Week 11 until it is verifiably final,
+    // even though the forward target has already moved on.
+    expect(getBestRisersFallersWeek(DURING_MNF)).toBe(10);
+    expect(getBestRisersFallersWeek(LONG_GAME_STILL_LIVE)).toBe(10);
+    expect(getBestRisersFallersWeek(AFTER_WEEK_END)).toBe(11);
   });
 
   test('past the configured week end, Week 11 is final and the board moves to 12', () => {
@@ -76,14 +91,14 @@ describe('resolveSeasonPhase — 2025 postseason → 2026 offseason/preseason �
     expect(phase.seasonPhaseLabel).toBe('2025 · Week 11');
   });
 
-  test('the Tuesday after MNF is still Week 11 in progress, not a completed week', () => {
+  test('the Tuesday after MNF is Week 11 completion-unverified, not completed', () => {
     // Kickoff was Monday 01:15Z, but nothing observable tells us the last game
-    // has finished. The forward target therefore does not roll until the
-    // configured week end.
+    // has finished, so the week is not finalized. The forward target has
+    // already rolled — that axis does not depend on result evidence.
     const phase = resolveSeasonPhase(at('2025-11-18T12:00:00Z'));
     expect(phase.regularSeasonWeek).toBe(11);
-    expect(phase.weekStatus).toBe('in_progress');
-    expect(phase.targetWeek).toBe(11);
+    expect(phase.weekStatus).toBe('completion_unverified');
+    expect(phase.targetWeek).toBe(12);
   });
 
   test('the inter-week gap belongs to the upcoming week as not_started', () => {
