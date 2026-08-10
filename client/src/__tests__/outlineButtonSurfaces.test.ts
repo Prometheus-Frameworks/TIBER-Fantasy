@@ -33,7 +33,21 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const DARK_BG = /bg-(slate|gray|zinc|neutral)-(6|7|8|9)00|bg-\[#0/;
-const DARK_HOVER_BG = /hover:bg-(slate|gray|zinc|neutral)-(6|7|8|9)00|hover:bg-\[#[01]/;
+// Every Tailwind hue, not just the neutrals. Restricting this to
+// slate/gray/zinc/neutral silently exempted coloured dark hovers such as
+// `hover:bg-blue-600/20` and `hover:bg-purple-600/20`, so the shared variant
+// switched those buttons to a dark `hover:text-accent-foreground` on a dark
+// hover surface while the audit still reported clean.
+const TW_HUE =
+  '(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)';
+// `/20`-style opacity modifiers are part of the class name and must not defeat
+// the match.
+const DARK_HOVER_BG = new RegExp(`hover:bg-${TW_HUE}-(?:6|7|8|9)00(?:\\/\\d+)?|hover:bg-\\[#[01]`);
+/**
+ * A translucent hover of any hue composites over whatever is beneath it, so on
+ * a surface the audit already classifies as dark the hover surface is dark too.
+ */
+const TRANSLUCENT_HOVER = new RegExp(`hover:bg-(?:${TW_HUE}-\\d{2,3}|\\[#[0-9a-fA-F]+\\])\\/\\d+`);
 const BASE_TEXT = /(?<!hover:)(?<!disabled:)\btext-(?!accent-foreground\b)[a-z[]/;
 const HOVER_TEXT = /hover:text-[a-z[]/;
 
@@ -96,7 +110,7 @@ function auditOutlineButtons(): Site[] {
       if (!tag.includes('variant="outline"')) continue;
 
       const darkBase = DARK_BG.test(tag.replace(/hover:bg-[^\s"]+/g, ''));
-      const darkHover = DARK_HOVER_BG.test(tag);
+      const darkHover = DARK_HOVER_BG.test(tag) || (darkBase && TRANSLUCENT_HOVER.test(tag));
       if (!darkBase && !darkHover) continue;
 
       sites.push({
