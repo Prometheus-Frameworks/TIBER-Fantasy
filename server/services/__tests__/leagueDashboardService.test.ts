@@ -2,12 +2,43 @@ import { playerIdentityMap } from '@shared/schema';
 
 let computeLeagueDashboard: typeof import('../leagueDashboardService').computeLeagueDashboard;
 
-function createDbMock({ identities = [], forgeRows = [], insertSpy }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock }) {
+function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy, readBack, readBackThrows, updateAffects = 1 }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock; readBack?: any[]; readBackThrows?: boolean; updateAffects?: number }) {
+  // The mock cannot introspect drizzle predicates, so identity selects are
+  // distinguished by call order: 1 = roster lookup, 2 = the GSIS-ownership
+  // probe hydration performs before writing, 3 = the post-write read-back.
+  let identitySelectCount = 0;
+  // What a real table would return afterwards: the rows the insert actually
+  // wrote. Defaulting this to `[]` would let a test pass on the fail-open path
+  // — the service returning unpersisted candidates — while looking like a
+  // successful hydration. Tests that need a suppressed insert pass `readBack`
+  // explicitly.
+  let writtenRows: any[] = [];
   return {
+    update: jest.fn(() => ({
+      set: (values: any) => ({
+        where: (clause: any) => {
+          updateSpy?.(values, clause);
+          const affected = Array.from({ length: updateAffects }, () => ({ updated: true }));
+          const result: any = Promise.resolve(affected);
+          // Mirrors drizzle: `.returning()` yields the affected rows, which is
+          // how the service decides whether it actually won the attach.
+          result.returning = () => Promise.resolve(affected);
+          return result;
+        },
+      }),
+    })),
     select: jest.fn(() => ({
       from: (table: any) => ({
         where: () => {
           if (table === playerIdentityMap) {
+            identitySelectCount += 1;
+            if (identitySelectCount === 2 && gsisOwners !== undefined) {
+              return Promise.resolve(gsisOwners);
+            }
+            if (identitySelectCount >= 3) {
+              if (readBackThrows) return Promise.reject(new Error('read-back unavailable'));
+              return Promise.resolve(readBack ?? writtenRows);
+            }
             return Promise.resolve(identities);
           }
           return {
@@ -20,6 +51,7 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy }: { identiti
     insert: jest.fn(() => ({
       values: (rows: any) => {
         insertSpy?.(rows);
+        writtenRows = [...writtenRows, ...(Array.isArray(rows) ? rows : [rows])];
         return {
           onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
           onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
@@ -620,6 +652,168 @@ describe('computeLeagueDashboard', () => {
     });
   });
 
+  describe('hydration cannot create a second owner of a GSIS', () => {
+    const sleeperPlayerWithGsis = {
+      s1: {
+        player_id: 's1', full_name: 'Player One', first_name: 'Player', last_name: 'One',
+        position: 'WR', team: 'CIN', active: true, fantasy_data_id: 12345, gsis_id: '00-0030001',
+      },
+    };
+
+    const runHydration = async (dbMock: any) =>
+      computeLeagueDashboard(
+        { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+        {
+          storage: storageDeps as any,
+          sleeperClient: { ...sleeperDeps, getNflPlayers: jest.fn().mockResolvedValue(sleeperPlayerWithGsis) } as any,
+          db: dbMock,
+          forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+          forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+        },
+      );
+
+    it('attaches the Sleeper id to the one existing GSIS owner instead of inserting a rival row', async () => {
+      // The duplicate-owner path: a canonical row already owns this GSIS but has
+      // no Sleeper id. Inserting `sleeper:s1` carrying the same GSIS would make
+      // it ambiguous, and the #308 resolvers would then refuse to resolve it —
+      // disabling links for that player after an ordinary dashboard read.
+      const insertSpy = jest.fn();
+      const updateSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-player-one', gsisId: '00-0030001', sleeperId: null }],
+        insertSpy,
+        updateSpy,
+      });
+
+      await runHydration(dbMock);
+
+      expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ sleeperId: 's1' }), expect.anything());
+      const insertedGsis = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []).map((row: any) => row.gsisId);
+      expect(insertedGsis).not.toContain('00-0030001');
+    });
+
+    it('withholds the GSIS when it is already owned by a different Sleeper id', async () => {
+      const insertSpy = jest.fn();
+      const updateSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-someone-else', gsisId: '00-0030001', sleeperId: 'other' }],
+        insertSpy,
+        updateSpy,
+      });
+
+      await runHydration(dbMock);
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([expect.objectContaining({ canonicalId: 'sleeper:s1', gsisId: null })]);
+    });
+
+    it('withholds the GSIS when ownership is already ambiguous', async () => {
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [
+          { canonicalId: 'dupe-a', gsisId: '00-0030001', sleeperId: null },
+          { canonicalId: 'dupe-b', gsisId: '00-0030001', sleeperId: null },
+        ],
+        insertSpy,
+      });
+
+      await runHydration(dbMock);
+
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([expect.objectContaining({ canonicalId: 'sleeper:s1', gsisId: null })]);
+    });
+  });
+
+  describe('hydration can never mint a second GSIS owner', () => {
+    const twoPlayersSameGsis = {
+      s1: { player_id: 's1', full_name: 'Player One', first_name: 'Player', last_name: 'One',
+            position: 'WR', team: 'CIN', active: true, gsis_id: '00-0030001' },
+      s2: { player_id: 's2', full_name: 'Player Two', first_name: 'Player', last_name: 'Two',
+            position: 'RB', team: 'BUF', active: true, gsis_id: '00-0030001' },
+    };
+
+    const run = async (dbMock: any, players: any, rosterIds: string[] = ['s1']) =>
+      computeLeagueDashboard(
+        { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+        {
+          storage: storageDeps as any,
+          sleeperClient: {
+            ...sleeperDeps,
+            getLeagueRosters: jest.fn().mockResolvedValue([{ owner_id: 'owner1', players: rosterIds }]),
+            getNflPlayers: jest.fn().mockResolvedValue(players),
+          } as any,
+          db: dbMock,
+          forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+          forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+        },
+      );
+
+    it('two candidates sharing a GSIS in one batch cannot both insert it', async () => {
+      // The same-batch race: a pre-read snapshot says "unowned" for both, and
+      // without this guard both rows would be inserted carrying the same GSIS.
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({ identities: [], gsisOwners: [], insertSpy });
+
+      await run(dbMock, twoPlayersSameGsis, ['s1', 's2']);
+
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted.length).toBeGreaterThan(0);
+      expect(inserted.every((row: any) => row.gsisId === null)).toBe(true);
+    });
+
+    it('an unowned GSIS is withheld rather than inserted, because the read is only a snapshot', async () => {
+      // Concurrency equivalent: another request could insert the same GSIS
+      // between our read and our write, and no unique index would stop it.
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({ identities: [], gsisOwners: [], insertSpy });
+
+      await run(dbMock, twoPlayersSameGsis, ['s1']);
+
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([expect.objectContaining({ canonicalId: 'sleeper:s1', gsisId: null })]);
+    });
+
+    it('an attach is bound to the exact selected owner and unclaimed state', async () => {
+      const updateSpy = jest.fn();
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-player-one', gsisId: '00-0030001', sleeperId: null }],
+        updateSpy,
+        insertSpy,
+      });
+
+      await run(dbMock, twoPlayersSameGsis, ['s1']);
+
+      expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ sleeperId: 's1' }), expect.anything());
+      // Attaching replaces the insert entirely; no rival row is written.
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([]);
+    });
+
+    it('the attached owner is returned in the same response, not only on a later one', async () => {
+      // The repairing request must not still report the player unresolved.
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-player-one', gsisId: '00-0030001', sleeperId: null }],
+        readBack: [{ canonicalId: 'tiber-player-one', gsisId: '00-0030001', sleeperId: 's1',
+                     position: 'WR', fullName: 'Player One' }],
+      });
+
+      const result = await run(dbMock, twoPlayersSameGsis, ['s1']);
+
+      expect(result.unresolvedPlayers).toEqual([]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: 'tiber-player-one',
+        sleeperId: 's1',
+      }));
+    });
+  });
+
   it('hydrates missing roster identities from Sleeper player metadata before classifying them unresolved', async () => {
     const insertSpy = jest.fn();
     const dbMock = createDbMock({ identities: [], insertSpy });
@@ -660,7 +854,9 @@ describe('computeLeagueDashboard', () => {
       position: 'WR',
       nflTeam: 'CIN',
       fantasyDataId: '12345',
-      gsisId: '00-0030001',
+      // Hydration never inserts a GSIS: gsis_id has no unique index, so any
+      // insert carrying one is a race that can mint a second owner.
+      gsisId: null,
     })]);
     expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
       rosterKey: 'sleeper:s1',
@@ -685,6 +881,71 @@ describe('computeLeagueDashboard', () => {
       knownUnscored: 1,
       unresolved: 0,
       evidenceCovered: 0,
+    });
+  });
+
+  describe('hydration reports only what the database actually holds', () => {
+    // The post-write read-back is the sole authority on persistence. Treating
+    // it as optional — falling back to the rows we *tried* to insert — makes
+    // hydration report an identity that is not in the table, so the roster
+    // shows a confidently resolved player backed by nothing.
+    const sleeperWithPlayerOne = {
+      getNflPlayers: jest.fn().mockResolvedValue({
+        s1: {
+          player_id: 's1',
+          full_name: 'Player One',
+          first_name: 'Player',
+          last_name: 'One',
+          position: 'WR',
+          team: 'CIN',
+          active: true,
+          gsis_id: '00-0030001',
+        },
+      }),
+    };
+
+    const runWith = (dbMock: any) => computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: { ...sleeperDeps, ...sleeperWithPlayerOne } as any,
+        db: dbMock,
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+      },
+    );
+
+    it('does not surface a candidate whose insert was suppressed by a conflict', async () => {
+      // `onConflictDoNothing` wrote nothing, so the read-back is legitimately
+      // empty. An empty read-back is an answer, not a missing one.
+      const insertSpy = jest.fn();
+      const result = await runWith(createDbMock({ identities: [], insertSpy, readBack: [] }));
+
+      expect(insertSpy).toHaveBeenCalled();
+      expect(result.unresolvedPlayers.map((p: any) => p.sleeperId)).toEqual(['s1']);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: null,
+      }));
+    });
+
+    it('does not surface a candidate when the read-back itself fails', async () => {
+      // A failed read-back is no answer at all. Reporting the candidates would
+      // be asserting persistence precisely when we could not confirm it.
+      const insertSpy = jest.fn();
+      const result = await runWith(createDbMock({ identities: [], insertSpy, readBackThrows: true }));
+
+      expect(insertSpy).toHaveBeenCalled();
+      expect(result.unresolvedPlayers.map((p: any) => p.sleeperId)).toEqual(['s1']);
+    });
+
+    it('still surfaces the identity when the read-back confirms it', async () => {
+      // The control: the guard must not simply disable hydration.
+      const result = await runWith(createDbMock({ identities: [] }));
+      expect(result.unresolvedPlayers).toEqual([]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: 'sleeper:s1',
+        sleeperId: 's1',
+      }));
     });
   });
 

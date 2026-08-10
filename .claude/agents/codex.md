@@ -767,3 +767,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Hardened the dormant legacy Data Lab router alongside the live shared service to prevent a future remount from restoring the unsafe pattern.
 - Added compiled-query regressions for the mounted `/usage-agg` call path, player/week filters, and a source guard against interpolated `sql.raw` templates.
 - Validation: focused security tests 6/6 passed; build passed with the existing OLC warning; full Jest run executed 850 passing tests while six unrelated baseline suites failed to load; typecheck retained 505 existing errors with zero changed-file matches; diff check passed.
+
+### 2026-08-09 — Rankings v2 canonical identity boundary corrections
+- Resolved ranking producer IDs under explicit GSIS provenance before any canonical lookup, with duplicate and query-outage states that remain visible but never link.
+- Bumped Rankings v2 to `v2-canonical-identity-2026-08-09`; server and client schemas now enforce coherent canonical/resolved/unresolved states and equal canonical link keys.
+- Added mounted player-route, cache mutation, collision, outage, contract-negotiation, contradictory-render, and composite-row-key regressions.
+- Validation: eight focused suites 152/152 with coverage disabled; build passed with the existing OLC warning; reviewed-head typecheck stayed at 505 diagnostics with zero new touched-file errors; diff check passed.
+- Operator gate: no database census or production coverage was claimed without `DATABASE_URL`; uniqueness/migration activation still requires an operator-recorded census and cohort review.

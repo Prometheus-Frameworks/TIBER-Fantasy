@@ -18,6 +18,7 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TiberTiers from '../TiberTiers';
+import { RANKINGS_V2_EXPECTED_CONTRACT_VERSION } from '../tiberTiersV2Mapper';
 
 type MockHttpResponse = {
   ok: boolean;
@@ -160,11 +161,20 @@ const STALE_SEASON_META = {
   status: 'season_calendar_config_stale',
   statusDetail: 'NFL season calendar ends after 2026.',
 };
+const IDENTITY = {
+    status: 'resolved' as const,
+    canonicalId: 'tiber-amon-ra-st-brown',
+    sourceId: '00-0036963',
+    sourceType: 'gsis' as const,
+    reason: null,
+    linkable: true,
+  };
 
 function wellFormedItem(overrides: Record<string, unknown> = {}) {
   return {
+    identity: IDENTITY,
     rank: 1,
-    playerId: '00-0036322',
+    playerId: 'tiber-amon-ra-st-brown',
     playerName: 'Justin Jefferson',
     position: 'WR',
     team: 'MIN',
@@ -210,6 +220,25 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(screen.queryByText(/\d+ players/)).toBeNull();
   });
 
+  it('rejects the pre-nullable contract revision instead of silently coercing it', async () => {
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          contractVersion: 'v2-scaffold-2026-04-02',
+          asOf: '2026-04-12T00:00:00.000Z',
+          sourceStack: [{ layer: 'forge' }],
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByText('Unable to load rankings')).toBeTruthy();
+    expect(screen.queryByText('No players match this filter yet.')).toBeNull();
+  });
+
   it('renders the error state for a malformed 2xx response with page-unsafe nested shapes', async () => {
     // sourceStack: [null] and an item missing `explanation` both previously crashed
     // rather than being rejected at the boundary.
@@ -218,6 +247,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [null],
@@ -239,6 +269,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-02-30',
           sourceStack: [{ layer: 'forge' }],
           items: [],
@@ -258,6 +289,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],
@@ -423,6 +455,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],
@@ -443,6 +476,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'promoted_artifact' }],
@@ -466,6 +500,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],

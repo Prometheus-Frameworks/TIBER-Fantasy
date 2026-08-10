@@ -8,7 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import {
+  buildRankingRowKey,
+  getLinkablePlayerId,
   Position,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   RankingsV2Item,
   RankingsSeasonMeta,
   resolveArchiveNotice,
@@ -26,6 +29,7 @@ import {
 type SortDirection = 'asc' | 'desc';
 
 export interface TiersApiResponse {
+  contractVersion: typeof RANKINGS_V2_EXPECTED_CONTRACT_VERSION;
   asOf: string;
   sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
@@ -279,19 +283,50 @@ export function TiberTiersView({
                       const confidenceBand = player.tier ?? getPillarNote(player, 'confidence_band');
                       const floor = getPillarNote(player, 'floor');
                       const ceiling = getPillarNote(player, 'ceiling');
+                      const linkablePlayerId = getLinkablePlayerId(player);
                       return (
-                        <tr key={player.playerId} className="border-t border-gray-800 hover:bg-slate-900/25">
+                        <tr key={buildRankingRowKey(player)} className="border-t border-gray-800 hover:bg-slate-900/25">
                           <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <Link href={`/player/${player.playerId}`} className="text-white hover:text-purple-400 text-sm font-medium">
-                                {player.playerName}
-                              </Link>
+                              {/* Only a resolved canonical key becomes a deep link. An
+                                  unresolved row stays fully visible — the board is never
+                                  blanked by sparse crosswalk coverage (#308). */}
+                              {linkablePlayerId ? (
+                                <Link
+                                  href={`/player/${linkablePlayerId}`}
+                                  className="text-white hover:text-purple-400 text-sm font-medium"
+                                  data-testid={`player-link-${linkablePlayerId}`}
+                                >
+                                  {player.playerName}
+                                </Link>
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className="text-white text-sm font-medium border-b border-dotted border-amber-500/70 cursor-help"
+                                      data-testid={`player-unresolved-${player.identity?.sourceId ?? 'unknown'}`}
+                                    >
+                                      {player.playerName}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      No canonical player page for this row yet
+                                      {player.identity?.reason ? ` (${player.identity.reason})` : ''}.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               <TrajectoryIcon trajectory={player.uiMeta?.trajectory} />
                             </div>
                             <CoreResearchQuickLinks
                               season={String(season)}
-                              playerId={player.playerId}
+                              // Canonical id only when the row actually resolved.
+                              // An unresolved row must not produce a player-specific
+                              // research link built from a raw source id (#308);
+                              // team/command-center links stay available.
+                              playerId={linkablePlayerId}
                               playerName={player.playerName}
                               team={player.team ?? null}
                               compact
