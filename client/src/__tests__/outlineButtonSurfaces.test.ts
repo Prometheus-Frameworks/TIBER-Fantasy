@@ -32,14 +32,15 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-const DARK_BG = /bg-(slate|gray|zinc|neutral)-(6|7|8|9)00|bg-\[#0/;
-// Every Tailwind hue, not just the neutrals. Restricting this to
-// slate/gray/zinc/neutral silently exempted coloured dark hovers such as
-// `hover:bg-blue-600/20` and `hover:bg-purple-600/20`, so the shared variant
-// switched those buttons to a dark `hover:text-accent-foreground` on a dark
-// hover surface while the audit still reported clean.
+// Every Tailwind hue, not just the neutrals. Restricting these classifiers to
+// slate/gray/zinc/neutral silently exempted coloured surfaces — first coloured
+// dark hovers, then coloured dark *bases* such as `bg-blue-900`, which were
+// classified as neither dark base nor dark hover and never audited at all.
 const TW_HUE =
   '(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)';
+
+/** Dark surface: any hue at a dark shade, or a near-black arbitrary hex. */
+const DARK_BG = new RegExp(`(?<!hover:)bg-${TW_HUE}-(?:6|7|8|9)00(?:\\/\\d+)?|(?<!hover:)bg-\\[#0`);
 // `/20`-style opacity modifiers are part of the class name and must not defeat
 // the match.
 const DARK_HOVER_BG = new RegExp(`hover:bg-${TW_HUE}-(?:6|7|8|9)00(?:\\/\\d+)?|hover:bg-\\[#[01]`);
@@ -48,8 +49,27 @@ const DARK_HOVER_BG = new RegExp(`hover:bg-${TW_HUE}-(?:6|7|8|9)00(?:\\/\\d+)?|h
  * a surface the audit already classifies as dark the hover surface is dark too.
  */
 const TRANSLUCENT_HOVER = new RegExp(`hover:bg-(?:${TW_HUE}-\\d{2,3}|\\[#[0-9a-fA-F]+\\])\\/\\d+`);
-const BASE_TEXT = /(?<!hover:)(?<!disabled:)\btext-(?!accent-foreground\b)[a-z[]/;
-const HOVER_TEXT = /hover:text-[a-z[]/;
+
+/**
+ * Foreground **colour** utilities only.
+ *
+ * `text-*` is not evidence of a colour: `text-sm`, `text-xs` and `text-center`
+ * are typography and layout. Accepting them let `bg-slate-900 text-sm` pass the
+ * audit with no foreground colour supplied at all.
+ *
+ * This is deliberately an allowlist. An unrecognised `text-*` utility is not
+ * treated as colour evidence, so the button gets reported rather than exempted
+ * — the safe direction for an audit to be wrong in.
+ */
+const TEXT_COLOUR =
+  `(?:${TW_HUE}-\\d{2,3}(?:\\/\\d+)?` +
+  `|white|black|transparent|current|inherit` +
+  `|foreground|background|primary|secondary|muted|accent|destructive|card|popover|ring` +
+  `|(?:muted|primary|secondary|accent|destructive|card|popover)-foreground` +
+  `|\\[[^\\]\\s]+\\])`;
+
+const BASE_TEXT = new RegExp(`(?<!hover:)(?<!disabled:)(?<!focus:)\\btext-(?!accent-foreground\\b)${TEXT_COLOUR}`);
+const HOVER_TEXT = new RegExp(`hover:text-${TEXT_COLOUR}`);
 
 interface Site {
   file: string;
@@ -102,6 +122,26 @@ function* openingTags(source: string): Generator<string> {
   }
 }
 
+/**
+ * The audit's classification of a single opening tag.
+ *
+ * Extracted so the classifiers can be pinned directly. The repository sweep
+ * only asserts a site count, which passes whether or not a classifier is
+ * silently exempting surfaces — that is exactly how the neutral-hue-only
+ * matchers survived three review rounds.
+ */
+export function classifyOutlineTag(tag: string) {
+  const darkBase = DARK_BG.test(tag.replace(/hover:bg-[^\s"]+/g, ''));
+  const darkHover = DARK_HOVER_BG.test(tag) || (darkBase && TRANSLUCENT_HOVER.test(tag));
+  return {
+    darkBase,
+    darkHover,
+    audited: darkBase || darkHover,
+    needsBaseText: darkBase && !BASE_TEXT.test(tag),
+    needsHoverText: darkHover && !HOVER_TEXT.test(tag),
+  };
+}
+
 function auditOutlineButtons(): Site[] {
   const sites: Site[] = [];
   for (const file of walk(CLIENT_SRC)) {
@@ -109,20 +149,81 @@ function auditOutlineButtons(): Site[] {
     for (const tag of openingTags(source)) {
       if (!tag.includes('variant="outline"')) continue;
 
-      const darkBase = DARK_BG.test(tag.replace(/hover:bg-[^\s"]+/g, ''));
-      const darkHover = DARK_HOVER_BG.test(tag) || (darkBase && TRANSLUCENT_HOVER.test(tag));
+      const { darkBase, darkHover, needsBaseText, needsHoverText } = classifyOutlineTag(tag);
       if (!darkBase && !darkHover) continue;
 
       sites.push({
         file: path.relative(CLIENT_SRC, file),
         tag: tag.replace(/\s+/g, ' ').slice(0, 120),
-        needsBaseText: darkBase && !BASE_TEXT.test(tag),
-        needsHoverText: darkHover && !HOVER_TEXT.test(tag),
+        needsBaseText,
+        needsHoverText,
       });
     }
   }
   return sites;
 }
+
+describe('the classifiers themselves', () => {
+  const tag = (cls: string) => `<Button variant="outline" className="${cls}">`;
+
+  describe('dark-base detection covers coloured hues, not just neutrals', () => {
+    test('a coloured dark base is audited', () => {
+      // The regression: `bg-blue-900 hover:bg-blue-500/20` was classified as
+      // neither dark base nor dark hover, so it was never audited at all.
+      const result = classifyOutlineTag(tag('bg-blue-900 hover:bg-blue-500/20'));
+      expect(result.darkBase).toBe(true);
+      expect(result.audited).toBe(true);
+      expect(result.needsBaseText).toBe(true);
+      expect(result.needsHoverText).toBe(true);
+    });
+
+    test.each(['bg-indigo-800', 'bg-emerald-700', 'bg-rose-900', 'bg-slate-900', 'bg-[#0a0e1a]'])(
+      '%s counts as a dark base',
+      (cls) => expect(classifyOutlineTag(tag(cls)).darkBase).toBe(true),
+    );
+
+    test('a light base is not audited', () => {
+      expect(classifyOutlineTag(tag('bg-blue-100 text-blue-900')).audited).toBe(false);
+    });
+
+    test('a hover-only dark class does not make the base dark', () => {
+      // Base darkness is judged with hover classes stripped, so a light button
+      // that merely hovers dark is not reported as needing a base foreground.
+      const result = classifyOutlineTag(tag('bg-white hover:bg-slate-800'));
+      expect(result.darkBase).toBe(false);
+      expect(result.darkHover).toBe(true);
+    });
+  });
+
+  describe('foreground detection accepts colours, not typography', () => {
+    test('text-sm is not evidence of a foreground colour', () => {
+      // The regression: any `text-*` counted, so `bg-slate-900 text-sm` passed
+      // the audit with no foreground colour supplied at all.
+      expect(classifyOutlineTag(tag('bg-slate-900 text-sm')).needsBaseText).toBe(true);
+    });
+
+    test.each(['text-xs', 'text-lg', 'text-center', 'text-ellipsis', 'text-nowrap'])(
+      '%s is typography or layout, not a colour',
+      (cls) => expect(classifyOutlineTag(tag(`bg-slate-900 ${cls}`)).needsBaseText).toBe(true),
+    );
+
+    test.each(['text-slate-100', 'text-white', 'text-blue-200', 'text-foreground', 'text-[#fff]'])(
+      '%s satisfies the base foreground requirement',
+      (cls) => expect(classifyOutlineTag(tag(`bg-slate-900 ${cls}`)).needsBaseText).toBe(false),
+    );
+
+    test('hover foreground detection is colour-specific too', () => {
+      expect(classifyOutlineTag(tag('hover:bg-slate-800 hover:text-sm')).needsHoverText).toBe(true);
+      expect(classifyOutlineTag(tag('hover:bg-slate-800 hover:text-slate-100')).needsHoverText).toBe(false);
+    });
+
+    test('an unrecognised text utility is reported rather than exempted', () => {
+      // The allowlist fails toward reporting: a utility the audit does not
+      // recognise must not silently satisfy the foreground requirement.
+      expect(classifyOutlineTag(tag('bg-slate-900 text-somethingnew')).needsBaseText).toBe(true);
+    });
+  });
+});
 
 describe('outline buttons on dark surfaces', () => {
   const sites = auditOutlineButtons();
