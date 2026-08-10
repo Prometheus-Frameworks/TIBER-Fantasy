@@ -2,13 +2,15 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { TiberIdentityCrosswalkIntegrationError } from './tiberIdentityCrosswalkTypes';
 
+const BUNDLED_ARTIFACT_FILENAME = 'tiber_identity_crosswalk_v2.json';
+
 const DEFAULT_BUNDLED_ARTIFACT_PATH = path.join(
   process.cwd(),
   'server',
   'artifacts',
   'external',
   'identity',
-  'tiber_identity_crosswalk_v1.json',
+  BUNDLED_ARTIFACT_FILENAME,
 );
 
 export class TiberIdentityCrosswalkClient {
@@ -27,7 +29,7 @@ export class TiberIdentityCrosswalkClient {
   private resolveSourcePath() {
     return path.extname(this.artifactPath).toLowerCase() === '.json'
       ? this.artifactPath
-      : path.join(this.artifactPath, 'tiber_identity_crosswalk_v1.json');
+      : path.join(this.artifactPath, BUNDLED_ARTIFACT_FILENAME);
   }
 
   getConfig() {
