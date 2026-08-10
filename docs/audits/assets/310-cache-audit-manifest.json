@@ -149,7 +149,7 @@
       "exactAgreement": 0,
       "within1": 2,
       "within5": 18,
-      "medianDelta": -2.74,
+      "medianDelta": -3.215,
       "minDelta": -26.01,
       "maxDelta": 22.3,
       "largestAbsoluteDeltas": [

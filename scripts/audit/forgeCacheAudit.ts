@@ -268,7 +268,11 @@ function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
     exactAgreement: deltas.filter((d) => d === 0).length,
     within1: absolute.filter((d) => d <= 1).length,
     within5: absolute.filter((d) => d <= 5).length,
-    medianDelta: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
+    // An even-length sample has no single middle element. Taking
+    // `sorted[n/2]` returns the upper of the two, which is a different
+    // statistic that happens to coincide only when n is odd — with the 50
+    // joined rows here it published -2.74 instead of -3.215.
+    medianDelta: median(sorted),
     minDelta: sorted.length ? sorted[0] : null,
     maxDelta: sorted.length ? sorted[sorted.length - 1] : null,
     largestAbsoluteDeltas: [...joined]
@@ -276,6 +280,20 @@ function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
       .sort((a, b) => Math.abs(b.delta!) - Math.abs(a.delta!))
       .slice(0, 10),
   };
+}
+
+/**
+ * The median of an ascending numeric sample.
+ *
+ * Even-length samples average the two middle values; there is no single middle
+ * element to pick, and picking one silently reports a different statistic.
+ */
+function median(sorted: readonly number[]): number | null {
+  if (!sorted.length) return null;
+  const mid = sorted.length / 2;
+  return sorted.length % 2
+    ? sorted[Math.floor(mid)]
+    : Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(3));
 }
 
 /** What the cache would need to persist to be reproducible, and what it does. */

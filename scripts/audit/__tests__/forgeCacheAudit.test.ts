@@ -218,6 +218,34 @@ describe('comparability', () => {
     expect(dc.exactAgreement).toBe(deltas.filter((d: number) => d === 0).length);
     expect(dc.minDelta).toBe(Math.min(...deltas));
     expect(dc.maxDelta).toBe(Math.max(...deltas));
+
+    // The published median was the upper of the two middle values, which is a
+    // different statistic that only coincides with the median when the sample
+    // is odd. With these 50 rows it reported -2.74 instead of -3.215.
+    const sorted = [...deltas].sort((a: number, b: number) => a - b);
+    const mid = sorted.length / 2;
+    const expected = sorted.length % 2
+      ? sorted[Math.floor(mid)]
+      : Number(((sorted[mid - 1] + sorted[mid]) / 2).toFixed(3));
+    expect(dc.medianDelta).toBe(expected);
+    expect(sorted.length % 2).toBe(0);
+    expect(dc.medianDelta).not.toBe(sorted[mid]);
+  });
+
+  test('the published document quotes the manifest, not a stale figure', () => {
+    // The audit prose is the artifact a reader actually reads; a corrected
+    // number in the manifest that never reached the document corrects nothing.
+    const doc = fs.readFileSync(
+      path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md'),
+      'utf8',
+    );
+    const dc = manifest.comparability.descriptiveComparison;
+    expect(doc).toContain(`| median delta (cache − static) | ${dc.medianDelta} |`);
+    expect(doc).toContain(`| joined rows | ${dc.joinedRows} |`);
+    expect(doc).toContain(`| within ±1.0 alpha | ${dc.within1} |`);
+    expect(doc).toContain(`| within ±5.0 alpha | ${dc.within5} |`);
+    // The summary table cited "no valid join" after §5.1 established one.
+    expect(doc).not.toContain('**not performed** | no valid join');
   });
 
   test('the comparison describes difference without attributing cause', () => {

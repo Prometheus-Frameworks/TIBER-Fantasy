@@ -238,7 +238,7 @@ cache does not persist the lineage that would support attribution.
 | **exact agreement** | **0** |
 | within ±1.0 alpha | 2 |
 | within ±5.0 alpha | 18 |
-| median delta (cache − static) | -2.74 |
+| median delta (cache − static) | -3.215 |
 | range | -26.01 … +22.30 |
 
 Largest absolute disagreements:
@@ -325,7 +325,7 @@ and fixture rows. Nothing here promotes, deploys, deletes, or mutates anything.
 | Fixture vs generated vs player-specific split *in the cache* | **unavailable** | no per-row provenance |
 | Deterministic recompute parity | **not possible** | three independent blockers, §4.1 |
 | Cross-surface identity resolvability | **unavailable** | requires `player_identity_map`; see #308 |
-| Score-difference attribution vs producer candidate | **not performed** | no valid join, §5.1 |
+| Score-difference attribution vs producer candidate | **not performed** | join now exists (§5.1); blocked instead by the missing lineage the terminal finding names, §5.3 |
 
 Every one of these is a *reason the cache fails closed*, not a gap to be filled by
 assumption. No credential was requested and no lineage was manufactured.
