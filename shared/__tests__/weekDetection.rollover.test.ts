@@ -24,7 +24,12 @@ describe('a week is not complete while its last game is being played', () => {
   // game was live the API reported a completed week, a completed MNF, and a full
   // 16/16 slate — then rolled the forward target to Week 12.
   const DURING_MNF = at('2025-11-18T02:30:00Z');
-  const AFTER_MNF = at('2025-11-18T06:00:00Z');
+  // Deliberately beyond any plausible fixed-duration estimate: a doubleheader
+  // or a long game can still be live here, so a kickoff+Nh cutoff would have
+  // reported the week complete. The configured week end is the only boundary
+  // this calendar actually knows.
+  const LONG_GAME_STILL_LIVE = at('2025-11-18T07:30:00Z');
+  const AFTER_WEEK_END = at('2025-11-19T05:00:00Z');
 
   test('mid-MNF the week is still in progress and does not roll forward', () => {
     const phase = resolveSeasonPhase(DURING_MNF);
@@ -40,11 +45,22 @@ describe('a week is not complete while its last game is being played', () => {
     expect(info?.gamesCompleted).toBeLessThan(info!.totalGames);
   });
 
-  test('once the game finishes the week completes and rolls forward', () => {
-    const phase = resolveSeasonPhase(AFTER_MNF);
-    expect(phase.weekStatus).toBe('completed');
+  test('a game running long does not complete the week', () => {
+    const phase = resolveSeasonPhase(LONG_GAME_STILL_LIVE);
+    expect(phase.weekStatus).toBe('in_progress');
+    expect(phase.targetWeek).toBe(11);
+    const info = getCurrentWeek(LONG_GAME_STILL_LIVE);
+    expect(info?.mondayNightCompleted).toBe(false);
+    expect(info?.gamesCompleted).toBe(15);
+  });
+
+  test('past the configured week end, Week 11 is final and the board moves to 12', () => {
+    const phase = resolveSeasonPhase(AFTER_WEEK_END);
+    expect(phase.regularSeasonWeek).toBe(12);
     expect(phase.targetWeek).toBe(12);
-    const info = getCurrentWeek(AFTER_MNF);
+    // Week 11 itself, queried explicitly, is now complete with a full slate.
+    const info = getWeekInfo(11, 2025, AFTER_WEEK_END);
+    expect(info?.weekStatus).toBe('completed');
     expect(info?.mondayNightCompleted).toBe(true);
     expect(info?.gamesCompleted).toBe(16);
   });
@@ -60,11 +76,14 @@ describe('resolveSeasonPhase — 2025 postseason → 2026 offseason/preseason �
     expect(phase.seasonPhaseLabel).toBe('2025 · Week 11');
   });
 
-  test('a completed week rolls the target to the next week without changing the current week', () => {
-    const phase = resolveSeasonPhase(at('2025-11-18T12:00:00Z')); // after Week 11 MNF
+  test('the Tuesday after MNF is still Week 11 in progress, not a completed week', () => {
+    // Kickoff was Monday 01:15Z, but nothing observable tells us the last game
+    // has finished. The forward target therefore does not roll until the
+    // configured week end.
+    const phase = resolveSeasonPhase(at('2025-11-18T12:00:00Z'));
     expect(phase.regularSeasonWeek).toBe(11);
-    expect(phase.weekStatus).toBe('completed');
-    expect(phase.targetWeek).toBe(12);
+    expect(phase.weekStatus).toBe('in_progress');
+    expect(phase.targetWeek).toBe(11);
   });
 
   test('the inter-week gap belongs to the upcoming week as not_started', () => {
@@ -116,7 +135,9 @@ describe('resolveSeasonPhase — 2025 postseason → 2026 offseason/preseason �
 
   test('the 2026 target week is flagged as anchor-derived, not an ingested schedule', () => {
     expect(resolveSeasonPhase(at('2026-08-09T12:00:00Z')).scheduleSource).toBe('anchor_derived');
-    expect(resolveSeasonPhase(at('2025-11-16T18:00:00Z')).scheduleSource).toBe('explicit_schedule');
+    // 2025 is anchor-derived too: every week is the Week 1 anchor plus an exact
+    // seven-day stride, so claiming an ingested schedule was false provenance.
+    expect(resolveSeasonPhase(at('2025-11-16T18:00:00Z')).scheduleSource).toBe('anchor_derived');
   });
 
   test('past the end of the configured calendar it fails loudly instead of clamping', () => {
@@ -172,7 +193,11 @@ describe('getWeekInfo / risers-fallers', () => {
   });
 
   test('best risers/fallers week is a completed week in season', () => {
-    expect(getBestRisersFallersWeek(at('2025-11-18T12:00:00Z'))).toBe(11);
+    // Week 11 is not assertable as complete on the Tuesday, so the last week
+    // whose games are all final is 10. This lags a day versus the previous
+    // behaviour — the deliberate cost of never claiming unfinished results.
+    expect(getBestRisersFallersWeek(at('2025-11-18T12:00:00Z'))).toBe(10);
+    expect(getBestRisersFallersWeek(at('2025-11-19T05:00:00Z'))).toBe(11);
   });
 
   test('week 1 never has risers/fallers data', () => {

@@ -29,7 +29,6 @@ import {
   NflWeekWindow,
   getConfiguredSeasons,
   getSeasonCalendar,
-  mondayNightEndMs,
 } from './nflSeasonCalendar';
 
 export type NflPhase = 'offseason' | 'preseason' | 'regular_season' | 'postseason';
@@ -121,15 +120,19 @@ function lastWeek(calendar: NflSeasonCalendar): NflWeekWindow {
 
 function weekStatusAt(window: NflWeekWindow, nowMs: number): NflWeekStatus {
   if (nowMs < ms(window.startDate)) return 'not_started';
-  // Branching on `mondayNightDate` reported the week completed from the moment
-  // the Monday night game kicked off, while it was still being played.
+  // Completion is keyed to the configured week end, deliberately.
   //
-  // The boundary is game completion, not the administrative `endDate`: the week
-  // is over once the last game finishes (Tuesday ~05:00Z), whereas `endDate` is
-  // the Wednesday roll into the next week's prep. Using `endDate` here would
-  // trade one dishonesty for another, holding the week "in progress" for roughly
-  // a day after the final whistle.
-  if (nowMs < mondayNightEndMs(window)) return 'in_progress';
+  // `mondayNightDate` is a kickoff, so branching on it reported the week
+  // complete while the last game was still being played. A fixed assumed
+  // duration only narrowed that window — a doubleheader or any long game still
+  // outruns it, and we have no per-game completion signal to key on. The
+  // configured week end is the one boundary this calendar actually knows.
+  //
+  // The cost is that a finished week reads `in_progress` until the Wednesday
+  // roll. That is the honest direction to be wrong in: under-claiming a
+  // completed week is recoverable, whereas reporting results that do not exist
+  // yet is the defect this repair exists to remove.
+  if (nowMs < ms(window.endDate)) return 'in_progress';
   return 'completed';
 }
 
@@ -310,10 +313,10 @@ function estimateGamesCompleted(currentDate: Date, window: NflWeekWindow): numbe
   const currentTime = currentDate.getTime();
 
   if (currentTime < startTime) return 0;
-  // Kickoff is not completion: during the Monday night game 15 of 16 are done
-  // and one is in progress. Reporting 16 here claimed a full completed slate
-  // while the week's last game was live.
-  if (currentTime >= mondayNightEndMs(window)) return TOTAL_GAMES_PER_WEEK;
+  // Kickoff is not completion: from the Monday kickoff until the configured
+  // week end, 15 games are done and at least one is unfinished. Reporting 16
+  // claimed a full completed slate while the week's last game was live.
+  if (currentTime >= ms(window.endDate)) return TOTAL_GAMES_PER_WEEK;
   if (currentTime >= mondayNightTime) return TOTAL_GAMES_PER_WEEK - 1;
 
   const dayOfWeek = currentDate.getUTCDay();
@@ -354,7 +357,7 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
 
   const weekStatus: NflWeekStatus =
     phase.weekStatus ?? (window ? weekStatusAt(window, now.getTime()) : 'not_started');
-  const mondayNightCompleted = window ? now.getTime() >= mondayNightEndMs(window) : false;
+  const mondayNightCompleted = window ? now.getTime() >= ms(window.endDate) : false;
   const calendar = getSeasonCalendar(displaySeason);
   const nextWindow = calendar?.weeks.find((w) => w.week === displayWeek + 1);
 
@@ -397,7 +400,7 @@ export function getWeekInfo(week: number, season?: number, currentDate?: Date): 
   if (!calendar || !window) return null;
 
   const status = weekStatusAt(window, now.getTime());
-  const mondayNightCompleted = now.getTime() >= mondayNightEndMs(window);
+  const mondayNightCompleted = now.getTime() >= ms(window.endDate);
   const phase = resolveSeasonPhase(now);
   const nextWindow = calendar.weeks.find((w) => w.week === week + 1);
 

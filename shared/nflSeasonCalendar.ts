@@ -43,8 +43,9 @@ export interface NflSeasonCalendar {
 }
 
 /**
- * Offsets observed in the ingested 2025 schedule, reused to derive week windows
- * for seasons where only the Week 1 anchor is known.
+ * Nominal weekly cadence offsets, reused to derive week windows for seasons
+ * where only the Week 1 anchor is known. These are league-cadence conventions,
+ * not observations of a real schedule.
  */
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
@@ -53,24 +54,6 @@ const WEEK_STRIDE_MS = 7 * DAY_MS;
 const WEEK_END_OFFSET_MS = 5 * DAY_MS + 8 * HOUR_MS;
 /** Thursday 20:00Z → Tuesday 01:15Z (MNF ~8:15pm ET). */
 const MONDAY_NIGHT_OFFSET_MS = 4 * DAY_MS + 5 * HOUR_MS + 15 * 60 * 1000;
-
-/**
- * Approximate wall-clock length of a Monday night game, kickoff to final whistle.
- *
- * `mondayNightDate` is the **kickoff**, not the finish. Treating kickoff as
- * completion reports a finished week — and a full slate of completed games —
- * while the last game of the week is still being played.
- *
- * This is an explicit, documented approximation. It is deliberately generous:
- * over-waiting briefly reports an in-progress week that has just ended, which is
- * recoverable, whereas under-waiting reports results that do not exist yet.
- */
-export const MONDAY_NIGHT_APPROX_DURATION_MS = 3 * HOUR_MS + 45 * 60 * 1000;
-
-/** Approximate instant the Monday night game finishes. */
-export function mondayNightEndMs(window: NflWeekWindow): number {
-  return new Date(window.mondayNightDate).getTime() + MONDAY_NIGHT_APPROX_DURATION_MS;
-}
 
 /**
  * Derive week windows from a Week 1 Thursday kickoff anchor.
@@ -99,7 +82,7 @@ export function deriveWeekWindowsFromAnchor(
   });
 }
 
-/** The ingested 2025 regular-season schedule (Thursday/Sunday/Monday structure). */
+/** 2025 regular-season week windows, on the nominal Thursday/Sunday/Monday cadence. */
 const NFL_2025_WEEKS: NflWeekWindow[] = [
   { week: 1, startDate: '2025-09-04T20:00:00Z', endDate: '2025-09-10T04:00:00Z', mondayNightDate: '2025-09-09T01:15:00Z' },
   { week: 2, startDate: '2025-09-11T20:00:00Z', endDate: '2025-09-17T04:00:00Z', mondayNightDate: '2025-09-16T01:15:00Z' },
@@ -134,7 +117,14 @@ const NFL_2026_WEEK_1_ANCHOR = '2026-09-10T20:00:00Z';
 export const NFL_SEASON_CALENDARS: NflSeasonCalendar[] = [
   {
     season: 2025,
-    scheduleSource: 'explicit_schedule',
+    // NOT an ingested schedule, despite the rows being written out longhand.
+    // Every week is the Week 1 anchor plus an exact seven-day stride (verified:
+    // zero deviation across all 18), every week carries the same nominal
+    // 01:15Z Monday slot, and Week 18 carries one too even though the real
+    // Week 18 has no Monday night game. Labelling that `explicit_schedule`
+    // contradicts this module's own definition and hands consumers false
+    // provenance. It is anchor-derived until a real schedule is ingested.
+    scheduleSource: 'anchor_derived',
     preseasonStart: '2025-07-31T00:00:00Z',
     postseasonEnd: '2026-02-09T04:00:00Z',
     regularSeasonWeeks: 18,
