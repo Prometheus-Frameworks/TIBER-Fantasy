@@ -2,11 +2,17 @@ import { playerIdentityMap } from '@shared/schema';
 
 let computeLeagueDashboard: typeof import('../leagueDashboardService').computeLeagueDashboard;
 
-function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy, readBack, updateAffects = 1 }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock; readBack?: any[]; updateAffects?: number }) {
+function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy, readBack, readBackThrows, updateAffects = 1 }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock; readBack?: any[]; readBackThrows?: boolean; updateAffects?: number }) {
   // The mock cannot introspect drizzle predicates, so identity selects are
   // distinguished by call order: 1 = roster lookup, 2 = the GSIS-ownership
   // probe hydration performs before writing, 3 = the post-write read-back.
   let identitySelectCount = 0;
+  // What a real table would return afterwards: the rows the insert actually
+  // wrote. Defaulting this to `[]` would let a test pass on the fail-open path
+  // — the service returning unpersisted candidates — while looking like a
+  // successful hydration. Tests that need a suppressed insert pass `readBack`
+  // explicitly.
+  let writtenRows: any[] = [];
   return {
     update: jest.fn(() => ({
       set: (values: any) => ({
@@ -30,7 +36,8 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, 
               return Promise.resolve(gsisOwners);
             }
             if (identitySelectCount >= 3) {
-              return Promise.resolve(readBack ?? []);
+              if (readBackThrows) return Promise.reject(new Error('read-back unavailable'));
+              return Promise.resolve(readBack ?? writtenRows);
             }
             return Promise.resolve(identities);
           }
@@ -44,6 +51,7 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, 
     insert: jest.fn(() => ({
       values: (rows: any) => {
         insertSpy?.(rows);
+        writtenRows = [...writtenRows, ...(Array.isArray(rows) ? rows : [rows])];
         return {
           onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
           onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
@@ -873,6 +881,71 @@ describe('computeLeagueDashboard', () => {
       knownUnscored: 1,
       unresolved: 0,
       evidenceCovered: 0,
+    });
+  });
+
+  describe('hydration reports only what the database actually holds', () => {
+    // The post-write read-back is the sole authority on persistence. Treating
+    // it as optional — falling back to the rows we *tried* to insert — makes
+    // hydration report an identity that is not in the table, so the roster
+    // shows a confidently resolved player backed by nothing.
+    const sleeperWithPlayerOne = {
+      getNflPlayers: jest.fn().mockResolvedValue({
+        s1: {
+          player_id: 's1',
+          full_name: 'Player One',
+          first_name: 'Player',
+          last_name: 'One',
+          position: 'WR',
+          team: 'CIN',
+          active: true,
+          gsis_id: '00-0030001',
+        },
+      }),
+    };
+
+    const runWith = (dbMock: any) => computeLeagueDashboard(
+      { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+      {
+        storage: storageDeps as any,
+        sleeperClient: { ...sleeperDeps, ...sleeperWithPlayerOne } as any,
+        db: dbMock,
+        forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+        forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+      },
+    );
+
+    it('does not surface a candidate whose insert was suppressed by a conflict', async () => {
+      // `onConflictDoNothing` wrote nothing, so the read-back is legitimately
+      // empty. An empty read-back is an answer, not a missing one.
+      const insertSpy = jest.fn();
+      const result = await runWith(createDbMock({ identities: [], insertSpy, readBack: [] }));
+
+      expect(insertSpy).toHaveBeenCalled();
+      expect(result.unresolvedPlayers.map((p: any) => p.sleeperId)).toEqual(['s1']);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: null,
+      }));
+    });
+
+    it('does not surface a candidate when the read-back itself fails', async () => {
+      // A failed read-back is no answer at all. Reporting the candidates would
+      // be asserting persistence precisely when we could not confirm it.
+      const insertSpy = jest.fn();
+      const result = await runWith(createDbMock({ identities: [], insertSpy, readBackThrows: true }));
+
+      expect(insertSpy).toHaveBeenCalled();
+      expect(result.unresolvedPlayers.map((p: any) => p.sleeperId)).toEqual(['s1']);
+    });
+
+    it('still surfaces the identity when the read-back confirms it', async () => {
+      // The control: the guard must not simply disable hydration.
+      const result = await runWith(createDbMock({ identities: [] }));
+      expect(result.unresolvedPlayers).toEqual([]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: 'sleeper:s1',
+        sleeperId: 's1',
+      }));
     });
   });
 

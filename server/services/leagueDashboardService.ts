@@ -430,14 +430,24 @@ async function hydrateMissingSleeperIdentities(
     // An attach updates an existing row that is not in `toInsert`, so returning
     // only the inserts would leave the request that performed the repair still
     // reporting that player unresolved until some later request.
-    let hydrated: any[] = toInsert as any[];
+    //
+    // The read-back is the ONLY authority on what is persisted, so its result
+    // is taken as-is — including when it is empty. `toInsert` is a set of
+    // candidates, not an outcome: `onConflictDoNothing` may have suppressed
+    // every one of them, and falling back to the candidates would report rows
+    // that are not in the table as though they were. An empty read-back is a
+    // real answer; a failed read-back is no answer, and both must resolve to
+    // "nothing hydrated" rather than to the unpersisted candidate list.
+    let hydrated: any[] = [];
+    let readBackFailed = false;
     try {
       const authoritative = await (deps.db as any)
         .select()
         .from(playerIdentityMap)
         .where(inArray(playerIdentityMap.sleeperId, uniqueMissingIds));
-      if (Array.isArray(authoritative) && authoritative.length > 0) hydrated = authoritative;
+      hydrated = Array.isArray(authoritative) ? authoritative : [];
     } catch (readBackError) {
+      readBackFailed = true;
       logger.log('identity-hydration-readback-failed', {
         requestId: logger.requestId,
         error: (readBackError as Error).message,
@@ -453,6 +463,7 @@ async function hydrateMissingSleeperIdentities(
       gsisWithheld: gsisWithheld.length,
       gsisWithheldSample: gsisWithheld.slice(0, 5),
       returned: hydrated.length,
+      readBackFailed,
     });
 
     return hydrated as any;
