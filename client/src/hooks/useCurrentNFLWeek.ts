@@ -33,9 +33,18 @@ interface WeekInfo {
   targetWeek: number | null;
   targetLabel: string | null;
   scheduleSource: 'explicit_schedule' | 'anchor_derived' | null;
+  // The target's provenance travels with it (Fantasy #307 Phase A).
+  targetProvenance: 'verified_schedule' | 'anchor_derived' | null;
+  targetIsProvisional: boolean;
   configStatus: 'ok' | 'stale_calendar_config';
   configNote: string | null;
 }
+
+/**
+ * Rendered wherever completion cannot be asserted — which, with no per-game
+ * finalization source in this build, is everywhere completion would matter.
+ */
+export const COMPLETION_NOT_VERIFIED_COPY = 'Completion not verified.';
 
 export function useCurrentNFLWeek() {
   const { data, isLoading, error } = useQuery<WeekInfo>({
@@ -57,8 +66,13 @@ export function useCurrentNFLWeek() {
     // dozen-plus existing consumers keep compiling and behaving as before.
     // #307 Phase A scope is the Rankings/current-week surface; migrating these
     // other pages onto the nullable phase fields below is deliberate follow-up.
-    currentWeek: data?.currentWeek || 1,
-    upcomingWeek: data?.upcomingWeek || data?.currentWeek || 1,
+    // `?? 0`, not `|| 1`: when the server reports that no week is resolvable
+    // it now sends 0, and `|| 1` would quietly reconstruct the invented Week 1
+    // this PR removes. Zero keeps the legacy number type while being
+    // impossible to mistake for a real NFL week, and week=0 requests fail
+    // closed server-side instead of fabricating a board.
+    currentWeek: data?.currentWeek ?? 0,
+    upcomingWeek: data?.upcomingWeek ?? data?.currentWeek ?? 0,
     season: data?.season || new Date().getFullYear(),
     weekStatus: data?.weekStatus || 'not_started',
     // Legacy accessor keeps its boolean shape for existing consumers, but a
@@ -82,6 +96,10 @@ export function useCurrentNFLWeek() {
     targetWeek: data?.targetWeek ?? null,
     targetLabel: data?.targetLabel ?? null,
     scheduleSource: data?.scheduleSource ?? null,
+    // A provisional target may drive forward-looking requests, but only while
+    // this flag travels with it and the UI does not imply completion.
+    targetProvenance: data?.targetProvenance ?? null,
+    targetIsProvisional: data?.targetIsProvisional ?? false,
     configStatus: data?.configStatus ?? null,
     configNote: data?.configNote ?? null,
 

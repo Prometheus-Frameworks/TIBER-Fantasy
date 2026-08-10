@@ -144,12 +144,16 @@ const entryLanes = [
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("WR");
   const [searchQuery, setSearchQuery] = useState("");
-  const { season } = useCurrentNFLWeek();
+  // Nullable phase-aware season, not the legacy accessor whose fallback
+  // invented the wall-clock year when detection had nothing to report. An
+  // unresolved season disables the request instead of fabricating one.
+  const { resolvedSeason } = useCurrentNFLWeek();
 
   const { data: labData, isLoading } = useQuery<{ data: LabPlayer[]; count: number }>({
-    queryKey: ["/api/data-lab/lab-agg", activeFilter, season],
+    queryKey: ["/api/data-lab/lab-agg", activeFilter, resolvedSeason],
     queryFn: () =>
-      fetch(`/api/data-lab/lab-agg?season=${season}&position=${activeFilter}&limit=100`).then((r) => r.json()),
+      fetch(`/api/data-lab/lab-agg?season=${resolvedSeason}&position=${activeFilter}&limit=100`).then((r) => r.json()),
+    enabled: resolvedSeason !== null,
   });
 
   const { data: healthData } = useQuery<{

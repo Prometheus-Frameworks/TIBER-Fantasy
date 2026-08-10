@@ -57,7 +57,7 @@ export interface TiberTiersViewProps {
   /** Season whose rows are being requested. Null until season state resolves. */
   season: number | null;
   /** Week filter for the request, or null for "whole season so far". */
-  asOfWeek: number | null;
+  decisionTargetWeek: number | null;
   availableSeasons: number[];
   onSeasonChange: (season: number) => void;
   position: Position;
@@ -76,7 +76,7 @@ export interface TiberTiersViewProps {
 // TiberTiers (below) owns only the data fetching and wires its result into this component.
 export function TiberTiersView({
   season,
-  asOfWeek,
+  decisionTargetWeek,
   availableSeasons,
   onSeasonChange,
   position,
@@ -330,7 +330,7 @@ export default function TiberTiers() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   // `resolvedSeason` (not the legacy `season`) so an unresolved season stays
   // null instead of becoming a plausible-but-unverified calendar year.
-  const { resolvedSeason: detectedSeason, regularSeasonWeek, phase, configStatus } = useCurrentNFLWeek();
+  const { resolvedSeason: detectedSeason, targetSeason, targetWeek, configStatus } = useCurrentNFLWeek();
 
   // Explicit user season choice wins; otherwise follow detection. Neither path
   // falls back to a hardcoded season or the old `currentWeek || 17` guess — an
@@ -342,8 +342,15 @@ export default function TiberTiers() {
   // not let that stale local selection become an explicit query-string bypass:
   // fail closed immediately, then clear it for the next configured state.
   const season = configStatus === 'stale_calendar_config' ? null : selectedSeason ?? detectedSeason;
-  const isCurrentSeasonSelected = season !== null && season === detectedSeason;
-  const asOfWeek = isCurrentSeasonSelected && phase === 'regular_season' ? regularSeasonWeek : null;
+  // The week this page asks for is the DECISION TARGET — the week the forward
+  // board should be about — not `regularSeasonWeek`. The two agree while a
+  // week is in play, but once its final game window opens the target rolls
+  // forward while the in-play week number does not; sending the in-play week
+  // then builds a board about a week with nothing left to decide. The target
+  // applies only when the viewed season IS the target season; an archive
+  // selection has no forward target and sends no week, letting the server
+  // derive that season's own extent.
+  const decisionTargetWeek = season !== null && season === targetSeason ? targetWeek : null;
 
   useEffect(() => {
     if (configStatus === 'stale_calendar_config') setSelectedSeason(null);
@@ -361,11 +368,14 @@ export default function TiberTiers() {
     // from a later stale-calendar season-null request. Without it, React Query
     // can reuse the initial cached response during a mounted fresh → stale
     // transition and never ask the route for its typed unavailable payload.
-    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek, configStatus],
+    queryKey: ['/api/rankings/v2/weekly', season, position, decisionTargetWeek, configStatus],
     queryFn: async () => {
       const params = new URLSearchParams({ position, limit: '75' });
       if (season !== null) params.set('season', String(season));
-      if (asOfWeek !== null) params.set('asOfWeek', String(asOfWeek));
+      // Sent under the public parameter name `asOfWeek` (the API type is
+      // preserved); the VALUE is the decision target, and the server publishes
+      // the evidence extent separately in seasonMeta.
+      if (decisionTargetWeek !== null) params.set('asOfWeek', String(decisionTargetWeek));
       const url = `/api/rankings/v2/weekly?${params.toString()}`;
       const res = await fetch(url);
       if (!res.ok) {
@@ -393,7 +403,7 @@ export default function TiberTiers() {
   return (
     <TiberTiersView
       season={season}
-      asOfWeek={asOfWeek}
+      decisionTargetWeek={decisionTargetWeek}
       availableSeasons={availableSeasons}
       onSeasonChange={setSelectedSeason}
       position={position}

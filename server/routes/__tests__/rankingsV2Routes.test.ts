@@ -44,8 +44,8 @@ describe('rankingsV2Routes scoring integration', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     mockedCache.mockResolvedValue({ players: [], computedAt: new Date('2026-04-12T00:00:00.000Z'), asOfWeek: 5 } as any);
-    mockedBuildRankingsScoringInputs.mockResolvedValue([
-      ...Array.from({ length: 12 }).map((_, idx) => ({
+    mockedBuildRankingsScoringInputs.mockResolvedValue({
+      players: Array.from({ length: 12 }).map((_, idx) => ({
         player_id: `00-0036${idx}`,
         player_name: `Player ${idx}`,
         position: 'WR',
@@ -55,7 +55,9 @@ describe('rankingsV2Routes scoring integration', () => {
         targets_pg: 10,
         fantasy_points_ppr_pg: 19.5,
       })),
-    ]);
+      // The source-declared extent: max weekly_stats.week actually aggregated.
+      maxRepresentedWeek: 5,
+    } as any);
     mockedHasMeaningfulScoringInputs.mockReturnValue(true);
   });
 
@@ -199,9 +201,10 @@ describe('rankingsV2Routes scoring integration', () => {
   });
 
   it('does not prefer scoring rankings when mapped inputs are not meaningful', async () => {
-    mockedBuildRankingsScoringInputs.mockResolvedValue([
-      { player_id: '00-1', player_name: 'Thin Input WR', position: 'WR', team: 'FA', games_sampled: 1 } as any,
-    ]);
+    mockedBuildRankingsScoringInputs.mockResolvedValue({
+      players: [{ player_id: '00-1', player_name: 'Thin Input WR', position: 'WR', team: 'FA', games_sampled: 1 }],
+      maxRepresentedWeek: 1,
+    } as any);
     mockedHasMeaningfulScoringInputs.mockReturnValue(false);
     mockedCache.mockResolvedValue({
       players: [{ playerId: '00-1', playerName: 'Thin Input WR', position: 'WR', nflTeam: 'FA', tier: 'T5', alpha: 12, rawAlpha: 10 }],

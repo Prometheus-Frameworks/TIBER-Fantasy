@@ -44,6 +44,8 @@ const FRESH_CURRENT_WEEK = {
   targetWeek: 1,
   targetLabel: 'Target: Week 1',
   scheduleSource: 'anchor_derived',
+  targetProvenance: 'anchor_derived',
+  targetIsProvisional: true,
   configStatus: 'ok',
   configNote: null,
 };
@@ -59,6 +61,8 @@ const STALE_CURRENT_WEEK = {
   targetWeek: null,
   targetLabel: null,
   scheduleSource: null,
+  targetProvenance: null,
+  targetIsProvisional: false,
   configStatus: 'stale_calendar_config',
   configNote: 'NFL season calendar ends after 2026.',
 };
@@ -111,6 +115,16 @@ const SEASON_META = {
   configNote: null,
   evidenceSeason: 2025,
   evidenceWeek: 18,
+  decisionTargetSeason: 2026,
+  decisionTargetWeek: 1,
+  decisionTargetProvenance: 'anchor_derived' as const,
+  decisionTargetIsProvisional: true,
+  evidenceThroughSeason: 2025,
+  evidenceThroughWeek: 18,
+  evidenceProvenance: 'source_declared_as_of',
+  completionVerified: false,
+  finalizedThroughWeek: null,
+  completionCopy: 'Completion not verified.',
   generatedAt: '2026-08-08T19:04:15.325Z',
   isArchiveView: true,
   status: 'archive_season_not_current',
@@ -131,6 +145,16 @@ const STALE_SEASON_META = {
   configNote: 'NFL season calendar ends after 2026.',
   evidenceSeason: null,
   evidenceWeek: null,
+  decisionTargetSeason: 2026,
+  decisionTargetWeek: 1,
+  decisionTargetProvenance: 'anchor_derived' as const,
+  decisionTargetIsProvisional: true,
+  evidenceThroughSeason: null,
+  evidenceThroughWeek: null,
+  evidenceProvenance: 'source_extent_unknown',
+  completionVerified: false,
+  finalizedThroughWeek: null,
+  completionCopy: 'Completion not verified.',
   generatedAt: null,
   isArchiveView: false,
   status: 'season_calendar_config_stale',
@@ -338,6 +362,58 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     await waitFor(() => {
       expect(screen.getByTestId('season-2026').getAttribute('aria-pressed')).toBe('true');
       expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('false');
+    });
+  });
+
+  it('sends the DECISION TARGET as asOfWeek, not regularSeasonWeek', async () => {
+    // The week this page requests is the forward target from phase detection
+    // (targetWeek), which rolls ahead of the in-play week once its final game
+    // window opens. The fixture's regularSeasonWeek is null (preseason) while
+    // targetWeek is 1: the request must carry asOfWeek=1 — a page keyed on
+    // regularSeasonWeek would send nothing here and, mid-season, would send
+    // the in-play week after the target had already rolled.
+    const fetchMock = mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
+          sourceStack: [{ layer: 'forge' }],
+          trust: { sampleNote: null, stabilityNote: null },
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+    await screen.findByText('No players match this filter yet.');
+
+    // The very first request can fire before the current-week query resolves
+    // (season/week both still null), so the invariant is pinned on the settled
+    // request — the latest one once detection has landed.
+    await waitFor(() => {
+      const rankingsUrl = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'))
+        .pop()!;
+      const params = new URL(rankingsUrl, 'http://localhost').searchParams;
+      expect(params.get('season')).toBe('2026');
+      expect(params.get('asOfWeek')).toBe('1');
+    });
+
+    // An archive selection has no forward target: switching to 2025 (not the
+    // target season) must drop the week entirely rather than send either the
+    // 2026 target or a reconstructed number — the server derives that season's
+    // own extent.
+    fireEvent.click(screen.getByTestId('season-2025'));
+    await waitFor(() => {
+      const archiveUrl = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'))
+        .pop()!;
+      const archiveParams = new URL(archiveUrl, 'http://localhost').searchParams;
+      expect(archiveParams.get('season')).toBe('2025');
+      expect(archiveParams.has('asOfWeek')).toBe(false);
     });
   });
 

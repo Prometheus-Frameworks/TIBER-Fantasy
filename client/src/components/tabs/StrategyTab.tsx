@@ -82,8 +82,12 @@ export default function StrategyTab() {
   const [sosPosition, setSosPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [startSitPosition, setStartSitPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   
-  // Get current NFL week dynamically
-  const { upcomingWeek: startSitWeek, isLoading: weekLoading } = useCurrentNFLWeek();
+  // Start/sit and waivers are forward-looking decisions, so they key on the
+  // nullable DECISION TARGET, not the legacy numeric accessor whose `|| 1`
+  // fallback invented Week 1 whenever no week was resolvable. When the target
+  // is unresolved (offseason boundary, stale calendar) the requests are
+  // disabled below rather than fabricated.
+  const { targetWeek: startSitWeek, isLoading: weekLoading } = useCurrentNFLWeek();
 
   // Build query URLs with params
   const buildSosUrl = (type: 'defense' | 'offense') => {
@@ -110,7 +114,10 @@ export default function StrategyTab() {
   // Build query URLs with params
   const buildStartSitUrl = () => {
     const params = new URLSearchParams();
-    params.set('week', startSitWeek.toString());
+    // Guarded by `enabled` below; the throw is a tripwire against a future
+    // caller bypassing the gate and silently querying an invented week.
+    if (startSitWeek === null) throw new Error('start/sit requested without a resolved target week');
+    params.set('week', String(startSitWeek));
     if (startSitPosition !== 'ALL') {
       params.set('position', startSitPosition);
     }
@@ -119,7 +126,8 @@ export default function StrategyTab() {
 
   const buildWaiverUrl = () => {
     const params = new URLSearchParams();
-    params.set('week', startSitWeek.toString());
+    if (startSitWeek === null) throw new Error('waivers requested without a resolved target week');
+    params.set('week', String(startSitWeek));
     return `/api/strategy/targets?${params.toString()}`;
   };
 
@@ -130,7 +138,7 @@ export default function StrategyTab() {
       const response = await fetch(buildStartSitUrl());
       return response.json();
     },
-    enabled: activeTab === 'startsit' && startSitWeek > 0 && !weekLoading,
+    enabled: activeTab === 'startsit' && startSitWeek !== null && startSitWeek > 0 && !weekLoading,
   });
 
   // Fetch waiver targets (wait for week data)
@@ -140,7 +148,7 @@ export default function StrategyTab() {
       const response = await fetch(buildWaiverUrl());
       return response.json();
     },
-    enabled: activeTab === 'waivers' && startSitWeek > 0 && !weekLoading,
+    enabled: activeTab === 'waivers' && startSitWeek !== null && startSitWeek > 0 && !weekLoading,
   });
 
   const isLoading = sosView === 'defense' ? defenseLoading : offenseLoading;

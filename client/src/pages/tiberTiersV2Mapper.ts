@@ -196,6 +196,26 @@ export const seasonMetaSchema = z.object({
   configNote: z.string().nullable(),
   evidenceSeason: z.number().nullable(),
   evidenceWeek: z.number().nullable(),
+
+  // The decision-target / evidence split. Required, not optional: a response
+  // that omits these must reach the error state rather than let the page infer
+  // an evidence extent from the target — the conflation #307 exists to remove.
+  decisionTargetSeason: z.number().nullable(),
+  decisionTargetWeek: z.number().nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetIsProvisional: z.boolean(),
+  evidenceThroughSeason: z.number().nullable(),
+  evidenceThroughWeek: z.number().nullable(),
+  evidenceProvenance: z.enum([
+    'source_declared_as_of',
+    'source_max_represented_week',
+    'source_extent_unknown',
+    'no_rankable_source',
+  ]),
+  completionVerified: z.boolean(),
+  finalizedThroughWeek: z.number().nullable(),
+  completionCopy: z.string().nullable(),
+
   generatedAt: z.string().datetime().nullable(),
   isArchiveView: z.boolean(),
   status: z.string().nullable(),

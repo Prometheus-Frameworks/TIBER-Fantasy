@@ -172,6 +172,42 @@ export const rankingsV2SeasonMetaSchema = z.object({
 
   evidenceSeason: z.number().nullable(),
   evidenceWeek: z.number().nullable(),
+
+  /**
+   * The decision-target / evidence split (Fantasy #307 Phase A).
+   *
+   * Added alongside the existing fields rather than replacing them: no
+   * pre-existing field changes name, type or nullability, so a consumer of the
+   * current contract version keeps validating. `targetWeek` and
+   * `decisionTargetWeek` carry the same value by construction; the new name
+   * exists so a reader cannot mistake a forward target for an evidence bound,
+   * and the provenance travels with each side.
+   *
+   * `evidenceThroughWeek` is the extent the admitted SOURCE declares — the
+   * cache's own asOfWeek, or the measured maximum stats week — never a
+   * calendar/clock derivation and never the query ceiling. Null means the
+   * extent is unknown, which must not render as "full season".
+   *
+   * `completionVerified` is independent of evidence extent and is false until
+   * a real finalization source exists; `finalizedThroughWeek` is reserved for
+   * that source and is null today.
+   */
+  decisionTargetSeason: z.number().nullable(),
+  decisionTargetWeek: z.number().nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetIsProvisional: z.boolean(),
+  evidenceThroughSeason: z.number().nullable(),
+  evidenceThroughWeek: z.number().nullable(),
+  evidenceProvenance: z.enum([
+    'source_declared_as_of',
+    'source_max_represented_week',
+    'source_extent_unknown',
+    'no_rankable_source',
+  ]),
+  completionVerified: z.boolean(),
+  finalizedThroughWeek: z.number().nullable(),
+  completionCopy: z.string().nullable(),
+
   generatedAt: z.string().datetime().nullable(),
   isArchiveView: z.boolean(),
   status: z.string().nullable(),

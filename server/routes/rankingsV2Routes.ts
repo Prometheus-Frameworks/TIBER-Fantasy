@@ -10,7 +10,7 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
-import { resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
+import { COMPLETION_NOT_VERIFIED_COPY, resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
 import { elapsedRegularSeasonWeeks } from '@shared/nflSeasonCalendar';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
@@ -27,10 +27,28 @@ export const ARCHIVE_SEASON_STATUS = 'archive_season_not_current';
  * Fantasy #307 — a 2026 computation timestamp over 2025 Week 18 evidence must
  * not read as current-season evidence.
  */
+/**
+ * Why the evidence extent is (or is not) known. Every value names a SOURCE
+ * relationship, never a calendar or clock derivation:
+ *
+ *   source_declared_as_of        — the serving cache declared its own asOfWeek
+ *   source_max_represented_week  — measured from the admitted stats rows
+ *   source_extent_unknown        — the source cannot state its extent; the
+ *                                  week is null and must not render as
+ *                                  "full season"
+ *   no_rankable_source           — nothing was admitted at all
+ */
+export type EvidenceProvenance =
+  | 'source_declared_as_of'
+  | 'source_max_represented_week'
+  | 'source_extent_unknown'
+  | 'no_rankable_source';
+
 function buildSeasonMeta(input: {
   phase: SeasonPhaseInfo;
   evidenceSeason: number | null;
   evidenceWeek: number | null;
+  evidenceProvenance: EvidenceProvenance;
   generatedAt: string | null;
   status: string | null;
   statusDetail: string | null;
@@ -58,6 +76,32 @@ function buildSeasonMeta(input: {
     scheduleSource: input.phase.scheduleSource,
     configStatus: input.phase.configStatus,
     configNote: input.phase.configNote,
+
+    // The decision-target / evidence split, published so a consumer never has
+    // to infer which job a week number is doing. Additive: every pre-existing
+    // field keeps its name, type and nullability.
+    //
+    // `decisionTargetWeek` restates the forward target with its provenance
+    // attached — a provisional anchor-derived target may drive forward-looking
+    // requests only while that flag travels with it.
+    decisionTargetSeason: input.phase.targetSeason,
+    decisionTargetWeek: input.phase.targetWeek,
+    decisionTargetProvenance: input.phase.targetProvenance,
+    decisionTargetIsProvisional: input.phase.targetIsProvisional,
+    // `evidenceThroughWeek` restates `evidenceWeek` under a name that cannot
+    // be mistaken for a target, with the source relationship that produced it.
+    evidenceThroughSeason: input.evidenceWeek === null ? null : input.evidenceSeason,
+    evidenceThroughWeek: input.evidenceWeek,
+    evidenceProvenance: input.evidenceProvenance,
+    // Completion is a separate fact from evidence extent, and this build has
+    // no per-game finalization source at all — deriving one from the calendar
+    // is exactly the defect this split removes. So completion is never
+    // asserted: a source containing evidence through Week N does not prove
+    // every game in Week N is final. A separately sourced
+    // `finalizedThroughWeek` may exist one day; until then it is null.
+    completionVerified: false,
+    finalizedThroughWeek: null,
+    completionCopy: COMPLETION_NOT_VERIFIED_COPY,
 
     // Evidence vs computation — deliberately separate fields.
     evidenceSeason: input.evidenceSeason,
@@ -101,6 +145,7 @@ function buildUnavailablePayload(input: {
       phase: input.phase,
       evidenceSeason: input.season,
       evidenceWeek: null,
+      evidenceProvenance: 'no_rankable_source',
       generatedAt: null,
       status: input.status,
       statusDetail: input.detail,
@@ -282,15 +327,26 @@ export function createRankingsV2Router(): Router {
       // postseason this correctly defaults a parameterless request to 2026.
       const season = hasExplicitSeason ? requestedSeason : phase.targetSeason ?? phase.season;
 
+      // Three different values, three different jobs — conflating any two of
+      // them is the defect #307 exists to remove:
+      //
+      //   decisionTargetWeek — which week's board to build. Forward-looking; a
+      //     provisional anchor-derived target may legitimately drive it.
+      //   statsQueryCeiling — an upper bound on the stats QUERY. It filters
+      //     recorded rows and cannot fabricate one, so it may come from the
+      //     queried season's own calendar. It is never published.
+      //   evidenceWeek (below, per payload) — the extent the admitted SOURCE
+      //     actually declares. Never derived from a calendar, a clock, or the
+      //     query ceiling; null when the source cannot state it.
       const asOfWeekParam = req.query.asOfWeek as string | undefined;
       const requestedWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : NaN;
-      const asOfWeek = Number.isFinite(requestedWeek)
+      const decisionTargetWeek = Number.isFinite(requestedWeek)
         ? requestedWeek
         : season === phase.season
           ? phase.regularSeasonWeek ?? undefined
           : undefined;
 
-      // The evidence cutoff belongs to the season being queried, not to the
+      // The query ceiling belongs to the season being queried, not to the
       // live clock. `throughWeek` is a hard `lte` filter, so falling back to
       // the live phase week silently truncated every other season: a 2024
       // archive requested during 2026 Week 3 returned weeks 1-3 and presented
@@ -299,10 +355,11 @@ export function createRankingsV2Router(): Router {
       // same fallback also emptied the 2025 archive during the 2025
       // postseason, when `regularSeasonWeek` is null but all 18 weeks exist.
       //
-      // Deriving the bound from the queried season's own calendar answers all
-      // of these with one rule, and reproduces today's live behaviour exactly
-      // for the in-flight season.
-      const evidenceThroughWeek = Number.isFinite(requestedWeek)
+      // Deriving the ceiling from the queried season's own calendar answers
+      // all of these with one rule. What the ceiling is NOT is evidence: it
+      // says what the query was allowed to admit, not what the source
+      // contained, and it is never published as an evidence claim.
+      const statsQueryCeiling = Number.isFinite(requestedWeek)
         ? requestedWeek
         : elapsedRegularSeasonWeeks(season);
 
@@ -336,9 +393,9 @@ export function createRankingsV2Router(): Router {
         }
       }
 
-      if (evidenceThroughWeek === null) {
-        // No bound can be derived for this season without borrowing one from a
-        // different season, which is the defect above. Say so rather than
+      if (statsQueryCeiling === null) {
+        // No ceiling can be derived for this season without borrowing one from
+        // a different season, which is the defect above. Say so rather than
         // serving evidence whose extent we cannot state.
         return res.json(
           buildUnavailablePayload({
@@ -353,13 +410,15 @@ export function createRankingsV2Router(): Router {
         );
       }
 
-      const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
-      const scoringInputs = await buildRankingsScoringInputs({
+      // The cache is keyed by the DECISION TARGET — which board is being built.
+      const cache = await getGradesFromCache(season, decisionTargetWeek, position, limit, CACHE_VERSION);
+      const scoringBuild = await buildRankingsScoringInputs({
         season,
-        throughWeek: evidenceThroughWeek,
+        throughWeek: statsQueryCeiling,
         position,
         limit,
       });
+      const scoringInputs = scoringBuild.players;
       const meaningfulInputCount = scoringInputs.filter(hasMeaningfulScoringInputs).length;
       const hasMeaningfulCoverage = meaningfulInputCount >= Math.max(10, Math.floor(scoringInputs.length * 0.6));
       // Populated whenever the FORGE-cache path below is reached instead of scoring rankings,
@@ -371,7 +430,7 @@ export function createRankingsV2Router(): Router {
         const scoringRankings = await scoringService.getWeeklyRankings({
           leagueContext: toLeagueContextInput({
             season,
-            week: asOfWeek,
+            week: decisionTargetWeek,
             scoringFormat: 'ppr',
             teams: 12,
           }),
@@ -391,7 +450,11 @@ export function createRankingsV2Router(): Router {
                 layer: 'promoted_artifact' as const,
                 source: 'point-prediction-model /api/tiber/weekly/rankings',
                 asOf: scoringAsOf,
-                notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
+                notes:
+                  `season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, ` +
+                  `statsQueryCeiling=${statsQueryCeiling}, ` +
+                  `maxRepresentedWeek=${scoringBuild.maxRepresentedWeek ?? 'none'}, ` +
+                  `position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
               },
             ],
             items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
@@ -405,12 +468,15 @@ export function createRankingsV2Router(): Router {
             seasonMeta: buildSeasonMeta({
               phase,
               evidenceSeason: season,
-              // The scoring path is built from weekly stats bounded by
-              // `evidenceThroughWeek`, so that — not the caller's optional
-              // `asOfWeek` — is the extent of the football behind these
-              // scores. Reporting null here while filtering to a week was the
-              // same conflation in the envelope itself.
-              evidenceWeek: evidenceThroughWeek,
+              // The extent the SOURCE declares: the greatest weekly-stats week
+              // actually aggregated into the admitted inputs, measured from
+              // the rows themselves. Not the query ceiling — a filter says
+              // what was asked for, not what the source contained — and not
+              // the caller's target. Null when the source held nothing.
+              evidenceWeek: scoringBuild.maxRepresentedWeek,
+              evidenceProvenance: scoringBuild.maxRepresentedWeek === null
+                ? 'source_extent_unknown'
+                : 'source_max_represented_week',
               generatedAt: scoringAsOf,
               status: null,
               statusDetail: null,
@@ -461,8 +527,8 @@ export function createRankingsV2Router(): Router {
             // scoringFallbackReason records why this layer is serving instead of the scoring service,
             // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
             notes: isCacheEmpty
-              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`
-              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
+              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, position=${position}`
+              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, position=${position}`,
           },
           {
             layer: 'confidence_stability' as const,
@@ -496,7 +562,14 @@ export function createRankingsV2Router(): Router {
         seasonMeta: buildSeasonMeta({
           phase,
           evidenceSeason: season,
-          evidenceWeek: cache.asOfWeek ?? asOfWeek ?? null,
+          // The cache's OWN declared as-of week — the one value the serving
+          // source states about its evidence extent. The caller's target must
+          // not stand in for it: `?? asOfWeek` here previously let a requested
+          // week be published as evidence the cache never declared. When the
+          // cache declares nothing, the extent is unknown and stays null —
+          // which must never be rendered as "full season".
+          evidenceWeek: cache.asOfWeek ?? null,
+          evidenceProvenance: cache.asOfWeek != null ? 'source_declared_as_of' : 'source_extent_unknown',
           generatedAt: toIso(cache.computedAt),
           status: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
           statusDetail: isCacheEmpty

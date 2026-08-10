@@ -42,6 +42,28 @@ export type NflPhase = 'offseason' | 'preseason' | 'regular_season' | 'postseaso
 export type NflWeekStatus = 'not_started' | 'in_progress' | 'completion_unverified' | 'completed';
 export type SeasonConfigStatus = 'ok' | 'stale_calendar_config';
 
+/**
+ * Where a target week's timing comes from.
+ *
+ * `verified_schedule` — the season's real week-by-week schedule was ingested.
+ * `anchor_derived`   — only the Week 1 kickoff anchor is known and every other
+ *                      boundary is cadence arithmetic off it.
+ *
+ * An anchor-derived target is a **provisional scheduling signal**. It is enough
+ * to say "the board should be aiming at Week N" and never enough to say that
+ * any game kicked off, that a week completed, or that a specific number of
+ * games finished. It may drive forward-looking requests only while this
+ * provenance travels with it.
+ */
+export type TargetProvenance = 'verified_schedule' | 'anchor_derived';
+
+/**
+ * Copy for any surface that cannot assert completion. This build has no
+ * per-game finalization source at all, so no copy anywhere should imply that
+ * games or weeks are known to be final.
+ */
+export const COMPLETION_NOT_VERIFIED_COPY = 'Completion not verified.';
+
 export interface SeasonPhaseInfo {
   /** The season the current phase belongs to. During the 2026 offseason this is 2026. */
   season: number;
@@ -60,6 +82,15 @@ export interface SeasonPhaseInfo {
   targetWeek: number | null;
   /** e.g. "Target: Week 1". Null when there is no resolvable target. */
   targetLabel: string | null;
+
+  /**
+   * `scheduleSource` restated as target provenance, so a consumer reading the
+   * target does not have to know that `explicit_schedule` is the trustworthy
+   * one. Null exactly when there is no target.
+   */
+  targetProvenance: TargetProvenance | null;
+  /** True when the target rests on anchor arithmetic rather than an ingested schedule. */
+  targetIsProvisional: boolean;
 
   /**
    * Whether the target week's timing comes from an ingested schedule or from a
@@ -106,6 +137,10 @@ export interface WeekInfo {
   targetWeek: number | null;
   targetLabel: string | null;
   scheduleSource: NflScheduleSource | null;
+  // Additive (Fantasy #307 Phase A): the target's provenance travels with it.
+  // No pre-existing field changes name, type or nullability.
+  targetProvenance: TargetProvenance | null;
+  targetIsProvisional: boolean;
   configStatus: SeasonConfigStatus;
   configNote: string | null;
 }
@@ -204,6 +239,11 @@ function buildPhaseInfo(input: {
     targetWeek: input.targetWeek,
     targetLabel: input.targetWeek === null ? null : `Target: Week ${input.targetWeek}`,
     scheduleSource: input.scheduleSource,
+    targetProvenance:
+      input.targetWeek === null || input.scheduleSource === null
+        ? null
+        : input.scheduleSource === 'explicit_schedule' ? 'verified_schedule' : 'anchor_derived',
+    targetIsProvisional: input.targetWeek !== null && input.scheduleSource === 'anchor_derived',
     configStatus: input.configStatus ?? 'ok',
     configNote: input.configNote ?? null,
     configuredSeasons: getConfiguredSeasons(),
@@ -394,7 +434,13 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
   const phase = resolveSeasonPhase(now);
 
   const displaySeason = phase.phase === 'regular_season' ? phase.season : phase.targetSeason ?? phase.season;
-  const displayWeek = phase.regularSeasonWeek ?? phase.targetWeek ?? 1;
+  // No `?? 1`. Reconstructing a null target as Week 1 is the same class of
+  // defect as the old clamp to Week 18: it manufactures a week number the
+  // calendar refused to produce, and every downstream consumer then treats
+  // the invention as detection. When there is no target, `currentWeek` is 0 —
+  // a value that cannot be mistaken for a real NFL week — and `configStatus`
+  // and `targetWeek` carry the real answer.
+  const displayWeek = phase.regularSeasonWeek ?? phase.targetWeek ?? 0;
   const window = windowFor(displaySeason, displayWeek);
 
   const weekStatus: NflWeekStatus =
@@ -431,6 +477,8 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
     targetWeek: phase.targetWeek,
     targetLabel: phase.targetLabel,
     scheduleSource: phase.scheduleSource,
+    targetProvenance: phase.targetProvenance,
+    targetIsProvisional: phase.targetIsProvisional,
     configStatus: phase.configStatus,
     configNote: phase.configNote,
   };
@@ -474,6 +522,8 @@ export function getWeekInfo(week: number, season?: number, currentDate?: Date): 
     targetWeek: phase.targetWeek,
     targetLabel: phase.targetLabel,
     scheduleSource: calendar.scheduleSource,
+    targetProvenance: phase.targetProvenance,
+    targetIsProvisional: phase.targetIsProvisional,
     configStatus: phase.configStatus,
     configNote: phase.configNote,
   };

@@ -81,7 +81,7 @@ const cacheRow = {
 describe('Rankings v2 season/phase contract', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedBuild.mockResolvedValue([]);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
     mockedMeaningful.mockReturnValue(false);
     mockedCache.mockResolvedValue({
       players: [cacheRow],
@@ -187,5 +187,117 @@ describe('Rankings v2 season/phase contract', () => {
     // of the contract rather than an untyped extra.
     expect(body.seasonMeta).toBeDefined();
     expect(body.contractVersion).toBeDefined();
+  });
+});
+
+describe('evidence is what the source declares, never the request or a calendar', () => {
+  beforeEach(() => {
+    mockResolveSeasonPhase.mockReturnValue(MIDSEASON_2025);
+  });
+
+  test('the cache path publishes the cache\'s own declared as-of week, not the requested target', async () => {
+    // The caller asks for the Week 18 board; the serving cache declares its
+    // rows are as of Week 5. Evidence is the SOURCE's statement: publishing
+    // the request here is exactly how a target week used to masquerade as
+    // evidence for football that had not been played.
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2025-11-16T18:00:00.000Z'),
+      asOfWeek: 5,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    expect(body.seasonMeta.evidenceWeek).toBe(5);
+    expect(body.seasonMeta.evidenceThroughWeek).toBe(5);
+    expect(body.seasonMeta.evidenceProvenance).toBe('source_declared_as_of');
+    // The target the request named is still visible — as a target.
+    expect(body.seasonMeta.decisionTargetWeek).toBe(MIDSEASON_2025.targetWeek);
+  });
+
+  test('a cache that declares no extent yields unknown — never \"full season\"', async () => {
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2025-11-16T18:00:00.000Z'),
+      asOfWeek: undefined,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
+    expect(body.seasonMeta.evidenceProvenance).toBe('source_extent_unknown');
+    // Null is "unknown", not "18": nothing downstream may widen it.
+    expect(body.seasonMeta.evidenceWeek).not.toBe(18);
+  });
+
+  test('the scoring path publishes the measured max represented week, not the query ceiling', async () => {
+    // The ceiling admits up to week 11 (the live phase week), but the stats
+    // actually aggregated only reach week 9 — say, an ingestion lag. The
+    // envelope must say 9: the ceiling is what the query was ALLOWED to
+    // admit, not what the source contained.
+    mockedBuild.mockResolvedValue({
+      players: Array.from({ length: 12 }).map((_, idx) => ({
+        player_id: `00-00${idx}`,
+        player_name: `P${idx}`,
+        position: 'WR',
+        team: 'MIN',
+        games_sampled: 5,
+        targets_pg: 8,
+        fantasy_points_ppr_pg: 15,
+      })),
+      maxRepresentedWeek: 9,
+    } as any);
+    mockedMeaningful.mockReturnValue(true);
+    const { scoringService } = jest.requireMock('../../modules/externalModels/scoring/scoringService');
+    scoringService.getWeeklyRankings.mockResolvedValue({
+      ok: true,
+      data: {
+        asOf: '2025-11-16T18:00:00.000Z',
+        items: [{
+          rank: 1, playerId: '00-000', playerName: 'P0', team: 'MIN', position: 'WR',
+          expectedPoints: 20.1, vorp: 3.4,
+        }],
+      },
+    });
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR');
+
+    // The ceiling comes from the queried season's own calendar under the real
+    // clock (all 18 of 2025's weeks have begun by now) — and that is exactly
+    // why it must not be published: the envelope below says 9, the measured
+    // extent, not the 18 the query was merely allowed to admit.
+    expect(mockedBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ season: 2025, throughWeek: 18 }),
+    );
+    expect(body.seasonMeta.evidenceWeek).toBe(9);
+    expect(body.seasonMeta.evidenceThroughWeek).toBe(9);
+    expect(body.seasonMeta.evidenceProvenance).toBe('source_max_represented_week');
+  });
+
+  test('the unavailable payload declares no rankable source', async () => {
+    mockResolveSeasonPhase.mockReturnValue(STALE);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR');
+
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+  });
+
+  test('completion is never asserted: no finalization source exists', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    expect(body.seasonMeta.completionVerified).toBe(false);
+    expect(body.seasonMeta.finalizedThroughWeek).toBeNull();
+    expect(body.seasonMeta.completionCopy).toBe('Completion not verified.');
+  });
+
+  test('the decision target carries its provenance in the envelope', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    expect(body.seasonMeta.decisionTargetSeason).toBe(MIDSEASON_2025.targetSeason);
+    expect(body.seasonMeta.decisionTargetWeek).toBe(MIDSEASON_2025.targetWeek);
+    expect(body.seasonMeta.decisionTargetProvenance).toBe('anchor_derived');
+    expect(body.seasonMeta.decisionTargetIsProvisional).toBe(true);
   });
 });

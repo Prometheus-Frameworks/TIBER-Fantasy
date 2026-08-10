@@ -80,7 +80,7 @@ const cacheRow = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedBuild.mockResolvedValue([]);
+  mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
   mockedMeaningful.mockReturnValue(false);
   mockedCache.mockResolvedValue({
     players: [cacheRow],
