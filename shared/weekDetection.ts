@@ -111,6 +111,12 @@ export interface WeekInfo {
 }
 
 const TOTAL_GAMES_PER_WEEK = 16;
+/**
+ * Nominal elapsed time from kickoff to a final whistle. Used only to keep the
+ * games-completed estimate from counting a game that is still being played;
+ * it is a cadence convention, not an observation of any real game.
+ */
+const GAME_DURATION_HOURS = 3;
 
 const PHASE_LABELS: Record<NflPhase, string> = {
   offseason: 'Offseason',
@@ -341,19 +347,33 @@ function estimateGamesCompleted(currentDate: Date, window: NflWeekWindow): numbe
   if (currentTime >= ms(window.endDate)) return TOTAL_GAMES_PER_WEEK;
   if (currentTime >= mondayNightTime) return TOTAL_GAMES_PER_WEEK - 1;
 
-  const dayOfWeek = currentDate.getUTCDay();
-  const hour = currentDate.getUTCHours();
+  // Every boundary below is a *completion* boundary, measured from this week's
+  // own Thursday kickoff anchor. Two defects are being removed at once:
+  //
+  //  - the ladder stepped at KICKOFF times, so a game counted as completed the
+  //    instant it started (20:00Z Thursday reported one game done while it was
+  //    being played; 17:00Z Sunday reported eight);
+  //  - it bucketed by UTC weekday, so the early hours of UTC Monday — still
+  //    Sunday evening in the US, with the 4pm ET slate live — reported 13.
+  //
+  // Offsets from the anchor are timezone-free and use the same basis as the
+  // rest of this module. They remain nominal-cadence approximations over an
+  // anchor-derived calendar: flex scheduling, international kickoffs and
+  // overrun all move them. That is precisely why the caller emits `null`
+  // rather than a number for the part of the week this cannot describe.
+  const hoursSinceKickoff = (currentTime - startTime) / (60 * 60 * 1000);
 
-  if (dayOfWeek === 4) return hour >= 20 ? 1 : 0; // Thursday
-  if (dayOfWeek === 5 || dayOfWeek === 6) return 1; // Friday–Saturday: TNF only
-  if (dayOfWeek === 0) {
-    // Sunday
-    if (hour < 17) return 1;
-    if (hour < 21) return 8;
-    return 12;
-  }
-  if (dayOfWeek === 1) return 13; // Monday, pre-MNF
-  return 0;
+  // Thursday 20:00Z + 3h.
+  if (hoursSinceKickoff < GAME_DURATION_HOURS) return 0;
+  // Sunday early slate (17:00Z, i.e. anchor + 69h) finishes at anchor + 72h.
+  if (hoursSinceKickoff < 72) return 1;
+  // Sunday late slate (~21:00Z, anchor + 73h) finishes at anchor + 76h.
+  if (hoursSinceKickoff < 76) return 8;
+  // Sunday night (~01:20Z Monday, anchor + 77h) finishes at anchor + 80h.
+  if (hoursSinceKickoff < 80) return 12;
+  // Everything but Monday night. MNF itself is handled by the branches above,
+  // which key off the calendar's own Monday-night timestamp.
+  return 13;
 }
 
 function windowFor(season: number, week: number | null): NflWeekWindow | null {

@@ -148,3 +148,30 @@ export function getSeasonCalendar(season: number): NflSeasonCalendar | null {
 export function getConfiguredSeasons(): number[] {
   return NFL_SEASON_CALENDARS.map((calendar) => calendar.season).sort((a, b) => a - b);
 }
+
+/**
+ * How many regular-season weeks of `season` have begun as of `now`.
+ *
+ * This is the honest upper bound on how much football evidence a season can
+ * have produced, and it is derived from that season's own calendar rather than
+ * from the live clock's phase. The distinction matters because the live phase
+ * week is meaningless for any other season: applying it to an archive
+ * truncates the archive, and applying it to a forward season invents evidence
+ * for games that have not happened.
+ *
+ * "Begun" rather than "completed" is deliberate — it reproduces exactly what
+ * the live phase week already reports for the in-flight season (mid-Week-5
+ * counts 5), so this generalises the existing rule to every season instead of
+ * changing it. Weeks that have begun but not finished contribute whatever
+ * evidence exists so far, which is the same thing the live path has always
+ * done.
+ *
+ * Returns null for a season this build cannot describe, so callers fail closed
+ * rather than substituting a bound from somewhere else.
+ */
+export function elapsedRegularSeasonWeeks(season: number, now: Date = new Date()): number | null {
+  const calendar = getSeasonCalendar(season);
+  if (!calendar) return null;
+  const nowMs = now.getTime();
+  return calendar.weeks.filter((week) => nowMs >= new Date(week.startDate).getTime()).length;
+}

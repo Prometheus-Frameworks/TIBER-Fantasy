@@ -279,3 +279,62 @@ describe('calendar config integrity', () => {
     expect(new Set(seasons).size).toBe(seasons.length);
   });
 });
+
+describe('the games-completed estimate never counts a game still being played', () => {
+  // The same kickoff-is-not-completion principle applied one level down. The
+  // ladder inside estimateGamesCompleted stepped at kickoff times, so the
+  // instant a slate started its games were reported as finished.
+  //
+  // Week 11 2025 runs from Thursday 2025-11-13T20:00Z.
+  const infoAt = (iso: string) => getWeekInfo(11, 2025, at(iso));
+  const gamesAt = (iso: string) => infoAt(iso)?.gamesCompleted ?? null;
+
+  test('Thursday kickoff reports nothing completed yet', () => {
+    expect(gamesAt('2025-11-13T19:59:00Z')).toBe(0);
+    // Previously 1: the game had just started.
+    expect(gamesAt('2025-11-13T20:00:00Z')).toBe(0);
+    expect(gamesAt('2025-11-13T21:30:00Z')).toBe(0);
+  });
+
+  test('TNF counts once it has had time to finish', () => {
+    expect(gamesAt('2025-11-13T23:00:00Z')).toBe(1);
+    expect(gamesAt('2025-11-14T12:00:00Z')).toBe(1);
+    expect(gamesAt('2025-11-15T12:00:00Z')).toBe(1);
+  });
+
+  test('the Sunday early slate is not counted at its own kickoff', () => {
+    // Previously 8 at 17:00Z, when the 1pm ET games had just kicked off.
+    expect(gamesAt('2025-11-16T17:00:00Z')).toBe(1);
+    expect(gamesAt('2025-11-16T19:00:00Z')).toBe(1);
+    expect(gamesAt('2025-11-16T20:00:00Z')).toBe(8);
+  });
+
+  test('the Sunday late slate is not counted at its own kickoff', () => {
+    // Previously 12 at 21:00Z, when the 4pm ET games had just kicked off.
+    expect(gamesAt('2025-11-16T21:00:00Z')).toBe(8);
+    expect(gamesAt('2025-11-16T23:00:00Z')).toBe(8);
+    expect(gamesAt('2025-11-17T00:00:00Z')).toBe(12);
+  });
+
+  test('the estimate never decreases as the week progresses', () => {
+    const samples = [
+      '2025-11-13T18:00:00Z', '2025-11-13T20:00:00Z', '2025-11-13T23:30:00Z',
+      '2025-11-14T12:00:00Z', '2025-11-15T12:00:00Z', '2025-11-16T12:00:00Z',
+      '2025-11-16T17:00:00Z', '2025-11-16T20:30:00Z', '2025-11-17T00:30:00Z',
+    ].map(gamesAt);
+    for (let i = 1; i < samples.length; i += 1) {
+      expect(samples[i]).toBeGreaterThanOrEqual(samples[i - 1]!);
+    }
+  });
+
+  test('it never exceeds the slate it is estimating', () => {
+    for (const iso of [
+      '2025-11-13T20:00:00Z', '2025-11-16T20:30:00Z',
+      '2025-11-17T00:30:00Z', '2025-11-19T05:00:00Z',
+    ]) {
+      const info = infoAt(iso);
+      if (info?.gamesCompleted === null || info?.gamesCompleted === undefined) continue;
+      expect(info.gamesCompleted).toBeLessThanOrEqual(info.totalGames);
+    }
+  });
+});

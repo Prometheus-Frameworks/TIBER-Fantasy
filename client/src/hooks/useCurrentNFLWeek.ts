@@ -1,11 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
+import type { NflWeekStatus } from '@shared/weekDetection';
 
 export type NflPhase = 'offseason' | 'preseason' | 'regular_season' | 'postseason';
 
 interface WeekInfo {
   currentWeek: number;
   season: number;
-  weekStatus: 'not_started' | 'in_progress' | 'completed';
+  /**
+   * Imported rather than re-declared. This union was written out by hand and
+   * silently drifted when the server gained `completion_unverified`, so the
+   * client's type claimed a state the API could actually send did not exist —
+   * and any consumer narrowing on it fell through. Binding it to the server's
+   * own type makes the next such addition a compile error here.
+   */
+  weekStatus: NflWeekStatus;
   mondayNightCompleted: boolean | null;
   weekStartDate: string;
   weekEndDate: string;

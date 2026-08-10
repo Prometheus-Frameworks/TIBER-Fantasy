@@ -11,6 +11,7 @@ import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCa
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
 import { resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
+import { elapsedRegularSeasonWeeks } from '@shared/nflSeasonCalendar';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
@@ -289,6 +290,22 @@ export function createRankingsV2Router(): Router {
           ? phase.regularSeasonWeek ?? undefined
           : undefined;
 
+      // The evidence cutoff belongs to the season being queried, not to the
+      // live clock. `throughWeek` is a hard `lte` filter, so falling back to
+      // the live phase week silently truncated every other season: a 2024
+      // archive requested during 2026 Week 3 returned weeks 1-3 and presented
+      // them as the season, and in the offseason the `?? 0` fallback matched
+      // nothing at all while still rendering as a populated archive view. The
+      // same fallback also emptied the 2025 archive during the 2025
+      // postseason, when `regularSeasonWeek` is null but all 18 weeks exist.
+      //
+      // Deriving the bound from the queried season's own calendar answers all
+      // of these with one rule, and reproduces today's live behaviour exactly
+      // for the in-flight season.
+      const evidenceThroughWeek = Number.isFinite(requestedWeek)
+        ? requestedWeek
+        : elapsedRegularSeasonWeeks(season);
+
       const position = ((req.query.position as string) || 'ALL').toUpperCase() as SupportedPosition;
       const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 300);
 
@@ -319,12 +336,27 @@ export function createRankingsV2Router(): Router {
         }
       }
 
+      if (evidenceThroughWeek === null) {
+        // No bound can be derived for this season without borrowing one from a
+        // different season, which is the defect above. Say so rather than
+        // serving evidence whose extent we cannot state.
+        return res.json(
+          buildUnavailablePayload({
+            season: null,
+            status: SEASON_CONFIG_STALE_STATUS,
+            detail:
+              `Season ${season} is not present in the configured NFL season calendar, so the ` +
+              'extent of its evidence cannot be established; rankings are unavailable.',
+            phase,
+            position,
+          }),
+        );
+      }
+
       const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
       const scoringInputs = await buildRankingsScoringInputs({
         season,
-        // No week filter means "everything recorded for this season so far",
-        // which is correct pre-Week-1 (nothing) and mid-season (weeks to date).
-        throughWeek: asOfWeek ?? phase.regularSeasonWeek ?? 0,
+        throughWeek: evidenceThroughWeek,
         position,
         limit,
       });
@@ -373,7 +405,12 @@ export function createRankingsV2Router(): Router {
             seasonMeta: buildSeasonMeta({
               phase,
               evidenceSeason: season,
-              evidenceWeek: asOfWeek ?? null,
+              // The scoring path is built from weekly stats bounded by
+              // `evidenceThroughWeek`, so that — not the caller's optional
+              // `asOfWeek` — is the extent of the football behind these
+              // scores. Reporting null here while filtering to a week was the
+              // same conflation in the envelope itself.
+              evidenceWeek: evidenceThroughWeek,
               generatedAt: scoringAsOf,
               status: null,
               statusDetail: null,

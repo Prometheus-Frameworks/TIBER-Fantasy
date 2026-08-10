@@ -29,6 +29,7 @@ jest.mock('@shared/weekDetection', () => ({
 }));
 
 import { createRankingsV2Router } from '../rankingsV2Routes';
+import { elapsedRegularSeasonWeeks } from '@shared/nflSeasonCalendar';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import {
   buildRankingsScoringInputs,
@@ -154,13 +155,82 @@ describe('Rankings v2 route forward-season default', () => {
 
     expect(status).toBe(200);
     expect(mockedCache).toHaveBeenCalledWith(2026, undefined, 'WR', 100, 'test-version');
+    // Derived, not a literal: the bound is 2026's own elapsed week count, which
+    // is 0 today but will not be forever. A hardcoded 0 here would quietly
+    // start asserting the wrong thing once 2026 Week 1 kicks off.
     expect(mockedBuild).toHaveBeenCalledWith(
-      expect.objectContaining({ season: 2026, throughWeek: 0 }),
+      expect.objectContaining({ season: 2026, throughWeek: elapsedRegularSeasonWeeks(2026) }),
     );
     expect(body.seasonMeta.currentSeason).toBe(2025);
     expect(body.seasonMeta.forwardRankingSeason).toBe(2026);
     expect(body.seasonMeta.evidenceSeason).toBe(2026);
     expect(body.seasonMeta.evidenceWeek).toBe(1);
     expect(body.seasonMeta.isArchiveView).toBe(false);
+  });
+});
+
+describe('Rankings v2 route evidence bound belongs to the queried season', () => {
+  // The reported defect: `throughWeek` fell back to the LIVE phase week
+  // whenever the request named another season. Because the consumer applies it
+  // as a hard `lte` filter, an archive was silently truncated to the live week
+  // and presented as the whole season, and in the offseason the `?? 0`
+  // fallback returned nothing while still rendering as a populated archive.
+  it('bounds an explicitly requested archive by that archive, not by the live clock', async () => {
+    mockResolveSeasonPhase.mockReturnValue(POSTSEASON_2025);
+
+    const { status, body } = await callRankings('/api/rankings/v2/weekly?position=WR&season=2025');
+
+    expect(status).toBe(200);
+    // 2025 is complete, so its bound is its full length — regardless of what
+    // the live clock happens to say. The old code produced 0 here, because
+    // `regularSeasonWeek` is null during a postseason.
+    expect(mockedBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ season: 2025, throughWeek: 18 }),
+    );
+    expect(body.seasonMeta.evidenceSeason).toBe(2025);
+  });
+
+  it('reports the evidence bound it actually applied', async () => {
+    // Reporting `evidenceWeek: null` while filtering to a week was the same
+    // evidence/computation conflation inside the envelope.
+    mockResolveSeasonPhase.mockReturnValue(POSTSEASON_2025);
+    mockedMeaningful.mockReturnValue(true);
+    const { scoringService } = jest.requireMock(
+      '../../modules/externalModels/scoring/scoringService',
+    ) as any;
+    scoringService.getWeeklyRankings.mockResolvedValue({
+      ok: true,
+      data: { asOf: '2026-01-20T00:00:00.000Z', items: [] },
+    });
+
+    const { body } = await callRankings('/api/rankings/v2/weekly?position=WR&season=2025');
+
+    expect(body.seasonMeta.evidenceWeek).toBe(18);
+  });
+
+  it('fails closed for a season whose extent cannot be established', async () => {
+    // An unconfigured season has no calendar to bound it, and the fix must not
+    // reach for another season's bound. It must say so instead.
+    mockResolveSeasonPhase.mockReturnValue(POSTSEASON_2025);
+
+    const { status, body } = await callRankings('/api/rankings/v2/weekly?position=WR&season=2019');
+
+    expect(status).toBe(200);
+    expect(body.items).toEqual([]);
+    expect(body.seasonMeta.status).toBe('season_calendar_config_stale');
+    expect(body.seasonMeta.statusDetail).toContain('extent of its evidence cannot be established');
+    expect(mockedCache).not.toHaveBeenCalled();
+    expect(mockedBuild).not.toHaveBeenCalled();
+  });
+
+  it('still honours an explicit asOfWeek over the derived bound', async () => {
+    // The caller pinning a week is a deliberate request, not a defect.
+    mockResolveSeasonPhase.mockReturnValue(POSTSEASON_2025);
+
+    await callRankings('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=6');
+
+    expect(mockedBuild).toHaveBeenCalledWith(
+      expect.objectContaining({ season: 2025, throughWeek: 6 }),
+    );
   });
 });
