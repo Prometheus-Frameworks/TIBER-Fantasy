@@ -231,7 +231,7 @@ export default function Dashboard() {
         <div className="status-row">
           <div className="status-card">
             <div className="status-label">Season Context</div>
-            <div className="status-value">{season}</div>
+            <div className="status-value">{resolvedSeason ?? '—'}</div>
             <div className="status-sub">Current default season across tools</div>
           </div>
           <div className="status-card">
@@ -271,7 +271,7 @@ export default function Dashboard() {
             </div>
           </div>
           <DataLabDiscoveryWidget
-            season={String(commandCenterData?.data.season ?? season)}
+            season={String(commandCenterData?.data.season ?? resolvedSeason ?? '—')}
             data={commandCenterData?.data ?? null}
             isLoading={isCommandCenterLoading}
             fallbackSummary={{

@@ -16,6 +16,35 @@ jest.mock('../../modules/forge/forgeGradeCache', () => ({
   CACHE_VERSION: 'test-version',
   getGradesFromCache: jest.fn(),
 }));
+// The route now resolves ranking identities (#313); the resolver pulls in the
+// real db module, which throws at import time without DATABASE_URL. Identity
+// behaviour is not under test here — every id resolves to nothing, which the
+// route tolerates by emitting unresolved, non-linkable rows.
+jest.mock('../../infra/db', () => ({ db: {} }));
+jest.mock('../../services/identity/rankingIdentityResolver', () => ({
+  resolveRankingIdentities: async (sourceIds: string[]) => ({
+    identities: new Map(
+      sourceIds.map((sourceId) => [sourceId, {
+        status: 'unresolved',
+        canonicalId: null,
+        sourceId,
+        sourceType: 'gsis',
+        reason: 'not_in_identity_map',
+        linkable: false,
+      }]),
+    ),
+    coverage: {
+      total: sourceIds.length,
+      canonical: 0,
+      resolved: 0,
+      unresolved: sourceIds.length,
+      ambiguous: 0,
+      coverageRatio: 0,
+      byReason: sourceIds.length ? { not_in_identity_map: sourceIds.length } : {},
+    },
+  }),
+}));
+
 jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
   toLeagueContextInput: jest.fn(() => ({})),
   buildRankingsScoringInputs: jest.fn(),
@@ -154,7 +183,9 @@ describe('Rankings v2 route forward-season default', () => {
     const { status, body } = await callRankings('/api/rankings/v2/weekly?position=WR');
 
     expect(status).toBe(200);
-    expect(mockedCache).toHaveBeenCalledWith(2026, undefined, 'WR', 100, 'test-version');
+    // The forward-season default also carries the forward TARGET WEEK, so the
+    // requested board matches the advertised target rather than being weekless.
+    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version');
     // Derived, not a literal: the bound is 2026's own elapsed week count, which
     // is 0 today but will not be forever. A hardcoded 0 here would quietly
     // start asserting the wrong thing once 2026 Week 1 kicks off.

@@ -332,6 +332,19 @@ describe('TiberTiersView rendered output', () => {
         stabilityNote: 'season_calendar_config_stale',
       },
       items: [],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('Season state unavailable');
+    expect(html).toContain('NFL season calendar ends after 2026.');
+    expect(html).toContain('Season calendar unavailable');
+    expect(html).toContain('cannot determine which season or week');
+    expect(html).not.toContain('No players match this filter yet.');
+    expect(html).not.toMatch(/\d+ players/);
+    expect(html).not.toContain('FORGE grades for this filter have not been computed yet');
+  });
+
   it('renders an unresolved row with no player link and no player-research link (Fantasy #308)', () => {
     const unresolved = makeItem({
       playerId: null,
@@ -346,6 +359,7 @@ describe('TiberTiersView rendered output', () => {
       },
     });
     const data: TiersApiResponse = {
+      seasonMeta: SEASON_META,
       contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-08-08T19:04:15.325Z',
       sourceStack: [{ layer: 'forge' }],
@@ -355,13 +369,6 @@ describe('TiberTiersView rendered output', () => {
 
     const html = render(baseProps({ data }));
 
-    expect(html).toContain('Season state unavailable');
-    expect(html).toContain('NFL season calendar ends after 2026.');
-    expect(html).toContain('Season calendar unavailable');
-    expect(html).toContain('cannot determine which season or week');
-    expect(html).not.toContain('No players match this filter yet.');
-    expect(html).not.toMatch(/\d+ players/);
-    expect(html).not.toContain('FORGE grades for this filter have not been computed yet');
     // The row is still on the board.
     expect(html).toContain('Unmapped Player');
     // No player deep link, and no link built from the raw source id.
@@ -387,6 +394,7 @@ describe('TiberTiersView rendered output', () => {
       },
     });
     const data: TiersApiResponse = {
+      seasonMeta: SEASON_META,
       contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-08-08T19:04:15.325Z',
       sourceStack: [{ layer: 'forge' }],
@@ -416,6 +424,7 @@ describe('TiberTiersView rendered output', () => {
       },
     });
     const data: TiersApiResponse = {
+      seasonMeta: SEASON_META,
       contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
       asOf: '2026-08-08T19:04:15.325Z',
       sourceStack: [{ layer: 'forge' }],
@@ -446,7 +455,26 @@ describe('TiberTiersView rendered output', () => {
     expect(() =>
       validateRankingsV2WeeklyResponse({ items: [], sourceStack: [], asOf: '2026-04-12T00:00:00.000Z' }),
     ).toThrow();
-    // An explicit, well-formed empty array *with* season metadata is the only genuine empty result.
+    // An explicit, well-formed empty array with the negotiated contract version
+    // AND the season/phase envelope is the only genuine empty result — dropping
+    // either one is malformed.
+    expect(() =>
+      validateRankingsV2WeeklyResponse({
+        contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+        items: [],
+        sourceStack: [],
+        asOf: '2026-04-12T00:00:00.000Z',
+        seasonMeta: SEASON_META,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      validateRankingsV2WeeklyResponse({
+        contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+        items: [],
+        sourceStack: [],
+        asOf: '2026-04-12T00:00:00.000Z',
+      }),
+    ).toThrow();
     expect(() =>
       validateRankingsV2WeeklyResponse({
         items: [],
@@ -454,13 +482,6 @@ describe('TiberTiersView rendered output', () => {
         asOf: '2026-04-12T00:00:00.000Z',
         seasonMeta: SEASON_META,
       }),
-    ).not.toThrow();
-    // An explicit, well-formed empty array is the only genuine empty result.
-    expect(() => validateRankingsV2WeeklyResponse({
-      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
-      items: [],
-      sourceStack: [],
-      asOf: '2026-04-12T00:00:00.000Z',
-    })).not.toThrow();
+    ).toThrow();
   });
 });

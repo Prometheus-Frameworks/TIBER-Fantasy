@@ -329,7 +329,10 @@ export function resolveSeasonPhaseHeadline(meta: RankingsSeasonMeta): string {
  */
 export function resolveEvidenceLine(meta: RankingsSeasonMeta): string {
   if (meta.evidenceSeason === null) return 'No ranking evidence available.';
-  const week = meta.evidenceWeek === null ? 'full season' : `through week ${meta.evidenceWeek}`;
+  // A null week means the source could not state its extent — the fail-to-null
+  // case the provenance fields exist for. Rendering it as "full season" turned
+  // an explicit unknown into the strongest possible completeness claim.
+  const week = meta.evidenceWeek === null ? 'extent not stated' : `through week ${meta.evidenceWeek}`;
   const scope = `${meta.evidenceSeason} evidence, ${week}`;
   return meta.isArchiveView ? `Archive: ${scope}` : scope;
 }

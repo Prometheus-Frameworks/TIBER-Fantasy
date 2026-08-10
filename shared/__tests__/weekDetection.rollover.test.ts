@@ -61,23 +61,32 @@ describe('a week is not complete while its last game is being played', () => {
     expect(info?.gamesCompleted).toBeNull();
   });
 
-  test('result-dependent admission stays conservative through the whole window', () => {
-    // Risers/fallers must not admit Week 11 until it is verifiably final,
-    // even though the forward target has already moved on.
-    expect(getBestRisersFallersWeek(DURING_MNF)).toBe(10);
-    expect(getBestRisersFallersWeek(LONG_GAME_STILL_LIVE)).toBe(10);
-    expect(getBestRisersFallersWeek(AFTER_WEEK_END)).toBe(11);
+  test('result-dependent admission is closed for the whole anchor-derived season', () => {
+    // Risers/fallers admit a week's RESULTS, which requires verified
+    // completion. Every configured calendar is anchor-derived — arithmetic
+    // that its own contract says can only support phase detection — so no
+    // week ever reaches 'completed' and no results are admitted. This is a
+    // deliberate product consequence, not a regression: the feature returns
+    // when a real schedule/finalization source is ingested, or when its gate
+    // migrates to source-declared data presence.
+    expect(getBestRisersFallersWeek(DURING_MNF)).toBeNull();
+    expect(getBestRisersFallersWeek(LONG_GAME_STILL_LIVE)).toBeNull();
+    expect(getBestRisersFallersWeek(AFTER_WEEK_END)).toBeNull();
   });
 
-  test('past the configured week end, Week 11 is final and the board moves to 12', () => {
+  test('past the configured week end, the board moves to 12 but Week 11 is not asserted final', () => {
     const phase = resolveSeasonPhase(AFTER_WEEK_END);
     expect(phase.regularSeasonWeek).toBe(12);
     expect(phase.targetWeek).toBe(12);
-    // Week 11 itself, queried explicitly, is now complete with a full slate.
+    // The scheduling boundary elapsed, but a boundary derived from a seven-day
+    // stride cannot verify that football finished. Completion stays
+    // unverified and completion-dependent claims stay null — 'completed',
+    // mondayNightCompleted: true and a 16-game count here were arithmetic
+    // asserting observations.
     const info = getWeekInfo(11, 2025, AFTER_WEEK_END);
-    expect(info?.weekStatus).toBe('completed');
-    expect(info?.mondayNightCompleted).toBe(true);
-    expect(info?.gamesCompleted).toBe(16);
+    expect(info?.weekStatus).toBe('completion_unverified');
+    expect(info?.mondayNightCompleted).toBeNull();
+    expect(info?.gamesCompleted).toBeNull();
   });
 });
 
@@ -195,7 +204,9 @@ describe('getWeekInfo / risers-fallers', () => {
     const info = getWeekInfo(3, 2025, at('2025-11-16T18:00:00Z'));
     expect(info?.season).toBe(2025);
     expect(info?.currentWeek).toBe(3);
-    expect(info?.weekStatus).toBe('completed');
+    // Anchor-derived: the scheduled window elapsed, but completion is never
+    // asserted from stride arithmetic.
+    expect(info?.weekStatus).toBe('completion_unverified');
   });
 
   test('returns null for an unconfigured season', () => {
@@ -209,10 +220,11 @@ describe('getWeekInfo / risers-fallers', () => {
 
   test('best risers/fallers week is a completed week in season', () => {
     // Week 11 is not assertable as complete on the Tuesday, so the last week
-    // whose games are all final is 10. This lags a day versus the previous
-    // behaviour — the deliberate cost of never claiming unfinished results.
-    expect(getBestRisersFallersWeek(at('2025-11-18T12:00:00Z'))).toBe(10);
-    expect(getBestRisersFallersWeek(at('2025-11-19T05:00:00Z'))).toBe(11);
+    // whose games are all final is 10 — but "final" cannot be established
+    // from an anchor-derived calendar at all, so result admission stays
+    // closed for the whole season rather than lagging a day.
+    expect(getBestRisersFallersWeek(at('2025-11-18T12:00:00Z'))).toBeNull();
+    expect(getBestRisersFallersWeek(at('2025-11-19T05:00:00Z'))).toBeNull();
   });
 
   test('week 1 never has risers/fallers data', () => {

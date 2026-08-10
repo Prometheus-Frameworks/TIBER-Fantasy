@@ -172,12 +172,16 @@ function lastWeek(calendar: NflSeasonCalendar): NflWeekWindow {
   return calendar.weeks[calendar.weeks.length - 1];
 }
 
-function weekStatusAt(window: NflWeekWindow, nowMs: number): NflWeekStatus {
+function weekStatusAt(
+  window: NflWeekWindow,
+  nowMs: number,
+  scheduleSource: NflScheduleSource,
+): NflWeekStatus {
   if (nowMs < ms(window.startDate)) return 'not_started';
   // Three intervals, because there are three genuinely different states:
   //   startDate .. MNF kickoff  — games are scheduled and running: in_progress
   //   MNF kickoff .. endDate    — the last game may or may not have finished
-  //   endDate ..                — verifiably final
+  //   endDate ..                — the scheduled window has elapsed
   //
   // The middle interval is the honest one. `mondayNightDate` is a kickoff, so
   // treating it as completion published results that did not exist; a fixed
@@ -186,7 +190,15 @@ function weekStatusAt(window: NflWeekWindow, nowMs: number): NflWeekStatus {
   // and we cannot support it either. It is uncertainty, and it is typed as such.
   if (nowMs < ms(window.mondayNightDate)) return 'in_progress';
   if (nowMs < ms(window.endDate)) return 'completion_unverified';
-  return 'completed';
+  // Past the closing boundary. Whether that means COMPLETED depends on what
+  // the boundary is: an ingested schedule's week end is a real league
+  // boundary, but an anchor-derived window is cadence arithmetic that the
+  // calendar's own contract says is suitable for phase detection only. Both
+  // configured seasons are currently anchor-derived, so without a real
+  // finalization source, completion stays unverified — reporting 'completed'
+  // here is what let both current-week endpoints publish
+  // `mondayNightCompleted: true` and a 16-game count from arithmetic.
+  return scheduleSource === 'explicit_schedule' ? 'completed' : 'completion_unverified';
 }
 
 /**
@@ -301,7 +313,7 @@ export function resolveSeasonPhase(currentDate?: Date): SeasonPhaseInfo {
     if (nowMs >= week1StartMs && nowMs < regularSeasonEndMs) {
       const window = findRegularSeasonWeek(calendar, nowMs);
       if (window) {
-        const status = weekStatusAt(window, nowMs);
+        const status = weekStatusAt(window, nowMs, calendar.scheduleSource);
         // The forward target is decoupled from result finalization.
         //
         // Start/sit, waivers and the Rankings board are forward-planning
@@ -442,13 +454,14 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
   // and `targetWeek` carry the real answer.
   const displayWeek = phase.regularSeasonWeek ?? phase.targetWeek ?? 0;
   const window = windowFor(displaySeason, displayWeek);
+  const calendar = getSeasonCalendar(displaySeason);
 
   const weekStatus: NflWeekStatus =
-    phase.weekStatus ?? (window ? weekStatusAt(window, now.getTime()) : 'not_started');
+    phase.weekStatus ??
+    (window && calendar ? weekStatusAt(window, now.getTime(), calendar.scheduleSource) : 'not_started');
   const mondayNightCompleted = window
     ? (weekStatus === 'completion_unverified' ? null : now.getTime() >= ms(window.endDate))
     : false;
-  const calendar = getSeasonCalendar(displaySeason);
   const nextWindow = calendar?.weeks.find((w) => w.week === displayWeek + 1);
 
   return {
@@ -494,7 +507,7 @@ export function getWeekInfo(week: number, season?: number, currentDate?: Date): 
   const window = calendar?.weeks.find((w) => w.week === week);
   if (!calendar || !window) return null;
 
-  const status = weekStatusAt(window, now.getTime());
+  const status = weekStatusAt(window, now.getTime(), calendar.scheduleSource);
   const mondayNightCompleted =
     status === 'completion_unverified' ? null : now.getTime() >= ms(window.endDate);
   const phase = resolveSeasonPhase(now);

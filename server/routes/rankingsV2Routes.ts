@@ -431,11 +431,21 @@ export function createRankingsV2Router(): Router {
       //     query ceiling; null when the source cannot state it.
       const asOfWeekParam = req.query.asOfWeek as string | undefined;
       const requestedWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : NaN;
+      // An omitted week defaults to the PHASE TARGET whenever the requested
+      // season is the target season — so the board, the request, and the
+      // published metadata agree. Defaulting to `regularSeasonWeek` here left
+      // two disagreements: during the preseason it sent no week while the
+      // response advertised Target Week 1, and after the Monday rollover it
+      // requested the expired week while publishing the next one. A requested
+      // season that is neither the target season nor the phase season is an
+      // archive and has no forward target.
       const decisionTargetWeek = Number.isFinite(requestedWeek)
         ? requestedWeek
-        : season === phase.season
-          ? phase.regularSeasonWeek ?? undefined
-          : undefined;
+        : season === phase.targetSeason
+          ? phase.targetWeek ?? undefined
+          : season === phase.season
+            ? phase.regularSeasonWeek ?? undefined
+            : undefined;
 
       // The query ceiling belongs to the season being queried, not to the
       // live clock. `throughWeek` is a hard `lte` filter, so falling back to

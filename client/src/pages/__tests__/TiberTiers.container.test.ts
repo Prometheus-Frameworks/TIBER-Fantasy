@@ -314,6 +314,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
           ok: true,
           status: 200,
           json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
             asOf: '2031-10-01T12:00:00.000Z',
             seasonMeta: STALE_SEASON_META,
             sourceStack: [],
@@ -331,6 +332,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-08-09T12:00:00.000Z',
           seasonMeta: {
             ...SEASON_META,
@@ -409,6 +411,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
         ok: true,
         status: 200,
         json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-04-12T00:00:00.000Z',
           seasonMeta: SEASON_META,
           sourceStack: [{ layer: 'forge' }],

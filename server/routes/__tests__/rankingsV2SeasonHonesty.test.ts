@@ -17,6 +17,35 @@ jest.mock('../../modules/forge/forgeGradeCache', () => ({
   CACHE_VERSION: 'test-version',
   getGradesFromCache: jest.fn(),
 }));
+// The route now resolves ranking identities (#313); the resolver pulls in the
+// real db module, which throws at import time without DATABASE_URL. Identity
+// behaviour is not under test here — every id resolves to nothing, which the
+// route tolerates by emitting unresolved, non-linkable rows.
+jest.mock('../../infra/db', () => ({ db: {} }));
+jest.mock('../../services/identity/rankingIdentityResolver', () => ({
+  resolveRankingIdentities: async (sourceIds: string[]) => ({
+    identities: new Map(
+      sourceIds.map((sourceId) => [sourceId, {
+        status: 'unresolved',
+        canonicalId: null,
+        sourceId,
+        sourceType: 'gsis',
+        reason: 'not_in_identity_map',
+        linkable: false,
+      }]),
+    ),
+    coverage: {
+      total: sourceIds.length,
+      canonical: 0,
+      resolved: 0,
+      unresolved: sourceIds.length,
+      ambiguous: 0,
+      coverageRatio: 0,
+      byReason: sourceIds.length ? { not_in_identity_map: sourceIds.length } : {},
+    },
+  }),
+}));
+
 jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
   toLeagueContextInput: jest.fn((input) => ({ season: input.season, week: input.week, scoringFormat: 'ppr', teams: 12 })),
   buildRankingsScoringInputs: jest.fn(),
@@ -96,8 +125,11 @@ describe('Rankings v2 season/phase contract', () => {
     const { status, body } = await call('/api/rankings/v2/weekly?position=WR');
 
     expect(status).toBe(200);
-    // The cache is queried for the *current* season, not a hardcoded 2025.
-    expect(mockedCache).toHaveBeenCalledWith(2026, undefined, 'WR', 100, 'test-version');
+    // The cache is queried for the *current* season, not a hardcoded 2025 —
+    // and for the PHASE TARGET week (preseason → Week 1), so the board, the
+    // request, and the published Target Week 1 metadata agree instead of the
+    // request silently carrying no week.
+    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version');
     // And the scoring inputs are not pinned to `throughWeek: 18`.
     expect(mockedBuild).toHaveBeenCalledWith(expect.objectContaining({ season: 2026, throughWeek: 0 }));
     expect(body.seasonMeta.currentSeason).toBe(2026);
@@ -192,7 +224,17 @@ describe('Rankings v2 season/phase contract', () => {
 
 describe('evidence is what the source declares, never the request or a calendar', () => {
   beforeEach(() => {
+    // Top-level describe: the contract suite's beforeEach does not apply here,
+    // so the full mock set is established locally.
+    jest.clearAllMocks();
     mockResolveSeasonPhase.mockReturnValue(MIDSEASON_2025);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
+    mockedMeaningful.mockReturnValue(false);
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2025-11-16T18:00:00.000Z'),
+      asOfWeek: 11,
+    } as any);
   });
 
   test('the cache path publishes the cache\'s own declared as-of week, not the requested target', async () => {
@@ -273,6 +315,25 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.evidenceWeek).toBe(9);
     expect(body.seasonMeta.evidenceThroughWeek).toBe(9);
     expect(body.seasonMeta.evidenceProvenance).toBe('source_max_represented_week');
+  });
+
+  test('an EMPTY cache declares nothing, even when a week was explicitly requested', async () => {
+    // getGradesFromCache echoes the requested week in `asOfWeek` even when it
+    // holds no rows, so without the emptiness gate an uncomputed cache would
+    // "declare" whatever week the caller asked for — preseason Week 1
+    // evidence published alongside forge_cache_empty_uncomputed.
+    mockedCache.mockResolvedValue({
+      players: [],
+      computedAt: null,
+      asOfWeek: 18,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+
+    expect(body.seasonMeta.status).toBe('forge_cache_empty_uncomputed');
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
+    expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
   });
 
   test('the unavailable payload declares no rankable source', async () => {

@@ -287,15 +287,11 @@ describe('validateRankingsV2WeeklyResponse', () => {
 };
 
   const wellFormed = {
-    asOf: '2026-04-12T00:00:00.000Z',
-    sourceStack: [{ layer: 'forge' }],
-    items: [],
-    seasonMeta: SEASON_META,
-  const wellFormed = {
     contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
     asOf: '2026-04-12T00:00:00.000Z',
     sourceStack: [{ layer: 'forge' }],
     items: [],
+    seasonMeta: SEASON_META,
   };
 
   const IDENTITY = {
