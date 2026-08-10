@@ -200,54 +200,82 @@ ranked surface even as history without that caveat attached.
 
 ## 5. Comparison with the FORGE producer candidate
 
-### 5.1 The comparison #310 asks for cannot be performed as specified
+### 5.1 The lineages are now joinable (refreshed against main `ee68666`)
 
-The two artifacts **share no join key**:
+**This section was rewritten after TIBER-Fantasy PR #318 landed.** As originally
+published it said the two artifacts shared no join key and that no comparison
+could be performed. #318 replaced the bundled artifact
+(`cc2254a8…` → `de0e2c19…`) and gave it real GSIS identifiers, which made the
+earlier conclusion false. The original finding is preserved below as a dated
+record rather than quietly deleted.
 
-| | Railway `forge_grade_cache` | Bundled `FORGE_PLAYER_STATIC_V1` |
-|---|---|---|
-| rows | 357 | 59 |
-| identifier namespace | GSIS, 100% | 45 `tiber-data-player-…`, 14 `…-fixture` |
-| **direct ID intersection** | **0** | **0** |
-| alpha range | 25.0 – 95.0 (declared bounds) | 2.86 – 100 |
-| `generated_at` | n/a (`computed_at` 2026-08-08) | 2026-01-08 |
-| sha256 | n/a (database) | `cc2254a8…d9b5cf14` |
+| | Railway `forge_grade_cache` | `FORGE_PLAYER_STATIC_V1` (was) | `FORGE_PLAYER_STATIC_V1` (main `ee68666`) |
+|---|---|---|---|
+| rows | 357 | 59 | **50** |
+| identifier namespace | GSIS, 100% | 45 `tiber-data-player-…`, 14 `…-fixture` | **GSIS, 100%** |
+| **direct ID intersection** | — | **0** | **50** |
+| `generated_baseline` rows | n/a | 14 | **0** |
+| repeated names | n/a | 7 names × 2 rows | **0** |
+| sha256 | n/a (database) | `cc2254a8…` | `de0e2c19…` |
 
-Name is **not** a usable fallback key either: the static artifact contains
-**7 player names appearing on 2 rows each (14 rows total)** — one from each of its
-two cohorts. Amon-Ra St. Brown is one of them.
+Every one of the 50 static rows intersects the observed cache cohort, and no
+ambiguous-name blocker remains, so a join is now defensible on `gsis_player_id`.
 
-Any join across these two artifacts therefore requires an explicit
-identity-resolution step that does not exist yet. Per #310 this audit states the
-method rather than inventing one: **no defensible join is available, so no
-score-difference attribution is published.**
+> The audit tooling derives this verdict from the measured identifiers rather
+> than asserting it, and `--check` now hashes the static artifact, so a future
+> replacement of those bytes fails loudly instead of silently invalidating the
+> findings the way #318 did.
 
-### 5.2 Representative side-by-side — Amon-Ra St. Brown
+### 5.2 Descriptive comparison across the 50 shared players
 
-The single clearest illustration. Amon-Ra exists **three times across two
-artifacts under three identifier namespaces with three different scores**:
+Published now that a join exists. **Descriptive only** — it reports where the two
+artifacts agree and differ, and deliberately attributes nothing, because the
+cache does not persist the lineage that would support attribution.
 
-| source | identifier | alpha | tier | evidence status |
-|---|---|---:|---|---|
-| Railway `forge_grade_cache` | `00-0036963` | **95.0** | T1 | *no provenance persisted* (17 games, rawAlpha 77.2) |
-| `FORGE_PLAYER_STATIC_V1` | `real-player-2025-amon-ra-st-brown-strong-wr2-fixture` | **88.07** | elite | ⚠️ **`generated_baseline` — not player evidence** |
-| `FORGE_PLAYER_STATIC_V1` | `tiber-data-player-2025-amon-ra-st-brown` | **30.13** | low | `player_specific` |
+| measure | value |
+|---|---:|
+| joined rows | 50 |
+| **exact agreement** | **0** |
+| within ±1.0 alpha | 2 |
+| within ±5.0 alpha | 18 |
+| median delta (cache − static) | -2.74 |
+| range | -26.01 … +22.30 |
 
-The 88.07 row **must not be read as source-backed player evidence**; the
-artifact's own `score_source_policy` forbids it, and FORGE #49 (finding 2) tracks
-that fixture rows occupy the top alphas. Confirmed here: the five highest static
-alphas — Bowers 100, Chase 99.91, Bijan 97.56, Allen 92.69, Amon-Ra 88.07 — are
-**all** `generated_baseline`.
+Largest absolute disagreements:
 
-A naive comparison of "95.0 vs 88.07" would compare a provenance-less cache score
-against a fabricated baseline and read as near-agreement. The honest reading is
-that these three numbers are not comparable at all.
+| player | GSIS | pos | static alpha | cache alpha | delta |
+|---|---|---|---:|---:|---:|
+| Mark Andrews | `00-0034753` | TE | 70.01 | 44 | -26.01 |
+| Zay Flowers | `00-0039064` | WR | 82.23 | 59.3 | -22.93 |
+| Jacoby Brissett | `00-0033119` | QB | 57.7 | 80 | +22.30 |
+| T.Hill | `00-0033040` | WR | 34.76 | 55.2 | +20.44 |
+| Brock Bowers | `00-0039338` | TE | 72.43 | 90 | +17.57 |
+
+**The two artifacts agree exactly on none of the 50 shared players**, and the
+spread reaches 26 alpha points. That is a measurement, not an explanation: it
+does not establish which artifact is closer to correct, nor why they differ.
+Answering that needs the input manifest, source snapshot identity and engine
+version pin that §6 shows the cache does not persist — which is precisely the
+terminal finding, now supported by a joinable comparison rather than blocked
+by the absence of one.
+
+### 5.2b Original finding, superseded — retained as a dated record
+
+As observed on 2026-08-09 against static artifact `cc2254a8…`, the two artifacts
+shared **no** join key: 0 direct ID intersection, and name was unusable as a
+fallback because 7 player names appeared on 2 rows each. Amon-Ra St. Brown then
+existed three times across two artifacts under three namespaces with three
+scores (cache `00-0036963` 95.0; static `…-fixture` 88.07, `generated_baseline`
+and explicitly not player evidence; static `tiber-data-player-…` 30.13,
+`player_specific`). Under that artifact no defensible join existed and no
+difference attribution was published.
 
 ### 5.3 Difference attribution
 
-Not published — see 5.1. Attributing differences to inputs, cohort scale, engine
-version, identity, or cache transformation requires a valid join, and there is
-none. Publishing a category breakdown over a name-matched join would be
+Still not published — but for a different reason than before. A valid join now
+exists (§5.2), so the blocker is no longer identity. Attributing the measured
+differences to inputs, cohort scale, engine version, or cache transformation
+requires the reproducibility fields §6 shows the cache does not persist. Publishing a category breakdown over a name-matched join would be
 fabricated precision.
 
 ---

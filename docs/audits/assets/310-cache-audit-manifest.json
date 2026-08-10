@@ -122,53 +122,119 @@
   },
   "staticArtifact": {
     "path": "server/artifacts/external/forge/forge_player_static_v1.json",
-    "sha256": "cc2254a8d712976184ce370ecc2f932831d65925773b9e5dde924948d9b5cf14",
-    "generatedAt": "2026-01-08T00:00:00.000Z",
+    "sha256": "de0e2c19a7054653c460b9b8597b620d37084b5407d035afb97310c694cd1cf9",
+    "generatedAt": "2026-04-27T00:00:00Z",
     "modelVersion": "forge-player-static-v1.0.0",
-    "rowCount": 59
+    "rowCount": 50
   },
   "comparability": {
-    "directIdIntersection": 0,
+    "directIdIntersection": 50,
     "liveNamespace": "gsis",
     "staticNamespaces": {
-      "fixture": 14,
-      "other": 45
+      "fixture": 0,
+      "other": 50
     },
-    "staticAmbiguousNames": 7,
-    "staticRowsUnderAmbiguousNames": 14,
-    "generatedBaselineRows": 14,
-    "generatedBaselineTopAlphas": [
-      {
-        "name": "Brock Bowers",
-        "alpha": 100,
-        "evidence": "generated_baseline_not_player_evidence"
-      },
-      {
-        "name": "Ja'Marr Chase",
-        "alpha": 99.91,
-        "evidence": "generated_baseline_not_player_evidence"
-      },
-      {
-        "name": "Bijan Robinson",
-        "alpha": 97.56,
-        "evidence": "generated_baseline_not_player_evidence"
-      },
-      {
-        "name": "Josh Allen",
-        "alpha": 92.69,
-        "evidence": "generated_baseline_not_player_evidence"
-      },
-      {
-        "name": "Amon-Ra St. Brown",
-        "alpha": 88.07,
-        "evidence": "generated_baseline_not_player_evidence"
-      }
-    ],
-    "joinable": false,
-    "joinBlockers": [
-      "zero direct identifier intersection between the two artifacts",
-      "static artifact repeats player names across cohorts, so name is not a unique key within it either"
-    ]
+    "staticAmbiguousNames": 0,
+    "staticRowsUnderAmbiguousNames": 0,
+    "generatedBaselineRows": 0,
+    "generatedBaselineTopAlphas": [],
+    "joinable": true,
+    "joinBlockers": [],
+    "descriptiveComparison": {
+      "status": "available",
+      "note": "Descriptive only. Reports where the two artifacts agree and differ on shared identifiers; it does not attribute any difference to a cause, because the cache does not persist the lineage that would support attribution.",
+      "joinKey": "gsis_player_id",
+      "joinedRows": 50,
+      "comparableRows": 50,
+      "exactAgreement": 0,
+      "within1": 2,
+      "within5": 18,
+      "medianDelta": -2.74,
+      "minDelta": -26.01,
+      "maxDelta": 22.3,
+      "largestAbsoluteDeltas": [
+        {
+          "playerId": "00-0034753",
+          "playerName": "Mark Andrews",
+          "position": "TE",
+          "staticAlpha": 70.01,
+          "cacheAlpha": 44,
+          "delta": -26.01
+        },
+        {
+          "playerId": "00-0039064",
+          "playerName": "Zay Flowers",
+          "position": "WR",
+          "staticAlpha": 82.23,
+          "cacheAlpha": 59.3,
+          "delta": -22.93
+        },
+        {
+          "playerId": "00-0033119",
+          "playerName": "Jacoby Brissett",
+          "position": "QB",
+          "staticAlpha": 57.7,
+          "cacheAlpha": 80,
+          "delta": 22.3
+        },
+        {
+          "playerId": "00-0033040",
+          "playerName": "T.Hill",
+          "position": "WR",
+          "staticAlpha": 34.76,
+          "cacheAlpha": 55.2,
+          "delta": 20.44
+        },
+        {
+          "playerId": "00-0039338",
+          "playerName": "Brock Bowers",
+          "position": "TE",
+          "staticAlpha": 72.43,
+          "cacheAlpha": 90,
+          "delta": 17.57
+        },
+        {
+          "playerId": "00-0033873",
+          "playerName": "Patrick Mahomes",
+          "position": "QB",
+          "staticAlpha": 62.82,
+          "cacheAlpha": 80,
+          "delta": 17.18
+        },
+        {
+          "playerId": "00-0032764",
+          "playerName": "Derrick Henry",
+          "position": "RB",
+          "staticAlpha": 87.98,
+          "cacheAlpha": 71.8,
+          "delta": -16.18
+        },
+        {
+          "playerId": "00-0035710",
+          "playerName": "Daniel Jones",
+          "position": "QB",
+          "staticAlpha": 56.82,
+          "cacheAlpha": 72.8,
+          "delta": 15.98
+        },
+        {
+          "playerId": "00-0037240",
+          "playerName": "Jameson Williams",
+          "position": "WR",
+          "staticAlpha": 76.59,
+          "cacheAlpha": 60.8,
+          "delta": -15.79
+        },
+        {
+          "playerId": "00-0026498",
+          "playerName": "Matthew Stafford",
+          "position": "QB",
+          "staticAlpha": 70.65,
+          "cacheAlpha": 86,
+          "delta": 15.35
+        }
+      ]
+    }
   },
   "provenance": {
     "requiredForReproducibility": [

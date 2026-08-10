@@ -179,17 +179,62 @@ describe('clamping analysis', () => {
 });
 
 describe('comparability', () => {
-  test('the two lineages remain unjoinable, with both blockers recorded', () => {
-    expect(manifest.comparability.joinable).toBe(false);
-    expect(manifest.comparability.directIdIntersection).toBe(0);
-    expect(manifest.comparability.joinBlockers).toHaveLength(2);
+  test('joinability is derived from the measured identifiers', () => {
+    // #318 gave the static artifact real GSIS identifiers, so the lineages are
+    // now joinable. The verdict tracks the measurement rather than a literal.
+    const { joinable, directIdIntersection, joinBlockers } = manifest.comparability;
+    expect(joinable).toBe(joinBlockers.length === 0);
+    expect(joinable).toBe(directIdIntersection > 0 && manifest.comparability.staticAmbiguousNames === 0);
   });
 
-  test('generated_baseline rows are labelled non-player-evidence', () => {
-    expect(manifest.comparability.generatedBaselineRows).toBeGreaterThan(0);
+  test('any generated_baseline row is labelled non-player-evidence', () => {
+    // The current artifact carries none; the labelling rule must still hold if
+    // one reappears.
     for (const row of manifest.comparability.generatedBaselineTopAlphas) {
       expect(row.evidence).toBe('generated_baseline_not_player_evidence');
     }
+    expect(manifest.comparability.generatedBaselineTopAlphas).toHaveLength(
+      Math.min(5, manifest.comparability.generatedBaselineRows),
+    );
+  });
+
+  test('the descriptive comparison is published and recomputable from the artifacts', () => {
+    const dc = manifest.comparability.descriptiveComparison;
+    expect(dc.status).toBe('available');
+    expect(dc.joinKey).toBe('gsis_player_id');
+    expect(dc.joinedRows).toBe(manifest.comparability.directIdIntersection);
+
+    const liveById = new Map(cohort.rows.map((r: any) => [r.playerId, r]));
+    const staticRows = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, manifest.staticArtifact.path), 'utf8'),
+    ).rows ?? [];
+    const shared = staticRows.filter((r: any) => liveById.has(r.player_id));
+    expect(dc.joinedRows).toBe(shared.length);
+
+    const deltas = shared.map((r: any) =>
+      Number(((liveById.get(r.player_id) as any).alpha - r.forge_alpha).toFixed(2)),
+    );
+    expect(dc.comparableRows).toBe(deltas.length);
+    expect(dc.exactAgreement).toBe(deltas.filter((d: number) => d === 0).length);
+    expect(dc.minDelta).toBe(Math.min(...deltas));
+    expect(dc.maxDelta).toBe(Math.max(...deltas));
+  });
+
+  test('the comparison describes difference without attributing cause', () => {
+    // The cache still cannot say WHY the two disagree; the terminal finding is
+    // about exactly that missing lineage.
+    const dc = manifest.comparability.descriptiveComparison;
+    expect(dc.note).toMatch(/does not attribute/i);
+    expect(dc.note).toMatch(/lineage/i);
+    expect(manifest.disposition.terminal_finding)
+      .toBe('legacy_forge_cache_quarantined_insufficient_provenance');
+  });
+
+  test('--check hashes the static artifact the findings depend on', () => {
+    // #318 replaced these bytes underneath the manifest and --check still
+    // reported success, so the drift passed silently.
+    const bytes = fs.readFileSync(path.join(REPO_ROOT, manifest.staticArtifact.path));
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(manifest.staticArtifact.sha256);
   });
 
   test('the static artifact digest matches the bundled bytes', () => {

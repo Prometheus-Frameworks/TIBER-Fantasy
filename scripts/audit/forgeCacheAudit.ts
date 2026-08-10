@@ -213,6 +213,68 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
     // A join is defensible only when no measured blocker remains.
     joinable: joinBlockers.length === 0,
     joinBlockers,
+    // When the lineages ARE joinable, publish the comparison rather than
+    // leaving the section empty. This is descriptive only: it reports where the
+    // two artifacts agree and differ on shared identifiers. It deliberately
+    // does NOT attribute those differences to a cause — the cache still lacks
+    // the lineage that would make causal attribution possible, which is what
+    // the terminal finding is about.
+    descriptiveComparison: joinBlockers.length === 0
+      ? describeJoinedRows(rows, staticRows)
+      : { status: 'unavailable_lineages_not_joinable' },
+  };
+}
+
+/**
+ * Descriptive comparison across shared identifiers.
+ *
+ * Reports agreement and spread on the rows both artifacts describe. No causal
+ * claim is made or implied: a difference here says the two artifacts disagree,
+ * not why, and the cache cannot answer why.
+ */
+function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
+  const liveById = new Map(rows.map((row) => [row.playerId, row]));
+  const joined = staticRows
+    .filter((row) => liveById.has(row.player_id))
+    .map((row) => {
+      const live = liveById.get(row.player_id)!;
+      const staticAlpha = typeof row.forge_alpha === 'number' ? row.forge_alpha : null;
+      const cacheAlpha = typeof live.alpha === 'number' ? live.alpha : null;
+      return {
+        playerId: row.player_id,
+        playerName: live.playerName || row.player_name,
+        position: live.position,
+        staticAlpha,
+        cacheAlpha,
+        delta: staticAlpha !== null && cacheAlpha !== null
+          ? Number((cacheAlpha - staticAlpha).toFixed(2))
+          : null,
+      };
+    });
+
+  const deltas = joined.map((r) => r.delta).filter((d): d is number => d !== null);
+  const sorted = [...deltas].sort((a, b) => a - b);
+  const absolute = deltas.map(Math.abs);
+
+  return {
+    status: 'available',
+    note:
+      'Descriptive only. Reports where the two artifacts agree and differ on shared ' +
+      'identifiers; it does not attribute any difference to a cause, because the cache ' +
+      'does not persist the lineage that would support attribution.',
+    joinKey: 'gsis_player_id',
+    joinedRows: joined.length,
+    comparableRows: deltas.length,
+    exactAgreement: deltas.filter((d) => d === 0).length,
+    within1: absolute.filter((d) => d <= 1).length,
+    within5: absolute.filter((d) => d <= 5).length,
+    medianDelta: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
+    minDelta: sorted.length ? sorted[0] : null,
+    maxDelta: sorted.length ? sorted[sorted.length - 1] : null,
+    largestAbsoluteDeltas: [...joined]
+      .filter((r) => r.delta !== null)
+      .sort((a, b) => Math.abs(b.delta!) - Math.abs(a.delta!))
+      .slice(0, 10),
   };
 }
 
@@ -362,6 +424,29 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
     problems.push('source descriptions disagree between the two artifacts');
   }
 
+  // The static FORGE artifact is a DEPENDENCY of the published comparability
+  // findings, not just a path reference. Without hashing it here, --check
+  // reported success while #318 replaced those bytes underneath the manifest
+  // and silently invalidated every conclusion derived from them.
+  const staticRelPath = manifest.staticArtifact?.path;
+  if (typeof staticRelPath !== 'string') {
+    problems.push('manifest does not record the static artifact path');
+  } else {
+    const staticAbsPath = path.join(repoRoot, staticRelPath);
+    if (!fs.existsSync(staticAbsPath)) {
+      problems.push(`static artifact is missing at ${staticRelPath}`);
+    } else {
+      const actual = createHash('sha256').update(fs.readFileSync(staticAbsPath)).digest('hex');
+      if (actual !== manifest.staticArtifact?.sha256) {
+        problems.push(
+          `static artifact bytes at ${staticRelPath} no longer match the digest the findings were derived from ` +
+          `(recorded ${String(manifest.staticArtifact?.sha256).slice(0, 8)}…, actual ${actual.slice(0, 8)}…) — ` +
+          'regenerate the static-dependent findings',
+        );
+      }
+    }
+  }
+
   return { ok: problems.length === 0, problems };
 }
 
@@ -385,8 +470,25 @@ async function main() {
   const staticRaw = fs.readFileSync(staticPath);
   const staticArtifact = JSON.parse(staticRaw.toString());
 
-  const { rows, perPosition } = await fetchLiveCohort(baseUrl);
-  const observedAt = new Date().toISOString();
+  // `--offline` recomputes every static-dependent finding from the COMMITTED
+  // cohort instead of re-observing production. The cohort is a dated
+  // observation and must not be silently replaced by a new one; only the
+  // findings that depend on the repository artifact are refreshed.
+  const offline = process.argv.includes('--offline');
+  let rows: LiveRow[];
+  let perPosition: Record<string, ObservedPositionSource>;
+  let observedAt: string;
+
+  if (offline) {
+    const committed = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, COHORT_RELATIVE_PATH), 'utf8'));
+    rows = committed.rows as LiveRow[];
+    perPosition = committed.observation.per_position as Record<string, ObservedPositionSource>;
+    observedAt = committed.observation.observed_at as string;
+    console.log(`offline: reusing the committed cohort (${rows.length} rows observed ${observedAt}).`);
+  } else {
+    ({ rows, perPosition } = await fetchLiveCohort(baseUrl));
+    observedAt = new Date().toISOString();
+  }
 
   const { cohortJson, cohortSha256, manifestJson } = buildArtifacts(
     baseUrl, observedAt, rows, perPosition, staticRaw, staticArtifact,
