@@ -26,7 +26,13 @@ export const CSS_BACKGROUND = '#ffffff';
 export const CSS_FOREGROUND = '#0a0a0a';
 /** What the `default` variant declares via `bg-primary text-primary-foreground`. */
 export const CSS_PRIMARY = '#e2640d';
-export const CSS_PRIMARY_FOREGROUND = '#ffffff';
+/**
+ * Near-black, matching `--foreground`. White on the Ember primary measured
+ * 3.46:1 — an AA failure for normal text that was briefly carried as a named
+ * waiver. The waiver was rejected: the brand keeps its Ember background and
+ * the foreground moves to a measured 5.72:1 instead.
+ */
+export const CSS_PRIMARY_FOREGROUND = '#0a0a0a';
 
 /** WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text and non-text. */
 export const AA_TEXT_CONTRAST = 4.5;

@@ -44,7 +44,12 @@
   --card: #ffffff;
   --card-foreground: #0a0a0a;
   --primary: #e2640d;
-  --primary-foreground: #ffffff;
+  /* Near-black, not white: white on the Ember primary measures 3.46:1, which
+     fails WCAG AA for normal text (4.5:1). #0a0a0a — the system foreground —
+     measures 5.72:1 on #e2640d, keeping the brand background while making
+     every default/primary control legible. Pinned by the button contrast
+     audit; do not flip this back to white without re-measuring. */
+  --primary-foreground: #0a0a0a;
   --secondary: #f4f4f4;
   --secondary-foreground: #0a0a0a;
   --accent: #f4f4f4;

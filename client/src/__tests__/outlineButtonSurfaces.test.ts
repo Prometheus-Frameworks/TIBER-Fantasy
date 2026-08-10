@@ -497,30 +497,6 @@ describe('surface resolution', () => {
   });
 });
 
-/**
- * Measured, named exceptions — visible debt, not a silent pass.
- *
- * The Ember brand primary `#e2640d` carries white text at 3.46:1. That clears
- * AA for large text and for non-text UI (3:1) but not for normal text (4.5:1).
- * Every option to fix it is a brand decision rather than a call-site one:
- *
- *   keep #e2640d, flip --primary-foreground to near-black -> 5.72:1
- *   darken the accent to #b34e0a, keep white text         -> 5.24:1
- *   accept 3.46:1 as documented debt
- *
- * Recorded here with the measured value so it is on the record and cannot be
- * confused with a passing surface. The list is asserted exactly, so a NEW
- * failure cannot hide inside the waiver.
- */
-const KNOWN_BRAND_DEBT = [
-  'components/sos/dashboard/FilterWidget.tsx [base 3.46:1]',
-  'components/sos/dashboard/FilterWidget.tsx [hover 3.46:1]',
-  'pages/AnalyticsPage.tsx [base 3.46:1]',
-  'pages/AnalyticsPage.tsx [hover 3.46:1]',
-];
-
-const waiverKey = (o: Offender) => `${o.file} [${o.state} ${o.ratio}:1]`;
-
 describe('outline buttons meet WCAG AA for text', () => {
   const { offenders, audited } = auditOutlineButtons();
 
@@ -529,24 +505,34 @@ describe('outline buttons meet WCAG AA for text', () => {
     expect(audited).toBeGreaterThanOrEqual(20);
   });
 
-  test('no outline button renders text below 4.5:1 on its own surface', () => {
+  test('no outline button renders text below 4.5:1 on its own surface — no waivers', () => {
+    // An earlier revision carried a four-entry KNOWN_BRAND_DEBT list for the
+    // Ember primary at 3.46:1 with white text. The waiver was rejected: a
+    // documented failure is still a failure, and it contradicted this PR's own
+    // AA objective. The brand keeps its Ember background and the foreground
+    // moved to near-black instead, so the list is gone and this assertion is
+    // absolute. Do not reintroduce an exception list here.
     const report = offenders
-      .filter((o) => !KNOWN_BRAND_DEBT.includes(waiverKey(o)))
       .map((o) => `${o.file}:${o.line} [${o.state} ${o.ratio}:1] ${o.className}`);
     expect(report).toEqual([]);
   });
 
-  test('the brand debt is exactly what was measured, and nothing else hides in it', () => {
-    // A waiver that silently absorbs new failures is worse than no waiver.
-    const waived = offenders.map(waiverKey).filter((k) => KNOWN_BRAND_DEBT.includes(k));
-    expect([...new Set(waived)].sort()).toEqual([...new Set(KNOWN_BRAND_DEBT)].sort());
+  test('the brand primary pairing itself clears AA, pinned to the measured value', () => {
+    // #0a0a0a on #e2640d. Pinned exactly so a drift in either token — or a
+    // quiet revert of --primary-foreground to white (3.46:1) — fails here
+    // rather than resurfacing as four call-site offenders with a tempting
+    // waiver-shaped fix.
+    const brand = contrastRatio(parseHex(CSS_PRIMARY)!, parseHex(CSS_PRIMARY_FOREGROUND)!);
+    expect(brand).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+    expect(Number(brand.toFixed(2))).toBe(5.72);
   });
 
-  test('every waived entry is the brand primary, not an unrelated failure', () => {
-    // Pins WHY each entry is waived: all of them are `--primary` with white
-    // text. A different colour pairing must not inherit this exemption.
-    const brand = contrastRatio(parseHex(CSS_PRIMARY)!, parseHex(CSS_PRIMARY_FOREGROUND)!);
-    expect(Number(brand.toFixed(2))).toBe(3.46);
-    for (const entry of KNOWN_BRAND_DEBT) expect(entry).toContain('3.46:1');
+  test('the previously waived pairing would still be caught', () => {
+    // The exact colours the waiver covered. If the audit ever stops seeing
+    // white-on-ember as a failure, the no-waiver assertion above is passing
+    // vacuously and this trips instead.
+    const whiteOnEmber = contrastRatio(parseHex(CSS_PRIMARY)!, [255, 255, 255]);
+    expect(Number(whiteOnEmber.toFixed(2))).toBe(3.46);
+    expect(whiteOnEmber).toBeLessThan(AA_TEXT_CONTRAST);
   });
 });
