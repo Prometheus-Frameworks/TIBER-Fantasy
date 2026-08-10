@@ -9,29 +9,87 @@ that is its deliverable.
 
 **Artifacts:** [`assets/310-cache-audit-manifest.json`](assets/310-cache-audit-manifest.json)
 · [`assets/310-live-cohort-observed.json`](assets/310-live-cohort-observed.json)
-**Reproduce:** `npx tsx scripts/audit/forgeCacheAudit.ts`
+**Reproduce:** `npx tsx scripts/audit/forgeCacheAudit.ts --offline` (recomputes the
+repository-dependent findings from the committed observation; **do not** re-run the
+live GETs — see §0)
 **Verify:** `npx tsx scripts/audit/forgeCacheAudit.ts --check` (asserts the two
-committed artifacts agree on counts, positions, timestamps and digest)
+committed artifacts agree on counts, positions, timestamps and digest; that the
+preserved observation payload is intact; that the dated evidence status is
+unchanged; that neither envelope attributes the bytes to a producer path; and
+that the terminal finding has not been renamed back)
+
+## 0. Evidence status of the observed cohort — read this first
+
+```text
+unverified_predates_lineage_guard
+```
+
+The 357 committed rows were captured **before** `scripts/audit/forgeCacheResponseGuard.ts`
+existed. That guard is the thing that binds a response to a producer path. Without
+it, **nothing was recorded at capture time that can say which producer served those
+bytes.** The same endpoint serves promoted scoring-service items whenever
+`SCORING_SERVICE_BASE_URL` is configured and the call succeeds, so "these rows came
+from the legacy cache" was an *inference from what the endpoint usually serves* —
+not an observation.
+
+**This is visible in the committed bytes, not merely inferred from the guard's
+absence.** The guard's `ObservedPositionSource` declares `layer` and `source`
+fields. The committed `observation.per_position` records carry only `asOf` and
+`fallbackReason` — for all four positions:
+
+```json
+"QB": { "asOf": "2026-08-08T19:03:54.986Z", "fallbackReason": "config_error" }
+```
+
+The serving layer was never captured, so it cannot be read back out. A recorded
+`scoringFallbackReason=config_error` says the *scoring-service call failed*; it
+does not record what served the rows instead.
+
+The observation is **preserved, not re-run.** Re-issuing production GETs today
+would answer a different day's question and would destroy the record of what was
+actually returned on 2026-08-09. So the bytes are kept unchanged, dated,
+digest-pinned and **closed**, and the *claim* is narrowed instead:
+
+| The captured rows **can** support | The captured rows **cannot** support |
+|---|---|
+| Structural observations: row counts, per-position counts, identifier shape and namespace | That the response came from `forge_grade_cache` |
+| Descriptive numeric observations computed from the captured alphas: clamping bounds, floor/ceiling concentration, joined-row agreement and spread | That the response came from the promoted scoring service |
+| | That the response came from **any** other named producer path |
+
+The captured rows and the capture instant are pinned by
+`PRESERVED_OBSERVATION.rows_sha256` **independently of the file digest**, because
+attaching this status necessarily rewrote the containing file. The pre-annotation
+file digest (`118c5cc6…`) is retained in the manifest as the chain-of-custody link.
+`--check` fails if the rows, the capture instant, the status, or the producer-claim
+prohibition is edited.
 
 ## Terminal finding
 
 ```text
-legacy_forge_cache_quarantined_insufficient_provenance
+observed_ranking_cohort_quarantined_insufficient_provenance
 ```
+
+> **Renamed.** This finding was previously
+> `legacy_forge_cache_quarantined_insufficient_provenance`. That name asserted, in
+> its own wording, that the cohort *came from the legacy cache* — the precise
+> attribution §0 shows the capture cannot support. The finding is now named for the
+> **observed cohort**, not for a producer. The manifest retains the old name under
+> `disposition.superseded_finding_name`.
 
 This is an **audit classification and a required disposition — not an
 already-enforced runtime state.** Nothing in this audit changes the production
 consumer; the Rankings surface still reads the cache today. Enforcement belongs
 to Fantasy #307 Phase B.
 
-Read it as: the Railway `forge_grade_cache` **cannot be shown to be reproducible
+Read it as: the observed 2025 ranking cohort **cannot be shown to be reproducible
 or source-attributable from available evidence**, so it is **classified for
 quarantine**. It **must not** occupy a canonical or current ranking mode. It may
 remain reachable as clearly labelled 2025 legacy diagnostic/review data.
 
-This is a statement about *evidence*, not about score quality. Nothing here says
-the scores are wrong; it says their lineage cannot be established, which is the
-condition #310 defined as failing closed.
+**Quarantine here is a policy response to insufficient provenance.** It is not a
+verdict that any particular producer served these rows, and it is not a claim that
+the scores are wrong. Nothing here says the scores are wrong; it says their lineage
+cannot be established, which is the condition #310 defined as failing closed.
 
 ---
 
@@ -59,16 +117,23 @@ architecture's own classification.
 | cohort served | **357 rows** — QB 38 / RB 95 / WR 146 / TE 78 |
 | `computedAt` | `2026-08-08T19:03:54Z` – `19:04:29Z` (per position) |
 | declared scope | `season=2025, asOfWeek=18` |
-| serving reason | `scoringFallbackReason=config_error` on **all four** positions |
+| scoring-service outcome | `scoringFallbackReason=config_error` on **all four** positions |
+| serving layer | **not recorded** — see §0 |
 
 **Correction worth recording:** at small `limit` values the response instead
 reports `insufficient_coverage`, because the meaningful-input gate
 (`>= max(10, 0.6n)`) cannot be met by a 3-row sample. At a realistic cohort size
 the gate **passes** and the scoring service is genuinely attempted — it then fails
 with `config_error`, which `scoringServiceClient.ts:213` raises when
-`SCORING_SERVICE_BASE_URL` is unset. So FORGE is serving because the Forecast
-scoring service is **not configured in this environment**, not because the
-readiness gate rejected the cohort.
+`SCORING_SERVICE_BASE_URL` is unset. So the Forecast scoring service is **not
+configured in this environment**, and the readiness gate is not what rejected the
+cohort.
+
+**What this does not establish:** that FORGE served these particular rows. The
+recorded `config_error` says the scoring-service call failed; the serving layer
+itself was not captured (§0). Earlier revisions of this section read the fallback
+reason as proof that the legacy cache answered. It is consistent with that, but it
+is not evidence of it.
 
 ---
 
@@ -238,8 +303,16 @@ cache does not persist the lineage that would support attribution.
 | **exact agreement** | **0** |
 | within ±1.0 alpha | 2 |
 | within ±5.0 alpha | 18 |
-| median delta (cache − static) | -2.74 |
+| median delta (cache − static) | **-3.215** |
 | range | -26.01 … +22.30 |
+
+> **Median correction.** Earlier revisions reported -2.74. With 50 joined rows the
+> cohort is even, so there is no single middle element and the median is the mean
+> of the two middle deltas, -3.69 and -2.74 → **-3.215**. The previous figure was
+> `sorted[Math.floor(n / 2)]`, which is the *upper* of the two middle values — a
+> different statistic. Individual deltas are held to 2dp; the mean of two 2dp
+> values is exact at 3dp, so the median is reported at 3dp rather than rounded a
+> second time.
 
 Largest absolute disagreements:
 
@@ -290,8 +363,9 @@ These are **required dispositions this audit records**, not changes it makes.
 - ❌ **No cache manifest/digest is added.** That is conditional on lineage and
   reproducibility being sufficient; neither is.
 - ⛔ **Must be quarantined** from canonical/current ranking modes with the typed
-  reason `legacy_forge_cache_quarantined_insufficient_provenance`. *Not yet
-  enforced — #307 Phase B owns the consumer change.*
+  reason `observed_ranking_cohort_quarantined_insufficient_provenance`. *Not yet
+  enforced — #307 Phase B owns the consumer change.* The quarantine is a response
+  to insufficient provenance, not a finding about which producer served the rows.
 - 📌 **May be retained for 2025 history**, labelled legacy diagnostic/review
   data, with these limitations stated: unrecoverable source window, no
   deterministic recompute, and 32.5% of rows pinned at the calibration floor.
@@ -325,7 +399,17 @@ and fixture rows. Nothing here promotes, deploys, deletes, or mutates anything.
 | Fixture vs generated vs player-specific split *in the cache* | **unavailable** | no per-row provenance |
 | Deterministic recompute parity | **not possible** | three independent blockers, §4.1 |
 | Cross-surface identity resolvability | **unavailable** | requires `player_identity_map`; see #308 |
-| Score-difference attribution vs producer candidate | **not performed** | no valid join, §5.1 |
+| Score-difference **attribution** vs producer candidate | **not possible** | missing provenance, §0 + §6 — *not* a missing join |
+| Which producer path served the observed cohort | **unverified** | captured before the lineage guard, §0 |
 
-Every one of these is a *reason the cache fails closed*, not a gap to be filled by
+> **Correction.** Earlier revisions gave the reason for the attribution row as
+> "no valid join, §5.1". That is no longer true and should not have survived the
+> §5.1 rewrite: since #318 the two artifacts share GSIS identifiers and **the
+> 50-row join is valid**, and the descriptive comparison in §5.2 is published from
+> it. What blocks *attribution* is that the cohort does not carry the input
+> manifest, source-snapshot identity or engine-version pin that would say **why**
+> the two differ — and, per §0, does not even establish which producer answered.
+> The join is fine; the provenance is not.
+
+Every one of these is a *reason the cohort fails closed*, not a gap to be filled by
 assumption. No credential was requested and no lineage was manufactured.

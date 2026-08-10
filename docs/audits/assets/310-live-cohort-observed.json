@@ -1,9 +1,9 @@
 {
-  "audit": "railway_forge_grade_cache_lineage",
+  "audit": "railway_ranking_cache_lineage",
   "issue": "Prometheus-Frameworks/TIBER-Fantasy#310",
   "observation": {
     "observed_at": "2026-08-09T19:56:19.909Z",
-    "source_description": "Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) for QB/RB/WR/TE at season=2025, asOfWeek=18, limit=300.",
+    "source_description": "Public HTTP GET of /api/rankings/v2/weekly for QB/RB/WR/TE at season=2025, asOfWeek=18, limit=300. The responding producer path was not recorded at capture time.",
     "base_url": "https://tiber-fantasy-production.up.railway.app",
     "season": 2025,
     "as_of_week": 18,
@@ -32,7 +32,32 @@
       }
     },
     "production_mutations": "none",
-    "database_access": "none"
+    "database_access": "none",
+    "evidence_status": {
+      "status": "unverified_predates_lineage_guard",
+      "closed": true,
+      "immutable": true,
+      "captured_before_guard": "scripts/audit/forgeCacheResponseGuard.ts",
+      "observed_fields_present": [
+        "asOf",
+        "fallbackReason"
+      ],
+      "observed_fields_missing": [
+        "layer",
+        "source"
+      ],
+      "missing_field_consequence": "The serving layer was not recorded for any position, so the committed bytes cannot identify which producer answered. A recorded scoringFallbackReason of \"config_error\" says the scoring service call failed; it does not record what served the rows instead.",
+      "supports": [
+        "structural observations about the captured rows: row counts, per-position counts, identifier shape and namespace",
+        "descriptive numeric observations computed from the captured alpha values: clamping bounds, floor/ceiling concentration, and joined-row agreement and spread"
+      ],
+      "does_not_support": [
+        "that the response was produced by forge_grade_cache",
+        "that the response was produced by the promoted scoring service",
+        "that the response was produced by any other named producer path"
+      ],
+      "reobservation": "None. This observation is closed. It is not to be replaced by a fresh capture; a guarded re-observation would be a new, separately dated observation."
+    }
   },
   "artifact": "observed_cache_cohort",
   "row_count": 357,

@@ -40,6 +40,17 @@ import {
   assertForgeCacheResponse,
   type ObservedPositionSource,
 } from './forgeCacheResponseGuard';
+import {
+  OBSERVATION_EVIDENCE_STATUS,
+  PRESERVED_OBSERVATION,
+  SUPERSEDED_TERMINAL_FINDING,
+  TERMINAL_FINDING,
+  canonicalJson,
+  median,
+  rowsDigest,
+  sha256,
+  unsupportedLineageClaims,
+} from './forgeCacheAuditClaims';
 
 // This file runs as ESM under tsx, so __dirname is unavailable.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -60,15 +71,6 @@ interface LiveRow {
   rawAlpha: number | null;
   tier: string | null;
   gamesPlayed: number | null;
-}
-
-/** Canonical JSON so the cohort digest is stable across runs. */
-function canonicalJson(value: unknown): string {
-  return JSON.stringify(value, null, 2) + '\n';
-}
-
-function sha256(text: string): string {
-  return createHash('sha256').update(text).digest('hex');
 }
 
 function arg(name: string, fallback: string): string {
@@ -268,7 +270,7 @@ function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
     exactAgreement: deltas.filter((d) => d === 0).length,
     within1: absolute.filter((d) => d <= 1).length,
     within5: absolute.filter((d) => d <= 5).length,
-    medianDelta: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
+    medianDelta: median(sorted),
     minDelta: sorted.length ? sorted[0] : null,
     maxDelta: sorted.length ? sorted[sorted.length - 1] : null,
     largestAbsoluteDeltas: [...joined]
@@ -312,16 +314,37 @@ function auditProvenance() {
   };
 }
 
+/**
+ * The evidence status of the committed cohort bytes.
+ *
+ * These rows were captured before `forgeCacheResponseGuard.ts` existed. The
+ * guard is what binds a response to a producer path; without it, nothing was
+ * recorded at capture time that can say which producer served those bytes. The
+ * same endpoint serves promoted scoring-service items whenever
+ * `SCORING_SERVICE_BASE_URL` is configured and the call succeeds, so "it came
+ * from forge_grade_cache" was an inference from what the endpoint usually
+ * serves, not an observation.
+ *
+ * The bytes are preserved unchanged rather than re-observed. A fresh guarded
+ * capture would answer a different day's question and would destroy the record
+ * of what was actually returned on the observation date. So the observation is
+ * kept, dated, digest-pinned, and closed — and the CLAIM is narrowed to what
+ * the bytes can carry on their own.
+ */
 /** Observation envelope shared by both artifacts, so neither is an unexplained blob. */
 function observationEnvelope(baseUrl: string, observedAt: string, perPosition: Record<string, ObservedPositionSource>) {
   return {
-    audit: 'railway_forge_grade_cache_lineage',
+    audit: 'railway_ranking_cache_lineage',
     issue: 'Prometheus-Frameworks/TIBER-Fantasy#310',
     observation: {
       observed_at: observedAt,
+      // Describes the REQUEST that was made, not the producer that answered it.
+      // The earlier wording ("… which serves Railway forge_grade_cache") stated
+      // an attribution the capture never established.
       source_description:
-        'Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) ' +
-        `for QB/RB/WR/TE at season=${AUDIT_SEASON}, asOfWeek=${AUDIT_WEEK}, limit=300.`,
+        'Public HTTP GET of /api/rankings/v2/weekly for QB/RB/WR/TE at ' +
+        `season=${AUDIT_SEASON}, asOfWeek=${AUDIT_WEEK}, limit=300. ` +
+        'The responding producer path was not recorded at capture time.',
       base_url: baseUrl,
       season: AUDIT_SEASON,
       as_of_week: AUDIT_WEEK,
@@ -329,6 +352,7 @@ function observationEnvelope(baseUrl: string, observedAt: string, perPosition: R
       per_position: perPosition,
       production_mutations: 'none',
       database_access: 'none',
+      evidence_status: OBSERVATION_EVIDENCE_STATUS,
     },
   };
 }
@@ -356,6 +380,11 @@ function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], pe
       sha256: cohortSha256,
       row_count: rows.length,
     },
+    // The payload pin, separate from the file pin above. See PRESERVED_OBSERVATION.
+    preserved_observation: {
+      ...PRESERVED_OBSERVATION,
+      rows_sha256_actual: rowsDigest(rows),
+    },
     cacheCohort: {
       rows: rows.length,
       byPosition: Object.fromEntries(POSITIONS.map((p) => [p, rows.filter((r) => r.position === p).length])),
@@ -374,8 +403,18 @@ function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], pe
     disposition: {
       // An audit classification, not an enforced runtime state. Nothing in this
       // PR changes the production consumer; enforcement is Fantasy #307 Phase B.
-      terminal_finding: 'legacy_forge_cache_quarantined_insufficient_provenance',
+      //
+      // The finding is named for the OBSERVED COHORT, not for a producer. The
+      // previous name — `legacy_forge_cache_quarantined_insufficient_provenance`
+      // — asserted in its own wording that the bytes came from the legacy cache,
+      // which is exactly the attribution the capture cannot support. Quarantine
+      // is the policy response to insufficient provenance; it is not a verdict
+      // about which producer answered.
+      terminal_finding: TERMINAL_FINDING,
+      superseded_finding_name: SUPERSEDED_TERMINAL_FINDING,
       status: 'classified_for_quarantine',
+      quarantine_basis: 'insufficient_provenance',
+      quarantine_is_not: 'a finding that the cohort was served by any particular producer path',
       enforced_by_this_audit: false,
       enforcement_owner: 'Prometheus-Frameworks/TIBER-Fantasy#307 Phase B',
       required_disposition:
@@ -424,6 +463,61 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
     problems.push('source descriptions disagree between the two artifacts');
   }
 
+  // The dated-observation status is part of what --check enforces, not just
+  // documentation. These bytes predate the lineage guard; if a later edit
+  // quietly upgraded the status, every claim resting on it would silently
+  // widen. Both artifacts must carry the canonical status verbatim.
+  const canonicalStatus = canonicalJson(OBSERVATION_EVIDENCE_STATUS);
+  for (const [name, artifact] of [['manifest', manifest], ['cohort', cohort]] as const) {
+    const declared = artifact.observation?.evidence_status;
+    if (!declared) {
+      problems.push(`${name} carries no observation evidence_status; the cohort predates the lineage guard and must say so`);
+    } else if (declared.status !== OBSERVATION_EVIDENCE_STATUS.status) {
+      problems.push(
+        `${name} declares evidence_status "${declared.status}"; this observation is closed as ` +
+        `"${OBSERVATION_EVIDENCE_STATUS.status}" and may not be reclassified without a new, guarded observation`,
+      );
+    } else if (canonicalJson(declared) !== canonicalStatus) {
+      problems.push(`${name} evidence_status has been edited away from the canonical closed status`);
+    }
+  }
+
+  // The prohibition itself, enforced rather than described: no text in either
+  // observation envelope may attribute the captured bytes to a producer path.
+  for (const [name, artifact] of [['manifest', manifest], ['cohort', cohort]] as const) {
+    for (const claim of unsupportedLineageClaims(artifact.observation)) {
+      problems.push(`${name}: ${claim}`);
+    }
+  }
+
+  // The observation payload is immutable. The file digest legitimately moved
+  // when the evidence status was attached; the captured rows and the capture
+  // instant may not move at all.
+  const actualRowsDigest = rowsDigest(cohort.rows);
+  if (actualRowsDigest !== PRESERVED_OBSERVATION.rows_sha256) {
+    problems.push(
+      `committed cohort rows no longer match the preserved observation ` +
+      `(pinned ${PRESERVED_OBSERVATION.rows_sha256.slice(0, 8)}…, actual ${actualRowsDigest.slice(0, 8)}…) — ` +
+      'this observation is closed and must not be re-captured or edited',
+    );
+  }
+  if (cohort.observation?.observed_at !== PRESERVED_OBSERVATION.observed_at) {
+    problems.push(
+      `committed cohort observed_at is ${cohort.observation?.observed_at}; the preserved observation is ` +
+      `dated ${PRESERVED_OBSERVATION.observed_at} and may not be re-dated`,
+    );
+  }
+  if (manifest.preserved_observation?.rows_sha256 !== PRESERVED_OBSERVATION.rows_sha256) {
+    problems.push('manifest does not pin the preserved observation rows digest');
+  }
+
+  if (manifest.disposition?.terminal_finding !== TERMINAL_FINDING) {
+    problems.push(
+      `manifest terminal_finding is "${manifest.disposition?.terminal_finding}"; expected "${TERMINAL_FINDING}" — ` +
+      'the finding may not be renamed back to a form that asserts a proven producer origin',
+    );
+  }
+
   // The static FORGE artifact is a DEPENDENCY of the published comparability
   // findings, not just a path reference. Without hashing it here, --check
   // reported success while #318 replaced those bytes underneath the manifest
@@ -457,7 +551,12 @@ async function main() {
   if (check) {
     const result = verifyCommitted(REPO_ROOT);
     if (result.ok) {
-      console.log('committed audit artifacts agree: counts, positions, timestamps and digest all match.');
+      console.log(
+        'committed audit artifacts agree: counts, positions, timestamps and digest all match; ' +
+        `preserved observation intact (${PRESERVED_OBSERVATION.row_count} rows, ${PRESERVED_OBSERVATION.observed_at}); ` +
+        `evidence status "${OBSERVATION_EVIDENCE_STATUS.status}"; no unsupported lineage claim; ` +
+        `terminal finding "${TERMINAL_FINDING}".`,
+      );
       process.exit(0);
     }
     console.error('committed audit artifacts DISAGREE:');
@@ -501,7 +600,7 @@ async function main() {
   console.log(`Wrote ${MANIFEST_RELATIVE_PATH}`);
   console.log(`Wrote ${COHORT_RELATIVE_PATH}`);
   console.log(`cohort=${rows.length} cohort_sha256=${cohortSha256}`);
-  console.log('terminal_finding=legacy_forge_cache_quarantined_insufficient_provenance (classified, not enforced)');
+  console.log(`terminal_finding=${TERMINAL_FINDING} (classified, not enforced)`);
 }
 
 main().catch((error) => {

@@ -14,6 +14,15 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
 import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
+import {
+  OBSERVATION_EVIDENCE_STATUS,
+  PRESERVED_OBSERVATION,
+  SUPERSEDED_TERMINAL_FINDING,
+  TERMINAL_FINDING,
+  median,
+  rowsDigest,
+  unsupportedLineageClaims,
+} from '../forgeCacheAuditClaims';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'docs/audits/assets/310-cache-audit-manifest.json');
@@ -111,12 +120,106 @@ describe('the two committed artifacts describe one observation', () => {
   });
 });
 
+describe('the observation is preserved, dated, and closed', () => {
+  // The committed rows were captured before `forgeCacheResponseGuard.ts`
+  // existed. The guard is what binds a response to a producer path, so nothing
+  // recorded at capture time can say which producer served these bytes. They
+  // are kept unchanged and the CLAIM is narrowed, rather than being replaced by
+  // a fresh capture that would answer a different day's question.
+  test('both artifacts carry the closed pre-lineage-guard evidence status', () => {
+    for (const doc of [manifest, cohort]) {
+      expect(doc.observation.evidence_status).toEqual(OBSERVATION_EVIDENCE_STATUS);
+      expect(doc.observation.evidence_status.status).toBe('unverified_predates_lineage_guard');
+      expect(doc.observation.evidence_status.closed).toBe(true);
+    }
+  });
+
+  test('the captured rows and capture instant are pinned independently of the file', () => {
+    // The cohort FILE digest legitimately moved when the status was attached.
+    // The observation payload underneath it must not move at all.
+    expect(rowsDigest(cohort.rows)).toBe(PRESERVED_OBSERVATION.rows_sha256);
+    expect(cohort.observation.observed_at).toBe(PRESERVED_OBSERVATION.observed_at);
+    expect(cohort.rows).toHaveLength(PRESERVED_OBSERVATION.row_count);
+    expect(manifest.preserved_observation.rows_sha256).toBe(PRESERVED_OBSERVATION.rows_sha256);
+    expect(manifest.preserved_observation.rows_sha256_actual).toBe(PRESERVED_OBSERVATION.rows_sha256);
+    // The pre-reclassification file digest is retained as the custody link.
+    expect(manifest.preserved_observation.superseded_envelope_sha256)
+      .toBe('118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106');
+  });
+
+  test('the status states what the bytes can and cannot support', () => {
+    const status = OBSERVATION_EVIDENCE_STATUS;
+    expect(status.supports.join(' ')).toMatch(/structural/i);
+    expect(status.supports.join(' ')).toMatch(/descriptive numeric/i);
+    // Producer attribution is disclaimed, not merely omitted.
+    expect(status.does_not_support).toEqual(expect.arrayContaining([
+      expect.stringContaining('forge_grade_cache'),
+      expect.stringContaining('promoted scoring service'),
+    ]));
+  });
+
+  test('neither observation envelope attributes the bytes to a producer path', () => {
+    // The prohibition is enforced, not described. `does_not_support` is the one
+    // place the producer names may appear, because it exists to disclaim them.
+    expect(unsupportedLineageClaims(manifest.observation)).toEqual([]);
+    expect(unsupportedLineageClaims(cohort.observation)).toEqual([]);
+  });
+
+  test('the recorded per-position fields cannot identify the serving layer', () => {
+    // The status is grounded in the committed bytes, not in the guard's absence.
+    // `ObservedPositionSource` declares `layer` and `source`; the capture has
+    // neither, for any position.
+    for (const position of POSITIONS) {
+      const record = cohort.observation.per_position[position];
+      expect(record).toBeDefined();
+      expect(Object.keys(record).sort()).toEqual(['asOf', 'fallbackReason']);
+      expect(record.layer).toBeUndefined();
+      expect(record.source).toBeUndefined();
+    }
+    expect(OBSERVATION_EVIDENCE_STATUS.observed_fields_missing).toEqual(['layer', 'source']);
+  });
+
+  test('disclaimer fields may name producers without counting as claims', () => {
+    // Otherwise the text that exists to DENY an attribution would be flagged as
+    // making it, and the only way to pass would be to delete the disclaimer.
+    expect(unsupportedLineageClaims({
+      does_not_support: ['that the response was produced by forge_grade_cache'],
+      missing_field_consequence: 'the scoring service call failed; nothing records what served the rows',
+    })).toEqual([]);
+  });
+
+  test('the claim scanner would catch a restored attribution', () => {
+    // Pinned adversarially: if the scanner stopped working, this passes
+    // vacuously and the test above would give false assurance.
+    const tampered = {
+      source_description: 'GET /api/rankings/v2/weekly (which serves Railway forge_grade_cache).',
+      evidence_status: OBSERVATION_EVIDENCE_STATUS,
+    };
+    expect(unsupportedLineageClaims(tampered)).toEqual([
+      expect.stringContaining('forge_grade_cache'),
+    ]);
+  });
+});
+
 describe('the disposition is an audit classification, not an enforced state', () => {
   test('records the terminal finding without claiming enforcement', () => {
-    expect(manifest.disposition.terminal_finding).toBe('legacy_forge_cache_quarantined_insufficient_provenance');
+    expect(manifest.disposition.terminal_finding).toBe(TERMINAL_FINDING);
     expect(manifest.disposition.status).toBe('classified_for_quarantine');
     expect(manifest.disposition.enforced_by_this_audit).toBe(false);
     expect(manifest.disposition.enforcement_owner).toContain('#307');
+  });
+
+  test('the finding is named for the cohort, not for a producer origin', () => {
+    // The old name asserted proven legacy-cache origin in its own wording,
+    // which is the attribution the capture cannot support.
+    expect(TERMINAL_FINDING).not.toMatch(/forge_grade_cache|legacy_forge_cache/);
+    expect(manifest.disposition.superseded_finding_name).toBe(SUPERSEDED_TERMINAL_FINDING);
+    expect(SUPERSEDED_TERMINAL_FINDING).toMatch(/legacy_forge_cache/);
+  });
+
+  test('quarantine is a response to missing provenance, not a source verdict', () => {
+    expect(manifest.disposition.quarantine_basis).toBe('insufficient_provenance');
+    expect(manifest.disposition.quarantine_is_not).toMatch(/not a finding|served by any particular producer/i);
   });
 
   test('states the required disposition rather than asserting it is already applied', () => {
@@ -218,6 +321,27 @@ describe('comparability', () => {
     expect(dc.exactAgreement).toBe(deltas.filter((d: number) => d === 0).length);
     expect(dc.minDelta).toBe(Math.min(...deltas));
     expect(dc.maxDelta).toBe(Math.max(...deltas));
+    expect(dc.medianDelta).toBe(median([...deltas].sort((a: number, b: number) => a - b)));
+  });
+
+  test('the median of the even 50-row cohort averages the two middle deltas', () => {
+    // 50 joined rows has no single middle element. The old implementation took
+    // `sorted[Math.floor(n / 2)]` — the UPPER of the two middle values — and
+    // published -2.74 as the median. The two middle deltas are -3.69 and -2.74,
+    // so the median is -3.215.
+    const dc = manifest.comparability.descriptiveComparison;
+    expect(dc.joinedRows % 2).toBe(0);
+    expect(dc.medianDelta).toBe(-3.215);
+    expect(dc.medianDelta).not.toBe(-2.74);
+  });
+
+  test('median() handles even and odd cohorts and the empty case', () => {
+    expect(median([-3.69, -2.74])).toBe(-3.215);
+    // Rounded to 3dp: the mean of two 2dp values is exact at 3dp, so this
+    // removes float residue rather than re-rounding the statistic.
+    expect(median([1, 2])).toBe(1.5);
+    expect(median([1, 2, 4])).toBe(2);
+    expect(median([])).toBeNull();
   });
 
   test('the comparison describes difference without attributing cause', () => {
@@ -226,8 +350,17 @@ describe('comparability', () => {
     const dc = manifest.comparability.descriptiveComparison;
     expect(dc.note).toMatch(/does not attribute/i);
     expect(dc.note).toMatch(/lineage/i);
-    expect(manifest.disposition.terminal_finding)
-      .toBe('legacy_forge_cache_quarantined_insufficient_provenance');
+    expect(manifest.disposition.terminal_finding).toBe(TERMINAL_FINDING);
+  });
+
+  test('the join is valid; what is blocked is source attribution, not the join', () => {
+    // The 50-row GSIS join is a legitimate descriptive comparison. Causal and
+    // source attribution stay blocked by missing provenance — which is a
+    // different blocker from the "no valid join" the first revision reported.
+    expect(manifest.comparability.joinable).toBe(true);
+    expect(manifest.comparability.joinBlockers).toEqual([]);
+    expect(manifest.comparability.descriptiveComparison.joinedRows).toBe(50);
+    expect(manifest.provenance.deterministicRecomputePossible).toBe(false);
   });
 
   test('--check hashes the static artifact the findings depend on', () => {
