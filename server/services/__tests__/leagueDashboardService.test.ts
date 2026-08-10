@@ -2,10 +2,15 @@ import { playerIdentityMap } from '@shared/schema';
 
 let computeLeagueDashboard: typeof import('../leagueDashboardService').computeLeagueDashboard;
 
-function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy, readBack, updateAffects = 1 }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock; readBack?: any[]; updateAffects?: number }) {
+function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy, readBack, readBackError, updateAffects = 1 }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock; readBack?: any[]; readBackError?: Error; updateAffects?: number }) {
   // The mock cannot introspect drizzle predicates, so identity selects are
   // distinguished by call order: 1 = roster lookup, 2 = the GSIS-ownership
   // probe hydration performs before writing, 3 = the post-write read-back.
+  //
+  // `readBack` defaults to `[]` on purpose: an empty authoritative read-back is
+  // the realistic shape of an insert that `onConflictDoNothing()` skipped, and
+  // the service must treat it as an answer rather than falling back to the
+  // candidate rows it tried to write.
   let identitySelectCount = 0;
   return {
     update: jest.fn(() => ({
@@ -30,6 +35,7 @@ function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, 
               return Promise.resolve(gsisOwners);
             }
             if (identitySelectCount >= 3) {
+              if (readBackError) return Promise.reject(readBackError);
               return Promise.resolve(readBack ?? []);
             }
             return Promise.resolve(identities);
@@ -806,9 +812,137 @@ describe('computeLeagueDashboard', () => {
     });
   });
 
+  describe('only a confirmed read-back may expose a hydrated identity', () => {
+    // `toInsert` is a candidate set, never a result. Every insert runs under
+    // `onConflictDoNothing()`, so a candidate can be silently skipped and never
+    // reach `player_identity_map`. Returning candidates therefore publishes a
+    // canonical identity that may not exist — and because the caller splices
+    // hydration output straight into `identities`, the fabricated row is
+    // indistinguishable from a real one in the same request's dashboard state.
+    // Carries a GSIS so the ownership probe runs. That keeps the mock's
+    // documented select ordering intact (1 = roster, 2 = GSIS probe,
+    // 3 = read-back); without it the probe short-circuits, select #2 becomes
+    // the read-back, and these tests would pass by reading the roster stub
+    // rather than the read-back they exist to exercise.
+    const onePlayer = {
+      s1: { player_id: 's1', full_name: 'Player One', first_name: 'Player', last_name: 'One',
+            position: 'WR', team: 'CIN', active: true, gsis_id: '00-0030001' },
+    };
+
+    const run = async (dbMock: any) =>
+      computeLeagueDashboard(
+        { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+        {
+          storage: storageDeps as any,
+          sleeperClient: {
+            ...sleeperDeps,
+            getLeagueRosters: jest.fn().mockResolvedValue([{ owner_id: 'owner1', players: ['s1'] }]),
+            getNflPlayers: jest.fn().mockResolvedValue(onePlayer),
+          } as any,
+          db: dbMock,
+          forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+          forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+        },
+      );
+
+    it('a skipped insert with an empty read-back leaves the player unresolved, not fabricated', async () => {
+      // The reproduction: the insert is attempted, `onConflictDoNothing()`
+      // skips it, and the authoritative read-back confirms nothing. An empty
+      // read-back is an ANSWER — the row is not there — so the candidate must
+      // not be substituted for it.
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({ identities: [], gsisOwners: [], insertSpy, readBack: [] });
+
+      const result = await run(dbMock);
+
+      // The insert really was attempted; this is not a test that skipped the path.
+      expect(insertSpy).toHaveBeenCalledWith([expect.objectContaining({ canonicalId: 'sleeper:s1' })]);
+      expect(result.unresolvedPlayers).toEqual([expect.objectContaining({ sleeperId: 's1' })]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: null,
+        visibilityState: 'unresolved',
+      }));
+    });
+
+    it('a failed read-back yields nothing rather than the unconfirmed candidates', async () => {
+      // A read-back error is not an answer at all. It must not be downgraded
+      // into "assume the write landed".
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [],
+        insertSpy,
+        readBackError: new Error('connection terminated during read-back'),
+      });
+
+      const result = await run(dbMock);
+
+      expect(insertSpy).toHaveBeenCalled();
+      expect(result.unresolvedPlayers).toEqual([expect.objectContaining({ sleeperId: 's1' })]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({ canonicalId: null }));
+    });
+
+    it('an unconfirmed candidate never reaches the same request’s dashboard state', async () => {
+      // The snapshot assertion, distinct from the two above: no part of the
+      // response may carry the candidate canonical id, and roster visibility
+      // must count the player as unresolved rather than identity-covered.
+      const dbMock = createDbMock({ identities: [], gsisOwners: [], readBack: [] });
+
+      const result = await run(dbMock);
+
+      // The provider key itself may still be echoed — that is the request's own
+      // input, not a claim about identity. What must be absent is any CANONICAL
+      // identity for a row the read-back never confirmed.
+      const player = result.teams[0].roster[0];
+      expect(player.canonicalId).toBeNull();
+      expect(player.currentTiberPlayerId).toBeNull();
+      expect(player.crosswalkStatus).toBe('unresolved');
+      expect(result.diagnostics?.rosterVisibility).toEqual(expect.objectContaining({
+        total: 1,
+        identityCovered: 0,
+        unresolved: 1,
+      }));
+    });
+
+    it('a confirmed read-back is still exposed', async () => {
+      // The fix must fail closed without disabling hydration: when the row IS
+      // confirmed present, it resolves exactly as before.
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [],
+        readBack: [{ canonicalId: 'sleeper:s1', gsisId: null, sleeperId: 's1',
+                     position: 'WR', fullName: 'Player One', nflTeam: 'CIN' }],
+      });
+
+      const result = await run(dbMock);
+
+      expect(result.unresolvedPlayers).toEqual([]);
+      expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
+        canonicalId: 'sleeper:s1',
+        sleeperId: 's1',
+      }));
+    });
+  });
+
   it('hydrates missing roster identities from Sleeper player metadata before classifying them unresolved', async () => {
     const insertSpy = jest.fn();
-    const dbMock = createDbMock({ identities: [], insertSpy });
+    // The read-back must confirm the row for it to be exposed. This test is
+    // about the hydration path producing the right INSERT and the right
+    // resolved shape, so the read-back reflects a write that actually landed;
+    // the skipped-insert case is covered separately above.
+    const dbMock = createDbMock({
+      identities: [],
+      insertSpy,
+      readBack: [{
+        canonicalId: 'sleeper:s1',
+        sleeperId: 's1',
+        fullName: 'Player One',
+        position: 'WR',
+        nflTeam: 'CIN',
+        fantasyDataId: '12345',
+        gsisId: null,
+      }],
+    });
     const forgeServiceMock = { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) };
 
     const result = await computeLeagueDashboard(

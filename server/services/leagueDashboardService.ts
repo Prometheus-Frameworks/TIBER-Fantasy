@@ -430,14 +430,31 @@ async function hydrateMissingSleeperIdentities(
     // An attach updates an existing row that is not in `toInsert`, so returning
     // only the inserts would leave the request that performed the repair still
     // reporting that player unresolved until some later request.
-    let hydrated: any[] = toInsert as any[];
+    //
+    // The read-back is the ONLY authority on what `player_identity_map` holds.
+    // `toInsert` is a candidate set, not a result: every insert runs under
+    // `onConflictDoNothing()`, so any of those rows may have been skipped and
+    // never persisted. Returning them would publish a canonical identity that
+    // was never confirmed to exist — the caller splices these rows straight
+    // into `identities`, and from there into `identityBySleeperId` and
+    // `canonicalIds`, so an unconfirmed candidate becomes indistinguishable
+    // from a real row in the dashboard snapshot.
+    //
+    // Therefore: start empty, and admit only what the read-back confirms.
+    // An empty read-back is an authoritative answer — nothing was confirmed —
+    // not a signal to fall back to the candidates. A failed read-back is not
+    // an answer at all, so it also yields nothing rather than the candidates.
+    let hydrated: any[] = [];
+    let readBackFailed = false;
     try {
       const authoritative = await (deps.db as any)
         .select()
         .from(playerIdentityMap)
         .where(inArray(playerIdentityMap.sleeperId, uniqueMissingIds));
-      if (Array.isArray(authoritative) && authoritative.length > 0) hydrated = authoritative;
+      hydrated = Array.isArray(authoritative) ? authoritative : [];
     } catch (readBackError) {
+      readBackFailed = true;
+      hydrated = [];
       logger.log('identity-hydration-readback-failed', {
         requestId: logger.requestId,
         error: (readBackError as Error).message,
@@ -452,7 +469,10 @@ async function hydrateMissingSleeperIdentities(
       attachAttempted: toAttach.length,
       gsisWithheld: gsisWithheld.length,
       gsisWithheldSample: gsisWithheld.slice(0, 5),
+      // `returned` is confirmed rows only. Zero is ambiguous on its own, so
+      // record which of the two zeroes this was.
       returned: hydrated.length,
+      readBackFailed,
     });
 
     return hydrated as any;
