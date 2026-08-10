@@ -160,7 +160,14 @@ describe('Rankings v2 route forward-season default', () => {
     expect(body.seasonMeta.currentSeason).toBe(2025);
     expect(body.seasonMeta.forwardRankingSeason).toBe(2026);
     expect(body.seasonMeta.evidenceSeason).toBe(2026);
-    expect(body.seasonMeta.evidenceWeek).toBe(1);
+    // A forward Week 1 board has no evidence yet. Reporting `evidenceWeek: 1`
+    // here claimed 2026 Week 1 evidence existed before the season began — the
+    // target week leaking into the evidence field, which is the exact
+    // conflation this split removes.
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.completionVerified).toBe(false);
+    expect(body.seasonMeta.decisionTargetWeek).toBe(1);
+    expect(body.seasonMeta.decisionTargetProvenance).toBe('anchor_derived');
     expect(body.seasonMeta.isArchiveView).toBe(false);
   });
 });

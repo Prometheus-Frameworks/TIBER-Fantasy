@@ -10,7 +10,13 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
-import { resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
+import {
+  COMPLETION_NOT_VERIFIED_COPY,
+  EvidenceProvenance,
+  resolveArchiveEvidenceCutoff,
+  resolveSeasonPhase,
+  SeasonPhaseInfo,
+} from '@shared/weekDetection';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
@@ -30,6 +36,7 @@ function buildSeasonMeta(input: {
   phase: SeasonPhaseInfo;
   evidenceSeason: number | null;
   evidenceWeek: number | null;
+  evidenceProvenance?: EvidenceProvenance;
   generatedAt: string | null;
   status: string | null;
   statusDetail: string | null;
@@ -55,6 +62,23 @@ function buildSeasonMeta(input: {
     targetWeek: input.phase.targetWeek,
     targetLabel: input.phase.targetLabel,
     scheduleSource: input.phase.scheduleSource,
+
+    // The split, published so a consumer never has to infer which job a week
+    // number is doing. `decisionTargetWeek` is forward-looking and may be
+    // provisional; `evidenceThroughWeek` admits results and is null unless
+    // completion is verified.
+    decisionTargetSeason: input.phase.targetSeason,
+    decisionTargetWeek: input.phase.targetWeek,
+    decisionTargetProvenance: input.phase.targetProvenance,
+    decisionTargetIsProvisional: input.phase.targetIsProvisional,
+    evidenceThroughSeason: input.evidenceWeek === null ? null : input.evidenceSeason,
+    evidenceThroughWeek: input.evidenceWeek,
+    evidenceProvenance: input.evidenceProvenance ?? input.phase.evidenceProvenance,
+    completionVerified: input.evidenceWeek !== null,
+    completionCopy: input.evidenceWeek !== null
+      ? `Complete through Week ${input.evidenceWeek}.`
+      : COMPLETION_NOT_VERIFIED_COPY,
+
     configStatus: input.phase.configStatus,
     configNote: input.phase.configNote,
 
@@ -281,13 +305,74 @@ export function createRankingsV2Router(): Router {
       // postseason this correctly defaults a parameterless request to 2026.
       const season = hasExplicitSeason ? requestedSeason : phase.targetSeason ?? phase.season;
 
+      // Two different questions, previously answered by one number.
+      //
+      //   decisionTargetWeek — which week's board to build. Forward-looking, and
+      //     allowed to rest on a provisional anchor-derived target.
+      //   evidenceThroughWeek — how far results may be admitted. Requires
+      //     verified completion and fails closed to `undefined`.
+      //
+      // `asOfWeek` was serving as both: it keyed the cache AND was published as
+      // `evidenceWeek`. That is how an anchor-derived calendar date came to
+      // admit results for games that had not been played.
       const asOfWeekParam = req.query.asOfWeek as string | undefined;
       const requestedWeek = asOfWeekParam ? parseInt(asOfWeekParam, 10) : NaN;
-      const asOfWeek = Number.isFinite(requestedWeek)
+      const hasExplicitWeek = Number.isFinite(requestedWeek);
+
+      // Resolution unchanged from before the split: `undefined` still means
+      // "no week filter" for the cache lookup. Naming it `decisionTargetWeek`
+      // is the point — it records which of the two jobs this value does, and
+      // stops it being reused as the evidence bound below.
+      const decisionTargetWeek = hasExplicitWeek
         ? requestedWeek
         : season === phase.season
           ? phase.regularSeasonWeek ?? undefined
           : undefined;
+
+      // The cutoff belongs to the season being requested. For an explicitly
+      // requested historical archive that is THAT season's own cutoff — never
+      // the live current-season week, which is how a 2024 board previously
+      // ended up cut off at a current-season week number.
+      const cutoff = hasExplicitSeason && season !== phase.season
+        ? resolveArchiveEvidenceCutoff(season)
+        : {
+            season: phase.evidenceThroughSeason,
+            week: phase.evidenceThroughWeek,
+            provenance: phase.evidenceProvenance,
+          };
+
+      // An explicit `asOfWeek` is a caller-supplied bound. It may only NARROW
+      // the verified cutoff, never extend past it.
+      //
+      // This is the value that gets PUBLISHED as evidence and drives
+      // completion copy. It is null unless completion is verified, which today
+      // means null for every configured season — both are anchor-derived.
+      const evidenceThroughWeek =
+        cutoff.week === null
+          ? undefined
+          : hasExplicitWeek
+            ? Math.min(requestedWeek, cutoff.week)
+            : cutoff.week;
+
+      // Separately: the upper bound on the stats QUERY.
+      //
+      // `throughWeek` becomes `lte(weeklyStats.week, N)` over rows that exist
+      // only for games actually played and ingested. A generous bound cannot
+      // fabricate a result; it only declines to exclude a recorded one. So this
+      // is a forward-looking scheduling bound — exactly the use an
+      // anchor-derived target is permitted for — and NOT the evidence cutoff.
+      //
+      // Binding it to the verified cutoff instead would admit nothing at all
+      // while no season has an ingested schedule, blanking the board for no
+      // honesty gain. The honesty lives in what is *claimed*: `evidenceWeek`,
+      // `completionVerified` and the copy below all stay unverified.
+      const statsQueryThroughWeek = hasExplicitWeek
+        ? requestedWeek
+        : season === phase.season
+          ? phase.regularSeasonWeek ?? 0
+          : season === phase.targetSeason
+            ? 0 // A future target season has no recorded weeks yet.
+            : (resolveArchiveEvidenceCutoff(season).week ?? 0);
 
       const position = ((req.query.position as string) || 'ALL').toUpperCase() as SupportedPosition;
       const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 300);
@@ -319,12 +404,14 @@ export function createRankingsV2Router(): Router {
         }
       }
 
-      const cache = await getGradesFromCache(season, asOfWeek, position, limit, CACHE_VERSION);
+      // The cache is keyed by the DECISION TARGET — which board is being built.
+      const cache = await getGradesFromCache(season, decisionTargetWeek, position, limit, CACHE_VERSION);
       const scoringInputs = await buildRankingsScoringInputs({
         season,
-        // No week filter means "everything recorded for this season so far",
-        // which is correct pre-Week-1 (nothing) and mid-season (weeks to date).
-        throughWeek: asOfWeek ?? phase.regularSeasonWeek ?? 0,
+        // Scheduling bound over recorded rows — see `statsQueryThroughWeek`.
+        // Deliberately NOT `evidenceThroughWeek`: this bounds a query, it does
+        // not license a claim.
+        throughWeek: statsQueryThroughWeek,
         position,
         limit,
       });
@@ -339,7 +426,7 @@ export function createRankingsV2Router(): Router {
         const scoringRankings = await scoringService.getWeeklyRankings({
           leagueContext: toLeagueContextInput({
             season,
-            week: asOfWeek,
+            week: decisionTargetWeek,
             scoringFormat: 'ppr',
             teams: 12,
           }),
@@ -359,7 +446,7 @@ export function createRankingsV2Router(): Router {
                 layer: 'promoted_artifact' as const,
                 source: 'point-prediction-model /api/tiber/weekly/rankings',
                 asOf: scoringAsOf,
-                notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
+                notes: `season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, evidenceThroughWeek=${evidenceThroughWeek ?? 'none'}, position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
               },
             ],
             items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
@@ -373,7 +460,8 @@ export function createRankingsV2Router(): Router {
             seasonMeta: buildSeasonMeta({
               phase,
               evidenceSeason: season,
-              evidenceWeek: asOfWeek ?? null,
+              evidenceWeek: evidenceThroughWeek ?? null,
+              evidenceProvenance: cutoff.provenance,
               generatedAt: scoringAsOf,
               status: null,
               statusDetail: null,
@@ -424,8 +512,8 @@ export function createRankingsV2Router(): Router {
             // scoringFallbackReason records why this layer is serving instead of the scoring service,
             // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
             notes: isCacheEmpty
-              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`
-              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, asOfWeek=${cache.asOfWeek ?? asOfWeek ?? 'unknown'}, position=${position}`,
+              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${cache.asOfWeek ?? decisionTargetWeek ?? 'unknown'}, evidenceThroughWeek=${evidenceThroughWeek ?? 'none'}, position=${position}`
+              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${cache.asOfWeek ?? decisionTargetWeek ?? 'unknown'}, evidenceThroughWeek=${evidenceThroughWeek ?? 'none'}, position=${position}`,
           },
           {
             layer: 'confidence_stability' as const,
@@ -459,7 +547,8 @@ export function createRankingsV2Router(): Router {
         seasonMeta: buildSeasonMeta({
           phase,
           evidenceSeason: season,
-          evidenceWeek: cache.asOfWeek ?? asOfWeek ?? null,
+          evidenceWeek: evidenceThroughWeek ?? null,
+          evidenceProvenance: cutoff.provenance,
           generatedAt: toIso(cache.computedAt),
           status: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
           statusDetail: isCacheEmpty

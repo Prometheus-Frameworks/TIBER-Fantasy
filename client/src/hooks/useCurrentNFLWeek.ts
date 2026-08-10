@@ -5,7 +5,7 @@ export type NflPhase = 'offseason' | 'preseason' | 'regular_season' | 'postseaso
 interface WeekInfo {
   currentWeek: number;
   season: number;
-  weekStatus: 'not_started' | 'in_progress' | 'completed';
+  weekStatus: 'not_started' | 'in_progress' | 'completion_unverified' | 'completed';
   mondayNightCompleted: boolean | null;
   weekStartDate: string;
   weekEndDate: string;
@@ -25,9 +25,25 @@ interface WeekInfo {
   targetWeek: number | null;
   targetLabel: string | null;
   scheduleSource: 'explicit_schedule' | 'anchor_derived' | null;
+
+  // The decision-target / evidence-cutoff split (Fantasy #307 Phase A).
+  targetProvenance: 'verified_schedule' | 'anchor_derived' | null;
+  targetIsProvisional: boolean;
+  evidenceThroughSeason: number | null;
+  evidenceThroughWeek: number | null;
+  evidenceProvenance:
+    | 'verified_completed_week'
+    | 'no_completed_week'
+    | 'completion_unverified'
+    | 'anchor_derived_cannot_verify_completion'
+    | 'stale_calendar_config';
+
   configStatus: 'ok' | 'stale_calendar_config';
   configNote: string | null;
 }
+
+/** Rendered wherever completion cannot be asserted. */
+export const COMPLETION_NOT_VERIFIED_COPY = 'Completion not verified.';
 
 export function useCurrentNFLWeek() {
   const { data, isLoading, error } = useQuery<WeekInfo>({
@@ -74,6 +90,26 @@ export function useCurrentNFLWeek() {
     targetWeek: data?.targetWeek ?? null,
     targetLabel: data?.targetLabel ?? null,
     scheduleSource: data?.scheduleSource ?? null,
+
+    // --- Forward target vs evidence cutoff (Fantasy #307 Phase A) ---------
+    // A provisional target may drive forward-looking requests, but only while
+    // `targetIsProvisional` travels with it. The evidence cutoff is separate
+    // and fails closed to null, so no surface can accidentally read a
+    // scheduling signal as permission to show results.
+    targetProvenance: data?.targetProvenance ?? null,
+    targetIsProvisional: data?.targetIsProvisional ?? false,
+    evidenceThroughSeason: data?.evidenceThroughSeason ?? null,
+    evidenceThroughWeek: data?.evidenceThroughWeek ?? null,
+    evidenceProvenance: data?.evidenceProvenance ?? null,
+    completionVerified: (data?.evidenceThroughWeek ?? null) !== null,
+    // Never implies completion when it is unverified. `gamesCompleted` and
+    // `mondayNightCompleted` are null in that state, so copy derived from them
+    // would otherwise read as "0 games completed".
+    completionCopy:
+      (data?.evidenceThroughWeek ?? null) !== null
+        ? `Complete through Week ${data?.evidenceThroughWeek}.`
+        : COMPLETION_NOT_VERIFIED_COPY,
+
     configStatus: data?.configStatus ?? null,
     configNote: data?.configNote ?? null,
 

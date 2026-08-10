@@ -114,10 +114,22 @@ describe('Rankings v2 season/phase contract', () => {
 
     expect(body.seasonMeta.generatedAt).toBe('2026-08-08T19:04:15.325Z');
     expect(body.seasonMeta.evidenceSeason).toBe(2025);
-    expect(body.seasonMeta.evidenceWeek).toBe(18);
     // A 2026 computation over 2025 evidence must not read as current-season evidence.
     expect(body.seasonMeta.generatedAt.startsWith('2026')).toBe(true);
     expect(body.seasonMeta.evidenceSeason).not.toBe(body.seasonMeta.currentSeason);
+
+    // `evidenceWeek` is the VERIFIED cutoff, not an echo of the requested
+    // `asOfWeek`. 2025 is an anchor-derived calendar, so no week's completion
+    // can be supported and the field is null — where it previously reported 18
+    // purely because 18 was asked for.
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
+    expect(body.seasonMeta.completionVerified).toBe(false);
+    expect(body.seasonMeta.completionCopy).toBe('Completion not verified.');
+    expect(body.seasonMeta.evidenceProvenance).toBe('anchor_derived_cannot_verify_completion');
+    // The forward target is unaffected and still travels with its provenance.
+    expect(body.seasonMeta.decisionTargetWeek).toBe(1);
+    expect(body.seasonMeta.decisionTargetIsProvisional).toBe(true);
   });
 
   test('2025 rows served during the 2026 preseason are flagged as an archive view', async () => {

@@ -196,6 +196,27 @@ export const seasonMetaSchema = z.object({
   configNote: z.string().nullable(),
   evidenceSeason: z.number().nullable(),
   evidenceWeek: z.number().nullable(),
+
+  // The decision-target / evidence-cutoff split. Required, not optional: a
+  // response that omits them must reach the error state rather than let the
+  // page infer a cutoff from the target, which is the conflation #307 exists
+  // to remove.
+  decisionTargetSeason: z.number().nullable(),
+  decisionTargetWeek: z.number().nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetIsProvisional: z.boolean(),
+  evidenceThroughSeason: z.number().nullable(),
+  evidenceThroughWeek: z.number().nullable(),
+  evidenceProvenance: z.enum([
+    'verified_completed_week',
+    'no_completed_week',
+    'completion_unverified',
+    'anchor_derived_cannot_verify_completion',
+    'stale_calendar_config',
+  ]),
+  completionVerified: z.boolean(),
+  completionCopy: z.string().nullable(),
+
   generatedAt: z.string().datetime().nullable(),
   isArchiveView: z.boolean(),
   status: z.string().nullable(),

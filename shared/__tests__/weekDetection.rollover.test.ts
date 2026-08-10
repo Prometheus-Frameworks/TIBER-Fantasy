@@ -73,11 +73,16 @@ describe('a week is not complete while its last game is being played', () => {
     const phase = resolveSeasonPhase(AFTER_WEEK_END);
     expect(phase.regularSeasonWeek).toBe(12);
     expect(phase.targetWeek).toBe(12);
-    // Week 11 itself, queried explicitly, is now complete with a full slate.
+    // Week 11 itself, queried explicitly, is now past its closing boundary.
     const info = getWeekInfo(11, 2025, AFTER_WEEK_END);
     expect(info?.weekStatus).toBe('completed');
     expect(info?.mondayNightCompleted).toBe(true);
-    expect(info?.gamesCompleted).toBe(16);
+    // But the GAME COUNT stays null. 2025 is an anchor-derived calendar: its
+    // week boundaries are a seven-day stride off the Week 1 anchor, so "16
+    // games finished" would be asserting a specific number of completed games
+    // from arithmetic, not from any observation. The week-status boundary is a
+    // scheduling fact and may be reported; the game count is not.
+    expect(info?.gamesCompleted).toBeNull();
   });
 });
 
@@ -178,9 +183,12 @@ describe('getCurrentWeek — backward-compatible adapter', () => {
     const info = getCurrentWeek(at('2025-11-16T18:00:00Z'));
     expect(info.currentWeek).toBe(11);
     expect(info.regularSeasonWeek).toBe(11);
-    expect(typeof info.gamesCompleted).toBe('number');
     expect(info.totalGames).toBe(16);
     expect(info.weekStartDate).not.toBe('');
+    // `gamesCompleted` is nullable and null here: every configured season is
+    // anchor-derived, so no game count can be supported. `totalGames` is a
+    // league constant and stays a number.
+    expect(info.gamesCompleted).toBeNull();
   });
 
   test('exposes phase labels for the presentation layer', () => {
@@ -269,7 +277,7 @@ describe('calendar config integrity', () => {
         week: w.week,
         start: new Date(w.startDate).getTime(),
         end: new Date(w.endDate).getTime(),
-        mnf: new Date(w.mondayNightDate).getTime(),
+        mnf: new Date(w.finalGameWindowOpensAt).getTime(),
       }));
     expect(instants(derived)).toEqual(instants(ingested));
   });

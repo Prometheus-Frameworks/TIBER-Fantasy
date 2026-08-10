@@ -22,13 +22,35 @@
 
 export type NflScheduleSource = 'explicit_schedule' | 'anchor_derived';
 
+/**
+ * A week's calendar boundaries.
+ *
+ * Every field here is a **scheduling boundary**, never an observation. None of
+ * them records that a game kicked off, that a game finished, or that a week
+ * completed — this module has no per-game feed and cannot know any of that. For
+ * an `anchor_derived` season the values are not even real league times; they are
+ * cadence arithmetic off the Week 1 anchor.
+ *
+ * The field names were changed to say so. `mondayNightDate` read as the actual
+ * Monday-night kickoff instant, and `endDate` was documented as "the point at
+ * which the week is completed" — both claims this data cannot support, and both
+ * were being consumed as though it could.
+ */
 export interface NflWeekWindow {
   week: number;
-  /** Thursday kickoff. */
+  /** Scheduled opening boundary of the week (nominally the Thursday kickoff slot). */
   startDate: string;
-  /** Tuesday after MNF — the point at which the week is "completed". */
+  /**
+   * Scheduled closing boundary of the week. Reaching it means the scheduled
+   * window has elapsed — NOT that the week's games are known to have finished.
+   */
   endDate: string;
-  mondayNightDate: string;
+  /**
+   * When the week's final scheduled game window opens (nominally MNF). Passing
+   * it means the last game *could* be under way. It is a kickoff-side boundary
+   * and is never evidence that anything completed.
+   */
+  finalGameWindowOpensAt: string;
 }
 
 export interface NflSeasonCalendar {
@@ -53,7 +75,7 @@ const WEEK_STRIDE_MS = 7 * DAY_MS;
 /** Thursday 20:00Z → the following Wednesday 04:00Z. */
 const WEEK_END_OFFSET_MS = 5 * DAY_MS + 8 * HOUR_MS;
 /** Thursday 20:00Z → Tuesday 01:15Z (MNF ~8:15pm ET). */
-const MONDAY_NIGHT_OFFSET_MS = 4 * DAY_MS + 5 * HOUR_MS + 15 * 60 * 1000;
+const FINAL_GAME_WINDOW_OFFSET_MS = 4 * DAY_MS + 5 * HOUR_MS + 15 * 60 * 1000;
 
 /**
  * Derive week windows from a Week 1 Thursday kickoff anchor.
@@ -77,31 +99,31 @@ export function deriveWeekWindowsFromAnchor(
       week: index + 1,
       startDate: new Date(startMs).toISOString(),
       endDate: new Date(startMs + WEEK_END_OFFSET_MS).toISOString(),
-      mondayNightDate: new Date(startMs + MONDAY_NIGHT_OFFSET_MS).toISOString(),
+      finalGameWindowOpensAt: new Date(startMs + FINAL_GAME_WINDOW_OFFSET_MS).toISOString(),
     };
   });
 }
 
 /** 2025 regular-season week windows, on the nominal Thursday/Sunday/Monday cadence. */
 const NFL_2025_WEEKS: NflWeekWindow[] = [
-  { week: 1, startDate: '2025-09-04T20:00:00Z', endDate: '2025-09-10T04:00:00Z', mondayNightDate: '2025-09-09T01:15:00Z' },
-  { week: 2, startDate: '2025-09-11T20:00:00Z', endDate: '2025-09-17T04:00:00Z', mondayNightDate: '2025-09-16T01:15:00Z' },
-  { week: 3, startDate: '2025-09-18T20:00:00Z', endDate: '2025-09-24T04:00:00Z', mondayNightDate: '2025-09-23T01:15:00Z' },
-  { week: 4, startDate: '2025-09-25T20:00:00Z', endDate: '2025-10-01T04:00:00Z', mondayNightDate: '2025-09-30T01:15:00Z' },
-  { week: 5, startDate: '2025-10-02T20:00:00Z', endDate: '2025-10-08T04:00:00Z', mondayNightDate: '2025-10-07T01:15:00Z' },
-  { week: 6, startDate: '2025-10-09T20:00:00Z', endDate: '2025-10-15T04:00:00Z', mondayNightDate: '2025-10-14T01:15:00Z' },
-  { week: 7, startDate: '2025-10-16T20:00:00Z', endDate: '2025-10-22T04:00:00Z', mondayNightDate: '2025-10-21T01:15:00Z' },
-  { week: 8, startDate: '2025-10-23T20:00:00Z', endDate: '2025-10-29T04:00:00Z', mondayNightDate: '2025-10-28T01:15:00Z' },
-  { week: 9, startDate: '2025-10-30T20:00:00Z', endDate: '2025-11-05T04:00:00Z', mondayNightDate: '2025-11-04T01:15:00Z' },
-  { week: 10, startDate: '2025-11-06T20:00:00Z', endDate: '2025-11-12T04:00:00Z', mondayNightDate: '2025-11-11T01:15:00Z' },
-  { week: 11, startDate: '2025-11-13T20:00:00Z', endDate: '2025-11-19T04:00:00Z', mondayNightDate: '2025-11-18T01:15:00Z' },
-  { week: 12, startDate: '2025-11-20T20:00:00Z', endDate: '2025-11-26T04:00:00Z', mondayNightDate: '2025-11-25T01:15:00Z' },
-  { week: 13, startDate: '2025-11-27T20:00:00Z', endDate: '2025-12-03T04:00:00Z', mondayNightDate: '2025-12-02T01:15:00Z' },
-  { week: 14, startDate: '2025-12-04T20:00:00Z', endDate: '2025-12-10T04:00:00Z', mondayNightDate: '2025-12-09T01:15:00Z' },
-  { week: 15, startDate: '2025-12-11T20:00:00Z', endDate: '2025-12-17T04:00:00Z', mondayNightDate: '2025-12-16T01:15:00Z' },
-  { week: 16, startDate: '2025-12-18T20:00:00Z', endDate: '2025-12-24T04:00:00Z', mondayNightDate: '2025-12-23T01:15:00Z' },
-  { week: 17, startDate: '2025-12-25T20:00:00Z', endDate: '2025-12-31T04:00:00Z', mondayNightDate: '2025-12-30T01:15:00Z' },
-  { week: 18, startDate: '2026-01-01T20:00:00Z', endDate: '2026-01-07T04:00:00Z', mondayNightDate: '2026-01-06T01:15:00Z' },
+  { week: 1, startDate: '2025-09-04T20:00:00Z', endDate: '2025-09-10T04:00:00Z', finalGameWindowOpensAt: '2025-09-09T01:15:00Z' },
+  { week: 2, startDate: '2025-09-11T20:00:00Z', endDate: '2025-09-17T04:00:00Z', finalGameWindowOpensAt: '2025-09-16T01:15:00Z' },
+  { week: 3, startDate: '2025-09-18T20:00:00Z', endDate: '2025-09-24T04:00:00Z', finalGameWindowOpensAt: '2025-09-23T01:15:00Z' },
+  { week: 4, startDate: '2025-09-25T20:00:00Z', endDate: '2025-10-01T04:00:00Z', finalGameWindowOpensAt: '2025-09-30T01:15:00Z' },
+  { week: 5, startDate: '2025-10-02T20:00:00Z', endDate: '2025-10-08T04:00:00Z', finalGameWindowOpensAt: '2025-10-07T01:15:00Z' },
+  { week: 6, startDate: '2025-10-09T20:00:00Z', endDate: '2025-10-15T04:00:00Z', finalGameWindowOpensAt: '2025-10-14T01:15:00Z' },
+  { week: 7, startDate: '2025-10-16T20:00:00Z', endDate: '2025-10-22T04:00:00Z', finalGameWindowOpensAt: '2025-10-21T01:15:00Z' },
+  { week: 8, startDate: '2025-10-23T20:00:00Z', endDate: '2025-10-29T04:00:00Z', finalGameWindowOpensAt: '2025-10-28T01:15:00Z' },
+  { week: 9, startDate: '2025-10-30T20:00:00Z', endDate: '2025-11-05T04:00:00Z', finalGameWindowOpensAt: '2025-11-04T01:15:00Z' },
+  { week: 10, startDate: '2025-11-06T20:00:00Z', endDate: '2025-11-12T04:00:00Z', finalGameWindowOpensAt: '2025-11-11T01:15:00Z' },
+  { week: 11, startDate: '2025-11-13T20:00:00Z', endDate: '2025-11-19T04:00:00Z', finalGameWindowOpensAt: '2025-11-18T01:15:00Z' },
+  { week: 12, startDate: '2025-11-20T20:00:00Z', endDate: '2025-11-26T04:00:00Z', finalGameWindowOpensAt: '2025-11-25T01:15:00Z' },
+  { week: 13, startDate: '2025-11-27T20:00:00Z', endDate: '2025-12-03T04:00:00Z', finalGameWindowOpensAt: '2025-12-02T01:15:00Z' },
+  { week: 14, startDate: '2025-12-04T20:00:00Z', endDate: '2025-12-10T04:00:00Z', finalGameWindowOpensAt: '2025-12-09T01:15:00Z' },
+  { week: 15, startDate: '2025-12-11T20:00:00Z', endDate: '2025-12-17T04:00:00Z', finalGameWindowOpensAt: '2025-12-16T01:15:00Z' },
+  { week: 16, startDate: '2025-12-18T20:00:00Z', endDate: '2025-12-24T04:00:00Z', finalGameWindowOpensAt: '2025-12-23T01:15:00Z' },
+  { week: 17, startDate: '2025-12-25T20:00:00Z', endDate: '2025-12-31T04:00:00Z', finalGameWindowOpensAt: '2025-12-30T01:15:00Z' },
+  { week: 18, startDate: '2026-01-01T20:00:00Z', endDate: '2026-01-07T04:00:00Z', finalGameWindowOpensAt: '2026-01-06T01:15:00Z' },
 ];
 
 /**

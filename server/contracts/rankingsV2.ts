@@ -172,6 +172,36 @@ export const rankingsV2SeasonMetaSchema = z.object({
 
   evidenceSeason: z.number().nullable(),
   evidenceWeek: z.number().nullable(),
+
+  /**
+   * The decision-target / evidence-cutoff split (Fantasy #307 Phase A).
+   *
+   * Added alongside the existing fields rather than replacing them: no
+   * pre-existing field changes name, type or nullability, so a consumer pinned
+   * to the current contract version keeps validating. `targetWeek` and
+   * `decisionTargetWeek` carry the same value by construction; the new name
+   * exists so a reader cannot mistake a forward target for an evidence bound.
+   *
+   * `evidenceThroughWeek` is the ONLY field that licenses admitting results,
+   * and it is null unless completion is verified — including for every
+   * anchor-derived season.
+   */
+  decisionTargetSeason: z.number().nullable(),
+  decisionTargetWeek: z.number().nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetIsProvisional: z.boolean(),
+  evidenceThroughSeason: z.number().nullable(),
+  evidenceThroughWeek: z.number().nullable(),
+  evidenceProvenance: z.enum([
+    'verified_completed_week',
+    'no_completed_week',
+    'completion_unverified',
+    'anchor_derived_cannot_verify_completion',
+    'stale_calendar_config',
+  ]),
+  completionVerified: z.boolean(),
+  completionCopy: z.string().nullable(),
+
   generatedAt: z.string().datetime().nullable(),
   isArchiveView: z.boolean(),
   status: z.string().nullable(),
