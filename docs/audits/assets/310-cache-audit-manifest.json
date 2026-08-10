@@ -1,9 +1,10 @@
 {
   "audit": "railway_forge_grade_cache_lineage",
   "issue": "Prometheus-Frameworks/TIBER-Fantasy#310",
+  "artifact": "cache_audit_manifest",
   "observation": {
     "observed_at": "2026-08-09T19:56:19.909Z",
-    "source_description": "Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) for QB/RB/WR/TE at season=2025, asOfWeek=18, limit=300.",
+    "source_description": "Public HTTP GET of /api/rankings/v2/weekly for QB/RB/WR/TE at season=2025, asOfWeek=18, limit=300. The responding producer path was not recorded at capture time.",
     "base_url": "https://tiber-fantasy-production.up.railway.app",
     "season": 2025,
     "as_of_week": 18,
@@ -32,9 +33,40 @@
       }
     },
     "production_mutations": "none",
-    "database_access": "none"
+    "database_access": "none",
+    "evidence_status": {
+      "status": "unverified_predates_lineage_guard",
+      "closed": true,
+      "captured_before_guard": "scripts/audit/forgeCacheResponseGuard.ts",
+      "observed_fields_present": [
+        "asOf",
+        "fallbackReason"
+      ],
+      "observed_fields_missing": [
+        "layer",
+        "source"
+      ],
+      "missing_field_consequence": "The serving layer was not recorded for any position, so the committed bytes cannot identify which producer answered. A recorded scoringFallbackReason of \"config_error\" says the scoring service call failed; it does not record what served the rows instead.",
+      "supports": [
+        "structural observations about the captured rows: row counts, per-position counts, identifier shape and namespace",
+        "descriptive numeric observations computed from the captured alpha values: clamping bounds, floor/ceiling concentration, and joined-row agreement and spread"
+      ],
+      "does_not_support": [
+        "that the response was produced by forge_grade_cache",
+        "that the response was produced by the promoted scoring service",
+        "that the response was produced by any other named producer path"
+      ],
+      "reobservation": "None into this artifact. The observation is closed; the frozen file is never rewritten or re-captured. Any future guarded observation is a NEW, separately dated artifact at a new path, made with the lineage guard recording the serving layer."
+    }
   },
-  "artifact": "cache_audit_manifest",
+  "frozen_cohort": {
+    "committed_path": "docs/audits/assets/310-live-cohort-observed.json",
+    "sha256": "118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106",
+    "observed_at": "2026-08-09T19:56:19.909Z",
+    "row_count": 357,
+    "superseded_source_description": "Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) for QB/RB/WR/TE at season=2025, asOfWeek=18, limit=300.",
+    "supersession_note": "The frozen file’s source_description asserts \"(which serves Railway forge_grade_cache)\". That attribution was an inference, not an observation: the capture predates the lineage guard and records no serving layer. The file is preserved byte-for-byte as the dated record; this manifest’s own source_description and evidence_status carry the supportable claim."
+  },
   "cohort_artifact": {
     "committed_path": "docs/audits/assets/310-live-cohort-observed.json",
     "sha256": "118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106",
@@ -262,8 +294,11 @@
     ]
   },
   "disposition": {
-    "terminal_finding": "legacy_forge_cache_quarantined_insufficient_provenance",
+    "terminal_finding": "observed_ranking_cohort_quarantined_insufficient_provenance",
+    "superseded_finding_name": "legacy_forge_cache_quarantined_insufficient_provenance",
     "status": "classified_for_quarantine",
+    "quarantine_basis": "insufficient_provenance",
+    "quarantine_is_not": "a finding that the cohort was served by any particular producer path",
     "enforced_by_this_audit": false,
     "enforcement_owner": "Prometheus-Frameworks/TIBER-Fantasy#307 Phase B",
     "required_disposition": "Must not occupy a canonical or current ranking mode; may remain reachable as clearly labelled 2025 legacy diagnostic/review data."

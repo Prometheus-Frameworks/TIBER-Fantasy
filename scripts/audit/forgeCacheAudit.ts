@@ -10,18 +10,21 @@
  * its deliverable. "Read-only" here means read-only against production and the
  * database, not that the script writes nothing.
  *
- *   npx tsx scripts/audit/forgeCacheAudit.ts            # regenerate both artifacts
- *   npx tsx scripts/audit/forgeCacheAudit.ts --check    # verify committed artifacts agree
- *   npx tsx scripts/audit/forgeCacheAudit.ts --base-url https://<host>
+ *   npx tsx scripts/audit/forgeCacheAudit.ts --check              # verify artifacts + report
+ *   npx tsx scripts/audit/forgeCacheAudit.ts --offline            # regenerate the manifest only
+ *   npx tsx scripts/audit/forgeCacheAudit.ts --observe-to <path>  # NEW guarded observation, new path
  *
- * Regenerates **both** committed outputs, which back the findings in
- * `docs/audits/2026-08-09-railway-forge-cache-audit.md`:
- *   - `docs/audits/assets/310-cache-audit-manifest.json`
- *   - `docs/audits/assets/310-live-cohort-observed.json`
+ * There is deliberately no default mode. The 2026-08-09 cohort at
+ * `docs/audits/assets/310-live-cohort-observed.json` is a **frozen, closed
+ * observation** — byte-pinned by `--check` — and no invocation of this script
+ * writes to it. `--offline` regenerates only the derived manifest from the
+ * frozen bytes; `--observe-to` makes a new, separately dated observation
+ * through the lineage guard at a new path, without touching the manifest.
  *
- * The two are linked: the manifest records the cohort artifact's committed path
- * and its canonical SHA-256, and both carry the same observation timestamp and
- * source description, so a reader can tell they describe one observation.
+ * The manifest records the frozen cohort's committed path and complete-file
+ * SHA-256, quotes its (superseded) historical wording verbatim, and carries the
+ * audit's current claims — including the pre-lineage-guard evidence status that
+ * bounds what the frozen rows can support.
  *
  * Scope note: the cache's *source* tables (position role banks,
  * `datadive_snapshot_player_week`) are not in this repository and this script
@@ -40,6 +43,14 @@ import {
   assertForgeCacheResponse,
   type ObservedPositionSource,
 } from './forgeCacheResponseGuard';
+import {
+  CURRENT_SOURCE_DESCRIPTION,
+  FROZEN_COHORT,
+  OBSERVATION_EVIDENCE_STATUS,
+  SUPERSEDED_TERMINAL_FINDING,
+  TERMINAL_FINDING,
+  unsupportedLineageClaims,
+} from './forgeCacheAuditClaims';
 
 // This file runs as ESM under tsx, so __dirname is unavailable.
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +59,7 @@ const REPO_ROOT = path.resolve(HERE, '../..');
 const DEFAULT_BASE_URL = 'https://tiber-fantasy-production.up.railway.app';
 const COHORT_RELATIVE_PATH = 'docs/audits/assets/310-live-cohort-observed.json';
 const MANIFEST_RELATIVE_PATH = 'docs/audits/assets/310-cache-audit-manifest.json';
+const REPORT_RELATIVE_PATH = 'docs/audits/2026-08-09-railway-forge-cache-audit.md';
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 const GSIS_SHAPE = /^00-\d{7}$/;
 
@@ -330,43 +342,57 @@ function auditProvenance() {
   };
 }
 
-/** Observation envelope shared by both artifacts, so neither is an unexplained blob. */
-function observationEnvelope(baseUrl: string, observedAt: string, perPosition: Record<string, ObservedPositionSource>) {
-  return {
+/**
+ * Build the manifest — the audit's CURRENT-claims document.
+ *
+ * The frozen cohort file is an input here, never an output. Its bytes are the
+ * dated 2026-08-09 observation, wording and all, and correcting a claim never
+ * rewrites the record that made it: the manifest quotes the superseded wording,
+ * states the supersession, and carries the neutral current claims alongside.
+ */
+function buildManifest(cohortText: string, staticRaw: Buffer, staticArtifact: any) {
+  const cohort = JSON.parse(cohortText);
+  const rows = cohort.rows as LiveRow[];
+  const cohortSha256 = sha256(cohortText);
+
+  const manifest = {
+    // Same investigation as the frozen cohort. This is the audit's subject
+    // question — "what is the lineage of the Railway forge_grade_cache?" —
+    // not an attribution of the observed rows; the claim scanner exempts it
+    // on exactly that ground.
     audit: 'railway_forge_grade_cache_lineage',
     issue: 'Prometheus-Frameworks/TIBER-Fantasy#310',
+    artifact: 'cache_audit_manifest',
     observation: {
-      observed_at: observedAt,
-      source_description:
-        'Public HTTP GET of /api/rankings/v2/weekly (which serves Railway forge_grade_cache) ' +
-        `for QB/RB/WR/TE at season=${AUDIT_SEASON}, asOfWeek=${AUDIT_WEEK}, limit=300.`,
-      base_url: baseUrl,
+      observed_at: cohort.observation.observed_at,
+      // The manifest's OWN description of the request: what was asked, and the
+      // explicit statement that the responder was not recorded. The frozen
+      // file's differing wording is quoted and superseded in `frozen_cohort`.
+      source_description: CURRENT_SOURCE_DESCRIPTION,
+      base_url: cohort.observation.base_url,
       season: AUDIT_SEASON,
       as_of_week: AUDIT_WEEK,
       positions: [...POSITIONS],
-      per_position: perPosition,
+      per_position: cohort.observation.per_position,
       production_mutations: 'none',
       database_access: 'none',
+      evidence_status: OBSERVATION_EVIDENCE_STATUS,
     },
-  };
-}
-
-function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], perPosition: any, staticRaw: Buffer, staticArtifact: any) {
-  const envelope = observationEnvelope(baseUrl, observedAt, perPosition);
-
-  const cohort = {
-    ...envelope,
-    artifact: 'observed_cache_cohort',
-    row_count: rows.length,
-    by_position: Object.fromEntries(POSITIONS.map((p) => [p, rows.filter((r) => r.position === p).length])),
-    rows,
-  };
-  const cohortJson = canonicalJson(cohort);
-  const cohortSha256 = sha256(cohortJson);
-
-  const manifest = {
-    ...envelope,
-    artifact: 'cache_audit_manifest',
+    // The frozen historical record: complete-file pin plus the exact wording
+    // being superseded, kept verbatim so the correction has a paper trail.
+    frozen_cohort: {
+      committed_path: FROZEN_COHORT.committed_path,
+      sha256: FROZEN_COHORT.sha256,
+      observed_at: FROZEN_COHORT.observed_at,
+      row_count: FROZEN_COHORT.row_count,
+      superseded_source_description: FROZEN_COHORT.superseded_source_description,
+      supersession_note:
+        'The frozen file’s source_description asserts "(which serves Railway ' +
+        'forge_grade_cache)". That attribution was an inference, not an observation: ' +
+        'the capture predates the lineage guard and records no serving layer. The ' +
+        'file is preserved byte-for-byte as the dated record; this manifest’s own ' +
+        'source_description and evidence_status carry the supportable claim.',
+    },
     // Link to the companion artifact by committed path *and* content digest, so
     // the two cannot silently drift apart.
     cohort_artifact: {
@@ -392,8 +418,17 @@ function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], pe
     disposition: {
       // An audit classification, not an enforced runtime state. Nothing in this
       // PR changes the production consumer; enforcement is Fantasy #307 Phase B.
-      terminal_finding: 'legacy_forge_cache_quarantined_insufficient_provenance',
+      //
+      // Named for the OBSERVED COHORT, not for a producer. The superseded name
+      // asserted proven legacy-cache origin in its own wording — the exact
+      // attribution the capture cannot support. Quarantine is the policy
+      // response to insufficient provenance, not a verdict about which
+      // producer answered.
+      terminal_finding: TERMINAL_FINDING,
+      superseded_finding_name: SUPERSEDED_TERMINAL_FINDING,
       status: 'classified_for_quarantine',
+      quarantine_basis: 'insufficient_provenance',
+      quarantine_is_not: 'a finding that the cohort was served by any particular producer path',
       enforced_by_this_audit: false,
       enforcement_owner: 'Prometheus-Frameworks/TIBER-Fantasy#307 Phase B',
       required_disposition:
@@ -401,7 +436,7 @@ function buildArtifacts(baseUrl: string, observedAt: string, rows: LiveRow[], pe
     },
   };
 
-  return { cohortJson, cohortSha256, manifestJson: canonicalJson(manifest), manifest };
+  return { manifestJson: canonicalJson(manifest), manifest };
 }
 
 /** Checks the two committed artifacts agree with each other. */
@@ -438,8 +473,93 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
   if (manifest.observation?.observed_at !== cohort.observation?.observed_at) {
     problems.push('observation timestamps disagree between the two artifacts');
   }
-  if (manifest.observation?.source_description !== cohort.observation?.source_description) {
-    problems.push('source descriptions disagree between the two artifacts');
+
+  // --- the frozen observation ---------------------------------------------
+  // The complete-file pin. The cohort is the dated 2026-08-09 record and is
+  // never rewritten — not to fix wording, not to attach a status, not to
+  // re-observe. Any byte moving here is a policy violation, not drift.
+  const actualCohortSha = sha256(cohortText);
+  if (actualCohortSha !== FROZEN_COHORT.sha256) {
+    problems.push(
+      `the frozen cohort file has been modified (pinned ${FROZEN_COHORT.sha256.slice(0, 8)}…, ` +
+      `actual ${actualCohortSha.slice(0, 8)}…) — this observation is closed; a new guarded ` +
+      'observation must be a new dated artifact at a new path',
+    );
+  }
+  if (cohort.observation?.observed_at !== FROZEN_COHORT.observed_at) {
+    problems.push('the frozen cohort observed_at does not match the pinned capture instant');
+  }
+  if (manifest.frozen_cohort?.sha256 !== FROZEN_COHORT.sha256) {
+    problems.push('manifest does not pin the frozen cohort digest');
+  }
+  // The superseded wording must be quoted VERBATIM from the frozen file: a
+  // paraphrase would let the supersession drift from what was actually said.
+  if (manifest.frozen_cohort?.superseded_source_description !== cohort.observation?.source_description) {
+    problems.push('manifest superseded_source_description is not a verbatim quote of the frozen cohort wording');
+  }
+
+  // --- current claims ------------------------------------------------------
+  const status = manifest.observation?.evidence_status;
+  if (!status) {
+    problems.push('manifest carries no observation evidence_status; the cohort predates the lineage guard and must say so');
+  } else if (status.status !== OBSERVATION_EVIDENCE_STATUS.status) {
+    problems.push(
+      `manifest declares evidence_status "${status.status}"; this observation is closed as ` +
+      `"${OBSERVATION_EVIDENCE_STATUS.status}" and may not be reclassified without a new, guarded observation`,
+    );
+  } else if (canonicalJson(status) !== canonicalJson(OBSERVATION_EVIDENCE_STATUS)) {
+    problems.push('manifest evidence_status has been edited away from the canonical closed status');
+  }
+
+  if (manifest.observation?.source_description !== CURRENT_SOURCE_DESCRIPTION) {
+    problems.push('manifest source_description is not the neutral current description');
+  }
+
+  // No current assertion may attribute the frozen bytes to a producer path.
+  // Runs over the WHOLE manifest, not just the observation envelope; the
+  // exemptions (investigation title, verbatim quotes, disclaimers) are an
+  // explicit named list in forgeCacheAuditClaims.ts.
+  for (const claim of unsupportedLineageClaims(manifest)) {
+    problems.push(`manifest: ${claim}`);
+  }
+
+  if (manifest.disposition?.terminal_finding !== TERMINAL_FINDING) {
+    problems.push(
+      `manifest terminal_finding is "${manifest.disposition?.terminal_finding}"; expected "${TERMINAL_FINDING}" — ` +
+      'the finding may not be renamed back to a form that asserts a proven producer origin',
+    );
+  }
+
+  // --- report consistency --------------------------------------------------
+  // The report is prose about an audit OF forge_grade_cache, so a blanket term
+  // scan would drown in legitimate mentions. What is enforced instead: the
+  // neutral finding is present; the superseded name appears only in
+  // supersession context; and the report quotes the frozen digest and the
+  // corrected median rather than stale values.
+  const reportPath = path.join(repoRoot, REPORT_RELATIVE_PATH);
+  if (!fs.existsSync(reportPath)) {
+    problems.push(`audit report is missing at ${REPORT_RELATIVE_PATH}`);
+  } else {
+    const report = fs.readFileSync(reportPath, 'utf8');
+    if (!report.includes(TERMINAL_FINDING)) {
+      problems.push('report does not state the neutral terminal finding');
+    }
+    for (const [index, line] of report.split('\n').entries()) {
+      if (line.includes(SUPERSEDED_TERMINAL_FINDING) && !/supersed|renamed|previous|historical/i.test(line)) {
+        problems.push(
+          `report line ${index + 1} uses the superseded finding name outside a supersession context`,
+        );
+      }
+    }
+    if (!report.includes(FROZEN_COHORT.sha256.slice(0, 8))) {
+      problems.push('report does not quote the frozen cohort digest');
+    }
+    if (!report.includes('-3.215')) {
+      problems.push('report does not carry the corrected median (-3.215)');
+    }
+    if (!report.includes(OBSERVATION_EVIDENCE_STATUS.status)) {
+      problems.push('report does not state the observation evidence status');
+    }
   }
 
   // The static FORGE artifact is a DEPENDENCY of the published comparability
@@ -469,13 +589,19 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
 }
 
 async function main() {
-  const baseUrl = arg('base-url', DEFAULT_BASE_URL);
   const check = process.argv.includes('--check');
+  const offline = process.argv.includes('--offline');
+  const observeTo = arg('observe-to', '');
 
   if (check) {
     const result = verifyCommitted(REPO_ROOT);
     if (result.ok) {
-      console.log('committed audit artifacts agree: counts, positions, timestamps and digest all match.');
+      console.log(
+        'committed audit artifacts agree: counts, positions, timestamps and digest all match; ' +
+        `frozen cohort intact (${FROZEN_COHORT.sha256.slice(0, 8)}…, ${FROZEN_COHORT.row_count} rows, ` +
+        `${FROZEN_COHORT.observed_at}); evidence status "${OBSERVATION_EVIDENCE_STATUS.status}"; ` +
+        `no unsupported lineage claim; terminal finding "${TERMINAL_FINDING}"; report consistent.`,
+      );
       process.exit(0);
     }
     console.error('committed audit artifacts DISAGREE:');
@@ -484,42 +610,86 @@ async function main() {
     return;
   }
 
-  const staticPath = path.join(REPO_ROOT, 'server/artifacts/external/forge/forge_player_static_v1.json');
-  const staticRaw = fs.readFileSync(staticPath);
-  const staticArtifact = JSON.parse(staticRaw.toString());
-
-  // `--offline` recomputes every static-dependent finding from the COMMITTED
-  // cohort instead of re-observing production. The cohort is a dated
-  // observation and must not be silently replaced by a new one; only the
-  // findings that depend on the repository artifact are refreshed.
-  const offline = process.argv.includes('--offline');
-  let rows: LiveRow[];
-  let perPosition: Record<string, ObservedPositionSource>;
-  let observedAt: string;
-
   if (offline) {
-    const committed = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, COHORT_RELATIVE_PATH), 'utf8'));
-    rows = committed.rows as LiveRow[];
-    perPosition = committed.observation.per_position as Record<string, ObservedPositionSource>;
-    observedAt = committed.observation.observed_at as string;
-    console.log(`offline: reusing the committed cohort (${rows.length} rows observed ${observedAt}).`);
-  } else {
-    ({ rows, perPosition } = await fetchLiveCohort(baseUrl));
-    observedAt = new Date().toISOString();
+    // Regenerates DERIVED findings only. The frozen cohort is an input and is
+    // never written; only the manifest moves.
+    const cohortText = fs.readFileSync(path.join(REPO_ROOT, COHORT_RELATIVE_PATH), 'utf8');
+    const actualSha = sha256(cohortText);
+    if (actualSha !== FROZEN_COHORT.sha256) {
+      console.error(
+        `refusing to regenerate: the cohort at ${COHORT_RELATIVE_PATH} does not match the frozen ` +
+        `digest (pinned ${FROZEN_COHORT.sha256.slice(0, 8)}…, actual ${actualSha.slice(0, 8)}…). ` +
+        'Restore the frozen file first; the observation is closed and may not be edited.',
+      );
+      process.exit(1);
+    }
+
+    const staticPath = path.join(REPO_ROOT, 'server/artifacts/external/forge/forge_player_static_v1.json');
+    const staticRaw = fs.readFileSync(staticPath);
+    const staticArtifact = JSON.parse(staticRaw.toString());
+
+    const { manifestJson, manifest } = buildManifest(cohortText, staticRaw, staticArtifact);
+    fs.writeFileSync(path.join(REPO_ROOT, MANIFEST_RELATIVE_PATH), manifestJson);
+
+    console.log(`offline: reused the frozen cohort (${FROZEN_COHORT.row_count} rows observed ${FROZEN_COHORT.observed_at}).`);
+    console.log(`Wrote ${MANIFEST_RELATIVE_PATH} (the frozen cohort was not touched)`);
+    console.log(`terminal_finding=${manifest.disposition.terminal_finding} (classified, not enforced)`);
+    return;
   }
 
-  const { cohortJson, cohortSha256, manifestJson } = buildArtifacts(
-    baseUrl, observedAt, rows, perPosition, staticRaw, staticArtifact,
+  if (observeTo) {
+    // A NEW observation is a new dated artifact. It must go to a new path,
+    // passes every response through the lineage guard (so the serving layer is
+    // recorded this time), and does not touch the frozen cohort or the
+    // manifest — superseding the closed observation is an operator decision,
+    // not a side effect of running a script.
+    if (path.normalize(observeTo) === path.normalize(COHORT_RELATIVE_PATH)) {
+      console.error(`refusing: ${COHORT_RELATIVE_PATH} is the frozen 2026-08-09 observation and may not be overwritten.`);
+      process.exit(1);
+    }
+    const target = path.join(REPO_ROOT, observeTo);
+    if (fs.existsSync(target)) {
+      console.error(`refusing: ${observeTo} already exists; a new observation needs a new dated path.`);
+      process.exit(1);
+    }
+    const baseUrl = arg('base-url', DEFAULT_BASE_URL);
+    const { rows, perPosition } = await fetchLiveCohort(baseUrl);
+    const observedAt = new Date().toISOString();
+    const cohort = {
+      audit: 'railway_forge_grade_cache_lineage',
+      issue: 'Prometheus-Frameworks/TIBER-Fantasy#310',
+      artifact: 'observed_cache_cohort',
+      observation: {
+        observed_at: observedAt,
+        source_description: CURRENT_SOURCE_DESCRIPTION.replace(
+          'The responding producer path was not recorded at capture time.',
+          'Captured through the lineage guard; per_position records the serving layer.',
+        ),
+        base_url: baseUrl,
+        season: AUDIT_SEASON,
+        as_of_week: AUDIT_WEEK,
+        positions: [...POSITIONS],
+        per_position: perPosition,
+        production_mutations: 'none',
+        database_access: 'none',
+      },
+      row_count: rows.length,
+      by_position: Object.fromEntries(POSITIONS.map((p) => [p, rows.filter((r) => r.position === p).length])),
+      rows,
+    };
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, canonicalJson(cohort));
+    console.log(`Wrote NEW observation to ${observeTo} (${rows.length} rows). The frozen cohort and manifest are unchanged.`);
+    return;
+  }
+
+  console.error(
+    'No mode given. The 2026-08-09 observation is closed and cannot be re-captured by default.\n' +
+    '  --check                verify the committed artifacts and report\n' +
+    '  --offline              regenerate the manifest from the frozen cohort (cohort untouched)\n' +
+    '  --observe-to <path>    make a NEW guarded observation at a new dated path',
   );
-
-  fs.mkdirSync(path.join(REPO_ROOT, 'docs/audits/assets'), { recursive: true });
-  fs.writeFileSync(path.join(REPO_ROOT, COHORT_RELATIVE_PATH), cohortJson);
-  fs.writeFileSync(path.join(REPO_ROOT, MANIFEST_RELATIVE_PATH), manifestJson);
-
-  console.log(`Wrote ${MANIFEST_RELATIVE_PATH}`);
-  console.log(`Wrote ${COHORT_RELATIVE_PATH}`);
-  console.log(`cohort=${rows.length} cohort_sha256=${cohortSha256}`);
-  console.log('terminal_finding=legacy_forge_cache_quarantined_insufficient_provenance (classified, not enforced)');
+  process.exit(1);
 }
 
 main().catch((error) => {

@@ -14,6 +14,14 @@ import * as path from 'path';
 import { createHash } from 'crypto';
 import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
 import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
+import {
+  CURRENT_SOURCE_DESCRIPTION,
+  FROZEN_COHORT,
+  OBSERVATION_EVIDENCE_STATUS,
+  SUPERSEDED_TERMINAL_FINDING,
+  TERMINAL_FINDING,
+  unsupportedLineageClaims,
+} from '../forgeCacheAuditClaims';
 
 const REPO_ROOT = path.resolve(__dirname, '../../..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'docs/audits/assets/310-cache-audit-manifest.json');
@@ -89,10 +97,22 @@ describe('the two committed artifacts describe one observation', () => {
     expect(sum).toBe(cohort.row_count);
   });
 
-  test('one observation timestamp and source description, used consistently', () => {
+  test('one observation timestamp, used consistently', () => {
     expect(manifest.observation.observed_at).toBe(cohort.observation.observed_at);
-    expect(manifest.observation.source_description).toBe(cohort.observation.source_description);
     expect(new Date(manifest.observation.observed_at).toString()).not.toBe('Invalid Date');
+  });
+
+  test('the source descriptions deliberately differ: quote and supersede, never rewrite', () => {
+    // The frozen file's wording attributes a producer the capture never
+    // established. The manifest does not repeat it — it quotes it verbatim as
+    // superseded and carries its own neutral description. Equality here would
+    // mean either the frozen record was rewritten or the attribution returned.
+    expect(manifest.frozen_cohort.superseded_source_description)
+      .toBe(cohort.observation.source_description);
+    expect(manifest.observation.source_description).toBe(CURRENT_SOURCE_DESCRIPTION);
+    expect(manifest.observation.source_description)
+      .not.toBe(cohort.observation.source_description);
+    expect(manifest.observation.source_description).not.toMatch(/forge_grade_cache/);
   });
 
   test('the cohort is an explained artifact, not a bare array', () => {
@@ -111,12 +131,79 @@ describe('the two committed artifacts describe one observation', () => {
   });
 });
 
+describe('the frozen observation and its evidence status', () => {
+  test('the cohort file is byte-for-byte the frozen 2026-08-09 record', () => {
+    // The complete-file pin — envelope, wording and all, not just the rows.
+    // Correcting a claim never rewrites the record that made it.
+    expect(createHash('sha256').update(cohortText).digest('hex')).toBe(FROZEN_COHORT.sha256);
+    expect(cohort.observation.observed_at).toBe(FROZEN_COHORT.observed_at);
+    expect(cohort.rows).toHaveLength(FROZEN_COHORT.row_count);
+    expect(manifest.frozen_cohort.sha256).toBe(FROZEN_COHORT.sha256);
+  });
+
+  test('the manifest carries the closed pre-lineage-guard evidence status', () => {
+    expect(manifest.observation.evidence_status).toEqual(OBSERVATION_EVIDENCE_STATUS);
+    expect(manifest.observation.evidence_status.status).toBe('unverified_predates_lineage_guard');
+    expect(manifest.observation.evidence_status.closed).toBe(true);
+  });
+
+  test('the frozen per-position records genuinely lack the serving layer', () => {
+    // The status is grounded in the committed bytes, not in the guard's
+    // absence: `ObservedPositionSource` declares `layer` and `source`, and the
+    // frozen capture has neither, for any position.
+    for (const position of POSITIONS) {
+      const record = cohort.observation.per_position[position];
+      expect(record).toBeDefined();
+      expect(Object.keys(record).sort()).toEqual(['asOf', 'fallbackReason']);
+      expect(record.layer).toBeUndefined();
+      expect(record.source).toBeUndefined();
+    }
+    expect(OBSERVATION_EVIDENCE_STATUS.observed_fields_missing).toEqual(['layer', 'source']);
+  });
+
+  test('no current manifest assertion attributes the rows to a producer path', () => {
+    // The scan runs over the WHOLE manifest. The exemptions are the named
+    // quote/disclaimer fields and the investigation title — not the envelope
+    // boundary, which would let an attribution hide in a findings section.
+    expect(unsupportedLineageClaims(manifest)).toEqual([]);
+  });
+
+  test('the claim scanner would catch a restored attribution', () => {
+    // Pinned adversarially: if the scanner stops working, the test above
+    // passes vacuously and this trips instead.
+    expect(unsupportedLineageClaims({
+      note: 'these rows were served by forge_grade_cache',
+    })).toEqual([expect.stringContaining('forge_grade_cache')]);
+  });
+
+  test('disclaimers and verbatim quotes may name producers without counting as claims', () => {
+    // Otherwise the text that exists to DENY or SUPERSEDE an attribution would
+    // be flagged as making it, and the only way to pass would be deleting it.
+    expect(unsupportedLineageClaims({
+      does_not_support: ['that the response was produced by forge_grade_cache'],
+      superseded_source_description: FROZEN_COHORT.superseded_source_description,
+      missing_field_consequence: 'the scoring service call failed; nothing records what served the rows',
+    })).toEqual([]);
+  });
+});
+
 describe('the disposition is an audit classification, not an enforced state', () => {
   test('records the terminal finding without claiming enforcement', () => {
-    expect(manifest.disposition.terminal_finding).toBe('legacy_forge_cache_quarantined_insufficient_provenance');
+    expect(manifest.disposition.terminal_finding).toBe(TERMINAL_FINDING);
     expect(manifest.disposition.status).toBe('classified_for_quarantine');
     expect(manifest.disposition.enforced_by_this_audit).toBe(false);
     expect(manifest.disposition.enforcement_owner).toContain('#307');
+  });
+
+  test('the finding is named for the cohort, not for a producer origin', () => {
+    expect(TERMINAL_FINDING).not.toMatch(/forge_grade_cache|legacy_forge_cache/);
+    expect(manifest.disposition.superseded_finding_name).toBe(SUPERSEDED_TERMINAL_FINDING);
+    expect(SUPERSEDED_TERMINAL_FINDING).toMatch(/legacy_forge_cache/);
+  });
+
+  test('quarantine is a response to missing provenance, not a source verdict', () => {
+    expect(manifest.disposition.quarantine_basis).toBe('insufficient_provenance');
+    expect(manifest.disposition.quarantine_is_not).toMatch(/served by any particular producer/i);
   });
 
   test('states the required disposition rather than asserting it is already applied', () => {
@@ -254,8 +341,7 @@ describe('comparability', () => {
     const dc = manifest.comparability.descriptiveComparison;
     expect(dc.note).toMatch(/does not attribute/i);
     expect(dc.note).toMatch(/lineage/i);
-    expect(manifest.disposition.terminal_finding)
-      .toBe('legacy_forge_cache_quarantined_insufficient_provenance');
+    expect(manifest.disposition.terminal_finding).toBe(TERMINAL_FINDING);
   });
 
   test('--check hashes the static artifact the findings depend on', () => {
