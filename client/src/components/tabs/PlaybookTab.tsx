@@ -375,7 +375,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
                     <div className="flex justify-end">
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-500 text-white"
+                        className="bg-green-700 hover:bg-green-800 text-white"
                         onClick={() => setSelectedEntry(entry)}
                       >
                         Resolve
@@ -481,7 +481,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
               <Button
                 onClick={handleResolve}
                 disabled={resolveMutation.isPending}
-                className="bg-purple-600 hover:bg-purple-500"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {resolveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : 'Save Outcome'}
               </Button>
@@ -857,7 +857,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
       <div className="flex gap-3 flex-wrap">
         <Button
           onClick={() => setIsCreating(true)}
-          className="bg-gradient-to-r from-purple-600/30 to-blue-600/30 border border-purple-500/50 text-white hover:border-purple-400"
+          className="bg-purple-700 border border-purple-500/50 text-white hover:border-purple-400"
           data-testid="button-new-entry"
         >
           <Plus size={18} className="mr-2" />
@@ -943,7 +943,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
             <Button
               onClick={handleSendMessage}
               disabled={!chatMessage.trim() || chatMutation.isPending}
-              className="bg-amber-600 hover:bg-amber-500 text-white"
+              className="bg-amber-600 hover:bg-amber-500 text-black"
               data-testid="button-send-tiber"
             >
               <Send size={16} />
@@ -1010,7 +1010,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                 entry_type: newEntry.entryType
               })}
               disabled={!newEntry.title.trim() || !newEntry.content.trim() || createMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-500"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
               data-testid="button-save-entry"
             >
               {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} className="mr-1" />}
@@ -1066,7 +1066,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                         size="sm"
                         onClick={() => updateMutation.mutate({ id: entry.id, updates: editEntry })}
                         disabled={updateMutation.isPending}
-                        className="bg-purple-600 hover:bg-purple-500"
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
                         data-testid="button-save-edit"
                       >
                         Save

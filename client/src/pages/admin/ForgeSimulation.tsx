@@ -532,7 +532,7 @@ export default function ForgeSimulation() {
                       </div>
                     ) : (
                       <Button
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-green-700 hover:bg-green-800 text-white"
                         onClick={() => runSimulation.mutate()}
                         data-testid="run-simulation-button"
                       >

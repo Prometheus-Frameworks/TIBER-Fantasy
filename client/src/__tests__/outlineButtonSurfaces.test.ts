@@ -292,6 +292,51 @@ export interface Offender {
   ratio: number;
 }
 
+/**
+ * The auditable arms of a Button tag, or null when the tag is out of scope.
+ *
+ * Scope covers the two variants that declare their own background/foreground
+ * pair: `outline` (white/near-black) and `default` (Ember/near-black). A tag
+ * with NO variant attribute renders as `default` — which is exactly where the
+ * near-black `--primary-foreground` followed custom `bg-purple-600` overrides
+ * onto surfaces it fails on, invisible to a sweep keyed on `variant=` text.
+ * Other variants (ghost, secondary, destructive, link) remain out of scope.
+ */
+export function buttonArms(
+  tag: string,
+): Array<{ className: string; variant: 'outline' | 'default' }> | null {
+  const branches = classNameBranches(tag);
+  const armsFor = (variant: 'outline' | 'default') =>
+    (branches.length ? branches : ['']).map((className) => ({ className, variant }));
+
+  if (!/variant\s*=/.test(tag)) return armsFor('default');
+  if (/variant\s*=\s*"default"/.test(tag)) return armsFor('default');
+
+  const variants = variantBranches(tag);
+  if (isOutlineVariant(tag)) {
+    // A ternary variant and a ternary className are written against the same
+    // condition in the same order, so arm i of one is arm i of the other.
+    // Pairing them keeps every arm audited — including the `default` arm,
+    // which had real failures — without judging it by the wrong variant's
+    // defaults.
+    return (branches.length ? branches : ['']).map((className, i) => ({
+      className,
+      variant: variants[i] === 'default' ? 'default' : 'outline',
+    }));
+  }
+  if (variants.includes('default')) {
+    // Conditional between `default` and an out-of-scope variant: audit the
+    // default arms only, keeping the pairing.
+    const arms = (branches.length ? branches : ['']).map((className, i) => ({
+      className,
+      variant: variants[i] === 'default' ? ('default' as const) : null,
+    }));
+    const scoped = arms.filter((a): a is { className: string; variant: 'default' } => a.variant !== null);
+    return scoped.length ? scoped : null;
+  }
+  return null;
+}
+
 function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
   const offenders: Offender[] = [];
   let audited = 0;
@@ -301,20 +346,8 @@ function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
     const page = pageSurface(source);
 
     for (const { tag, line } of openingTags(source)) {
-      if (!isOutlineVariant(tag)) continue;
-
-      // A ternary variant and a ternary className are written against the same
-      // condition in the same order, so arm i of one is arm i of the other.
-      // Pairing them keeps every arm audited — including the `default` arm,
-      // which had real failures — without judging it by the wrong variant's
-      // defaults.
-      const variants = variantBranches(tag);
-      const branches = classNameBranches(tag);
-      const arms: Array<{ className: string; variant: 'outline' | 'default' }> =
-        (branches.length ? branches : ['']).map((className, i) => ({
-          className,
-          variant: variants[i] === 'default' ? 'default' : 'outline',
-        }));
+      const arms = buttonArms(tag);
+      if (!arms) continue;
 
       for (const { className, variant } of arms) {
         audited += 1;
@@ -525,6 +558,51 @@ describe('outline buttons meet WCAG AA for text', () => {
     const brand = contrastRatio(parseHex(CSS_PRIMARY)!, parseHex(CSS_PRIMARY_FOREGROUND)!);
     expect(brand).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
     expect(Number(brand.toFixed(2))).toBe(5.72);
+  });
+
+  test('default-variant buttons with background overrides are in the audit scope', () => {
+    // The near-black --primary-foreground follows a custom background wherever
+    // the call site does not set its own foreground. A sweep keyed on
+    // `variant=` text never saw the most common shape — a <Button> with no
+    // variant attribute at all — which is how bg-purple-600 controls shipped
+    // at 3.68:1. All three forms are in scope:
+    expect(buttonArms('<Button className="bg-purple-600" />')).toEqual([
+      { className: 'bg-purple-600', variant: 'default' },
+    ]);
+    expect(buttonArms('<Button variant="default" className="bg-purple-600" />')).toEqual([
+      { className: 'bg-purple-600', variant: 'default' },
+    ]);
+    // A conditional default arm keeps its pairing; out-of-scope arms drop out.
+    expect(buttonArms(`<Button variant={on ? 'default' : 'ghost'} className={on ? 'bg-purple-600' : 'x-y'} />`)).toEqual([
+      { className: 'bg-purple-600', variant: 'default' },
+    ]);
+    // Out-of-scope variants stay out.
+    expect(buttonArms('<Button variant="ghost" className="bg-purple-600" />')).toBeNull();
+  });
+
+  test('the repaired default-override pairings clear AA at rest AND hover, pinned', () => {
+    // The exact repairs applied for the custom-background finding, pinned to
+    // their measured values so a shade drift reopens the finding loudly.
+    const pin = (fg: string, bg: string, expected: number) => {
+      const measured = contrastRatio(parseHex(fg)!, parseHex(bg)!);
+      expect(Number(measured.toFixed(2))).toBe(expected);
+      expect(measured).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+    };
+    // white on purple-600 (rest) / purple-700 (hover)
+    pin('#ffffff', '#9333ea', 5.38); pin('#ffffff', '#7e22ce', 6.98);
+    // white on green-700 / green-800
+    pin('#ffffff', '#15803d', 5.02); pin('#ffffff', '#166534', 7.13);
+    // black on amber-600 / amber-500
+    pin('#000000', '#d97706', 6.59); pin('#000000', '#f59e0b', 9.78);
+    // white on emerald-700 / emerald-800
+    pin('#ffffff', '#047857', 5.48); pin('#ffffff', '#065f46', 7.68);
+    // white on cyan-700 / cyan-800
+    pin('#ffffff', '#0e7490', 5.36); pin('#ffffff', '#155e75', 7.27);
+    // white on blue-600 / blue-700
+    pin('#ffffff', '#2563eb', 5.17); pin('#ffffff', '#1d4ed8', 6.70);
+    // and the failures they replaced stay failures
+    expect(contrastRatio(parseHex('#0a0a0a')!, parseHex('#9333ea')!)).toBeLessThan(AA_TEXT_CONTRAST); // 3.68
+    expect(contrastRatio(parseHex('#ffffff')!, parseHex('#16a34a')!)).toBeLessThan(AA_TEXT_CONTRAST); // 3.30
   });
 
   test('the previously waived pairing would still be caught', () => {

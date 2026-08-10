@@ -331,7 +331,7 @@ function PlayerMatchesCard({
           <Button
             onClick={handleFindMatches}
             disabled={loading}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="bg-cyan-700 hover:bg-cyan-800 text-white"
             data-testid="button-find-matches"
           >
             {loading ? (
@@ -595,7 +595,7 @@ export default function ForgeLabEquationSandbox() {
                             </Button>
                             <Button
                               onClick={handleSavePreset}
-                              className="bg-purple-600 hover:bg-purple-700"
+                              className="bg-purple-600 hover:bg-purple-700 text-white"
                               data-testid="button-confirm-save"
                             >
                               Save Preset

@@ -703,7 +703,7 @@ export default function StressLab() {
               <Button
                 type="button"
                 onClick={inspectNote}
-                className="w-full bg-[#e2640d] text-white hover:bg-[#c7530b]"
+                className="w-full bg-ember text-primary-foreground hover:bg-ember/90"
               >
                 Inspect note
               </Button>
