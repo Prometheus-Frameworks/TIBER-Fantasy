@@ -2,12 +2,28 @@ import { playerIdentityMap } from '@shared/schema';
 
 let computeLeagueDashboard: typeof import('../leagueDashboardService').computeLeagueDashboard;
 
-function createDbMock({ identities = [], forgeRows = [], insertSpy }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock }) {
+function createDbMock({ identities = [], forgeRows = [], insertSpy, gsisOwners, updateSpy }: { identities?: any[]; forgeRows?: any[]; insertSpy?: jest.Mock; gsisOwners?: any[]; updateSpy?: jest.Mock }) {
+  // The mock cannot introspect drizzle predicates, so identity selects are
+  // distinguished by call order: the first is the roster lookup, and any later
+  // one is the GSIS-ownership probe hydration performs before writing.
+  let identitySelectCount = 0;
   return {
+    update: jest.fn(() => ({
+      set: (values: any) => ({
+        where: (clause: any) => {
+          updateSpy?.(values, clause);
+          return Promise.resolve(undefined);
+        },
+      }),
+    })),
     select: jest.fn(() => ({
       from: (table: any) => ({
         where: () => {
           if (table === playerIdentityMap) {
+            identitySelectCount += 1;
+            if (identitySelectCount > 1 && gsisOwners !== undefined) {
+              return Promise.resolve(gsisOwners);
+            }
             return Promise.resolve(identities);
           }
           return {
@@ -617,6 +633,82 @@ describe('computeLeagueDashboard', () => {
       knownUnscored: 0,
       unresolved: 1,
       evidenceCovered: 0,
+    });
+  });
+
+  describe('hydration cannot create a second owner of a GSIS', () => {
+    const sleeperPlayerWithGsis = {
+      s1: {
+        player_id: 's1', full_name: 'Player One', first_name: 'Player', last_name: 'One',
+        position: 'WR', team: 'CIN', active: true, fantasy_data_id: 12345, gsis_id: '00-0030001',
+      },
+    };
+
+    const runHydration = async (dbMock: any) =>
+      computeLeagueDashboard(
+        { userId: 'u1', leagueId: 'league1', week: 1, season: 2024 },
+        {
+          storage: storageDeps as any,
+          sleeperClient: { ...sleeperDeps, getNflPlayers: jest.fn().mockResolvedValue(sleeperPlayerWithGsis) } as any,
+          db: dbMock,
+          forgeService: { getForgeScoresForPlayers: jest.fn().mockResolvedValue([]) } as any,
+          forgePlayerStaticService: { getLookup: jest.fn().mockResolvedValue(forgeStaticLookup([])) } as any,
+        },
+      );
+
+    it('attaches the Sleeper id to the one existing GSIS owner instead of inserting a rival row', async () => {
+      // The duplicate-owner path: a canonical row already owns this GSIS but has
+      // no Sleeper id. Inserting `sleeper:s1` carrying the same GSIS would make
+      // it ambiguous, and the #308 resolvers would then refuse to resolve it —
+      // disabling links for that player after an ordinary dashboard read.
+      const insertSpy = jest.fn();
+      const updateSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-player-one', gsisId: '00-0030001', sleeperId: null }],
+        insertSpy,
+        updateSpy,
+      });
+
+      await runHydration(dbMock);
+
+      expect(updateSpy).toHaveBeenCalledWith(expect.objectContaining({ sleeperId: 's1' }), expect.anything());
+      const insertedGsis = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []).map((row: any) => row.gsisId);
+      expect(insertedGsis).not.toContain('00-0030001');
+    });
+
+    it('withholds the GSIS when it is already owned by a different Sleeper id', async () => {
+      const insertSpy = jest.fn();
+      const updateSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [{ canonicalId: 'tiber-someone-else', gsisId: '00-0030001', sleeperId: 'other' }],
+        insertSpy,
+        updateSpy,
+      });
+
+      await runHydration(dbMock);
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([expect.objectContaining({ canonicalId: 'sleeper:s1', gsisId: null })]);
+    });
+
+    it('withholds the GSIS when ownership is already ambiguous', async () => {
+      const insertSpy = jest.fn();
+      const dbMock = createDbMock({
+        identities: [],
+        gsisOwners: [
+          { canonicalId: 'dupe-a', gsisId: '00-0030001', sleeperId: null },
+          { canonicalId: 'dupe-b', gsisId: '00-0030001', sleeperId: null },
+        ],
+        insertSpy,
+      });
+
+      await runHydration(dbMock);
+
+      const inserted = insertSpy.mock.calls.flatMap(([rows]) => rows ?? []);
+      expect(inserted).toEqual([expect.objectContaining({ canonicalId: 'sleeper:s1', gsisId: null })]);
     });
   });
 

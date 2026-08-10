@@ -2,7 +2,7 @@ import { storage, type IStorage } from '../storage';
 import { sleeperClient, type SleeperPlayer, type SleeperRoster } from '../integrations/sleeperClient';
 import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { forgeService } from '../modules/forge/forgeService';
 import type { ForgeScore } from '../modules/forge/types';
 import { createPlaybookForgeLogger, type PlaybookForgeLogger } from '../utils/playbookForgeLogger';
@@ -288,6 +288,42 @@ function buildIdentityRowFromSleeperPlayer(sleeperId: string, player: SleeperPla
   };
 }
 
+type HydrationRow = NonNullable<ReturnType<typeof buildIdentityRowFromSleeperPlayer>>;
+
+/**
+ * Existing owners of the GSIS ids a hydration batch is about to write.
+ *
+ * `player_identity_map.gsis_id` carries **no unique index** — applying one is a
+ * documented operator step (Fantasy #308). `onConflictDoNothing()` therefore
+ * protects nothing here: it only suppresses conflicts the database actually
+ * declares. Without this lookup, hydrating a Sleeper player whose GSIS is
+ * already owned by a canonical row inserts a *second* owner of that GSIS, and
+ * the duplicate-aware resolvers then correctly refuse to resolve it — silently
+ * disabling Rankings and player links for that player after an ordinary
+ * dashboard read.
+ */
+async function resolveExistingGsisOwners(
+  database: LeagueDashboardDeps['db'],
+  gsisIds: string[],
+): Promise<Map<string, Array<{ canonicalId: string; sleeperId: string | null }>>> {
+  const owners = new Map<string, Array<{ canonicalId: string; sleeperId: string | null }>>();
+  if (gsisIds.length === 0) return owners;
+
+  const existing: any[] = await (database as any)
+    .select()
+    .from(playerIdentityMap)
+    .where(inArray(playerIdentityMap.gsisId, gsisIds));
+
+  for (const row of existing ?? []) {
+    const gsis = row?.gsisId;
+    if (!gsis) continue;
+    const list = owners.get(gsis) ?? [];
+    list.push({ canonicalId: row.canonicalId, sleeperId: row.sleeperId ?? null });
+    owners.set(gsis, list);
+  }
+  return owners;
+}
+
 async function hydrateMissingSleeperIdentities(
   sleeperIds: string[],
   deps: LeagueDashboardDeps,
@@ -314,19 +350,76 @@ async function hydrateMissingSleeperIdentities(
       return [];
     }
 
-    await deps.db
-      .insert(playerIdentityMap)
-      .values(rows as any)
-      .onConflictDoNothing();
+    // Fail closed on GSIS ownership before writing anything. Every outcome below
+    // either attaches to the single existing owner or drops the GSIS from the
+    // fallback insert; none of them mints a second owner.
+    const owners = await resolveExistingGsisOwners(
+      deps.db,
+      Array.from(new Set(rows.map((row) => row.gsisId).filter((id): id is string => !!id))),
+    );
+
+    const toInsert: HydrationRow[] = [];
+    const toAttach: Array<{ gsisId: string; sleeperId: string; canonicalId: string }> = [];
+    const gsisWithheld: Array<{ sleeperId: string; gsisId: string; reason: string }> = [];
+
+    for (const row of rows) {
+      const gsis = row.gsisId;
+      if (!gsis) { toInsert.push(row); continue; }
+
+      const existing = owners.get(gsis) ?? [];
+      if (existing.length === 0) { toInsert.push(row); continue; }
+
+      if (existing.length > 1) {
+        // Already ambiguous. Adding another owner can only deepen it.
+        gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason: 'gsis_already_ambiguous' });
+        toInsert.push({ ...row, gsisId: null });
+        continue;
+      }
+
+      const [owner] = existing;
+      if (owner.sleeperId === row.sleeperId) {
+        // The one owner already carries this Sleeper id; nothing to write.
+        continue;
+      }
+      if (owner.sleeperId === null) {
+        // Exactly one owner, unclaimed: attach rather than insert a rival row.
+        toAttach.push({ gsisId: gsis, sleeperId: row.sleeperId, canonicalId: owner.canonicalId });
+        continue;
+      }
+      // One owner, already bound to a different Sleeper id. Conflicting claims
+      // are an identity-data question, not something hydration may decide.
+      gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason: 'gsis_owned_by_different_sleeper_id' });
+      toInsert.push({ ...row, gsisId: null });
+    }
+
+    // Conditional single-statement update: the WHERE re-checks ownership, so a
+    // row that gained a Sleeper id between the read and the write is not
+    // overwritten.
+    for (const attach of toAttach) {
+      await (deps.db as any)
+        .update(playerIdentityMap)
+        .set({ sleeperId: attach.sleeperId, updatedAt: new Date() })
+        .where(and(eq(playerIdentityMap.gsisId, attach.gsisId), isNull(playerIdentityMap.sleeperId)));
+    }
+
+    if (toInsert.length > 0) {
+      await deps.db
+        .insert(playerIdentityMap)
+        .values(toInsert as any)
+        .onConflictDoNothing();
+    }
 
     logger.log('identity-hydration-complete', {
       requestId: logger.requestId,
       requested: uniqueMissingIds.length,
-      hydrated: rows.length,
-      sample: rows.slice(0, 5).map((row) => ({ sleeperId: row.sleeperId, canonicalId: row.canonicalId, fullName: row.fullName })),
+      hydrated: toInsert.length,
+      attachedToExistingGsisOwner: toAttach.length,
+      gsisWithheld: gsisWithheld.length,
+      gsisWithheldSample: gsisWithheld.slice(0, 5),
+      sample: toInsert.slice(0, 5).map((row) => ({ sleeperId: row.sleeperId, canonicalId: row.canonicalId, fullName: row.fullName })),
     });
 
-    return rows as any;
+    return toInsert as any;
   } catch (error) {
     logger.log('identity-hydration-failed', {
       requestId: logger.requestId,
