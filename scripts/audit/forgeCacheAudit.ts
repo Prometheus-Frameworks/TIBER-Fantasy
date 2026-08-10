@@ -450,8 +450,51 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
   }
 
   const cohortText = fs.readFileSync(cohortPath, 'utf8');
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifestText = fs.readFileSync(manifestPath, 'utf8');
+  const manifest = JSON.parse(manifestText);
   const cohort = JSON.parse(cohortText);
+
+  // --- derived-findings equivalence ---------------------------------------
+  // The pins below check individual fields. That is necessary but not
+  // sufficient: a hand-edited median, clamping count or comparability verdict
+  // sits in none of them and would pass. So rebuild the WHOLE expected
+  // manifest from the frozen inputs — the pinned cohort bytes plus the
+  // digest-pinned static artifact — and require the committed one to equal it.
+  // Every derived finding is then verified by construction, and the pins
+  // remain as targeted diagnostics that name the specific violation.
+  const staticPathForRebuild = path.join(
+    repoRoot,
+    typeof manifest.staticArtifact?.path === 'string'
+      ? manifest.staticArtifact.path
+      : 'server/artifacts/external/forge/forge_player_static_v1.json',
+  );
+  if (!fs.existsSync(staticPathForRebuild)) {
+    problems.push(`static artifact is missing at ${path.relative(repoRoot, staticPathForRebuild)}`);
+  } else {
+    try {
+      const staticRaw = fs.readFileSync(staticPathForRebuild);
+      const rebuilt = buildManifest(cohortText, staticRaw, JSON.parse(staticRaw.toString()));
+      if (rebuilt.manifestJson !== manifestText) {
+        problems.push(
+          'committed manifest does not match the manifest rebuilt from the frozen cohort and the ' +
+          'static artifact — a derived finding has been edited, or the inputs changed without ' +
+          'regenerating (run --offline)',
+        );
+        // Name the diverging top-level sections so the failure is actionable
+        // rather than a wall of JSON.
+        for (const key of Object.keys(rebuilt.manifest)) {
+          if (canonicalJson((rebuilt.manifest as any)[key]) !== canonicalJson(manifest[key])) {
+            problems.push(`  diverging section: ${key}`);
+          }
+        }
+        for (const key of Object.keys(manifest)) {
+          if (!(key in rebuilt.manifest)) problems.push(`  unexpected section: ${key}`);
+        }
+      }
+    } catch (error) {
+      problems.push(`could not rebuild the manifest for comparison: ${(error as Error).message}`);
+    }
+  }
 
   if (sha256(cohortText) !== manifest.cohort_artifact?.sha256) {
     problems.push('cohort digest recorded in the manifest does not match the committed cohort bytes');
@@ -554,8 +597,25 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
     if (!report.includes(FROZEN_COHORT.sha256.slice(0, 8))) {
       problems.push('report does not quote the frozen cohort digest');
     }
-    if (!report.includes('-3.215')) {
-      problems.push('report does not carry the corrected median (-3.215)');
+    // Report consistency is checked against the CURRENT manifest's descriptive
+    // comparison, not a fixed literal. A hardcoded `-3.215` would silently stop
+    // meaning anything the moment the comparison legitimately changed — the
+    // report could then drift from the manifest while --check still passed.
+    const dc = manifest.comparability?.descriptiveComparison;
+    if (dc && dc.status === 'available') {
+      const expectations: Array<[string, unknown]> = [
+        ['median delta', dc.medianDelta],
+        ['joined rows', dc.joinedRows],
+        ['exact agreement', dc.exactAgreement],
+        ['delta range minimum', dc.minDelta],
+        ['delta range maximum', dc.maxDelta],
+      ];
+      for (const [label, value] of expectations) {
+        if (value === null || value === undefined) continue;
+        if (!report.includes(String(value))) {
+          problems.push(`report does not carry the manifest's ${label} (${value})`);
+        }
+      }
     }
     if (!report.includes(OBSERVATION_EVIDENCE_STATUS.status)) {
       problems.push('report does not state the observation evidence status');

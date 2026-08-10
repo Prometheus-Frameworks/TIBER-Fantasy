@@ -11,10 +11,15 @@ that is its deliverable.
 · [`assets/310-live-cohort-observed.json`](assets/310-live-cohort-observed.json) *(frozen — see §0)*
 **Regenerate derived findings:** `npx tsx scripts/audit/forgeCacheAudit.ts --offline`
 (rewrites the manifest only; the frozen cohort is an input and is never written)
-**Verify:** `npx tsx scripts/audit/forgeCacheAudit.ts --check` (pins the complete
-frozen cohort file digest, the manifest/cohort agreement, the evidence status,
-the absence of producer-attribution claims, the static-artifact digest, and this
-report's consistency)
+**Verify:** `npx tsx scripts/audit/forgeCacheAudit.ts --check`. It **rebuilds the
+expected manifest** from the frozen cohort and the digest-pinned static artifact
+and requires the committed one to equal it — so every derived finding (median,
+clamping counts, comparability verdict) is verified by construction, not merely
+spot-checked. On top of that it pins the complete frozen-cohort file digest, the
+manifest/cohort agreement, the evidence status, the absence of
+producer-attribution claims, the static-artifact digest, and this report's
+consistency **against the current manifest's descriptive comparison** rather than
+any hardcoded figure.
 
 ## 0. Evidence status of the observed cohort — read this first
 

@@ -374,3 +374,65 @@ describe('provenance', () => {
     expect(manifest.provenance.deterministicRecomputeBlockers.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe('--check derives the findings rather than spot-checking fields', () => {
+  // Field pins are necessary but not sufficient: a hand-edited median,
+  // clamping count or comparability verdict sits in none of them. `--check`
+  // rebuilds the whole expected manifest from the frozen cohort plus the
+  // digest-pinned static artifact and requires equality, so every derived
+  // finding is verified by construction. These tests pin that the committed
+  // manifest IS that rebuild — the same property, checked from the suite.
+  const staticRaw = fs.readFileSync(path.join(REPO_ROOT, manifest.staticArtifact.path));
+
+  test('every derived section is reproducible from the frozen inputs', () => {
+    const cohortRows = cohort.rows;
+    const staticRows = JSON.parse(staticRaw.toString()).rows ?? [];
+    const liveById = new Map(cohortRows.map((r: any) => [r.playerId, r]));
+    const shared = staticRows.filter((r: any) => liveById.has(r.player_id));
+    const deltas = shared
+      .map((r: any) => Number(((liveById.get(r.player_id) as any).alpha - r.forge_alpha).toFixed(2)))
+      .sort((a: number, b: number) => a - b);
+
+    const dc = manifest.comparability.descriptiveComparison;
+    expect(dc.joinedRows).toBe(shared.length);
+    expect(dc.comparableRows).toBe(deltas.length);
+    expect(dc.exactAgreement).toBe(deltas.filter((d: number) => d === 0).length);
+    expect(dc.minDelta).toBe(deltas[0]);
+    expect(dc.maxDelta).toBe(deltas[deltas.length - 1]);
+
+    // The even-cohort median, recomputed independently of the script.
+    const mid = deltas.length / 2;
+    const expectedMedian = Number.isInteger(mid)
+      ? Number(((deltas[mid - 1] + deltas[mid]) / 2).toFixed(3))
+      : deltas[Math.floor(mid)];
+    expect(dc.medianDelta).toBe(expectedMedian);
+  });
+
+  test('the clamping counts are recomputable from the frozen rows', () => {
+    for (const position of POSITIONS) {
+      const alphas = cohort.rows
+        .filter((r: any) => r.position === position)
+        .map((r: any) => r.alpha)
+        .filter((a: any) => a !== null);
+      const calibration = (ALPHA_CALIBRATION as any)[position];
+      const published = manifest.clamping.byPosition[position];
+      expect(published.n).toBe(alphas.length);
+      expect(published.atFloor).toBe(alphas.filter((a: number) => a === calibration.outMin).length);
+      expect(published.atCeiling).toBe(alphas.filter((a: number) => a === calibration.outMax).length);
+    }
+  });
+
+  test('report consistency tracks the manifest, not a hardcoded literal', () => {
+    // A fixed `-3.215` in the checker would stop meaning anything the moment
+    // the comparison legitimately changed, letting the report drift while
+    // --check still passed. The report must quote whatever the manifest says.
+    const report = fs.readFileSync(
+      path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md'),
+      'utf8',
+    );
+    const dc = manifest.comparability.descriptiveComparison;
+    for (const value of [dc.medianDelta, dc.joinedRows, dc.minDelta, dc.maxDelta]) {
+      expect(report).toContain(String(value));
+    }
+  });
+});
