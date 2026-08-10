@@ -504,7 +504,7 @@ export default function ChatHomepage() {
               onClick={handleNewChat}
               variant="outline"
               size="sm"
-              className="hidden sm:flex items-center gap-2 bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20 hover:text-green-300"
+              className="hidden sm:flex items-center gap-2 bg-green-50 border-green-500/30 text-green-800 hover:bg-green-100 hover:text-green-900"
             >
               <MessageSquarePlus className="h-4 w-4" />
               <span className="text-sm">New Chat</span>
@@ -931,7 +931,7 @@ function CreateLeagueModal({ open, onClose, onSuccess }: {
               data-testid="button-cancel-create"
               variant="outline"
               onClick={onClose}
-              className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-700/50 hover:text-gray-100"
+              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
             >
               Cancel
             </Button>

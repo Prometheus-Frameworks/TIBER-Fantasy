@@ -100,7 +100,7 @@ export default function TeamReportsPage() {
             <Button
               onClick={() => setViewType('offensive')}
               variant={viewType === 'offensive' ? 'default' : 'outline'}
-              className={viewType === 'offensive' ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={viewType === 'offensive' ? 'bg-green-700 hover:bg-green-800' : ''}
               data-testid="button-view-offensive"
             >
               <Target className="w-4 h-4 mr-2" />
