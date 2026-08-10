@@ -10,9 +10,88 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
+import {
+  RankingIdentity,
+  RankingIdentityCoverage,
+  resolveRankingIdentities,
+} from '../services/identity/rankingIdentityResolver';
 
 type SupportedPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
 const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
+
+/**
+ * Identity for a producer row, falling back to a typed unresolved record.
+ *
+ * The resolver returns an entry for every distinct non-empty source ID it was
+ * given; this guards the case where a producer row carries an id the resolver
+ * never saw, so a missing entry becomes a visible non-linkable row rather than
+ * an exception or a silently linked raw ID.
+ */
+function identityFor(identities: Map<string, RankingIdentity>, sourceId: string): RankingIdentity {
+  return (
+    identities.get(sourceId.trim()) ?? {
+      status: 'unresolved',
+      canonicalId: null,
+      sourceId,
+      sourceType: 'unknown',
+      reason: 'identifier_not_resolved',
+    }
+  );
+}
+
+/**
+ * Normalize an internal resolution into one of the public contract's coherent
+ * discriminated states. Any contradictory internal state fails closed to an
+ * unresolved, non-linkable row instead of relying on contract parsing to catch
+ * it after a linkable playerId has already been constructed.
+ */
+function toPublicIdentity(identity: RankingIdentity): RankingsV2Item['identity'] {
+  const canonicalId = identity.canonicalId?.trim() ?? '';
+  const sourceId = identity.sourceId.trim();
+
+  if (
+    identity.status === 'canonical' &&
+    canonicalId &&
+    sourceId === canonicalId &&
+    identity.sourceType === 'canonical' &&
+    identity.reason === null
+  ) {
+    return {
+      status: 'canonical',
+      canonicalId,
+      sourceId,
+      sourceType: 'canonical',
+      reason: null,
+      linkable: true,
+    };
+  }
+
+  if (
+    identity.status === 'resolved' &&
+    canonicalId &&
+    sourceId &&
+    identity.sourceType === 'gsis' &&
+    identity.reason === null
+  ) {
+    return {
+      status: 'resolved',
+      canonicalId,
+      sourceId,
+      sourceType: 'gsis',
+      reason: null,
+      linkable: true,
+    };
+  }
+
+  return {
+    status: 'unresolved',
+    canonicalId: null,
+    sourceId: identity.sourceId,
+    sourceType: identity.sourceType,
+    reason: identity.reason ?? 'identity_state_incoherent',
+    linkable: false,
+  };
+}
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -68,7 +147,13 @@ function buildRiskSignals(row: any): RankingsV2RiskSignal[] {
     }));
 }
 
-export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso: string): RankingsV2Item {
+export function mapForgeCacheRowToRankingsV2Item(
+  row: any,
+  rank: number,
+  asOfIso: string,
+  identity: RankingIdentity,
+): RankingsV2Item {
+  const publicIdentity = toPublicIdentity(identity);
   const confidence = toNumberOrNull(row.confidence);
   const gamesPlayed = toNumberOrNull(row.gamesPlayed);
   const trajectory =
@@ -80,7 +165,11 @@ export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso
 
   return {
     rank,
-    playerId: String(row.playerId ?? ''),
+    // Canonical public key only — null when unresolved. The producer key stays
+    // visible via `identity.sourceId`, so a raw source ID can never be mistaken
+    // for a resolvable public key (#308).
+    playerId: publicIdentity.canonicalId,
+    identity: publicIdentity,
     playerName: String(row.playerName ?? 'Unknown Player'),
     position: typeof row.position === 'string' ? row.position : null,
     team: typeof row.nflTeam === 'string' ? row.nflTeam : null,
@@ -123,7 +212,8 @@ export function mapForgeCacheRowToRankingsV2Item(row: any, rank: number, asOfIso
   };
 }
 
-function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string): RankingsV2Item {
+function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string, identity: RankingIdentity): RankingsV2Item {
+  const publicIdentity = toPublicIdentity(identity);
   const confidenceBand = typeof row.confidenceBand === 'string' ? row.confidenceBand : null;
   const weeklyOutlook = typeof row.weeklyOutlook === 'string' ? row.weeklyOutlook : null;
   const floor = toNumberOrNull(row.floor);
@@ -131,7 +221,8 @@ function mapScoringRankingToRankingsV2Item(row: any, asOfIso: string): RankingsV
 
   return {
     rank: Number(row.rank),
-    playerId: String(row.playerId ?? ''),
+    playerId: publicIdentity.canonicalId,
+    identity: publicIdentity,
     playerName: String(row.playerName ?? 'Unknown Player'),
     position: typeof row.position === 'string' ? row.position : null,
     team: typeof row.team === 'string' ? row.team : null,
@@ -213,6 +304,12 @@ export function createRankingsV2Router(): Router {
 
         if (scoringRankings.ok) {
           const scoringAsOf = scoringRankings.data.asOf ?? new Date().toISOString();
+          // Resolve producer identifiers to canonical public keys before any row
+          // is emitted, for the scoring path as well as the FORGE path (#308).
+          const scoringResolution = await resolveRankingIdentities(
+            scoringRankings.data.items.map((row: any) => String(row.playerId ?? '')),
+            'gsis',
+          );
           const payload = {
             contractVersion: RANKINGS_V2_CONTRACT_VERSION,
             mode: 'weekly' as const,
@@ -227,7 +324,13 @@ export function createRankingsV2Router(): Router {
                 notes: `season=${season}, asOfWeek=${asOfWeek ?? 'unknown'}, position=${position}, meaningfulInputs=${meaningfulInputCount}/${scoringInputs.length}`,
               },
             ],
-            items: scoringRankings.data.items.map((row) => mapScoringRankingToRankingsV2Item(row, scoringAsOf)),
+            items: scoringRankings.data.items.map((row: any) =>
+              mapScoringRankingToRankingsV2Item(
+                row,
+                scoringAsOf,
+                identityFor(scoringResolution.identities, String(row.playerId ?? '')),
+              ),
+            ),
             trust: {
               confidence: null,
               asOf: scoringAsOf,
@@ -235,6 +338,7 @@ export function createRankingsV2Router(): Router {
               sampleNote: null,
               stabilityNote: null,
             },
+            identityCoverage: scoringResolution.coverage,
           };
 
           const parsed = rankingsV2ResponseSchema.safeParse(payload);
@@ -264,7 +368,28 @@ export function createRankingsV2Router(): Router {
       const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();
       const isCacheEmpty = cache.players.length === 0;
 
-      const items = cache.players.map((row: any, idx: number) => mapForgeCacheRowToRankingsV2Item(row, idx + 1, derivedAsOf));
+      // Identity resolution happens once for the whole cohort (two batched
+      // queries) before any row is emitted.
+      const resolution = await resolveRankingIdentities(
+        cache.players.map((row: any) => String(row.playerId ?? '')),
+        'gsis',
+      );
+      const items = cache.players.map((row: any, idx: number) =>
+        mapForgeCacheRowToRankingsV2Item(
+          row,
+          idx + 1,
+          derivedAsOf,
+          identityFor(resolution.identities, String(row.playerId ?? '')),
+        ),
+      );
+
+      if (resolution.coverage.unresolved > 0) {
+        console.warn(
+          `[RankingsV2/Routes] identity coverage ${(resolution.coverage.coverageRatio * 100).toFixed(1)}% ` +
+            `(${resolution.coverage.unresolved}/${resolution.coverage.total} unresolved): ` +
+            `${JSON.stringify(resolution.coverage.byReason)}`,
+        );
+      }
 
       const payload = {
         contractVersion: RANKINGS_V2_CONTRACT_VERSION,
@@ -309,6 +434,7 @@ export function createRankingsV2Router(): Router {
           sampleNote: isCacheEmpty ? 'FORGE grades for this filter have not been computed yet. Please check back shortly.' : null,
           stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
+        identityCoverage: resolution.coverage,
       };
 
       const parsed = rankingsV2ResponseSchema.safeParse(payload);

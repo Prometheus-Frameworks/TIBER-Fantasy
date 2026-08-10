@@ -2,8 +2,13 @@ import { z } from 'zod';
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE';
 
+/** Client-negotiated revision of the canonical Rankings v2 response. */
+export const RANKINGS_V2_EXPECTED_CONTRACT_VERSION = 'v2-canonical-identity-2026-08-09' as const;
+
 export interface TiersApiPlayer {
-  playerId: string;
+  /** Canonical key, or null when unresolved. Never a raw source id. */
+  playerId: string | null;
+  identity: RankingsV2ItemIdentity;
   playerName: string;
   position: Position;
   nflTeam?: string | null;
@@ -30,9 +35,38 @@ export interface TiersApiPlayer {
   };
 }
 
+export type RankingsV2ItemIdentity =
+  | {
+      status: 'canonical';
+      canonicalId: string;
+      sourceId: string;
+      sourceType: 'canonical';
+      reason: null;
+      linkable: true;
+    }
+  | {
+      status: 'resolved';
+      canonicalId: string;
+      sourceId: string;
+      sourceType: 'gsis';
+      reason: null;
+      linkable: true;
+    }
+  | {
+      status: 'unresolved';
+      canonicalId: null;
+      sourceId: string;
+      sourceType: 'canonical' | 'gsis' | 'unknown';
+      reason: string;
+      /** False → render the row but do not build a player deep link from it. */
+      linkable: false;
+    };
+
 export interface RankingsV2Item {
   rank: number;
-  playerId: string;
+  /** Canonical key, or null when unresolved. Never a raw source id. */
+  playerId: string | null;
+  identity: RankingsV2ItemIdentity;
   playerName: string;
   position?: string | null;
   team?: string | null;
@@ -155,9 +189,39 @@ const rankingsItemUiMetaSchema = z
   .nullable()
   .optional();
 
+const rankingsItemIdentitySchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('canonical'),
+    canonicalId: z.string().trim().min(1),
+    sourceId: z.string().trim().min(1),
+    sourceType: z.literal('canonical'),
+    reason: z.null(),
+    linkable: z.literal(true),
+  }),
+  z.object({
+    status: z.literal('resolved'),
+    canonicalId: z.string().trim().min(1),
+    sourceId: z.string().trim().min(1),
+    sourceType: z.literal('gsis'),
+    reason: z.null(),
+    linkable: z.literal(true),
+  }),
+  z.object({
+    status: z.literal('unresolved'),
+    canonicalId: z.null(),
+    sourceId: z.string(),
+    sourceType: z.enum(['canonical', 'gsis', 'unknown']),
+    reason: z.string().min(1),
+    linkable: z.literal(false),
+  }),
+]);
+
 const rankingsItemSchema = z.object({
   rank: z.number(),
-  playerId: z.string(),
+  playerId: z.string().nullable(),
+  // The page decides whether to render a deep link from this, so a response
+  // missing it must fail validation rather than let the UI guess (#308).
+  identity: rankingsItemIdentitySchema,
   playerName: z.string(),
   position: z.string().nullable().optional(),
   team: z.string().nullable().optional(),
@@ -176,10 +240,38 @@ const rankingsItemSchema = z.object({
     .nullable()
     .optional(),
   uiMeta: rankingsItemUiMetaSchema,
+}).superRefine((item, ctx) => {
+  if (item.identity.status === 'canonical' && item.identity.sourceId !== item.identity.canonicalId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['identity', 'sourceId'],
+      message: 'Canonical identity requires sourceId to equal canonicalId.',
+    });
+  }
+
+  if (item.identity.linkable) {
+    if (item.playerId !== item.identity.canonicalId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['playerId'],
+        message: 'Linkable ranking identity requires playerId to equal identity.canonicalId.',
+      });
+    }
+    return;
+  }
+
+  if (item.playerId !== null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['playerId'],
+      message: 'Unresolved ranking identity requires a null playerId.',
+    });
+  }
 });
 
 const rankingsV2WeeklyResponseSchema = z
   .object({
+    contractVersion: z.literal(RANKINGS_V2_EXPECTED_CONTRACT_VERSION),
     // Matches the canonical Rankings v2 contract's `z.string().datetime()` (see
     // server/contracts/rankingsV2.ts) exactly — same method, same zod version — so the
     // client rejects anything the server contract would: date-only strings, non-ISO
@@ -196,9 +288,47 @@ const rankingsV2WeeklyResponseSchema = z
       .optional(),
     items: z.array(rankingsItemSchema),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((response, ctx) => {
+    const seenRanks = new Map<number, number>();
+    response.items.forEach((item, index) => {
+      const firstIndex = seenRanks.get(item.rank);
+      if (firstIndex !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['items', index, 'rank'],
+          message: `Duplicate ranking rank (first seen at items[${firstIndex}]).`,
+        });
+        return;
+      }
+      seenRanks.set(item.rank, index);
+    });
+  });
 
 export type RankingsV2WeeklyResponseShape = z.infer<typeof rankingsV2WeeklyResponseSchema>;
+
+/**
+ * Independent render-time link guard. Even if a future caller bypasses the
+ * response validator, contradictory identity fields cannot produce
+ * `/player/null` or a link to a mismatched canonical key.
+ */
+export function getLinkablePlayerId(item: Pick<RankingsV2Item, 'playerId' | 'identity'>): string | null {
+  const { identity, playerId } = item;
+  if (!identity.linkable) return null;
+  if (identity.status !== 'canonical' && identity.status !== 'resolved') return null;
+  if (!playerId || playerId !== identity.canonicalId) return null;
+  return playerId;
+}
+
+/** Deterministic composite key; the response validator enforces unique ranks. */
+export function buildRankingRowKey(item: Pick<RankingsV2Item, 'rank' | 'position' | 'identity'>): string {
+  return [
+    item.identity.sourceType,
+    item.identity.sourceId,
+    String(item.rank),
+    item.position ?? 'unknown-position',
+  ].join('|');
+}
 
 // A 2xx HTTP response is not the same thing as a well-formed one. Without this check,
 // `data?.items ?? []` at the call site would quietly turn a malformed body (`{}`, `null`,
@@ -254,6 +384,7 @@ export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): Tiers
     const tier = asTier(item.tier);
     return {
       playerId: item.playerId,
+      identity: item.identity,
       playerName: item.playerName,
       position: (item.position as Position) || 'WR',
       nflTeam: item.team ?? null,
