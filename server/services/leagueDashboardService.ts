@@ -350,9 +350,18 @@ async function hydrateMissingSleeperIdentities(
       return [];
     }
 
-    // Fail closed on GSIS ownership before writing anything. Every outcome below
-    // either attaches to the single existing owner or drops the GSIS from the
-    // fallback insert; none of them mints a second owner.
+    // Fail closed on GSIS ownership before writing anything.
+    //
+    // `gsis_id` has no unique index — applying one is a documented operator
+    // step — so nothing in application code can make an INSERT carrying a GSIS
+    // safe. A pre-read is only a snapshot: two candidates in this same batch,
+    // or two concurrent hydration requests, can both observe zero owners and
+    // then both insert. Narrowing that window is not closing it.
+    //
+    // So hydration never inserts a GSIS at all. It may only ATTACH a Sleeper id
+    // to a row that already owns the GSIS, which cannot create a second owner
+    // by construction. Hydrated fallback rows carry `gsisId: null`; the
+    // crosswalk remains the authority for that mapping.
     const owners = await resolveExistingGsisOwners(
       deps.db,
       Array.from(new Set(rows.map((row) => row.gsisId).filter((id): id is string => !!id))),
@@ -361,45 +370,53 @@ async function hydrateMissingSleeperIdentities(
     const toInsert: HydrationRow[] = [];
     const toAttach: Array<{ gsisId: string; sleeperId: string; canonicalId: string }> = [];
     const gsisWithheld: Array<{ sleeperId: string; gsisId: string; reason: string }> = [];
+    // Two rows in one batch can name the same GSIS; only the first may attach.
+    const claimedInBatch = new Set<string>();
 
     for (const row of rows) {
       const gsis = row.gsisId;
       if (!gsis) { toInsert.push(row); continue; }
 
       const existing = owners.get(gsis) ?? [];
-      if (existing.length === 0) { toInsert.push(row); continue; }
-
-      if (existing.length > 1) {
-        // Already ambiguous. Adding another owner can only deepen it.
-        gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason: 'gsis_already_ambiguous' });
-        toInsert.push({ ...row, gsisId: null });
-        continue;
-      }
-
       const [owner] = existing;
-      if (owner.sleeperId === row.sleeperId) {
-        // The one owner already carries this Sleeper id; nothing to write.
-        continue;
+
+      if (existing.length === 1 && owner.sleeperId === row.sleeperId) {
+        continue; // The one owner already carries this Sleeper id.
       }
-      if (owner.sleeperId === null) {
-        // Exactly one owner, unclaimed: attach rather than insert a rival row.
+
+      if (existing.length === 1 && owner.sleeperId === null && !claimedInBatch.has(gsis)) {
+        claimedInBatch.add(gsis);
         toAttach.push({ gsisId: gsis, sleeperId: row.sleeperId, canonicalId: owner.canonicalId });
         continue;
       }
-      // One owner, already bound to a different Sleeper id. Conflicting claims
-      // are an identity-data question, not something hydration may decide.
-      gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason: 'gsis_owned_by_different_sleeper_id' });
+
+      const reason =
+        existing.length === 0 ? 'gsis_unowned_insert_would_race'
+        : existing.length > 1 ? 'gsis_already_ambiguous'
+        : claimedInBatch.has(gsis) ? 'gsis_claimed_earlier_in_batch'
+        : 'gsis_owned_by_different_sleeper_id';
+      gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason });
       toInsert.push({ ...row, gsisId: null });
     }
 
-    // Conditional single-statement update: the WHERE re-checks ownership, so a
-    // row that gained a Sleeper id between the read and the write is not
-    // overwritten.
+    // Conditional update bound to the exact owner selected above. The predicate
+    // re-checks canonical id, GSIS and unclaimed state, so a row that gained a
+    // Sleeper id between the read and the write is not overwritten; the
+    // affected-row count tells us whether this request actually won.
+    let attachedCount = 0;
     for (const attach of toAttach) {
-      await (deps.db as any)
+      const statement = (deps.db as any)
         .update(playerIdentityMap)
         .set({ sleeperId: attach.sleeperId, updatedAt: new Date() })
-        .where(and(eq(playerIdentityMap.gsisId, attach.gsisId), isNull(playerIdentityMap.sleeperId)));
+        .where(and(
+          eq(playerIdentityMap.canonicalId, attach.canonicalId),
+          eq(playerIdentityMap.gsisId, attach.gsisId),
+          isNull(playerIdentityMap.sleeperId),
+        ));
+      const affected = typeof statement?.returning === 'function'
+        ? await statement.returning()
+        : await statement;
+      if (!Array.isArray(affected) || affected.length > 0) attachedCount += 1;
     }
 
     if (toInsert.length > 0) {
@@ -409,17 +426,36 @@ async function hydrateMissingSleeperIdentities(
         .onConflictDoNothing();
     }
 
+    // Re-read authoritative rows for exactly the ids we were asked to hydrate.
+    // An attach updates an existing row that is not in `toInsert`, so returning
+    // only the inserts would leave the request that performed the repair still
+    // reporting that player unresolved until some later request.
+    let hydrated: any[] = toInsert as any[];
+    try {
+      const authoritative = await (deps.db as any)
+        .select()
+        .from(playerIdentityMap)
+        .where(inArray(playerIdentityMap.sleeperId, uniqueMissingIds));
+      if (Array.isArray(authoritative) && authoritative.length > 0) hydrated = authoritative;
+    } catch (readBackError) {
+      logger.log('identity-hydration-readback-failed', {
+        requestId: logger.requestId,
+        error: (readBackError as Error).message,
+      });
+    }
+
     logger.log('identity-hydration-complete', {
       requestId: logger.requestId,
       requested: uniqueMissingIds.length,
-      hydrated: toInsert.length,
-      attachedToExistingGsisOwner: toAttach.length,
+      inserted: toInsert.length,
+      attachedToExistingGsisOwner: attachedCount,
+      attachAttempted: toAttach.length,
       gsisWithheld: gsisWithheld.length,
       gsisWithheldSample: gsisWithheld.slice(0, 5),
-      sample: toInsert.slice(0, 5).map((row) => ({ sleeperId: row.sleeperId, canonicalId: row.canonicalId, fullName: row.fullName })),
+      returned: hydrated.length,
     });
 
-    return toInsert as any;
+    return hydrated as any;
   } catch (error) {
     logger.log('identity-hydration-failed', {
       requestId: logger.requestId,
