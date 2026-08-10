@@ -233,3 +233,15 @@ As of **2026-04-02**, the canonical public Rankings v2 contract scaffold lives a
 - `server/contracts/rankingsV2.ts`
 
 This is the in-repo source of truth for the v2 public response shape (`mode`, `lens`, `horizon`, `asOf`, `sourceStack`, `items`, `trust`) and item-level explanation/trust envelopes. It is intentionally scaffold-first and allows nullable/optional fields where current producers are not yet fully wired.
+
+### 2026-08-09 identity compatibility revision
+
+The public contract version is now `v2-canonical-identity-2026-08-09`.
+`playerId` is canonical-only and nullable, and every item carries a
+discriminated identity envelope. Linkable rows require a non-null `playerId`
+equal to `identity.canonicalId`; unresolved rows require `playerId: null` and
+`linkable: false`. Canonical-state `sourceId` must equal that same canonical
+key, and item ranks are unique within one response so the UI's composite row
+keys cannot collide when a producer source ID repeats. This is intentionally a
+versioned breaking change from `v2-scaffold-2026-04-02`, and consumers must
+negotiate/validate the new literal instead of silently accepting both shapes.
