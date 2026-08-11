@@ -327,11 +327,23 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
   if (!byPosition) return [];
 
   const problems: string[] = [];
-  const table = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
-    .find((t) => t.header.some((h) => /at floor/i.test(h)));
-  if (!table) {
+  // Exactly one table may carry the observed-clamping signature. `.find()`
+  // silently took the first and ignored the rest, so a second, conflicting
+  // table could sit in the same section stating different figures — the first
+  // passing the check while a reader scrolls to the second. Which of two
+  // disagreeing tables is authoritative is not a question this checker should
+  // answer by position, and an identical duplicate is a defect in its own right.
+  const candidates = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
+    .filter((t) => t.header.some((h) => /at floor/i.test(h)));
+  if (candidates.length === 0) {
     return ['report has no observed-clamping table for the manifest clamping findings to be checked against'];
   }
+  if (candidates.length > 1) {
+    return [
+      `report carries ${candidates.length} observed-clamping tables; exactly one may state these findings`,
+    ];
+  }
+  const table = candidates[0];
 
   const columnOf = (pattern: RegExp) => table.header.findIndex((h) => pattern.test(h));
   const columns = {
@@ -422,6 +434,22 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
     const stated = numbersIn(cell(totalRow, columns.n));
     if (stated.length !== 1 || stated[0] !== totalN) {
       problems.push(`report states the clamping total n as "${cell(totalRow, columns.n)}"; the positions sum to ${totalN}`);
+    }
+    // The total row's min/max are deliberately blank, and must stay blank.
+    // A cohort-wide minimum and maximum would be a NEW aggregate claim: the
+    // per-position bounds are what the calibration declares and what the
+    // manifest measures, and "the lowest alpha anywhere in the cohort" is a
+    // different statistic that nothing here derives. Leaving these unchecked
+    // let arbitrary numbers be inserted and read as measurements, so absence is
+    // enforced rather than assumed.
+    for (const [label, index] of [['min', columns.min], ['max', columns.max]] as const) {
+      const value = cell(totalRow, index);
+      if (value !== '') {
+        problems.push(
+          `report's clamping total row states a ${label} of "${value}"; that cell must stay blank — ` +
+          'the audit derives no cohort-wide bound',
+        );
+      }
     }
     checkCount('total at-floor', totalRow, columns.floor, totalFloor, formatClampPct(totalFloor, totalN));
     checkCount('total at-ceiling', totalRow, columns.ceiling, totalCeiling);

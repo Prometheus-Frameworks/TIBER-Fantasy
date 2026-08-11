@@ -541,8 +541,8 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
   const clamping = manifest.clamping;
 
   /** Rewrite one cell of a row in the observed-clamping table. */
-  const editClampCell = (rowLabel: string, column: number, replacement: string) => {
-    const lines = report.split('\n');
+  const editClampCell = (rowLabel: string, column: number, replacement: string, source = report) => {
+    const lines = source.split('\n');
     const index = lines.findIndex((line) =>
       /^\|/.test(line.trim()) &&
       line.split('|').slice(1, -1).map((c) => c.replace(/\*\*/g, '').trim().toLowerCase())[0] === rowLabel &&
@@ -629,6 +629,76 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
     const index = lines.findIndex((line) => /^\|\s*WR\s*\|/.test(line.trim()) && /\(\d/.test(line));
     lines.splice(index + 1, 0, '| K | 12 | 25.0 | 95.0 | 3 (25.0%) | 0 |');
     expect(reportClampingProblems(lines.join('\n'), clamping).join('\n')).toMatch(/unexpected "k" row/);
+  });
+
+  test('the total row\'s min and max must stay blank', () => {
+    // They are blank on purpose: a cohort-wide minimum and maximum would be a
+    // NEW aggregate claim the audit derives nothing to support. Leaving the
+    // cells unchecked let arbitrary numbers be inserted and read as
+    // measurements.
+    for (const [column, label] of [[2, 'min'], [3, 'max']] as const) {
+      const tampered = editClampCell('total', column, column === 2 ? '999' : '888');
+      const problems = reportClampingProblems(tampered, clamping);
+      expect(problems.join('\n')).toMatch(new RegExp(`total row states a ${label}`));
+      expect(problems.join('\n')).toMatch(/must stay blank/);
+    }
+
+    // Both at once — 999 and 888, the shape the finding described.
+    const both = editClampCell('total', 3, '888', editClampCell('total', 2, '999'));
+    expect(reportClampingProblems(both, clamping).length).toBeGreaterThanOrEqual(2);
+
+    // And the committed report genuinely leaves them blank, so the check above
+    // is not passing because it never looks.
+    const table = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
+      .find((t) => t.header.some((h) => /at floor/i.test(h)))!;
+    const totalRow = table.rows.find((r) => r[0].toLowerCase() === 'total')!;
+    expect(totalRow[2]).toBe('');
+    expect(totalRow[3]).toBe('');
+  });
+
+  test('exactly one observed-clamping table may state these findings', () => {
+    // `.find()` took the first match and ignored the rest, so a second,
+    // conflicting table could sit in the same section stating different
+    // figures — the first satisfying the check while a reader scrolls to the
+    // second. Which of two disagreeing tables is authoritative is not a
+    // question this checker should answer by position.
+    const lines = report.split('\n');
+    const headingIndex = lines.findIndex((l) => /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i.test(l));
+    expect(headingIndex).toBeGreaterThan(-1);
+
+    // The committed observed-clamping table, taken verbatim from the report so
+    // the duplicate below is genuinely identical rather than a lookalike.
+    const firstTableLine = lines.findIndex((line, i) => i > headingIndex && /at floor/i.test(line));
+    expect(firstTableLine).toBeGreaterThan(-1);
+    let lastTableLine = firstTableLine;
+    while (lines[lastTableLine + 1]?.trim().startsWith('|')) lastTableLine += 1;
+    const committedTable = lines.slice(firstTableLine, lastTableLine + 1);
+    // Sanity: the extracted block is the real one, header plus five rows.
+    expect(committedTable.length).toBe(7);
+
+    const insertAfter = (block: string[]) =>
+      [...lines.slice(0, lastTableLine + 1), '', ...block, ...lines.slice(lastTableLine + 1)].join('\n');
+
+    // A conflicting second table: correct first, wrong second.
+    const conflicting = insertAfter([
+      '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+      '|---|---:|---:|---:|---:|---:|',
+      '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+      '| RB | 95 | 25.0 | 95.0 | 1 (1.1%) | 5 |',
+      '| WR | 146 | 25.0 | 95.0 | 1 (0.7%) | 1 |',
+      '| TE | 78 | 25.0 | 95.0 | 1 (1.3%) | 1 |',
+      '| **total** | **357** | | | **3 (0.8%)** | **7** |',
+    ]);
+    expect(reportClampingProblems(conflicting, clamping).join('\n'))
+      .toMatch(/2 observed-clamping tables; exactly one/);
+    // Specifically NOT passing because the first table happened to be correct.
+    expect(reportClampingProblems(conflicting, clamping)).not.toEqual([]);
+
+    // An identical duplicate is also a failure — the ambiguity is the defect,
+    // not the disagreement.
+    const duplicated = insertAfter(committedTable);
+    expect(reportClampingProblems(duplicated, clamping).join('\n'))
+      .toMatch(/2 observed-clamping tables; exactly one/);
   });
 
   test('a deleted clamping table fails rather than passing vacuously', () => {
