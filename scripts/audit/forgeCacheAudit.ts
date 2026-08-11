@@ -49,6 +49,7 @@ import {
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
+  reportClampingProblems,
   reportComparisonProblems,
   rowIdentityFromCohortRow,
   rowIdentityFromResponseItem,
@@ -665,6 +666,15 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
     // date, a GSIS id, an alpha in the disagreement table — so the summary
     // cells could be rewritten and --check would still say "report consistent".
     for (const problem of reportComparisonProblems(report, manifest.comparability?.descriptiveComparison)) {
+      problems.push(problem);
+    }
+
+    // The clamping table is checked the same way, and for the same reason: it
+    // carries this audit's headline finding ("roughly a third of the served
+    // board sits exactly on the floor"), and verifying only the comparison
+    // table left it editable at will. Changing the WR floor from 59 (40.4%) to
+    // 1 (0.7%) inverts the finding, and --check called the report consistent.
+    for (const problem of reportClampingProblems(report, manifest.clamping)) {
       problems.push(problem);
     }
     if (!report.includes(OBSERVATION_EVIDENCE_STATUS.status)) {

@@ -246,6 +246,190 @@ function numbersIn(cell: string): number[] {
   return [...cell.matchAll(/[-+]?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
 }
 
+const cleanCell = (cell: string) => cell.replace(/\*\*/g, '').replace(/`/g, '').trim();
+
+export interface MarkdownTable {
+  header: string[];
+  rows: string[][];
+}
+
+/**
+ * Every markdown table under a heading, in order, as full rows.
+ *
+ * `readMarkdownTable` above returns only the first table's label/value pairs,
+ * which is the wrong shape here twice over: §4.3 carries TWO tables — the
+ * declared bounds and the observed clamping — and the clamping one has six
+ * columns, not two.
+ */
+export function readMarkdownTables(report: string, heading: RegExp): MarkdownTable[] {
+  const lines = report.split('\n');
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return [];
+
+  const headingLevel = (/^(#{1,6})\s/.exec(lines[start].trim()) ?? [, ''])[1]!.length;
+  const tables: MarkdownTable[] = [];
+  let current: string[][] | null = null;
+
+  for (const line of lines.slice(start + 1)) {
+    const trimmed = line.trim();
+    const nextHeading = /^(#{1,6})\s/.exec(trimmed);
+    // Stop at the next heading of the same or a higher level, so a subsection's
+    // tables are not attributed to this section.
+    if (nextHeading && nextHeading[1].length <= headingLevel) break;
+
+    if (!trimmed.startsWith('|')) {
+      if (current) { tables.push({ header: current[0], rows: current.slice(1) }); current = null; }
+      continue;
+    }
+    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
+    const parts = trimmed.split('|').slice(1, -1).map(cleanCell);
+    if (!current) current = [parts];
+    else current.push(parts);
+  }
+  if (current) tables.push({ header: current[0], rows: current.slice(1) });
+  return tables;
+}
+
+/**
+ * The report's own formatting rule for a clamp percentage.
+ *
+ * One decimal place, matching `auditClamping()` in `forgeCacheAudit.ts`. Kept
+ * here as the single definition so the checker cannot drift from the producer.
+ */
+export function formatClampPct(count: number, n: number): string {
+  return ((count / n) * 100).toFixed(1);
+}
+
+/** `59 (40.4%)` -> `{ count: 59, pct: '40.4' }`; a bare `7` -> `{ count: 7 }`. */
+function parseCountCell(cell: string): { count: number | null; pct: string | null } {
+  const match = /^(-?\d+(?:\.\d+)?)\s*(?:\(\s*(-?\d+(?:\.\d+)?)\s*%\s*\))?$/.exec(cleanCell(cell));
+  if (!match) return { count: null, pct: null };
+  return { count: Number(match[1]), pct: match[2] ?? null };
+}
+
+const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+/**
+ * Problems in how the report states the manifest's clamping findings.
+ *
+ * The gap this closes: `--check` verified the descriptive-comparison table and
+ * nothing else, so §4.3's clamping table could be edited freely — changing the
+ * WR floor from 59 (40.4%) to 1 (0.7%) still passed, turning the audit's
+ * headline finding ("roughly a third of the board sits on the floor") into its
+ * opposite while the gate reported the document consistent.
+ *
+ * Every position row and the total row is compared: counts exactly, and the
+ * displayed percentages against the report's own formatting rule rather than
+ * against a re-derived float that might round differently.
+ */
+export function reportClampingProblems(report: string, clamping: any): string[] {
+  const byPosition = clamping?.byPosition;
+  if (!byPosition) return [];
+
+  const problems: string[] = [];
+  const table = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
+    .find((t) => t.header.some((h) => /at floor/i.test(h)));
+  if (!table) {
+    return ['report has no observed-clamping table for the manifest clamping findings to be checked against'];
+  }
+
+  const columnOf = (pattern: RegExp) => table.header.findIndex((h) => pattern.test(h));
+  const columns = {
+    n: columnOf(/^n$/i),
+    min: columnOf(/^min$/i),
+    max: columnOf(/^max$/i),
+    floor: columnOf(/at floor/i),
+    ceiling: columnOf(/at ceiling/i),
+  };
+  for (const [name, index] of Object.entries(columns)) {
+    if (index === -1) problems.push(`report's clamping table has no "${name}" column`);
+  }
+  if (problems.length) return problems;
+
+  const seen = new Map<string, string[]>();
+  for (const row of table.rows) {
+    const key = (row[0] ?? '').toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) {
+      problems.push(`report's clamping table repeats the "${row[0]}" row`);
+      continue;
+    }
+    seen.set(key, row);
+  }
+
+  const expectedKeys = [...CLAMP_POSITIONS.map((p) => p.toLowerCase()), 'total'];
+  for (const key of seen.keys()) {
+    if (!expectedKeys.includes(key)) {
+      problems.push(`report's clamping table carries an unexpected "${key}" row`);
+    }
+  }
+
+  const cell = (row: string[], index: number) => cleanCell(row[index] ?? '');
+
+  const checkCount = (label: string, row: string[], index: number, expected: number, expectedPct?: string) => {
+    const parsed = parseCountCell(cell(row, index));
+    if (parsed.count !== expected) {
+      problems.push(`report states ${label} as "${cell(row, index)}"; the manifest measured ${expected}`);
+      return;
+    }
+    if (expectedPct !== undefined && parsed.pct !== expectedPct) {
+      problems.push(
+        `report states ${label} percentage as "${parsed.pct ?? 'none'}%"; the measured value formats to ${expectedPct}%`,
+      );
+    }
+  };
+
+  let totalN = 0;
+  let totalFloor = 0;
+  let totalCeiling = 0;
+
+  for (const position of CLAMP_POSITIONS) {
+    const measured = byPosition[position];
+    if (!measured) {
+      problems.push(`manifest has no clamping entry for ${position}`);
+      continue;
+    }
+    totalN += Number(measured.n);
+    totalFloor += Number(measured.atFloor);
+    totalCeiling += Number(measured.atCeiling);
+
+    const row = seen.get(position.toLowerCase());
+    if (!row) {
+      problems.push(`report's clamping table has no "${position}" row`);
+      continue;
+    }
+    for (const [label, index, expected] of [
+      ['n', columns.n, Number(measured.n)],
+      ['min', columns.min, Number(measured.min)],
+      ['max', columns.max, Number(measured.max)],
+    ] as const) {
+      const stated = numbersIn(cell(row, index));
+      if (stated.length !== 1 || stated[0] !== expected) {
+        problems.push(`report states ${position} ${label} as "${cell(row, index)}"; the manifest measured ${expected}`);
+      }
+    }
+    checkCount(
+      `${position} at-floor`, row, columns.floor,
+      Number(measured.atFloor), formatClampPct(Number(measured.atFloor), Number(measured.n)),
+    );
+    checkCount(`${position} at-ceiling`, row, columns.ceiling, Number(measured.atCeiling));
+  }
+
+  const totalRow = seen.get('total');
+  if (!totalRow) {
+    problems.push('report\'s clamping table has no "total" row');
+  } else {
+    const stated = numbersIn(cell(totalRow, columns.n));
+    if (stated.length !== 1 || stated[0] !== totalN) {
+      problems.push(`report states the clamping total n as "${cell(totalRow, columns.n)}"; the positions sum to ${totalN}`);
+    }
+    checkCount('total at-floor', totalRow, columns.floor, totalFloor, formatClampPct(totalFloor, totalN));
+    checkCount('total at-ceiling', totalRow, columns.ceiling, totalCeiling);
+  }
+
+  return problems;
+}
+
 /**
  * The measures the descriptive-comparison table must carry, each bound to the
  * row that states it.

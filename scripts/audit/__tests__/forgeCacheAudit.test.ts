@@ -20,7 +20,10 @@ import {
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
+  formatClampPct,
   readMarkdownTable,
+  readMarkdownTables,
+  reportClampingProblems,
   reportComparisonProblems,
   rowIdentityFromCohortRow,
   rowIdentityFromResponseItem,
@@ -529,6 +532,118 @@ describe('report consistency is checked per row, not as a substring sweep', () =
   test('an unavailable comparison imposes no report requirement', () => {
     // Nothing to be consistent with, so this must not manufacture a failure.
     expect(reportComparisonProblems(report, { status: 'unavailable_lineages_not_joinable' })).toEqual([]);
+  });
+});
+
+describe('the clamping table is verified row by row, not left unchecked', () => {
+  const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
+  const report = fs.readFileSync(REPORT_PATH, 'utf8');
+  const clamping = manifest.clamping;
+
+  /** Rewrite one cell of a row in the observed-clamping table. */
+  const editClampCell = (rowLabel: string, column: number, replacement: string) => {
+    const lines = report.split('\n');
+    const index = lines.findIndex((line) =>
+      /^\|/.test(line.trim()) &&
+      line.split('|').slice(1, -1).map((c) => c.replace(/\*\*/g, '').trim().toLowerCase())[0] === rowLabel &&
+      /\(\d/.test(line),
+    );
+    expect(index).toBeGreaterThan(-1);
+    const cells = lines[index].split('|');
+    cells[column + 1] = ` ${replacement} `;
+    lines[index] = cells.join('|');
+    return lines.join('\n');
+  };
+
+  test('the committed report is consistent with the manifest clamping', () => {
+    expect(reportClampingProblems(report, clamping)).toEqual([]);
+  });
+
+  test('the check is not passing vacuously — it found and parsed the table', () => {
+    // A checker that silently fails to locate its table reports zero problems
+    // forever. Pin that the table is real and has the columns being compared.
+    const table = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
+      .find((t) => t.header.some((h) => /at floor/i.test(h)));
+    expect(table).toBeDefined();
+    expect(table!.rows.map((r) => r[0].toLowerCase()).sort())
+      .toEqual(['qb', 'rb', 'te', 'total', 'wr']);
+    // Both §4.3 tables are seen; the declared-bounds one must not be mistaken
+    // for the observed one.
+    expect(readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i).length).toBe(2);
+  });
+
+  test('the reviewer\'s exact tamper is caught', () => {
+    // Verbatim from the finding: WR floor 59 (40.4%) -> 1 (0.7%). This inverts
+    // the audit's headline finding, and previously passed.
+    const tampered = editClampCell('wr', 4, '**1 (0.7%)**');
+    expect(tampered).not.toBe(report);
+    const problems = reportClampingProblems(tampered, clamping);
+    expect(problems.join('\n')).toMatch(/WR at-floor/);
+    expect(problems.join('\n')).toMatch(/manifest measured 59/);
+  });
+
+  test('the total row is caught independently of the position rows', () => {
+    const tampered = editClampCell('total', 4, '**7 (2.0%)**');
+    const problems = reportClampingProblems(tampered, clamping);
+    expect(problems.join('\n')).toMatch(/total at-floor/);
+    // And the position rows are untouched, so only the total is reported.
+    expect(problems.filter((p) => /WR|QB|RB|TE/.test(p))).toEqual([]);
+  });
+
+  test('a correct count with a wrong percentage is still caught', () => {
+    // The percentage is the number a reader actually acts on, so it is checked
+    // against the report's own formatting rule rather than merely being present.
+    const tampered = editClampCell('wr', 4, '**59 (4.0%)**');
+    expect(reportClampingProblems(tampered, clamping).join('\n'))
+      .toMatch(/percentage as "4\.0%".*formats to 40\.4%/);
+  });
+
+  test('n, min, max and the ceiling column are each checked', () => {
+    for (const [column, replacement, expected] of [
+      [1, '999', /WR n/],
+      [2, '99.9', /WR min/],
+      [3, '99.9', /WR max/],
+      [5, '99', /WR at-ceiling/],
+    ] as const) {
+      expect(reportClampingProblems(editClampCell('wr', column, replacement), clamping).join('\n'))
+        .toMatch(expected);
+    }
+  });
+
+  test('a missing row is caught', () => {
+    const withoutTe = report.split('\n')
+      .filter((line) => !(/^\|\s*TE\s*\|/.test(line.trim()) && /\(\d/.test(line)))
+      .join('\n');
+    expect(reportClampingProblems(withoutTe, clamping).join('\n')).toMatch(/no "TE" row/);
+  });
+
+  test('a duplicated row is caught', () => {
+    const lines = report.split('\n');
+    const index = lines.findIndex((line) => /^\|\s*WR\s*\|/.test(line.trim()) && /\(\d/.test(line));
+    lines.splice(index + 1, 0, lines[index]);
+    expect(reportClampingProblems(lines.join('\n'), clamping).join('\n')).toMatch(/repeats the "WR" row/);
+  });
+
+  test('an unexpected row is caught', () => {
+    const lines = report.split('\n');
+    const index = lines.findIndex((line) => /^\|\s*WR\s*\|/.test(line.trim()) && /\(\d/.test(line));
+    lines.splice(index + 1, 0, '| K | 12 | 25.0 | 95.0 | 3 (25.0%) | 0 |');
+    expect(reportClampingProblems(lines.join('\n'), clamping).join('\n')).toMatch(/unexpected "k" row/);
+  });
+
+  test('a deleted clamping table fails rather than passing vacuously', () => {
+    const withoutTable = report.split('\n').filter((line) => !line.trim().startsWith('|')).join('\n');
+    expect(reportClampingProblems(withoutTable, clamping)).not.toEqual([]);
+  });
+
+  test('the total row is derived from the positions, not trusted from the manifest', () => {
+    // The manifest publishes no total, so the checker sums the positions. Pin
+    // that the sums are what the report states.
+    const n = POSITIONS.reduce((sum, p) => sum + Number(clamping.byPosition[p].n), 0);
+    const floor = POSITIONS.reduce((sum, p) => sum + Number(clamping.byPosition[p].atFloor), 0);
+    expect(n).toBe(cohort.row_count);
+    expect(report).toMatch(new RegExp(`\\*\\*total\\*\\*\\s*\\|\\s*\\*\\*${n}\\*\\*`));
+    expect(formatClampPct(floor, n)).toBe('32.5');
   });
 });
 
