@@ -21,6 +21,7 @@ import {
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
   formatClampPct,
+  readMarkdownSections,
   readMarkdownTable,
   readMarkdownTables,
   reportClampingProblems,
@@ -699,6 +700,65 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
     const duplicated = insertAfter(committedTable);
     expect(reportClampingProblems(duplicated, clamping).join('\n'))
       .toMatch(/2 observed-clamping tables; exactly one/);
+  });
+
+  test('a duplicated §4.3 section is rejected, whatever its tables say', () => {
+    // The section-level version of the duplicate-table bug: the reader began
+    // at the FIRST matching heading, so a second §4.3 section — heading and
+    // all — sat entirely outside the scanned range. The one-table rule inside
+    // the first section was satisfied while a reader scrolled to the
+    // contradictory duplicate.
+    const HEADING = /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i;
+    const lines = report.split('\n');
+    const headingIndex = lines.findIndex((l) => HEADING.test(l));
+    expect(headingIndex).toBeGreaterThan(-1);
+    const headingLevel = /^(#{1,6})\s/.exec(lines[headingIndex].trim())![1].length;
+    let sectionEnd = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      const next = /^(#{1,6})\s/.exec(lines[i].trim());
+      if (next && next[1].length <= headingLevel) { sectionEnd = i; break; }
+    }
+    const committedSection = lines.slice(headingIndex, sectionEnd);
+    const appendSection = (section: string[]) =>
+      [...lines.slice(0, sectionEnd), '', ...section, '', ...lines.slice(sectionEnd)].join('\n');
+
+    // Case 1: a correct first section followed by a CONFLICTING duplicate.
+    // Under the old reader this passed on the strength of the first.
+    const conflicting = appendSection([
+      '### 4.3 The 25.0 / 95.0 bounds are **designed**, not a cohort artifact',
+      '',
+      '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+      '|---|---:|---:|---:|---:|---:|',
+      '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+      '| RB | 95 | 25.0 | 95.0 | 1 (1.1%) | 5 |',
+      '| WR | 146 | 25.0 | 95.0 | 1 (0.7%) | 1 |',
+      '| TE | 78 | 25.0 | 95.0 | 1 (1.3%) | 1 |',
+      '| **total** | **357** | | | **3 (0.8%)** | **7** |',
+    ]);
+    expect(reportClampingProblems(conflicting, clamping).join('\n'))
+      .toMatch(/2 sections whose heading matches.*exactly one/);
+
+    // Case 2: the committed section duplicated verbatim — the ambiguity is the
+    // defect, not the disagreement.
+    const identical = appendSection(committedSection);
+    expect(reportClampingProblems(identical, clamping).join('\n'))
+      .toMatch(/2 sections whose heading matches.*exactly one/);
+
+    // Case 3: a duplicated heading whose copy contains NO table at all still
+    // fails. Uniqueness is a property of the heading, not of which copy
+    // happens to carry the expected table.
+    const bareHeading = appendSection([
+      '### 4.3 The 25.0 / 95.0 bounds are **designed**, not a cohort artifact',
+      '',
+      'Superseded copy retained for reference.',
+    ]);
+    expect(reportClampingProblems(bareHeading, clamping).join('\n'))
+      .toMatch(/2 sections whose heading matches.*exactly one/);
+
+    // And the section scanner itself sees every copy, not just the first.
+    expect(readMarkdownSections(conflicting, HEADING)).toHaveLength(2);
+    expect(readMarkdownSections(bareHeading, HEADING)).toHaveLength(2);
+    expect(readMarkdownSections(report, HEADING)).toHaveLength(1);
   });
 
   test('a deleted clamping table fails rather than passing vacuously', () => {

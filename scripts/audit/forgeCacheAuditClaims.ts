@@ -261,33 +261,62 @@ export interface MarkdownTable {
  * declared bounds and the observed clamping — and the clamping one has six
  * columns, not two.
  */
-export function readMarkdownTables(report: string, heading: RegExp): MarkdownTable[] {
+export interface MarkdownSection {
+  /** The heading line itself, verbatim. */
+  heading: string;
+  tables: MarkdownTable[];
+}
+
+/**
+ * EVERY section whose heading matches, across the whole document.
+ *
+ * Scanning from only the first match is the section-level version of the
+ * `.find()` table bug one level down: a duplicated §4.3 heading with a
+ * contradictory second table sat entirely outside the scanned range, so the
+ * one-table rule inside the first section was satisfied while a reader
+ * scrolled to the duplicate. A checker that enforces uniqueness within a
+ * region it selected by taking the first match has only moved the ambiguity,
+ * not removed it.
+ */
+export function readMarkdownSections(report: string, heading: RegExp): MarkdownSection[] {
   const lines = report.split('\n');
-  const start = lines.findIndex((line) => heading.test(line));
-  if (start === -1) return [];
+  const sections: MarkdownSection[] = [];
 
-  const headingLevel = (/^(#{1,6})\s/.exec(lines[start].trim()) ?? [, ''])[1]!.length;
-  const tables: MarkdownTable[] = [];
-  let current: string[][] | null = null;
+  for (let start = 0; start < lines.length; start += 1) {
+    if (!heading.test(lines[start])) continue;
 
-  for (const line of lines.slice(start + 1)) {
-    const trimmed = line.trim();
-    const nextHeading = /^(#{1,6})\s/.exec(trimmed);
-    // Stop at the next heading of the same or a higher level, so a subsection's
-    // tables are not attributed to this section.
-    if (nextHeading && nextHeading[1].length <= headingLevel) break;
+    const headingLevel = (/^(#{1,6})\s/.exec(lines[start].trim()) ?? [, ''])[1]!.length;
+    const tables: MarkdownTable[] = [];
+    let current: string[][] | null = null;
 
-    if (!trimmed.startsWith('|')) {
-      if (current) { tables.push({ header: current[0], rows: current.slice(1) }); current = null; }
-      continue;
+    for (const line of lines.slice(start + 1)) {
+      const trimmed = line.trim();
+      const nextHeading = /^(#{1,6})\s/.exec(trimmed);
+      // Stop at the next heading of the same or a higher level, so a
+      // subsection's tables are not attributed to this section.
+      if (nextHeading && nextHeading[1].length <= headingLevel) break;
+
+      if (!trimmed.startsWith('|')) {
+        if (current) { tables.push({ header: current[0], rows: current.slice(1) }); current = null; }
+        continue;
+      }
+      if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
+      const parts = trimmed.split('|').slice(1, -1).map(cleanCell);
+      if (!current) current = [parts];
+      else current.push(parts);
     }
-    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
-    const parts = trimmed.split('|').slice(1, -1).map(cleanCell);
-    if (!current) current = [parts];
-    else current.push(parts);
+    if (current) tables.push({ header: current[0], rows: current.slice(1) });
+    sections.push({ heading: lines[start], tables });
   }
-  if (current) tables.push({ header: current[0], rows: current.slice(1) });
-  return tables;
+
+  return sections;
+}
+
+export function readMarkdownTables(report: string, heading: RegExp): MarkdownTable[] {
+  // First matching section's tables, for callers that have already established
+  // (or do not care) that the heading is unique. Uniqueness enforcement lives
+  // with the callers that govern a section, via readMarkdownSections.
+  return readMarkdownSections(report, heading)[0]?.tables ?? [];
 }
 
 /**
@@ -327,13 +356,27 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
   if (!byPosition) return [];
 
   const problems: string[] = [];
-  // Exactly one table may carry the observed-clamping signature. `.find()`
-  // silently took the first and ignored the rest, so a second, conflicting
-  // table could sit in the same section stating different figures — the first
-  // passing the check while a reader scrolls to the second. Which of two
-  // disagreeing tables is authoritative is not a question this checker should
-  // answer by position, and an identical duplicate is a defect in its own right.
-  const candidates = readMarkdownTables(report, /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i)
+  // Uniqueness is enforced at BOTH levels, because each level was defeated in
+  // turn. First the table: `.find()` took the first match inside the section
+  // and ignored a conflicting second table. Then the section: scanning from
+  // only the first matching heading meant a duplicated §4.3 heading — with its
+  // own contradictory table — sat entirely outside the scanned range, so the
+  // one-table rule was satisfied while a reader scrolled to the duplicate.
+  // Which copy is authoritative is not a question a checker should answer by
+  // position at either level, and the duplicate heading is a failure even when
+  // only one copy contains a table at all: the ambiguity is the defect.
+  const HEADING = /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i;
+  const sections = readMarkdownSections(report, HEADING);
+  if (sections.length === 0) {
+    return ['report has no 25.0 / 95.0 bounds section for the manifest clamping findings to be checked against'];
+  }
+  if (sections.length > 1) {
+    return [
+      `report carries ${sections.length} sections whose heading matches the 25.0 / 95.0 bounds section; ` +
+      'exactly one may state these findings',
+    ];
+  }
+  const candidates = sections[0].tables
     .filter((t) => t.header.some((h) => /at floor/i.test(h)));
   if (candidates.length === 0) {
     return ['report has no observed-clamping table for the manifest clamping findings to be checked against'];
