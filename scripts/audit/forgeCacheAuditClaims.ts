@@ -299,19 +299,22 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
     }
   }
 
-  // The range row carries both ends, so it is checked as a pair rather than as
-  // a single number.
+  // The range row carries both ends, and their ORDER is part of the claim.
+  // Membership alone ("does 22.30 appear somewhere in this cell?") is satisfied
+  // by `+22.30 … -26.01`, which states the maximum as the minimum and reads as
+  // a range running backwards. The cell must be the exact ordered pair.
   if (dc.minDelta !== null && dc.minDelta !== undefined) {
     const row = findRow(/^range$/);
     if (!row) {
       problems.push('report\'s descriptive-comparison table has no "range" row');
-    } else {
+    } else if (dc.maxDelta !== null && dc.maxDelta !== undefined) {
       const stated = numbersIn(row.value);
-      for (const [end, value] of [['minimum', dc.minDelta], ['maximum', dc.maxDelta]] as const) {
-        if (value === null || value === undefined) continue;
-        if (!stated.includes(Number(value))) {
-          problems.push(`report's range row "${row.value}" does not state the measured ${end} ${value}`);
-        }
+      const expected = [Number(dc.minDelta), Number(dc.maxDelta)];
+      if (stated.length !== 2 || stated[0] !== expected[0] || stated[1] !== expected[1]) {
+        problems.push(
+          `report's range row states [${stated.join(', ')}]; the manifest measured ` +
+          `[${expected.join(', ')}] in that order (minimum first)`,
+        );
       }
     }
   }

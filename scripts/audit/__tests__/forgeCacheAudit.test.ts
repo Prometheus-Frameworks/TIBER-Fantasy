@@ -470,6 +470,25 @@ describe('report consistency is checked per row, not as a substring sweep', () =
     expect(problems.join('\n')).toMatch(expected);
   });
 
+  test('a reversed range is caught, though both endpoints are still present', () => {
+    // The defect: checking that each endpoint appears *somewhere* in the cell is
+    // membership, not order. `+22.30 … -26.01` states the maximum as the
+    // minimum — a range running backwards — and satisfies membership exactly.
+    const reversed = editCell('range', `${dc.maxDelta} … ${dc.minDelta}`);
+    const cell = readMarkdownTable(reversed, /^#{2,4}.*descriptive comparison/i)!.get('range')!;
+    for (const end of [dc.minDelta, dc.maxDelta]) {
+      expect(cell).toContain(String(end)); // both endpoints still present
+    }
+    const problems = reportComparisonProblems(reversed, dc);
+    expect(problems.join('\n')).toMatch(/range row states .* in that order/s);
+  });
+
+  test('a range row with an extra or missing endpoint is caught', () => {
+    for (const replacement of [`${dc.minDelta}`, `${dc.minDelta} … ${dc.maxDelta} … 0`]) {
+      expect(reportComparisonProblems(editCell('range', replacement), dc)).not.toEqual([]);
+    }
+  });
+
   test('the old global-substring rule would have missed these edits', () => {
     // This is the finding, reproduced. The previous check asked only whether
     // `String(value)` appeared ANYWHERE in the document — and the document is
