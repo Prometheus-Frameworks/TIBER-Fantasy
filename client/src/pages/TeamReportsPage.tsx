@@ -100,7 +100,7 @@ export default function TeamReportsPage() {
             <Button
               onClick={() => setViewType('offensive')}
               variant={viewType === 'offensive' ? 'default' : 'outline'}
-              className={viewType === 'offensive' ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={viewType === 'offensive' ? 'bg-green-700 hover:bg-green-800 text-white' : ''}
               data-testid="button-view-offensive"
             >
               <Target className="w-4 h-4 mr-2" />
@@ -109,7 +109,7 @@ export default function TeamReportsPage() {
             <Button
               onClick={() => setViewType('defensive')}
               variant={viewType === 'defensive' ? 'default' : 'outline'}
-              className={viewType === 'defensive' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+              className={viewType === 'defensive' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
               data-testid="button-view-defensive"
             >
               <Shield className="w-4 h-4 mr-2" />

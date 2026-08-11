@@ -96,7 +96,7 @@ export function SyncLeagueModal({ open, onOpenChange, onSynced }: SyncLeagueModa
           <Button
             onClick={handleSync}
             disabled={!leagueIdExternal.trim() || syncMutation.isPending}
-            className="bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-50"
+            className="bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-50"
             data-testid="button-sync-league"
           >
             {syncMutation.isPending ? (

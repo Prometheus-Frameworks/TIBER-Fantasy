@@ -375,7 +375,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
                     <div className="flex justify-end">
                       <Button
                         size="sm"
-                        className="bg-green-600 hover:bg-green-500 text-white"
+                        className="bg-green-700 hover:bg-green-800 text-white"
                         onClick={() => setSelectedEntry(entry)}
                       >
                         Resolve
@@ -411,7 +411,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
                       <Button
                         key={outcome}
                         variant={pendingOutcome === outcome ? 'default' : 'outline'}
-                        className={pendingOutcome === outcome ? 'bg-green-600 text-white' : 'text-gray-300 border-gray-700'}
+                        className={pendingOutcome === outcome ? 'bg-green-700 text-white' : 'text-gray-700 border-gray-300'}
                         onClick={() => setPendingOutcome(outcome)}
                       >
                         {outcome.toUpperCase()}
@@ -481,7 +481,7 @@ function ReviewModePanel({ leagueId, teamId, week, season }: PlaybookContext) {
               <Button
                 onClick={handleResolve}
                 disabled={resolveMutation.isPending}
-                className="bg-purple-600 hover:bg-purple-500"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {resolveMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : 'Save Outcome'}
               </Button>
@@ -794,28 +794,28 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
         <div className="flex gap-2">
           <Button
             variant={activeView === 'journal' ? 'default' : 'outline'}
-            className={activeView === 'journal' ? 'bg-purple-600 text-white' : 'text-gray-300 border-purple-500/40'}
+            className={activeView === 'journal' ? 'bg-purple-600 text-white' : 'text-gray-700 border-purple-500/40'}
             onClick={() => setActiveView('journal')}
           >
             Journal
           </Button>
           <Button
             variant={activeView === 'war_room' ? 'default' : 'outline'}
-            className={activeView === 'war_room' ? 'bg-blue-600 text-white' : 'text-gray-300 border-blue-500/40'}
+            className={activeView === 'war_room' ? 'bg-blue-600 text-white' : 'text-gray-700 border-blue-500/40'}
             onClick={() => setActiveView('war_room')}
           >
             War Room
           </Button>
           <Button
             variant={activeView === 'review' ? 'default' : 'outline'}
-            className={activeView === 'review' ? 'bg-emerald-600 text-white' : 'text-gray-300 border-emerald-500/40'}
+            className={activeView === 'review' ? 'bg-emerald-700 text-white' : 'text-gray-700 border-emerald-500/40'}
             onClick={() => setActiveView('review')}
           >
             Review Mode
           </Button>
           <Button
             variant={activeView === 'insights' ? 'default' : 'outline'}
-            className={activeView === 'insights' ? 'bg-amber-600 text-white' : 'text-gray-300 border-amber-500/40'}
+            className={activeView === 'insights' ? 'bg-amber-700 text-white' : 'text-gray-700 border-amber-500/40'}
             onClick={() => setActiveView('insights')}
           >
             Insights
@@ -857,7 +857,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
       <div className="flex gap-3 flex-wrap">
         <Button
           onClick={() => setIsCreating(true)}
-          className="bg-gradient-to-r from-purple-600/30 to-blue-600/30 border border-purple-500/50 text-white hover:border-purple-400"
+          className="bg-purple-700 border border-purple-500/50 text-white hover:border-purple-400"
           data-testid="button-new-entry"
         >
           <Plus size={18} className="mr-2" />
@@ -867,7 +867,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
         <Button
           onClick={() => setIsAskTiberOpen(!isAskTiberOpen)}
           variant="outline"
-          className={`border-amber-500/50 ${isAskTiberOpen ? 'bg-amber-500/20 text-amber-300' : 'text-amber-400 hover:bg-amber-500/10'}`}
+          className={`border-amber-500/50 ${isAskTiberOpen ? 'bg-amber-100 text-amber-900' : 'text-amber-800 hover:bg-amber-100 hover:text-amber-900'}`}
           data-testid="button-ask-tiber"
         >
           <MessageCircle size={18} className="mr-2" />
@@ -910,7 +910,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-amber-300 border-amber-500/50 hover:bg-amber-500/10"
+                      className="text-amber-800 border-amber-500/50 hover:bg-amber-100 hover:text-amber-900"
                       onClick={() => handleSaveChatEntry(msg)}
                       disabled={saveChatEntryMutation.isPending}
                     >
@@ -943,7 +943,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
             <Button
               onClick={handleSendMessage}
               disabled={!chatMessage.trim() || chatMutation.isPending}
-              className="bg-amber-600 hover:bg-amber-500 text-white"
+              className="bg-amber-600 hover:bg-amber-500 text-black"
               data-testid="button-send-tiber"
             >
               <Send size={16} />
@@ -1010,7 +1010,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                 entry_type: newEntry.entryType
               })}
               disabled={!newEntry.title.trim() || !newEntry.content.trim() || createMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-500"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
               data-testid="button-save-entry"
             >
               {createMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} className="mr-1" />}
@@ -1066,7 +1066,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                         size="sm"
                         onClick={() => updateMutation.mutate({ id: entry.id, updates: editEntry })}
                         disabled={updateMutation.isPending}
-                        className="bg-purple-600 hover:bg-purple-500"
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
                         data-testid="button-save-edit"
                       >
                         Save

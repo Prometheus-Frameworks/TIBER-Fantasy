@@ -449,7 +449,7 @@ export default function ForgeLab() {
               <Button 
                 onClick={load} 
                 disabled={loading || exporting}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
                 data-testid="button-refresh"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
@@ -459,7 +459,7 @@ export default function ForgeLab() {
               <Button
                 onClick={handleExportSnapshot}
                 disabled={exporting || loading}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white"
                 data-testid="button-export-snapshot"
               >
                 <Download className={`h-4 w-4 mr-2 ${exporting ? 'animate-pulse' : ''}`} />

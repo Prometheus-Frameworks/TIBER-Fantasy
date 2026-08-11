@@ -263,7 +263,7 @@ export default function RagStatus() {
                 data-testid="button-search"
                 onClick={handleSearch}
                 disabled={searchMutation.isPending || !searchQuery.trim()}
-                className="bg-blue-500 hover:bg-blue-600"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {searchMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -356,7 +356,7 @@ export default function RagStatus() {
                 data-testid="button-chat"
                 onClick={handleChat}
                 disabled={chatMutation.isPending || !chatMessage.trim()}
-                className="bg-purple-500 hover:bg-purple-600"
+                className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {chatMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

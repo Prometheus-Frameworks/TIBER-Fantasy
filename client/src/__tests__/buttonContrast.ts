@@ -1,0 +1,258 @@
+/**
+ * Fantasy #309 — colour resolution and WCAG contrast for the button audit.
+ *
+ * Extracted from the audit test so the maths can be pinned against published
+ * reference values instead of being trusted. The previous audit classified
+ * surfaces by *pattern* — "shades 600-900 are dark" — which is why
+ * `bg-black`, `bg-*-950` and near-black arbitrary hexes slipped through and
+ * why the light/default surface was never examined at all. Resolving classes
+ * to actual colours and computing the real ratio removes that entire class of
+ * gap: there is no shade list to get wrong.
+ */
+
+import colors from 'tailwindcss/colors';
+
+/**
+ * `--background` / `--foreground` from client/src/index.css.
+ *
+ * These are the colours the `outline` variant itself declares via
+ * `bg-background text-foreground`, so they are the surface for any outline
+ * button that does not override the background — regardless of what page it
+ * sits on. That is precisely how legacy dark-page buttons ended up as light
+ * grey text on white. `index.css` is the source of truth and the audit pins
+ * these values against it.
+ */
+export const CSS_BACKGROUND = '#ffffff';
+export const CSS_FOREGROUND = '#0a0a0a';
+/** What the `default` variant declares via `bg-primary text-primary-foreground`. */
+export const CSS_PRIMARY = '#e2640d';
+/**
+ * Near-black, matching `--foreground`. White on the Ember primary measured
+ * 3.46:1 — an AA failure for normal text that was briefly carried as a named
+ * waiver. The waiver was rejected: the brand keeps its Ember background and
+ * the foreground moves to a measured 5.72:1 instead.
+ */
+export const CSS_PRIMARY_FOREGROUND = '#0a0a0a';
+
+/** WCAG 2.2 AA: 4.5:1 for normal text, 3:1 for large text and non-text. */
+export const AA_TEXT_CONTRAST = 4.5;
+
+const TW_HUES = [
+  'slate', 'gray', 'zinc', 'neutral', 'stone', 'red', 'orange', 'amber', 'yellow',
+  'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet',
+  'purple', 'fuchsia', 'pink', 'rose',
+] as const;
+
+export type Rgb = [number, number, number];
+
+export function parseHex(hex: string): Rgb | null {
+  let value = hex.trim().replace(/^#/, '');
+  if (value.length === 3 || value.length === 4) {
+    value = value.slice(0, 3).split('').map((c) => c + c).join('');
+  }
+  if (value.length === 8) value = value.slice(0, 6);
+  if (value.length !== 6 || !/^[0-9a-fA-F]{6}$/.test(value)) return null;
+  return [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16)) as Rgb;
+}
+
+/** WCAG relative luminance. */
+export function relativeLuminance([r, g, b]: Rgb): number {
+  const channel = (raw: number) => {
+    const c = raw / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** WCAG contrast ratio, 1:1 to 21:1. */
+export function contrastRatio(a: Rgb, b: Rgb): number {
+  const [hi, lo] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Composite `fg` at `alpha` over the opaque `bg`. */
+export function composite(fg: Rgb, bg: Rgb, alpha: number): Rgb {
+  return fg.map((v, i) => Math.round(v * alpha + bg[i] * (1 - alpha))) as Rgb;
+}
+
+/**
+ * Resolve the colour part of a Tailwind utility value.
+ *
+ * Returns null for anything that is not a colour — which is the point. The
+ * previous allowlist accepted any arbitrary value, so `text-[10px]` counted as
+ * a foreground colour and exempted the button from the audit entirely.
+ */
+export function resolveColourToken(token: string): Rgb | null {
+  if (!token) return null;
+  if (token === 'white') return [255, 255, 255];
+  if (token === 'black') return [0, 0, 0];
+  if (token === 'background') return parseHex(CSS_BACKGROUND);
+  if (token === 'foreground') return parseHex(CSS_FOREGROUND);
+  if (token === 'primary') return parseHex(CSS_PRIMARY);
+  if (token === 'primary-foreground') return parseHex(CSS_PRIMARY_FOREGROUND);
+
+  const scale = /^([a-z]+)-(\d{2,3})$/.exec(token);
+  if (scale && (TW_HUES as readonly string[]).includes(scale[1])) {
+    const hex = (colors as unknown as Record<string, Record<string, string>>)[scale[1]]?.[scale[2]];
+    return hex ? parseHex(hex) : null;
+  }
+
+  const arbitrary = /^\[(.+)\]$/.exec(token);
+  if (arbitrary) {
+    const inner = arbitrary[1];
+    // Only genuine colour syntax. `[10px]`, `[calc(...)]` and friends are not
+    // colours and must not satisfy a foreground requirement.
+    if (/^#[0-9a-fA-F]{3,8}$/.test(inner)) return parseHex(inner);
+    const rgb = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(inner);
+    if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] as Rgb;
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * A stylesheet rule that overrides button colours with `!important`.
+ *
+ * These are invisible to a class-name scan and beat the call site outright, so
+ * an audit that reads only Tailwind classes reports a surface the browser never
+ * paints. The shell's `.tiber-main button[class*="bg-purple"] { background:
+ * var(--ember) !important }` is exactly that: it repainted every legacy
+ * purple/indigo/blue button Ember while the audit measured purple.
+ */
+export interface ImportantButtonOverride {
+  /** The `[class*="…"]` substrings the rule matches on. */
+  classMatches: string[];
+  /** True when the selector is `:hover`. */
+  hover: boolean;
+  background: Rgb | null;
+  foreground: Rgb | null;
+}
+
+/** Read a `--token: value;` declaration out of a stylesheet. */
+export function readCssToken(css: string, name: string): string | null {
+  const match = new RegExp(`--${name}\\s*:\\s*([^;]+);`).exec(css);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Resolve a CSS colour value, following one level of `var(--token)` back into
+ * the stylesheet it came from.
+ */
+export function resolveCssColour(css: string, value: string): Rgb | null {
+  const trimmed = value.replace(/\s*!important\s*$/, '').trim();
+  const varRef = /^var\(\s*--([\w-]+)\s*(?:,\s*([^)]*))?\)$/.exec(trimmed);
+  if (varRef) {
+    const declared = readCssToken(css, varRef[1]);
+    const fallback = varRef[2]?.trim();
+    const resolved = declared ?? fallback;
+    return resolved ? resolveCssColour(css, resolved) : null;
+  }
+  if (trimmed === 'white') return [255, 255, 255];
+  if (trimmed === 'black') return [0, 0, 0];
+  if (trimmed.startsWith('#')) return parseHex(trimmed);
+  const rgb = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(trimmed);
+  return rgb ? ([Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] as Rgb) : null;
+}
+
+/**
+ * Every `!important` button colour override in a stylesheet.
+ *
+ * Deliberately narrow: it recognises the one shape the repo actually uses — a
+ * selector list of `button[class*="…"]`, optionally `:hover`, with
+ * `background`/`color` declarations marked `!important`. A general CSS cascade
+ * model would be a project of its own and would still need the same evidence;
+ * this reads the real rules out of the real file so the audit and the
+ * stylesheet cannot drift apart.
+ */
+export function parseImportantButtonOverrides(css: string): ImportantButtonOverride[] {
+  const overrides: ImportantButtonOverride[] = [];
+  const ruleRe = /((?:[^{}]*?button\[class\*=[^{}]*?))\{([^}]*)\}/g;
+
+  // `exec` loops rather than `matchAll`: this module is compiled under the
+  // repo's existing target, which does not downlevel iterator spread.
+  let rule: RegExpExecArray | null;
+  while ((rule = ruleRe.exec(css)) !== null) {
+    const [, selector, body] = rule;
+    const classRe = /button\[class\*=["']([^"']+)["']\]/g;
+    const classMatches: string[] = [];
+    let found: RegExpExecArray | null;
+    while ((found = classRe.exec(selector)) !== null) classMatches.push(found[1]);
+    if (!classMatches.length) continue;
+
+    const declaration = (property: string) => {
+      const found = new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]*!important)`, 'i').exec(body);
+      return found ? resolveCssColour(css, found[1]) : null;
+    };
+    const background = declaration('background') ?? declaration('background-color');
+    const foreground = declaration('color');
+    if (!background && !foreground) continue;
+
+    overrides.push({
+      classMatches,
+      hover: /:hover/.test(selector),
+      background,
+      foreground,
+    });
+  }
+  return overrides;
+}
+
+/** Linear interpolation between two colours at `t` in [0, 1]. */
+export function mix(a: Rgb, b: Rgb, t: number): Rgb {
+  return a.map((v, i) => Math.round(v + (b[i] - v) * t)) as Rgb;
+}
+
+/**
+ * The least-contrasting point along a gradient track, against a fixed
+ * foreground.
+ *
+ * Sampling rather than checking only the declared stops is not caution, it is
+ * required: contrast is `(L+0.05)` ratio against the foreground's luminance,
+ * so the worst point is wherever the background luminance comes *closest* to
+ * the foreground's. When the foreground sits between two stops' luminances,
+ * that point is strictly interior and both endpoints can pass while the middle
+ * of the button is unreadable.
+ *
+ * CSS interpolates `linear-gradient` in gamma-encoded sRGB by default, so
+ * interpolating the channel bytes is what the browser actually paints.
+ */
+export function worstGradientPoint(
+  stops: Rgb[],
+  foreground: Rgb,
+  samplesPerSegment = 24,
+): { colour: Rgb; ratio: number; offset: number } {
+  if (stops.length === 1) {
+    return { colour: stops[0], ratio: contrastRatio(stops[0], foreground), offset: 0 };
+  }
+  const segments = stops.length - 1;
+  let worst = { colour: stops[0], ratio: Infinity, offset: 0 };
+  for (let segment = 0; segment < segments; segment += 1) {
+    for (let step = 0; step <= samplesPerSegment; step += 1) {
+      const t = step / samplesPerSegment;
+      const colour = mix(stops[segment], stops[segment + 1], t);
+      const ratio = contrastRatio(colour, foreground);
+      if (ratio < worst.ratio) worst = { colour, ratio, offset: (segment + t) / segments };
+    }
+  }
+  return worst;
+}
+
+/**
+ * Resolve a full utility value including any `/NN` opacity modifier,
+ * compositing over `under` when translucent.
+ *
+ * Returns null when the colour cannot be resolved, and null for `under` when a
+ * translucent value has no known surface beneath it — the audit reports that
+ * as unresolvable rather than assuming a surface.
+ */
+export function resolveSurface(value: string, under: Rgb | null): Rgb | null {
+  const [name, opacity] = value.split('/');
+  const solid = resolveColourToken(name);
+  if (!solid) return null;
+  if (opacity === undefined) return solid;
+  const alpha = Number(opacity) / 100;
+  if (!Number.isFinite(alpha)) return null;
+  if (!under) return null;
+  return composite(solid, under, alpha);
+}
