@@ -20,6 +20,10 @@ import {
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
+  readMarkdownTable,
+  reportComparisonProblems,
+  rowIdentityFromCohortRow,
+  rowIdentityFromResponseItem,
   unsupportedLineageClaims,
 } from '../forgeCacheAuditClaims';
 
@@ -430,9 +434,199 @@ describe('--check derives the findings rather than spot-checking fields', () => 
       path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md'),
       'utf8',
     );
-    const dc = manifest.comparability.descriptiveComparison;
-    for (const value of [dc.medianDelta, dc.joinedRows, dc.minDelta, dc.maxDelta]) {
-      expect(report).toContain(String(value));
+    expect(reportComparisonProblems(report, manifest.comparability.descriptiveComparison)).toEqual([]);
+  });
+});
+
+describe('report consistency is checked per row, not as a substring sweep', () => {
+  const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
+  const report = fs.readFileSync(REPORT_PATH, 'utf8');
+  const dc = manifest.comparability.descriptiveComparison;
+
+  /** Rewrite one `| label | value |` cell of the comparison table. */
+  const editCell = (label: string, replacement: string) => {
+    const pattern = new RegExp(`^(\\|\\s*\\*{0,2}${label}[^|]*\\|\\s*)([^|]*?)(\\s*\\|)$`, 'm');
+    expect(report).toMatch(pattern);
+    return report.replace(pattern, `$1${replacement}$3`);
+  };
+
+  test('the table under the descriptive-comparison heading is located and parsed', () => {
+    const table = readMarkdownTable(report, /^#{2,4}.*descriptive comparison/i);
+    expect(table).not.toBeNull();
+    expect(table!.get('joined rows')).toBe(String(dc.joinedRows));
+    expect(table!.get('exact agreement')).toBe(String(dc.exactAgreement));
+  });
+
+  test.each([
+    ['joined rows', '51', /joined rows/],
+    ['exact agreement', '7', /exact agreement/],
+    ['within ±1', '9', /within ±1/],
+    ['within ±5', '44', /within ±5/],
+    ['median delta', '-3.9', /median delta/],
+    ['range', '-99.99 … +88.88', /range/],
+  ])('a rewritten "%s" cell is caught', (label, replacement, expected) => {
+    const problems = reportComparisonProblems(editCell(label, replacement), dc);
+    expect(problems.length).toBeGreaterThan(0);
+    expect(problems.join('\n')).toMatch(expected);
+  });
+
+  test('the old global-substring rule would have missed these edits', () => {
+    // This is the finding, reproduced. The previous check asked only whether
+    // `String(value)` appeared ANYWHERE in the document — and the document is
+    // full of numbers: dates, GSIS ids, per-player alphas, section numbers. So
+    // a reviewer could rewrite the summary cells and --check still printed
+    // "report consistent". Each of these mutations satisfies the old rule.
+    const oldRuleSatisfied = (text: string) =>
+      [dc.medianDelta, dc.joinedRows, dc.exactAgreement, dc.minDelta, dc.maxDelta]
+        .every((value) => text.includes(String(value)));
+
+    const tampered = [
+      editCell('joined rows', '51'),
+      editCell('exact agreement', '7'),
+      editCell('within ±5', '44'),
+    ];
+    for (const text of tampered) {
+      expect(oldRuleSatisfied(text)).toBe(true);          // old rule: "consistent"
+      expect(reportComparisonProblems(text, dc)).not.toEqual([]); // new rule: caught
+    }
+  });
+
+  test('a heading that disagrees with its own table is caught', () => {
+    const drifted = report.replace(
+      /^(#{2,4}.*descriptive comparison across the )\d+( shared players)$/im,
+      `$1${Number(dc.joinedRows) + 1}$2`,
+    );
+    expect(drifted).not.toBe(report);
+    expect(reportComparisonProblems(drifted, dc).join('\n')).toMatch(/heading states/);
+  });
+
+  test('a deleted comparison table is a problem, not a silent pass', () => {
+    // Deleting the section is the cheapest way to satisfy any "does it contain
+    // X" rule, so absence must fail rather than vacuously pass.
+    const withoutTable = report.split('\n').filter((line) => !line.trim().startsWith('|')).join('\n');
+    expect(reportComparisonProblems(withoutTable, dc)).not.toEqual([]);
+  });
+
+  test('an unavailable comparison imposes no report requirement', () => {
+    // Nothing to be consistent with, so this must not manufacture a failure.
+    expect(reportComparisonProblems(report, { status: 'unavailable_lineages_not_joinable' })).toEqual([]);
+  });
+});
+
+describe('the observation records the producer key, not the canonical one', () => {
+  // Fantasy #313 is current-main law: `item.playerId` is the canonical public
+  // key and is null when identity does not resolve; the producer's GSIS key
+  // moved to `item.identity.sourceId`. The static FORGE artifact is GSIS-keyed,
+  // so recording `playerId` puts the wrong namespace on the join key.
+  const resolvedItem = {
+    playerId: 'canonical-josh-allen',
+    playerName: 'Josh Allen',
+    identity: {
+      status: 'resolved',
+      canonicalId: 'canonical-josh-allen',
+      sourceId: '00-0034857',
+      sourceType: 'gsis',
+      reason: null,
+      linkable: true,
+    },
+  };
+  const unresolvedItem = {
+    playerId: null,
+    playerName: 'Unmapped Player',
+    identity: {
+      status: 'unresolved',
+      canonicalId: null,
+      sourceId: '00-0099999',
+      sourceType: 'gsis',
+      reason: 'no_identity_map_row',
+      linkable: false,
+    },
+  };
+
+  test('a resolved row records the GSIS producer key and keeps canonical separate', () => {
+    expect(rowIdentityFromResponseItem(resolvedItem, 'QB item 0')).toEqual({
+      sourceId: '00-0034857',
+      sourceType: 'gsis',
+      canonicalId: 'canonical-josh-allen',
+    });
+  });
+
+  test('an unresolved row still records its producer key', () => {
+    // The defect, reproduced: the previous mapping was
+    // `String(item.playerId ?? '')`, which turns every unresolved row into the
+    // empty string. Those rows then collide with each other as one "identifier"
+    // and match nothing in the static artifact — the join silently describes
+    // fewer players than the cohort contains.
+    expect(String((unresolvedItem as any).playerId ?? '')).toBe('');
+    const identity = rowIdentityFromResponseItem(unresolvedItem, 'QB item 1');
+    expect(identity.sourceId).toBe('00-0099999');
+    expect(identity.canonicalId).toBeNull();
+  });
+
+  test('the recorded key is the one the static artifact can be joined on', () => {
+    const staticRows: any[] = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, manifest.staticArtifact.path), 'utf8'),
+    ).rows ?? [];
+    const staticIds = new Set(staticRows.map((r) => r.player_id));
+    const items = [resolvedItem, unresolvedItem].map((item, i) => ({
+      item,
+      identity: rowIdentityFromResponseItem(item, `QB item ${i}`),
+    }));
+    // A real GSIS key from the static artifact, recorded through the mapper,
+    // joins; the canonical key it sits beside does not.
+    const anyStaticId = staticRows[0].player_id;
+    const joined = rowIdentityFromResponseItem(
+      { playerId: 'canonical-x', identity: { ...resolvedItem.identity, sourceId: anyStaticId } },
+      'QB item 0',
+    );
+    expect(staticIds.has(joined.sourceId)).toBe(true);
+    expect(staticIds.has(joined.canonicalId as string)).toBe(false);
+    expect(items.every((r) => r.identity.sourceId !== '')).toBe(true);
+  });
+
+  test('a response with no identity envelope is refused, not guessed at', () => {
+    // Without the envelope the audit cannot tell which namespace `playerId` is
+    // in. Falling back to it is the whole defect, so this fails loudly.
+    expect(() => rowIdentityFromResponseItem({ playerId: '00-0034857' }, 'QB item 0'))
+      .toThrow(/identity\.sourceId/);
+    expect(() => rowIdentityFromResponseItem({ playerId: null, identity: { sourceId: '' } }, 'QB item 0'))
+      .toThrow(/identity\.sourceId/);
+  });
+
+  test('the frozen pre-#313 cohort is read as producer keys, with canonical NOT recorded', () => {
+    // The frozen file predates both the identity envelope and #313: at capture
+    // time `playerId` still carried the producer key, so reading it as such is
+    // correct FOR THAT FILE. What was never observed is the canonical state,
+    // and that is reported as not-recorded rather than as "none resolved".
+    const identity = rowIdentityFromCohortRow(cohort.rows[0], 'cohort row 0');
+    expect(identity.sourceId).toBe(cohort.rows[0].playerId);
+    expect(identity.sourceType).toBe('gsis');
+    expect(identity.canonicalId).toBeUndefined();
+
+    expect(manifest.cacheCohort.identity.canonicalCoverage).toEqual({
+      recorded: false,
+      reason: 'observation predates the per-item identity envelope; canonical state was not observed',
+    });
+  });
+
+  test('a cohort written after this change is read from its own sourceId', () => {
+    expect(rowIdentityFromCohortRow(
+      { sourceId: '00-0034857', sourceType: 'gsis', canonicalId: null, playerId: null },
+      'cohort row 0',
+    )).toEqual({ sourceId: '00-0034857', sourceType: 'gsis', canonicalId: null });
+  });
+
+  test('a row carrying neither identifier is refused', () => {
+    expect(() => rowIdentityFromCohortRow({ position: 'QB' }, 'cohort row 0')).toThrow(/neither sourceId/);
+  });
+
+  test('the manifest names which identifier its identity findings measure', () => {
+    expect(manifest.cacheCohort.identity.identifierField).toBe('source_id');
+    expect(manifest.comparability.descriptiveComparison.joinKey).toBe('gsis_player_id');
+    // And the joined rows are labelled for the namespace they are actually in.
+    for (const row of manifest.comparability.descriptiveComparison.largestDisagreements ?? []) {
+      expect(row.gsisPlayerId).toMatch(/^00-\d{7}$/);
+      expect(row.playerId).toBeUndefined();
     }
   });
 });

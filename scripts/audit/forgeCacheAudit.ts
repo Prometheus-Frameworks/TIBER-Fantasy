@@ -49,6 +49,9 @@ import {
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
+  reportComparisonProblems,
+  rowIdentityFromCohortRow,
+  rowIdentityFromResponseItem,
   unsupportedLineageClaims,
 } from './forgeCacheAuditClaims';
 
@@ -63,9 +66,27 @@ const REPORT_RELATIVE_PATH = 'docs/audits/2026-08-09-railway-forge-cache-audit.m
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 const GSIS_SHAPE = /^00-\d{7}$/;
 
+/**
+ * A cohort row as the audit reasons about it.
+ *
+ * The two identifiers are kept apart deliberately. Fantasy #313 made
+ * `item.playerId` the **canonical public key and nothing else** — nullable when
+ * identity does not resolve — and moved the producer's own key to
+ * `item.identity.sourceId`. The static FORGE artifact is keyed on GSIS, so the
+ * producer key is the only thing it can be joined on; recording `playerId` here
+ * would put canonical keys (and empty strings for the unresolved rows) on the
+ * join key's side and silently reduce the intersection.
+ */
 interface LiveRow {
   position: string;
-  playerId: string;
+  /** The producer's own identifier — the GSIS key, and the join key. */
+  sourceId: string;
+  sourceType: 'canonical' | 'gsis' | 'unknown';
+  /**
+   * The canonical public key, null when identity did not resolve, and
+   * `undefined` when the observation predates the identity envelope entirely.
+   */
+  canonicalId?: string | null;
   playerName: string;
   team: string | null;
   alpha: number | null;
@@ -106,10 +127,10 @@ async function fetchLiveCohort(baseUrl: string) {
 
     perPosition[position] = assertForgeCacheResponse(position, body);
 
-    for (const item of body.items ?? []) {
+    for (const [index, item] of (body.items ?? []).entries()) {
       rows.push({
         position,
-        playerId: String(item.playerId ?? ''),
+        ...rowIdentityFromResponseItem(item, `${position} item ${index}`),
         playerName: String(item.playerName ?? ''),
         team: item.team ?? null,
         alpha: item.score ?? null,
@@ -122,15 +143,46 @@ async function fetchLiveCohort(baseUrl: string) {
   return { rows, perPosition };
 }
 
+/** Read a committed cohort file into rows, resolving each row's identity. */
+function readCohortRows(cohort: any): LiveRow[] {
+  return (cohort.rows ?? []).map((row: any, index: number) => ({
+    ...row,
+    ...rowIdentityFromCohortRow(row, `cohort row ${index}`),
+  })) as LiveRow[];
+}
+
 /** Identity shape and duplication within the cache cohort. */
 function auditIdentity(rows: LiveRow[]) {
-  const ids = rows.map((row) => row.playerId);
+  // Measured on the PRODUCER key. The canonical key is a different namespace
+  // and is reported separately below rather than being averaged in with it.
+  const ids = rows.map((row) => row.sourceId);
   const distinct = new Set(ids);
   const gsisShaped = ids.filter((id) => GSIS_SHAPE.test(id));
   const counts = new Map<string, number>();
   for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
 
+  // "Not recorded" is not "none resolved": the frozen observation predates the
+  // identity envelope, so it says so rather than publishing a 0% coverage that
+  // was never measured.
+  const canonicalRecorded = rows.some((row) => row.canonicalId !== undefined);
+  const canonicalCoverage = canonicalRecorded
+    ? {
+        recorded: true as const,
+        resolved: rows.filter((row) => typeof row.canonicalId === 'string' && row.canonicalId !== '').length,
+        unresolved: rows.filter((row) => row.canonicalId === null).length,
+      }
+    : {
+        recorded: false as const,
+        reason: 'observation predates the per-item identity envelope; canonical state was not observed',
+      };
+
   return {
+    identifierField: 'source_id',
+    identifierNote:
+      'The producer’s own key, as recorded by the observation. Since Fantasy #313 a ranking ' +
+      'item’s playerId is the canonical public key and is null when unresolved, so it is not ' +
+      'this measurement and is not the join key.',
+    canonicalCoverage,
     totalRows: ids.length,
     distinctIds: distinct.size,
     duplicateIds: Array.from(counts.entries()).filter(([, n]) => n > 1).map(([id]) => id),
@@ -178,7 +230,10 @@ function auditClamping(rows: LiveRow[]) {
 /** Whether the two lineages can be compared at all. */
 function auditComparability(rows: LiveRow[], staticArtifact: any) {
   const staticRows: any[] = staticArtifact.rows ?? [];
-  const liveIds = new Set(rows.map((r) => r.playerId));
+  // Joined on the producer key. The static artifact is GSIS-keyed, so a
+  // canonical key on this side would match nothing and be reported as a genuine
+  // zero intersection.
+  const liveIds = new Set(rows.map((r) => r.sourceId));
   const staticIds = staticRows.map((r) => r.player_id);
 
   const nameCounts = new Map<string, number>();
@@ -245,7 +300,7 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
  * not why, and the cache cannot answer why.
  */
 function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
-  const liveById = new Map(rows.map((row) => [row.playerId, row]));
+  const liveById = new Map(rows.map((row) => [row.sourceId, row]));
   const joined = staticRows
     .filter((row) => liveById.has(row.player_id))
     .map((row) => {
@@ -253,7 +308,10 @@ function describeJoinedRows(rows: LiveRow[], staticRows: any[]) {
       const staticAlpha = typeof row.forge_alpha === 'number' ? row.forge_alpha : null;
       const cacheAlpha = typeof live.alpha === 'number' ? live.alpha : null;
       return {
-        playerId: row.player_id,
+        // Named for what it is. Both sides of this join are producer GSIS keys;
+        // a bare `playerId` here would read as the canonical public key, which
+        // is the confusion this manifest exists to keep straight.
+        gsisPlayerId: row.player_id,
         playerName: live.playerName || row.player_name,
         position: live.position,
         staticAlpha,
@@ -352,7 +410,7 @@ function auditProvenance() {
  */
 function buildManifest(cohortText: string, staticRaw: Buffer, staticArtifact: any) {
   const cohort = JSON.parse(cohortText);
-  const rows = cohort.rows as LiveRow[];
+  const rows = readCohortRows(cohort);
   const cohortSha256 = sha256(cohortText);
 
   const manifest = {
@@ -601,21 +659,13 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
     // comparison, not a fixed literal. A hardcoded `-3.215` would silently stop
     // meaning anything the moment the comparison legitimately changed — the
     // report could then drift from the manifest while --check still passed.
-    const dc = manifest.comparability?.descriptiveComparison;
-    if (dc && dc.status === 'available') {
-      const expectations: Array<[string, unknown]> = [
-        ['median delta', dc.medianDelta],
-        ['joined rows', dc.joinedRows],
-        ['exact agreement', dc.exactAgreement],
-        ['delta range minimum', dc.minDelta],
-        ['delta range maximum', dc.maxDelta],
-      ];
-      for (const [label, value] of expectations) {
-        if (value === null || value === undefined) continue;
-        if (!report.includes(String(value))) {
-          problems.push(`report does not carry the manifest's ${label} (${value})`);
-        }
-      }
+    //
+    // It is also checked ROW BY ROW rather than as a substring sweep of the
+    // whole document. `report.includes('0')` matches any zero anywhere — a
+    // date, a GSIS id, an alpha in the disagreement table — so the summary
+    // cells could be rewritten and --check would still say "report consistent".
+    for (const problem of reportComparisonProblems(report, manifest.comparability?.descriptiveComparison)) {
+      problems.push(problem);
     }
     if (!report.includes(OBSERVATION_EVIDENCE_STATUS.status)) {
       problems.push('report does not state the observation evidence status');

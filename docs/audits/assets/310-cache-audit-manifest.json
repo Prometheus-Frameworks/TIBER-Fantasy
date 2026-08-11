@@ -81,6 +81,12 @@
       "TE": 78
     },
     "identity": {
+      "identifierField": "source_id",
+      "identifierNote": "The producer’s own key, as recorded by the observation. Since Fantasy #313 a ranking item’s playerId is the canonical public key and is null when unresolved, so it is not this measurement and is not the join key.",
+      "canonicalCoverage": {
+        "recorded": false,
+        "reason": "observation predates the per-item identity envelope; canonical state was not observed"
+      },
       "totalRows": 357,
       "distinctIds": 357,
       "duplicateIds": [],
@@ -186,7 +192,7 @@
       "maxDelta": 22.3,
       "largestAbsoluteDeltas": [
         {
-          "playerId": "00-0034753",
+          "gsisPlayerId": "00-0034753",
           "playerName": "Mark Andrews",
           "position": "TE",
           "staticAlpha": 70.01,
@@ -194,7 +200,7 @@
           "delta": -26.01
         },
         {
-          "playerId": "00-0039064",
+          "gsisPlayerId": "00-0039064",
           "playerName": "Zay Flowers",
           "position": "WR",
           "staticAlpha": 82.23,
@@ -202,7 +208,7 @@
           "delta": -22.93
         },
         {
-          "playerId": "00-0033119",
+          "gsisPlayerId": "00-0033119",
           "playerName": "Jacoby Brissett",
           "position": "QB",
           "staticAlpha": 57.7,
@@ -210,7 +216,7 @@
           "delta": 22.3
         },
         {
-          "playerId": "00-0033040",
+          "gsisPlayerId": "00-0033040",
           "playerName": "T.Hill",
           "position": "WR",
           "staticAlpha": 34.76,
@@ -218,7 +224,7 @@
           "delta": 20.44
         },
         {
-          "playerId": "00-0039338",
+          "gsisPlayerId": "00-0039338",
           "playerName": "Brock Bowers",
           "position": "TE",
           "staticAlpha": 72.43,
@@ -226,7 +232,7 @@
           "delta": 17.57
         },
         {
-          "playerId": "00-0033873",
+          "gsisPlayerId": "00-0033873",
           "playerName": "Patrick Mahomes",
           "position": "QB",
           "staticAlpha": 62.82,
@@ -234,7 +240,7 @@
           "delta": 17.18
         },
         {
-          "playerId": "00-0032764",
+          "gsisPlayerId": "00-0032764",
           "playerName": "Derrick Henry",
           "position": "RB",
           "staticAlpha": 87.98,
@@ -242,7 +248,7 @@
           "delta": -16.18
         },
         {
-          "playerId": "00-0035710",
+          "gsisPlayerId": "00-0035710",
           "playerName": "Daniel Jones",
           "position": "QB",
           "staticAlpha": 56.82,
@@ -250,7 +256,7 @@
           "delta": 15.98
         },
         {
-          "playerId": "00-0037240",
+          "gsisPlayerId": "00-0037240",
           "playerName": "Jameson Williams",
           "position": "WR",
           "staticAlpha": 76.59,
@@ -258,7 +264,7 @@
           "delta": -15.79
         },
         {
-          "playerId": "00-0026498",
+          "gsisPlayerId": "00-0026498",
           "playerName": "Matthew Stafford",
           "position": "QB",
           "staticAlpha": 70.65,

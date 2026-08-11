@@ -135,6 +135,204 @@ export const CLAIM_SCAN_EXEMPT_KEYS: Record<string, string> = {
   supersession_note: 'states which historical claim is being superseded and why',
 };
 
+export const GSIS_SHAPE = /^00-\d{7}$/;
+
+export interface RowIdentity {
+  /** The producer's own key — the GSIS identifier, and the only join key. */
+  sourceId: string;
+  sourceType: 'canonical' | 'gsis' | 'unknown';
+  /** Canonical public key; null = unresolved, undefined = never recorded. */
+  canonicalId?: string | null;
+}
+
+/**
+ * The identity to record for one `/api/rankings/v2/weekly` item.
+ *
+ * Fantasy #313 is current-main law: `item.playerId` is the canonical public key
+ * and nothing else, and it is **null** whenever identity did not resolve. The
+ * producer's own key lives in `item.identity.sourceId`. Reading `playerId` as
+ * the observation's identifier therefore records canonical keys — and empty
+ * strings for the unresolved rows — under a field the audit later joins against
+ * the GSIS-keyed static artifact, which quietly shrinks the intersection and
+ * makes the comparison describe fewer players than it claims.
+ *
+ * A response with no identity envelope is refused rather than falling back to
+ * `playerId`: without the envelope the audit cannot tell which namespace that
+ * field is in, and guessing is the whole defect.
+ */
+export function rowIdentityFromResponseItem(item: any, where: string): RowIdentity {
+  const identity = item?.identity;
+  if (!identity || typeof identity.sourceId !== 'string' || identity.sourceId === '') {
+    throw new Error(
+      `${where}: ranking item carries no identity.sourceId, so the producer key was not observed. ` +
+      'Falling back to item.playerId is not permitted — since Fantasy #313 that field is ' +
+      'canonical-only and null when unresolved, and recording it as the producer key breaks ' +
+      'the join against the GSIS-keyed static artifact.',
+    );
+  }
+  const sourceType: RowIdentity['sourceType'] =
+    identity.sourceType === 'gsis' || identity.sourceType === 'canonical'
+      ? identity.sourceType
+      : 'unknown';
+  return {
+    sourceId: identity.sourceId,
+    sourceType,
+    canonicalId: typeof item?.playerId === 'string' ? item.playerId : null,
+  };
+}
+
+/**
+ * The identity of a row read back from a committed cohort file.
+ *
+ * A cohort written after this change records `sourceId` explicitly. The frozen
+ * 2026-08-09 file predates both the identity envelope and Fantasy #313: its
+ * `playerId` values are GSIS keys, because at capture time that field still
+ * carried the producer's key. Reading it as the producer key is correct *for
+ * that file* and is deliberately not extended to any observation that records
+ * `sourceId` — the canonical state was never observed there, so it is reported
+ * as not recorded rather than as unresolved.
+ */
+export function rowIdentityFromCohortRow(row: any, where: string): RowIdentity {
+  if (typeof row?.sourceId === 'string' && row.sourceId !== '') {
+    return {
+      sourceId: row.sourceId,
+      sourceType: row.sourceType === 'gsis' || row.sourceType === 'canonical' ? row.sourceType : 'unknown',
+      canonicalId: row.canonicalId === undefined ? undefined : row.canonicalId,
+    };
+  }
+  if (typeof row?.playerId !== 'string' || row.playerId === '') {
+    throw new Error(`${where}: cohort row carries neither sourceId nor a legacy playerId`);
+  }
+  return {
+    sourceId: row.playerId,
+    sourceType: GSIS_SHAPE.test(row.playerId) ? 'gsis' : 'unknown',
+    canonicalId: undefined,
+  };
+}
+
+/**
+ * The `| label | value |` cells of the first markdown table under a heading.
+ *
+ * Returns null when the heading or its table is absent — a missing section is a
+ * different problem from a wrong cell, and the caller reports it as one.
+ */
+export function readMarkdownTable(report: string, heading: RegExp): Map<string, string> | null {
+  const lines = report.split('\n');
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return null;
+
+  const cells = new Map<string, string>();
+  let seen = false;
+  for (const line of lines.slice(start + 1)) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('|')) {
+      if (seen) break;      // the table ended
+      if (/^#{1,6}\s/.test(trimmed)) return null; // next section, no table here
+      continue;             // prose between the heading and the table
+    }
+    seen = true;
+    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
+    const parts = trimmed.split('|').slice(1, -1).map((c) => c.trim());
+    if (parts.length < 2) continue;
+    const label = parts[0].replace(/\*\*/g, '').replace(/`/g, '').trim().toLowerCase();
+    const value = parts[1].replace(/\*\*/g, '').replace(/`/g, '').trim();
+    if (label && !cells.has(label)) cells.set(label, value);
+  }
+  return seen ? cells : null;
+}
+
+/** Every number in a cell, so `-26.01 … +22.30` yields both ends. */
+function numbersIn(cell: string): number[] {
+  return [...cell.matchAll(/[-+]?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
+}
+
+/**
+ * The measures the descriptive-comparison table must carry, each bound to the
+ * row that states it.
+ */
+const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> = [
+  { label: /^joined rows$/, describe: 'joined rows', key: 'joinedRows' },
+  { label: /^exact agreement$/, describe: 'exact agreement', key: 'exactAgreement' },
+  { label: /^within ±1/, describe: 'within ±1.0 alpha', key: 'within1' },
+  { label: /^within ±5/, describe: 'within ±5.0 alpha', key: 'within5' },
+  { label: /^median delta/, describe: 'median delta', key: 'medianDelta' },
+];
+
+/**
+ * Problems in how the report states the manifest's descriptive comparison.
+ *
+ * Deliberately NOT a substring scan of the whole document. `report.includes('0')`
+ * is satisfied by any zero anywhere — a date, a GSIS id, a table of largest
+ * disagreements — so a reviewer could rewrite the summary cells and `--check`
+ * would still print "report consistent". Each measure is now read from the row
+ * that states it, in the table under the descriptive-comparison heading, and
+ * compared numerically.
+ */
+export function reportComparisonProblems(report: string, descriptiveComparison: any): string[] {
+  const dc = descriptiveComparison;
+  if (!dc || dc.status !== 'available') return [];
+
+  const problems: string[] = [];
+  const table = readMarkdownTable(report, /^#{2,4}.*descriptive comparison/i);
+  if (!table) {
+    return ['report has no descriptive-comparison table for the manifest comparison to be checked against'];
+  }
+
+  const findRow = (label: RegExp) => {
+    for (const [key, value] of table) if (label.test(key)) return { key, value };
+    return null;
+  };
+
+  for (const { label, describe, key } of COMPARISON_ROWS) {
+    const expected = dc[key];
+    if (expected === null || expected === undefined) continue;
+    const row = findRow(label);
+    if (!row) {
+      problems.push(`report's descriptive-comparison table has no "${describe}" row`);
+      continue;
+    }
+    const stated = numbersIn(row.value);
+    if (stated.length !== 1 || stated[0] !== Number(expected)) {
+      problems.push(
+        `report states ${describe} as "${row.value}"; the manifest measured ${expected}`,
+      );
+    }
+  }
+
+  // The range row carries both ends, so it is checked as a pair rather than as
+  // a single number.
+  if (dc.minDelta !== null && dc.minDelta !== undefined) {
+    const row = findRow(/^range$/);
+    if (!row) {
+      problems.push('report\'s descriptive-comparison table has no "range" row');
+    } else {
+      const stated = numbersIn(row.value);
+      for (const [end, value] of [['minimum', dc.minDelta], ['maximum', dc.maxDelta]] as const) {
+        if (value === null || value === undefined) continue;
+        if (!stated.includes(Number(value))) {
+          problems.push(`report's range row "${row.value}" does not state the measured ${end} ${value}`);
+        }
+      }
+    }
+  }
+
+  // The section heading counts the shared players too, and a heading that
+  // disagrees with its own table is exactly the drift this check exists for.
+  const headingLine = report.split('\n').find((line) => /^#{2,4}.*descriptive comparison/i.test(line));
+  if (headingLine && dc.joinedRows !== null && dc.joinedRows !== undefined) {
+    // Drop the leading section number ("### 5.2 ") so only counts stated in the
+    // heading's prose are read.
+    const counts = numbersIn(headingLine.replace(/^#{2,4}\s*[\d.]*\s*/, ''));
+    if (counts.length && !counts.includes(Number(dc.joinedRows))) {
+      problems.push(
+        `report's descriptive-comparison heading states ${counts.join('/')} shared players; the manifest measured ${dc.joinedRows}`,
+      );
+    }
+  }
+
+  return problems;
+}
+
 /** Every string value under `node`, excluding exempt keys. */
 export function currentClaimStrings(node: unknown): string[] {
   const out: string[] = [];

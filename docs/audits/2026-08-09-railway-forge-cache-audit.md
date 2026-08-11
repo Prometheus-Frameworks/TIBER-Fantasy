@@ -207,7 +207,17 @@ cohort, not a subset.
 | distinct identifiers | **357** (zero duplicates) |
 | GSIS-shaped (`00-` + 7 digits) | **357 (100.0%)** |
 | other namespaces | 0 |
+| canonical coverage | **not recorded** — the capture predates the per-item identity envelope |
 | cross-surface resolvability | **unavailable — requires database** |
+
+These are measurements of the **producer's own key**, which is what this cohort
+recorded and the only key the static artifact (§5) can be joined on. Fantasy
+#313 has since made a ranking item's `playerId` the canonical public key —
+`null` whenever identity does not resolve — and moved the producer key to
+`identity.sourceId`. The audit tooling now reads that field, so a future guarded
+observation records the producer key rather than a mix of canonical keys and
+blanks. Canonical coverage is reported as *not recorded* rather than as zero:
+this capture predates the envelope, so the canonical state was never observed.
 
 Internal identity hygiene is clean. Cross-surface resolvability is *not*
 assertable here: it needs `player_identity_map`, which this audit did not access.
