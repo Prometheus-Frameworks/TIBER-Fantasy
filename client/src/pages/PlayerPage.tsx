@@ -528,8 +528,11 @@ export default function PlayerPage() {
       <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
         <div className="text-center space-y-4">
           <h1 className="text-2xl font-bold text-white">Player Not Found</h1>
-          <p className="text-gray-400">Could not find player with ID: {playerId}</p>
+          <p className="text-gray-300">Could not find player with ID: {playerId}</p>
           <Link href="/tiers">
+            {/* The outline variant now carries its own foreground/border, so this
+                button no longer inherits the global body colour and render at
+                1.27:1 (Fantasy #309). No call-site colour override is needed. */}
             <Button variant="outline" className="gap-2" data-testid="button-back-tiers">
               <ArrowLeft size={16} />
               Back to Tiers

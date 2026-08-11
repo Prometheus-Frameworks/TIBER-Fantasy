@@ -224,7 +224,7 @@ function PlayerResultRow({ player, onCopy }: { player: PlayerMappingResult; onCo
                   e.stopPropagation();
                   onCopy(jsonData);
                 }}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 data-testid={`button-copy-${player.playerId}`}
               >
                 <Copy className="h-3 w-3 mr-1" />
@@ -410,7 +410,7 @@ export default function PlayerMappingTest() {
               <Button
                 onClick={handleSearch}
                 disabled={loading || query.trim().length < 2}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white"
                 data-testid="button-search"
               >
                 {loading ? (

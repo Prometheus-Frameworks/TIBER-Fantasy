@@ -87,7 +87,7 @@ export default function PlayerMapping() {
           <Button 
             onClick={handleSearch} 
             disabled={loading || query.trim().length < 2}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white"
             data-testid="button-search"
           >
             <Search className="h-4 w-4 mr-2" />

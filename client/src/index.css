@@ -44,7 +44,12 @@
   --card: #ffffff;
   --card-foreground: #0a0a0a;
   --primary: #e2640d;
-  --primary-foreground: #ffffff;
+  /* Near-black, not white: white on the Ember primary measures 3.46:1, which
+     fails WCAG AA for normal text (4.5:1). #0a0a0a — the system foreground —
+     measures 5.72:1 on #e2640d, keeping the brand background while making
+     every default/primary control legible. Pinned by the button contrast
+     audit; do not flip this back to white without re-measuring. */
+  --primary-foreground: #0a0a0a;
   --secondary: #f4f4f4;
   --secondary-foreground: #0a0a0a;
   --accent: #f4f4f4;
@@ -52,6 +57,10 @@
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --input: #e5e5e5;
+  /* Outline-button border: 4.54:1 against --background, clearing the 3:1
+     WCAG 2.2 AA requirement for meaningful UI boundaries (Fantasy #309).
+     --input itself is left alone so text inputs are not restyled. */
+  --btn-outline-border: #767676;
   --ring: #e2640d;
 }
 
@@ -138,7 +147,7 @@ html, body {
 .tiber-topbar-section {
   font-size: 13px;
   font-weight: 600;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   letter-spacing: 0.02em;
 }
 
@@ -216,7 +225,7 @@ html, body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
   padding: 20px 8px 6px;
 }
 
@@ -229,7 +238,7 @@ html, body {
   cursor: pointer;
   transition: all 0.15s ease;
   font-size: 13px;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   font-weight: 450;
   text-decoration: none;
   min-height: auto;
@@ -250,7 +259,7 @@ html, body {
 .nav-badge {
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .nav-item.active .nav-badge { color: var(--tmd-ember, #e2640d); }
@@ -276,7 +285,7 @@ html, body {
   font-size: 11.5px;
   font-family: var(--font-serif);
   font-style: italic;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   line-height: 1.45;
 }
 
@@ -297,8 +306,8 @@ html, body {
 }
 
 .user-pill:hover { background: rgba(255, 255, 255, 0.05); }
-.user-name { font-size: 13px; font-weight: 500; color: var(--tmd-text-muted, rgba(226,228,232,0.45)); }
-.user-league { font-size: 11px; color: var(--tmd-text-dim, rgba(226,228,232,0.28)); }
+.user-name { font-size: 13px; font-weight: 500; color: var(--tmd-text-muted, rgba(226,228,232,0.65)); }
+.user-league { font-size: 11px; color: var(--tmd-text-dim, rgba(226,228,232,0.52)); }
 
 /* ===== HERO ===== */
 .tiber-hero {
@@ -1013,7 +1022,7 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   padding: 4px;
   border-radius: 4px;
   line-height: 0;
@@ -1118,17 +1127,29 @@ html, body {
   color: var(--tmd-text, #e2e4e8);
 }
 
+/*
+ * Legacy purple/indigo/blue buttons inside the Tiber shell are repainted with
+ * the Ember brand surface. The foreground is `--primary-foreground`, not white:
+ * `!important` beats the call site, so this rule decides what actually renders,
+ * and white on Ember measures 3.46:1 at rest and 4.17:1 on the hover shade —
+ * both AA failures, and the exact pairing #309 removed the waiver for. The
+ * near-black foreground measures 5.72:1 and 4.75:1 on the same two surfaces.
+ *
+ * `client/src/__tests__/outlineButtonSurfaces.test.ts` parses these rules out
+ * of this file and audits the overridden surface, so the two cannot drift.
+ */
 .tiber-main button[class*="bg-purple"],
 .tiber-main button[class*="bg-indigo"],
 .tiber-main button[class*="bg-blue"] {
   background: var(--ember) !important;
-  color: white !important;
+  color: var(--primary-foreground) !important;
 }
 
 .tiber-main button[class*="bg-purple"]:hover,
 .tiber-main button[class*="bg-indigo"]:hover,
 .tiber-main button[class*="bg-blue"]:hover {
   background: #cc5a0c !important;
+  color: var(--primary-foreground) !important;
 }
 
 .tiber-main .font-mono,
@@ -1146,7 +1167,7 @@ html, body {
 }
 
 .tiber-main table thead th {
-  color: var(--tmd-text-muted, rgba(226,228,232,0.45));
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -2231,8 +2252,12 @@ html, body {
   --tmd-border: rgba(255, 255, 255, 0.07);
   --tmd-border-strong: rgba(255, 255, 255, 0.12);
   --tmd-text: #e2e4e8;
-  --tmd-text-muted: rgba(226, 228, 232, 0.45);
-  --tmd-text-dim: rgba(226, 228, 232, 0.28);
+  /* WCAG 2.2 AA on --tmd-bg (#07080a): 0.65 -> 6.76:1, 0.52 -> 4.69:1.
+     These are the declarations that actually take effect; the inline
+     var(..., fallback) copies below only apply when :root is absent, so both
+     must carry the accessible values (Fantasy #309). */
+  --tmd-text-muted: rgba(226, 228, 232, 0.65);
+  --tmd-text-dim: rgba(226, 228, 232, 0.52);
   --tmd-ember: #e2640d;
   --tmd-ember-dim: rgba(226, 100, 13, 0.12);
   --tmd-ember-glow: rgba(226, 100, 13, 0.08);
@@ -3212,7 +3237,9 @@ html, body {
 }
 
 .tmd-dir-uncertain {
-  color: rgba(226, 228, 232, 0.45);
+  /* "Uncertain" is a status, not decoration — it uses the token rather than a
+     hard-coded copy of the old 0.45 alpha (2.11:1 -> 6.76:1). */
+  color: var(--tmd-text-muted, rgba(226,228,232,0.65));
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -3271,7 +3298,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .tmd-dir-list {
@@ -3321,7 +3348,7 @@ html, body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
 }
 
 .tmd-dir-inputs strong {
@@ -3353,7 +3380,7 @@ html, body {
 .tmd-dir-coverage {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--tmd-text-dim, rgba(226,228,232,0.28));
+  color: var(--tmd-text-dim, rgba(226,228,232,0.52));
   padding-top: 4px;
 }
 

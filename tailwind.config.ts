@@ -54,6 +54,9 @@ export default {
         },
         border: "var(--border)",
         input: "var(--input)",
+        // Outline-button border. --input (#e5e5e5) is only 1.26:1 against
+        // white and fails the 3:1 UI-boundary requirement (Fantasy #309).
+        "btn-outline": "var(--btn-outline-border)",
         ring: "var(--ring)",
         chart: {
           "1": "var(--chart-1)",

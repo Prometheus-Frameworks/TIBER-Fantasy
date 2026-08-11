@@ -132,7 +132,7 @@ export default function PlayerResearch() {
           <Button 
             onClick={handleSearch} 
             disabled={loading || query.trim().length < 2}
-            className="bg-cyan-600 hover:bg-cyan-700"
+            className="bg-cyan-700 hover:bg-cyan-800 text-white"
             data-testid="button-search"
           >
             <Search className="h-4 w-4 mr-2" />
