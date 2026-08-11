@@ -339,6 +339,24 @@ function parseCountCell(cell: string): { count: number | null; pct: string | nul
 const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 
 /**
+ * The governed clamping section, identified by its NUMBER.
+ *
+ * The section's identity is §4.3, not the phrase its title happens to carry
+ * today. Matching on the title meant a duplicated section could be retitled —
+ * "4.3 Observed clamping under the designed bounds" — and stop being
+ * recognised as a duplicate at all, defeating the exactly-one rule by
+ * renaming rather than by position. So the heading is matched on the anchored
+ * numeric prefix alone and the remainder of the title is ignored.
+ *
+ * The boundary is deliberate on both sides: the number must sit at the start
+ * of a real Markdown heading (prose mentioning "4.3" is not a heading), and
+ * it must be exactly 4.3 — `(?!\d)` refuses 4.30 and `(?!\.\d)` refuses the
+ * subsection 4.3.1, while bare and differently punctuated forms ("### 4.3",
+ * "### 4.3.", "### 4.3 — retitled") all still count as §4.3.
+ */
+export const CLAMPING_SECTION_HEADING = /^#{1,6}\s*4\.3(?!\d)(?!\.\d)/;
+
+/**
  * Problems in how the report states the manifest's clamping findings.
  *
  * The gap this closes: `--check` verified the descriptive-comparison table and
@@ -365,14 +383,13 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
   // Which copy is authoritative is not a question a checker should answer by
   // position at either level, and the duplicate heading is a failure even when
   // only one copy contains a table at all: the ambiguity is the defect.
-  const HEADING = /^#{2,4}.*25\.0\s*\/\s*95\.0 bounds/i;
-  const sections = readMarkdownSections(report, HEADING);
+  const sections = readMarkdownSections(report, CLAMPING_SECTION_HEADING);
   if (sections.length === 0) {
-    return ['report has no 25.0 / 95.0 bounds section for the manifest clamping findings to be checked against'];
+    return ['report has no §4.3 section for the manifest clamping findings to be checked against'];
   }
   if (sections.length > 1) {
     return [
-      `report carries ${sections.length} sections whose heading matches the 25.0 / 95.0 bounds section; ` +
+      `report carries ${sections.length} sections whose heading matches §4.3; ` +
       'exactly one may state these findings',
     ];
   }

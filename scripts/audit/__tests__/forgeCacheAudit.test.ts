@@ -15,6 +15,7 @@ import { createHash } from 'crypto';
 import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
 import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
 import {
+  CLAMPING_SECTION_HEADING,
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
   OBSERVATION_EVIDENCE_STATUS,
@@ -700,6 +701,80 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
     const duplicated = insertAfter(committedTable);
     expect(reportClampingProblems(duplicated, clamping).join('\n'))
       .toMatch(/2 observed-clamping tables; exactly one/);
+  });
+
+  test('§4.3 is identified by its number, so a retitled duplicate is still a duplicate', () => {
+    // The defect: section identity was the title phrase, so a duplicate could
+    // be RETITLED and stop being recognised as §4.3 at all — defeating the
+    // exactly-one rule by renaming rather than by position.
+    const lines = report.split('\n');
+    const headingIndex = lines.findIndex((l) => CLAMPING_SECTION_HEADING.test(l));
+    expect(headingIndex).toBeGreaterThan(-1);
+    const headingLevel = /^(#{1,6})\s/.exec(lines[headingIndex].trim())![1].length;
+    let sectionEnd = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      const next = /^(#{1,6})\s/.exec(lines[i].trim());
+      if (next && next[1].length <= headingLevel) { sectionEnd = i; break; }
+    }
+    const appendLines = (block: string[]) =>
+      [...lines.slice(0, sectionEnd), '', ...block, '', ...lines.slice(sectionEnd)].join('\n');
+
+    const conflictingTable = [
+      '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+      '|---|---:|---:|---:|---:|---:|',
+      '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+      '| RB | 95 | 25.0 | 95.0 | 1 (1.1%) | 5 |',
+      '| WR | 146 | 25.0 | 95.0 | 1 (0.7%) | 1 |',
+      '| TE | 78 | 25.0 | 95.0 | 1 (1.3%) | 1 |',
+      '| **total** | **357** | | | **3 (0.8%)** | **7** |',
+    ];
+
+    // Case 1: the reviewer's exact shape — a RETITLED duplicate §4.3 with
+    // conflicting results. The title shares no phrase with the original.
+    const retitled = appendLines([
+      '### 4.3 Observed clamping under the designed bounds',
+      '',
+      ...conflictingTable,
+    ]);
+    expect(reportClampingProblems(retitled, clamping).join('\n'))
+      .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+
+    // Case 2: an identical-title duplicate still fails under the new selector.
+    const identicalTitle = appendLines([
+      lines[headingIndex],
+      '',
+      ...conflictingTable,
+    ]);
+    expect(reportClampingProblems(identicalTitle, clamping).join('\n'))
+      .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+
+    // Case 3: bare and differently punctuated §4.3 headings are §4.3 too —
+    // with or without any table in the copy.
+    for (const heading of ['### 4.3', '### 4.3.', '## 4.3 — superseded copy']) {
+      expect(CLAMPING_SECTION_HEADING.test(heading)).toBe(true);
+      const punctuated = appendLines([heading, '', 'Retained for reference.']);
+      expect(reportClampingProblems(punctuated, clamping).join('\n'))
+        .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+    }
+
+    // Case 4: 4.30 is a DIFFERENT section, not §4.3. Its presence — even with
+    // its own at-floor table — must not trip the section count, and its table
+    // must not be admitted as a clamping candidate.
+    expect(CLAMPING_SECTION_HEADING.test('### 4.30 Something else entirely')).toBe(false);
+    expect(CLAMPING_SECTION_HEADING.test('### 4.3.1 A subsection')).toBe(false);
+    const withFourThirty = appendLines([
+      '### 4.30 Something else entirely',
+      '',
+      ...conflictingTable,
+    ]);
+    expect(reportClampingProblems(withFourThirty, clamping)).toEqual([]);
+
+    // Case 5: ordinary prose mentioning "4.3" is not a heading and counts for
+    // nothing — anchoring on the hash prefix is what keeps it out.
+    expect(CLAMPING_SECTION_HEADING.test('as discussed in 4.3 above, the bounds are designed')).toBe(false);
+    const withProse = appendLines(['As discussed in 4.3 above, the bounds are designed.']);
+    expect(reportClampingProblems(withProse, clamping)).toEqual([]);
+    expect(readMarkdownSections(withProse, CLAMPING_SECTION_HEADING)).toHaveLength(1);
   });
 
   test('a duplicated §4.3 section is rejected, whatever its tables say', () => {
