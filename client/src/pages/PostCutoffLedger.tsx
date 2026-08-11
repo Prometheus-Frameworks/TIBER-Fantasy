@@ -278,7 +278,7 @@ function AddSignalPanel({ operatorKey }: { operatorKey: string }) {
           className="border-gray-300 bg-white font-mono text-xs text-gray-900"
         />
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" className="bg-ember text-white hover:bg-ember/90" onClick={handleParse} disabled={!pasteText.trim()}>
+          <Button type="button" size="sm" className="bg-ember text-primary-foreground hover:bg-ember/90" onClick={handleParse} disabled={!pasteText.trim()}>
             Parse pasted text
           </Button>
           <Button
@@ -491,7 +491,7 @@ function AddSignalPanel({ operatorKey }: { operatorKey: string }) {
               <Button
                 type="button"
                 size="sm"
-                className="bg-ember text-white hover:bg-ember/90"
+                className="bg-ember text-primary-foreground hover:bg-ember/90"
                 disabled={!operatorKey || !validation || validation.errors.length > 0 || saveMutation.isPending}
                 onClick={() => saveMutation.mutate(formStateToDraft(form))}
               >

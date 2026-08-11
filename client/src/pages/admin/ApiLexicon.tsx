@@ -371,7 +371,7 @@ export default function ApiLexicon() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-[#0d1117] border-[#1e2538] hover:bg-[#1a1f2e]"
+                          className="bg-[#0d1117] border-[#1e2538] text-slate-100 hover:bg-[#1a1f2e] hover:text-slate-100"
                           onClick={() => window.open(buildSampleUrl(selectedDescriptor!), '_blank')}
                           data-testid="button-open-endpoint"
                         >
@@ -381,7 +381,7 @@ export default function ApiLexicon() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-[#0d1117] border-[#1e2538] hover:bg-[#1a1f2e]"
+                          className="bg-[#0d1117] border-[#1e2538] text-slate-100 hover:bg-[#1a1f2e] hover:text-slate-100"
                           onClick={() => copyToClipboard(generateCurlCommand(selectedDescriptor!), 'cURL command')}
                           data-testid="button-copy-curl"
                         >

@@ -144,7 +144,7 @@ export function TiberTiersView({
               variant="outline"
               onClick={onRefetch}
               disabled={isFetching}
-              className="border-slate-700 bg-slate-900/60"
+              className="border-slate-700 bg-slate-900/60 text-slate-100"
               data-testid="refresh-tiers"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
@@ -242,7 +242,7 @@ export function TiberTiersView({
                 <Button
                   variant="outline"
                   onClick={onRefetch}
-                  className="mt-4 border-slate-700 bg-slate-900/60"
+                  className="mt-4 border-slate-700 bg-slate-900/60 text-slate-100"
                   data-testid="retry-tiers"
                 >
                   Retry
@@ -264,7 +264,7 @@ export function TiberTiersView({
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1200px]" data-testid="tiers-table">
-                  <thead className="bg-[#0a0e1a] text-xs text-slate-500 uppercase">
+                  <thead className="bg-[#0a0e1a] text-xs text-slate-400 uppercase">
                     <tr>
                       <th className="py-3 px-3 text-center">#</th>
                       <th className="py-3 px-3 text-left">Player</th>
@@ -286,7 +286,8 @@ export function TiberTiersView({
                       const linkablePlayerId = getLinkablePlayerId(player);
                       return (
                         <tr key={buildRankingRowKey(player)} className="border-t border-gray-800 hover:bg-slate-900/25">
-                          <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
+                          {/* slate-400, not slate-500: the #309 contrast repair on this dark table. */}
+                          <td className="py-3 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
                               {/* Only a resolved canonical key becomes a deep link. An
