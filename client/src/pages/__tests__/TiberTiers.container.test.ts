@@ -18,7 +18,11 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TiberTiers from '../TiberTiers';
-import { RANKINGS_V2_EXPECTED_CONTRACT_VERSION } from '../tiberTiersV2Mapper';
+import {
+  EXACT_WEEK_UNAVAILABLE_STATUS,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+  TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
+} from '../tiberTiersV2Mapper';
 
 type MockHttpResponse = {
   ok: boolean;
@@ -310,6 +314,72 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
 
     expect(await screen.findByText('Rankings are not available yet')).toBeTruthy();
     expect(screen.queryByText('compute-grades', { exact: false })).toBeNull();
+  });
+
+  it('renders the exact-week-unavailable state, never the empty filtered board', async () => {
+    // The regression: the server correctly returns
+    // `exact_week_evidence_unavailable` with zero items, but the resolver did
+    // not recognise it and fell through to `empty` — so a fail-closed response
+    // told the user "No players match this filter yet". That reads as "we
+    // looked and there is nothing", when the truth is the board could not be
+    // produced and another week's rows were deliberately not substituted.
+    //
+    // The status string here is the one the server actually publishes; the
+    // server suite pins that literal against the client constant.
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+          asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: {
+            ...SEASON_META,
+            status: EXACT_WEEK_UNAVAILABLE_STATUS,
+            statusDetail:
+              'No evidence is available for 2025 week 7. FORGE grades are not computed for that exact week. ' +
+              "A different week's rows are not substituted.",
+          },
+          sourceStack: [{ layer: 'forge' }],
+          trust: { sampleNote: null, stabilityNote: EXACT_WEEK_UNAVAILABLE_STATUS },
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByText('Rankings unavailable for the requested week')).toBeTruthy();
+    expect(screen.getByText(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE)).toBeTruthy();
+    // The server's own detail names the week it could not answer for.
+    expect(screen.getByTestId('tiers-exact-week-detail').textContent).toMatch(/2025 week 7/);
+
+    // The three statements it must NOT make.
+    expect(screen.queryByText('No players match this filter yet.')).toBeNull();
+    expect(screen.queryByText('Rankings are not available yet')).toBeNull();
+    expect(screen.queryByTestId('tiers-table')).toBeNull();
+  });
+
+  it('still renders the genuine-empty state when no such status is present', async () => {
+    // Fail-closed copy must not swallow the real empty case: a valid response
+    // with zero items and no status is still "nothing matched this filter".
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+          asOf: '2026-04-12T00:00:00.000Z',
+          seasonMeta: SEASON_META,
+          sourceStack: [{ layer: 'forge' }],
+          trust: { sampleNote: null, stabilityNote: null },
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByText('No players match this filter yet.')).toBeTruthy();
+    expect(screen.queryByTestId('tiers-exact-week-unavailable')).toBeNull();
   });
 
   it('clears a retained season and omits it from the actual request when the mounted page becomes stale', async () => {

@@ -454,13 +454,45 @@ export const TIERS_GENERIC_ERROR_MESSAGE =
 export const TIERS_STALE_CALENDAR_MESSAGE =
   'The NFL season calendar is out of date, so TIBER cannot determine which season or week these rankings should represent. No rankings were loaded.';
 
+/**
+ * The server's status for "you asked for a specific week and no admitted source
+ * can answer for it".
+ *
+ * Kept as a named constant on this side of the wire because the string is a
+ * protocol value, not display copy: the server publishes it as
+ * `seasonMeta.status`, and a typo here would silently reopen the defect it
+ * exists to close. `server/routes/rankingsV2Routes.ts` exports the same literal
+ * as `EXACT_WEEK_UNAVAILABLE_STATUS`, and the suite pins the two together.
+ */
+export const EXACT_WEEK_UNAVAILABLE_STATUS = 'exact_week_evidence_unavailable';
+
+/**
+ * Distinct from both the uncomputed-cache copy and the empty-filter copy.
+ *
+ * "No players match this filter yet" says the question was answered and the
+ * answer was none. "Not computed yet, check back shortly" says it will be
+ * answered soon. Neither is true here: the requested week has no governed
+ * evidence, and the server deliberately refused to substitute another week's
+ * rows for it, so the honest statement is that this board could not be produced.
+ */
+export const TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE =
+  'Governed evidence for the requested week is unavailable, so this board could not be produced. ' +
+  'TIBER does not substitute another week\'s rankings in its place. Try a different week, or check back once that week has been graded.';
+
 export function resolveTiersHeadline(layer: RankingsSourceView['layer']): string {
   if (layer === 'promoted_artifact') return 'Weekly Forecast Rankings';
   if (layer === 'forge') return 'Canonical FORGE Alpha ranks';
   return 'Weekly Rankings';
 }
 
-export type TiersViewState = 'loading' | 'error' | 'calendar_unavailable' | 'unavailable' | 'empty' | 'data';
+export type TiersViewState =
+  | 'loading'
+  | 'error'
+  | 'calendar_unavailable'
+  | 'exact_week_unavailable'
+  | 'unavailable'
+  | 'empty'
+  | 'data';
 
 // Single source of truth for which panel the page renders, so "truthful state" logic is
 // unit-testable independent of JSX. Priority: a failed/loading request always wins over
@@ -469,15 +501,33 @@ export function resolveTiersViewState(input: {
   isLoading: boolean;
   isError: boolean;
   isCalendarStale: boolean;
+  isExactWeekUnavailable?: boolean;
   isCacheUncomputed: boolean;
   playersCount: number;
 }): TiersViewState {
   if (input.isLoading) return 'loading';
   if (input.isError) return 'error';
   if (input.isCalendarStale) return 'calendar_unavailable';
+  // Before the cache/empty signals. The server returns zero items with this
+  // status, so falling through to `empty` told the user "no players match this
+  // filter" when the truth is that the board could not be produced at all —
+  // the fail-closed response reading, to a user, as a successful empty one.
+  if (input.isExactWeekUnavailable) return 'exact_week_unavailable';
   if (input.isCacheUncomputed) return 'unavailable';
   if (input.playersCount === 0) return 'empty';
   return 'data';
+}
+
+/**
+ * Read the exact-week-unavailable signal off a response's seasonMeta.
+ *
+ * A helper rather than an inline comparison at the call site, so the container
+ * cannot drift from the protocol value or forget the check the way it did.
+ */
+export function isExactWeekUnavailable(
+  seasonMeta: { status?: string | null } | null | undefined,
+): boolean {
+  return seasonMeta?.status === EXACT_WEEK_UNAVAILABLE_STATUS;
 }
 
 export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): TiersApiPlayer[] {

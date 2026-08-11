@@ -1,11 +1,15 @@
 import {
   buildRankingRowKey,
+  EXACT_WEEK_UNAVAILABLE_STATUS,
   getLinkablePlayerId,
+  isExactWeekUnavailable,
   mapRankingsV2ItemsToTiersPlayers,
   RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   resolveRankingsSourceView,
   resolveTiersHeadline,
   resolveTiersViewState,
+  TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
+  TIERS_STALE_CALENDAR_MESSAGE,
   validateRankingsV2WeeklyResponse,
 } from '../tiberTiersV2Mapper';
 
@@ -216,6 +220,56 @@ describe('resolveTiersViewState', () => {
         playersCount: 0,
       }),
     ).toBe('calendar_unavailable');
+  });
+
+  it('reports an unanswerable exact week before the cache/empty signals', () => {
+    // The regression: with zero items and no other signal this fell through to
+    // `empty`, so a fail-closed response rendered as "no players match this
+    // filter". It has to win over both remaining states.
+    expect(
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isExactWeekUnavailable: true,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
+    ).toBe('exact_week_unavailable');
+  });
+
+  it('keeps loading, error and stale-calendar ahead of the exact-week state', () => {
+    const base = {
+      isCalendarStale: false,
+      isExactWeekUnavailable: true,
+      isCacheUncomputed: false,
+      playersCount: 0,
+    };
+    expect(resolveTiersViewState({ ...base, isLoading: true, isError: false })).toBe('loading');
+    expect(resolveTiersViewState({ ...base, isLoading: false, isError: true })).toBe('error');
+    expect(resolveTiersViewState({ ...base, isLoading: false, isError: false, isCalendarStale: true }))
+      .toBe('calendar_unavailable');
+  });
+
+  it('reads the signal off the server status, and only that status', () => {
+    expect(isExactWeekUnavailable({ status: EXACT_WEEK_UNAVAILABLE_STATUS })).toBe(true);
+    expect(isExactWeekUnavailable({ status: 'forge_cache_empty_uncomputed' })).toBe(false);
+    expect(isExactWeekUnavailable({ status: 'archive_season_not_current' })).toBe(false);
+    expect(isExactWeekUnavailable({ status: null })).toBe(false);
+    expect(isExactWeekUnavailable(null)).toBe(false);
+    expect(isExactWeekUnavailable(undefined)).toBe(false);
+  });
+
+  it('gives the exact-week state copy distinct from the empty and uncomputed copy', () => {
+    // Three different situations must not share one sentence: "nothing
+    // matched", "not computed yet", and "could not be produced" are different
+    // claims, and only the last is true here.
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toBe(TIERS_STALE_CALENDAR_MESSAGE);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).toMatch(/requested week is unavailable/i);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).toMatch(/does not substitute/i);
+    // And it must not imply the answer is simply "none" or "soon".
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toMatch(/no players match/i);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toMatch(/have not been computed yet/i);
   });
 
   it('reports an uncomputed FORGE cache as unavailable, distinct from a genuinely empty ranking', () => {

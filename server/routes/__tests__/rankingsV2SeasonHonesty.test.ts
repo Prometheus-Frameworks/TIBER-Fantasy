@@ -59,7 +59,8 @@ jest.mock('@shared/weekDetection', () => ({
   resolveSeasonPhase: (...args: unknown[]) => mockResolveSeasonPhase(...args),
 }));
 
-import { createRankingsV2Router } from '../rankingsV2Routes';
+import { createRankingsV2Router, EXACT_WEEK_UNAVAILABLE_STATUS } from '../rankingsV2Routes';
+import { EXACT_WEEK_UNAVAILABLE_STATUS as CLIENT_EXACT_WEEK_UNAVAILABLE_STATUS } from '@/pages/tiberTiersV2Mapper';
 import {
   RANKINGS_V2_CONTRACT_VERSION,
   rankingsV2ResponseSchema,
@@ -446,6 +447,13 @@ describe('an explicit asOfWeek is exact, and fails closed', () => {
     expect(mockedCache).toHaveBeenCalledWith(
       2025, MIDSEASON_2025.targetWeek, 'WR', 100, 'test-version', { exactWeek: false },
     );
+  });
+
+  test('the status the server publishes is the one the client switches on', () => {
+    // The two sides of a protocol value, pinned together. A typo on either side
+    // would make the client fall through to its ordinary empty state — which is
+    // exactly the defect this status exists to prevent, reappearing silently.
+    expect(EXACT_WEEK_UNAVAILABLE_STATUS).toBe(CLIENT_EXACT_WEEK_UNAVAILABLE_STATUS);
   });
 
   test('a missing exact cache week fails closed instead of serving another week', async () => {

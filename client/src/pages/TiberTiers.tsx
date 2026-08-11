@@ -23,7 +23,9 @@ import {
   validateRankingsV2WeeklyResponse,
   TIERS_GENERIC_ERROR_MESSAGE,
   TIERS_LOADING_LABEL,
+  TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
   TIERS_STALE_CALENDAR_MESSAGE,
+  isExactWeekUnavailable,
 } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
@@ -108,11 +110,13 @@ export function TiberTiersView({
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
   const isCalendarStale = data?.seasonMeta.configStatus === 'stale_calendar_config';
+  const exactWeekUnavailable = isExactWeekUnavailable(data?.seasonMeta);
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
   const viewState = resolveTiersViewState({
     isLoading,
     isError,
     isCalendarStale,
+    isExactWeekUnavailable: exactWeekUnavailable,
     isCacheUncomputed,
     playersCount: players.length,
   });
@@ -252,6 +256,20 @@ export function TiberTiersView({
               <div className="p-10 text-center" data-testid="tiers-calendar-unavailable">
                 <div className="text-lg font-semibold text-amber-300 mb-2">Season calendar unavailable</div>
                 <p className="text-slate-400 text-sm">{TIERS_STALE_CALENDAR_MESSAGE}</p>
+              </div>
+            ) : viewState === 'exact_week_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-exact-week-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">
+                  Rankings unavailable for the requested week
+                </div>
+                <p className="text-slate-400 text-sm">{TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE}</p>
+                {/* The server's own detail names the season and week it could
+                    not answer for; showing it beats paraphrasing. */}
+                {data?.seasonMeta.statusDetail ? (
+                  <p className="text-slate-500 text-xs mt-2" data-testid="tiers-exact-week-detail">
+                    {data.seasonMeta.statusDetail}
+                  </p>
+                ) : null}
               </div>
             ) : viewState === 'unavailable' ? (
               <div className="p-10 text-center">
