@@ -111,6 +111,46 @@ export function resolveColourToken(token: string): Rgb | null {
   return null;
 }
 
+/** Linear interpolation between two colours at `t` in [0, 1]. */
+export function mix(a: Rgb, b: Rgb, t: number): Rgb {
+  return a.map((v, i) => Math.round(v + (b[i] - v) * t)) as Rgb;
+}
+
+/**
+ * The least-contrasting point along a gradient track, against a fixed
+ * foreground.
+ *
+ * Sampling rather than checking only the declared stops is not caution, it is
+ * required: contrast is `(L+0.05)` ratio against the foreground's luminance,
+ * so the worst point is wherever the background luminance comes *closest* to
+ * the foreground's. When the foreground sits between two stops' luminances,
+ * that point is strictly interior and both endpoints can pass while the middle
+ * of the button is unreadable.
+ *
+ * CSS interpolates `linear-gradient` in gamma-encoded sRGB by default, so
+ * interpolating the channel bytes is what the browser actually paints.
+ */
+export function worstGradientPoint(
+  stops: Rgb[],
+  foreground: Rgb,
+  samplesPerSegment = 24,
+): { colour: Rgb; ratio: number; offset: number } {
+  if (stops.length === 1) {
+    return { colour: stops[0], ratio: contrastRatio(stops[0], foreground), offset: 0 };
+  }
+  const segments = stops.length - 1;
+  let worst = { colour: stops[0], ratio: Infinity, offset: 0 };
+  for (let segment = 0; segment < segments; segment += 1) {
+    for (let step = 0; step <= samplesPerSegment; step += 1) {
+      const t = step / samplesPerSegment;
+      const colour = mix(stops[segment], stops[segment + 1], t);
+      const ratio = contrastRatio(colour, foreground);
+      if (ratio < worst.ratio) worst = { colour, ratio, offset: (segment + t) / segments };
+    }
+  }
+  return worst;
+}
+
 /**
  * Resolve a full utility value including any `/NN` opacity modifier,
  * compositing over `under` when translucent.

@@ -75,7 +75,7 @@ export default function HomeTab() {
             <Link href="/?tab=rankings">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                className="bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 text-white"
                 data-testid="button-view-rankings"
               >
                 View Power Rankings

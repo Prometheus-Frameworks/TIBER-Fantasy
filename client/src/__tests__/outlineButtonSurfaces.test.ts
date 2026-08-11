@@ -31,10 +31,12 @@ import {
   Rgb,
   composite,
   contrastRatio,
+  mix,
   parseHex,
   relativeLuminance,
   resolveColourToken,
   resolveSurface,
+  worstGradientPoint,
 } from './buttonContrast';
 
 const CLIENT_SRC = path.resolve(__dirname, '..');
@@ -215,11 +217,14 @@ export function pageSurface(source: string): Rgb | null {
 
 export interface SurfaceCheck {
   state: 'base' | 'hover';
+  /** For a gradient, the least-contrasting point along it — not a declared stop. */
   background: Rgb | null;
   foreground: Rgb | null;
   ratio: number | null;
   /** The audit could not resolve one side; reported rather than assumed to pass. */
   unresolved: boolean;
+  /** Where the worst point sits along the gradient, 0 at `from` and 1 at `to`. */
+  gradientOffset?: number;
 }
 
 /**
@@ -259,29 +264,100 @@ export function auditClassName(
   const variantBackground = parseHex(variant === 'default' ? CSS_PRIMARY : CSS_BACKGROUND)!;
   const variantForeground = parseHex(variant === 'default' ? CSS_PRIMARY_FOREGROUND : CSS_FOREGROUND)!;
 
+  /**
+   * The first `<prefix><stop>-` class naming a colour, e.g. `from-blue-500`.
+   *
+   * A gradient stop can also carry a *position* — `from-40%` — which is not a
+   * colour and must not be mistaken for one.
+   */
+  const stopValue = (prefix: string, stop: string): string | undefined => {
+    const full = `${prefix}${stop}-`;
+    return classes
+      .filter((c) => c.startsWith(full))
+      .map((c) => c.slice(full.length))
+      .find((v) => resolveColourToken(v.split('/')[0]) !== null);
+  };
+
+  // A `bg-gradient-*` / `bg-linear-*` directive means the painted surface is
+  // the from/via/to stops — not a `bg-<colour>` class and not the variant's
+  // own background. Ignoring the directive and measuring the variant fallback
+  // is exactly how a blue-to-purple hero button reported the Ember primary's
+  // 5.72:1 while actually rendering 3.68:1.
+  const isGradient = (prefix: string) =>
+    classes.some((c) => new RegExp(`^${prefix}bg-(gradient-to|linear)-`).test(c));
+
+  const baseStops = {
+    from: stopValue('', 'from'),
+    via: stopValue('', 'via'),
+    to: stopValue('', 'to'),
+  };
+  // `hover:from-*` overrides only the stop it names; the rest keep their base
+  // colour, so hover is the base track with the named stops swapped.
+  const hoverStops = {
+    from: stopValue('hover:', 'from') ?? baseStops.from,
+    via: stopValue('hover:', 'via') ?? baseStops.via,
+    to: stopValue('hover:', 'to') ?? baseStops.to,
+  };
+
+  /**
+   * Ordered gradient stops, or null when any stop is unresolvable.
+   *
+   * An omitted `from`/`to` is `transparent` in CSS, which shows the page
+   * through that end of the button — so the page is that stop's colour, and a
+   * gradient on a page the audit cannot read is unresolved rather than
+   * assumed to pass.
+   */
+  const gradientTrack = (
+    stops: { from?: string; via?: string; to?: string },
+    under: Rgb | null,
+  ): Rgb[] | null => {
+    const resolve = (token?: string) => (token === undefined ? under : resolveSurface(token, under));
+    const track = [resolve(stops.from)];
+    if (stops.via !== undefined) track.push(resolve(stops.via));
+    track.push(resolve(stops.to));
+    return track.every((c): c is Rgb => c !== null) ? track : null;
+  };
+
+  const solidTrack = (colour: Rgb | null): Rgb[] | null => (colour ? [colour] : null);
+
   const baseBgToken = split('bg-').colour;
-  const baseBg = baseBgToken ? resolveSurface(baseBgToken, page) : variantBackground;
+  const baseTrack = isGradient('')
+    ? gradientTrack(baseStops, page)
+    : solidTrack(baseBgToken ? resolveSurface(baseBgToken, page) : variantBackground);
+
   const baseFgToken = split('text-').colour;
   const baseFg = baseFgToken ? resolveColourToken(baseFgToken.split('/')[0]) : variantForeground;
 
   const hoverBgToken = split('hover:bg-').colour;
-  // A translucent hover composites over the button's own base surface.
-  const hoverBg = hoverBgToken ? resolveSurface(hoverBgToken, baseBg ?? page) : baseBg;
+  const hoverTrack = isGradient('') || isGradient('hover:')
+    ? gradientTrack(hoverStops, page)
+    // A translucent hover composites over the button's own base surface.
+    : hoverBgToken
+      ? solidTrack(resolveSurface(hoverBgToken, baseTrack?.[0] ?? page))
+      : baseTrack;
+
   const hoverFgToken = split('hover:text-').colour;
   const hoverFg = hoverFgToken ? resolveColourToken(hoverFgToken.split('/')[0]) : baseFg;
 
-  const check = (state: 'base' | 'hover', bg: Rgb | null, fg: Rgb | null): SurfaceCheck => ({
-    state,
-    background: bg,
-    foreground: fg,
-    ratio: bg && fg ? contrastRatio(bg, fg) : null,
-    // The only genuine unknown: a translucent background with no resolvable
-    // surface beneath it. A named colour always resolves, and a class that is
-    // not a colour is simply not an override.
-    unresolved: !bg || !fg,
-  });
+  const check = (state: 'base' | 'hover', track: Rgb[] | null, fg: Rgb | null): SurfaceCheck => {
+    // The only genuine unknown: a translucent background — or a gradient stop —
+    // with no resolvable surface beneath it. A named colour always resolves,
+    // and a class that is not a colour is simply not an override.
+    if (!track || !fg) {
+      return { state, background: track?.[0] ?? null, foreground: fg, ratio: null, unresolved: true };
+    }
+    const worst = worstGradientPoint(track, fg);
+    return {
+      state,
+      background: worst.colour,
+      foreground: fg,
+      ratio: worst.ratio,
+      unresolved: false,
+      gradientOffset: track.length > 1 ? worst.offset : undefined,
+    };
+  };
 
-  return [check('base', baseBg, baseFg), check('hover', hoverBg, hoverFg)];
+  return [check('base', baseTrack, baseFg), check('hover', hoverTrack, hoverFg)];
 }
 
 export interface Offender {
@@ -371,7 +447,11 @@ function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
             file: path.relative(CLIENT_SRC, file),
             line,
             className: className.slice(0, 90),
-            state: result.state,
+            // Name where along a gradient the failure sits: "it fails at 0.00"
+            // is a repairable report, "it fails" is not.
+            state: result.gradientOffset === undefined
+              ? result.state
+              : `${result.state}@${result.gradientOffset.toFixed(2)}`,
             ratio: Number(result.ratio.toFixed(2)),
           });
         }
@@ -521,6 +601,81 @@ describe('surface resolution', () => {
     expect(pageSurface('<div className="p-4">')).toBeNull();
   });
 
+  test('a gradient background is measured, not replaced by the variant fallback', () => {
+    // The regression: `bg-gradient-to-r` is not a colour, so the `bg-` scan
+    // found nothing and fell through to the variant's own background. The two
+    // hero buttons therefore reported the Ember primary's compliant 5.72:1
+    // while painting blue-to-purple, and the suite passed on a surface that
+    // never renders.
+    const [base, hover] = auditClassName(
+      'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700',
+      null,
+      'default',
+    );
+    expect(base.background).not.toEqual(parseHex(CSS_PRIMARY));
+    expect(Number(base.ratio!.toFixed(2))).toBe(3.67);
+    expect(Number(hover.ratio!.toFixed(2))).toBe(2.81);
+  });
+
+  test('the worst point on a gradient can be interior, so the track is sampled', () => {
+    // Not a refinement — endpoint-only checking is wrong. Relative luminance is
+    // convex in the channel bytes, so interpolating between two stops can dip
+    // below both. `from-cyan-600 to-rose-500` clears AA at BOTH declared stops
+    // and fails across the middle of the button, which a stop-only audit calls
+    // compliant.
+    const cyan = resolveColourToken('cyan-600')!;
+    const rose = resolveColourToken('rose-500')!;
+    const black: Rgb = [0, 0, 0];
+    expect(contrastRatio(cyan, black)).toBeGreaterThan(AA_TEXT_CONTRAST);
+    expect(contrastRatio(rose, black)).toBeGreaterThan(AA_TEXT_CONTRAST);
+
+    const worst = worstGradientPoint([cyan, rose], black);
+    expect(Number(worst.ratio.toFixed(2))).toBe(4.22);
+    expect(worst.ratio).toBeLessThan(AA_TEXT_CONTRAST);
+    expect(worst.offset).toBeCloseTo(0.5, 2);
+    expect(worst.colour).toEqual(mix(cyan, rose, 0.5));
+
+    // And the audit reports it through the same path a call site would hit.
+    const [check] = auditClassName('bg-gradient-to-r from-cyan-600 to-rose-500 text-black', null);
+    expect(check.ratio!).toBeLessThan(AA_TEXT_CONTRAST);
+    expect(check.gradientOffset).toBeCloseTo(0.5, 2);
+  });
+
+  test('a gradient position stop is not mistaken for a colour', () => {
+    // `from-40%` sets where the stop sits, not what colour it is. Reading it as
+    // a colour would make the track unresolvable and hide the button.
+    const [base] = auditClassName(
+      'bg-gradient-to-r from-blue-600 from-40% to-purple-700 text-white',
+      null,
+    );
+    expect(base.unresolved).toBe(false);
+    expect(base.background).toEqual(resolveColourToken('blue-600'));
+  });
+
+  test('a via stop is part of the track', () => {
+    // A three-stop gradient whose middle is the failure: dropping `via-*` from
+    // the track measures a button that clears AA end to end and never notices.
+    const [base] = auditClassName(
+      'bg-gradient-to-r from-blue-700 via-yellow-300 to-purple-800 text-white',
+      null,
+    );
+    expect(base.ratio!).toBeLessThan(AA_TEXT_CONTRAST);
+    expect(base.gradientOffset).toBeCloseTo(0.5, 2);
+  });
+
+  test('an omitted gradient stop is transparent, so the page shows through', () => {
+    // `bg-gradient-to-r from-white` fades to the page, not to the variant
+    // background. On a known page that end is the page colour; on an unknown
+    // one the audit says it does not know rather than assuming.
+    const onNavy = auditClassName('bg-gradient-to-r from-white', parseHex('#0a0e1a'), 'default')[0];
+    expect(onNavy.unresolved).toBe(false);
+    expect(onNavy.background).toEqual(parseHex('#0a0e1a'));
+
+    const onUnknown = auditClassName('bg-gradient-to-r from-white', null, 'default')[0];
+    expect(onUnknown.unresolved).toBe(true);
+    expect(onUnknown.ratio).toBeNull();
+  });
+
   test('an unresolvable translucent surface is reported, not assumed', () => {
     // No page root and a translucent override: the audit does not know what is
     // underneath, and says so rather than picking a convenient answer.
@@ -603,6 +758,33 @@ describe('outline buttons meet WCAG AA for text', () => {
     // and the failures they replaced stay failures
     expect(contrastRatio(parseHex('#0a0a0a')!, parseHex('#9333ea')!)).toBeLessThan(AA_TEXT_CONTRAST); // 3.68
     expect(contrastRatio(parseHex('#ffffff')!, parseHex('#16a34a')!)).toBeLessThan(AA_TEXT_CONTRAST); // 3.30
+  });
+
+  test('the repaired hero gradient clears AA across the whole track, pinned', () => {
+    // No foreground exists that clears the ORIGINAL blue-500 -> purple-700
+    // span: the light end needs a foreground darker than black and the dark end
+    // needs one lighter than white. So the finding could not be closed by
+    // "adding a compliant foreground" alone — the track itself had to darken to
+    // a range white clears, and `text-white` had to become explicit because the
+    // default variant's near-black foreground fails on it.
+    const track = (stops: string[], fg: string) =>
+      worstGradientPoint(stops.map((s) => resolveColourToken(s)!), parseHex(fg)!);
+
+    expect(Number(track(['blue-600', 'purple-700'], '#ffffff').ratio.toFixed(2))).toBe(5.17);
+    expect(Number(track(['blue-700', 'purple-800'], '#ffffff').ratio.toFixed(2))).toBe(6.70);
+
+    // `text-white` is load-bearing, not decorative: on the same repaired track
+    // the variant's own near-black foreground is still a failure, so dropping
+    // the class reopens the finding rather than quietly passing.
+    expect(track(['blue-600', 'purple-700'], CSS_PRIMARY_FOREGROUND).ratio)
+      .toBeLessThan(AA_TEXT_CONTRAST);
+
+    // And the original span admits no compliant foreground at all.
+    for (const fg of ['#ffffff', '#000000', CSS_PRIMARY_FOREGROUND, '#767676']) {
+      const rest = track(['blue-500', 'purple-600'], fg).ratio;
+      const hover = track(['blue-600', 'purple-700'], fg).ratio;
+      expect(Math.min(rest, hover)).toBeLessThan(AA_TEXT_CONTRAST);
+    }
   });
 
   test('the previously waived pairing would still be caught', () => {
