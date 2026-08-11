@@ -289,8 +289,8 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.evidenceWeek).toBe(5);
     expect(body.seasonMeta.evidenceThroughWeek).toBe(5);
     expect(body.seasonMeta.evidenceProvenance).toBe('source_declared_as_of');
-    // The target the request named is still visible — as a target.
-    expect(body.seasonMeta.decisionTargetWeek).toBe(MIDSEASON_2025.targetWeek);
+    // The target the request named is still visible — as the board's target.
+    expect(body.seasonMeta.decisionTargetWeek).toBe(18);
   });
 
   test('a cache that declares no extent yields unknown — never \"full season\"', async () => {
@@ -389,12 +389,104 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.completionCopy).toBe('Completion not verified.');
   });
 
-  test('the decision target carries its provenance in the envelope', async () => {
-    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
+  test('a defaulted target carries the phase provenance in the envelope', async () => {
+    // No asOfWeek: the week comes from the phase calendar, so it inherits that
+    // calendar's provenance and its provisional flag.
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025');
 
-    expect(body.seasonMeta.decisionTargetSeason).toBe(MIDSEASON_2025.targetSeason);
+    expect(body.seasonMeta.decisionTargetSeason).toBe(2025);
     expect(body.seasonMeta.decisionTargetWeek).toBe(MIDSEASON_2025.targetWeek);
     expect(body.seasonMeta.decisionTargetProvenance).toBe('anchor_derived');
     expect(body.seasonMeta.decisionTargetIsProvisional).toBe(true);
+  });
+});
+
+describe('seasonMeta describes the board that was returned', () => {
+  // The defect: `decisionTarget*` was built from the LIVE PHASE target
+  // regardless of what was requested, so an explicit historical request came
+  // back with correct rows under a label describing a different board — a 2025
+  // Week 7 board advertising 2026 Week 1. The label and the rows must be the
+  // same board.
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockResolveSeasonPhase.mockReturnValue(PRESEASON_2026);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
+    mockedMeaningful.mockReturnValue(false);
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2025-11-16T18:00:00.000Z'),
+      asOfWeek: 7,
+    } as any);
+  });
+
+  test('an explicit historical season/week is what the metadata publishes', async () => {
+    // The live phase is 2026 preseason, targeting Week 1. The request asks for
+    // the 2025 Week 7 board, and that is what comes back.
+    expect(PRESEASON_2026.targetSeason).toBe(2026);
+    expect(PRESEASON_2026.targetWeek).toBe(1);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.seasonMeta.decisionTargetSeason).toBe(2025);
+    expect(body.seasonMeta.decisionTargetWeek).toBe(7);
+    // The caller named the week, so no calendar arithmetic stands behind it.
+    expect(body.seasonMeta.decisionTargetProvenance).toBe('explicit_request');
+    expect(body.seasonMeta.decisionTargetIsProvisional).toBe(false);
+
+    // Not 2026 Week 1 — the board this response did not return.
+    expect(body.seasonMeta.decisionTargetSeason).not.toBe(PRESEASON_2026.targetSeason);
+    expect(body.seasonMeta.decisionTargetWeek).not.toBe(PRESEASON_2026.targetWeek);
+  });
+
+  test('the live phase target is preserved separately, not conflated', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.seasonMeta.phaseTargetSeason).toBe(PRESEASON_2026.targetSeason);
+    expect(body.seasonMeta.phaseTargetWeek).toBe(PRESEASON_2026.targetWeek);
+    expect(body.seasonMeta.phaseTargetProvenance).toBe(PRESEASON_2026.targetProvenance);
+    expect(body.seasonMeta.phaseTargetIsProvisional).toBe(PRESEASON_2026.targetIsProvisional);
+    // The legacy fields keep their pre-existing meaning and types.
+    expect(body.seasonMeta.targetSeason).toBe(PRESEASON_2026.targetSeason);
+    expect(body.seasonMeta.targetWeek).toBe(PRESEASON_2026.targetWeek);
+  });
+
+  test('the archive label and the board label agree', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    // The response is an archive view BECAUSE the board is 2025 while the
+    // forward board is 2026 — the same fact the decision target now states.
+    expect(body.seasonMeta.isArchiveView).toBe(true);
+    expect(body.seasonMeta.decisionTargetSeason).toBe(body.seasonMeta.evidenceSeason);
+  });
+
+  test('the current forward board still labels itself as the phase target', async () => {
+    // The fix must not invert the defect: when the request IS the forward
+    // board, both descriptions agree and nothing changes.
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2026-08-09T12:00:00.000Z'),
+      asOfWeek: 1,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2026');
+
+    expect(body.seasonMeta.decisionTargetSeason).toBe(PRESEASON_2026.targetSeason);
+    expect(body.seasonMeta.decisionTargetWeek).toBe(PRESEASON_2026.targetWeek);
+    expect(body.seasonMeta.phaseTargetWeek).toBe(PRESEASON_2026.targetWeek);
+    expect(body.seasonMeta.isArchiveView).toBe(false);
+  });
+
+  test('an unavailable response labels no board at all', async () => {
+    // Nothing was served, so borrowing the phase target here would label an
+    // empty response with a board it did not return.
+    mockResolveSeasonPhase.mockReturnValue(STALE);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR');
+
+    expect(body.items).toEqual([]);
+    expect(body.seasonMeta.decisionTargetWeek).toBeNull();
+    expect(body.seasonMeta.decisionTargetProvenance).toBeNull();
+    expect(body.seasonMeta.decisionTargetIsProvisional).toBe(false);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
   });
 });

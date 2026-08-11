@@ -272,10 +272,18 @@ export const rankingsV2SeasonMetaSchema = z.object({
    *
    * Added alongside the existing fields rather than replacing them: no
    * pre-existing field changes name, type or nullability, so a consumer of the
-   * current contract version keeps validating. `targetWeek` and
-   * `decisionTargetWeek` carry the same value by construction; the new name
-   * exists so a reader cannot mistake a forward target for an evidence bound,
-   * and the provenance travels with each side.
+   * current contract version keeps validating.
+   *
+   * `decisionTarget*` describes **the board carried in this response** — the
+   * effective request target. `phaseTarget*` is the live league target, which
+   * is a different fact whenever the caller asks for anything but the current
+   * forward board: publishing the phase target for both meant an explicit
+   * `season=2025&asOfWeek=7` request returned correct rows under a label
+   * describing 2026 Week 1. The legacy `targetSeason`/`targetWeek` keep their
+   * pre-existing meaning — the phase target — and are unchanged.
+   *
+   * `explicit_request` provenance records that the caller named the week, so
+   * no calendar arithmetic stands behind it and it is never provisional.
    *
    * `evidenceThroughWeek` is the extent the admitted SOURCE declares — the
    * cache's own asOfWeek, or the measured maximum stats week — never a
@@ -288,8 +296,14 @@ export const rankingsV2SeasonMetaSchema = z.object({
    */
   decisionTargetSeason: z.number().nullable(),
   decisionTargetWeek: z.number().nullable(),
-  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetProvenance: z
+    .enum(['verified_schedule', 'anchor_derived', 'explicit_request'])
+    .nullable(),
   decisionTargetIsProvisional: z.boolean(),
+  phaseTargetSeason: z.number().nullable(),
+  phaseTargetWeek: z.number().nullable(),
+  phaseTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  phaseTargetIsProvisional: z.boolean(),
   evidenceThroughSeason: z.number().nullable(),
   evidenceThroughWeek: z.number().nullable(),
   evidenceProvenance: z.enum([

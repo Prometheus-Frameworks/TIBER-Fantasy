@@ -10,7 +10,12 @@ import {
 import { CACHE_VERSION, getGradesFromCache } from '../modules/forge/forgeGradeCache';
 import { scoringService } from '../modules/externalModels/scoring/scoringService';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs, toLeagueContextInput } from '../modules/externalModels/scoring/scoringRequestMappers';
-import { COMPLETION_NOT_VERIFIED_COPY, resolveSeasonPhase, SeasonPhaseInfo } from '@shared/weekDetection';
+import {
+  COMPLETION_NOT_VERIFIED_COPY,
+  resolveSeasonPhase,
+  SeasonPhaseInfo,
+  type TargetProvenance,
+} from '@shared/weekDetection';
 import { elapsedRegularSeasonWeeks } from '@shared/nflSeasonCalendar';
 import {
   RankingIdentity,
@@ -49,8 +54,32 @@ export type EvidenceProvenance =
   | 'source_extent_unknown'
   | 'no_rankable_source';
 
+/**
+ * How the returned board's target week was arrived at.
+ *
+ * `explicit_request` is not a schedule provenance — it records that the caller
+ * named the week, so no calendar arithmetic stands behind it and nothing about
+ * it is provisional.
+ */
+type PublishedTargetProvenance = TargetProvenance | 'explicit_request';
+
 function buildSeasonMeta(input: {
   phase: SeasonPhaseInfo;
+  /**
+   * The board this response actually describes — the *effective request*
+   * target, not the live phase target.
+   *
+   * These are different facts whenever the caller asks for anything other than
+   * the current forward board, and publishing the phase target for both meant a
+   * 2025 Week 7 request came back advertising 2026 Week 1: correct rows under a
+   * label describing a different board entirely. The live phase target is still
+   * published, under `phaseTarget*`, where it cannot be mistaken for a
+   * description of the returned rows.
+   */
+  boardSeason: number;
+  boardWeek: number | null;
+  /** True when the caller named the week, rather than it being defaulted. */
+  boardWeekIsExplicit: boolean;
   evidenceSeason: number | null;
   evidenceWeek: number | null;
   evidenceProvenance: EvidenceProvenance;
@@ -64,6 +93,19 @@ function buildSeasonMeta(input: {
   // against the board's target season — otherwise a valid 2026 Week 1 board
   // would be mislabelled as a 2025 archive.
   const forwardRankingSeason = input.phase.targetSeason ?? input.phase.season;
+
+  // A week the caller named rests on no calendar arithmetic, so it carries
+  // neither a schedule provenance nor the provisional flag. A defaulted week
+  // came from the phase calendar and inherits both.
+  const boardProvenance: PublishedTargetProvenance | null =
+    input.boardWeek === null
+      ? null
+      : input.boardWeekIsExplicit
+        ? 'explicit_request'
+        : input.phase.targetProvenance;
+  const boardIsProvisional =
+    input.boardWeek !== null && !input.boardWeekIsExplicit && input.phase.targetIsProvisional;
+
   const isArchive =
     input.evidenceSeason !== null &&
     input.phase.configStatus === 'ok' &&
@@ -86,13 +128,21 @@ function buildSeasonMeta(input: {
     // to infer which job a week number is doing. Additive: every pre-existing
     // field keeps its name, type and nullability.
     //
-    // `decisionTargetWeek` restates the forward target with its provenance
-    // attached — a provisional anchor-derived target may drive forward-looking
-    // requests only while that flag travels with it.
-    decisionTargetSeason: input.phase.targetSeason,
-    decisionTargetWeek: input.phase.targetWeek,
-    decisionTargetProvenance: input.phase.targetProvenance,
-    decisionTargetIsProvisional: input.phase.targetIsProvisional,
+    // `decisionTarget*` describes **the board in this response**. It is the
+    // effective request target, so an explicit `season=2025&asOfWeek=7` request
+    // is labelled 2025 Week 7 — not the live 2026 Week 1 phase target, which
+    // describes a board this response did not return.
+    decisionTargetSeason: input.boardSeason,
+    decisionTargetWeek: input.boardWeek,
+    decisionTargetProvenance: boardProvenance,
+    decisionTargetIsProvisional: boardIsProvisional,
+    // The live phase target, preserved separately because it is still useful —
+    // a client showing "you are deciding Week 12" needs it — but it is now
+    // named for what it is and cannot be read as a description of these rows.
+    phaseTargetSeason: input.phase.targetSeason,
+    phaseTargetWeek: input.phase.targetWeek,
+    phaseTargetProvenance: input.phase.targetProvenance,
+    phaseTargetIsProvisional: input.phase.targetIsProvisional,
     // `evidenceThroughWeek` restates `evidenceWeek` under a name that cannot
     // be mistaken for a target, with the source relationship that produced it.
     evidenceThroughSeason: input.evidenceWeek === null ? null : input.evidenceSeason,
@@ -184,6 +234,13 @@ function buildUnavailablePayload(input: {
     },
     seasonMeta: buildSeasonMeta({
       phase: input.phase,
+      // No board was returned, so there is no board to describe. The requested
+      // season is recorded; the week is null rather than borrowed from the
+      // phase, which would label an empty response with a board it did not
+      // serve.
+      boardSeason: input.season ?? input.phase.season,
+      boardWeek: null,
+      boardWeekIsExplicit: false,
       evidenceSeason: input.season,
       evidenceWeek: null,
       evidenceProvenance: 'no_rankable_source',
@@ -619,6 +676,9 @@ export function createRankingsV2Router(): Router {
             },
             seasonMeta: buildSeasonMeta({
               phase,
+              boardSeason: season,
+              boardWeek: decisionTargetWeek ?? null,
+              boardWeekIsExplicit: Number.isFinite(requestedWeek),
               evidenceSeason: season,
               // The extent the SOURCE declares: the greatest weekly-stats week
               // actually aggregated into the admitted inputs, measured from
@@ -735,6 +795,9 @@ export function createRankingsV2Router(): Router {
         // rather than as current-season evidence.
         seasonMeta: buildSeasonMeta({
           phase,
+          boardSeason: season,
+          boardWeek: decisionTargetWeek ?? null,
+          boardWeekIsExplicit: Number.isFinite(requestedWeek),
           evidenceSeason: season,
           // The cache's OWN declared as-of week — the one value the serving
           // source states about its evidence extent. The caller's target must
