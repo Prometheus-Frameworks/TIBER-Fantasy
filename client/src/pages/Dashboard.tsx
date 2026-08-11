@@ -193,6 +193,17 @@ export default function Dashboard() {
   }).length;
   const topScorer = players[0];
 
+  // Navigation state, not display copy. When neither source has a real season
+  // the prop is empty and the command-center link drops the parameter — rather
+  // than serialising the em dash the status card renders, which produced
+  // `?season=%E2%80%94` and a 400 from the numeric season validator.
+  const widgetSeason =
+    commandCenterData?.data.season != null
+      ? String(commandCenterData.data.season)
+      : resolvedSeason != null
+        ? String(resolvedSeason)
+        : '';
+
   return (
     <>
       <div className="tiber-hero">
@@ -271,7 +282,7 @@ export default function Dashboard() {
             </div>
           </div>
           <DataLabDiscoveryWidget
-            season={String(commandCenterData?.data.season ?? resolvedSeason ?? '—')}
+            season={widgetSeason}
             data={commandCenterData?.data ?? null}
             isLoading={isCommandCenterLoading}
             fallbackSummary={{

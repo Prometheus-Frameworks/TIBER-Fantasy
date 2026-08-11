@@ -59,6 +59,7 @@ jest.mock('@shared/weekDetection', () => ({
 }));
 
 import { createRankingsV2Router } from '../rankingsV2Routes';
+import { RANKINGS_V2_CONTRACT_VERSION, rankingsV2ResponseSchema } from '../../contracts/rankingsV2';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
@@ -201,6 +202,41 @@ describe('Rankings v2 season/phase contract', () => {
     expect(body.seasonMeta.statusDetail).toMatch(/calendar ends after/i);
     // Fail closed: no cache read, no invented season.
     expect(mockedCache).not.toHaveBeenCalled();
+  });
+
+  test('the fail-closed response satisfies the canonical contract it advertises', async () => {
+    // Reproduces the reported defect: `identityCoverage` became required in
+    // #313, but the unavailable payload omitted it and returned without
+    // validation — so the ONE response that exists to be trusted when
+    // everything else is unavailable was the one a consumer validating the
+    // advertised contract would reject.
+    mockResolveSeasonPhase.mockReturnValue(STALE);
+
+    const { status, body } = await call('/api/rankings/v2/weekly?position=WR');
+
+    expect(status).toBe(200);
+    const parsed = rankingsV2ResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new Error(`fail-closed payload rejected by its own contract: ${JSON.stringify(parsed.error.flatten())}`);
+    }
+    expect(body.contractVersion).toBe(RANKINGS_V2_CONTRACT_VERSION);
+    // A true zero, not a fabricated coverage claim: nothing was admitted.
+    expect(body.identityCoverage).toEqual({
+      total: 0, canonical: 0, resolved: 0, unresolved: 0,
+      ambiguous: 0, coverageRatio: 0, byReason: {},
+    });
+  });
+
+  test('the no-derivable-extent fail-closed path validates too', async () => {
+    // The second unavailable return site, which took the same shortcut.
+    mockResolveSeasonPhase.mockReturnValue(MIDSEASON_2025);
+
+    const { status, body } = await call('/api/rankings/v2/weekly?position=WR&season=1999');
+
+    expect(status).toBe(200);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
+    expect(body.identityCoverage.total).toBe(0);
+    expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
   });
 
   test('a stale calendar still serves an explicitly requested archive season', async () => {

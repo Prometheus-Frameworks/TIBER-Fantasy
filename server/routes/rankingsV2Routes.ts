@@ -123,6 +123,42 @@ function buildSeasonMeta(input: {
 }
 
 /** Fail-closed payload used when no rankable state can be resolved. */
+/** A true zero envelope: no rows were admitted, so nothing was resolved. */
+const EMPTY_IDENTITY_COVERAGE: RankingIdentityCoverage = {
+  total: 0,
+  canonical: 0,
+  resolved: 0,
+  unresolved: 0,
+  ambiguous: 0,
+  coverageRatio: 0,
+  byReason: {},
+};
+
+/**
+ * Send a fail-closed payload through the SAME contract validation as a
+ * successful one.
+ *
+ * The unavailable path previously returned straight from `res.json()`, so it
+ * was the one response never checked against `rankingsV2ResponseSchema` — and
+ * therefore the one that could silently drift out of contract, which is
+ * exactly what happened when #313 added `identityCoverage`. Validating here
+ * means a future required field breaks this path loudly instead of shipping a
+ * response that consumers of the advertised contract reject.
+ */
+function sendUnavailable(res: Response, payload: unknown) {
+  const parsed = rankingsV2ResponseSchema.safeParse(payload);
+  if (!parsed.success) {
+    console.error(
+      `[RankingsV2/Routes] fail-closed payload violates the response contract: ${JSON.stringify(parsed.error.flatten())}`,
+    );
+    return res.status(500).json({
+      error: 'Failed to build Rankings v2 unavailable payload',
+      details: parsed.error.flatten(),
+    });
+  }
+  return res.json(parsed.data);
+}
+
 function buildUnavailablePayload(input: {
   season: number | null;
   status: string;
@@ -155,6 +191,12 @@ function buildUnavailablePayload(input: {
       status: input.status,
       statusDetail: input.detail,
     }),
+    // Required by `rankingsV2ResponseSchema` since #313. Omitting it made the
+    // fail-closed response the ONE payload a consumer validating the advertised
+    // contract would reject — the surface that exists to be trusted when
+    // everything else is unavailable. There are no rows here, so the envelope
+    // is a true zero: nothing was resolved because nothing was admitted.
+    identityCoverage: EMPTY_IDENTITY_COVERAGE,
   };
 }
 
@@ -482,15 +524,13 @@ export function createRankingsV2Router(): Router {
           const detail = hasExplicitSeason
             ? `Season ${requestedSeason} is not present in the configured NFL season calendar; current rankings are unavailable.`
             : phase.configNote ?? 'NFL season calendar is out of date.';
-          return res.json(
-            buildUnavailablePayload({
-              season: null,
-              status: SEASON_CONFIG_STALE_STATUS,
-              detail,
-              phase,
-              position,
-            }),
-          );
+          return sendUnavailable(res, buildUnavailablePayload({
+            season: null,
+            status: SEASON_CONFIG_STALE_STATUS,
+            detail,
+            phase,
+            position,
+          }));
         }
       }
 
@@ -498,14 +538,13 @@ export function createRankingsV2Router(): Router {
         // No ceiling can be derived for this season without borrowing one from
         // a different season, which is the defect above. Say so rather than
         // serving evidence whose extent we cannot state.
-        return res.json(
-          buildUnavailablePayload({
-            season: null,
-            status: SEASON_CONFIG_STALE_STATUS,
-            detail:
-              `Season ${season} is not present in the configured NFL season calendar, so the ` +
-              'extent of its evidence cannot be established; rankings are unavailable.',
-            phase,
+        return sendUnavailable(res, buildUnavailablePayload({
+          season: null,
+          status: SEASON_CONFIG_STALE_STATUS,
+          detail:
+            `Season ${season} is not present in the configured NFL season calendar, so the ` +
+            'extent of its evidence cannot be established; rankings are unavailable.',
+          phase,
             position,
           }),
         );
