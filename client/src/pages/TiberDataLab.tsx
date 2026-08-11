@@ -574,7 +574,7 @@ function PlayerDrawer({
           <div className="pt-4">
             <Button 
               variant="outline" 
-              className="w-full border-blue-600 text-blue-700 hover:bg-blue-600/20 hover:text-blue-800"
+              className="w-full border-blue-600 text-blue-700 hover:bg-blue-100 hover:text-blue-900"
               onClick={handleAskTiber}
               data-testid="button-ask-tiber"
             >

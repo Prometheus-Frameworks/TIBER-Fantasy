@@ -111,6 +111,93 @@ export function resolveColourToken(token: string): Rgb | null {
   return null;
 }
 
+/**
+ * A stylesheet rule that overrides button colours with `!important`.
+ *
+ * These are invisible to a class-name scan and beat the call site outright, so
+ * an audit that reads only Tailwind classes reports a surface the browser never
+ * paints. The shell's `.tiber-main button[class*="bg-purple"] { background:
+ * var(--ember) !important }` is exactly that: it repainted every legacy
+ * purple/indigo/blue button Ember while the audit measured purple.
+ */
+export interface ImportantButtonOverride {
+  /** The `[class*="…"]` substrings the rule matches on. */
+  classMatches: string[];
+  /** True when the selector is `:hover`. */
+  hover: boolean;
+  background: Rgb | null;
+  foreground: Rgb | null;
+}
+
+/** Read a `--token: value;` declaration out of a stylesheet. */
+export function readCssToken(css: string, name: string): string | null {
+  const match = new RegExp(`--${name}\\s*:\\s*([^;]+);`).exec(css);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Resolve a CSS colour value, following one level of `var(--token)` back into
+ * the stylesheet it came from.
+ */
+export function resolveCssColour(css: string, value: string): Rgb | null {
+  const trimmed = value.replace(/\s*!important\s*$/, '').trim();
+  const varRef = /^var\(\s*--([\w-]+)\s*(?:,\s*([^)]*))?\)$/.exec(trimmed);
+  if (varRef) {
+    const declared = readCssToken(css, varRef[1]);
+    const fallback = varRef[2]?.trim();
+    const resolved = declared ?? fallback;
+    return resolved ? resolveCssColour(css, resolved) : null;
+  }
+  if (trimmed === 'white') return [255, 255, 255];
+  if (trimmed === 'black') return [0, 0, 0];
+  if (trimmed.startsWith('#')) return parseHex(trimmed);
+  const rgb = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(trimmed);
+  return rgb ? ([Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] as Rgb) : null;
+}
+
+/**
+ * Every `!important` button colour override in a stylesheet.
+ *
+ * Deliberately narrow: it recognises the one shape the repo actually uses — a
+ * selector list of `button[class*="…"]`, optionally `:hover`, with
+ * `background`/`color` declarations marked `!important`. A general CSS cascade
+ * model would be a project of its own and would still need the same evidence;
+ * this reads the real rules out of the real file so the audit and the
+ * stylesheet cannot drift apart.
+ */
+export function parseImportantButtonOverrides(css: string): ImportantButtonOverride[] {
+  const overrides: ImportantButtonOverride[] = [];
+  const ruleRe = /((?:[^{}]*?button\[class\*=[^{}]*?))\{([^}]*)\}/g;
+
+  // `exec` loops rather than `matchAll`: this module is compiled under the
+  // repo's existing target, which does not downlevel iterator spread.
+  let rule: RegExpExecArray | null;
+  while ((rule = ruleRe.exec(css)) !== null) {
+    const [, selector, body] = rule;
+    const classRe = /button\[class\*=["']([^"']+)["']\]/g;
+    const classMatches: string[] = [];
+    let found: RegExpExecArray | null;
+    while ((found = classRe.exec(selector)) !== null) classMatches.push(found[1]);
+    if (!classMatches.length) continue;
+
+    const declaration = (property: string) => {
+      const found = new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]*!important)`, 'i').exec(body);
+      return found ? resolveCssColour(css, found[1]) : null;
+    };
+    const background = declaration('background') ?? declaration('background-color');
+    const foreground = declaration('color');
+    if (!background && !foreground) continue;
+
+    overrides.push({
+      classMatches,
+      hover: /:hover/.test(selector),
+      background,
+      foreground,
+    });
+  }
+  return overrides;
+}
+
 /** Linear interpolation between two colours at `t` in [0, 1]. */
 export function mix(a: Rgb, b: Rgb, t: number): Rgb {
   return a.map((v, i) => Math.round(v + (b[i] - v) * t)) as Rgb;

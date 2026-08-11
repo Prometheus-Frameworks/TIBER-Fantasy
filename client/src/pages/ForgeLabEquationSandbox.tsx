@@ -559,7 +559,7 @@ export default function ForgeLabEquationSandbox() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-purple-600 text-purple-700 hover:bg-purple-600/20 hover:text-purple-800"
+                            className="border-purple-600 text-purple-700 hover:bg-purple-100 hover:text-purple-900"
                             data-testid="button-save-preset"
                           >
                             <Save className="h-4 w-4 mr-1" />

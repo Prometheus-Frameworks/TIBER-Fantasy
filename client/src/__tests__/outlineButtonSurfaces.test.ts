@@ -28,11 +28,15 @@ import {
   CSS_FOREGROUND,
   CSS_PRIMARY,
   CSS_PRIMARY_FOREGROUND,
+  type ImportantButtonOverride,
   Rgb,
   composite,
   contrastRatio,
   mix,
   parseHex,
+  parseImportantButtonOverrides,
+  readCssToken,
+  resolveCssColour,
   relativeLuminance,
   resolveColourToken,
   resolveSurface,
@@ -331,9 +335,17 @@ export function auditClassName(
   const hoverBgToken = split('hover:bg-').colour;
   const hoverTrack = isGradient('') || isGradient('hover:')
     ? gradientTrack(hoverStops, page)
-    // A translucent hover composites over the button's own base surface.
+    // A translucent hover composites over the PAGE, not over the button's own
+    // base background. `hover:bg-blue-600/20` sets `background-color` on hover,
+    // and a background-color replaces the element's previous one outright —
+    // the alpha then composites against the backdrop behind the element, which
+    // is the ancestor/page surface. Compositing over the base background
+    // instead invents a lighter surface than the browser paints: on a dark
+    // navy page it turned a near-black hover into an off-white one, which is
+    // how `hover:bg-blue-600/20` with dark blue text passed at a fictional
+    // ratio while rendering about 1.85:1.
     : hoverBgToken
-      ? solidTrack(resolveSurface(hoverBgToken, baseTrack?.[0] ?? page))
+      ? solidTrack(resolveSurface(hoverBgToken, page))
       : baseTrack;
 
   const hoverFgToken = split('hover:text-').colour;
@@ -413,6 +425,58 @@ export function buttonArms(
   return null;
 }
 
+const INDEX_CSS = fs.readFileSync(path.join(CLIENT_SRC, 'index.css'), 'utf8');
+const IMPORTANT_OVERRIDES = parseImportantButtonOverrides(INDEX_CSS);
+
+/**
+ * The states an `!important` stylesheet rule forces onto a matching button.
+ *
+ * A button matching one of these selectors renders the override's colours
+ * wherever the shell is mounted — the call site's own classes lose. So its
+ * class list is not the whole story, and a button that clears AA on its
+ * declared surface can still be unreadable on the surface it actually gets.
+ *
+ * Which pages mount inside the shell is a routing question a static scan
+ * cannot answer, so the rule here is the conservative one: a button must be
+ * legible on every surface it can render on. That is stricter than the DOM in
+ * some cases and never weaker, which is the correct direction for an audit.
+ */
+export function overriddenChecks(
+  className: string,
+  overrides: ImportantButtonOverride[] = IMPORTANT_OVERRIDES,
+): SurfaceCheck[] {
+  const classes = classesOf(className);
+  const applicable = overrides.filter((rule) =>
+    rule.classMatches.some((match) => classes.some((c) => c.includes(match))),
+  );
+  if (!applicable.length) return [];
+
+  const base = applicable.find((rule) => !rule.hover);
+  const hover = applicable.find((rule) => rule.hover);
+  if (!base) return [];
+
+  // A `:hover` rule that sets only the background inherits the base rule's
+  // foreground, exactly as the cascade does.
+  const states: Array<{ state: 'base' | 'hover'; bg: Rgb | null; fg: Rgb | null }> = [
+    { state: 'base', bg: base.background, fg: base.foreground },
+  ];
+  if (hover) {
+    states.push({
+      state: 'hover',
+      bg: hover.background ?? base.background,
+      fg: hover.foreground ?? base.foreground,
+    });
+  }
+
+  return states.map(({ state, bg, fg }) => ({
+    state,
+    background: bg,
+    foreground: fg,
+    ratio: bg && fg ? contrastRatio(bg, fg) : null,
+    unresolved: !bg || !fg,
+  }));
+}
+
 function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
   const offenders: Offender[] = [];
   let audited = 0;
@@ -427,7 +491,13 @@ function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
 
       for (const { className, variant } of arms) {
         audited += 1;
-        for (const result of auditClassName(className, page, variant)) {
+        const declared = auditClassName(className, page, variant);
+        const overridden = overriddenChecks(className).map((check) => ({
+          ...check,
+          state: `${check.state}` as 'base' | 'hover',
+          overridden: true,
+        }));
+        for (const result of [...declared, ...overridden] as Array<SurfaceCheck & { overridden?: boolean }>) {
           if (result.ratio === null) {
             // Neither passing nor failing: the audit could not resolve one
             // side. Silently skipping these is how a translucent background
@@ -447,11 +517,15 @@ function auditOutlineButtons(): { offenders: Offender[]; audited: number } {
             file: path.relative(CLIENT_SRC, file),
             line,
             className: className.slice(0, 90),
-            // Name where along a gradient the failure sits: "it fails at 0.00"
-            // is a repairable report, "it fails" is not.
-            state: result.gradientOffset === undefined
-              ? result.state
-              : `${result.state}@${result.gradientOffset.toFixed(2)}`,
+            // Name where along a gradient the failure sits, and say when the
+            // failing surface is the one a stylesheet forced rather than the
+            // one the class list declares: "it fails" is not a repairable
+            // report when the class list looks compliant.
+            state: result.overridden
+              ? `${result.state}/!important`
+              : result.gradientOffset === undefined
+                ? result.state
+                : `${result.state}@${result.gradientOffset.toFixed(2)}`,
             ratio: Number(result.ratio.toFixed(2)),
           });
         }
@@ -590,9 +664,35 @@ describe('surface resolution', () => {
     expect(onWhite.ratio!).toBeLessThan(AA_TEXT_CONTRAST);
   });
 
-  test('a translucent hover composites over the button, not the page', () => {
+  test('a translucent hover composites over the page, not over the base background', () => {
+    // An earlier revision of this audit had it the other way round, and that
+    // was wrong about CSS: `hover:bg-*` sets `background-color`, which REPLACES
+    // the element's previous background rather than layering over it, so the
+    // alpha composites against the backdrop behind the element. On a dark page
+    // the difference is the whole verdict — the same class is a near-black
+    // surface, not an off-white one.
+    const navy = parseHex('#0a0e1a')!;
+    const [, hover] = auditClassName('bg-white text-blue-700 hover:bg-blue-600/20', navy);
+    expect(hover.background).toEqual(composite(resolveColourToken('blue-600')!, navy, 0.2));
+    expect(hover.background).not.toEqual(composite(resolveColourToken('blue-600')!, [255, 255, 255], 0.2));
+
+    // And the wrong model was not merely imprecise, it flipped the result:
+    // dark text on that surface passes under the old model and fails under the
+    // correct one.
+    expect(hover.ratio!).toBeLessThan(AA_TEXT_CONTRAST);
+    const underOldModel = contrastRatio(
+      composite(resolveColourToken('blue-600')!, [255, 255, 255], 0.2),
+      resolveColourToken('blue-700')!,
+    );
+    expect(underOldModel).toBeGreaterThan(AA_TEXT_CONTRAST);
+  });
+
+  test('a translucent hover on a page the audit cannot read is unresolved', () => {
+    // No page root: the backdrop is genuinely unknown, and the audit says so
+    // rather than substituting the button's own background for it.
     const [, hover] = auditClassName('bg-white text-blue-700 hover:bg-blue-600/20', null);
-    expect(hover.background).toEqual(composite(resolveColourToken('blue-600')!, [255, 255, 255], 0.2));
+    expect(hover.unresolved).toBe(true);
+    expect(hover.ratio).toBeNull();
   });
 
   test('page surface is read from the page root', () => {
@@ -785,6 +885,73 @@ describe('outline buttons meet WCAG AA for text', () => {
       const hover = track(['blue-600', 'purple-700'], fg).ratio;
       expect(Math.min(rest, hover)).toBeLessThan(AA_TEXT_CONTRAST);
     }
+  });
+
+  test('the shell\'s !important overrides are read out of index.css, not restated', () => {
+    // A hardcoded copy of these rules would stop meaning anything the moment
+    // the stylesheet moved, which is the failure mode this whole audit exists
+    // to remove. The rules are parsed from the real file.
+    const shell = IMPORTANT_OVERRIDES.filter((rule) =>
+      rule.classMatches.some((m) => ['bg-purple', 'bg-indigo', 'bg-blue'].includes(m)),
+    );
+    expect(shell.length).toBeGreaterThanOrEqual(2);
+
+    const base = shell.find((rule) => !rule.hover)!;
+    const hover = shell.find((rule) => rule.hover)!;
+    // `var(--ember)` is followed back into the stylesheet, not guessed.
+    expect(base.background).toEqual(parseHex(readCssToken(INDEX_CSS, 'ember')!));
+    expect(base.foreground).toEqual(parseHex(CSS_PRIMARY_FOREGROUND));
+    expect(hover.background).toEqual(parseHex('#cc5a0c'));
+  });
+
+  test('a stylesheet override is audited as the surface that actually renders', () => {
+    // The regression: `.tiber-main button[class*="bg-purple"]` repaints every
+    // legacy purple/indigo/blue button with the Ember brand surface and beats
+    // the call site with `!important`. A class-name audit measured purple and
+    // called it compliant; the DOM rendered Ember.
+    const forgeLabButton = 'bg-purple-600 hover:bg-purple-700 text-white';
+    const checks = overriddenChecks(forgeLabButton);
+    expect(checks).toHaveLength(2);
+    expect(checks[0].background).toEqual(parseHex(CSS_PRIMARY));
+    // The call site's own `text-white` loses to the `!important` colour.
+    expect(checks[0].foreground).not.toEqual([255, 255, 255]);
+    for (const check of checks) expect(check.ratio!).toBeGreaterThanOrEqual(AA_TEXT_CONTRAST);
+    expect(Number(checks[0].ratio!.toFixed(2))).toBe(5.72);
+    expect(Number(checks[1].ratio!.toFixed(2))).toBe(4.75);
+  });
+
+  test('the override\'s previous white foreground is caught, at the reviewed ratios', () => {
+    // Replaying the stylesheet as it was: `color: white !important` on the same
+    // two Ember surfaces. Both fail — 3.46:1 at rest and 4.17:1 on hover — and
+    // 3.46:1 is the exact pairing this PR deleted the waiver for, reintroduced
+    // through a rule no class-name scan could see.
+    const previous: ImportantButtonOverride[] = parseImportantButtonOverrides(`
+      .tiber-main button[class*="bg-purple"],
+      .tiber-main button[class*="bg-blue"] {
+        background: var(--ember) !important;
+        color: white !important;
+      }
+      .tiber-main button[class*="bg-purple"]:hover,
+      .tiber-main button[class*="bg-blue"]:hover {
+        background: #cc5a0c !important;
+      }
+      :root { --ember: ${CSS_PRIMARY}; }
+    `);
+
+    const checks = overriddenChecks('bg-purple-600 hover:bg-purple-700 text-white', previous);
+    expect(checks.map((c) => Number(c.ratio!.toFixed(2)))).toEqual([3.46, 4.17]);
+    for (const check of checks) expect(check.ratio!).toBeLessThan(AA_TEXT_CONTRAST);
+    // The hover rule sets no colour, so it inherits the base rule's — the same
+    // thing the cascade does.
+    expect(checks[1].foreground).toEqual([255, 255, 255]);
+  });
+
+  test('a button the override does not match is unaffected', () => {
+    // The repaired hero gradient carries neither `bg-purple` nor `bg-blue` as a
+    // background class, so the shell rule does not apply to it — asserting
+    // otherwise would invent failures.
+    expect(overriddenChecks('bg-gradient-to-r from-blue-600 to-purple-700 text-white')).toEqual([]);
+    expect(overriddenChecks('bg-green-700 text-white')).toEqual([]);
   });
 
   test('the previously waived pairing would still be caught', () => {

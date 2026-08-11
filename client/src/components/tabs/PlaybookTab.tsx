@@ -867,7 +867,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
         <Button
           onClick={() => setIsAskTiberOpen(!isAskTiberOpen)}
           variant="outline"
-          className={`border-amber-500/50 ${isAskTiberOpen ? 'bg-amber-100 text-amber-900' : 'text-amber-800 hover:bg-amber-500/10'}`}
+          className={`border-amber-500/50 ${isAskTiberOpen ? 'bg-amber-100 text-amber-900' : 'text-amber-800 hover:bg-amber-100 hover:text-amber-900'}`}
           data-testid="button-ask-tiber"
         >
           <MessageCircle size={18} className="mr-2" />
@@ -910,7 +910,7 @@ export default function PlaybookTab({ leagueId = null, teamId = null, week = nul
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-amber-800 border-amber-500/50 hover:bg-amber-500/10"
+                      className="text-amber-800 border-amber-500/50 hover:bg-amber-100 hover:text-amber-900"
                       onClick={() => handleSaveChatEntry(msg)}
                       disabled={saveChatEntryMutation.isPending}
                     >

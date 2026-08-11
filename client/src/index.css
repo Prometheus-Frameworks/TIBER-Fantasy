@@ -1127,17 +1127,29 @@ html, body {
   color: var(--tmd-text, #e2e4e8);
 }
 
+/*
+ * Legacy purple/indigo/blue buttons inside the Tiber shell are repainted with
+ * the Ember brand surface. The foreground is `--primary-foreground`, not white:
+ * `!important` beats the call site, so this rule decides what actually renders,
+ * and white on Ember measures 3.46:1 at rest and 4.17:1 on the hover shade —
+ * both AA failures, and the exact pairing #309 removed the waiver for. The
+ * near-black foreground measures 5.72:1 and 4.75:1 on the same two surfaces.
+ *
+ * `client/src/__tests__/outlineButtonSurfaces.test.ts` parses these rules out
+ * of this file and audits the overridden surface, so the two cannot drift.
+ */
 .tiber-main button[class*="bg-purple"],
 .tiber-main button[class*="bg-indigo"],
 .tiber-main button[class*="bg-blue"] {
   background: var(--ember) !important;
-  color: white !important;
+  color: var(--primary-foreground) !important;
 }
 
 .tiber-main button[class*="bg-purple"]:hover,
 .tiber-main button[class*="bg-indigo"]:hover,
 .tiber-main button[class*="bg-blue"]:hover {
   background: #cc5a0c !important;
+  color: var(--primary-foreground) !important;
 }
 
 .tiber-main .font-mono,
