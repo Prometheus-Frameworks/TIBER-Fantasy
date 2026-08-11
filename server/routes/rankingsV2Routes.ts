@@ -28,6 +28,15 @@ const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
 export const SEASON_CONFIG_STALE_STATUS = 'season_calendar_config_stale';
 /** Serving rows from a season other than the one the league is currently in. */
 export const ARCHIVE_SEASON_STATUS = 'archive_season_not_current';
+/**
+ * An explicitly requested week has no evidence from any admitted source.
+ *
+ * Distinct from `forge_cache_empty_uncomputed`, which says the grades for the
+ * *current* board have not been computed yet and will be shortly. This says the
+ * exact week the caller asked about cannot be answered, and that no other
+ * week's rows were substituted for it.
+ */
+export const EXACT_WEEK_UNAVAILABLE_STATUS = 'exact_week_evidence_unavailable';
 
 /**
  * Phase/freshness envelope attached to every weekly rankings response.
@@ -55,13 +64,17 @@ export type EvidenceProvenance =
   | 'no_rankable_source';
 
 /**
- * How the returned board's target week was arrived at.
+ * Where the returned board's target week came from.
  *
- * `explicit_request` is not a schedule provenance — it records that the caller
- * named the week, so no calendar arithmetic stands behind it and nothing about
- * it is provisional.
+ * Deliberately a SEPARATE field from `decisionTargetProvenance` rather than a
+ * new member of that enum. `TargetProvenance` answers "how trustworthy is the
+ * schedule behind this week" and is a closed set an existing client may already
+ * switch on exhaustively; adding a value to it would break those clients
+ * mid-rolling-deployment without a contract-version change. Origin is a
+ * different question — "who chose this week" — so it gets its own optional
+ * field and the existing enum keeps its meaning and its membership.
  */
-type PublishedTargetProvenance = TargetProvenance | 'explicit_request';
+export type DecisionTargetOrigin = 'explicit_request' | 'phase_default';
 
 function buildSeasonMeta(input: {
   phase: SeasonPhaseInfo;
@@ -94,17 +107,23 @@ function buildSeasonMeta(input: {
   // would be mislabelled as a 2025 archive.
   const forwardRankingSeason = input.phase.targetSeason ?? input.phase.season;
 
-  // A week the caller named rests on no calendar arithmetic, so it carries
-  // neither a schedule provenance nor the provisional flag. A defaulted week
-  // came from the phase calendar and inherits both.
-  const boardProvenance: PublishedTargetProvenance | null =
+  // Provenance keeps its existing meaning and its existing membership: it
+  // describes the SCHEDULE the week rests on. An explicitly requested week
+  // rests on no calendar arithmetic at all, so it has no schedule provenance —
+  // null, an already-valid value in the closed enum — and is not provisional.
+  // Who chose the week is a different question, answered by `origin` below.
+  const boardProvenance: TargetProvenance | null =
+    input.boardWeek === null || input.boardWeekIsExplicit
+      ? null
+      : input.phase.targetProvenance;
+  const boardIsProvisional =
+    input.boardWeek !== null && !input.boardWeekIsExplicit && input.phase.targetIsProvisional;
+  const boardOrigin: DecisionTargetOrigin | null =
     input.boardWeek === null
       ? null
       : input.boardWeekIsExplicit
         ? 'explicit_request'
-        : input.phase.targetProvenance;
-  const boardIsProvisional =
-    input.boardWeek !== null && !input.boardWeekIsExplicit && input.phase.targetIsProvisional;
+        : 'phase_default';
 
   const isArchive =
     input.evidenceSeason !== null &&
@@ -136,6 +155,11 @@ function buildSeasonMeta(input: {
     decisionTargetWeek: input.boardWeek,
     decisionTargetProvenance: boardProvenance,
     decisionTargetIsProvisional: boardIsProvisional,
+    // Who chose the week, as its own field rather than a new member of the
+    // closed provenance enum above — widening that enum would break an
+    // existing client switching on it exhaustively, mid-rolling-deployment,
+    // without a contract-version change.
+    decisionTargetOrigin: boardOrigin,
     // The live phase target, preserved separately because it is still useful —
     // a client showing "you are deciding Week 12" needs it — but it is now
     // named for what it is and cannot be read as a description of these rows.
@@ -608,7 +632,23 @@ export function createRankingsV2Router(): Router {
       }
 
       // The cache is keyed by the DECISION TARGET — which board is being built.
-      const cache = await getGradesFromCache(season, decisionTargetWeek, position, limit, CACHE_VERSION);
+      //
+      // An explicitly requested week is EXACT. `getGradesFromCache()` otherwise
+      // substitutes the season's latest cached week when the requested one has
+      // no rows, and the response then labelled those rows as the requested
+      // board: a Week 7 request came back with Week 18 grades under a Week 7
+      // heading. Those rows describe games the caller did not ask about, so
+      // this is a wrong answer rather than a degraded one, and the exact-week
+      // read refuses the substitution.
+      const weekIsExplicit = Number.isFinite(requestedWeek);
+      const cache = await getGradesFromCache(
+        season,
+        decisionTargetWeek,
+        position,
+        limit,
+        CACHE_VERSION,
+        { exactWeek: weekIsExplicit },
+      );
       const scoringBuild = await buildRankingsScoringInputs({
         season,
         throughWeek: statsQueryCeiling,
@@ -722,6 +762,37 @@ export function createRankingsV2Router(): Router {
 
       const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();
       const isCacheEmpty = cache.players.length === 0;
+
+      // Reaching here on an explicit week means the scoring service did not
+      // serve the exact week either — it was skipped, it failed, or its payload
+      // did not satisfy the contract. With no exact-week evidence from either
+      // source, the honest response is the typed unavailable one. Falling
+      // through would render an empty board under the requested week's label,
+      // which reads as "we looked and there is nothing" rather than "we could
+      // not answer the question you asked".
+      if (weekIsExplicit && isCacheEmpty) {
+        return sendUnavailable(res, buildUnavailablePayload({
+          season,
+          status: EXACT_WEEK_UNAVAILABLE_STATUS,
+          detail:
+            `No evidence is available for ${season} week ${decisionTargetWeek}. ` +
+            'FORGE grades are not computed for that exact week' +
+            (scoringFallbackReason ? `, and the scoring service did not serve it (${scoringFallbackReason})` : '') +
+            '. A different week\'s rows are not substituted.',
+          phase,
+          position,
+        }));
+      }
+
+      // A substitution must never be labelled as the requested board. The exact
+      // read above prevents it on the explicit path; this is the backstop for
+      // any future caller that reaches here with substituted rows.
+      if (cache.weekSubstituted) {
+        console.warn(
+          `[RankingsV2/Routes] cache substituted week ${cache.asOfWeek} for requested ${cache.requestedAsOfWeek}; ` +
+          'serving as a defaulted board, not as the requested one',
+        );
+      }
 
       // Identity resolution happens once for the whole cohort (two batched
       // queries) before any row is emitted.

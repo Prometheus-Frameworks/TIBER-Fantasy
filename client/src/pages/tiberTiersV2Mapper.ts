@@ -292,16 +292,20 @@ export const seasonMetaSchema = z.object({
   // that omits these must reach the error state rather than let the page infer
   // an evidence extent from the target — the conflation #307 exists to remove.
   //
-  // `decisionTarget*` describes THE BOARD IN THIS RESPONSE. `explicit_request`
-  // means the caller named the week, so no calendar arithmetic stands behind
-  // it. `phaseTarget*` is the live league target, which is a different fact
-  // whenever the request asked for anything but the current forward board.
+  // `decisionTarget*` describes THE BOARD IN THIS RESPONSE. `phaseTarget*` is
+  // the live league target, which is a different fact whenever the request
+  // asked for anything but the current forward board.
+  //
+  // Provenance keeps its existing closed membership — it describes the schedule
+  // behind the week, and an explicitly requested week rests on none, so it is
+  // null there. Who chose the week is the separate optional
+  // `decisionTargetOrigin`, optional precisely so a client written against the
+  // pre-change schema still validates a response carrying it.
   decisionTargetSeason: z.number().nullable(),
   decisionTargetWeek: z.number().nullable(),
-  decisionTargetProvenance: z
-    .enum(['verified_schedule', 'anchor_derived', 'explicit_request'])
-    .nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
   decisionTargetIsProvisional: z.boolean(),
+  decisionTargetOrigin: z.enum(['explicit_request', 'phase_default']).nullable().optional(),
   phaseTargetSeason: z.number().nullable(),
   phaseTargetWeek: z.number().nullable(),
   phaseTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),

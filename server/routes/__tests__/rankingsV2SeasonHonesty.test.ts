@@ -9,6 +9,7 @@
 
 import express from 'express';
 import { AddressInfo } from 'net';
+import { z } from 'zod';
 
 jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
   scoringService: { getWeeklyRankings: jest.fn() },
@@ -59,7 +60,11 @@ jest.mock('@shared/weekDetection', () => ({
 }));
 
 import { createRankingsV2Router } from '../rankingsV2Routes';
-import { RANKINGS_V2_CONTRACT_VERSION, rankingsV2ResponseSchema } from '../../contracts/rankingsV2';
+import {
+  RANKINGS_V2_CONTRACT_VERSION,
+  rankingsV2ResponseSchema,
+  rankingsV2SeasonMetaSchema,
+} from '../../contracts/rankingsV2';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 
@@ -130,7 +135,7 @@ describe('Rankings v2 season/phase contract', () => {
     // and for the PHASE TARGET week (preseason → Week 1), so the board, the
     // request, and the published Target Week 1 metadata agree instead of the
     // request silently carrying no week.
-    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version');
+    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version', { exactWeek: false });
     // And the scoring inputs are not pinned to `throughWeek: 18`.
     expect(mockedBuild).toHaveBeenCalledWith(expect.objectContaining({ season: 2026, throughWeek: 0 }));
     expect(body.seasonMeta.currentSeason).toBe(2026);
@@ -176,7 +181,7 @@ describe('Rankings v2 season/phase contract', () => {
 
     const { body } = await call('/api/rankings/v2/weekly?position=WR');
 
-    expect(mockedCache).toHaveBeenCalledWith(2025, 11, 'WR', 100, 'test-version');
+    expect(mockedCache).toHaveBeenCalledWith(2025, 11, 'WR', 100, 'test-version', { exactWeek: false });
     expect(body.seasonMeta.isArchiveView).toBe(false);
     expect(body.seasonMeta.status).toBeNull();
     expect(body.seasonMeta.currentPhaseLabel).toBe('2025 · Week 11');
@@ -187,7 +192,7 @@ describe('Rankings v2 season/phase contract', () => {
 
     await call('/api/rankings/v2/weekly?position=RB&season=2024&asOfWeek=7');
 
-    expect(mockedCache).toHaveBeenCalledWith(2024, 7, 'RB', 100, 'test-version');
+    expect(mockedCache).toHaveBeenCalledWith(2024, 7, 'RB', 100, 'test-version', { exactWeek: true });
   });
 
   test('a stale calendar fails closed into a typed unavailable state', async () => {
@@ -244,7 +249,7 @@ describe('Rankings v2 season/phase contract', () => {
 
     const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
 
-    expect(mockedCache).toHaveBeenCalledWith(2025, 18, 'WR', 100, 'test-version');
+    expect(mockedCache).toHaveBeenCalledWith(2025, 18, 'WR', 100, 'test-version', { exactWeek: true });
     expect(body.items.length).toBe(1);
   });
 
@@ -366,7 +371,11 @@ describe('evidence is what the source declares, never the request or a calendar'
 
     const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18');
 
-    expect(body.seasonMeta.status).toBe('forge_cache_empty_uncomputed');
+    // The evidence claim is the point here, and it is unchanged: nothing was
+    // admitted, so nothing is declared. The *status* is now the stronger
+    // exact-week one, because an explicitly requested week with no rows is a
+    // question this build cannot answer rather than a board still computing.
+    expect(body.seasonMeta.status).toBe('exact_week_evidence_unavailable');
     expect(body.seasonMeta.evidenceWeek).toBeNull();
     expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
     expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
@@ -397,7 +406,207 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.decisionTargetSeason).toBe(2025);
     expect(body.seasonMeta.decisionTargetWeek).toBe(MIDSEASON_2025.targetWeek);
     expect(body.seasonMeta.decisionTargetProvenance).toBe('anchor_derived');
+    expect(body.seasonMeta.decisionTargetOrigin).toBe('phase_default');
     expect(body.seasonMeta.decisionTargetIsProvisional).toBe(true);
+  });
+});
+
+describe('an explicit asOfWeek is exact, and fails closed', () => {
+  // The defect: `getGradesFromCache()` substitutes the season's latest cached
+  // week when the requested week has no rows, and the response labelled those
+  // rows as the requested board. A Week 7 request came back with Week 18
+  // grades under a Week 7 heading — rows describing games the caller never
+  // asked about, which is a wrong answer rather than a degraded one.
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockResolveSeasonPhase.mockReturnValue(MIDSEASON_2025);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
+    mockedMeaningful.mockReturnValue(false);
+  });
+
+  test('the exact week is requested from the cache, not "whatever is newest"', async () => {
+    mockedCache.mockResolvedValue({
+      players: [cacheRow], computedAt: new Date('2025-10-20T18:00:00.000Z'), asOfWeek: 7,
+    } as any);
+
+    await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(mockedCache).toHaveBeenCalledWith(2025, 7, 'WR', 100, 'test-version', { exactWeek: true });
+  });
+
+  test('a defaulted week does NOT ask for an exact read', async () => {
+    // Omitting the week is how a caller says "whatever is current", so the
+    // latest-week resolution is correct there and must not be disabled.
+    mockedCache.mockResolvedValue({
+      players: [cacheRow], computedAt: new Date('2025-11-16T18:00:00.000Z'), asOfWeek: 11,
+    } as any);
+
+    await call('/api/rankings/v2/weekly?position=WR&season=2025');
+
+    expect(mockedCache).toHaveBeenCalledWith(
+      2025, MIDSEASON_2025.targetWeek, 'WR', 100, 'test-version', { exactWeek: false },
+    );
+  });
+
+  test('a missing exact cache week fails closed instead of serving another week', async () => {
+    // The exact read returns empty. Scoring is unavailable. The response must
+    // say it cannot answer, not render an empty Week 7 board.
+    mockedCache.mockResolvedValue({
+      players: [], computedAt: null, asOfWeek: 7, requestedAsOfWeek: 7, weekSubstituted: false,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.items).toEqual([]);
+    expect(body.seasonMeta.status).toBe('exact_week_evidence_unavailable');
+    expect(body.seasonMeta.statusDetail).toMatch(/week 7/i);
+    expect(body.seasonMeta.statusDetail).toMatch(/not substituted/i);
+    // Distinct from "grades are still being computed for the current board".
+    expect(body.seasonMeta.status).not.toBe('forge_cache_empty_uncomputed');
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
+  });
+
+  test('unavailable exact scoring evidence also fails closed', async () => {
+    // Scoring has coverage and is attempted, but the service errors; the exact
+    // cache week is empty. Neither source answered the question asked.
+    mockedMeaningful.mockReturnValue(true);
+    mockedBuild.mockResolvedValue({
+      players: Array.from({ length: 20 }, () => ({ playerId: 'x' })), maxRepresentedWeek: 7,
+    } as any);
+    const { scoringService } = jest.requireMock('../../modules/externalModels/scoring/scoringService');
+    scoringService.getWeeklyRankings.mockResolvedValue({
+      ok: false, code: 'upstream_unavailable', message: 'boom',
+    });
+    mockedCache.mockResolvedValue({
+      players: [], computedAt: null, asOfWeek: 7, requestedAsOfWeek: 7, weekSubstituted: false,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.seasonMeta.status).toBe('exact_week_evidence_unavailable');
+    expect(body.seasonMeta.statusDetail).toMatch(/upstream_unavailable/);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
+  });
+
+  test('a latest-week substitution is never labelled as the requested board', async () => {
+    // The end-to-end property, stated directly: whatever comes back for an
+    // explicit week is either that week's evidence or nothing. There is no
+    // path that returns another week's rows under the requested week's label.
+    mockedCache.mockResolvedValue({
+      players: [], computedAt: null, asOfWeek: 7, requestedAsOfWeek: 7, weekSubstituted: false,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.items).toEqual([]);
+    // No board was served, so none is labelled — `decisionTargetWeek` describes
+    // the board IN the response, and there is none. The week the caller asked
+    // about is named in the status detail, where it belongs.
+    expect(body.seasonMeta.decisionTargetWeek).toBeNull();
+    expect(body.seasonMeta.statusDetail).toMatch(/week 7/i);
+    // Evidence is not claimed through any week at all.
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+  });
+
+  test('an exact week that IS present is served normally', async () => {
+    // Fail-closed must not become fail-always: the exact week exists, so it is
+    // served, and its metadata describes it.
+    mockedCache.mockResolvedValue({
+      players: [cacheRow], computedAt: new Date('2025-10-20T18:00:00.000Z'),
+      asOfWeek: 7, requestedAsOfWeek: 7, weekSubstituted: false,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+
+    expect(body.items.length).toBe(1);
+    expect(body.seasonMeta.status).not.toBe('exact_week_evidence_unavailable');
+    expect(body.seasonMeta.decisionTargetWeek).toBe(7);
+    expect(body.seasonMeta.evidenceWeek).toBe(7);
+  });
+
+  test('a defaulted board with an empty cache keeps its own uncomputed status', async () => {
+    // The fail-closed gate is for explicit weeks only. A defaulted board with
+    // no computed grades is a different, pre-existing state and keeps saying so.
+    mockedCache.mockResolvedValue({
+      players: [], computedAt: null, asOfWeek: 11, requestedAsOfWeek: null, weekSubstituted: false,
+    } as any);
+
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025');
+
+    expect(body.seasonMeta.status).toBe('forge_cache_empty_uncomputed');
+    expect(body.seasonMeta.status).not.toBe('exact_week_evidence_unavailable');
+  });
+});
+
+describe('the response stays compatible with the pre-change client schema', () => {
+  // The other half of the finding: `explicit_request` had been added to the
+  // existing closed provenance enum without moving the contract version, so a
+  // client validating the advertised `v2-canonical-identity-2026-08-09` schema
+  // would reject a response mid-rolling-deployment. Origin moved to its own
+  // optional field and the enum was restored.
+  const PRE_CHANGE_SEASON_META = z.object({
+    decisionTargetSeason: z.number().nullable(),
+    decisionTargetWeek: z.number().nullable(),
+    decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+    decisionTargetIsProvisional: z.boolean(),
+    evidenceThroughSeason: z.number().nullable(),
+    evidenceThroughWeek: z.number().nullable(),
+    evidenceProvenance: z.enum([
+      'source_declared_as_of',
+      'source_max_represented_week',
+      'source_extent_unknown',
+      'no_rankable_source',
+    ]),
+    completionVerified: z.boolean(),
+    finalizedThroughWeek: z.number().nullable(),
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockResolveSeasonPhase.mockReturnValue(MIDSEASON_2025);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
+    mockedMeaningful.mockReturnValue(false);
+    mockedCache.mockResolvedValue({
+      players: [cacheRow], computedAt: new Date('2025-10-20T18:00:00.000Z'),
+      asOfWeek: 7, requestedAsOfWeek: 7, weekSubstituted: false,
+    } as any);
+  });
+
+  test('the contract version is unchanged', () => {
+    expect(RANKINGS_V2_CONTRACT_VERSION).toBe('v2-canonical-identity-2026-08-09');
+  });
+
+  test('an explicit-week response validates against the pre-change schema', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+    expect(body.contractVersion).toBe('v2-canonical-identity-2026-08-09');
+
+    const parsed = PRE_CHANGE_SEASON_META.safeParse(body.seasonMeta);
+    expect(parsed.success).toBe(true);
+  });
+
+  test('a defaulted response validates against the pre-change schema', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025');
+    expect(PRE_CHANGE_SEASON_META.safeParse(body.seasonMeta).success).toBe(true);
+  });
+
+  test('the provenance enum has not gained a member', async () => {
+    // The direct regression: had `explicit_request` still been published as a
+    // provenance, the pre-change enum above would reject it.
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+    expect(['verified_schedule', 'anchor_derived', null])
+      .toContain(body.seasonMeta.decisionTargetProvenance);
+    expect(body.seasonMeta.decisionTargetProvenance).not.toBe('explicit_request');
+  });
+
+  test('origin is additive: a client that ignores it is unaffected', async () => {
+    const { body } = await call('/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=7');
+    const { decisionTargetOrigin, ...withoutOrigin } = body.seasonMeta;
+
+    expect(decisionTargetOrigin).toBe('explicit_request');
+    // Dropping the new field entirely still satisfies the current contract,
+    // which is what "optional" has to mean for a rolling deployment.
+    expect(rankingsV2SeasonMetaSchema.safeParse(withoutOrigin).success).toBe(true);
   });
 });
 
@@ -429,8 +638,11 @@ describe('seasonMeta describes the board that was returned', () => {
 
     expect(body.seasonMeta.decisionTargetSeason).toBe(2025);
     expect(body.seasonMeta.decisionTargetWeek).toBe(7);
-    // The caller named the week, so no calendar arithmetic stands behind it.
-    expect(body.seasonMeta.decisionTargetProvenance).toBe('explicit_request');
+    // The caller named the week, so no SCHEDULE stands behind it: provenance
+    // describes the schedule and is null here, keeping its existing closed
+    // membership. Origin is the separate field that says who chose the week.
+    expect(body.seasonMeta.decisionTargetProvenance).toBeNull();
+    expect(body.seasonMeta.decisionTargetOrigin).toBe('explicit_request');
     expect(body.seasonMeta.decisionTargetIsProvisional).toBe(false);
 
     // Not 2026 Week 1 — the board this response did not return.

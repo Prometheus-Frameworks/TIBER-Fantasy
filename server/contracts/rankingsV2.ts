@@ -282,8 +282,14 @@ export const rankingsV2SeasonMetaSchema = z.object({
    * describing 2026 Week 1. The legacy `targetSeason`/`targetWeek` keep their
    * pre-existing meaning — the phase target — and are unchanged.
    *
-   * `explicit_request` provenance records that the caller named the week, so
-   * no calendar arithmetic stands behind it and it is never provisional.
+   * `decisionTargetProvenance` keeps its existing closed membership. It answers
+   * "how trustworthy is the schedule behind this week", and an explicitly
+   * requested week rests on no schedule at all, so it is null there — an
+   * already-valid value. Who chose the week is a different question, answered
+   * by the separate optional `decisionTargetOrigin`. Adding a value to the
+   * provenance enum instead would break an existing client switching on it
+   * exhaustively, mid-rolling-deployment, without a contract-version change —
+   * which is why the contract version is unchanged and the enum is untouched.
    *
    * `evidenceThroughWeek` is the extent the admitted SOURCE declares — the
    * cache's own asOfWeek, or the measured maximum stats week — never a
@@ -296,10 +302,13 @@ export const rankingsV2SeasonMetaSchema = z.object({
    */
   decisionTargetSeason: z.number().nullable(),
   decisionTargetWeek: z.number().nullable(),
-  decisionTargetProvenance: z
-    .enum(['verified_schedule', 'anchor_derived', 'explicit_request'])
-    .nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
   decisionTargetIsProvisional: z.boolean(),
+  /**
+   * Who chose the board's week. Optional so a client written against the
+   * pre-change schema still validates a response that carries it.
+   */
+  decisionTargetOrigin: z.enum(['explicit_request', 'phase_default']).nullable().optional(),
   phaseTargetSeason: z.number().nullable(),
   phaseTargetWeek: z.number().nullable(),
   phaseTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),

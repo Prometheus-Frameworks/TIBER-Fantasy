@@ -163,7 +163,7 @@ describe('Rankings v2 route stale-calendar gate', () => {
       );
 
       expect(status).toBe(200);
-      expect(mockedCache).toHaveBeenCalledWith(season, 18, 'WR', 100, 'test-version');
+      expect(mockedCache).toHaveBeenCalledWith(season, 18, 'WR', 100, 'test-version', { exactWeek: true });
       expect(mockedBuild).toHaveBeenCalledWith(expect.objectContaining({ season, throughWeek: 18 }));
       expect(body.items).toHaveLength(1);
       expect(body.seasonMeta.evidenceSeason).toBe(season);
@@ -185,7 +185,7 @@ describe('Rankings v2 route forward-season default', () => {
     expect(status).toBe(200);
     // The forward-season default also carries the forward TARGET WEEK, so the
     // requested board matches the advertised target rather than being weekless.
-    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version');
+    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version', { exactWeek: false });
     // Derived, not a literal: the bound is 2026's own elapsed week count, which
     // is 0 today but will not be forever. A hardcoded 0 here would quietly
     // start asserting the wrong thing once 2026 Week 1 kicks off.
