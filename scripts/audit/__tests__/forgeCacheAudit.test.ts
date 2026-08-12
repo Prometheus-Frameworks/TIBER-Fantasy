@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createHash } from 'crypto';
 import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
+import { computeForgePlayerStaticRowsDigest } from '../../../server/modules/externalModels/forge/forgePlayerStaticArtifactContract';
 import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
 import {
   CLAMPING_SECTION_HEADING,
@@ -780,6 +781,185 @@ describe('comparability', () => {
         expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
       },
     );
+
+    describe('runtime artifact-admission parity', () => {
+      function digestFor(rows: unknown[]) {
+        return {
+          algorithm: 'sha256',
+          scope: 'rows',
+          canonicalization: 'json_sorted_keys_no_whitespace_v1',
+          value: computeForgePlayerStaticRowsDigest(rows),
+        };
+      }
+
+      test('a valid content_digest binds and admits the root rows array', () => {
+        const ignoredLowerRow = { ...evidenceRow, player_id: '00-0000002' };
+        const plan = planForgeStaticArtifactComparison({
+          rows: [evidenceRow],
+          players: [ignoredLowerRow],
+          content_digest: digestFor([evidenceRow]),
+        }, liveIds);
+
+        expect(plan.rowContainer).toBe('rows');
+        expect(plan.staticRows).toEqual([evidenceRow]);
+        expect(plan.evidenceRows).toEqual([evidenceRow]);
+        expect(plan.joinBlockers).toEqual([]);
+      });
+
+      test.each(['players', 'data'] as const)(
+        'a digest-free legacy %s container remains adapter-compatible',
+        (container) => {
+          const plan = planForgeStaticArtifactComparison({ [container]: [evidenceRow] }, liveIds);
+          expect(plan.rowContainer).toBe(container);
+          expect(plan.staticRows).toEqual([evidenceRow]);
+          expect(plan.joinBlockers).toEqual([]);
+        },
+      );
+
+      test.each([
+        ['null declaration', null],
+        ['wrong algorithm', { ...digestFor([evidenceRow]), algorithm: 'md5' }],
+        ['wrong scope', { ...digestFor([evidenceRow]), scope: 'players' }],
+        ['wrong canonicalization', { ...digestFor([evidenceRow]), canonicalization: 'plain_json' }],
+        ['uppercase digest', { ...digestFor([evidenceRow]), value: 'A'.repeat(64) }],
+        ['short digest', { ...digestFor([evidenceRow]), value: 'a'.repeat(63) }],
+      ])('%s fails closed before any rows are admitted', (_label, contentDigest) => {
+        const plan = planForgeStaticArtifactComparison({
+          rows: [evidenceRow],
+          players: [evidenceRow],
+          content_digest: contentDigest,
+        }, liveIds);
+        expect(plan.rowContainer).toBeNull();
+        expect(plan.staticRows).toEqual([]);
+        expect(plan.evidenceRows).toEqual([]);
+        expect(plan.joinBlockers.join(' ')).toMatch(/content_digest declaration is malformed or unsupported/);
+        expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+      });
+
+      test.each(['players', 'data'] as const)(
+        'a present digest without root rows cannot be rescued by %s',
+        (container) => {
+          const plan = planForgeStaticArtifactComparison({
+            [container]: [evidenceRow],
+            content_digest: digestFor([evidenceRow]),
+          }, liveIds);
+          expect(plan.rowContainer).toBeNull();
+          expect(plan.staticRows).toEqual([]);
+          expect(plan.joinBlockers.join(' ')).toMatch(/content_digest.*root rows field is not an array/);
+        },
+      );
+
+      test('a digest mismatch rejects even otherwise valid root rows', () => {
+        const plan = planForgeStaticArtifactComparison({
+          rows: [evidenceRow],
+          content_digest: digestFor([]),
+        }, liveIds);
+        expect(plan.rowContainer).toBeNull();
+        expect(plan.staticRows).toEqual([]);
+        expect(plan.joinBlockers.join(' ')).toMatch(/content_digest does not match/);
+      });
+
+      test('a canonicalization error becomes a blocker rather than escaping the audit', () => {
+        const plan = planForgeStaticArtifactComparison({
+          rows: [undefined],
+          content_digest: {
+            algorithm: 'sha256',
+            scope: 'rows',
+            canonicalization: 'json_sorted_keys_no_whitespace_v1',
+            value: 'a'.repeat(64),
+          },
+        }, liveIds);
+        expect(plan.rowContainer).toBeNull();
+        expect(plan.staticRows).toEqual([]);
+        expect(plan.joinBlockers.join(' ')).toMatch(/cannot be canonicalized/);
+      });
+
+      test.each([
+        ['unsupported artifact ID', { artifact_type: 'OTHER_ARTIFACT' }, /unsupported artifact ID/],
+        ['unsupported contract version', { schema_version: 'v2' }, /unsupported contract version/],
+      ])('%s blocks all row containers', (_label, declaration, problem) => {
+        const plan = planForgeStaticArtifactComparison({
+          rows: [evidenceRow],
+          players: [evidenceRow],
+          ...declaration,
+        }, liveIds);
+        expect(plan.rowContainer).toBeNull();
+        expect(plan.staticRows).toEqual([]);
+        expect(plan.joinBlockers.join(' ')).toMatch(problem);
+      });
+
+      test.each([
+        ['exact ID and v1', { artifact_type: 'FORGE_PLAYER_STATIC_V1', version: 'v1' }],
+        ['legacy ID and major 1', { artifact_type: 'forge_player_static', version: '1.0.0' }],
+        ['containing ID and containing v1', { artifact_type: 'export_FORGE_PLAYER_STATIC_V1_prod', version: 'preview-v1-canary' }],
+        ['no declarations', {}],
+      ])('preserves the adapter\'s existing broad declaration admission: %s', (_label, declaration) => {
+        const plan = planForgeStaticArtifactComparison({ rows: [evidenceRow], ...declaration }, liveIds);
+        expect(plan.rowContainer).toBe('rows');
+        expect(plan.joinBlockers).toEqual([]);
+      });
+
+      test('uses the adapter nullish chains and manifest-over-meta-over-root shallow merge', () => {
+        const plan = planForgeStaticArtifactComparison({
+          artifact_type: 'OTHER_ROOT',
+          version: 'v2',
+          meta: null,
+          metadata: { artifact_type: 'OTHER_METADATA', version: 'v2' },
+          consumer_manifest: null,
+          downstream_consumer_manifest: {
+            artifact_type: 'FORGE_PLAYER_STATIC_V1',
+            version: 'v1',
+          },
+          rows: [evidenceRow],
+        }, liveIds);
+        expect(plan.rowContainer).toBe('rows');
+        expect(plan.joinBlockers).toEqual([]);
+      });
+
+      test.each([
+        [
+          'non-nullish invalid metadata candidates stop each fallback chain',
+          {
+            artifact_type: 'FORGE_PLAYER_STATIC_V1',
+            version: 'v1',
+            meta: false,
+            metadata: { artifact_type: 'OTHER_METADATA', version: 'v2' },
+            consumer_manifest: false,
+            downstream_consumer_manifest: { artifact_type: 'OTHER_DOWNSTREAM', version: 'v2' },
+          },
+        ],
+        [
+          'manifest is the final shared fallback for both chains',
+          {
+            artifact_type: 'OTHER_ROOT',
+            version: 'v2',
+            manifest: { artifact_type: 'FORGE_PLAYER_STATIC_V1', version: 'v1' },
+          },
+        ],
+      ])('preserves adapter nullish selection: %s', (_label, declaration) => {
+        const plan = planForgeStaticArtifactComparison({ rows: [evidenceRow], ...declaration }, liveIds);
+        expect(plan.rowContainer).toBe('rows');
+        expect(plan.joinBlockers).toEqual([]);
+      });
+
+      test('uses adapter declaration-key precedence after the shallow merge', () => {
+        const blocked = planForgeStaticArtifactComparison({
+          artifact_type: 'OTHER_ARTIFACT',
+          artifact_id: 'FORGE_PLAYER_STATIC_V1',
+          rows: [evidenceRow],
+        }, liveIds);
+        expect(blocked.rowContainer).toBeNull();
+        expect(blocked.joinBlockers.join(' ')).toMatch(/unsupported artifact ID OTHER_ARTIFACT/);
+
+        const admitted = planForgeStaticArtifactComparison({
+          artifact_type: 42,
+          artifact_id: 'FORGE_PLAYER_STATIC_V1',
+          rows: [evidenceRow],
+        }, liveIds);
+        expect(admitted.rowContainer).toBe('rows');
+        expect(admitted.joinBlockers).toEqual([]);
+      });
+    });
   });
 
   test('joinability is derived from the measured identifiers', () => {

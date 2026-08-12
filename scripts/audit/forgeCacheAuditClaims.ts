@@ -12,6 +12,10 @@
 import { createHash } from 'crypto';
 import { decodeHTMLAttribute, decodeHTMLStrict } from 'entities';
 import { lexer as lexMarkdown, type Token as MarkedToken } from 'marked';
+import {
+  assessForgePlayerStaticContentDigest,
+  assessForgePlayerStaticDeclaration,
+} from '../../server/modules/externalModels/forge/forgePlayerStaticArtifactContract';
 
 export function sha256Text(text: string | Buffer): string {
   return createHash('sha256').update(text).digest('hex');
@@ -316,6 +320,39 @@ function selectForgeStaticArtifactRows(staticArtifact: any): {
   };
 }
 
+function forgeStaticArtifactAdmissionProblem(staticArtifact: unknown): string | null {
+  // Runtime order is JSON.parse -> client digest verification -> adapter
+  // declaration/shape checks -> row-container selection. The audit receives an
+  // already-parsed value and preserves every subsequent gate in that order.
+  const digest = assessForgePlayerStaticContentDigest(staticArtifact);
+  if (!digest.accepted) {
+    switch (digest.reason) {
+      case 'unsupported_declaration':
+        return 'static artifact content_digest declaration is malformed or unsupported';
+      case 'missing_rows':
+        return 'static artifact content_digest is present but the root rows field is not an array';
+      case 'digest_mismatch':
+        return 'static artifact content_digest does not match the canonical digest of root rows';
+      case 'canonicalization_error':
+        return 'static artifact root rows cannot be canonicalized for content_digest verification';
+    }
+  }
+
+  const declaration = assessForgePlayerStaticDeclaration(staticArtifact);
+  if (!declaration.accepted) {
+    switch (declaration.reason) {
+      case 'invalid_object':
+        return 'static artifact is not a nonempty JSON object accepted by the promoted adapter';
+      case 'unsupported_id':
+        return `static artifact declares unsupported artifact ID ${declaration.declaredId}`;
+      case 'unsupported_version':
+        return `static artifact declares unsupported contract version ${declaration.declaredVersion}`;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Plan the evidence side of the static/cohort comparison in one pure step.
  *
@@ -351,16 +388,21 @@ export function planStaticEvidenceComparison(
 /**
  * Plan one complete promoted static artifact against the observed live IDs.
  *
- * The runtime adapter selects the first array exposed as `rows`, `players`, or
- * `data`, even when that first array is empty. Keeping that transport choice in
- * the same pure plan as evidence selection prevents offline audit generation
- * from comparing a different row set than the runtime consumer loads.
+ * Runtime admission verifies any declared root-rows digest, then applies the
+ * adapter's declared ID/version gate, then selects the first array exposed as
+ * `rows`, `players`, or `data`, even when that first array is empty. Keeping
+ * those envelope gates and that transport choice in the same pure plan as
+ * evidence selection prevents offline audit generation from comparing an
+ * artifact or row set that the runtime consumer would refuse.
  */
 export function planForgeStaticArtifactComparison(
   staticArtifact: any,
   liveIds: ReadonlySet<string>,
 ): ForgeStaticArtifactComparisonPlan {
-  const selected = selectForgeStaticArtifactRows(staticArtifact);
+  const admissionProblem = forgeStaticArtifactAdmissionProblem(staticArtifact);
+  const selected = admissionProblem === null
+    ? selectForgeStaticArtifactRows(staticArtifact)
+    : { rows: [], container: null, problems: [admissionProblem] };
   const evidence = planStaticEvidenceComparison(selected.rows, liveIds);
   return {
     ...evidence,

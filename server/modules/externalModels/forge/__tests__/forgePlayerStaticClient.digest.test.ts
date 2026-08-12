@@ -97,6 +97,62 @@ describe('ForgePlayerStaticClient content digest verification', () => {
     expect(result.integrity).toBe('digest_missing');
   });
 
+  it('keeps non-object shape rejection with the adapter and does not emit the object-only legacy warning', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      for (const payload of [null, [], 'not-an-artifact']) {
+        await writeArtifact(payload);
+        const client = new ForgePlayerStaticClient({ artifactPath, enabled: true });
+        const result = await client.loadPromotedArtifact();
+        expect(result.integrity).toBe('digest_missing');
+      }
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it.each(['players', 'data'] as const)(
+    'leaves a digest-free legacy %s container for the adapter to consume',
+    async (container) => {
+      await writeArtifact({
+        artifact_type: 'FORGE_PLAYER_STATIC_V1',
+        [container]: ROWS,
+      });
+      const client = new ForgePlayerStaticClient({ artifactPath, enabled: true });
+      const result = await client.loadPromotedArtifact();
+      expect(result.integrity).toBe('digest_missing');
+      expect(result.payload).toEqual(expect.objectContaining({ [container]: ROWS }));
+    },
+  );
+
+  it.each(['players', 'data'] as const)(
+    'rejects a present rows-scoped digest when only %s exists',
+    async (container) => {
+      await writeArtifact({
+        artifact_type: 'FORGE_PLAYER_STATIC_V1',
+        [container]: ROWS,
+        content_digest: artifactWithDigest().content_digest,
+      });
+      const client = new ForgePlayerStaticClient({ artifactPath, enabled: true });
+      await expect(client.loadPromotedArtifact()).rejects.toMatchObject({
+        code: 'invalid_payload',
+        state: 'malformed',
+      });
+    },
+  );
+
+  it('rejects an uppercase digest value as an unsupported declaration', async () => {
+    const artifact = artifactWithDigest();
+    artifact.content_digest.value = artifact.content_digest.value.toUpperCase();
+    await writeArtifact(artifact);
+    const client = new ForgePlayerStaticClient({ artifactPath, enabled: true });
+    await expect(client.loadPromotedArtifact()).rejects.toMatchObject({
+      code: 'invalid_payload',
+      state: 'malformed',
+    });
+  });
+
   it('digest recomputation is key-order independent (canonicalization)', () => {
     const reordered = [
       {

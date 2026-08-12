@@ -1,4 +1,5 @@
 import { assessAndLogArtifactFreshness } from '../artifactFreshness';
+import { assessForgePlayerStaticDeclaration } from './forgePlayerStaticArtifactContract';
 import {
   ForgePlayerStaticIntegrationError,
   ForgePlayerStaticLookup,
@@ -51,49 +52,6 @@ function normalizeScoreSource(value: unknown): ForgePlayerStaticScoreSource {
   if (value === 'generated_baseline') return 'generated_baseline';
   if (value === 'fallback_default') return 'fallback_default';
   return 'unknown';
-}
-
-function assertSupportedArtifact(payload: Record<string, unknown>) {
-  const meta = toRecord(payload.meta ?? payload.metadata ?? payload.manifest);
-  const manifest = toRecord(payload.consumer_manifest ?? payload.downstream_consumer_manifest ?? payload.manifest);
-  const declaredId = pickString({ ...payload, ...meta, ...manifest }, [
-    'artifact_type',
-    'artifactType',
-    'artifact_id',
-    'artifactId',
-    'artifact_name',
-    'artifactName',
-    'name',
-    'id',
-    'contract',
-    'contract_id',
-    'contractId',
-  ]);
-  const declaredVersion = pickString({ ...payload, ...meta, ...manifest }, ['version', 'contract_version', 'contractVersion', 'schema_version', 'schemaVersion']);
-  const normalizedDeclaredId = declaredId?.toUpperCase();
-
-  if (
-    normalizedDeclaredId
-    && normalizedDeclaredId !== 'FORGE_PLAYER_STATIC_V1'
-    && normalizedDeclaredId !== 'FORGE_PLAYER_STATIC'
-    && !normalizedDeclaredId.includes('FORGE_PLAYER_STATIC_V1')
-  ) {
-    throw new ForgePlayerStaticIntegrationError(
-      'unsupported',
-      `Unsupported FORGE static artifact (${declaredId}); expected FORGE_PLAYER_STATIC_V1.`,
-      422,
-      'unsupported',
-    );
-  }
-
-  if (declaredVersion && !String(declaredVersion).toLowerCase().includes('v1') && !String(declaredVersion).startsWith('1')) {
-    throw new ForgePlayerStaticIntegrationError(
-      'unsupported',
-      `Unsupported FORGE static artifact version (${declaredVersion}); expected v1.`,
-      422,
-      'unsupported',
-    );
-  }
 }
 
 function normalizeRow(row: unknown): ForgePlayerStaticRow {
@@ -155,8 +113,8 @@ function normalizeRow(row: unknown): ForgePlayerStaticRow {
 }
 
 export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: string): ForgePlayerStaticLookup {
-  const record = toRecord(payload);
-  if (Object.keys(record).length === 0) {
+  const declaration = assessForgePlayerStaticDeclaration(payload);
+  if (!declaration.accepted && declaration.reason === 'invalid_object') {
     throw new ForgePlayerStaticIntegrationError(
       'invalid_payload',
       'FORGE_PLAYER_STATIC_V1 artifact must be a JSON object.',
@@ -164,8 +122,23 @@ export function adaptForgePlayerStaticArtifact(payload: unknown, sourcePath: str
       'malformed',
     );
   }
-
-  assertSupportedArtifact(record);
+  if (!declaration.accepted && declaration.reason === 'unsupported_id') {
+    throw new ForgePlayerStaticIntegrationError(
+      'unsupported',
+      `Unsupported FORGE static artifact (${declaration.declaredId}); expected FORGE_PLAYER_STATIC_V1.`,
+      422,
+      'unsupported',
+    );
+  }
+  if (!declaration.accepted) {
+    throw new ForgePlayerStaticIntegrationError(
+      'unsupported',
+      `Unsupported FORGE static artifact version (${declaration.declaredVersion}); expected v1.`,
+      422,
+      'unsupported',
+    );
+  }
+  const record = declaration.record;
 
   const rows = pickRows(record);
   if (rows.length === 0) {

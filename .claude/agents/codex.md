@@ -808,3 +808,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - `auditComparability()` uses that one selected row collection for namespaces, names, baseline diagnostics, strict evidence, intersection, blockers, and descriptive comparison.
 - Regressions cover all containers, precedence/fallthrough, terminal empties, invalid roots, malformed rows, ignored lower containers, and alias collisions through alternate containers.
 - Validation: audit 311/311 plus adapter 11/11; full branch 119 suites/1,366 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison runtime-admission parity
+- Added one pure contract shared by the promoted runtime client, adapter, and cache audit for root-rows digest verification plus declared artifact ID/version admission.
+- The audit now follows runtime order and fails closed before row selection when a present digest is malformed, has no root `rows`, mismatches, cannot canonicalize, or when the adapter would reject the declared ID/version. Digest-free legacy `rows`/`players`/`data` behavior remains unchanged.
+- Regressions cover digest syntax/content/root binding, lower-container non-rescue, legacy warning behavior, declaration aliases and precedence, nullish metadata chains, shallow merge order, and the adapter's existing broad v1 spellings.
+- Validation: audit 334/334; adapter/client 26/26; full branch 119 suites/1,398 tests with the same seven baseline failures; real `--check`, build, diff check, and frozen hashes pass; typecheck remains the exact 505 baseline with zero touched-file diagnostics; an independent 25,000-case JSON-round-trip differential audit found zero admission mismatches.
