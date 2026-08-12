@@ -72,7 +72,7 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
         notes: 'Freshness derived from cache computedAt.',
       },
     ],
-    items: [{ position: 'QB' }],
+    items: [{ position: 'QB', trust: { asOf: '2026-08-09T00:00:00.000Z' } }],
     seasonMeta: {
       decisionTargetSeason: 2025,
       decisionTargetWeek: 18,
@@ -264,12 +264,56 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
   });
 
   test.each([
-    ['one wrong-position item', [{ position: 'WR' }]],
-    ['mixed-position items', [{ position: 'QB' }, { position: 'WR' }]],
-    ['a malformed item', [{ position: 'QB' }, null]],
+    ['one wrong-position item', [{ position: 'WR', trust: forgeBody.items[0].trust }]],
+    [
+      'mixed-position items',
+      [forgeBody.items[0], { position: 'WR', trust: forgeBody.items[0].trust }],
+    ],
+    ['a malformed item', [forgeBody.items[0], null]],
   ])('rejects %s rather than relabelling rows from the request loop', (_case, items) => {
     expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items }))
       .toThrow(/every guarded FORGE cache item must declare/);
+  });
+
+  test.each([
+    ['missing trust', { position: 'QB' }],
+    ['null trust', { position: 'QB', trust: null }],
+    ['non-object trust', { position: 'QB', trust: 'not-an-object' }],
+    ['array trust', { position: 'QB', trust: [] }],
+  ])('rejects an item with %s', (_case, item) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items: [item] }))
+      .toThrow(/must carry a trust object with the cache-evidence clock/);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['invalid', 'not-a-date'],
+    ['noncanonical', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects a %s item trust.asOf', (_case, asOf) => {
+    const item = { ...forgeBody.items[0], trust: { asOf } };
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items: [item] }))
+      .toThrow(/item 0 trust\.asOf must be a canonical cache-evidence datetime/);
+  });
+
+  test('rejects a divergent item trust.asOf', () => {
+    const item = {
+      ...forgeBody.items[0],
+      trust: { asOf: '2026-08-09T00:00:01.000Z' },
+    };
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items: [item] }))
+      .toThrow(/item 0 trust\.asOf must agree exactly with the admitted FORGE cache source clock/);
+  });
+
+  test('rejects one divergent item inside an otherwise clock-consistent item collection', () => {
+    const divergent = {
+      ...forgeBody.items[0],
+      trust: { asOf: '2026-08-09T00:00:01.000Z' },
+    };
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      items: [forgeBody.items[0], divergent, forgeBody.items[0]],
+    })).toThrow(/item 1 trust\.asOf must agree exactly/);
   });
 
   test.each([

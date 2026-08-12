@@ -204,6 +204,25 @@ export function assertForgeCacheResponse(position: string, body: any): ObservedP
       `${position}: every guarded FORGE cache item must declare the requested position ${position}.`,
     );
   }
+  for (const [index, item] of items.entries()) {
+    const itemTrust = item.trust;
+    if (itemTrust === null || typeof itemTrust !== 'object' || Array.isArray(itemTrust)) {
+      throw new Error(
+        `${position}: item ${index} must carry a trust object with the cache-evidence clock.`,
+      );
+    }
+    if (!isCanonicalIso(itemTrust.asOf)) {
+      throw new Error(
+        `${position}: item ${index} trust.asOf must be a canonical cache-evidence datetime.`,
+      );
+    }
+    if (itemTrust.asOf !== primaryAsOf) {
+      throw new Error(
+        `${position}: item ${index} trust.asOf must agree exactly with the admitted ` +
+        'FORGE cache source clock.',
+      );
+    }
+  }
 
   return {
     asOf: primaryAsOf,

@@ -868,3 +868,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - A valid UI response that synthesized top-level `asOf` because cache `computedAt` was null remains valid at runtime but is deliberately inadmissible as fresh audit evidence.
 - Adversarial clock/null/copy tests plus the real route branch pin the distinction.
 - Validation: focused audit and route suites 415/415; real `--check`, build, diff, and governed hashes pass unchanged.
+
+### 2026-08-12 — FORGE cache-audit per-item source-clock binding
+- Every admitted item must now carry an object `trust` with a canonical `asOf` exactly equal to the primary FORGE cache source clock; indexed errors identify the first invalid row.
+- Missing/null/malformed/divergent and mixed-item adversaries fail closed, while the real cache route proves all valid rows bind to the envelope source time.
+- The null-`computedAt` route still fails at the envelope clock first even though its items inherit the synthesized response time.
+- Validation: focused audit plus route 425/425; real `--check`, build, diff, and governed hashes pass unchanged.

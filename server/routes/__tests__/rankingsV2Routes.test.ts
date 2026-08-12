@@ -194,6 +194,8 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.sourceStack[1].asOf).toBe(res.body.asOf);
     expect(res.body.seasonMeta.generatedAt).toBe(res.body.asOf);
     expect(res.body.trust.asOf).toBe(res.body.asOf);
+    expect(res.body.items.length).toBeGreaterThan(0);
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
     expect(assertForgeCacheResponse('WR', res.body)).toMatchObject({
       layer: 'forge',
       fallbackReason: 'upstream_unavailable',
@@ -265,6 +267,10 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.trust.freshnessNote).toBe(
       'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
     );
+    // Items inherit the synthesized response time too, but that agreement
+    // cannot rescue the missing primary cache clock: the envelope gate runs
+    // first and rejects this as fresh observation evidence.
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
     expect(() => assertForgeCacheResponse('WR', res.body))
       .toThrow(/confidence source asOf values must each be canonical ISO datetimes/);
   });
