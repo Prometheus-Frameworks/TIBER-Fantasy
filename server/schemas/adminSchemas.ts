@@ -63,7 +63,9 @@ export const brandReplaySchema = z.object({
     .min(1, 'Week must be 1 or greater')
     .max(18, 'Week must be 18 or less')
     .optional()
-    .describe('Optional specific week - if not provided, uses current week'),
+    .describe(
+      'Optional specific week - if omitted, the requested season must match the governed current evidence season',
+    ),
   forceRecompute: z.boolean()
     .default(false)
     .describe('Whether to clear existing signals before replay')

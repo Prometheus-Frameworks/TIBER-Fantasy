@@ -800,3 +800,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Preserved explicit season-only archive/current processing, exact explicit-week filters, `processAll` limit removal, and preseason/stale fail-closed behavior for omitted targets.
 - Audited adjacent ETL routes: weekly writers/computations retain atomic season/week targets, while Bronze status was already season-wide.
 - Validation: five focused route/config/service suites passed 69/69; build passed with the baseline OLC warning; typecheck remained 505 diagnostics with the same four pre-existing `etlRoutes.ts` errors and no new test-file diagnostics; diff check passed.
+
+### 2026-08-12 — Automated derived-writer target isolation
+- Intelligent Scheduler weekly, incremental, and brand-recompute writers plus all-implicit admin brand streaming now resolve one governed evidence tuple and reuse it for mutations, exact result queries, and receipts; stale SeasonService database observations remain freshness input only.
+- Admin replay resolves before force deletion: matching current season-only requests use the governed week, mismatched half-pairs return 400, and explicit archive pairs remain exact. Governed the active RB-context derived writer and write-capable brand week-rollover path as well.
+- Preserved source-observed SeasonService behavior for non-writer freshness/status consumers.
+- Validation: seven focused suites passed 86/86; full branch passed 141 suites/1,416 tests with the same seven baseline failures; build passed with the baseline OLC warning; typecheck stayed at 505 baseline diagnostics with no new touched-file diagnostics; `git diff --check` passed.

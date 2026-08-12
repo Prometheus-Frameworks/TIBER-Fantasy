@@ -102,6 +102,18 @@ describe('SeasonService source-observed fallback', () => {
     });
   });
 
+  test('a stale database tuple remains observable after calendar rollover', async () => {
+    jest.setSystemTime(new Date('2027-01-05T12:00:00.000Z'));
+    mockExecute.mockResolvedValue({ rows: [{ season: 2025, week: 18 }] });
+
+    await expect(new SeasonService().current()).resolves.toEqual({
+      season: 2025,
+      week: 18,
+      seasonType: 'regular',
+      source: 'db',
+    });
+  });
+
   test('an explicit configured week is paired with the central configured season', async () => {
     jest.setSystemTime(new Date('2026-08-12T12:00:00.000Z'));
     process.env.TIBER_WEEK = '18';

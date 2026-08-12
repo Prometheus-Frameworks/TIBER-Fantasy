@@ -149,14 +149,16 @@ import adminForgeRouter from './routes/adminForge';
 import playerMappingRoutes, { metricsRouter, forgeLabRouter, adminPlayerMappingRouter } from './routes/playerMappingRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
+import {
+  handleAdminBrandReplay,
+  handleAdminBrandStream,
+} from './routes/adminBrandRoutes';
 import { requireAdminAuth } from './middleware/adminAuth';
 import { rateLimiters } from './middleware/rateLimit';
 import { securityHeaders } from './middleware/security';
 import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
-  validateBrandReplay,
-  validateBrandStream,
   validateSignalsStatus,
   validateSignalsPurge,
   ADMIN_API_CONFIG
@@ -5657,86 +5659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * 2. POST /api/admin/brand/replay - Replay brand signal generation for specific period
    */
   app.post('/api/admin/brand/replay', requireAdminAuth, async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    
-    try {
-      console.log('🔄 [AdminAPI] Brand replay request received');
-      
-      // Validate request body
-      const validatedData = validateBrandReplay(req.body);
-      
-      // Execute brand replay
-      const result = await adminService.replayBrandSignals(validatedData);
-      
-      const duration = Date.now() - startTime;
-      console.log(`${result.success ? '✅' : '❌'} [AdminAPI] Brand replay completed in ${duration}ms`);
-      
-      res.json({
-        ...result,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_replay'
-      });
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error('❌ [AdminAPI] Brand replay failed:', error);
-      
-      const statusCode = error instanceof z.ZodError ? 400 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        error: error instanceof z.ZodError 
-          ? 'Validation error: ' + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
-          : (error as Error).message || 'Unknown error',
-        details: error instanceof z.ZodError ? error.errors : undefined,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_replay',
-        processingTimeMs: duration
-      });
-    }
+    await handleAdminBrandReplay(req, res, adminService);
   });
 
   /**
    * 3. POST /api/admin/brand/stream - Trigger live brand signal streaming
    */
   app.post('/api/admin/brand/stream', requireAdminAuth, async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    
-    try {
-      console.log('🚀 [AdminAPI] Brand streaming request received');
-      
-      // Validate request body
-      const validatedData = validateBrandStream(req.body);
-      
-      // Execute brand streaming
-      const result = await adminService.streamBrandSignals(validatedData);
-      
-      const duration = Date.now() - startTime;
-      console.log(`${result.success ? '✅' : '❌'} [AdminAPI] Brand streaming completed in ${duration}ms`);
-      
-      res.json({
-        ...result,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_streaming'
-      });
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error('❌ [AdminAPI] Brand streaming failed:', error);
-      
-      const statusCode = error instanceof z.ZodError ? 400 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        error: error instanceof z.ZodError 
-          ? 'Validation error: ' + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
-          : (error as Error).message || 'Unknown error',
-        details: error instanceof z.ZodError ? error.errors : undefined,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_streaming',
-        processingTimeMs: duration
-      });
-    }
+    await handleAdminBrandStream(req, res, adminService);
   });
 
   /**

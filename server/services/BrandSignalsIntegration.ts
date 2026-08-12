@@ -6,8 +6,9 @@
  */
 
 import { brandBus } from './BrandBus';
-import { SeasonService } from './SeasonService';
 import { MonitoringService } from './MonitoringService';
+import { requireEvidenceIngestionDefaultTarget } from '../config/season';
+import { resolveSeasonPhase } from '../../shared/weekDetection';
 import { 
   createDatasetCommittedEvent, 
   createRollWeekEvent,
@@ -23,7 +24,6 @@ import { RedraftBuySellPlugin } from '../plugins/redraftBuySell';
  */
 export class BrandSignalsIntegration {
   private static instance: BrandSignalsIntegration;
-  private seasonService = new SeasonService();
   private monitoring = MonitoringService.getInstance();
   private isInitialized = false;
   private lastKnownWeek: number | null = null;
@@ -100,10 +100,10 @@ export class BrandSignalsIntegration {
    */
   private async initializeWeekMonitoring(): Promise<void> {
     try {
-      const currentSeason = await this.seasonService.current();
-      this.lastKnownWeek = currentSeason.week;
+      const currentTarget = requireEvidenceIngestionDefaultTarget();
+      this.lastKnownWeek = currentTarget.week;
       
-      console.log(`📅 [BrandSignalsIntegration] Week monitoring initialized - Current: ${currentSeason.season} Week ${currentSeason.week}`);
+      console.log(`📅 [BrandSignalsIntegration] Week monitoring initialized - Current: ${currentTarget.season} Week ${currentTarget.week}`);
     } catch (error) {
       console.warn('⚠️ [BrandSignalsIntegration] Failed to initialize week monitoring:', error);
       // Non-critical error, continue with initialization
@@ -164,17 +164,24 @@ export class BrandSignalsIntegration {
     }
 
     try {
-      const currentSeason = await this.seasonService.current();
+      const now = new Date();
+      const currentTarget = requireEvidenceIngestionDefaultTarget(now);
+      const phase = resolveSeasonPhase(now);
+      const seasonType = phase.phase === 'regular_season'
+        ? 'regular'
+        : phase.phase === 'postseason'
+          ? 'post'
+          : 'pre';
       
       // Check if week has changed
-      if (this.lastKnownWeek !== null && this.lastKnownWeek !== currentSeason.week) {
-        console.log(`📅 [BrandSignalsIntegration] Week rollover detected: ${this.lastKnownWeek} → ${currentSeason.week}`);
+      if (this.lastKnownWeek !== null && this.lastKnownWeek !== currentTarget.week) {
+        console.log(`📅 [BrandSignalsIntegration] Week rollover detected: ${this.lastKnownWeek} → ${currentTarget.week}`);
 
         const event = createRollWeekEvent(
-          currentSeason.season,
-          currentSeason.week,
+          currentTarget.season,
+          currentTarget.week,
           this.lastKnownWeek,
-          currentSeason.seasonType
+          seasonType,
         );
 
         await brandBus.emit(event);
@@ -183,7 +190,7 @@ export class BrandSignalsIntegration {
       }
 
       // Update tracking
-      this.lastKnownWeek = currentSeason.week;
+      this.lastKnownWeek = currentTarget.week;
 
     } catch (error) {
       console.error(`❌ [BrandSignalsIntegration] Failed to check week rollover:`, error);
