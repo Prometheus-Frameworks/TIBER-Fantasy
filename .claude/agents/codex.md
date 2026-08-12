@@ -768,6 +768,18 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added compiled-query regressions for the mounted `/usage-agg` call path, player/week filters, and a source guard against interpolated `sql.raw` templates.
 - Validation: focused security tests 6/6 passed; build passed with the existing OLC warning; full Jest run executed 850 passing tests while six unrelated baseline suites failed to load; typecheck retained 505 existing errors with zero changed-file matches; diff check passed.
 
+### 2026-08-09 — Observatory human-readable workflow redesign
+- Reframed the Observatory as a two-step human workflow: add an observation, then review the route.
+- Replaced white result cards with a restrained dark surface and organized the artifact into plain-language detection, required checks, repo handoffs, uncertainty, and advanced details.
+- Collapsed architecture, guardrails, provenance, exports, and raw JSON behind disclosures; removed the prefilled note and unmeasured declared-system status badges.
+- Preserved the deterministic client-side heuristic, truthful Teamstate live status, explicit unavailable states, export formats, and no-write/no-ranking boundary.
+- Validation: focused Observatory Jest suite 22/22 ✅; full production build ✅ with the existing OLC duplicate-member warning; `git diff --check` ✅; repo-wide typecheck ⚠️ existing unrelated backlog, no `StressLab.tsx` error.
+
+### 2026-08-12 — Observatory current-main integration and accessibility hardening
+- Integrated current main without dropping the redesign or main's contrast correction.
+- Repaired Observatory text, field, and outline-button contrast; preserved semantic hierarchy with the governed dark-shell tokens.
+- Cleared stale review output on input/example changes and added semantic headings/live regions.
+- Validation: focused Observatory/contrast/outline suites 85/85; deployment-equivalent build passed with baseline warnings; typecheck stayed at 505 baseline diagnostics with no Observatory match; diff check passed.
 ### 2026-08-09 — Rankings v2 canonical identity boundary corrections
 - Resolved ranking producer IDs under explicit GSIS provenance before any canonical lookup, with duplicate and query-outage states that remain visible but never link.
 - Bumped Rankings v2 to `v2-canonical-identity-2026-08-09`; server and client schemas now enforce coherent canonical/resolved/unresolved states and equal canonical link keys.
