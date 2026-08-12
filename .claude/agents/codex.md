@@ -862,3 +862,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - The superseded bare `asOfWeek` spelling is rejected rather than treated as compatibility evidence because it cannot prove the cache rows' declared week.
 - Regressions cover the current emitted shape, malformed/ambiguous note grammar, independently wrong note/structured scope fields, wrong/additional source layers, missing/empty/mixed-position items, invalid timestamps, and the old note shape.
 - Validation: focused audit plus real Rankings route 387/387 (380 + 7); real `--check`, build, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE cache-audit source-clock evidence gate
+- The live observation guard now requires one canonical cache-evidence time repeated exactly by the FORGE source, confidence companion, top-level response, `seasonMeta.generatedAt`, and `trust.asOf`, with cache-`computedAt` freshness copy.
+- A valid UI response that synthesized top-level `asOf` because cache `computedAt` was null remains valid at runtime but is deliberately inadmissible as fresh audit evidence.
+- Adversarial clock/null/copy tests plus the real route branch pin the distinction.
+- Validation: focused audit and route suites 415/415; real `--check`, build, diff, and governed hashes pass unchanged.

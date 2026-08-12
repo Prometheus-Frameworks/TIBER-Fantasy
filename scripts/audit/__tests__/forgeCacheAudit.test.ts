@@ -59,10 +59,16 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
   const forgeBody = {
     asOf: '2026-08-09T00:00:00.000Z',
     sourceStack: [
-      { layer: 'forge', source: 'api/forge/tiers cache (forge_grade_cache)', notes: forgeNotes },
+      {
+        layer: 'forge',
+        source: 'api/forge/tiers cache (forge_grade_cache)',
+        asOf: '2026-08-09T00:00:00.000Z',
+        notes: forgeNotes,
+      },
       {
         layer: 'confidence_stability',
         source: 'forge cache confidence + trajectory metadata',
+        asOf: '2026-08-09T00:00:00.000Z',
         notes: 'Freshness derived from cache computedAt.',
       },
     ],
@@ -75,6 +81,11 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
       evidenceThroughSeason: 2025,
       evidenceThroughWeek: 18,
       evidenceProvenance: 'source_declared_as_of',
+      generatedAt: '2026-08-09T00:00:00.000Z',
+    },
+    trust: {
+      asOf: '2026-08-09T00:00:00.000Z',
+      freshnessNote: 'Freshness based on forge cache computedAt.',
     },
   };
 
@@ -240,7 +251,7 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
   test('rejects a current-looking source note when structured season metadata is absent', () => {
     const { seasonMeta: _seasonMeta, ...withoutSeasonMeta } = forgeBody;
     expect(() => assertForgeCacheResponse('QB', withoutSeasonMeta))
-      .toThrow(/structured Rankings v2 seasonMeta does not prove/);
+      .toThrow(/seasonMeta\.generatedAt and trust\.asOf must each be canonical|structured Rankings v2 seasonMeta does not prove/);
   });
 
   test.each([
@@ -262,13 +273,123 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
   });
 
   test.each([
-    ['missing asOf', undefined],
-    ['date-only asOf', '2026-08-09'],
-    ['invalid asOf', '2026-13-40T25:61:61.000Z'],
-    ['noncanonical offset asOf', '2026-08-09T00:00:00.000+00:00'],
+    ['missing top-level asOf', undefined],
+    ['null top-level asOf', null],
+    ['date-only top-level asOf', '2026-08-09'],
+    ['invalid top-level asOf', '2026-13-40T25:61:61.000Z'],
+    ['noncanonical offset top-level asOf', '2026-08-09T00:00:00.000+00:00'],
   ])('rejects %s', (_case, asOf) => {
     expect(() => assertForgeCacheResponse('QB', { ...forgeBody, asOf }))
-      .toThrow(/asOf must be a canonical ISO datetime/);
+      .toThrow(/must each be canonical ISO datetimes/);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['invalid', 'not-a-date'],
+    ['noncanonical', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects a %s primary cache asOf', (_case, asOf) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      sourceStack: [{ ...forgeBody.sourceStack[0], asOf }, forgeBody.sourceStack[1]],
+    })).toThrow(/must each be canonical ISO datetimes/);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['invalid', 'not-a-date'],
+    ['noncanonical', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects a %s confidence companion asOf', (_case, asOf) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      sourceStack: [forgeBody.sourceStack[0], { ...forgeBody.sourceStack[1], asOf }],
+    })).toThrow(/must each be canonical ISO datetimes/);
+  });
+
+  test.each([
+    [
+      'primary cache clock',
+      { ...forgeBody.sourceStack[0], asOf: '2026-08-09T00:00:01.000Z' },
+      forgeBody.sourceStack[1],
+      forgeBody.asOf,
+    ],
+    [
+      'confidence companion clock',
+      forgeBody.sourceStack[0],
+      { ...forgeBody.sourceStack[1], asOf: '2026-08-09T00:00:01.000Z' },
+      forgeBody.asOf,
+    ],
+    [
+      'top-level response clock',
+      forgeBody.sourceStack[0],
+      forgeBody.sourceStack[1],
+      '2026-08-09T00:00:01.000Z',
+    ],
+    [
+      'matching source clocks that disagree with the response clock',
+      { ...forgeBody.sourceStack[0], asOf: '2026-08-09T00:00:01.000Z' },
+      { ...forgeBody.sourceStack[1], asOf: '2026-08-09T00:00:01.000Z' },
+      forgeBody.asOf,
+    ],
+  ])('rejects a mismatched %s', (_case, primary, confidence, asOf) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      asOf,
+      sourceStack: [primary, confidence],
+    })).toThrow(/must agree exactly/);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['invalid', 'not-a-date'],
+    ['noncanonical', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects a %s seasonMeta.generatedAt', (_case, generatedAt) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      seasonMeta: { ...forgeBody.seasonMeta, generatedAt },
+    })).toThrow(/seasonMeta\.generatedAt and trust\.asOf must each be canonical/);
+  });
+
+  test.each([
+    ['missing', undefined],
+    ['null', null],
+    ['invalid', 'not-a-date'],
+    ['noncanonical', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects a %s trust.asOf', (_case, asOf) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      trust: { ...forgeBody.trust, asOf },
+    })).toThrow(/seasonMeta\.generatedAt and trust\.asOf must each be canonical/);
+  });
+
+  test.each([
+    ['seasonMeta.generatedAt', { seasonMeta: { ...forgeBody.seasonMeta, generatedAt: '2026-08-09T00:00:01.000Z' } }],
+    ['trust.asOf', { trust: { ...forgeBody.trust, asOf: '2026-08-09T00:00:01.000Z' } }],
+  ])('rejects a mismatched %s cache-clock repeat', (_case, override) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, ...override }))
+      .toThrow(/must agree exactly with the admitted FORGE cache source clock/);
+  });
+
+  test.each([
+    ['missing confidence note', undefined],
+    ['fallback confidence note', 'No cache timestamp; using current server time as asOf fallback.'],
+  ])('rejects %s', (_case, notes) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      sourceStack: [forgeBody.sourceStack[0], { ...forgeBody.sourceStack[1], notes }],
+    })).toThrow(/confidence source notes must identify cache computedAt/);
+  });
+
+  test.each([
+    ['missing trust freshness note', undefined],
+    ['fallback trust freshness note', 'Cache computedAt unavailable; top-level asOf reflects server fallback time.'],
+  ])('rejects %s', (_case, freshnessNote) => {
+    expect(() => assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      trust: { ...forgeBody.trust, freshnessNote },
+    })).toThrow(/trust\.freshnessNote must identify cache computedAt/);
   });
 });
 

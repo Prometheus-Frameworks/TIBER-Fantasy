@@ -12,6 +12,8 @@ export const AUDIT_WEEK = 18;
 
 const FORGE_CACHE_SOURCE = 'api/forge/tiers cache (forge_grade_cache)';
 const FORGE_CONFIDENCE_SOURCE = 'forge cache confidence + trajectory metadata';
+const FORGE_CONFIDENCE_NOTE = 'Freshness derived from cache computedAt.';
+const FORGE_TRUST_FRESHNESS_NOTE = 'Freshness based on forge cache computedAt.';
 const FORGE_SOURCE_NOTE =
   /^scoringFallbackReason=(none|insufficient_coverage|invalid_scoring_payload|config_error|upstream_unavailable|upstream_timeout|upstream_error|invalid_payload); season=(0|[1-9]\d*), decisionTargetWeek=(0|[1-9]\d*), cacheDeclaredAsOfWeek=(0|[1-9]\d*), position=(QB|RB|WR|TE)$/;
 
@@ -41,6 +43,15 @@ function parseForgeCacheSourceNote(position: string, notes: unknown) {
     cacheDeclaredAsOfWeek: match[4],
     position: match[5],
   };
+}
+
+function isCanonicalIso(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) &&
+    !Number.isNaN(Date.parse(value)) &&
+    new Date(value).toISOString() === value
+  );
 }
 
 /**
@@ -83,6 +94,57 @@ export function assertForgeCacheResponse(position: string, body: any): ObservedP
     throw new Error(
       `${position}: expected exactly the Rankings v2 FORGE cache source followed by its ` +
       'confidence_stability companion, with no additional producer layers.',
+    );
+  }
+
+  // A nonempty cache response can still lack `computedAt`. In that case the
+  // route synthesizes its top-level `asOf` from the response clock while both
+  // source entries truthfully carry null. That response time is not cache
+  // evidence time, so it cannot make a fresh observation reproducible. Admit
+  // only a canonical cache clock repeated identically by the primary source,
+  // its confidence companion, and the top-level response.
+  const responseAsOf = body?.asOf;
+  const primaryAsOf = primary?.asOf;
+  const confidenceAsOf = confidenceLayer?.asOf;
+  if (
+    !isCanonicalIso(responseAsOf) ||
+    !isCanonicalIso(primaryAsOf) ||
+    !isCanonicalIso(confidenceAsOf)
+  ) {
+    throw new Error(
+      `${position}: top-level, FORGE cache, and confidence source asOf values ` +
+      'must each be canonical ISO datetimes.',
+    );
+  }
+  if (primaryAsOf !== responseAsOf || confidenceAsOf !== responseAsOf) {
+    throw new Error(
+      `${position}: top-level, FORGE cache, and confidence source asOf values ` +
+      'must agree exactly.',
+    );
+  }
+  if (confidenceLayer?.notes !== FORGE_CONFIDENCE_NOTE) {
+    throw new Error(
+      `${position}: confidence source notes must identify cache computedAt as the freshness source.`,
+    );
+  }
+
+  const seasonGeneratedAt = body?.seasonMeta?.generatedAt;
+  const trustAsOf = body?.trust?.asOf;
+  if (!isCanonicalIso(seasonGeneratedAt) || !isCanonicalIso(trustAsOf)) {
+    throw new Error(
+      `${position}: seasonMeta.generatedAt and trust.asOf must each be canonical ` +
+      'cache-evidence datetimes.',
+    );
+  }
+  if (seasonGeneratedAt !== primaryAsOf || trustAsOf !== primaryAsOf) {
+    throw new Error(
+      `${position}: seasonMeta.generatedAt and trust.asOf must agree exactly with ` +
+      'the admitted FORGE cache source clock.',
+    );
+  }
+  if (body?.trust?.freshnessNote !== FORGE_TRUST_FRESHNESS_NOTE) {
+    throw new Error(
+      `${position}: trust.freshnessNote must identify cache computedAt as the freshness source.`,
     );
   }
 
@@ -143,18 +205,8 @@ export function assertForgeCacheResponse(position: string, body: any): ObservedP
     );
   }
 
-  const asOf = body?.asOf;
-  const isCanonicalIso =
-    typeof asOf === 'string' &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(asOf) &&
-    !Number.isNaN(Date.parse(asOf)) &&
-    new Date(asOf).toISOString() === asOf;
-  if (!isCanonicalIso) {
-    throw new Error(`${position}: response asOf must be a canonical ISO datetime.`);
-  }
-
   return {
-    asOf,
+    asOf: primaryAsOf,
     layer,
     source: primary?.source ?? null,
     fallbackReason: noteScope.fallbackReason,
