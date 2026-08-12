@@ -307,18 +307,33 @@ export interface FenceDelimiter {
 
 /**
  * Lightweight fenced-code-block delimiter detector (backtick or tilde
- * fences). Deliberately not a full parser — it does not validate an info
- * string on the opening line — but it DOES apply CommonMark's own closing
- * rule: a closer must use the same character as its opener, run at least as
- * long, and be followed only by whitespace. A shorter run, the opposite
- * character, or a run with trailing suffix text (` ``` js `, `~~~~x`) is not
- * a closer at all — it stays fenced content, so an accidental line inside a
- * fenced block that happens to start with a few backticks cannot end the
- * fence early and let a governed heading/table underneath it leak out.
+ * fences). Deliberately not a full parser, but it DOES apply CommonMark's
+ * two opener/closer rules that matter for this classifier:
+ *
+ *  - **Opener info string**: the text after the fence run on the SAME line.
+ *    A backtick fence's info string may not itself contain a raw backtick —
+ *    CommonMark says so because an unescaped backtick there is ambiguous
+ *    with inline code spans, and a line like ```` ```bad`info ```` is
+ *    therefore not a fence opener at all, just ordinary text. Treating it as
+ *    an opener anyway would let a line shaped like that hide a governed
+ *    heading/table underneath it as "fenced content" it was never entitled
+ *    to hide. A tilde fence has no such restriction — its info string may
+ *    contain backticks or tildes freely, since tildes cannot be confused
+ *    with an inline code span delimiter.
+ *  - **Closer**: must use the same character as its opener, run at least as
+ *    long, and be followed only by whitespace. A shorter run, the opposite
+ *    character, or a run with trailing suffix text (` ``` js `, `~~~~x`) is
+ *    not a closer at all — it stays fenced content, so an accidental line
+ *    inside a fenced block that happens to start with a few backticks
+ *    cannot end the fence early either.
  */
 function parseFenceOpener(line: string): FenceDelimiter | null {
-  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-  return match ? { char: match[1][0] as '`' | '~', length: match[1].length } : null;
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  if (!match) return null;
+  const char = match[1][0] as '`' | '~';
+  const infoString = match[2];
+  if (char === '`' && infoString.includes('`')) return null;
+  return { char, length: match[1].length };
 }
 
 function isFenceCloser(line: string, opener: FenceDelimiter): boolean {
@@ -747,30 +762,41 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
     ];
   }
 
-  const table = new Map<string, string>();
-  for (const row of candidates[0].rows) {
-    const label = cleanCell(row[0] ?? '').toLowerCase();
-    const value = cleanCell(row[1] ?? '');
-    if (label && !table.has(label)) table.set(label, value);
-  }
-
-  const findRow = (label: RegExp) => {
-    for (const [key, value] of table) if (label.test(key)) return { key, value };
-    return null;
-  };
+  // Every row that matches a given measure's label regex, from the
+  // PRESERVED row array — not a label -> value Map. A Map collapsed a
+  // second row under the same (or a differently-worded, same-regex) label
+  // to whichever value was seen first, silently discarding a conflicting —
+  // or even identical — duplicate rather than reporting it. "Exactly one
+  // semantic match" is enforced explicitly below instead.
+  const rowsMatching = (label: RegExp) =>
+    candidates[0].rows
+      .map((row) => ({ label: cleanCell(row[0] ?? '').toLowerCase(), value: cleanCell(row[1] ?? '') }))
+      .filter((r) => r.label && label.test(r.label));
 
   for (const { label, describe, key } of COMPARISON_ROWS) {
+    const matches = rowsMatching(label);
+    if (matches.length > 1) {
+      // Duplicate detection is unconditional — a structural property of the
+      // report — independent of whether the manifest currently has a value
+      // to compare it against. Identical-valued and conflicting-valued
+      // duplicates both trip this; which copy would be "correct" is not a
+      // question this checker should answer by position.
+      problems.push(
+        `report's descriptive-comparison table repeats the "${describe}" row ` +
+        `(${matches.length} rows match); exactly one may state this measure`,
+      );
+      continue;
+    }
     const expected = dc[key];
     if (expected === null || expected === undefined) continue;
-    const row = findRow(label);
-    if (!row) {
+    if (matches.length === 0) {
       problems.push(`report's descriptive-comparison table has no "${describe}" row`);
       continue;
     }
-    const stated = numbersIn(row.value);
+    const stated = numbersIn(matches[0].value);
     if (stated.length !== 1 || stated[0] !== Number(expected)) {
       problems.push(
-        `report states ${describe} as "${row.value}"; the manifest measured ${expected}`,
+        `report states ${describe} as "${matches[0].value}"; the manifest measured ${expected}`,
       );
     }
   }
@@ -779,12 +805,17 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
   // Membership alone ("does 22.30 appear somewhere in this cell?") is satisfied
   // by `+22.30 … -26.01`, which states the maximum as the minimum and reads as
   // a range running backwards. The cell must be the exact ordered pair.
-  if (dc.minDelta !== null && dc.minDelta !== undefined) {
-    const row = findRow(/^range$/);
-    if (!row) {
+  const rangeMatches = rowsMatching(/^range$/);
+  if (rangeMatches.length > 1) {
+    problems.push(
+      `report's descriptive-comparison table repeats the "range" row ` +
+      `(${rangeMatches.length} rows match); exactly one may state this measure`,
+    );
+  } else if (dc.minDelta !== null && dc.minDelta !== undefined) {
+    if (rangeMatches.length === 0) {
       problems.push('report\'s descriptive-comparison table has no "range" row');
     } else if (dc.maxDelta !== null && dc.maxDelta !== undefined) {
-      const stated = numbersIn(row.value);
+      const stated = numbersIn(rangeMatches[0].value);
       const expected = [Number(dc.minDelta), Number(dc.maxDelta)];
       if (stated.length !== 2 || stated[0] !== expected[0] || stated[1] !== expected[1]) {
         problems.push(

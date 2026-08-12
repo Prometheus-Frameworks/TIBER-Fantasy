@@ -562,6 +562,56 @@ describe('report consistency is checked per row, not as a substring sweep', () =
     expect(reportComparisonProblems(report, { status: 'unavailable_lineages_not_joinable' })).toEqual([]);
   });
 
+  describe('a repeated governed row is caught, not silently collapsed to whichever value was seen first', () => {
+    /** Insert a line directly after the real "| joined rows | ... |" row. */
+    const insertAfterJoinedRows = (line: string) => {
+      const marker = '| joined rows | 50 |';
+      expect(report).toContain(marker);
+      return report.replace(marker, `${marker}\n${line}`);
+    };
+
+    test('an identical duplicate "joined rows" row still fails — the ambiguity is the defect, not the disagreement', () => {
+      const duplicated = insertAfterJoinedRows('| joined rows | 50 |');
+      const problems = reportComparisonProblems(duplicated, dc);
+      expect(problems.join('\n')).toMatch(/repeats the "joined rows" row/);
+      expect(problems.join('\n')).toMatch(/2 rows match/);
+    });
+
+    test('a conflicting duplicate "joined rows" row fails too', () => {
+      const conflicting = insertAfterJoinedRows('| joined rows | 51 |');
+      const problems = reportComparisonProblems(conflicting, dc);
+      expect(problems.join('\n')).toMatch(/repeats the "joined rows" row/);
+    });
+
+    test('a textually different label that matches the SAME semantic regex still counts as a repeat', () => {
+      // "within ±1.0 alpha" and a differently-worded "within ±1 std dev" both
+      // match the governed `/^within ±1/` regex — a first-value-wins Map
+      // would key them separately as if unrelated; the real requirement is
+      // "exactly one row means this measure," not "exactly one exact label".
+      const pattern = /^(\|\s*within ±1[^|]*\|\s*)([^|]*?)(\s*\|)$/m;
+      expect(report).toMatch(pattern);
+      const withExtraRow = report.replace(pattern, (full) => `${full}\n| within ±1 std dev | 9 |`);
+      expect(withExtraRow).not.toBe(report);
+      const problems = reportComparisonProblems(withExtraRow, dc);
+      expect(problems.join('\n')).toMatch(/repeats the "within ±1\.0 alpha" row/);
+    });
+
+    test('a repeated "range" row fails independently of the other governed measures', () => {
+      const pattern = /^(\|\s*range\s*\|\s*)([^|]*?)(\s*\|)$/m;
+      expect(report).toMatch(pattern);
+      const duplicated = report.replace(pattern, (full) => `${full}\n${full}`);
+      expect(duplicated).not.toBe(report);
+      const problems = reportComparisonProblems(duplicated, dc);
+      expect(problems.join('\n')).toMatch(/repeats the "range" row/);
+      // Every other governed measure is untouched and still passes.
+      expect(problems.filter((p) => !/range/.test(p))).toEqual([]);
+    });
+
+    test('the committed report itself carries no repeated governed row', () => {
+      expect(reportComparisonProblems(report, dc)).toEqual([]);
+    });
+  });
+
   describe('§5.2 is identified by its number, keyed the same way as §4.3', () => {
     const lines = report.split('\n');
     const headingIndex = lines.findIndex((l) => COMPARISON_SECTION_HEADING.test(l));
@@ -687,6 +737,104 @@ describe('fenced code blocks: a closer must match the opener\'s character and le
     const sections = readMarkdownSections(doc, HEADING);
     expect(sections).toHaveLength(1);
     expect(sections[0].tables[0]?.rows.length).toBe(1);
+  });
+});
+
+describe('fence opener info strings: a backtick fence with a raw backtick in its info string is not a fence at all', () => {
+  const clampingTable = [
+    '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+    '|---|---:|---:|---:|---:|---:|',
+    '| QB | 1 | 1 | 1 | 0 (0.0%) | 0 |',
+  ];
+  const comparisonTable = ['| measure | value |', '|---|---:|', '| joined rows | 1 |'];
+
+  test('an invalid backtick opener near §4.3 does not hide a duplicate heading — it stays ordinary text', () => {
+    // CommonMark: a backtick fence's info string may not contain a raw
+    // backtick. This line is therefore not an opener at all, so the
+    // heading right after it is NOT fenced content — it is a real, visible
+    // second §4.3 heading, and the exactly-one-section gate must catch it.
+    const doc = [
+      '### 4.3 Real section',
+      '',
+      ...clampingTable,
+      '',
+      '```bad`info',
+      '### 4.3 Duplicate, meant to look fenced',
+      '',
+      ...clampingTable,
+      '```',
+    ].join('\n');
+    expect(readMarkdownSections(doc, CLAMPING_SECTION_HEADING)).toHaveLength(2);
+  });
+
+  test('an invalid backtick opener near §5.2 does not hide a duplicate heading either', () => {
+    const doc = [
+      '### 5.2 Real section',
+      '',
+      ...comparisonTable,
+      '',
+      '```bad`info',
+      '### 5.2 Duplicate, meant to look fenced',
+      '',
+      ...comparisonTable,
+      '```',
+    ].join('\n');
+    expect(readMarkdownSections(doc, COMPARISON_SECTION_HEADING)).toHaveLength(2);
+  });
+
+  test('a valid backtick info string (no raw backtick) still opens a real fence', () => {
+    const doc = [
+      '```js',
+      '### 4.3 Fenced, must not count',
+      '',
+      ...clampingTable,
+      '```',
+      '',
+      '### 4.3 Real',
+      '',
+      ...clampingTable,
+    ].join('\n');
+    const sections = readMarkdownSections(doc, CLAMPING_SECTION_HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 4.3 Real');
+  });
+
+  test('a tilde fence info string MAY contain backticks or tildes and still opens a real fence', () => {
+    for (const infoString of ['`code`', 'contains~tildes', '`multiple`~backticks`and~tildes']) {
+      const doc = [
+        `~~~${infoString}`,
+        '### 4.3 Fenced, must not count',
+        '',
+        ...clampingTable,
+        '~~~',
+        '',
+        '### 4.3 Real',
+        '',
+        ...clampingTable,
+      ].join('\n');
+      const sections = readMarkdownSections(doc, CLAMPING_SECTION_HEADING);
+      expect(sections).toHaveLength(1);
+      expect(sections[0].heading).toBe('### 4.3 Real');
+    }
+  });
+
+  test('0-3 leading spaces before a fence opener with an info string are still tolerated', () => {
+    for (const indent of ['', ' ', '  ', '   ']) {
+      const doc = [
+        `${indent}\`\`\`js`,
+        '### 4.3 Fenced, must not count',
+        '',
+        ...clampingTable,
+        '```',
+        '',
+        '### 4.3 Real',
+        '',
+        ...clampingTable,
+      ].join('\n');
+      const sections = readMarkdownSections(doc, CLAMPING_SECTION_HEADING);
+      expect(sections).toHaveLength(1);
+      expect(sections[0].heading).toBe('### 4.3 Real');
+    }
   });
 });
 
