@@ -210,6 +210,86 @@ export function rowIdentityFromCohortRow(row: any, where: string): RowIdentity {
   };
 }
 
+export interface AtxHeading {
+  level: number;
+  content: string;
+}
+
+/**
+ * Parse one line as a bounded ATX heading (CommonMark's `#`-style heading),
+ * or return null.
+ *
+ * Shared by section discovery AND section-boundary detection below, so both
+ * agree on what counts as a heading rather than each carrying its own
+ * regex/trim combination that can drift out of sync with the other:
+ *
+ *  - 0-3 leading spaces are tolerated (CommonMark's own boundary); 4+ spaces
+ *    or ANY leading tab is an indented code line, never a heading — a
+ *    pseudo-heading indented that far must not be promoted into one, and
+ *    (via the same check in the section-boundary loop below) must not
+ *    terminate a live section either.
+ *  - 1-6 '#' characters.
+ *  - a space or tab must follow the hash run, or the line must end there —
+ *    "###4.3" glues the number onto the marker itself and is not a heading
+ *    at all, just a line of text that happens to start with hashes.
+ *  - a closing hash sequence is recognised and stripped only when it is
+ *    itself preceded by a space/tab, per CommonMark ("### 4.3 Title ###"
+ *    strips to content "4.3 Title"). A trailing run of '#' glued directly
+ *    onto the content with no preceding whitespace ("### 4.3###") is
+ *    ambiguous for this narrow, bounded classifier — it is not treated as a
+ *    closing sequence, and rather than guess at a literal-title reading the
+ *    whole line is rejected as not a heading.
+ */
+export function parseAtxHeading(line: string): AtxHeading | null {
+  const match = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/.exec(line.replace(/\r$/, ''));
+  if (!match) return null;
+
+  const level = match[1].length;
+  const content = (match[2] ?? '').trim();
+  if (content === '') return { level, content: '' };
+
+  const closing = /^(.*?)[ \t]+#+[ \t]*$/.exec(content);
+  if (closing) return { level, content: closing[1] };
+  if (/#+$/.test(content)) return null;
+
+  return { level, content };
+}
+
+/**
+ * A parsed heading's line, reconstructed in normalized form (single space,
+ * no leading indent, closing hashes already stripped), so a caller-supplied
+ * title `RegExp` — several of which expect to see the `#` marker at the
+ * start — matches against a canonical shape rather than the original line's
+ * exact indentation or closing-hash spelling.
+ */
+function normalizedHeadingLine(h: AtxHeading): string {
+  return h.content ? `${'#'.repeat(h.level)} ${h.content}` : '#'.repeat(h.level);
+}
+
+/**
+ * True when a line's leading whitespace is inside the CommonMark "flow
+ * content" bound: 0-3 spaces, no tab anywhere in the indent. Four or more
+ * leading spaces — or a leading tab — is an indented code line, so neither a
+ * heading marker (see `parseAtxHeading`) nor a table pipe starting there is
+ * markup; it is a code line that happens to contain `#` or `|`.
+ */
+function hasBoundedIndent(line: string): boolean {
+  return !/^( {4,}|\t| {1,3}\t)/.test(line);
+}
+
+/**
+ * Lightweight fenced-code-block delimiter detector (backtick or tilde
+ * fences). Deliberately not a full parser: it does not match a closing
+ * fence's length against its opener, and does not validate the info string —
+ * it exists only so callers can track "are we inside a fenced block right
+ * now", so a heading or table living inside a fenced code sample never
+ * satisfies a governed section/table check.
+ */
+function fenceDelimiterChar(line: string): '`' | '~' | null {
+  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+  return match ? (match[1][0] as '`' | '~') : null;
+}
+
 /**
  * The `| label | value |` cells of the first markdown table under a heading.
  *
@@ -218,16 +298,30 @@ export function rowIdentityFromCohortRow(row: any, where: string): RowIdentity {
  */
 export function readMarkdownTable(report: string, heading: RegExp): Map<string, string> | null {
   const lines = report.split('\n');
-  const start = lines.findIndex((line) => heading.test(line));
+  let start = -1;
+  let scanFence: '`' | '~' | null = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const fenceChar = fenceDelimiterChar(lines[i]);
+    if (scanFence) { if (fenceChar === scanFence) scanFence = null; continue; }
+    if (fenceChar) { scanFence = fenceChar; continue; }
+    const parsed = parseAtxHeading(lines[i]);
+    if (parsed && heading.test(normalizedHeadingLine(parsed))) { start = i; break; }
+  }
   if (start === -1) return null;
 
   const cells = new Map<string, string>();
   let seen = false;
+  let fence: '`' | '~' | null = null;
   for (const line of lines.slice(start + 1)) {
+    const fenceChar = fenceDelimiterChar(line);
+    if (fence) { if (fenceChar === fence) fence = null; continue; }
+    if (fenceChar) { fence = fenceChar; continue; }
+
     const trimmed = line.trim();
-    if (!trimmed.startsWith('|')) {
+    const isTableRow = trimmed.startsWith('|') && hasBoundedIndent(line);
+    if (!isTableRow) {
       if (seen) break;      // the table ended
-      if (/^#{1,6}\s/.test(trimmed)) return null; // next section, no table here
+      if (parseAtxHeading(line)) return null; // next section, no table here
       continue;             // prose between the heading and the table
     }
     seen = true;
@@ -282,21 +376,36 @@ export function readMarkdownSections(report: string, heading: RegExp): MarkdownS
   const lines = report.split('\n');
   const sections: MarkdownSection[] = [];
 
+  let scanFence: '`' | '~' | null = null;
   for (let start = 0; start < lines.length; start += 1) {
-    if (!heading.test(lines[start])) continue;
+    const scanFenceChar = fenceDelimiterChar(lines[start]);
+    if (scanFence) { if (scanFenceChar === scanFence) scanFence = null; continue; }
+    if (scanFenceChar) { scanFence = scanFenceChar; continue; }
 
-    const headingLevel = (/^(#{1,6})\s/.exec(lines[start].trim()) ?? [, ''])[1]!.length;
+    const parsedHeading = parseAtxHeading(lines[start]);
+    if (!parsedHeading || !heading.test(normalizedHeadingLine(parsedHeading))) continue;
+
+    const headingLevel = parsedHeading.level;
     const tables: MarkdownTable[] = [];
     let current: string[][] | null = null;
+    let fence: '`' | '~' | null = null;
 
     for (const line of lines.slice(start + 1)) {
-      const trimmed = line.trim();
-      const nextHeading = /^(#{1,6})\s/.exec(trimmed);
-      // Stop at the next heading of the same or a higher level, so a
-      // subsection's tables are not attributed to this section.
-      if (nextHeading && nextHeading[1].length <= headingLevel) break;
+      const fenceChar = fenceDelimiterChar(line);
+      if (fence) { if (fenceChar === fence) fence = null; continue; }
+      if (fenceChar) { fence = fenceChar; continue; }
 
-      if (!trimmed.startsWith('|')) {
+      // Stop at the next heading of the same or a higher level, so a
+      // subsection's tables are not attributed to this section. A
+      // pseudo-heading indented 4+ spaces/a tab, or one living inside a
+      // fenced block (handled above), is not a heading via `parseAtxHeading`
+      // and so cannot end the section early.
+      const nextHeading = parseAtxHeading(line);
+      if (nextHeading && nextHeading.level <= headingLevel) break;
+
+      const trimmed = line.trim();
+      const isTableRow = trimmed.startsWith('|') && hasBoundedIndent(line);
+      if (!isTableRow) {
         if (current) { tables.push({ header: current[0], rows: current.slice(1) }); current = null; }
         continue;
       }
@@ -353,8 +462,17 @@ const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
  * it must be exactly 4.3 — `(?!\d)` refuses 4.30 and `(?!\.\d)` refuses the
  * subsection 4.3.1, while bare and differently punctuated forms ("### 4.3",
  * "### 4.3.", "### 4.3 — retitled") all still count as §4.3.
+ *
+ * "Real Markdown heading" is enforced by `parseAtxHeading` before this
+ * pattern ever runs: `readMarkdownSections`/`readMarkdownTable` test it
+ * against the heading's normalized reconstruction (0-3 leading spaces
+ * already stripped, a required space/tab after the hashes already
+ * confirmed, any closing hash sequence already resolved), never against a
+ * raw, possibly-indented, possibly-glued line. `\s+` here — not `\s*` — is
+ * then just "the one separating space", since the classifier has already
+ * refused a bare "###4.3" with no separator at all.
  */
-export const CLAMPING_SECTION_HEADING = /^#{1,6}\s*4\.3(?!\d)(?!\.\d)/;
+export const CLAMPING_SECTION_HEADING = /^#{1,6}\s+4\.3(?!\d)(?!\.\d)/;
 
 /**
  * Problems in how the report states the manifest's clamping findings.

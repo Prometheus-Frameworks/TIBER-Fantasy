@@ -22,6 +22,7 @@ import {
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
   formatClampPct,
+  parseAtxHeading,
   readMarkdownSections,
   readMarkdownTable,
   readMarkdownTables,
@@ -834,6 +835,173 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
     expect(readMarkdownSections(conflicting, HEADING)).toHaveLength(2);
     expect(readMarkdownSections(bareHeading, HEADING)).toHaveLength(2);
     expect(readMarkdownSections(report, HEADING)).toHaveLength(1);
+  });
+
+  describe('the §4.3 heading is a bounded ATX classifier, not a raw regex/trim combination', () => {
+    // Locate the committed §4.3 section once, the same way the retitling test
+    // above does, so every case here inserts around the REAL section rather
+    // than a hand-built stand-in.
+    const lines = report.split('\n');
+    const headingIndex = lines.findIndex((l) => CLAMPING_SECTION_HEADING.test(l));
+    const headingLevel = /^(#{1,6})\s/.exec(lines[headingIndex].trim())![1].length;
+    let sectionEnd = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      const next = /^(#{1,6})\s/.exec(lines[i].trim());
+      if (next && next[1].length <= headingLevel) { sectionEnd = i; break; }
+    }
+    const appendAfterSection = (block: string[]) =>
+      [...lines.slice(0, sectionEnd), '', ...block, '', ...lines.slice(sectionEnd)].join('\n');
+
+    test('duplicate §4.3 headings with one, two, or three leading spaces fail', () => {
+      for (const indent of [' ', '  ', '   ']) {
+        const withIndentedDuplicate = appendAfterSection([
+          `${indent}### 4.3 Duplicate via leading-space indent`,
+          '',
+          'Retained for reference.',
+        ]);
+        expect(reportClampingProblems(withIndentedDuplicate, clamping).join('\n'))
+          .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+      }
+    });
+
+    test('four leading spaces and a leading tab do not count as headings', () => {
+      for (const indent of ['    ', '\t']) {
+        const withPseudoHeading = appendAfterSection([
+          `${indent}### 4.3 Indented past the code boundary`,
+          '',
+          'Retained for reference.',
+        ]);
+        // Still exactly the one real section — the indented line never
+        // registered as a second §4.3 heading at all.
+        expect(reportClampingProblems(withPseudoHeading, clamping)).toEqual([]);
+        expect(readMarkdownSections(withPseudoHeading, CLAMPING_SECTION_HEADING)).toHaveLength(1);
+      }
+    });
+
+    test('a tab between the hashes and the number still counts', () => {
+      expect(parseAtxHeading('###\t4.3 Tab after the hashes')).toEqual({
+        level: 3,
+        content: '4.3 Tab after the hashes',
+      });
+      const withTabHeading = appendAfterSection([
+        '###\t4.3 Tab after the hashes',
+        '',
+        'Retained for reference.',
+      ]);
+      expect(reportClampingProblems(withTabHeading, clamping).join('\n'))
+        .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+    });
+
+    test('a four-space/tab-indented pseudo-heading does not terminate the live section', () => {
+      // Insert the pseudo-heading INSIDE the real section, between its
+      // heading and its clamping table. If it wrongly terminated the
+      // section, the table below it would no longer be attributed to §4.3
+      // and the check would report the table missing rather than passing.
+      const withPseudoHeadingInside = [
+        ...lines.slice(0, headingIndex + 1),
+        '',
+        '    #### 4.4 Not really a subsection',
+        ...lines.slice(headingIndex + 1),
+      ].join('\n');
+      expect(reportClampingProblems(withPseudoHeadingInside, clamping)).toEqual([]);
+    });
+
+    test('backtick- and tilde-fenced §4.3 heading/table blocks cannot satisfy the checker', () => {
+      const clampingTableBlock = [
+        '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+        '|---|---:|---:|---:|---:|---:|',
+        '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+        '| RB | 95 | 25.0 | 95.0 | 1 (1.1%) | 5 |',
+        '| WR | 146 | 25.0 | 95.0 | 1 (0.7%) | 1 |',
+        '| TE | 78 | 25.0 | 95.0 | 1 (1.3%) | 1 |',
+        '| **total** | **357** | | | **3 (0.8%)** | **7** |',
+      ];
+
+      for (const fence of ['```', '~~~']) {
+        // A document whose ONLY §4.3 heading/table lives inside a fenced code
+        // block: the classifier must see zero real sections, not one.
+        const fencedOnly = [
+          '# Report',
+          '',
+          fence,
+          '### 4.3 Observed clamping under the designed bounds',
+          '',
+          ...clampingTableBlock,
+          fence,
+        ].join('\n');
+        expect(readMarkdownSections(fencedOnly, CLAMPING_SECTION_HEADING)).toHaveLength(0);
+        expect(reportClampingProblems(fencedOnly, clamping).join('\n'))
+          .toMatch(/no §4\.3 section/);
+
+        // The same fenced block placed ALONGSIDE the real, unfenced §4.3
+        // section must not register as a second match.
+        const withFencedDuplicate = appendAfterSection([
+          fence,
+          '### 4.3 Observed clamping under the designed bounds',
+          '',
+          ...clampingTableBlock,
+          fence,
+        ]);
+        expect(reportClampingProblems(withFencedDuplicate, clamping)).toEqual([]);
+        expect(readMarkdownSections(withFencedDuplicate, CLAMPING_SECTION_HEADING)).toHaveLength(1);
+      }
+    });
+
+    test('a whitespace-delimited closing hash sequence is recognised: "### 4.3 Title ###" counts', () => {
+      expect(parseAtxHeading('### 4.3 Title ###')).toEqual({ level: 3, content: '4.3 Title' });
+      const withClosedHeading = appendAfterSection([
+        '### 4.3 Title ###',
+        '',
+        'Retained for reference.',
+      ]);
+      expect(reportClampingProblems(withClosedHeading, clamping).join('\n'))
+        .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
+    });
+
+    test('a missing or unrecognised separator makes the line not a heading: "###4.3" and "### 4.3###" do not count', () => {
+      expect(parseAtxHeading('###4.3')).toBeNull();
+      expect(parseAtxHeading('### 4.3###')).toBeNull();
+
+      for (const line of ['###4.3 Glued to the marker', '### 4.3###']) {
+        const withInvalidHeading = appendAfterSection([line, '', 'Retained for reference.']);
+        expect(reportClampingProblems(withInvalidHeading, clamping)).toEqual([]);
+        expect(readMarkdownSections(withInvalidHeading, CLAMPING_SECTION_HEADING)).toHaveLength(1);
+      }
+    });
+
+    test('four-space/tab-indented tables cannot satisfy the observed-clamping requirement', () => {
+      const indentedTableDoc = [
+        '### 4.3 Observed clamping under the designed bounds',
+        '',
+        '    | position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+        '    |---|---:|---:|---:|---:|---:|',
+        '    | QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+        '    | RB | 95 | 25.0 | 95.0 | 1 (1.1%) | 5 |',
+        '    | WR | 146 | 25.0 | 95.0 | 1 (0.7%) | 1 |',
+        '    | TE | 78 | 25.0 | 95.0 | 1 (1.3%) | 1 |',
+        '    | **total** | **357** | | | **3 (0.8%)** | **7** |',
+      ].join('\n');
+      const sections = readMarkdownSections(indentedTableDoc, CLAMPING_SECTION_HEADING);
+      expect(sections).toHaveLength(1);
+      expect(sections[0].tables).toEqual([]);
+      expect(reportClampingProblems(indentedTableDoc, clamping).join('\n'))
+        .toMatch(/no observed-clamping table/);
+    });
+
+    test('4.30, 4.3.1, prose, and the committed report retain their existing expected results', () => {
+      expect(parseAtxHeading('### 4.30 Something else entirely')).toEqual({
+        level: 3,
+        content: '4.30 Something else entirely',
+      });
+      expect(parseAtxHeading('### 4.3.1 A subsection')).toEqual({
+        level: 3,
+        content: '4.3.1 A subsection',
+      });
+      expect(CLAMPING_SECTION_HEADING.test('### 4.30 Something else entirely')).toBe(false);
+      expect(CLAMPING_SECTION_HEADING.test('### 4.3.1 A subsection')).toBe(false);
+      expect(parseAtxHeading('as discussed in 4.3 above, the bounds are designed')).toBeNull();
+      expect(reportClampingProblems(report, clamping)).toEqual([]);
+    });
   });
 
   test('a deleted clamping table fails rather than passing vacuously', () => {
