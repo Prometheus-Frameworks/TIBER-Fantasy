@@ -776,3 +776,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Reused the existing bounded governed-document rules; fenced and indented code remain inert, while bounded inline presentation cannot hide a same-root contradiction. No general Markdown or arbitrary-English contradiction parser is claimed.
 - Split the governed report sentence into its own paragraph and removed the adjacent redundant ungoverned spread result.
 - Validation: focused audit Jest suite 196/196, including reference-link and strikethrough fail-closed regressions; real committed-artifact `--check` passed; `git diff --check` passed; frozen cohort, manifest, and static artifact retained SHA-256 `118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106`, `8b317b1376ab2ae18f06137730730968efa36f053e43e294b57053f13a58df7a`, and `de0e2c19a7054653c460b9b8597b620d37084b5407d035afb97310c694cd1cf9`.
+
+### 2026-08-12 — FORGE cache-audit rendered narrative boundaries
+- Replaced the custom §5.2 prose block scan with pinned Marked GFM tokens while leaving the existing governed section/table tokenizer authoritative and unchanged.
+- Paragraphs, headings, tight lists, blockquotes, Setext headings, thematic breaks, and fences now follow rendered block boundaries; code and tables remain inert narrative examples.
+- Inline text uses per-token HTML5 decoding for prose and one whole-attribute decode for image alt text, preventing both hidden visible claims and cross-presentation entity invention. Image alt text and strikethrough remain fail-closed as the sole governed sentence.
+- Added accumulated adversarial regressions for container boundaries, soft/hard breaks, nested fence exits, tight-list text, entities across inline/image presentation, and image-alt emphasis/link/code/deletion.
+- Validation: focused audit 246/246; real `--check`, build, and diff check pass; typecheck remains the exact 505-diagnostic baseline with no audit-file matches; final independent differential replay matched 768 ordinary-inline and 832 image-alt forms against actual Marked/DOM visibility; cohort/manifest/static bytes and hashes unchanged.
+- Development-only dependencies are exact-pinned (`marked@15.0.12`, `entities@4.5.0`) with minimal lockfile change. No report, runtime, deployment, readiness, or governed-artifact mutation.

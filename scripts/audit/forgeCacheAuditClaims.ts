@@ -10,6 +10,8 @@
  */
 
 import { createHash } from 'crypto';
+import { decodeHTMLAttribute, decodeHTMLStrict } from 'entities';
+import { lexer as lexMarkdown, type Token as MarkedToken } from 'marked';
 
 export function sha256Text(text: string | Buffer): string {
   return createHash('sha256').update(text).digest('hex');
@@ -1135,75 +1137,174 @@ export function readMarkdownTables(report: string, heading: RegExp): MarkdownTab
 }
 
 interface GovernedNarrativeParagraph {
-  startLine: number;
-  endLine: number;
   value: string;
+  kind: 'paragraph' | 'heading';
+  topLevel: boolean;
+  inGovernedSection: boolean;
   problem: string | null;
 }
 
 /**
- * Visible narrative paragraphs under the same bounded Markdown rules used for
- * governed sections and tables.
+ * Rendered text of a Marked inline-token stream.
  *
- * This is intentionally not a general Markdown AST. It only separates the
- * constructs material to the claim guard below: fenced/indented code and pipe
- * tables are inert, blockquote/list markers are removed by the existing
- * bounded container view, and ordinary soft-wrapped prose is joined into one
- * paragraph. Inline presentation is normalized with the same bounded helper
- * used for governed headings and cells; an unsupported form is retained with
- * a problem so a same-root claim cannot disappear behind syntax we do not
- * claim to parse.
+ * Marked retains entities in text tokens because its HTML renderer delegates
+ * their decoding to the browser. The audit reasons about what a reader sees,
+ * so decode HTML5 references exactly once after inline tokenization. Links,
+ * emphasis, deletion and code spans contribute their rendered text; images
+ * contribute alt text; hard/soft line breaks contribute whitespace.
  */
-function governedNarrativeParagraphs(report: string): GovernedNarrativeParagraph[] {
-  const lines = report.split('\n');
-  const visible = visibleMarkdownLines(lines);
-  const tableLines = markdownTableLineNumbers(lines, visible);
-  const containerViews = governedContainerViews(lines, visible);
-  const paragraphs: GovernedNarrativeParagraph[] = [];
-  let parts: string[] = [];
-  let startLine = -1;
-  let endLine = -1;
+function renderedInlineSource(tokens: MarkedToken[] | undefined): string {
+  if (!tokens) return '';
+  return tokens.map((token): string => {
+    switch (token.type) {
+      case 'br':
+        return ' ';
+      case 'image':
+        // Image alt text is flattened into one HTML attribute before the
+        // browser decodes entities. Preserve entity fragments while removing
+        // inline presentation, concatenate the full alt value, then decode it
+        // once; ordinary prose intentionally decodes per token instead.
+        {
+          const altSource = token.tokens
+            ? renderedImageAltSource(token.tokens)
+            : token.text;
+          // Marked places TextRenderer output directly in a double-quoted alt
+          // attribute. A literal quote therefore terminates the attribute;
+          // an entity-encoded quote is decoded later and remains data.
+          return decodeHTMLAttribute(altSource.split('"', 1)[0]);
+        }
+      case 'text':
+      case 'escape':
+        // Marked's prose renderer recognizes entity source only when it has a
+        // semicolon; legacy semicolonless spellings are escaped and therefore
+        // remain literal reader-visible text.
+        return decodeHTMLStrict(token.text);
+      case 'codespan':
+        // Entity-like text in a code span is literal code, not browser-decoded
+        // prose. Keep it atomic so presentation boundaries cannot manufacture
+        // an entity across adjacent tokens.
+        return token.text;
+      case 'strong':
+      case 'em':
+      case 'del':
+      case 'link':
+        return renderedInlineSource(token.tokens);
+      case 'html':
+        // governedMarkdownSyntaxProblems() rejects visible raw HTML before the
+        // narrative check. Retain it here so it cannot manufacture plain text.
+        return token.raw;
+      default:
+        return 'tokens' in token && Array.isArray(token.tokens)
+          ? renderedInlineSource(token.tokens)
+          : 'text' in token && typeof token.text === 'string'
+            ? token.text
+            : '';
+    }
+  }).join('');
+}
 
-  const flush = () => {
-    if (parts.length === 0) return;
-    const normalized = normalizeBoundedInline(parts.join(' '));
-    paragraphs.push({
-      startLine,
-      endLine,
-      value: normalized.value,
-      problem: normalized.problem,
-    });
-    parts = [];
-    startLine = -1;
-    endLine = -1;
+function renderedInlineText(tokens: MarkedToken[] | undefined): string {
+  return renderedInlineSource(tokens)
+    .replace(/\p{Default_Ignorable_Code_Point}+/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+/** Visible image-alt source before its single whole-attribute entity decode. */
+function renderedImageAltSource(tokens: MarkedToken[] | undefined): string {
+  if (!tokens) return '';
+  return tokens.map((token): string => {
+    // This mirrors Marked's TextRenderer: a hard break contributes nothing;
+    // every other inline renderer contributes that token's own `text` value.
+    // It deliberately does not recurse through nested presentation, whose
+    // literal inner markers remain in the generated alt attribute.
+    if (token.type === 'br') return '';
+    return 'text' in token && typeof token.text === 'string' ? token.text : '';
+  }).join('');
+}
+
+function governedInlineProblem(tokens: MarkedToken[] | undefined): string | null {
+  if (!tokens) return null;
+  for (const token of tokens) {
+    if (token.type === 'image') return 'image alt text';
+    if (token.type === 'del') return 'strikethrough text';
+    if ('tokens' in token && Array.isArray(token.tokens)) {
+      const nested = governedInlineProblem(token.tokens);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+/**
+ * Visible narrative blocks, parsed by a pinned real GFM lexer.
+ *
+ * The custom governed tokenizer remains authoritative for the report's exact
+ * section/table schemas. Narrative paragraph boundaries are a different job:
+ * CommonMark list, quote, Setext, thematic-break and fence interactions are
+ * delegated to Marked instead of maintaining a second block parser here.
+ * Paragraphs and headings remain visible globally; fenced/indented code and
+ * tables are deliberately inert examples. Optional source-range markers are
+ * inserted as top-level HTML comments before lexing the complete document, so
+ * section membership is preserved without treating token lengths as physical
+ * offsets (Marked deliberately omits reference-definition source lines).
+ */
+function governedNarrativeParagraphs(
+  report: string,
+  governedSection?: MarkdownSection,
+): GovernedNarrativeParagraph[] {
+  const blocks: GovernedNarrativeParagraph[] = [];
+  let markerNonce = 0;
+  let startMarker = '';
+  let endMarker = '';
+  do {
+    startMarker = `<!--tiber-audit-governed-section-start-${markerNonce}-->`;
+    endMarker = `<!--tiber-audit-governed-section-end-${markerNonce}-->`;
+    markerNonce += 1;
+  } while (report.includes(startMarker) || report.includes(endMarker));
+  let source = report;
+  if (governedSection) {
+    const lineStarts = [0];
+    for (const match of report.matchAll(/\n/g)) lineStarts.push((match.index ?? 0) + 1);
+    const sectionStart = lineStarts[governedSection.startLine] ?? report.length;
+    const sectionEnd = lineStarts[governedSection.endLine] ?? report.length;
+    const beforeEnd = report.slice(sectionStart, sectionEnd);
+    const endBoundary = beforeEnd.endsWith('\n') ? '' : '\n';
+    source =
+      report.slice(0, sectionStart) + `${startMarker}\n` +
+      beforeEnd + endBoundary + `${endMarker}\n` +
+      report.slice(sectionEnd);
+  }
+  let inGovernedSection = !governedSection;
+
+  const visit = (tokens: MarkedToken[], topLevel: boolean): void => {
+    for (const token of tokens) {
+      if (topLevel && token.type === 'html') {
+        if (token.raw.includes(startMarker)) inGovernedSection = true;
+        if (token.raw.includes(endMarker)) inGovernedSection = false;
+        continue;
+      }
+      if (token.type === 'paragraph' || token.type === 'heading' || (
+        !topLevel && token.type === 'text' && Array.isArray(token.tokens)
+      )) {
+        blocks.push({
+          value: renderedInlineText(token.tokens),
+          kind: token.type === 'heading' ? 'heading' : 'paragraph',
+          topLevel,
+          inGovernedSection,
+          problem: governedInlineProblem(token.tokens),
+        });
+      } else if (token.type === 'blockquote') {
+        visit(token.tokens, false);
+      } else if (token.type === 'list') {
+        for (const item of token.items) visit(item.tokens, false);
+      }
+      // Code and table tokens intentionally do not recurse.
+    }
   };
 
-  lines.forEach((line, index) => {
-    if (!visible[index] || tableLines.has(index)) {
-      flush();
-      return;
-    }
-    const containerView = containerViews[index];
-    const structuralLine = containerView.stripped ? containerView.text : line;
-    if (!hasBoundedIndent(structuralLine)) {
-      flush();
-      return;
-    }
-
-    // Inline code is presentation inside a prose assertion, so retain it for
-    // normalizeBoundedInline() below. Only fenced/indented code blocks are
-    // inert structural examples.
-    const narrative = structuralLine.replace(/^ {0,3}/, '').trim();
-    if (narrative === '') {
-      flush();
-      return;
-    }
-    if (parts.length === 0) startLine = index;
-    parts.push(narrative);
-    endLine = index + 1;
-  });
-  flush();
-  return paragraphs;
+  visit(lexMarkdown(source, { gfm: true, async: false }) as MarkedToken[], true);
+  return blocks;
 }
 
 /**
@@ -1734,27 +1835,7 @@ const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> =
  */
 export const COMPARISON_SECTION_HEADING = /^#{1,6}\s+5\.2(?!\w)(?!\.\d)/;
 
-const EXACT_AGREEMENT_NARRATIVE_ROOT = /\bartifacts agree exactly on\b/gi;
-
-/**
- * Conservative root search for unsupported prose presentation.
- *
- * `normalizeBoundedInline()` intentionally refuses reference links,
- * strikethrough, and imbalanced presentation instead of pretending to parse
- * them. For this one governed root, refusal must not become invisibility:
- * remove only the presentation fragments that can split its words, then fail
- * closed if the root appears. This is a narrow ambiguity detector, not a claim
- * that the syntax has otherwise been parsed or accepted.
- */
-function exactAgreementRootSearchValue(paragraph: GovernedNarrativeParagraph): string {
-  if (!paragraph.problem) return paragraph.value;
-  return paragraph.value
-    .replace(/\[([^\]\n]+)\]\[[^\]\n]*\]/g, '$1')
-    .replace(/\[([^\]\n]+)\]/g, '$1')
-    .replace(/~~([^~\n]+)~~/g, '$1')
-    .replace(/[*_`]/g, '')
-    .replace(/[ \t]+/g, ' ');
-}
+const EXACT_AGREEMENT_NARRATIVE_ROOT = /\bartifacts\s+agree\s+exactly\s+on\b/giu;
 
 /**
  * Bind §5.2's redundant prose result to the same manifest fields as its table.
@@ -1787,8 +1868,8 @@ function exactAgreementNarrativeProblems(
       : String(exactAgreement);
   const expected =
     `The two artifacts agree exactly on ${quantity} of the ${joinedRows} shared players.`;
-  const rooted = governedNarrativeParagraphs(report).flatMap((paragraph) => {
-    const matches = [...exactAgreementRootSearchValue(paragraph).matchAll(EXACT_AGREEMENT_NARRATIVE_ROOT)];
+  const rooted = governedNarrativeParagraphs(report, section).flatMap((paragraph) => {
+    const matches = [...paragraph.value.matchAll(EXACT_AGREEMENT_NARRATIVE_ROOT)];
     return matches.map(() => paragraph);
   });
 
@@ -1808,11 +1889,17 @@ function exactAgreementNarrativeProblems(
   const [claim] = rooted;
   if (claim.problem) {
     return [
-      `report's exact-agreement narrative uses ${claim.problem}; ` +
-      'the governed claim must use the directly tokenizable manifest-derived sentence',
+      `report's exact-agreement narrative is carried by ${claim.problem}; ` +
+      'the governed claim must be directly visible paragraph text',
     ];
   }
-  if (claim.startLine <= section.startLine || claim.endLine > section.endLine) {
+  if (claim.kind !== 'paragraph' || !claim.topLevel) {
+    return [
+      `report's exact-agreement narrative is rendered as a ${claim.topLevel ? claim.kind : `nested ${claim.kind}`}; ` +
+      'the governed claim must be one standalone top-level paragraph in §5.2',
+    ];
+  }
+  if (!claim.inGovernedSection) {
     return ['report states its governed exact-agreement narrative outside the unique §5.2 section'];
   }
   if (claim.value !== expected) {

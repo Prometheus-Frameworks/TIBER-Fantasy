@@ -1320,6 +1320,18 @@ describe('report consistency is checked per row, not as a substring sweep', () =
   const exactAgreementNarrative =
     '**The two artifacts agree exactly on none of the 50 shared players.**';
 
+  const insertImmediatelyAfterExactNarrative = (block: string) => {
+    const marker = `${exactAgreementNarrative}\n\n`;
+    expect(report).toContain(marker);
+    return report.replace(marker, `${exactAgreementNarrative}\n${block}\n\n`);
+  };
+
+  const insertAfterExactNarrativeBoundary = (block: string) => {
+    const marker = `${exactAgreementNarrative}\n\n`;
+    expect(report).toContain(marker);
+    return report.replace(marker, `${exactAgreementNarrative}\n\n${block}\n\n`);
+  };
+
   /** Rewrite one `| label | value |` cell of the comparison table. */
   const editCell = (label: string, replacement: string) => {
     const pattern = new RegExp(`^(\\|\\s*\\*{0,2}${label}[^|]*\\|\\s*)([^|]*?)(\\s*\\|)$`, 'm');
@@ -1408,6 +1420,194 @@ describe('report consistency is checked per row, not as a substring sweep', () =
       .toMatch(/exact-agreement narrative.*manifest requires/i);
   });
 
+  test('invisible reference definitions before §5.2 do not shift narrative section membership', () => {
+    const definitions = Array.from(
+      { length: 100 },
+      (_, index) => `[unused-${index}]: https://example.invalid/${index}`,
+    ).join('\n');
+    expect(reportComparisonProblems(`${definitions}\n\n${report}`, dc)).toEqual([]);
+  });
+
+  test.each(['before', 'after']) (
+    'a reference definition %s §5.2 remains available to the governed paragraph',
+    (placement) => {
+      const presented = report.replace(
+        exactAgreementNarrative,
+        '**The two artifacts [agree][exact-claim] exactly on none of the 50 shared players.**',
+      );
+      const definition = '[exact-claim]: https://example.invalid/exact-claim';
+      const withDefinition = placement === 'before'
+        ? `${definition}\n\n${presented}`
+        : `${presented}\n\n${definition}\n`;
+      expect(reportComparisonProblems(withDefinition, dc)).toEqual([]);
+    },
+  );
+
+  test.each([
+    ['ATX heading', '# Follow-on heading'],
+    ['bullet list', '- Follow-on item'],
+    ['ordered list', '1. Follow-on item'],
+    ['blockquote', '> Follow-on quotation'],
+    ['thematic break', '***'],
+  ])('a real GFM %s immediately after the exact sentence is a separate block', (_label, block) => {
+    expect(reportComparisonProblems(insertImmediatelyAfterExactNarrative(block), dc)).toEqual([]);
+  });
+
+  test.each([
+    ['ATX heading', '# These artifacts agree exactly on all of the 50 shared players.'],
+    ['tight bullet', '- These artifacts agree exactly on all of the 50 shared players.'],
+    ['tight ordered item', '1. These artifacts agree exactly on all of the 50 shared players.'],
+    ['blockquote', '> These artifacts agree exactly on all of the 50 shared players.'],
+    ['soft-wrapped blockquote', '> These artifacts agree\n> exactly on all of the 50 shared players.'],
+    ['decreasing quote depth', '>> These artifacts agree\n> exactly on all of the 50 shared players.'],
+    ['backslash hard break', 'These artifacts\\\nagree exactly on all of the 50 shared players.'],
+    ['HTML named whitespace', 'These artifacts&ThinSpace;agree exactly on all of the 50 shared players.'],
+    ['reference link', 'These artifacts [agree][claim] exactly on all of the 50 shared players.\n\n[claim]: https://example.invalid/'],
+  ])('a rendered same-root contradiction in %s remains globally visible', (_label, block) => {
+    expect(reportComparisonProblems(`${report}\n\n${block}\n`, dc).join('\n'))
+      .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+  });
+
+  test('noninterrupting top-level ordered-2 text remains in the governed paragraph', () => {
+    expect(reportComparisonProblems(
+      insertImmediatelyAfterExactNarrative('2. This is still the same rendered paragraph.'),
+      dc,
+    ).join('\n')).toMatch(/exact-agreement narrative.*manifest requires/i);
+  });
+
+  test.each(['---', '==='])(
+    'an immediate Setext underline (%s) promotes the claim to a heading and fails',
+    (underline) => {
+      expect(reportComparisonProblems(insertImmediatelyAfterExactNarrative(underline), dc).join('\n'))
+        .toMatch(/rendered as a heading/i);
+      expect(reportComparisonProblems(insertAfterExactNarrativeBoundary(underline), dc)).toEqual([]);
+    },
+  );
+
+  test('no-blank indented continuation is prose, while blank-separated indented code is inert', () => {
+    expect(reportComparisonProblems(
+      insertImmediatelyAfterExactNarrative('    Harmless continuation text.'),
+      dc,
+    ).join('\n')).toMatch(/exact-agreement narrative.*manifest requires/i);
+    expect(reportComparisonProblems(
+      insertAfterExactNarrativeBoundary('    These artifacts agree exactly on all of the 50 shared players.'),
+      dc,
+    )).toEqual([]);
+  });
+
+  test.each([
+    '```text\nThese artifacts agree exactly on all of the 50 shared players.\n```',
+    '> ```text\n> These artifacts agree exactly on all of the 50 shared players.\n> ```',
+    '- item\n  ```text\n  These artifacts agree exactly on all of the 50 shared players.\n  ```',
+  ])('same-root examples in a rendered code block remain inert', (block) => {
+    expect(reportComparisonProblems(`${report}\n\n${block}\n`, dc)).toEqual([]);
+  });
+
+  test.each([
+    '> ```text\nThese artifacts agree exactly on all of the 50 shared players.\n> ```',
+    '- item\n  ```text\nThese artifacts agree exactly on all of the 50 shared players.\n  ```',
+  ])('prose after exiting a nested fence is reprocessed as visible', (block) => {
+    expect(reportComparisonProblems(`${report}\n\n${block}\n`, dc).join('\n'))
+      .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+  });
+
+  test('strikethrough and image alt text cannot satisfy the sole governed sentence', () => {
+    for (const replacement of [
+      '~~The two artifacts agree exactly on none of the 50 shared players.~~',
+      '![The two artifacts agree exactly on none of the 50 shared players.](missing.png)',
+    ]) {
+      const tampered = report.replace(exactAgreementNarrative, replacement);
+      expect(reportComparisonProblems(tampered, dc).join('\n'))
+        .toMatch(/strikethrough text|image alt text/i);
+    }
+  });
+
+  test('presentation inside image alt text cannot hide a duplicate visible claim', () => {
+    for (const presentedAgree of [
+      '**agree**',
+      '[agree](https://example.invalid/claim)',
+      '`agree`',
+      '~~agree~~',
+    ]) {
+      const contradictory =
+        `${report}\n\n![These artifacts ${presentedAgree} exactly on all of the 50 shared players.](missing.png)\n`;
+      expect(reportComparisonProblems(contradictory, dc).join('\n'))
+        .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+    }
+  });
+
+  test('image alt attributes decode entities once after presentation is flattened', () => {
+    for (const splitEntity of [
+      '![These artifacts&nb`sp;`agree exactly on all of the 50 shared players.](missing.png)',
+      '![These artifacts&nb[sp;](https://example.invalid/)agree exactly on all of the 50 shared players.](missing.png)',
+    ]) {
+      const contradictory = `${report}\n\n${splitEntity}\n`;
+      expect(reportComparisonProblems(contradictory, dc).join('\n'))
+        .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+    }
+  });
+
+  test('semicolonless entity text followed by an alphanumeric stays literal in image alt attributes', () => {
+    const literalAlt =
+      `${report}\n\n![These artifacts&nbspagree exactly on all of the 50 shared players.](missing.png)\n`;
+    expect(reportComparisonProblems(literalAlt, dc)).toEqual([]);
+  });
+
+  test('a hard-break token is removed when Marked flattens image alt text', () => {
+    const flattenedAlt =
+      `${report}\n\n![These artifacts  \nagree exactly on all of the 50 shared players.](missing.png)\n`;
+    expect(reportComparisonProblems(flattenedAlt, dc)).toEqual([]);
+  });
+
+  test.each([
+    '***agree***',
+    '**_agree_**',
+    '[*agree*](https://example.invalid/)',
+    '~~**agree**~~',
+    '**[agree](https://example.invalid/)**',
+    '[**agree**](https://example.invalid/)',
+    '*`agree`*',
+  ]) (
+    'nested image-alt presentation %s retains its inner literal markers',
+    (presentedAgree) => {
+      const literalMarkers =
+        `${report}\n\n![These artifacts ${presentedAgree} exactly on all of the 50 shared players.](missing.png)\n`;
+      expect(reportComparisonProblems(literalMarkers, dc)).toEqual([]);
+    },
+  );
+
+  test('literal image-label quotes terminate Marked alt attributes, while entity quotes remain data', () => {
+    for (const quoteSource of ['"', '\\"']) {
+      const terminated =
+        `${report}\n\n![${quoteSource} These artifacts agree exactly on all of the 50 shared players.](missing.png)\n`;
+      expect(reportComparisonProblems(terminated, dc)).toEqual([]);
+    }
+    const entityQuote =
+      `${report}\n\n![&quot; These artifacts agree exactly on all of the 50 shared players.](missing.png)\n`;
+    expect(reportComparisonProblems(entityQuote, dc).join('\n'))
+      .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+  });
+
+  test.each(['&nbspagree', '&#32agree']) (
+    'semicolonless prose entity source %s remains literal rather than manufacturing whitespace',
+    (entitySource) => {
+      const literalProse =
+        `${report}\n\nThese artifacts${entitySource} exactly on all of the 50 shared players.\n`;
+      expect(reportComparisonProblems(literalProse, dc)).toEqual([]);
+    },
+  );
+
+  test('inline token boundaries cannot manufacture a whitespace entity', () => {
+    for (const replacement of [
+      'The two artifacts&nb`sp;`agree exactly on none of the 50 shared players.',
+      'The two artifacts&nb[sp;](https://example.invalid/)agree exactly on none of the 50 shared players.',
+      'The two artifacts`&nbsp;`agree exactly on none of the 50 shared players.',
+    ]) {
+      const tampered = report.replace(exactAgreementNarrative, replacement);
+      expect(reportComparisonProblems(tampered, dc)).not.toEqual([]);
+    }
+  });
+
   test('the exact prose template follows the manifest count rather than a pinned none/50 literal', () => {
     const oneAgreement = { ...dc, exactAgreement: 1 };
     const adjusted = editCell('exact agreement', '1').replace(
@@ -1439,6 +1639,23 @@ describe('report consistency is checked per row, not as a substring sweep', () =
     }
   });
 
+  test('rendered whitespace inside a link label remains part of the visible claim', () => {
+    const contradiction =
+      `${report}\n\nThese artifacts[ agree ](https://example.invalid/)exactly on all of the 50 shared players.\n`;
+    expect(reportComparisonProblems(contradiction, dc).join('\n'))
+      .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+  });
+
+  test.each(['\u200E', '\u200F', '\u061C', '\u2066', '\u00AD', '\u034F']) (
+    'reader-invisible Unicode format control U+%s cannot split a visible claim root',
+    (formatControl) => {
+      const contradiction =
+        `${report}\n\nThese artifacts${formatControl} agree exactly on all of the 50 shared players.\n`;
+      expect(reportComparisonProblems(contradiction, dc).join('\n'))
+        .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+    },
+  );
+
   test('unsupported reference-link and strikethrough presentation fail closed around the same root', () => {
     for (const contradiction of [
       'These artifacts [agree][claim] exactly on all of the 50 shared players.\n\n[claim]: https://example.invalid/',
@@ -1462,6 +1679,17 @@ describe('report consistency is checked per row, not as a substring sweep', () =
       );
       expect(reportComparisonProblems(withExample, dc)).toEqual([]);
     }
+  });
+
+  test('fenced text resembling internal section markers is inert and cannot collide', () => {
+    const withMarkerExamples = `${report}\n\n\`\`\`html\n` +
+      '<!--tiber-audit-governed-section-start-->\n' +
+      '<!--tiber-audit-governed-section-end-->\n' +
+      '<!--tiber-audit-governed-section-start-0-->\n' +
+      '<!--tiber-audit-governed-section-end-0-->\n' +
+      '\`\`\`\n';
+    expect(() => reportComparisonProblems(withMarkerExamples, dc)).not.toThrow();
+    expect(reportComparisonProblems(withMarkerExamples, dc)).toEqual([]);
   });
 
   test('a deleted comparison table is a problem, not a silent pass', () => {
