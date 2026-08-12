@@ -802,3 +802,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Missing/unresolvable IDs fail explicitly; aliases and normalized IDs are never substituted into the evidence comparison, which remains strict raw `player_id` only.
 - Added outcome coverage for all aliases, baseline/invalid-alpha twins, precedence, false-duplicate controls, malformed rows, and Unicode whitespace parity; malformed all-static diagnostics no longer crash the audit.
 - Validation: audit 294/294 plus adapter 11/11; full branch 119 suites/1,349 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison row-container parity
+- The artifact-level comparison plan now selects the first array under `rows`, `players`, or `data`, matching promoted-adapter precedence exactly; empty selected arrays and absent/invalid containers fail explicitly.
+- `auditComparability()` uses that one selected row collection for namespaces, names, baseline diagnostics, strict evidence, intersection, blockers, and descriptive comparison.
+- Regressions cover all containers, precedence/fallthrough, terminal empties, invalid roots, malformed rows, ignored lower containers, and alias collisions through alternate containers.
+- Validation: audit 311/311 plus adapter 11/11; full branch 119 suites/1,366 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.

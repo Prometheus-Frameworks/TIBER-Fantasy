@@ -47,7 +47,7 @@ import {
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
   OBSERVATION_EVIDENCE_STATUS,
-  planStaticEvidenceComparison,
+  planForgeStaticArtifactComparison,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
   reportClampingProblems,
@@ -232,16 +232,16 @@ function auditClamping(rows: LiveRow[]) {
 
 /** Whether the two lineages can be compared at all. */
 function auditComparability(rows: LiveRow[], staticArtifact: any) {
-  const staticRows: any[] = staticArtifact.rows ?? [];
   // Joined on the producer key. The static artifact is GSIS-keyed, so a
   // canonical key on this side would match nothing and be reported as a genuine
   // zero intersection. Only contract-admitted player-specific rows may create
   // that intersection; baseline/default/unknown rows remain diagnostics only.
   const liveIds = new Set(rows.map((r) => r.sourceId));
+  const comparisonPlan = planForgeStaticArtifactComparison(staticArtifact, liveIds);
+  const staticRows = comparisonPlan.staticRows;
   const staticIds = staticRows.map((r) =>
     typeof r?.player_id === 'string' ? r.player_id : '',
   );
-  const comparisonPlan = planStaticEvidenceComparison(staticRows, liveIds);
   const evidenceRows = comparisonPlan.evidenceRows;
 
   const nameCounts = new Map<string, number>();

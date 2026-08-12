@@ -275,6 +275,47 @@ export interface StaticEvidenceComparisonPlan {
   joinBlockers: string[];
 }
 
+export type ForgeStaticRowContainer = 'rows' | 'players' | 'data';
+
+export interface ForgeStaticArtifactComparisonPlan extends StaticEvidenceComparisonPlan {
+  /** Exact row array selected by the promoted adapter's container precedence. */
+  staticRows: any[];
+  /** The selected adapter container, or null when the payload exposes none. */
+  rowContainer: ForgeStaticRowContainer | null;
+}
+
+function selectForgeStaticArtifactRows(staticArtifact: any): {
+  rows: any[];
+  container: ForgeStaticRowContainer | null;
+  problems: string[];
+} {
+  if (!staticArtifact || typeof staticArtifact !== 'object' || Array.isArray(staticArtifact)) {
+    return {
+      rows: [],
+      container: null,
+      problems: ['static artifact is not an object with an adapter-supported row array'],
+    };
+  }
+
+  for (const container of ['rows', 'players', 'data'] as const) {
+    if (!Array.isArray(staticArtifact[container])) continue;
+    const rows = staticArtifact[container];
+    return {
+      rows,
+      container,
+      problems: rows.length === 0
+        ? [`static artifact ${container} row array is empty`]
+        : [],
+    };
+  }
+
+  return {
+    rows: [],
+    container: null,
+    problems: ['static artifact exposes no adapter-supported rows, players, or data array'],
+  };
+}
+
 /**
  * Plan the evidence side of the static/cohort comparison in one pure step.
  *
@@ -304,6 +345,28 @@ export function planStaticEvidenceComparison(
         (index) => `static artifact row ${index} has no adapter-resolvable player ID`,
       ),
     ],
+  };
+}
+
+/**
+ * Plan one complete promoted static artifact against the observed live IDs.
+ *
+ * The runtime adapter selects the first array exposed as `rows`, `players`, or
+ * `data`, even when that first array is empty. Keeping that transport choice in
+ * the same pure plan as evidence selection prevents offline audit generation
+ * from comparing a different row set than the runtime consumer loads.
+ */
+export function planForgeStaticArtifactComparison(
+  staticArtifact: any,
+  liveIds: ReadonlySet<string>,
+): ForgeStaticArtifactComparisonPlan {
+  const selected = selectForgeStaticArtifactRows(staticArtifact);
+  const evidence = planStaticEvidenceComparison(selected.rows, liveIds);
+  return {
+    ...evidence,
+    staticRows: selected.rows,
+    rowContainer: selected.container,
+    joinBlockers: [...selected.problems, ...evidence.joinBlockers],
   };
 }
 

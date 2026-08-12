@@ -27,6 +27,7 @@ import {
   formatClampPct,
   governedMarkdownSyntaxProblems,
   parseAtxHeading,
+  planForgeStaticArtifactComparison,
   planStaticEvidenceComparison,
   readMarkdownSections,
   readMarkdownTable,
@@ -662,6 +663,123 @@ describe('comparability', () => {
       expect(plan.directIdIntersection).toBe(1);
       expect(plan.joinBlockers).toEqual([]);
     });
+  });
+
+  describe('static artifact row-container parity with the promoted adapter', () => {
+    const evidenceRow = {
+      player_id: '00-0000001',
+      player_name: 'Evidence Player',
+      forge_alpha: 50,
+      provenance: { score_source: 'player_specific' },
+    };
+    const liveIds = new Set(['00-0000001']);
+
+    test.each(['rows', 'players', 'data'] as const)(
+      '%s can supply the exact evidence rows',
+      (container) => {
+        const plan = planForgeStaticArtifactComparison(
+          { [container]: [evidenceRow] },
+          liveIds,
+        );
+        expect(plan.rowContainer).toBe(container);
+        expect(plan.staticRows).toEqual([evidenceRow]);
+        expect(plan.evidenceRows).toEqual([evidenceRow]);
+        expect(plan.directIdIntersection).toBe(1);
+        expect(plan.joinBlockers).toEqual([]);
+      },
+    );
+
+    test('rows wins over adversarial players and data arrays', () => {
+      const ignoredDuplicate = { ...evidenceRow };
+      const ignoredMissing = { forge_alpha: 99 };
+      const plan = planForgeStaticArtifactComparison(
+        { rows: [evidenceRow], players: [ignoredDuplicate], data: [ignoredMissing] },
+        liveIds,
+      );
+      expect(plan.rowContainer).toBe('rows');
+      expect(plan.staticRows).toEqual([evidenceRow]);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test('a non-array rows field falls through to players', () => {
+      const plan = planForgeStaticArtifactComparison(
+        { rows: { invalid: true }, players: [evidenceRow], data: [] },
+        liveIds,
+      );
+      expect(plan.rowContainer).toBe('players');
+      expect(plan.staticRows).toEqual([evidenceRow]);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test('non-array rows and players fields fall through to data', () => {
+      const plan = planForgeStaticArtifactComparison(
+        { rows: null, players: 'invalid', data: [evidenceRow] },
+        liveIds,
+      );
+      expect(plan.rowContainer).toBe('data');
+      expect(plan.staticRows).toEqual([evidenceRow]);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test.each([
+      ['rows', { rows: [], players: [evidenceRow], data: [evidenceRow] }],
+      ['players', { rows: {}, players: [], data: [evidenceRow] }],
+      ['data', { rows: null, players: 'invalid', data: [] }],
+    ])('an empty selected %s array is terminal and never falls through', (container, artifact) => {
+      const plan = planForgeStaticArtifactComparison(artifact, liveIds);
+      expect(plan.rowContainer).toBe(container);
+      expect(plan.staticRows).toEqual([]);
+      expect(plan.evidenceRows).toEqual([]);
+      expect(plan.joinBlockers.join(' ')).toMatch(new RegExp(`${container} row array is empty`));
+      expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+    });
+
+    test.each([
+      ['missing containers', {}],
+      ['all containers non-array', { rows: {}, players: 'bad', data: null }],
+      ['null payload', null],
+      ['array payload', [evidenceRow]],
+      ['primitive payload', 'bad'],
+    ])('%s fails explicitly without throwing', (_label, artifact) => {
+      const plan = planForgeStaticArtifactComparison(artifact, liveIds);
+      expect(plan.rowContainer).toBeNull();
+      expect(plan.staticRows).toEqual([]);
+      expect(plan.evidenceRows).toEqual([]);
+      expect(plan.joinBlockers.join(' ')).toMatch(/static artifact/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+    });
+
+    test('a selected nonempty array delegates malformed rows to row-level validity', () => {
+      const plan = planForgeStaticArtifactComparison({ players: [null] }, liveIds);
+      expect(plan.rowContainer).toBe('players');
+      expect(plan.staticRows).toEqual([null]);
+      expect(plan.joinBlockers.join(' ')).toMatch(/row 0 has no adapter-resolvable player ID/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/row array is empty/);
+    });
+
+    test.each(['players', 'data'] as const)(
+      '%s retains alias collision blocking and strict evidence admission',
+      (container) => {
+        const plan = planForgeStaticArtifactComparison(
+          {
+            [container]: [
+              evidenceRow,
+              {
+                playerId: ' 00-0000001 ',
+                forge_alpha: Number.NaN,
+                provenance: { score_source: 'player_specific' },
+              },
+            ],
+          },
+          liveIds,
+        );
+        expect(plan.rowContainer).toBe(container);
+        expect(plan.evidenceRows).toEqual([evidenceRow]);
+        expect(plan.directIdIntersection).toBe(1);
+        expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+        expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+      },
+    );
   });
 
   test('joinability is derived from the measured identifiers', () => {
