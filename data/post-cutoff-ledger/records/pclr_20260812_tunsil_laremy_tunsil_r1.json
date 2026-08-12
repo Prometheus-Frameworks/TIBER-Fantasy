@@ -1,0 +1,54 @@
+{
+  "record_id": "pclr_20260812_tunsil_laremy_tunsil_r1",
+  "ledger_entry_id": "pcl_20260812_tunsil_laremy_tunsil",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-12T23:40:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": null,
+      "display_name": "Laremy Tunsil",
+      "identity_status": "unresolved"
+    },
+    "observed_at": "2026-08-08",
+    "event_type": "injury_update",
+    "observations": [
+      "Washington LT Laremy Tunsil suffered a torn triceps during practice on 2026-08-08 and requires surgery.",
+      "The team confirmed an extended absence but has not published a full-season timetable.",
+      "Washington's stated replacement plan: Brandon Coleman to LT, Chris Paul at LG, Josh Conerly Jr. remaining at RT, Andrew Wylie as swing-tackle depth."
+    ],
+    "inferences": [],
+    "forecast_pressure": "none",
+    "confidence": "high",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.commanders.com/news/commanders-training-camp-notebook-laremy-tunsil-brandon-coleman",
+        "note": "Team confirmation of injury and replacement discussion.",
+        "verified": false
+      },
+      {
+        "ref": "https://github.com/Prometheus-Frameworks/TIBER-Research/issues/3",
+        "note": "Bounded research pilot definition capturing the event, subjects, and preregistered hypotheses.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Canonical identity unresolved: offensive linemen are outside the governed skill-position roster map, so no GSIS ID is joined here.",
+      "Do not encode 'out for the season' as settled fact before a post-operative timeline exists.",
+      "Baseline run seasonal-ppr-2026-forward-001 is designated but not executed/frozen in TIBER-Forecast as of 2026-08-12 (forwardRun1 packages bind but do not execute the run)."
+    ],
+    "open_questions": [
+      "What is the post-operative recovery timeline?",
+      "Does Washington place Tunsil on injured reserve, and with what designation?"
+    ],
+    "unrecognized_fields": []
+  }
+}
