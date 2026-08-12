@@ -157,6 +157,103 @@ export function computeJoinBlockers(input: { directIdIntersection: number }): st
   return blockers;
 }
 
+export interface PlayerSpecificStaticEvidenceSelection {
+  /** One row per eligible player_id, suitable for an evidence comparison. */
+  rows: any[];
+  /** Any artifact ID repeated in the artifact. Adapter parity makes this fatal. */
+  duplicatePlayerIds: string[];
+}
+
+/**
+ * Admit static FORGE rows to the audit's player-specific comparison.
+ *
+ * The promoted artifact's contract is deliberately closed: only a row whose
+ * raw provenance says `player_specific` may count as evidence. Baselines,
+ * defaults, unknown/missing sources and aliases remain visible artifact rows,
+ * but may not create an ID intersection or enter the numeric comparison. The
+ * audit also requires the raw `forge_alpha` used by that comparison to be a
+ * finite number; it does not silently normalize strings or alternate fields.
+ *
+ * Duplicate eligible IDs fail closed at the caller. Returning a de-duplicated
+ * row collection prevents the diagnostic intersection itself from being
+ * inflated while `duplicatePlayerIds` preserves the reason the comparison
+ * must remain unavailable.
+ */
+export function selectPlayerSpecificStaticEvidenceRows(
+  staticRows: readonly any[],
+): PlayerSpecificStaticEvidenceSelection {
+  // Match the promoted adapter's fail-closed identity law: duplication is a
+  // property of the artifact, not only of whichever duplicate happens to be
+  // evidence-eligible. Otherwise a baseline/default/malformed twin could make
+  // an admitted ID look unique after filtering.
+  const rawIdCounts = new Map<string, number>();
+  for (const row of staticRows) {
+    if (typeof row?.player_id !== 'string' || row.player_id === '') continue;
+    rawIdCounts.set(row.player_id, (rawIdCounts.get(row.player_id) ?? 0) + 1);
+  }
+
+  const eligible = staticRows.filter((row) =>
+    row?.provenance?.score_source === 'player_specific' &&
+    typeof row?.forge_alpha === 'number' &&
+    Number.isFinite(row.forge_alpha) &&
+    typeof row?.player_id === 'string' &&
+    row.player_id !== '',
+  );
+
+  const seen = new Set<string>();
+  const rows: any[] = [];
+  for (const row of eligible) {
+    if (seen.has(row.player_id)) {
+      continue;
+    }
+    seen.add(row.player_id);
+    rows.push(row);
+  }
+
+  return {
+    rows,
+    duplicatePlayerIds: [...rawIdCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([id]) => id)
+      .sort(),
+  };
+}
+
+export interface StaticEvidenceComparisonPlan {
+  /** The only static rows the numeric comparison may consume. */
+  evidenceRows: any[];
+  /** Distinct eligible IDs that are also present in the observed cohort. */
+  directIdIntersection: number;
+  /** Any condition that makes the evidence comparison unavailable. */
+  joinBlockers: string[];
+}
+
+/**
+ * Plan the evidence side of the static/cohort comparison in one pure step.
+ *
+ * Keeping selection, intersection and duplicate blocking together prevents a
+ * caller from filtering rows for one metric while accidentally using all
+ * artifact rows for another. `auditComparability` consumes this plan verbatim,
+ * and the adversarial audit tests exercise the same outcome-level seam.
+ */
+export function planStaticEvidenceComparison(
+  staticRows: readonly any[],
+  liveIds: ReadonlySet<string>,
+): StaticEvidenceComparisonPlan {
+  const selection = selectPlayerSpecificStaticEvidenceRows(staticRows);
+  const directIdIntersection = selection.rows.filter((row) => liveIds.has(row.player_id)).length;
+  return {
+    evidenceRows: selection.rows,
+    directIdIntersection,
+    joinBlockers: [
+      ...computeJoinBlockers({ directIdIntersection }),
+      ...selection.duplicatePlayerIds.map(
+        (id) => `duplicate player_id in the static artifact: ${id}`,
+      ),
+    ],
+  };
+}
+
 export const GSIS_SHAPE = /^00-\d{7}$/;
 
 export interface RowIdentity {

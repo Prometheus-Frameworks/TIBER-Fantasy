@@ -784,3 +784,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added accumulated adversarial regressions for container boundaries, soft/hard breaks, nested fence exits, tight-list text, entities across inline/image presentation, and image-alt emphasis/link/code/deletion.
 - Validation: focused audit 246/246; real `--check`, build, and diff check pass; typecheck remains the exact 505-diagnostic baseline with no audit-file matches; final independent differential replay matched 768 ordinary-inline and 832 image-alt forms against actual Marked/DOM visibility; cohort/manifest/static bytes and hashes unchanged.
 - Development-only dependencies are exact-pinned (`marked@15.0.12`, `entities@4.5.0`) with minimal lockfile change. No report, runtime, deployment, readiness, or governed-artifact mutation.
+
+### 2026-08-12 — FORGE static comparison evidence admission
+- Added one pure comparison plan that selects only strict raw `player_specific` rows with finite numeric `forge_alpha`, derives the identifier intersection from those rows, and passes that exact collection into the descriptive comparison.
+- Baseline/default/unknown/missing/malformed rows remain diagnostic-only and cannot make §5.2 joinable. Duplicate IDs are detected across the entire raw artifact before filtering and fail closed in parity with the promoted adapter.
+- Added outcome-level adversarial tests for every non-evidence source, invalid alpha, mixed/intersecting/nonintersecting evidence, and eligible/non-evidence duplicate combinations.
+- Validation: focused audit 262/262; full branch 119 suites/1,313 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; independent final audit clean. Cohort/manifest/report/static bytes remain unchanged.

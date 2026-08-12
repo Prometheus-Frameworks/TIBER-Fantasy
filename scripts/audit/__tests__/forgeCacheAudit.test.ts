@@ -27,6 +27,7 @@ import {
   formatClampPct,
   governedMarkdownSyntaxProblems,
   parseAtxHeading,
+  planStaticEvidenceComparison,
   readMarkdownSections,
   readMarkdownTable,
   readMarkdownTables,
@@ -35,6 +36,7 @@ import {
   reportIdentityProblems,
   rowIdentityFromCohortRow,
   rowIdentityFromResponseItem,
+  selectPlayerSpecificStaticEvidenceRows,
   unsupportedLineageClaims,
 } from '../forgeCacheAuditClaims';
 
@@ -281,6 +283,119 @@ describe('clamping analysis', () => {
 });
 
 describe('comparability', () => {
+  describe('static player-specific evidence admission', () => {
+    const row = (
+      playerId: string,
+      scoreSource: unknown,
+      alpha: unknown = 50,
+    ) => ({
+      player_id: playerId,
+      player_name: playerId,
+      forge_alpha: alpha,
+      provenance: scoreSource === undefined ? {} : { score_source: scoreSource },
+    });
+
+    test.each([
+      ['generated baseline', 'generated_baseline'],
+      ['fallback default', 'fallback_default'],
+      ['unknown source', 'some_future_source'],
+      ['missing source', undefined],
+    ])('%s cannot create an evidence intersection', (_label, scoreSource) => {
+      const plan = planStaticEvidenceComparison(
+        [row('00-0000001', scoreSource)],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([]);
+      expect(plan.directIdIntersection).toBe(0);
+      expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+    });
+
+    test.each([
+      ['null', null],
+      ['numeric string', '50'],
+      ['NaN', Number.NaN],
+      ['positive infinity', Number.POSITIVE_INFINITY],
+      ['negative infinity', Number.NEGATIVE_INFINITY],
+    ])('player_specific with %s alpha is not comparable evidence', (_label, alpha) => {
+      const selected = selectPlayerSpecificStaticEvidenceRows([
+        row('00-0000001', 'player_specific', alpha),
+      ]);
+      expect(selected.rows).toEqual([]);
+      expect(selected.duplicatePlayerIds).toEqual([]);
+    });
+
+    test('mixed artifacts admit only strict finite player-specific rows', () => {
+      const admitted = row('00-0000001', 'player_specific', 51.25);
+      const plan = planStaticEvidenceComparison(
+        [
+          row('00-0000002', 'generated_baseline', 99),
+          row('00-0000003', 'fallback_default', 88),
+          row('00-0000004', undefined, 77),
+          admitted,
+        ],
+        new Set(['00-0000001', '00-0000002', '00-0000003', '00-0000004']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test('a valid but nonintersecting evidence row does not admit an intersecting baseline', () => {
+      const liveIds = new Set(['00-0000001']);
+      const plan = planStaticEvidenceComparison(
+        [
+          row('00-0000001', 'generated_baseline', 99),
+          row('00-0000002', 'player_specific', 50),
+        ],
+        liveIds,
+      );
+      expect(plan.evidenceRows.map((candidate) => candidate.player_id)).toEqual(['00-0000002']);
+      expect(plan.directIdIntersection).toBe(0);
+      expect(plan.joinBlockers).not.toEqual([]);
+    });
+
+    test('duplicate eligible IDs are reported and cannot inflate the selected rows', () => {
+      const first = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [first, row('00-0000001', 'player_specific', 60)],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([first]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+    });
+
+    test.each([
+      ['generated baseline twin', row('00-0000001', 'generated_baseline', 99)],
+      ['fallback twin', row('00-0000001', 'fallback_default', 99)],
+      ['invalid-alpha player-specific twin', row('00-0000001', 'player_specific', Number.NaN)],
+    ])('an admitted ID duplicated by a %s still fails closed', (_label, duplicate) => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, duplicate],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+    });
+
+    test('duplicate non-evidence IDs reject the artifact just as the promoted adapter does', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          row('00-0000002', 'generated_baseline', 99),
+          row('00-0000002', 'fallback_default', 88),
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000002/);
+    });
+  });
+
   test('joinability is derived from the measured identifiers', () => {
     // #318 gave the static artifact real GSIS identifiers, so the lineages are
     // now joinable. The verdict tracks the measurement rather than a literal.
@@ -333,7 +448,9 @@ describe('comparability', () => {
     const staticRows = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, manifest.staticArtifact.path), 'utf8'),
     ).rows ?? [];
-    const shared = staticRows.filter((r: any) => liveById.has(r.player_id));
+    const selected = selectPlayerSpecificStaticEvidenceRows(staticRows);
+    expect(selected.duplicatePlayerIds).toEqual([]);
+    const shared = selected.rows.filter((r: any) => liveById.has(r.player_id));
     expect(dc.joinedRows).toBe(shared.length);
 
     const deltas = shared.map((r: any) =>

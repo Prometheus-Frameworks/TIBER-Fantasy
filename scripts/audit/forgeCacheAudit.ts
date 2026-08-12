@@ -44,10 +44,10 @@ import {
   type ObservedPositionSource,
 } from './forgeCacheResponseGuard';
 import {
-  computeJoinBlockers,
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
   OBSERVATION_EVIDENCE_STATUS,
+  planStaticEvidenceComparison,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
   reportClampingProblems,
@@ -235,9 +235,12 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
   const staticRows: any[] = staticArtifact.rows ?? [];
   // Joined on the producer key. The static artifact is GSIS-keyed, so a
   // canonical key on this side would match nothing and be reported as a genuine
-  // zero intersection.
+  // zero intersection. Only contract-admitted player-specific rows may create
+  // that intersection; baseline/default/unknown rows remain diagnostics only.
   const liveIds = new Set(rows.map((r) => r.sourceId));
   const staticIds = staticRows.map((r) => r.player_id);
+  const comparisonPlan = planStaticEvidenceComparison(staticRows, liveIds);
+  const evidenceRows = comparisonPlan.evidenceRows;
 
   const nameCounts = new Map<string, number>();
   for (const row of staticRows) {
@@ -246,11 +249,11 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
   }
   const ambiguousNames = Array.from(nameCounts.entries()).filter(([, n]) => n > 1);
 
-  const generatedBaselineRows = staticRows.filter((row) =>
-    Object.values(row.components ?? {}).some((c: any) => c?.evidence_status === 'generated_baseline'),
+  const generatedBaselineRows = staticRows.filter(
+    (row) => row?.provenance?.score_source === 'generated_baseline',
   );
 
-  const directIdIntersection = staticIds.filter((id) => liveIds.has(id)).length;
+  const directIdIntersection = comparisonPlan.directIdIntersection;
 
   // Derived, not asserted. Emitting a literal `joinable: false` alongside a
   // freshly measured intersection makes the manifest contradict itself the
@@ -259,7 +262,7 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
   // takes only the measured ID intersection — see its own doc comment for why
   // duplicate display names (`ambiguousNames`, a diagnostic below) cannot
   // block a join that is performed exclusively on `sourceId`/`player_id`.
-  const joinBlockers = computeJoinBlockers({ directIdIntersection });
+  const joinBlockers = comparisonPlan.joinBlockers;
 
   return {
     directIdIntersection,
@@ -272,6 +275,7 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
     staticRowsUnderAmbiguousNames: ambiguousNames.reduce((sum, [, n]) => sum + n, 0),
     generatedBaselineRows: generatedBaselineRows.length,
     generatedBaselineTopAlphas: generatedBaselineRows
+      .filter((row) => typeof row.forge_alpha === 'number' && Number.isFinite(row.forge_alpha))
       .sort((a, b) => b.forge_alpha - a.forge_alpha)
       .slice(0, 5)
       .map((r) => ({ name: r.player_name, alpha: r.forge_alpha, evidence: 'generated_baseline_not_player_evidence' })),
@@ -285,7 +289,7 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
     // the lineage that would make causal attribution possible, which is what
     // the terminal finding is about.
     descriptiveComparison: joinBlockers.length === 0
-      ? describeJoinedRows(rows, staticRows)
+      ? describeJoinedRows(rows, evidenceRows)
       : { status: 'unavailable_lineages_not_joinable' },
   };
 }
