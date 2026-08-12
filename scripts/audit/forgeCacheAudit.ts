@@ -44,6 +44,7 @@ import {
   type ObservedPositionSource,
 } from './forgeCacheResponseGuard';
 import {
+  computeJoinBlockers,
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
   OBSERVATION_EVIDENCE_STATUS,
@@ -253,16 +254,11 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
   // Derived, not asserted. Emitting a literal `joinable: false` alongside a
   // freshly measured intersection makes the manifest contradict itself the
   // moment the producer artifact gains real identifiers — and would keep
-  // suppressing a comparison that had become defensible.
-  const joinBlockers: string[] = [];
-  if (directIdIntersection === 0) {
-    joinBlockers.push('zero direct identifier intersection between the two artifacts');
-  }
-  if (ambiguousNames.length > 0) {
-    joinBlockers.push(
-      'static artifact repeats player names across cohorts, so name is not a unique key within it either',
-    );
-  }
+  // suppressing a comparison that had become defensible. `computeJoinBlockers`
+  // takes only the measured ID intersection — see its own doc comment for why
+  // duplicate display names (`ambiguousNames`, a diagnostic below) cannot
+  // block a join that is performed exclusively on `sourceId`/`player_id`.
+  const joinBlockers = computeJoinBlockers({ directIdIntersection });
 
   return {
     directIdIntersection,

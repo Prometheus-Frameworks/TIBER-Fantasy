@@ -135,6 +135,26 @@ export const CLAIM_SCAN_EXEMPT_KEYS: Record<string, string> = {
   supersession_note: 'states which historical claim is being superseded and why',
 };
 
+/**
+ * What blocks (or does not block) a join between the two artifacts.
+ *
+ * A join is performed EXCLUSIVELY on `sourceId`/`player_id` — the measured
+ * `directIdIntersection` — so this deliberately takes no name-related input
+ * at all: there is nothing here for duplicate display names to block,
+ * because the join never looks at names. That is enforced by this
+ * function's own signature, not merely by an `if` a future edit could add
+ * back. If a name-based FALLBACK join is ever introduced, its own blocker
+ * belongs in a NEW, separate input to this function, gated on that fallback
+ * actually being used — not on name ambiguity existing in the abstract.
+ */
+export function computeJoinBlockers(input: { directIdIntersection: number }): string[] {
+  const blockers: string[] = [];
+  if (input.directIdIntersection === 0) {
+    blockers.push('zero direct identifier intersection between the two artifacts');
+  }
+  return blockers;
+}
+
 export const GSIS_SHAPE = /^00-\d{7}$/;
 
 export interface RowIdentity {
@@ -235,10 +255,15 @@ export interface AtxHeading {
  *  - a closing hash sequence is recognised and stripped only when it is
  *    itself preceded by a space/tab, per CommonMark ("### 4.3 Title ###"
  *    strips to content "4.3 Title"). A trailing run of '#' glued directly
- *    onto the content with no preceding whitespace ("### 4.3###") is
- *    ambiguous for this narrow, bounded classifier — it is not treated as a
- *    closing sequence, and rather than guess at a literal-title reading the
- *    whole line is rejected as not a heading.
+ *    onto the content with no preceding whitespace ("### 4.3 Contradictory
+ *    copy###") is NOT a recognised closing sequence either, per the same
+ *    CommonMark rule — but unlike a missing separator after the OPENING
+ *    hashes, this is still a well-formed heading with real title text
+ *    before it. It is kept as literal content, glued hashes and all, rather
+ *    than rejecting the whole line: a checker that discarded such a heading
+ *    outright would fail to recognise it as a duplicate of the section it
+ *    retitles, which is precisely the ambiguity this classifier exists to
+ *    catch, not create.
  */
 export function parseAtxHeading(line: string): AtxHeading | null {
   const match = /^ {0,3}(#{1,6})(?:[ \t]+(.*))?$/.exec(line.replace(/\r$/, ''));
@@ -249,10 +274,7 @@ export function parseAtxHeading(line: string): AtxHeading | null {
   if (content === '') return { level, content: '' };
 
   const closing = /^(.*?)[ \t]+#+[ \t]*$/.exec(content);
-  if (closing) return { level, content: closing[1] };
-  if (/#+$/.test(content)) return null;
-
-  return { level, content };
+  return closing ? { level, content: closing[1] } : { level, content };
 }
 
 /**
@@ -277,17 +299,33 @@ function hasBoundedIndent(line: string): boolean {
   return !/^( {4,}|\t| {1,3}\t)/.test(line);
 }
 
+/** A fence-opening delimiter: which character, and how many of it. */
+export interface FenceDelimiter {
+  char: '`' | '~';
+  length: number;
+}
+
 /**
  * Lightweight fenced-code-block delimiter detector (backtick or tilde
- * fences). Deliberately not a full parser: it does not match a closing
- * fence's length against its opener, and does not validate the info string —
- * it exists only so callers can track "are we inside a fenced block right
- * now", so a heading or table living inside a fenced code sample never
- * satisfies a governed section/table check.
+ * fences). Deliberately not a full parser — it does not validate an info
+ * string on the opening line — but it DOES apply CommonMark's own closing
+ * rule: a closer must use the same character as its opener, run at least as
+ * long, and be followed only by whitespace. A shorter run, the opposite
+ * character, or a run with trailing suffix text (` ``` js `, `~~~~x`) is not
+ * a closer at all — it stays fenced content, so an accidental line inside a
+ * fenced block that happens to start with a few backticks cannot end the
+ * fence early and let a governed heading/table underneath it leak out.
  */
-function fenceDelimiterChar(line: string): '`' | '~' | null {
+function parseFenceOpener(line: string): FenceDelimiter | null {
   const match = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-  return match ? (match[1][0] as '`' | '~') : null;
+  return match ? { char: match[1][0] as '`' | '~', length: match[1].length } : null;
+}
+
+function isFenceCloser(line: string, opener: FenceDelimiter): boolean {
+  const match = /^ {0,3}(`+|~+)[ \t]*$/.exec(line);
+  if (!match) return false;
+  const run = match[1];
+  return run[0] === opener.char && run.length >= opener.length;
 }
 
 /**
@@ -299,11 +337,11 @@ function fenceDelimiterChar(line: string): '`' | '~' | null {
 export function readMarkdownTable(report: string, heading: RegExp): Map<string, string> | null {
   const lines = report.split('\n');
   let start = -1;
-  let scanFence: '`' | '~' | null = null;
+  let scanFence: FenceDelimiter | null = null;
   for (let i = 0; i < lines.length; i += 1) {
-    const fenceChar = fenceDelimiterChar(lines[i]);
-    if (scanFence) { if (fenceChar === scanFence) scanFence = null; continue; }
-    if (fenceChar) { scanFence = fenceChar; continue; }
+    if (scanFence) { if (isFenceCloser(lines[i], scanFence)) scanFence = null; continue; }
+    const opener = parseFenceOpener(lines[i]);
+    if (opener) { scanFence = opener; continue; }
     const parsed = parseAtxHeading(lines[i]);
     if (parsed && heading.test(normalizedHeadingLine(parsed))) { start = i; break; }
   }
@@ -311,11 +349,11 @@ export function readMarkdownTable(report: string, heading: RegExp): Map<string, 
 
   const cells = new Map<string, string>();
   let seen = false;
-  let fence: '`' | '~' | null = null;
+  let fence: FenceDelimiter | null = null;
   for (const line of lines.slice(start + 1)) {
-    const fenceChar = fenceDelimiterChar(line);
-    if (fence) { if (fenceChar === fence) fence = null; continue; }
-    if (fenceChar) { fence = fenceChar; continue; }
+    if (fence) { if (isFenceCloser(line, fence)) fence = null; continue; }
+    const opener = parseFenceOpener(line);
+    if (opener) { fence = opener; continue; }
 
     const trimmed = line.trim();
     const isTableRow = trimmed.startsWith('|') && hasBoundedIndent(line);
@@ -376,11 +414,11 @@ export function readMarkdownSections(report: string, heading: RegExp): MarkdownS
   const lines = report.split('\n');
   const sections: MarkdownSection[] = [];
 
-  let scanFence: '`' | '~' | null = null;
+  let scanFence: FenceDelimiter | null = null;
   for (let start = 0; start < lines.length; start += 1) {
-    const scanFenceChar = fenceDelimiterChar(lines[start]);
-    if (scanFence) { if (scanFenceChar === scanFence) scanFence = null; continue; }
-    if (scanFenceChar) { scanFence = scanFenceChar; continue; }
+    if (scanFence) { if (isFenceCloser(lines[start], scanFence)) scanFence = null; continue; }
+    const scanOpener = parseFenceOpener(lines[start]);
+    if (scanOpener) { scanFence = scanOpener; continue; }
 
     const parsedHeading = parseAtxHeading(lines[start]);
     if (!parsedHeading || !heading.test(normalizedHeadingLine(parsedHeading))) continue;
@@ -388,12 +426,12 @@ export function readMarkdownSections(report: string, heading: RegExp): MarkdownS
     const headingLevel = parsedHeading.level;
     const tables: MarkdownTable[] = [];
     let current: string[][] | null = null;
-    let fence: '`' | '~' | null = null;
+    let fence: FenceDelimiter | null = null;
 
     for (const line of lines.slice(start + 1)) {
-      const fenceChar = fenceDelimiterChar(line);
-      if (fence) { if (fenceChar === fence) fence = null; continue; }
-      if (fenceChar) { fence = fenceChar; continue; }
+      if (fence) { if (isFenceCloser(line, fence)) fence = null; continue; }
+      const opener = parseFenceOpener(line);
+      if (opener) { fence = opener; continue; }
 
       // Stop at the next heading of the same or a higher level, so a
       // subsection's tables are not attributed to this section. A
@@ -459,9 +497,11 @@ const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
  *
  * The boundary is deliberate on both sides: the number must sit at the start
  * of a real Markdown heading (prose mentioning "4.3" is not a heading), and
- * it must be exactly 4.3 — `(?!\d)` refuses 4.30 and `(?!\.\d)` refuses the
- * subsection 4.3.1, while bare and differently punctuated forms ("### 4.3",
- * "### 4.3.", "### 4.3 — retitled") all still count as §4.3.
+ * it must be exactly 4.3 — `(?!\w)` refuses 4.30 (a digit is a word
+ * character) AND a letter-suffixed lookalike like "4.3b", while `(?!\.\d)`
+ * separately refuses the subsection 4.3.1 (`.` is not a word character, so
+ * `(?!\w)` alone would not catch it). Bare and differently punctuated forms
+ * ("### 4.3", "### 4.3.", "### 4.3 — retitled") all still count as §4.3.
  *
  * "Real Markdown heading" is enforced by `parseAtxHeading` before this
  * pattern ever runs: `readMarkdownSections`/`readMarkdownTable` test it
@@ -472,7 +512,7 @@ const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
  * then just "the one separating space", since the classifier has already
  * refused a bare "###4.3" with no separator at all.
  */
-export const CLAMPING_SECTION_HEADING = /^#{1,6}\s+4\.3(?!\d)(?!\.\d)/;
+export const CLAMPING_SECTION_HEADING = /^#{1,6}\s+4\.3(?!\w)(?!\.\d)/;
 
 /**
  * Problems in how the report states the manifest's clamping findings.
@@ -649,6 +689,18 @@ const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> =
 ];
 
 /**
+ * The governed descriptive-comparison section, identified by its NUMBER —
+ * the same treatment as `CLAMPING_SECTION_HEADING` and for the same reason:
+ * matching on the title phrase ("descriptive comparison") let a duplicated
+ * section be retitled and stop being recognised as §5.2 at all. `(?!\w)`
+ * refuses 5.20 AND the report's own "5.2b" — a letter-suffixed lookalike
+ * that is a DIFFERENT, superseded section per the committed report and must
+ * not be conflated with the governed §5.2 — and `(?!\.\d)` separately
+ * refuses the subsection 5.2.1.
+ */
+export const COMPARISON_SECTION_HEADING = /^#{1,6}\s+5\.2(?!\w)(?!\.\d)/;
+
+/**
  * Problems in how the report states the manifest's descriptive comparison.
  *
  * Deliberately NOT a substring scan of the whole document. `report.includes('0')`
@@ -657,15 +709,49 @@ const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> =
  * would still print "report consistent". Each measure is now read from the row
  * that states it, in the table under the descriptive-comparison heading, and
  * compared numerically.
+ *
+ * Uniqueness is enforced at both the section and table level, mirroring
+ * `reportClampingProblems`: a duplicated §5.2 heading — verbatim, retitled,
+ * carrying a conflicting table, or even bare with no table at all — is a
+ * failure on its own, independent of whether any one copy happens to state
+ * the correct figures. Which copy a reader lands on is not something this
+ * checker should decide by position.
  */
 export function reportComparisonProblems(report: string, descriptiveComparison: any): string[] {
   const dc = descriptiveComparison;
   if (!dc || dc.status !== 'available') return [];
 
   const problems: string[] = [];
-  const table = readMarkdownTable(report, /^#{2,4}.*descriptive comparison/i);
-  if (!table) {
+  const sections = readMarkdownSections(report, COMPARISON_SECTION_HEADING);
+  if (sections.length === 0) {
+    return ['report has no §5.2 section for the manifest descriptive comparison to be checked against'];
+  }
+  if (sections.length > 1) {
+    return [
+      `report carries ${sections.length} sections whose heading matches §5.2; exactly one may state these findings`,
+    ];
+  }
+
+  // The descriptive-comparison table is identified by its shape (a "joined
+  // rows" row), not by position — §5.2 also carries a second, unrelated
+  // "largest absolute disagreements" table that must not be mistaken for it.
+  const candidates = sections[0].tables.filter((t) =>
+    t.rows.some((row) => /^joined rows$/i.test(cleanCell(row[0] ?? ''))),
+  );
+  if (candidates.length === 0) {
     return ['report has no descriptive-comparison table for the manifest comparison to be checked against'];
+  }
+  if (candidates.length > 1) {
+    return [
+      `report carries ${candidates.length} descriptive-comparison tables; exactly one may state these findings`,
+    ];
+  }
+
+  const table = new Map<string, string>();
+  for (const row of candidates[0].rows) {
+    const label = cleanCell(row[0] ?? '').toLowerCase();
+    const value = cleanCell(row[1] ?? '');
+    if (label && !table.has(label)) table.set(label, value);
   }
 
   const findRow = (label: RegExp) => {
@@ -711,8 +797,10 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
 
   // The section heading counts the shared players too, and a heading that
   // disagrees with its own table is exactly the drift this check exists for.
-  const headingLine = report.split('\n').find((line) => /^#{2,4}.*descriptive comparison/i.test(line));
-  if (headingLine && dc.joinedRows !== null && dc.joinedRows !== undefined) {
+  // Read from the section the scanner already found above (fence/indent
+  // aware), not a second, separately-matched raw line.
+  const headingLine = sections[0].heading;
+  if (dc.joinedRows !== null && dc.joinedRows !== undefined) {
     // Drop the leading section number ("### 5.2 ") so only counts stated in the
     // heading's prose are read.
     const counts = numbersIn(headingLine.replace(/^#{2,4}\s*[\d.]*\s*/, ''));

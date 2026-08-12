@@ -16,11 +16,13 @@ import { ALPHA_CALIBRATION } from '../../../server/modules/forge/types';
 import { assertForgeCacheResponse } from '../forgeCacheResponseGuard';
 import {
   CLAMPING_SECTION_HEADING,
+  COMPARISON_SECTION_HEADING,
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
+  computeJoinBlockers,
   formatClampPct,
   parseAtxHeading,
   readMarkdownSections,
@@ -281,7 +283,30 @@ describe('comparability', () => {
     // now joinable. The verdict tracks the measurement rather than a literal.
     const { joinable, directIdIntersection, joinBlockers } = manifest.comparability;
     expect(joinable).toBe(joinBlockers.length === 0);
-    expect(joinable).toBe(directIdIntersection > 0 && manifest.comparability.staticAmbiguousNames === 0);
+    // The join is performed exclusively on the measured ID intersection —
+    // NOT on `staticAmbiguousNames` (a diagnostic, not a blocker; see
+    // `computeJoinBlockers` below). The committed artifact happens to have
+    // zero ambiguous names today, so this only pins the ID-based half of the
+    // rule; the "does not depend on names" half is regressed directly below.
+    expect(joinable).toBe(directIdIntersection > 0);
+  });
+
+  describe('computeJoinBlockers — a join performed exclusively on player_id', () => {
+    test('a nonzero ID intersection is joinable regardless of static-artifact name ambiguity', () => {
+      // The exact P2 scenario: distinct GSIS IDs that happen to share a
+      // display name. `computeJoinBlockers` does not even accept a
+      // name-ambiguity input, so there is nothing for duplicate names to
+      // block — the fix is enforced by the function's own signature, not
+      // merely by omitting an `if`.
+      expect(computeJoinBlockers({ directIdIntersection: 50 })).toEqual([]);
+      expect(computeJoinBlockers({ directIdIntersection: 1 })).toEqual([]);
+    });
+
+    test('zero identifier intersection still blocks the join', () => {
+      const blockers = computeJoinBlockers({ directIdIntersection: 0 });
+      expect(blockers).not.toEqual([]);
+      expect(blockers.join(' ')).toMatch(/zero direct identifier intersection/);
+    });
   });
 
   test('any generated_baseline row is labelled non-player-evidence', () => {
@@ -535,6 +560,133 @@ describe('report consistency is checked per row, not as a substring sweep', () =
   test('an unavailable comparison imposes no report requirement', () => {
     // Nothing to be consistent with, so this must not manufacture a failure.
     expect(reportComparisonProblems(report, { status: 'unavailable_lineages_not_joinable' })).toEqual([]);
+  });
+
+  describe('§5.2 is identified by its number, keyed the same way as §4.3', () => {
+    const lines = report.split('\n');
+    const headingIndex = lines.findIndex((l) => COMPARISON_SECTION_HEADING.test(l));
+    const headingLevel = /^(#{1,6})\s/.exec(lines[headingIndex].trim())![1].length;
+    let sectionEnd = lines.length;
+    for (let i = headingIndex + 1; i < lines.length; i += 1) {
+      const next = /^(#{1,6})\s/.exec(lines[i].trim());
+      if (next && next[1].length <= headingLevel) { sectionEnd = i; break; }
+    }
+    const appendAfterSection = (block: string[]) =>
+      [...lines.slice(0, sectionEnd), '', ...block, '', ...lines.slice(sectionEnd)].join('\n');
+
+    const conflictingTable = [
+      '| measure | value |',
+      '|---|---:|',
+      '| joined rows | 51 |',
+      '| exact agreement | 7 |',
+    ];
+
+    test('sanity: §5.2 is found and is distinct from the "5.2b" superseded section', () => {
+      expect(headingIndex).toBeGreaterThan(-1);
+      expect(lines[headingIndex]).toMatch(/^### 5\.2 /);
+      expect(readMarkdownSections(report, COMPARISON_SECTION_HEADING)).toHaveLength(1);
+    });
+
+    test('a verbatim duplicate §5.2 heading with a conflicting table fails', () => {
+      const duplicated = appendAfterSection([lines[headingIndex], '', ...conflictingTable]);
+      expect(reportComparisonProblems(duplicated, dc).join('\n'))
+        .toMatch(/2 sections whose heading matches §5\.2.*exactly one/);
+    });
+
+    test('a RETITLED duplicate §5.2 heading still fails — identity is the number, not the phrase', () => {
+      const retitled = appendAfterSection([
+        '### 5.2 A completely different title, same section number',
+        '',
+        ...conflictingTable,
+      ]);
+      expect(reportComparisonProblems(retitled, dc).join('\n'))
+        .toMatch(/2 sections whose heading matches §5\.2.*exactly one/);
+    });
+
+    test('a bare-heading duplicate with NO table still fails — uniqueness is a property of the heading', () => {
+      const bareHeading = appendAfterSection(['### 5.2 Retained for reference', '', 'No table here.']);
+      expect(reportComparisonProblems(bareHeading, dc).join('\n'))
+        .toMatch(/2 sections whose heading matches §5\.2.*exactly one/);
+    });
+
+    test('a second correctly-shaped table WITHIN the single §5.2 section also fails', () => {
+      const withSecondTable = [
+        ...lines.slice(0, sectionEnd),
+        '',
+        ...conflictingTable,
+        ...lines.slice(sectionEnd),
+      ].join('\n');
+      expect(reportComparisonProblems(withSecondTable, dc).join('\n'))
+        .toMatch(/2 descriptive-comparison tables; exactly one/);
+    });
+
+    test('5.20 and 5.2.1 lookalikes are refused, and so is the report\'s own superseded "5.2b"', () => {
+      expect(COMPARISON_SECTION_HEADING.test('### 5.20 Something else entirely')).toBe(false);
+      expect(COMPARISON_SECTION_HEADING.test('### 5.2.1 A subsection')).toBe(false);
+      expect(COMPARISON_SECTION_HEADING.test('### 5.2b Original finding, superseded')).toBe(false);
+      // None of these register as a second §5.2 match when appended.
+      for (const heading of ['### 5.20 Something else entirely', '### 5.2.1 A subsection']) {
+        const withLookalike = appendAfterSection([heading, '', ...conflictingTable]);
+        expect(reportComparisonProblems(withLookalike, dc)).toEqual([]);
+      }
+    });
+  });
+});
+
+describe('fenced code blocks: a closer must match the opener\'s character and length', () => {
+  const HEADING = /^#{1,6}\s+9\.9(?!\w)(?!\.\d)/;
+  const table = [
+    '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |',
+    '|---|---:|---:|---:|---:|---:|',
+    '| QB | 1 | 1 | 1 | 0 (0.0%) | 0 |',
+  ];
+
+  test('a shorter closer does not end the fence — the heading/table inside stays fenced content', () => {
+    const doc = ['````', '### 9.9 Fenced', '', ...table, '```', 'still fenced', '````'].join('\n');
+    expect(readMarkdownSections(doc, HEADING)).toHaveLength(0);
+  });
+
+  test('an equal-length closer ends the fence', () => {
+    const doc = ['```', '### 9.9 Fenced', '```', '', '### 9.9 Real', '', ...table].join('\n');
+    // The first "### 9.9 Fenced" never counts; the second, unfenced heading does.
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 9.9 Real');
+  });
+
+  test('a longer closer ends the fence too', () => {
+    const doc = ['```', '### 9.9 Fenced', '`````', '', '### 9.9 Real', '', ...table].join('\n');
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 9.9 Real');
+  });
+
+  test('the opposite delimiter character does not close a fence', () => {
+    const doc = ['```', '### 9.9 Fenced', '~~~', 'still fenced', '```', '', '### 9.9 Real', '', ...table].join('\n');
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 9.9 Real');
+  });
+
+  test('a run with trailing suffix text is not a closer — only whitespace may follow it', () => {
+    const doc = ['```', '### 9.9 Fenced', '``` js', 'still fenced', '```', '', '### 9.9 Real', '', ...table].join('\n');
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 9.9 Real');
+  });
+
+  test('tilde fences follow the same rule', () => {
+    const doc = ['~~~~', '### 9.9 Fenced', '~~~', 'still fenced', '~~~~', '', '### 9.9 Real', '', ...table].join('\n');
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toBe('### 9.9 Real');
+  });
+
+  test('an unfenced heading/table pair (no fence involved) is found normally', () => {
+    const doc = ['### 9.9 Real', '', ...table].join('\n');
+    const sections = readMarkdownSections(doc, HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].tables[0]?.rows.length).toBe(1);
   });
 });
 
@@ -958,15 +1110,32 @@ describe('the clamping table is verified row by row, not left unchecked', () => 
         .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
     });
 
-    test('a missing or unrecognised separator makes the line not a heading: "###4.3" and "### 4.3###" do not count', () => {
+    test('a missing separator after the hashes makes the line not a heading at all: "###4.3" does not count', () => {
       expect(parseAtxHeading('###4.3')).toBeNull();
-      expect(parseAtxHeading('### 4.3###')).toBeNull();
+      const withInvalidHeading = appendAfterSection(['###4.3 Glued to the marker', '', 'Retained for reference.']);
+      expect(reportClampingProblems(withInvalidHeading, clamping)).toEqual([]);
+      expect(readMarkdownSections(withInvalidHeading, CLAMPING_SECTION_HEADING)).toHaveLength(1);
+    });
 
-      for (const line of ['###4.3 Glued to the marker', '### 4.3###']) {
-        const withInvalidHeading = appendAfterSection([line, '', 'Retained for reference.']);
-        expect(reportClampingProblems(withInvalidHeading, clamping)).toEqual([]);
-        expect(readMarkdownSections(withInvalidHeading, CLAMPING_SECTION_HEADING)).toHaveLength(1);
-      }
+    test('a trailing hash run glued to real title text, with no preceding whitespace, is kept as literal content and still counts: "### 4.3 Contradictory copy###"', () => {
+      // Distinct from the missing-separator case above: here the hashes are
+      // glued to actual title text, not to the marker itself, so this is
+      // still a well-formed heading — CommonMark keeps the trailing hashes as
+      // literal content when they are not whitespace-delimited, and this
+      // classifier does the same rather than discarding the line. Discarding
+      // it would let a retitled duplicate that happens to end in "###" evade
+      // detection entirely — the opposite of what the checker is for.
+      expect(parseAtxHeading('### 4.3 Contradictory copy###')).toEqual({
+        level: 3,
+        content: '4.3 Contradictory copy###',
+      });
+      const withGluedTrailingHash = appendAfterSection([
+        '### 4.3 Contradictory copy###',
+        '',
+        'Retained for reference.',
+      ]);
+      expect(reportClampingProblems(withGluedTrailingHash, clamping).join('\n'))
+        .toMatch(/2 sections whose heading matches §4\.3.*exactly one/);
     });
 
     test('four-space/tab-indented tables cannot satisfy the observed-clamping requirement', () => {
