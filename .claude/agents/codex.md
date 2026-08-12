@@ -794,3 +794,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Extracted the existing weekly-sync handler into a thin testable route module and made the route plus `fetchSeasonToDate()` consume the same bound resolver.
 - Added service and real HTTP boundary regressions for 2024 Week 18, unknown/future rejection, explicit live-preseason zero elapsed weeks, no-argument preseason fail-closed behavior, January 2026/Week 17 rollover, exact archive pairs, and week-only mismatch rejection.
 - Validation: focused ingestion/route/config suites passed 71/71; local curl passed; server build passed with the baseline OLC warning; typecheck stayed at the 505-diagnostic baseline with zero touched-file matches; `git diff --check` passed.
+
+### 2026-08-12 — Bronze-to-Silver season-wide default restoration
+- Restored the distinction between a governed default season and an explicitly requested week on `/api/etl/bronze-to-silver`: omitted week stays undefined through the Bronze service query instead of becoming the current evidence week.
+- Preserved explicit season-only archive/current processing, exact explicit-week filters, `processAll` limit removal, and preseason/stale fail-closed behavior for omitted targets.
+- Audited adjacent ETL routes: weekly writers/computations retain atomic season/week targets, while Bronze status was already season-wide.
+- Validation: five focused route/config/service suites passed 69/69; build passed with the baseline OLC warning; typecheck remained 505 diagnostics with the same four pre-existing `etlRoutes.ts` errors and no new test-file diagnostics; diff check passed.

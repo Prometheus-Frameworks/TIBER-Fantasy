@@ -11,6 +11,7 @@ import {
   EvidenceIngestionTargetUnavailableError,
   InvalidEvidenceIngestionTargetError,
   requireEvidenceIngestionDefaultTarget,
+  resolveEvidenceIngestionSeason,
   resolveEvidenceIngestionTarget,
 } from '../config/season';
 import { playerIdentityService } from '../services/PlayerIdentityService';
@@ -684,7 +685,14 @@ router.post('/bronze-to-silver', async (req: Request, res: Response) => {
       processAll = false
     } = req.body;
 
-    const { season: targetSeason, week: targetWeek } = resolveEvidenceIngestionTarget({ season, week });
+    // Bronze-to-Silver is season-wide unless the caller names a week. Resolve
+    // an omitted season through the governed evidence tuple so defaults still
+    // fail closed, but do not turn its week into a filter the caller did not
+    // request. Fully explicit/week-bearing requests keep the atomic resolver.
+    const target = week === undefined
+      ? { season: resolveEvidenceIngestionSeason(season), week: undefined }
+      : resolveEvidenceIngestionTarget({ season, week });
+    const { season: targetSeason, week: targetWeek } = target;
 
     console.log(`📊 Processing Bronze to Silver: Source [${source || 'all'}], Status [${status}], Season ${targetSeason}${targetWeek ? `, Week ${targetWeek}` : ''}`);
 

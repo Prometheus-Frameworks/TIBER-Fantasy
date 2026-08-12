@@ -170,7 +170,7 @@ describe('active ingestion routes use one governed season/week pair', () => {
     expect(mockIngestWeeklyData).not.toHaveBeenCalled();
   });
 
-  test('bronze ingestion and bronze-to-silver receive the same January football tuple', async () => {
+  test('bronze ingestion stays weekly while bronze-to-silver defaults to the governed season', async () => {
     const ingest = await request(app).post('/api/etl/bronze-ingest').send({});
     expect(ingest.status).toBe(200);
     expect(mockSleeperIngest).toHaveBeenCalledWith(
@@ -179,9 +179,89 @@ describe('active ingestion routes use one governed season/week pair', () => {
 
     const process = await request(app).post('/api/etl/bronze-to-silver').send({});
     expect(process.status).toBe(200);
+    expect(mockGetRawPayloads).toHaveBeenCalledWith({
+      source: undefined,
+      status: 'PENDING',
+      season: 2026,
+      week: undefined,
+      limit: 100,
+    });
+    expect(process.body.data).toMatchObject({ processed: 0, season: 2026 });
+    expect(process.body.data).not.toHaveProperty('week');
+  });
+
+  test('bronze-to-silver processAll removes only the page limit, not the season-wide scope', async () => {
+    const response = await request(app)
+      .post('/api/etl/bronze-to-silver')
+      .send({ processAll: true });
+
+    expect(response.status).toBe(200);
+    expect(mockGetRawPayloads).toHaveBeenCalledWith({
+      source: undefined,
+      status: 'PENDING',
+      season: 2026,
+      week: undefined,
+      limit: undefined,
+    });
+  });
+
+  test('bronze-to-silver preserves an explicit archive season without borrowing a live week', async () => {
+    jest.setSystemTime(new Date('2028-03-01T12:00:00.000Z'));
+
+    const response = await request(app)
+      .post('/api/etl/bronze-to-silver')
+      .send({ season: 2024, limit: 25 });
+
+    expect(response.status).toBe(200);
+    expect(mockGetRawPayloads).toHaveBeenCalledWith({
+      source: undefined,
+      status: 'PENDING',
+      season: 2024,
+      week: undefined,
+      limit: 25,
+    });
+  });
+
+  test('bronze-to-silver accepts an explicit current season during preseason without inventing a week', async () => {
+    jest.setSystemTime(new Date('2026-08-12T12:00:00.000Z'));
+
+    const response = await request(app)
+      .post('/api/etl/bronze-to-silver')
+      .send({ season: 2026 });
+
+    expect(response.status).toBe(200);
     expect(mockGetRawPayloads).toHaveBeenCalledWith(
-      expect.objectContaining({ season: 2026, week: 17 }),
+      expect.objectContaining({ season: 2026, week: undefined }),
     );
+  });
+
+  test('bronze-to-silver keeps a fully explicit week exact', async () => {
+    const response = await request(app)
+      .post('/api/etl/bronze-to-silver')
+      .send({ season: 2025, week: 18, source: 'sleeper', status: 'PROCESSING' });
+
+    expect(response.status).toBe(200);
+    expect(mockGetRawPayloads).toHaveBeenCalledWith({
+      source: 'sleeper',
+      status: 'PROCESSING',
+      season: 2025,
+      week: 18,
+      limit: 100,
+    });
+  });
+
+  test.each([
+    '2026-08-12T12:00:00.000Z',
+    '2028-03-01T12:00:00.000Z',
+  ])('bronze-to-silver default fails closed before service access at %s', async (now) => {
+    jest.setSystemTime(new Date(now));
+
+    const response = await request(app)
+      .post('/api/etl/bronze-to-silver')
+      .send({ processAll: true });
+
+    expect(response.status).toBe(503);
+    expect(mockGetRawPayloads).not.toHaveBeenCalled();
   });
 
   test('the admin buys/sells compute default is no longer pinned to 2025', async () => {
