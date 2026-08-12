@@ -855,3 +855,10 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Admin replay resolves before force deletion: matching current season-only requests use the governed week, mismatched half-pairs return 400, and explicit archive pairs remain exact. Governed the active RB-context derived writer and write-capable brand week-rollover path as well.
 - Preserved source-observed SeasonService behavior for non-writer freshness/status consumers.
 - Validation: seven focused suites passed 86/86; full branch passed 141 suites/1,416 tests with the same seven baseline failures; build passed with the baseline OLC warning; typecheck stayed at 505 baseline diagnostics with no new touched-file diagnostics; `git diff --check` passed.
+
+### 2026-08-12 — FORGE cache-audit Rankings v2 week-metadata alignment
+- The live-response guard now parses one anchored, closed current FORGE source-note grammar and requires `decisionTargetWeek` and `cacheDeclaredAsOfWeek` to independently match the audit's requested Week 18 before rows are admitted.
+- It also requires the exact two-entry cache/confidence source stack, a closed current fallback-reason value, matching structured decision/evidence season metadata, a nonempty same-position item set, and a canonical ISO observation time.
+- The superseded bare `asOfWeek` spelling is rejected rather than treated as compatibility evidence because it cannot prove the cache rows' declared week.
+- Regressions cover the current emitted shape, malformed/ambiguous note grammar, independently wrong note/structured scope fields, wrong/additional source layers, missing/empty/mixed-position items, invalid timestamps, and the old note shape.
+- Validation: focused audit plus real Rankings route 387/387 (380 + 7); real `--check`, build, and diff check pass; governed artifacts remain byte-identical.

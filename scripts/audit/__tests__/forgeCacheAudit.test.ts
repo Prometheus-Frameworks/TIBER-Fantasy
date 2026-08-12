@@ -53,16 +53,52 @@ const cohort = JSON.parse(cohortText);
 const POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 
 describe('only forge_grade_cache rows are accepted as cache evidence', () => {
-  const forgeNotes = 'scoringFallbackReason=none; season=2025, asOfWeek=18, position=QB';
+  const forgeNotes =
+    'scoringFallbackReason=none; season=2025, decisionTargetWeek=18, ' +
+    'cacheDeclaredAsOfWeek=18, position=QB';
   const forgeBody = {
     asOf: '2026-08-09T00:00:00.000Z',
-    sourceStack: [{ layer: 'forge', source: 'api/forge/tiers cache (forge_grade_cache)', notes: forgeNotes }],
+    sourceStack: [
+      { layer: 'forge', source: 'api/forge/tiers cache (forge_grade_cache)', notes: forgeNotes },
+      {
+        layer: 'confidence_stability',
+        source: 'forge cache confidence + trajectory metadata',
+        notes: 'Freshness derived from cache computedAt.',
+      },
+    ],
+    items: [{ position: 'QB' }],
+    seasonMeta: {
+      decisionTargetSeason: 2025,
+      decisionTargetWeek: 18,
+      evidenceSeason: 2025,
+      evidenceWeek: 18,
+      evidenceThroughSeason: 2025,
+      evidenceThroughWeek: 18,
+      evidenceProvenance: 'source_declared_as_of',
+    },
   };
 
   test('accepts a genuine FORGE cache response', () => {
     const observed = assertForgeCacheResponse('QB', forgeBody);
     expect(observed.layer).toBe('forge');
     expect(observed.fallbackReason).toBe('none');
+  });
+
+  test.each([
+    'none',
+    'insufficient_coverage',
+    'invalid_scoring_payload',
+    'config_error',
+    'upstream_unavailable',
+    'upstream_timeout',
+    'upstream_error',
+    'invalid_payload',
+  ])('accepts the current closed fallback reason %s', (fallbackReason) => {
+    const notes = forgeNotes.replace('scoringFallbackReason=none', `scoringFallbackReason=${fallbackReason}`);
+    expect(assertForgeCacheResponse('QB', {
+      ...forgeBody,
+      sourceStack: [{ ...forgeBody.sourceStack[0], notes }, forgeBody.sourceStack[1]],
+    }).fallbackReason).toBe(fallbackReason);
   });
 
   test('refuses promoted scoring-service items rather than mislabelling the lineage', () => {
@@ -81,17 +117,158 @@ describe('only forge_grade_cache rows are accepted as cache evidence', () => {
       .toThrow(/expected the forge_grade_cache layer/);
   });
 
-  test('refuses a response served at a different scope than requested', () => {
+  test.each([
+    [
+      'season',
+      'scoringFallbackReason=none; season=2024, decisionTargetWeek=18, ' +
+        'cacheDeclaredAsOfWeek=18, position=QB',
+    ],
+    [
+      'decision target week',
+      'scoringFallbackReason=none; season=2025, decisionTargetWeek=17, ' +
+        'cacheDeclaredAsOfWeek=18, position=QB',
+    ],
+    [
+      'cache-declared week',
+      'scoringFallbackReason=none; season=2025, decisionTargetWeek=18, ' +
+        'cacheDeclaredAsOfWeek=17, position=QB',
+    ],
+    [
+      'position',
+      'scoringFallbackReason=none; season=2025, decisionTargetWeek=18, ' +
+        'cacheDeclaredAsOfWeek=18, position=WR',
+    ],
+  ])('refuses a response served at a different %s than requested', (_field, notes) => {
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        sourceStack: [{ ...forgeBody.sourceStack[0], notes }, forgeBody.sourceStack[1]],
+      }),
+    ).toThrow(/does not match the requested scope/);
+  });
+
+  test('refuses the superseded bare asOfWeek note instead of treating the request echo as source scope', () => {
     expect(() =>
       assertForgeCacheResponse('QB', {
         ...forgeBody,
         sourceStack: [{
-          layer: 'forge',
-          source: 'cache',
-          notes: 'scoringFallbackReason=none; season=2024, asOfWeek=18, position=QB',
-        }],
+          ...forgeBody.sourceStack[0],
+          notes: 'scoringFallbackReason=none; season=2025, asOfWeek=18, position=QB',
+        }, forgeBody.sourceStack[1]],
       }),
-    ).toThrow(/does not match the requested scope/);
+    ).toThrow(/current closed Rankings v2 grammar/);
+  });
+
+  test('requires the exact cache source rather than accepting any forge-labelled producer', () => {
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        sourceStack: [{ ...forgeBody.sourceStack[0], source: 'some other FORGE producer' }],
+      }),
+    ).toThrow(/expected source "api\/forge\/tiers cache \(forge_grade_cache\)"/);
+  });
+
+  test.each([
+    [
+      'a promoted producer after the cache source',
+      [forgeBody.sourceStack[0], { layer: 'promoted_artifact', source: 'scoring service' }],
+    ],
+    [
+      'a duplicate forge source',
+      [forgeBody.sourceStack[0], forgeBody.sourceStack[0]],
+    ],
+    [
+      'an omitted confidence companion',
+      [forgeBody.sourceStack[0]],
+    ],
+    [
+      'an additional producer after the expected companion',
+      [...forgeBody.sourceStack, { layer: 'forge', source: 'another producer' }],
+    ],
+    [
+      'a wrongly named confidence companion',
+      [forgeBody.sourceStack[0], { ...forgeBody.sourceStack[1], source: 'manual confidence' }],
+    ],
+  ])('rejects sourceStack composition with %s', (_case, sourceStack) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, sourceStack }))
+      .toThrow(/exactly the Rankings v2 FORGE cache source/);
+  });
+
+  test.each([
+    ['prefixed season key', forgeNotes.replace('season=2025', 'notseason=2025')],
+    ['prefixed position key', forgeNotes.replace('position=QB', 'opposition=QB')],
+    ['week value suffix', forgeNotes.replace('decisionTargetWeek=18', 'decisionTargetWeek=18x')],
+    ['extra token', `${forgeNotes}, asOfWeek=18`],
+    ['missing fallback', forgeNotes.replace('scoringFallbackReason=none; ', '')],
+    ['unknown fallback', forgeNotes.replace('scoringFallbackReason=none', 'scoringFallbackReason=mystery')],
+    ['duplicate season', forgeNotes.replace('season=2025', 'season=2025, season=2024')],
+    [
+      'duplicate decision target',
+      forgeNotes.replace('decisionTargetWeek=18', 'decisionTargetWeek=18, decisionTargetWeek=17'),
+    ],
+    [
+      'duplicate cache-declared week',
+      forgeNotes.replace('cacheDeclaredAsOfWeek=18', 'cacheDeclaredAsOfWeek=18, cacheDeclaredAsOfWeek=17'),
+    ],
+    ['duplicate position', forgeNotes.replace('position=QB', 'position=QB, position=WR')],
+  ])('rejects malformed or ambiguous source notes: %s', (_case, notes) => {
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        sourceStack: [{ ...forgeBody.sourceStack[0], notes }, forgeBody.sourceStack[1]],
+      }),
+    ).toThrow(/current closed Rankings v2 grammar/);
+  });
+
+  test.each([
+    ['decisionTargetSeason', 2024],
+    ['decisionTargetWeek', 17],
+    ['evidenceSeason', 2024],
+    ['evidenceWeek', 17],
+    ['evidenceThroughSeason', 2024],
+    ['evidenceThroughWeek', 17],
+    ['evidenceProvenance', 'source_extent_unknown'],
+  ])('rejects contradictory structured season metadata: %s', (field, value) => {
+    expect(() =>
+      assertForgeCacheResponse('QB', {
+        ...forgeBody,
+        seasonMeta: { ...forgeBody.seasonMeta, [field]: value },
+      }),
+    ).toThrow(/structured Rankings v2 seasonMeta does not prove/);
+  });
+
+  test('rejects a current-looking source note when structured season metadata is absent', () => {
+    const { seasonMeta: _seasonMeta, ...withoutSeasonMeta } = forgeBody;
+    expect(() => assertForgeCacheResponse('QB', withoutSeasonMeta))
+      .toThrow(/structured Rankings v2 seasonMeta does not prove/);
+  });
+
+  test.each([
+    ['missing items', undefined],
+    ['non-array items', { position: 'QB' }],
+    ['empty items', []],
+  ])('rejects %s', (_case, items) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items }))
+      .toThrow(/requires a nonempty items array/);
+  });
+
+  test.each([
+    ['one wrong-position item', [{ position: 'WR' }]],
+    ['mixed-position items', [{ position: 'QB' }, { position: 'WR' }]],
+    ['a malformed item', [{ position: 'QB' }, null]],
+  ])('rejects %s rather than relabelling rows from the request loop', (_case, items) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, items }))
+      .toThrow(/every guarded FORGE cache item must declare/);
+  });
+
+  test.each([
+    ['missing asOf', undefined],
+    ['date-only asOf', '2026-08-09'],
+    ['invalid asOf', '2026-13-40T25:61:61.000Z'],
+    ['noncanonical offset asOf', '2026-08-09T00:00:00.000+00:00'],
+  ])('rejects %s', (_case, asOf) => {
+    expect(() => assertForgeCacheResponse('QB', { ...forgeBody, asOf }))
+      .toThrow(/asOf must be a canonical ISO datetime/);
   });
 });
 

@@ -10,11 +10,37 @@
 export const AUDIT_SEASON = 2025;
 export const AUDIT_WEEK = 18;
 
+const FORGE_CACHE_SOURCE = 'api/forge/tiers cache (forge_grade_cache)';
+const FORGE_CONFIDENCE_SOURCE = 'forge cache confidence + trajectory metadata';
+const FORGE_SOURCE_NOTE =
+  /^scoringFallbackReason=(none|insufficient_coverage|invalid_scoring_payload|config_error|upstream_unavailable|upstream_timeout|upstream_error|invalid_payload); season=(0|[1-9]\d*), decisionTargetWeek=(0|[1-9]\d*), cacheDeclaredAsOfWeek=(0|[1-9]\d*), position=(QB|RB|WR|TE)$/;
+
 export interface ObservedPositionSource {
   asOf: string;
   layer: string | null;
   source: string | null;
   fallbackReason: string | null;
+}
+
+function parseForgeCacheSourceNote(position: string, notes: unknown) {
+  if (typeof notes !== 'string') {
+    throw new Error(`${position}: FORGE cache source notes are missing or are not a string.`);
+  }
+
+  const match = FORGE_SOURCE_NOTE.exec(notes);
+  if (!match) {
+    throw new Error(
+      `${position}: FORGE cache source notes do not match the current closed Rankings v2 grammar.`,
+    );
+  }
+
+  return {
+    fallbackReason: match[1],
+    season: match[2],
+    decisionTargetWeek: match[3],
+    cacheDeclaredAsOfWeek: match[4],
+    position: match[5],
+  };
 }
 
 /**
@@ -29,9 +55,9 @@ export interface ObservedPositionSource {
  * both committed artifacts on a rerun. So: fail closed.
  */
 export function assertForgeCacheResponse(position: string, body: any): ObservedPositionSource {
-  const primary = body?.sourceStack?.[0] ?? null;
+  const sourceStack = body?.sourceStack;
+  const primary = Array.isArray(sourceStack) ? sourceStack[0] ?? null : null;
   const layer: string | null = primary?.layer ?? null;
-  const notes: string = primary?.notes ?? '';
 
   if (layer !== 'forge') {
     throw new Error(
@@ -41,27 +67,96 @@ export function assertForgeCacheResponse(position: string, body: any): ObservedP
     );
   }
 
-  // The layer echoes the scope it actually served. A silently different
-  // season/week/position would produce artifacts that misstate what was observed.
-  const servedSeason = notes.match(/season=(\d+)/)?.[1] ?? null;
-  const servedWeek = notes.match(/asOfWeek=(\d+)/)?.[1] ?? null;
-  const servedPosition = notes.match(/position=([A-Z]+)/)?.[1] ?? null;
-  if (
-    servedSeason !== String(AUDIT_SEASON) ||
-    servedWeek !== String(AUDIT_WEEK) ||
-    servedPosition !== position
-  ) {
+  if (primary?.source !== FORGE_CACHE_SOURCE) {
     throw new Error(
-      `${position}: served scope (season=${servedSeason}, asOfWeek=${servedWeek}, ` +
-      `position=${servedPosition}) does not match the requested scope ` +
-      `(season=${AUDIT_SEASON}, asOfWeek=${AUDIT_WEEK}, position=${position}).`,
+      `${position}: expected source "${FORGE_CACHE_SOURCE}", got ` +
+      `"${typeof primary?.source === 'string' ? primary.source : 'none'}".`,
     );
   }
 
+  const confidenceLayer = sourceStack[1];
+  if (
+    sourceStack.length !== 2 ||
+    confidenceLayer?.layer !== 'confidence_stability' ||
+    confidenceLayer?.source !== FORGE_CONFIDENCE_SOURCE
+  ) {
+    throw new Error(
+      `${position}: expected exactly the Rankings v2 FORGE cache source followed by its ` +
+      'confidence_stability companion, with no additional producer layers.',
+    );
+  }
+
+  // The current Rankings v2 FORGE layer records two different week facts:
+  // `decisionTargetWeek` is the board the caller asked it to build, while
+  // `cacheDeclaredAsOfWeek` is the week declared by the rows it actually
+  // admitted. Both must equal the audit request. The former bare `asOfWeek`
+  // note is deliberately not accepted as compatibility input: it cannot prove
+  // that the admitted cache evidence belongs to the requested board.
+  // A silently different season/week/position would produce artifacts that
+  // misstate what was observed.
+  const noteScope = parseForgeCacheSourceNote(position, primary?.notes);
+  if (
+    noteScope.season !== String(AUDIT_SEASON) ||
+    noteScope.decisionTargetWeek !== String(AUDIT_WEEK) ||
+    noteScope.cacheDeclaredAsOfWeek !== String(AUDIT_WEEK) ||
+    noteScope.position !== position
+  ) {
+    throw new Error(
+      `${position}: served scope (season=${noteScope.season}, ` +
+      `decisionTargetWeek=${noteScope.decisionTargetWeek}, ` +
+      `cacheDeclaredAsOfWeek=${noteScope.cacheDeclaredAsOfWeek}, ` +
+      `position=${noteScope.position}) does not match the requested scope ` +
+      `(season=${AUDIT_SEASON}, decisionTargetWeek=${AUDIT_WEEK}, ` +
+      `cacheDeclaredAsOfWeek=${AUDIT_WEEK}, position=${position}).`,
+    );
+  }
+
+  // Notes are diagnostic text. The current response also carries the same
+  // decision/evidence facts structurally, so require agreement instead of
+  // allowing correct-looking text to bless a contradictory payload.
+  const meta = body?.seasonMeta;
+  const structuredScopeMatches =
+    meta !== null &&
+    typeof meta === 'object' &&
+    !Array.isArray(meta) &&
+    meta.decisionTargetSeason === AUDIT_SEASON &&
+    meta.decisionTargetWeek === AUDIT_WEEK &&
+    meta.evidenceSeason === AUDIT_SEASON &&
+    meta.evidenceWeek === AUDIT_WEEK &&
+    meta.evidenceThroughSeason === AUDIT_SEASON &&
+    meta.evidenceThroughWeek === AUDIT_WEEK &&
+    meta.evidenceProvenance === 'source_declared_as_of';
+  if (!structuredScopeMatches) {
+    throw new Error(
+      `${position}: structured Rankings v2 seasonMeta does not prove the requested ` +
+      `${AUDIT_SEASON} Week ${AUDIT_WEEK} decision and source-declared evidence scope.`,
+    );
+  }
+
+  const items = body?.items;
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error(`${position}: guarded FORGE cache evidence requires a nonempty items array.`);
+  }
+  if (items.some((item) => item === null || typeof item !== 'object' || item.position !== position)) {
+    throw new Error(
+      `${position}: every guarded FORGE cache item must declare the requested position ${position}.`,
+    );
+  }
+
+  const asOf = body?.asOf;
+  const isCanonicalIso =
+    typeof asOf === 'string' &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(asOf) &&
+    !Number.isNaN(Date.parse(asOf)) &&
+    new Date(asOf).toISOString() === asOf;
+  if (!isCanonicalIso) {
+    throw new Error(`${position}: response asOf must be a canonical ISO datetime.`);
+  }
+
   return {
-    asOf: body.asOf,
+    asOf,
     layer,
     source: primary?.source ?? null,
-    fallbackReason: notes.match(/scoringFallbackReason=([a-z_]+)/)?.[1] ?? null,
+    fallbackReason: noteScope.fallbackReason,
   };
 }

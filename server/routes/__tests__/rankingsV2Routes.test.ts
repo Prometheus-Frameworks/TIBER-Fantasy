@@ -28,6 +28,7 @@ import { scoringService } from '../../modules/externalModels/scoring/scoringServ
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 import { RANKINGS_V2_CONTRACT_VERSION } from '../../contracts/rankingsV2';
+import { assertForgeCacheResponse } from '../../../scripts/audit/forgeCacheResponseGuard';
 
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
@@ -175,10 +176,10 @@ describe('rankingsV2Routes scoring integration', () => {
         },
       ],
       computedAt: new Date('2026-04-12T00:00:00.000Z'),
-      asOfWeek: 5,
+      asOfWeek: 18,
     } as any);
 
-    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=18');
 
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
@@ -187,6 +188,12 @@ describe('rankingsV2Routes scoring integration', () => {
     // scoring-service failure is never indistinguishable from a genuinely empty ranking.
     const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
     expect(forgeLayer.notes).toContain('scoringFallbackReason=upstream_unavailable');
+    // This runs the real route payload through the audit boundary so producer
+    // metadata and the one-off observation guard cannot silently drift apart.
+    expect(assertForgeCacheResponse('WR', res.body)).toMatchObject({
+      layer: 'forge',
+      fallbackReason: 'upstream_unavailable',
+    });
   });
 
   it('falls back to FORGE cache and traces the reason when the scoring client rejects a malformed rankings collection', async () => {
