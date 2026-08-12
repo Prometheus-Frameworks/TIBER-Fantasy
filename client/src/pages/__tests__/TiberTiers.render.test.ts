@@ -63,8 +63,8 @@ const SEASON_META = {
   decisionTargetWeek: 1,
   decisionTargetProvenance: 'anchor_derived' as const,
   decisionTargetIsProvisional: true,
-  phaseTargetSeason: 2025,
-  phaseTargetWeek: 12,
+  phaseTargetSeason: 2026,
+  phaseTargetWeek: 1,
   phaseTargetProvenance: 'anchor_derived',
   phaseTargetIsProvisional: true,
   evidenceThroughSeason: 2025,
@@ -138,10 +138,48 @@ describe('TiberTiersView rendered output', () => {
     const html = render(baseProps({ data }));
 
     expect(html).toContain('Rankings are not available yet');
+    expect(html).toContain('FORGE grades for this filter have not been computed yet');
     expect(html).not.toContain('POST /api/forge/compute-grades');
     expect(html).not.toContain('compute-grades');
     expect(html).not.toMatch(/\d+ players/);
     expect(html).not.toContain('Source:');
+  });
+
+  it('renders a safe cache-rejection explanation instead of claiming rejected rows were uncomputed', () => {
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-04-12T00:00:00.000Z',
+      seasonMeta: {
+        ...SEASON_META,
+        evidenceSeason: null,
+        evidenceWeek: null,
+        evidenceThroughSeason: null,
+        evidenceThroughWeek: null,
+        evidenceProvenance: 'no_rankable_source',
+        generatedAt: null,
+        isArchiveView: false,
+        status: 'forge_cache_empty_uncomputed',
+        statusDetail:
+          'FORGE cache rows were rejected for resolved target 1: ' +
+          'declaredAsOfWeek=18, requestedAsOfWeek=1, weekSubstituted=true. internal suffix',
+      },
+      sourceStack: [],
+      trust: {
+        freshnessNote:
+          'FORGE cache rows were rejected because their week metadata did not match the resolved target.',
+        sampleNote: null,
+        stabilityNote: 'forge_cache_empty_uncomputed',
+      },
+      items: [],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('cache rows were rejected');
+    expect(html).toContain('target week 1');
+    expect(html).toContain('cache week 18');
+    expect(html).not.toContain('internal suffix');
+    expect(html).not.toContain('have not been computed yet');
   });
 
   it('renders no evidence-season claim, no archive banner, and no FORGE headline for a no_rankable_source empty-cache response', () => {
@@ -348,11 +386,11 @@ describe('TiberTiersView rendered output', () => {
       decisionTargetWeek: 1,
       decisionTargetProvenance: 'anchor_derived' as const,
       decisionTargetIsProvisional: true,
-      phaseTargetSeason: 2025,
-      phaseTargetWeek: 12,
+      phaseTargetSeason: 2026,
+      phaseTargetWeek: 1,
       phaseTargetProvenance: 'anchor_derived',
       phaseTargetIsProvisional: true,
-      evidenceThroughSeason: 2025,
+      evidenceThroughSeason: 2026,
       evidenceThroughWeek: 1,
       evidenceProvenance: 'source_declared_as_of',
       completionVerified: false,
@@ -376,30 +414,75 @@ describe('TiberTiersView rendered output', () => {
     expect(html).not.toContain('2026 · archive');
   });
 
+  it('with no forward target, compares selector archives to the real current season without rendering null', () => {
+    const noForwardTargetMeta = {
+      ...SEASON_META,
+      currentSeason: 2026,
+      forwardRankingSeason: null,
+      currentPhase: 'postseason' as const,
+      currentPhaseLabel: '2026 · Postseason',
+      targetSeason: null,
+      targetWeek: null,
+      targetLabel: null,
+      phaseTargetSeason: null,
+      phaseTargetWeek: null,
+      phaseTargetProvenance: null,
+      phaseTargetIsProvisional: false,
+      evidenceSeason: 2026,
+      evidenceWeek: 18,
+      evidenceThroughSeason: 2026,
+      evidenceThroughWeek: 18,
+      isArchiveView: false,
+      status: null,
+      statusDetail: null,
+    };
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2027-01-20T00:00:00.000Z',
+      seasonMeta: noForwardTargetMeta,
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [makeItem()],
+    };
+
+    const html = render(baseProps({ data, season: 2026, availableSeasons: [2025, 2026] }));
+
+    expect(html).toContain('2025 · archive');
+    expect(html).not.toContain('2026 · archive');
+    expect(html).not.toContain('null');
+  });
+
   it('renders a stale calendar as calendar-specific unavailable, never empty or FORGE-uncomputed', () => {
     const staleMeta = {
       ...SEASON_META,
+      currentSeason: null,
+      forwardRankingSeason: null,
+      currentPhase: null,
+      currentPhaseLabel: null,
+      currentRegularSeasonWeek: null,
       configStatus: 'stale_calendar_config' as const,
       configNote: 'NFL season calendar ends after 2026.',
       evidenceSeason: null,
       evidenceWeek: null,
-      decisionTargetSeason: 2026,
-      decisionTargetWeek: 1,
-      decisionTargetProvenance: 'anchor_derived' as const,
-      decisionTargetIsProvisional: true,
-      phaseTargetSeason: 2025,
-      phaseTargetWeek: 12,
-      phaseTargetProvenance: 'anchor_derived',
-      phaseTargetIsProvisional: true,
+      decisionTargetSeason: null,
+      decisionTargetWeek: null,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      phaseTargetSeason: null,
+      phaseTargetWeek: null,
+      phaseTargetProvenance: null,
+      phaseTargetIsProvisional: false,
       evidenceThroughSeason: null,
       evidenceThroughWeek: null,
-      evidenceProvenance: 'source_extent_unknown',
+      evidenceProvenance: 'no_rankable_source',
       completionVerified: false,
       finalizedThroughWeek: null,
       completionCopy: 'Completion not verified.',
       generatedAt: null,
+      targetSeason: null,
       targetWeek: null,
       targetLabel: null,
+      scheduleSource: null,
       isArchiveView: false,
       status: 'season_calendar_config_stale',
       statusDetail: 'NFL season calendar ends after 2026.',
@@ -424,6 +507,10 @@ describe('TiberTiersView rendered output', () => {
     expect(html).not.toContain('No players match this filter yet.');
     expect(html).not.toMatch(/\d+ players/);
     expect(html).not.toContain('FORGE grades for this filter have not been computed yet');
+    expect(html).toContain('2025 · archive');
+    expect(html).toContain('2026 · archive');
+    expect(html).not.toContain('2027');
+    expect(html).not.toContain('null');
   });
 
   it('renders a successfully served configured-history archive under a stale calendar: "Archive:" framing ALONGSIDE, not instead of, the stale-calendar warning', () => {
@@ -434,6 +521,11 @@ describe('TiberTiersView rendered output', () => {
     // heading and the archive/stale warning banner still say so too.
     const staleArchiveMeta = {
       ...SEASON_META,
+      currentSeason: null,
+      forwardRankingSeason: null,
+      currentPhase: null,
+      currentPhaseLabel: null,
+      currentRegularSeasonWeek: null,
       configStatus: 'stale_calendar_config' as const,
       configNote: 'NFL season calendar ends after 2026.',
       evidenceSeason: 2025,
@@ -453,8 +545,10 @@ describe('TiberTiersView rendered output', () => {
       finalizedThroughWeek: null,
       completionCopy: 'Completion not verified.',
       generatedAt: '2026-08-08T19:04:15.325Z',
+      targetSeason: null,
       targetWeek: null,
       targetLabel: null,
+      scheduleSource: null,
       isArchiveView: true,
       status: 'archive_season_not_current',
       statusDetail: 'Showing configured historical 2025 evidence while live season state is unavailable.',

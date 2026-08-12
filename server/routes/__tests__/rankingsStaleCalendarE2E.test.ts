@@ -182,7 +182,15 @@ describe('Rankings v2 route stale-calendar gate', () => {
       );
       // Must not compare to, or claim, the synthetic stale live target.
       expect(body.seasonMeta.statusDetail).not.toMatch(/forward board targets/);
-      expect(body.seasonMeta.statusDetail).not.toContain(String(body.seasonMeta.currentSeason));
+      expect(body.seasonMeta.currentSeason).toBeNull();
+      expect(body.seasonMeta.forwardRankingSeason).toBeNull();
+      expect(body.seasonMeta.currentPhase).toBeNull();
+      expect(body.seasonMeta.currentPhaseLabel).toBeNull();
+      expect(body.seasonMeta.phaseTargetSeason).toBeNull();
+      expect(body.seasonMeta.phaseTargetWeek).toBeNull();
+      expect(body.seasonMeta.phaseTargetProvenance).toBeNull();
+      expect(body.seasonMeta.phaseTargetIsProvisional).toBe(false);
+      expect(body.seasonMeta.statusDetail).not.toMatch(/2027|2031/);
     },
   );
 
@@ -198,10 +206,11 @@ describe('Rankings v2 route stale-calendar gate', () => {
     } as any);
 
     const { status, body } = await callRankings(
-      '/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18',
+      '/api/rankings/v2/weekly?position=WR&season=2025',
     );
 
     expect(status).toBe(200);
+    expect(mockedCache).toHaveBeenCalledWith(2025, undefined, 'WR', 100, 'test-version', { exactWeek: false });
     expect(body.seasonMeta.evidenceProvenance).toBe('source_extent_unknown');
     expect(body.seasonMeta.evidenceSeason).toBe(2025);
     expect(body.seasonMeta.isArchiveView).toBe(true);
@@ -223,7 +232,7 @@ describe('Rankings v2 route forward-season default', () => {
     expect(status).toBe(200);
     // The forward-season default also carries the forward TARGET WEEK, so the
     // requested board matches the advertised target rather than being weekless.
-    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version', { exactWeek: false });
+    expect(mockedCache).toHaveBeenCalledWith(2026, 1, 'WR', 100, 'test-version', { exactWeek: true });
     // Derived, not a literal: the bound is 2026's own elapsed week count, which
     // is 0 today but will not be forever. A hardcoded 0 here would quietly
     // start asserting the wrong thing once 2026 Week 1 kicks off.

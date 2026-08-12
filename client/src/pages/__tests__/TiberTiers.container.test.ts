@@ -140,8 +140,8 @@ const SEASON_META = {
   decisionTargetWeek: 1,
   decisionTargetProvenance: 'anchor_derived' as const,
   decisionTargetIsProvisional: true,
-  phaseTargetSeason: 2025,
-  phaseTargetWeek: 12,
+  phaseTargetSeason: 2026,
+  phaseTargetWeek: 1,
   phaseTargetProvenance: 'anchor_derived',
   phaseTargetIsProvisional: true,
   evidenceThroughSeason: 2025,
@@ -158,10 +158,11 @@ const SEASON_META = {
 
 const STALE_SEASON_META = {
   ...SEASON_META,
-  currentSeason: 2027,
-  forwardRankingSeason: 2027,
-  currentPhase: 'offseason' as const,
-  currentPhaseLabel: '2027 · Offseason',
+  currentSeason: null,
+  forwardRankingSeason: null,
+  currentPhase: null,
+  currentPhaseLabel: null,
+  currentRegularSeasonWeek: null,
   targetSeason: null,
   targetWeek: null,
   targetLabel: null,
@@ -170,17 +171,17 @@ const STALE_SEASON_META = {
   configNote: 'NFL season calendar ends after 2026.',
   evidenceSeason: null,
   evidenceWeek: null,
-  decisionTargetSeason: 2026,
-  decisionTargetWeek: 1,
-  decisionTargetProvenance: 'anchor_derived' as const,
-  decisionTargetIsProvisional: true,
-  phaseTargetSeason: 2025,
-  phaseTargetWeek: 12,
-  phaseTargetProvenance: 'anchor_derived',
-  phaseTargetIsProvisional: true,
+  decisionTargetSeason: null,
+  decisionTargetWeek: null,
+  decisionTargetProvenance: null,
+  decisionTargetIsProvisional: false,
+  phaseTargetSeason: null,
+  phaseTargetWeek: null,
+  phaseTargetProvenance: null,
+  phaseTargetIsProvisional: false,
   evidenceThroughSeason: null,
   evidenceThroughWeek: null,
-  evidenceProvenance: 'source_extent_unknown',
+  evidenceProvenance: 'no_rankable_source',
   completionVerified: false,
   finalizedThroughWeek: null,
   completionCopy: 'Completion not verified.',
@@ -332,6 +333,53 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(screen.queryByText('compute-grades', { exact: false })).toBeNull();
   });
 
+  it('carries an auto-derived target origin through the real URL and uncomputed-status render chain', async () => {
+    const fetchMock = mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+          asOf: '2026-08-09T12:00:00.000Z',
+          seasonMeta: {
+            ...SEASON_META,
+            evidenceSeason: null,
+            evidenceWeek: null,
+            evidenceThroughSeason: null,
+            evidenceThroughWeek: null,
+            evidenceProvenance: 'no_rankable_source',
+            generatedAt: null,
+            isArchiveView: false,
+            status: 'forge_cache_empty_uncomputed',
+            statusDetail: 'FORGE grades for this target have not been computed yet.',
+            decisionTargetOrigin: 'phase_default',
+          },
+          sourceStack: [],
+          trust: { sampleNote: null, stabilityNote: 'forge_cache_empty_uncomputed' },
+          items: [],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByText('Rankings are not available yet')).toBeTruthy();
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) =>
+        String(input).includes('targetOrigin=phase_default'),
+      )).toBe(true);
+    });
+    const rankingsUrl = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .find((url) => url.includes('targetOrigin=phase_default'));
+    expect(rankingsUrl).toBeDefined();
+    const params = new URL(rankingsUrl!, 'http://localhost').searchParams;
+    expect(params.get('season')).toBe('2026');
+    expect(params.get('asOfWeek')).toBe('1');
+    expect(params.get('targetOrigin')).toBe('phase_default');
+    expect(screen.queryByTestId('tiers-exact-week-unavailable')).toBeNull();
+    expect(screen.queryByText('No players match this filter yet.')).toBeNull();
+  });
+
   it('renders the exact-week-unavailable state, never the empty filtered board', async () => {
     // The regression: the server correctly returns
     // `exact_week_evidence_unavailable` with zero items, but the resolver did
@@ -408,7 +456,8 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
    */
   function mockConfiguredArchiveResponder(isLiveCalendarStale: () => boolean) {
     return async (url: string) => {
-      const requestedSeason = new URL(url, 'http://localhost').searchParams.get('season');
+      const requestParams = new URL(url, 'http://localhost').searchParams;
+      const requestedSeason = requestParams.get('season');
       if (requestedSeason === null) {
         return {
           ok: true,
@@ -428,6 +477,8 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       }
 
       const evidenceSeason = Number(requestedSeason);
+      const requestedWeek = requestParams.get('asOfWeek');
+      const isPhaseDefault = requestParams.get('targetOrigin') === 'phase_default';
       // Fantasy #307 correction round 5: while the live calendar is stale,
       // ANY admitted evidence is archive by construction — the route's own
       // stale-calendar gate already proved this can only be an explicitly
@@ -447,9 +498,18 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
           contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
           asOf: '2026-08-09T12:00:00.000Z',
           seasonMeta: {
-            ...SEASON_META,
+            ...(isLiveCalendarStale() ? STALE_SEASON_META : SEASON_META),
+            decisionTargetSeason: evidenceSeason,
+            decisionTargetWeek: requestedWeek === null ? null : Number(requestedWeek),
+            decisionTargetProvenance: isPhaseDefault ? 'anchor_derived' : null,
+            decisionTargetIsProvisional: isPhaseDefault,
+            decisionTargetOrigin: isPhaseDefault ? 'phase_default' : null,
             evidenceSeason,
             evidenceWeek: evidenceSeason === 2025 ? 18 : 1,
+            evidenceThroughSeason: evidenceSeason,
+            evidenceThroughWeek: evidenceSeason === 2025 ? 18 : 1,
+            evidenceProvenance: 'source_declared_as_of',
+            generatedAt: '2026-08-09T12:00:00.000Z',
             isArchiveView,
             status: isArchiveView ? 'archive_season_not_current' : null,
             statusDetail,
@@ -747,6 +807,7 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       const params = new URL(rankingsUrl, 'http://localhost').searchParams;
       expect(params.get('season')).toBe('2026');
       expect(params.get('asOfWeek')).toBe('1');
+      expect(params.get('targetOrigin')).toBe('phase_default');
     });
 
     // An archive selection has no forward target: switching to 2025 (not the
@@ -762,6 +823,26 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       const archiveParams = new URL(archiveUrl, 'http://localhost').searchParams;
       expect(archiveParams.get('season')).toBe('2025');
       expect(archiveParams.has('asOfWeek')).toBe(false);
+      expect(archiveParams.has('targetOrigin')).toBe(false);
+    });
+
+    // Selecting the live target season again still auto-derives Week 1; the
+    // click chose the season, not a week, so its origin remains phase_default.
+    fireEvent.click(screen.getByTestId('season-2026'));
+    await waitFor(() => {
+      const liveUrls = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => {
+          if (!url.includes('/api/rankings/v2/weekly')) return false;
+          const params = new URL(url, 'http://localhost').searchParams;
+          return params.get('season') === '2026' && params.get('targetOrigin') === 'phase_default';
+        });
+      expect(liveUrls.length).toBeGreaterThan(0);
+      const liveUrl = liveUrls[liveUrls.length - 1];
+      const liveParams = new URL(liveUrl, 'http://localhost').searchParams;
+      expect(liveParams.get('season')).toBe('2026');
+      expect(liveParams.get('asOfWeek')).toBe('1');
+      expect(liveParams.get('targetOrigin')).toBe('phase_default');
     });
   });
 

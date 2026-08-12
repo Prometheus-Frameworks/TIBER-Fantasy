@@ -204,11 +204,11 @@ export interface GetGradesFromCacheOptions {
   /**
    * Refuse the latest-week substitution below.
    *
-   * A caller that named a week is asking about *that* football. Quietly serving
-   * a different week's grades under the requested week's label is not a
-   * degraded answer, it is a wrong one — the rows describe games the caller did
-   * not ask about. Callers that want "whatever is newest" express that by
-   * passing no week at all.
+   * A caller that resolved a target week is asking about *that* football,
+   * whether the target came from a query parameter or a phase default. Quietly
+   * serving a different week's grades under that label is not a degraded
+   * answer, it is a wrong one. Callers that want "whatever is newest" express
+   * that by passing no week at all.
    */
   exactWeek?: boolean;
 }

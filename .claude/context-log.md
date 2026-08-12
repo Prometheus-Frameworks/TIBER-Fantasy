@@ -557,3 +557,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** Rankings v2 contract/route/client mapper and page, `PlayerIdentityService`, the ranking identity resolver, identity policy/architecture docs, `replit.md`, and focused server/client tests.
 - **Validation:** Eight focused Jest suites passed (152 tests, `--coverage=false`); production build passed with the existing OLC duplicate-member warning; typecheck retained 505 reviewed-head diagnostics with zero new touched-file diagnostics; `git diff --check` passed.
 - **Notes:** No `DATABASE_URL` was available. Database-wide GSIS census, uniqueness migration, and production coverage activation remain explicit operator gates; unresolved/outage rows stay visible and non-linkable.
+
+### 2026-08-12 — Codex: Rankings v2 Rev16 season/cache honesty corrections
+- **What changed:** Made every resolved phase/default week an exact cache question, preserved truthful phase-default versus explicit origins, rejected substituted or mismatched cache rows, nulled stale/no-target live metadata, enforced a complete `no_rankable_source` envelope, and rendered a safe cache-rejection explanation instead of “not computed” copy.
+- **Files modified:** Rankings v2 route/contract/FORGE cache, Tiber Tiers mapper/page, and focused server/client regressions.
+- **Validation:** Five focused suites passed (225/225); full branch run passed 125 suites/1288 tests with the same seven baseline suite failures as base (125 suites/1245 tests); build passed with the baseline OLC duplicate-member warning; typecheck remained identical at 505 diagnostics; `git diff --check` passed.
+- **Notes:** No contract-version change, merge, deployment, or readiness mutation. Truly weekless historical requests retain newest-cache semantics; stale configured archives remain explicit and truthful.

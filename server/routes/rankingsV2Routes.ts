@@ -89,7 +89,7 @@ function buildSeasonMeta(input: {
    * published, under `phaseTarget*`, where it cannot be mistaken for a
    * description of the returned rows.
    */
-  boardSeason: number;
+  boardSeason: number | null;
   boardWeek: number | null;
   /** True when the caller named the week, rather than it being defaulted. */
   boardWeekIsExplicit: boolean;
@@ -105,7 +105,22 @@ function buildSeasonMeta(input: {
   // while the forward board targets 2026, so archive status must be computed
   // against the board's target season — otherwise a valid 2026 Week 1 board
   // would be mislabelled as a 2025 archive.
-  const forwardRankingSeason = input.phase.targetSeason ?? input.phase.season;
+  // `resolveSeasonPhase()` preserves numeric legacy accessors after the last
+  // configured calendar by carrying `newest + 1` internally. That sentinel is
+  // useful only to keep old callers from crashing; it is not observed league
+  // state and must never cross this public boundary. When the calendar is
+  // stale, every live season/phase/target fact is unavailable instead.
+  const livePhaseAvailable = input.phase.configStatus === 'ok';
+  const currentSeason = livePhaseAvailable ? input.phase.season : null;
+  const forwardRankingSeason = livePhaseAvailable ? input.phase.targetSeason : null;
+  const currentPhase = livePhaseAvailable ? input.phase.phase : null;
+  const currentPhaseLabel = livePhaseAvailable ? input.phase.seasonPhaseLabel : null;
+  const currentRegularSeasonWeek = livePhaseAvailable ? input.phase.regularSeasonWeek : null;
+  const phaseTargetSeason = livePhaseAvailable ? input.phase.targetSeason : null;
+  const phaseTargetWeek = livePhaseAvailable ? input.phase.targetWeek : null;
+  const phaseTargetProvenance = livePhaseAvailable ? input.phase.targetProvenance : null;
+  const phaseTargetIsProvisional = livePhaseAvailable ? input.phase.targetIsProvisional : false;
+  const archiveComparisonSeason = forwardRankingSeason ?? currentSeason;
 
   // Provenance keeps its existing meaning and its existing membership: it
   // describes the SCHEDULE the week rests on. An explicitly requested week
@@ -113,11 +128,14 @@ function buildSeasonMeta(input: {
   // null, an already-valid value in the closed enum — and is not provisional.
   // Who chose the week is a different question, answered by `origin` below.
   const boardProvenance: TargetProvenance | null =
-    input.boardWeek === null || input.boardWeekIsExplicit
+    input.boardWeek === null || input.boardWeekIsExplicit || !livePhaseAvailable
       ? null
       : input.phase.targetProvenance;
   const boardIsProvisional =
-    input.boardWeek !== null && !input.boardWeekIsExplicit && input.phase.targetIsProvisional;
+    input.boardWeek !== null &&
+    !input.boardWeekIsExplicit &&
+    livePhaseAvailable &&
+    input.phase.targetIsProvisional;
   const boardOrigin: DecisionTargetOrigin | null =
     input.boardWeek === null
       ? null
@@ -143,25 +161,28 @@ function buildSeasonMeta(input: {
     input.evidenceSeason === null
       ? false
       : input.phase.configStatus === 'ok'
-        ? input.evidenceSeason !== forwardRankingSeason
+        ? archiveComparisonSeason !== null && input.evidenceSeason !== archiveComparisonSeason
         : true;
 
   return {
-    currentSeason: input.phase.season,
+    currentSeason,
     forwardRankingSeason,
-    currentPhase: input.phase.phase,
-    currentPhaseLabel: input.phase.seasonPhaseLabel,
-    currentRegularSeasonWeek: input.phase.regularSeasonWeek,
-    targetSeason: input.phase.targetSeason,
-    targetWeek: input.phase.targetWeek,
-    targetLabel: input.phase.targetLabel,
-    scheduleSource: input.phase.scheduleSource,
+    currentPhase,
+    currentPhaseLabel,
+    currentRegularSeasonWeek,
+    targetSeason: phaseTargetSeason,
+    targetWeek: phaseTargetWeek,
+    targetLabel: livePhaseAvailable ? input.phase.targetLabel : null,
+    scheduleSource: livePhaseAvailable && phaseTargetSeason !== null && phaseTargetWeek !== null
+      ? input.phase.scheduleSource
+      : null,
     configStatus: input.phase.configStatus,
     configNote: input.phase.configNote,
 
     // The decision-target / evidence split, published so a consumer never has
-    // to infer which job a week number is doing. Additive: every pre-existing
-    // field keeps its name, type and nullability.
+    // to infer which job a week number is doing. The whole `seasonMeta`
+    // envelope is additive relative to deployed main; unpublished intermediate
+    // shapes on this branch do not constrain these truthful nulls.
     //
     // `decisionTarget*` describes **the board in this response**. It is the
     // effective request target, so an explicit `season=2025&asOfWeek=7` request
@@ -179,10 +200,10 @@ function buildSeasonMeta(input: {
     // The live phase target, preserved separately because it is still useful —
     // a client showing "you are deciding Week 12" needs it — but it is now
     // named for what it is and cannot be read as a description of these rows.
-    phaseTargetSeason: input.phase.targetSeason,
-    phaseTargetWeek: input.phase.targetWeek,
-    phaseTargetProvenance: input.phase.targetProvenance,
-    phaseTargetIsProvisional: input.phase.targetIsProvisional,
+    phaseTargetSeason,
+    phaseTargetWeek,
+    phaseTargetProvenance,
+    phaseTargetIsProvisional,
     // `evidenceThroughWeek` restates `evidenceWeek` under a name that cannot
     // be mistaken for a target, with the source relationship that produced it.
     evidenceThroughSeason: input.evidenceWeek === null ? null : input.evidenceSeason,
@@ -207,8 +228,10 @@ function buildSeasonMeta(input: {
     statusDetail:
       input.statusDetail ??
       (isArchive
-        ? input.phase.configStatus === 'ok'
-          ? `Showing ${input.evidenceSeason} evidence while the forward board targets ${forwardRankingSeason} (${input.phase.seasonPhaseLabel}).`
+        ? input.phase.configStatus === 'ok' && currentPhaseLabel !== null
+          ? forwardRankingSeason !== null
+            ? `Showing ${input.evidenceSeason} evidence while the forward board targets ${forwardRankingSeason} (${currentPhaseLabel}).`
+            : `Showing historical ${input.evidenceSeason} evidence while the league is in ${currentSeason} with no forward ranking target (${currentPhaseLabel}).`
           // Stale calendar: no live forward target/season is claimed, since
           // none is known — `phase.season`/`forwardRankingSeason` here are
           // themselves the synthetic value the stale calendar produced, not
@@ -284,7 +307,7 @@ function buildUnavailablePayload(input: {
       // season is recorded; the week is null rather than borrowed from the
       // phase, which would label an empty response with a board it did not
       // serve.
-      boardSeason: input.season ?? input.phase.season,
+      boardSeason: input.season,
       boardWeek: null,
       boardWeekIsExplicit: false,
       // `no_rankable_source`: nothing was admitted, so there is no evidence
@@ -562,7 +585,8 @@ export function createRankingsV2Router(): Router {
       // target week we fail closed with a typed state rather than inventing one
       // (Fantasy #307 Phase A).
       const phase = resolveSeasonPhase();
-      const requestedSeason = parseInt(req.query.season as string, 10);
+      const seasonParam = req.query.season as string | undefined;
+      const requestedSeason = parseInt(seasonParam as string, 10);
       const hasExplicitSeason = Number.isFinite(requestedSeason);
       // Outside the regular season the live weekly board is about the forward
       // target, not necessarily the phase-owning season. During the 2025
@@ -594,9 +618,26 @@ export function createRankingsV2Router(): Router {
         ? requestedWeek
         : season === phase.targetSeason
           ? phase.targetWeek ?? undefined
-          : season === phase.season
-            ? phase.regularSeasonWeek ?? undefined
-            : undefined;
+          : undefined;
+
+      // The Tiers client serializes its automatically resolved target as
+      // `asOfWeek`, so query-parameter presence alone cannot distinguish user
+      // choice from phase default. The narrow hint is trusted only when both
+      // season and week exactly match this server's own current phase target;
+      // an absent, malformed, or forged hint remains an explicit request.
+      const requestedTargetOrigin = req.query.targetOrigin;
+      const requestClaimsPhaseDefault = requestedTargetOrigin === 'phase_default';
+      const hasCanonicalSeasonParam =
+        hasExplicitSeason && seasonParam === String(requestedSeason);
+      const hasCanonicalWeekParam =
+        Number.isFinite(requestedWeek) && asOfWeekParam === String(requestedWeek);
+      const phaseDefaultHintMatches =
+        requestClaimsPhaseDefault &&
+        hasCanonicalSeasonParam &&
+        hasCanonicalWeekParam &&
+        season === phase.targetSeason &&
+        requestedWeek === phase.targetWeek;
+      const weekIsExplicit = Number.isFinite(requestedWeek) && !phaseDefaultHintMatches;
 
       // The query ceiling belongs to the season being queried, not to the
       // live clock. `throughWeek` is a hard `lte` filter, so falling back to
@@ -634,7 +675,7 @@ export function createRankingsV2Router(): Router {
             ? `Season ${requestedSeason} is not present in the configured NFL season calendar; current rankings are unavailable.`
             : phase.configNote ?? 'NFL season calendar is out of date.';
           return sendUnavailable(res, buildUnavailablePayload({
-            season: null,
+            season: hasExplicitSeason ? requestedSeason : null,
             status: SEASON_CONFIG_STALE_STATUS,
             detail,
             phase,
@@ -648,7 +689,7 @@ export function createRankingsV2Router(): Router {
         // a different season, which is the defect above. Say so rather than
         // serving evidence whose extent we cannot state.
         return sendUnavailable(res, buildUnavailablePayload({
-          season: null,
+          season: hasExplicitSeason ? season : null,
           status: SEASON_CONFIG_STALE_STATUS,
           detail:
             `Season ${season} is not present in the configured NFL season calendar, so the ` +
@@ -661,21 +702,20 @@ export function createRankingsV2Router(): Router {
 
       // The cache is keyed by the DECISION TARGET — which board is being built.
       //
-      // An explicitly requested week is EXACT. `getGradesFromCache()` otherwise
-      // substitutes the season's latest cached week when the requested one has
-      // no rows, and the response then labelled those rows as the requested
-      // board: a Week 7 request came back with Week 18 grades under a Week 7
-      // heading. Those rows describe games the caller did not ask about, so
-      // this is a wrong answer rather than a degraded one, and the exact-week
-      // read refuses the substitution.
-      const weekIsExplicit = Number.isFinite(requestedWeek);
+      // Exactness follows the BOARD TARGET, not the query-string syntax. A
+      // parameterless preseason, in-season, or postseason-forward request still
+      // resolves to one specific decisionTargetWeek. Substituting a different
+      // cached week there is the same wrong answer as substituting for an
+      // explicit `asOfWeek`. Only a genuinely weekless historical request asks
+      // for "whatever is newest" and may use the cache's latest-week behavior.
+      const decisionTargetWeekIsExact = decisionTargetWeek !== undefined;
       const cache = await getGradesFromCache(
         season,
         decisionTargetWeek,
         position,
         limit,
         CACHE_VERSION,
-        { exactWeek: weekIsExplicit },
+        { exactWeek: decisionTargetWeekIsExact },
       );
       const scoringBuild = await buildRankingsScoringInputs({
         season,
@@ -746,7 +786,7 @@ export function createRankingsV2Router(): Router {
               phase,
               boardSeason: season,
               boardWeek: decisionTargetWeek ?? null,
-              boardWeekIsExplicit: Number.isFinite(requestedWeek),
+              boardWeekIsExplicit: weekIsExplicit,
               evidenceSeason: season,
               // The extent the SOURCE declares: the greatest weekly-stats week
               // actually aggregated into the admitted inputs, measured from
@@ -788,8 +828,38 @@ export function createRankingsV2Router(): Router {
         );
       }
 
-      const derivedAsOf = toIso(cache.computedAt) ?? new Date().toISOString();
-      const isCacheEmpty = cache.players.length === 0;
+      // Defense in depth: even an exact cache implementation can regress, and
+      // a mock/adapter can return internally contradictory metadata. Rows for a
+      // resolved target are admitted only when the cache both says it did not
+      // substitute and declares that exact week. A weekless historical request
+      // has no target to compare and is intentionally exempt.
+      const cacheTargetMismatch =
+        decisionTargetWeekIsExact &&
+        cache.players.length > 0 &&
+        (cache.weekSubstituted === true || cache.asOfWeek !== decisionTargetWeek);
+      if (cacheTargetMismatch) {
+        console.error(
+          `[RankingsV2/Routes] refusing cache rows for resolved target ${decisionTargetWeek}: ` +
+          `declaredAsOfWeek=${cache.asOfWeek ?? 'none'}, ` +
+          `requestedAsOfWeek=${cache.requestedAsOfWeek ?? 'none'}, ` +
+          `weekSubstituted=${cache.weekSubstituted === true}`,
+        );
+      }
+
+      const admittedCachePlayers = cacheTargetMismatch ? [] : cache.players;
+      const isCacheEmpty = admittedCachePlayers.length === 0;
+      // A computation timestamp belongs to an admitted cohort. Even an
+      // ordinary empty adapter result may carry the cache table's most recent
+      // timestamp; without rows, that timestamp is not evidence for this
+      // response and must not leak into trust/season metadata.
+      const admittedComputedAt = isCacheEmpty ? null : cache.computedAt;
+      const derivedAsOf = toIso(admittedComputedAt) ?? new Date().toISOString();
+      const cacheMismatchDiagnostics = cacheTargetMismatch
+        ? `FORGE cache rows were rejected for resolved target ${decisionTargetWeek}: ` +
+          `declaredAsOfWeek=${cache.asOfWeek ?? 'none'}, ` +
+          `requestedAsOfWeek=${cache.requestedAsOfWeek ?? 'none'}, ` +
+          `weekSubstituted=${cache.weekSubstituted === true}`
+        : null;
 
       // Reaching here on an explicit week means the scoring service did not
       // serve the exact week either — it was skipped, it failed, or its payload
@@ -802,11 +872,17 @@ export function createRankingsV2Router(): Router {
         return sendUnavailable(res, buildUnavailablePayload({
           season,
           status: EXACT_WEEK_UNAVAILABLE_STATUS,
-          detail:
-            `No evidence is available for ${season} week ${decisionTargetWeek}. ` +
-            'FORGE grades are not computed for that exact week' +
-            (scoringFallbackReason ? `, and the scoring service did not serve it (${scoringFallbackReason})` : '') +
-            '. A different week\'s rows are not substituted.',
+          detail: cacheMismatchDiagnostics
+            ? `No admissible evidence is available for ${season} week ${decisionTargetWeek}. ` +
+              `${cacheMismatchDiagnostics}. ` +
+              (scoringFallbackReason
+                ? `The scoring service did not serve the target (${scoringFallbackReason}). `
+                : '') +
+              'A different week\'s rows are not substituted.'
+            : `No evidence is available for ${season} week ${decisionTargetWeek}. ` +
+              'FORGE grades are not computed for that exact week' +
+              (scoringFallbackReason ? `, and the scoring service did not serve it (${scoringFallbackReason})` : '') +
+              '. A different week\'s rows are not substituted.',
           phase,
           position,
         }));
@@ -815,20 +891,18 @@ export function createRankingsV2Router(): Router {
       // A substitution must never be labelled as the requested board. The exact
       // read above prevents it on the explicit path; this is the backstop for
       // any future caller that reaches here with substituted rows.
-      if (cache.weekSubstituted) {
-        console.warn(
-          `[RankingsV2/Routes] cache substituted week ${cache.asOfWeek} for requested ${cache.requestedAsOfWeek}; ` +
-          'serving as a defaulted board, not as the requested one',
-        );
-      }
-
       // Identity resolution happens once for the whole cohort (two batched
       // queries) before any row is emitted.
       const resolution = await resolveRankingIdentities(
-        cache.players.map((row: any) => String(row.playerId ?? '')),
+        admittedCachePlayers.map((row: any) => String(row.playerId ?? '')),
         'gsis',
       );
-      const items = cache.players.map((row: any, idx: number) =>
+      // The production resolver treats an empty input as vacuously covered
+      // (`coverageRatio: 1`). That is sensible for its internal API but not
+      // for this public no-source envelope: no rows were admitted, so coverage
+      // must be the explicit zero fact rather than a perfect-resolution claim.
+      const identityCoverage = isCacheEmpty ? EMPTY_IDENTITY_COVERAGE : resolution.coverage;
+      const items = admittedCachePlayers.map((row: any, idx: number) =>
         mapForgeCacheRowToRankingsV2Item(
           row,
           idx + 1,
@@ -854,7 +928,10 @@ export function createRankingsV2Router(): Router {
       // layer answered.
       const emptyCacheDiagnostics =
         `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, ` +
-        `decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, position=${position}`;
+        `decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, position=${position}; ` +
+        `cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, ` +
+        `cacheRequestedAsOfWeek=${cache.requestedAsOfWeek ?? 'none'}, ` +
+        `weekSubstituted=${cache.weekSubstituted === true}`;
 
       const payload = {
         contractVersion: RANKINGS_V2_CONTRACT_VERSION,
@@ -868,7 +945,7 @@ export function createRankingsV2Router(): Router {
               {
                 layer: 'forge' as const,
                 source: 'api/forge/tiers cache (forge_grade_cache)',
-                asOf: toIso(cache.computedAt),
+                asOf: toIso(admittedComputedAt),
                 // score/value below are FORGE alpha/rawAlpha, NOT scoring-service Expected Points/VORP.
                 // scoringFallbackReason records why this layer is serving instead of the scoring service,
                 // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
@@ -877,8 +954,8 @@ export function createRankingsV2Router(): Router {
               {
                 layer: 'confidence_stability' as const,
                 source: 'forge cache confidence + trajectory metadata',
-                asOf: toIso(cache.computedAt),
-                notes: cache.computedAt
+                asOf: toIso(admittedComputedAt),
+                notes: admittedComputedAt
                   ? 'Freshness derived from cache computedAt.'
                   : 'No cache timestamp; using current server time as asOf fallback.',
               },
@@ -886,15 +963,19 @@ export function createRankingsV2Router(): Router {
         items,
         trust: {
           confidence: null,
-          asOf: toIso(cache.computedAt),
+          asOf: toIso(admittedComputedAt),
           freshnessNote: isCacheEmpty
-            ? 'FORGE grades are not computed yet for this week/filter.'
-            : cache.computedAt
+            ? cacheMismatchDiagnostics
+              ? 'FORGE cache rows were rejected because their week metadata did not match the resolved target.'
+              : 'FORGE grades are not computed yet for this week/filter.'
+            : admittedComputedAt
               ? 'Freshness based on forge cache computedAt.'
               : 'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
           // Public, read-only copy only — operator mutation instructions (e.g. which
           // endpoint recomputes grades) belong in operator/admin diagnostics, not here.
-          sampleNote: isCacheEmpty ? 'FORGE grades for this filter have not been computed yet. Please check back shortly.' : null,
+          sampleNote: isCacheEmpty
+            ? cacheMismatchDiagnostics ?? 'FORGE grades for this filter have not been computed yet. Please check back shortly.'
+            : null,
           stabilityNote: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
         },
         // `generatedAt` is the cache computation time; `evidenceSeason`/
@@ -905,7 +986,7 @@ export function createRankingsV2Router(): Router {
           phase,
           boardSeason: season,
           boardWeek: decisionTargetWeek ?? null,
-          boardWeekIsExplicit: Number.isFinite(requestedWeek),
+          boardWeekIsExplicit: weekIsExplicit,
           // `no_rankable_source` describes NOTHING about the football: an
           // empty cache is not a source that happens to omit its extent, it
           // is no source at all. Publishing the requested season alongside it
@@ -931,13 +1012,15 @@ export function createRankingsV2Router(): Router {
           evidenceProvenance: isCacheEmpty
             ? 'no_rankable_source'
             : cache.asOfWeek != null ? 'source_declared_as_of' : 'source_extent_unknown',
-          generatedAt: isCacheEmpty ? null : toIso(cache.computedAt),
+          generatedAt: isCacheEmpty ? null : toIso(admittedComputedAt),
           status: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
           statusDetail: isCacheEmpty
-            ? `FORGE grades for this filter have not been computed yet. ${emptyCacheDiagnostics}.`
+            ? cacheMismatchDiagnostics
+              ? `${cacheMismatchDiagnostics}. ${emptyCacheDiagnostics}.`
+              : `FORGE grades for this filter have not been computed yet. ${emptyCacheDiagnostics}.`
             : null,
         }),
-        identityCoverage: resolution.coverage,
+        identityCoverage,
       };
 
       const parsed = rankingsV2ResponseSchema.safeParse(payload);

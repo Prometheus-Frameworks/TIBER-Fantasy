@@ -274,10 +274,10 @@ const rankingsItemSchema = z.object({
 // a response missing them must reach the error state rather than let the UI fall
 // back to a guess — that guess is the #307 defect.
 export const seasonMetaSchema = z.object({
-  currentSeason: z.number(),
-  forwardRankingSeason: z.number(),
-  currentPhase: z.enum(['offseason', 'preseason', 'regular_season', 'postseason']),
-  currentPhaseLabel: z.string(),
+  currentSeason: z.number().nullable(),
+  forwardRankingSeason: z.number().nullable(),
+  currentPhase: z.enum(['offseason', 'preseason', 'regular_season', 'postseason']).nullable(),
+  currentPhaseLabel: z.string().nullable(),
   currentRegularSeasonWeek: z.number().nullable(),
   targetSeason: z.number().nullable(),
   targetWeek: z.number().nullable(),
@@ -327,6 +327,211 @@ export const seasonMetaSchema = z.object({
   status: z.string().nullable(),
   statusDetail: z.string().nullable(),
 }).superRefine((meta, ctx) => {
+  // Mirrors the server boundary: when the calendar is stale, all live
+  // season/phase/target facts are unavailable. In particular, a numeric
+  // `newest + 1` legacy sentinel must never be rendered as a real season.
+  if (meta.configStatus === 'stale_calendar_config') {
+    const staleLiveFacts: Array<[string, unknown]> = [
+      ['currentSeason', meta.currentSeason],
+      ['forwardRankingSeason', meta.forwardRankingSeason],
+      ['currentPhase', meta.currentPhase],
+      ['currentPhaseLabel', meta.currentPhaseLabel],
+      ['currentRegularSeasonWeek', meta.currentRegularSeasonWeek],
+      ['targetSeason', meta.targetSeason],
+      ['targetWeek', meta.targetWeek],
+      ['targetLabel', meta.targetLabel],
+      ['scheduleSource', meta.scheduleSource],
+      ['phaseTargetSeason', meta.phaseTargetSeason],
+      ['phaseTargetWeek', meta.phaseTargetWeek],
+      ['phaseTargetProvenance', meta.phaseTargetProvenance],
+    ];
+    for (const [field, value] of staleLiveFacts) {
+      if (value !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `configStatus "stale_calendar_config" requires ${field} to be null — live season state is unavailable.`,
+        });
+      }
+    }
+    if (meta.phaseTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phaseTargetIsProvisional'],
+        message: 'A stale calendar cannot publish a provisional phase target it did not resolve.',
+      });
+    }
+    if (meta.decisionTargetProvenance !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetProvenance'],
+        message: 'A stale calendar cannot publish schedule provenance for an explicit historical decision target.',
+      });
+    }
+    if (meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetIsProvisional'],
+        message: 'A stale calendar cannot publish a provisional decision target.',
+      });
+    }
+  } else {
+    const requiredLiveFacts: Array<[string, unknown]> = [
+      ['currentSeason', meta.currentSeason],
+      ['currentPhase', meta.currentPhase],
+      ['currentPhaseLabel', meta.currentPhaseLabel],
+    ];
+    for (const [field, value] of requiredLiveFacts) {
+      if (value === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `configStatus "ok" requires ${field} — live season state is available.`,
+        });
+      }
+    }
+    if (meta.targetSeason !== meta.phaseTargetSeason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetSeason'],
+        message: 'targetSeason and phaseTargetSeason must describe the same live phase target.',
+      });
+    }
+    if (meta.forwardRankingSeason !== meta.phaseTargetSeason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['forwardRankingSeason'],
+        message: 'forwardRankingSeason must equal phaseTargetSeason, including null when no forward target exists.',
+      });
+    }
+    if (meta.targetWeek !== meta.phaseTargetWeek) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetWeek'],
+        message: 'targetWeek and phaseTargetWeek must describe the same live phase target.',
+      });
+    }
+
+    const hasPhaseTargetSeason = meta.phaseTargetSeason !== null;
+    const hasPhaseTargetWeek = meta.phaseTargetWeek !== null;
+    if (hasPhaseTargetSeason !== hasPhaseTargetWeek) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasPhaseTargetSeason ? ['phaseTargetWeek'] : ['phaseTargetSeason'],
+        message: 'phaseTargetSeason and phaseTargetWeek must either both be present or both be null.',
+      });
+    } else if (!hasPhaseTargetSeason) {
+      const absentTargetFacts: Array<[string, unknown]> = [
+        ['targetLabel', meta.targetLabel],
+        ['scheduleSource', meta.scheduleSource],
+        ['phaseTargetProvenance', meta.phaseTargetProvenance],
+      ];
+      for (const [field, value] of absentTargetFacts) {
+        if (value !== null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: `A null phase target requires ${field} to be null.`,
+          });
+        }
+      }
+      if (meta.phaseTargetIsProvisional) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phaseTargetIsProvisional'],
+          message: 'A null phase target cannot be provisional.',
+        });
+      }
+    } else {
+      for (const [field, value] of [
+        ['targetLabel', meta.targetLabel],
+        ['scheduleSource', meta.scheduleSource],
+        ['phaseTargetProvenance', meta.phaseTargetProvenance],
+      ] as Array<[string, unknown]>) {
+        if (value === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: `A present phase target requires ${field}.`,
+          });
+        }
+      }
+      if (meta.phaseTargetProvenance !== null) {
+        const expectedScheduleSource = meta.phaseTargetProvenance === 'verified_schedule'
+          ? 'explicit_schedule'
+          : 'anchor_derived';
+        if (meta.scheduleSource !== expectedScheduleSource) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['scheduleSource'],
+            message: 'scheduleSource must agree with phaseTargetProvenance.',
+          });
+        }
+        const shouldBeProvisional = meta.phaseTargetProvenance === 'anchor_derived';
+        if (meta.phaseTargetIsProvisional !== shouldBeProvisional) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['phaseTargetIsProvisional'],
+            message: 'phaseTargetIsProvisional must agree with phaseTargetProvenance.',
+          });
+        }
+      }
+    }
+  }
+
+  if (meta.decisionTargetWeek !== null && meta.decisionTargetSeason === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['decisionTargetSeason'],
+      message: 'A present decisionTargetWeek requires a decisionTargetSeason.',
+    });
+  }
+
+  if (meta.decisionTargetWeek === null) {
+    const absentDecisionFacts: Array<[string, unknown]> = [
+      ['decisionTargetProvenance', meta.decisionTargetProvenance],
+      ['decisionTargetOrigin', meta.decisionTargetOrigin ?? null],
+    ];
+    for (const [field, value] of absentDecisionFacts) {
+      if (value !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `A null decisionTargetWeek requires ${field} to be null or absent.`,
+        });
+      }
+    }
+    if (meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetIsProvisional'],
+        message: 'A null decision target cannot be provisional.',
+      });
+    }
+  } else if (meta.decisionTargetOrigin === 'explicit_request') {
+    if (meta.decisionTargetProvenance !== null || meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetOrigin'],
+        message: 'An explicit request has no schedule provenance and is not provisional.',
+      });
+    }
+  } else if (meta.decisionTargetOrigin === 'phase_default') {
+    const matchesPhaseTarget =
+      meta.configStatus === 'ok' &&
+      meta.decisionTargetSeason === meta.phaseTargetSeason &&
+      meta.decisionTargetWeek === meta.phaseTargetWeek &&
+      meta.decisionTargetProvenance === meta.phaseTargetProvenance &&
+      meta.decisionTargetIsProvisional === meta.phaseTargetIsProvisional;
+    if (!matchesPhaseTarget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetOrigin'],
+        message: 'A phase-default decision target must exactly match the available live phase target.',
+      });
+    }
+  }
+
   // Mirrors the invariant enforced in `rankingsV2SeasonMetaSchema` in
   // server/contracts/rankingsV2.ts. `no_rankable_source` means nothing was
   // admitted, so a response contradicting that (an evidence season/week/
@@ -369,6 +574,7 @@ export type RankingsSeasonMeta = z.infer<typeof seasonMetaSchema>;
  */
 export function resolveSeasonPhaseHeadline(meta: RankingsSeasonMeta): string {
   if (meta.configStatus === 'stale_calendar_config') return 'Season state unavailable';
+  if (meta.currentPhaseLabel === null) return 'Season state unavailable';
   return meta.targetLabel ? `${meta.currentPhaseLabel} — ${meta.targetLabel}` : meta.currentPhaseLabel;
 }
 
@@ -394,7 +600,9 @@ export function resolveArchiveNotice(meta: RankingsSeasonMeta): string | null {
   if (!meta.isArchiveView) return null;
   return (
     meta.statusDetail ??
-    `Showing ${meta.evidenceSeason} evidence while the league is in ${meta.currentPhaseLabel}.`
+    (meta.currentPhaseLabel === null
+      ? `Showing ${meta.evidenceSeason} evidence while live season state is unavailable.`
+      : `Showing ${meta.evidenceSeason} evidence while the league is in ${meta.currentPhaseLabel}.`)
   );
 }
 
@@ -410,6 +618,7 @@ const rankingsV2WeeklyResponseSchema = z
     sourceStack: z.array(rankingsSourceStackItemSchema),
     trust: z
       .object({
+        freshnessNote: z.string().nullable().optional(),
         sampleNote: z.string().nullable().optional(),
         stabilityNote: z.string().nullable().optional(),
       })
@@ -449,11 +658,20 @@ const rankingsV2WeeklyResponseSchema = z
     // ranks" headline for a response that answered nothing. Guarded on
     // presence first — a legacy response with no seasonMeta at all makes no
     // provenance claim to check.
-    if (response.seasonMeta?.evidenceProvenance === 'no_rankable_source' && response.sourceStack.length > 0) {
+    if (response.seasonMeta?.evidenceProvenance !== 'no_rankable_source') return;
+
+    if (response.sourceStack.length > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['sourceStack'],
         message: 'evidenceProvenance "no_rankable_source" requires an empty sourceStack — no layer produced admitted rows.',
+      });
+    }
+    if (response.items.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['items'],
+        message: 'evidenceProvenance "no_rankable_source" requires empty items — no rankable rows were admitted.',
       });
     }
   });
@@ -539,6 +757,44 @@ export const EXACT_WEEK_UNAVAILABLE_STATUS = 'exact_week_evidence_unavailable';
  * `SEASON_CONFIG_STALE_STATUS`, pinned together in the suite.
  */
 export const SEASON_CONFIG_STALE_STATUS = 'season_calendar_config_stale';
+export const CACHE_EMPTY_STATUS = 'forge_cache_empty_uncomputed';
+export const CACHE_ROWS_REJECTED_FRESHNESS_NOTE =
+  'FORGE cache rows were rejected because their week metadata did not match the resolved target.';
+export const TIERS_CACHE_UNCOMPUTED_MESSAGE =
+  'FORGE grades for this filter have not been computed yet. Please check back shortly.';
+
+/**
+ * User-safe copy for an unavailable FORGE response.
+ *
+ * The backend's full status detail is diagnostic text, so it is never rendered
+ * wholesale. A rejection is recognised by the named freshness literal and a
+ * strict numeric/boolean prefix; only those parsed values are reconstructed
+ * into display copy. Ordinary empty-cache responses keep the established
+ * "not computed yet" message.
+ */
+export function resolveCacheUnavailableMessage(response: {
+  trust?: { freshnessNote?: string | null; stabilityNote?: string | null } | null;
+  seasonMeta?: { statusDetail?: string | null } | null;
+} | null | undefined): string {
+  if (
+    response?.trust?.stabilityNote !== CACHE_EMPTY_STATUS ||
+    response.trust.freshnessNote !== CACHE_ROWS_REJECTED_FRESHNESS_NOTE
+  ) {
+    return TIERS_CACHE_UNCOMPUTED_MESSAGE;
+  }
+
+  const match = response.seasonMeta?.statusDetail?.match(
+    /^FORGE cache rows were rejected for resolved target (\d+): declaredAsOfWeek=(\d+|none), requestedAsOfWeek=(\d+|none), weekSubstituted=(true|false)\./,
+  );
+  if (!match) return CACHE_ROWS_REJECTED_FRESHNESS_NOTE;
+
+  const [, targetWeek, declaredWeek, requestedWeek, substituted] = match;
+  return (
+    `FORGE cache rows were rejected because they did not match target week ${targetWeek} ` +
+    `(cache week ${declaredWeek}, requested week ${requestedWeek}, substitution flag ${substituted}). ` +
+    'No mismatched rankings were shown.'
+  );
+}
 
 /**
  * Distinct from both the uncomputed-cache copy and the empty-filter copy.

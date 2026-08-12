@@ -774,3 +774,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added mounted player-route, cache mutation, collision, outage, contract-negotiation, contradictory-render, and composite-row-key regressions.
 - Validation: eight focused suites 152/152 with coverage disabled; build passed with the existing OLC warning; reviewed-head typecheck stayed at 505 diagnostics with zero new touched-file errors; diff check passed.
 - Operator gate: no database census or production coverage was claimed without `DATABASE_URL`; uniqueness/migration activation still requires an operator-recorded census and cohort review.
+
+### 2026-08-12 — Rankings v2 Rev16 season/cache honesty corrections
+- Made resolved phase/default weeks exact, retained newest-cache behavior only for genuinely weekless history, and rejected substituted/mismatched cache rows with explicit-versus-phase-default status honesty.
+- Nulled stale and no-forward-target live facts, enforced coherent phase/decision tuples plus the complete zero `no_rankable_source` invariant, and added safe UI copy for rejected-cache responses.
+- Validation: five focused suites 225/225; full branch 125 suites/1288 passing with the same seven baseline suite failures as base (125/1245); build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics; diff check passed.
+- No merge, deployment, readiness change, contract-version bump, or unrelated scope mutation.

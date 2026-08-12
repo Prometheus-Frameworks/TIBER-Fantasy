@@ -6,12 +6,16 @@ import {
   isExactWeekUnavailable,
   isCalendarUnavailable,
   mapRankingsV2ItemsToTiersPlayers,
+  CACHE_ROWS_REJECTED_FRESHNESS_NOTE,
   RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   resolveRankingsSourceView,
+  resolveCacheUnavailableMessage,
   resolveRequestedSeason,
+  seasonMetaSchema,
   resolveTiersHeadline,
   resolveTiersViewState,
   TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
+  TIERS_CACHE_UNCOMPUTED_MESSAGE,
   TIERS_STALE_CALENDAR_MESSAGE,
   TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE,
   validateRankingsV2WeeklyResponse,
@@ -342,6 +346,35 @@ describe('resolveTiersViewState', () => {
   });
 });
 
+describe('resolveCacheUnavailableMessage', () => {
+  it('renders parsed rejection facts only for the named rejection freshness signal', () => {
+    const message = resolveCacheUnavailableMessage({
+      trust: {
+        stabilityNote: 'forge_cache_empty_uncomputed',
+        freshnessNote: CACHE_ROWS_REJECTED_FRESHNESS_NOTE,
+      },
+      seasonMeta: {
+        statusDetail:
+          'FORGE cache rows were rejected for resolved target 11: ' +
+          'declaredAsOfWeek=7, requestedAsOfWeek=11, weekSubstituted=false. private diagnostic suffix',
+      },
+    });
+
+    expect(message).toMatch(/rejected/i);
+    expect(message).toMatch(/target week 11/i);
+    expect(message).toMatch(/cache week 7/i);
+    expect(message).not.toMatch(/private diagnostic suffix/i);
+    expect(message).not.toMatch(/not been computed yet/i);
+  });
+
+  it('keeps ordinary empty-cache copy and does not render arbitrary status detail', () => {
+    expect(resolveCacheUnavailableMessage({
+      trust: { stabilityNote: 'forge_cache_empty_uncomputed', freshnessNote: 'ordinary empty cache' },
+      seasonMeta: { statusDetail: 'do not render this backend detail' },
+    })).toBe(TIERS_CACHE_UNCOMPUTED_MESSAGE);
+  });
+});
+
 describe('resolveRequestedSeason', () => {
   const CONFIGURED = [2025, 2026];
 
@@ -481,8 +514,8 @@ describe('validateRankingsV2WeeklyResponse', () => {
   decisionTargetWeek: 1,
   decisionTargetProvenance: 'anchor_derived' as const,
   decisionTargetIsProvisional: true,
-  phaseTargetSeason: 2025,
-  phaseTargetWeek: 12,
+  phaseTargetSeason: 2026,
+  phaseTargetWeek: 1,
   phaseTargetProvenance: 'anchor_derived',
   phaseTargetIsProvisional: true,
   evidenceThroughSeason: 2025,
@@ -582,6 +615,126 @@ describe('validateRankingsV2WeeklyResponse', () => {
       expect(validateRankingsV2WeeklyResponse(wellFormed)).toEqual(wellFormed);
       expect(validateRankingsV2WeeklyResponse(wellFormed).seasonMeta).toEqual(SEASON_META);
     });
+  });
+
+  describe('nullable live metadata is a stale/no-forward-target state, never an unguarded widening', () => {
+    const stale = {
+      ...SEASON_META,
+      currentSeason: null,
+      forwardRankingSeason: null,
+      currentPhase: null,
+      currentPhaseLabel: null,
+      currentRegularSeasonWeek: null,
+      targetSeason: null,
+      targetWeek: null,
+      targetLabel: null,
+      scheduleSource: null,
+      configStatus: 'stale_calendar_config' as const,
+      decisionTargetSeason: 2025,
+      decisionTargetWeek: 18,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      decisionTargetOrigin: 'explicit_request' as const,
+      phaseTargetSeason: null,
+      phaseTargetWeek: null,
+      phaseTargetProvenance: null,
+      phaseTargetIsProvisional: false,
+    };
+
+    it('accepts truthful stale nulls and rejects each synthetic season/phase leak', () => {
+      expect(seasonMetaSchema.safeParse(stale).success).toBe(true);
+      for (const [field, value] of [
+        ['currentSeason', 2027],
+        ['forwardRankingSeason', 2027],
+        ['currentPhase', 'offseason'],
+        ['currentPhaseLabel', '2027 · Offseason'],
+      ] as const) {
+        expect(seasonMetaSchema.safeParse({ ...stale, [field]: value }).success).toBe(false);
+      }
+    });
+
+    it('rejects null current facts while config is ok and enforces forward-target coherence', () => {
+      for (const field of ['currentSeason', 'currentPhase', 'currentPhaseLabel'] as const) {
+        expect(seasonMetaSchema.safeParse({ ...SEASON_META, [field]: null }).success).toBe(false);
+      }
+      expect(seasonMetaSchema.safeParse({ ...SEASON_META, forwardRankingSeason: null }).success).toBe(false);
+      expect(seasonMetaSchema.safeParse({
+        ...SEASON_META,
+        forwardRankingSeason: null,
+        targetSeason: null,
+        targetWeek: null,
+        targetLabel: null,
+        phaseTargetSeason: null,
+        phaseTargetWeek: null,
+        phaseTargetProvenance: null,
+        phaseTargetIsProvisional: false,
+        scheduleSource: null,
+      }).success).toBe(true);
+      expect(seasonMetaSchema.safeParse({
+        ...SEASON_META,
+        forwardRankingSeason: null,
+        targetSeason: null,
+        targetWeek: null,
+        targetLabel: null,
+        phaseTargetSeason: null,
+        phaseTargetWeek: null,
+        phaseTargetProvenance: null,
+        phaseTargetIsProvisional: false,
+        scheduleSource: 'anchor_derived',
+      }).success).toBe(false);
+    });
+
+    it('mirrors phase/decision tuple coherence at the client boundary', () => {
+      const phaseDefault = {
+        ...SEASON_META,
+        decisionTargetOrigin: 'phase_default' as const,
+      };
+      expect(seasonMetaSchema.safeParse(phaseDefault).success).toBe(true);
+      for (const mutated of [
+        { ...phaseDefault, targetWeek: 2 },
+        { ...phaseDefault, phaseTargetWeek: null },
+        { ...phaseDefault, targetLabel: null },
+        { ...phaseDefault, scheduleSource: 'explicit_schedule' },
+        { ...phaseDefault, decisionTargetSeason: null },
+        { ...phaseDefault, decisionTargetWeek: 2 },
+        { ...phaseDefault, decisionTargetOrigin: 'explicit_request' },
+      ]) {
+        expect(seasonMetaSchema.safeParse(mutated).success).toBe(false);
+      }
+    });
+
+    it('stale metadata cannot publish decision schedule provenance or provisionality', () => {
+      expect(seasonMetaSchema.safeParse({
+        ...stale,
+        decisionTargetProvenance: 'anchor_derived',
+      }).success).toBe(false);
+      expect(seasonMetaSchema.safeParse({
+        ...stale,
+        decisionTargetIsProvisional: true,
+      }).success).toBe(false);
+    });
+  });
+
+  it('rejects rows and source claims when present seasonMeta says no_rankable_source', () => {
+    const noRankableMeta = {
+      ...SEASON_META,
+      evidenceSeason: null,
+      evidenceWeek: null,
+      decisionTargetSeason: null,
+      decisionTargetWeek: null,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      decisionTargetOrigin: null,
+      evidenceThroughSeason: null,
+      evidenceThroughWeek: null,
+      evidenceProvenance: 'no_rankable_source' as const,
+      generatedAt: null,
+      isArchiveView: false,
+    };
+    const base = { ...wellFormed, seasonMeta: noRankableMeta, sourceStack: [], items: [] };
+    expect(() => validateRankingsV2WeeklyResponse(base)).not.toThrow();
+    expect(() => validateRankingsV2WeeklyResponse({ ...base, sourceStack: [{ layer: 'forge' }] })).toThrow();
+    expect(() => validateRankingsV2WeeklyResponse({ ...base, items: [wellFormedItem] })).toThrow();
   });
 
   it.each([

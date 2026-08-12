@@ -15,6 +15,7 @@ import {
   RankingsV2Item,
   RankingsSeasonMeta,
   resolveArchiveNotice,
+  resolveCacheUnavailableMessage,
   resolveEvidenceLine,
   resolveRankingsSourceView,
   resolveSeasonPhaseHeadline,
@@ -38,6 +39,7 @@ export interface TiersApiResponse {
   asOf: string;
   sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
+    freshnessNote?: string | null;
     sampleNote?: string | null;
     stabilityNote?: string | null;
   } | null;
@@ -141,6 +143,7 @@ export function TiberTiersView({
   const showMetaLine = viewState === 'data' || viewState === 'empty';
   const seasonMeta = data?.seasonMeta ?? null;
   const archiveNotice = seasonMeta ? resolveArchiveNotice(seasonMeta) : null;
+  const cacheUnavailableMessage = resolveCacheUnavailableMessage(data);
 
   return (
     <TooltipProvider>
@@ -214,7 +217,13 @@ export function TiberTiersView({
                   data-testid={`season-${option}`}
                 >
                   {option}
-                  {seasonMeta && option !== seasonMeta.forwardRankingSeason ? ' · archive' : ''}
+                  {seasonMeta &&
+                  (seasonMeta.forwardRankingSeason === null
+                    ? seasonMeta.configStatus === 'stale_calendar_config' ||
+                      (seasonMeta.currentSeason !== null && option !== seasonMeta.currentSeason)
+                    : option !== seasonMeta.forwardRankingSeason)
+                    ? ' · archive'
+                    : ''}
                 </button>
               ))}
             </div>
@@ -306,10 +315,12 @@ export function TiberTiersView({
                 ) : null}
               </div>
             ) : viewState === 'unavailable' ? (
-              <div className="p-10 text-center">
+              <div className="p-10 text-center" data-testid="tiers-cache-unavailable">
                 <div className="text-lg font-semibold text-amber-300 mb-2">Rankings are not available yet</div>
                 {/* Public, read-only copy only — no operator/admin mutation instructions here. */}
-                <p className="text-slate-400 text-sm">FORGE grades for this filter have not been computed yet. Please check back shortly.</p>
+                <p className="text-slate-400 text-sm" data-testid="tiers-cache-unavailable-detail">
+                  {cacheUnavailableMessage}
+                </p>
               </div>
             ) : viewState === 'empty' ? (
               <div className="p-10 text-center text-slate-400">No players match this filter yet.</div>
@@ -468,6 +479,13 @@ export default function TiberTiers() {
   // selection has no forward target and sends no week, letting the server
   // derive that season's own extent.
   const decisionTargetWeek = season !== null && season === targetSeason ? targetWeek : null;
+  const decisionTargetOrigin =
+    season !== null &&
+    decisionTargetWeek !== null &&
+    season === targetSeason &&
+    decisionTargetWeek === targetWeek
+      ? 'phase_default'
+      : null;
 
   // The exact retained list, not a synthesized `[current-1, current]` pair —
   // that synthesis went blank the moment `detectedSeason` went null under a
@@ -481,7 +499,9 @@ export default function TiberTiers() {
     // from a later stale-calendar season-null request. Without it, React Query
     // can reuse the initial cached response during a mounted fresh → stale
     // transition and never ask the route for its typed unavailable payload.
-    queryKey: ['/api/rankings/v2/weekly', season, position, decisionTargetWeek, configStatus],
+    queryKey: [
+      '/api/rankings/v2/weekly', season, position, decisionTargetWeek, decisionTargetOrigin, configStatus,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({ position, limit: '75' });
       if (season !== null) params.set('season', String(season));
@@ -489,6 +509,7 @@ export default function TiberTiers() {
       // preserved); the VALUE is the decision target, and the server publishes
       // the evidence extent separately in seasonMeta.
       if (decisionTargetWeek !== null) params.set('asOfWeek', String(decisionTargetWeek));
+      if (decisionTargetOrigin !== null) params.set('targetOrigin', decisionTargetOrigin);
       const url = `/api/rankings/v2/weekly?${params.toString()}`;
       const res = await fetch(url);
       if (!res.ok) {
