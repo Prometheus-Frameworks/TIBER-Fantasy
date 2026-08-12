@@ -164,6 +164,28 @@ export interface PlayerSpecificStaticEvidenceSelection {
   duplicatePlayerIds: string[];
   /** IDs whose raw spelling is not the closed, canonical artifact spelling. */
   nonCanonicalPlayerIds: string[];
+  /** Zero-based rows the promoted adapter would reject for having no ID. */
+  missingPlayerIdRows: number[];
+}
+
+const ADAPTER_PLAYER_ID_KEYS = [
+  'player_id',
+  'playerId',
+  'canonical_player_id',
+  'canonicalPlayerId',
+  'tiber_id',
+  'tiberId',
+] as const;
+
+function resolveAdapterPlayerId(row: any): { raw: string; normalized: string } | null {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+  for (const key of ADAPTER_PLAYER_ID_KEYS) {
+    const value = row[key];
+    if (typeof value === 'string' && value.trim()) {
+      return { raw: value, normalized: value.trim() };
+    }
+  }
+  return null;
 }
 
 /**
@@ -176,13 +198,14 @@ export interface PlayerSpecificStaticEvidenceSelection {
  * audit also requires the raw `forge_alpha` used by that comparison to be a
  * finite number; it does not silently normalize strings or alternate fields.
  *
- * Duplicate eligible IDs fail closed at the caller. Duplicate detection uses
- * the promoted adapter's trimmed identity key, but this audit does not silently
- * normalize the upstream row: any surrounding whitespace is separately fatal
- * and that row cannot enter the evidence comparison. Returning a de-duplicated
- * row collection prevents the diagnostic intersection itself from being
- * inflated while the reported identity problems preserve why the comparison
- * must remain unavailable.
+ * Duplicate eligible IDs fail closed at the caller. Artifact-wide identity
+ * validation mirrors the promoted adapter's supported key precedence and
+ * trimmed identity key, but this audit does not silently normalize an alias or
+ * whitespace-bearing upstream row into evidence: only a canonical raw
+ * `player_id` can enter the comparison. Returning a de-duplicated row
+ * collection prevents the diagnostic intersection itself from being inflated
+ * while the reported identity problems preserve why the comparison must remain
+ * unavailable.
  */
 export function selectPlayerSpecificStaticEvidenceRows(
   staticRows: readonly any[],
@@ -193,14 +216,24 @@ export function selectPlayerSpecificStaticEvidenceRows(
   // an admitted ID look unique after filtering.
   const normalizedIdCounts = new Map<string, number>();
   const nonCanonicalPlayerIds = new Set<string>();
-  for (const row of staticRows) {
-    if (typeof row?.player_id !== 'string') continue;
-    const normalizedId = row.player_id.trim();
-    if (row.player_id !== normalizedId) {
-      nonCanonicalPlayerIds.add(normalizedId || '<empty>');
+  const missingPlayerIdRows: number[] = [];
+  for (const [index, row] of staticRows.entries()) {
+    const resolvedId = resolveAdapterPlayerId(row);
+    if (!resolvedId) {
+      missingPlayerIdRows.push(index);
+      const hasWhitespaceOnlyAlias = ADAPTER_PLAYER_ID_KEYS.some((key) =>
+        typeof row?.[key] === 'string' && row[key] !== '' && row[key].trim() === '',
+      );
+      if (hasWhitespaceOnlyAlias) nonCanonicalPlayerIds.add('<empty>');
+      continue;
     }
-    if (normalizedId === '') continue;
-    normalizedIdCounts.set(normalizedId, (normalizedIdCounts.get(normalizedId) ?? 0) + 1);
+    if (resolvedId.raw !== resolvedId.normalized) {
+      nonCanonicalPlayerIds.add(resolvedId.normalized);
+    }
+    normalizedIdCounts.set(
+      resolvedId.normalized,
+      (normalizedIdCounts.get(resolvedId.normalized) ?? 0) + 1,
+    );
   }
 
   const eligible = staticRows.filter((row) =>
@@ -229,6 +262,7 @@ export function selectPlayerSpecificStaticEvidenceRows(
       .map(([id]) => id)
       .sort(),
     nonCanonicalPlayerIds: [...nonCanonicalPlayerIds].sort(),
+    missingPlayerIdRows,
   };
 }
 
@@ -265,6 +299,9 @@ export function planStaticEvidenceComparison(
       ),
       ...selection.nonCanonicalPlayerIds.map(
         (id) => `non-canonical player_id whitespace in the static artifact: ${id}`,
+      ),
+      ...selection.missingPlayerIdRows.map(
+        (index) => `static artifact row ${index} has no adapter-resolvable player ID`,
       ),
     ],
   };

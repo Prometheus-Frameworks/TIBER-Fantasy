@@ -796,3 +796,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Whitespace-bearing upstream IDs are not normalized into evidence: they are excluded and produce a separate fail-closed blocker, including whitespace-only values.
 - Added outcome-level cases for baseline and malformed-alpha twins, lone whitespace evidence, and whitespace-only IDs.
 - Validation: focused audit 266/266; full branch 119 suites/1,321 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison adapter-ID aliases
+- Artifact-wide validity and duplicate diagnostics now resolve the adapter's six supported player-ID keys in exact trim-and-skip precedence before evidence filtering.
+- Missing/unresolvable IDs fail explicitly; aliases and normalized IDs are never substituted into the evidence comparison, which remains strict raw `player_id` only.
+- Added outcome coverage for all aliases, baseline/invalid-alpha twins, precedence, false-duplicate controls, malformed rows, and Unicode whitespace parity; malformed all-static diagnostics no longer crash the audit.
+- Validation: audit 294/294 plus adapter 11/11; full branch 119 suites/1,349 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.

@@ -238,13 +238,17 @@ function auditComparability(rows: LiveRow[], staticArtifact: any) {
   // zero intersection. Only contract-admitted player-specific rows may create
   // that intersection; baseline/default/unknown rows remain diagnostics only.
   const liveIds = new Set(rows.map((r) => r.sourceId));
-  const staticIds = staticRows.map((r) => r.player_id);
+  const staticIds = staticRows.map((r) =>
+    typeof r?.player_id === 'string' ? r.player_id : '',
+  );
   const comparisonPlan = planStaticEvidenceComparison(staticRows, liveIds);
   const evidenceRows = comparisonPlan.evidenceRows;
 
   const nameCounts = new Map<string, number>();
   for (const row of staticRows) {
-    const key = normaliseName(row.player_name);
+    const key = normaliseName(
+      typeof row?.player_name === 'string' ? row.player_name : '',
+    );
     nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
   }
   const ambiguousNames = Array.from(nameCounts.entries()).filter(([, n]) => n > 1);

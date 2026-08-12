@@ -323,6 +323,7 @@ describe('comparability', () => {
       expect(selected.rows).toEqual([]);
       expect(selected.duplicatePlayerIds).toEqual([]);
       expect(selected.nonCanonicalPlayerIds).toEqual([]);
+      expect(selected.missingPlayerIdRows).toEqual([]);
     });
 
     test('mixed artifacts admit only strict finite player-specific rows', () => {
@@ -431,6 +432,235 @@ describe('comparability', () => {
       expect(plan.evidenceRows).toEqual([admitted]);
       expect(plan.directIdIntersection).toBe(1);
       expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*<empty>/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/row 1 has no adapter-resolvable player ID/);
+    });
+
+    const alternateIdAliases = [
+      'playerId',
+      'canonical_player_id',
+      'canonicalPlayerId',
+      'tiber_id',
+      'tiberId',
+    ] as const;
+
+    test.each(alternateIdAliases.flatMap((alias) => [
+      [alias, 'generated_baseline', 99],
+      [alias, 'player_specific', Number.NaN],
+    ] as const))(
+      'adapter alias %s with %s participates in normalized duplicate detection',
+      (alias, source, alpha) => {
+        const admitted = row('00-0000001', 'player_specific', 50);
+        const aliasTwin = {
+          [alias]: ' 00-0000001 ',
+          forge_alpha: alpha,
+          provenance: { score_source: source },
+        };
+        const plan = planStaticEvidenceComparison(
+          [admitted, aliasTwin],
+          new Set(['00-0000001']),
+        );
+        expect(plan.evidenceRows).toEqual([admitted]);
+        expect(plan.directIdIntersection).toBe(1);
+        expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+        expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+      },
+    );
+
+    test('adapter alias precedence skips a whitespace-only player_id before playerId', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            player_id: ' \t ',
+            playerId: '00-0000001',
+            forge_alpha: 99,
+            provenance: { score_source: 'generated_baseline' },
+          },
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/non-canonical player_id whitespace/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/no adapter-resolvable player ID/);
+    });
+
+    test('adapter alias precedence skips a non-string player_id before playerId', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            player_id: 123,
+            playerId: '00-0000001',
+            forge_alpha: 99,
+            provenance: { score_source: 'generated_baseline' },
+          },
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/no adapter-resolvable player ID/);
+    });
+
+    test('the first adapter-supported nonempty alias owns collision identity', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            player_id: ' 00-0000001 ',
+            playerId: '00-9999999',
+            forge_alpha: 99,
+            provenance: { score_source: 'generated_baseline' },
+          },
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/00-9999999/);
+    });
+
+    test('an ignored lower-precedence alias cannot invent a duplicate', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            playerId: '00-0000002',
+            canonical_player_id: '00-0000001',
+            forge_alpha: 99,
+            provenance: { score_source: 'generated_baseline' },
+          },
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test('an alias-only player-specific row cannot enter the strict raw comparison', () => {
+      const plan = planStaticEvidenceComparison(
+        [{
+          playerId: '00-0000001',
+          forge_alpha: 50,
+          provenance: { score_source: 'player_specific' },
+        }],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([]);
+      expect(plan.directIdIntersection).toBe(0);
+      expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+      expect(plan.joinBlockers.join(' ')).not.toMatch(/no adapter-resolvable player ID/);
+    });
+
+    test('a distinct alias-only player-specific row cannot inflate a valid intersection', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            playerId: '00-0000002',
+            forge_alpha: 60,
+            provenance: { score_source: 'player_specific' },
+          },
+        ],
+        new Set(['00-0000001', '00-0000002']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers).toEqual([]);
+    });
+
+    test('an alias-only player-specific row colliding with raw evidence is still fatal', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [
+          admitted,
+          {
+            playerId: '00-0000001',
+            forge_alpha: 60,
+            provenance: { score_source: 'player_specific' },
+          },
+        ],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+    });
+
+    test('a row with no adapter-resolvable player ID blocks the artifact', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, { forge_alpha: 99, provenance: { score_source: 'generated_baseline' } }],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/row 1 has no adapter-resolvable player ID/);
+    });
+
+    test.each([
+      ['null row', null],
+      ['array row', []],
+      ['primitive row', '00-0000002'],
+      ['object-valued alias', { player_id: { value: '00-0000002' } }],
+      ['nested-only alias', { identity: { player_id: '00-0000002' } }],
+      ['all aliases empty/non-string', {
+        player_id: '',
+        playerId: '   ',
+        canonical_player_id: null,
+        canonicalPlayerId: 123,
+        tiber_id: {},
+        tiberId: [],
+      }],
+    ])('%s is an explicit invalid-ID blocker', (_label, malformed) => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, malformed],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/row 1 has no adapter-resolvable player ID/);
+    });
+
+    test.each([
+      ['NBSP', '\u00a0'],
+      ['EM SPACE', '\u2003'],
+      ['BOM', '\ufeff'],
+    ])('%s around an alias follows adapter trim semantics', (_label, whitespace) => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, {
+          playerId: `${whitespace}00-0000001${whitespace}`,
+          forge_alpha: 99,
+          provenance: { score_source: 'generated_baseline' },
+        }],
+        new Set(['00-0000001']),
+      );
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+    });
+
+    test('ZWSP remains literal on both the adapter and audit sides', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, {
+          playerId: '\u200b00-0000001\u200b',
+          forge_alpha: 99,
+          provenance: { score_source: 'generated_baseline' },
+        }],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers).toEqual([]);
     });
   });
 
