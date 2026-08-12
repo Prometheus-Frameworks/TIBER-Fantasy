@@ -7,6 +7,16 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### Unreleased — 2026-08-09: Rankings season-honesty review corrections
+- **Branch:** `codex/pr311-correction-round`
+- **Summary:** Closed the remaining Fantasy #307 Phase A review findings across postseason defaults/archive labels and stale-calendar API/UI behavior, including a real mounted fresh-to-stale container regression.
+- **Key Files:**
+  - `client/src/pages/TiberTiers.tsx` — forward-season archive suffix, retained-selection fail-close, stale-aware query key, calendar-specific unavailable render
+  - `client/src/pages/tiberTiersV2Mapper.ts` — distinct calendar-unavailable state and public copy
+  - `server/routes/rankingsV2Routes.ts` — target-season default and configured-history-only stale gate
+  - focused container, rendered-output, mapper, and Express-route regressions
+- **Validation:** Eight focused suites passed 128/128 with `--coverage=false`; build passed with the existing OLC warning; typecheck stayed at the reviewed head's 505 diagnostics with zero new normalized errors; diff check passed.
+
 ## Completed Tasks
 
 ### Unreleased — 2026-07-31: Active Node admin route authentication hardening
@@ -764,3 +774,115 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Collapsed architecture, guardrails, provenance, exports, and raw JSON behind disclosures; removed the prefilled note and unmeasured declared-system status badges.
 - Preserved the deterministic client-side heuristic, truthful Teamstate live status, explicit unavailable states, export formats, and no-write/no-ranking boundary.
 - Validation: focused Observatory Jest suite 22/22 ✅; full production build ✅ with the existing OLC duplicate-member warning; `git diff --check` ✅; repo-wide typecheck ⚠️ existing unrelated backlog, no `StressLab.tsx` error.
+
+### 2026-08-12 — Observatory current-main integration and accessibility hardening
+- Integrated current main without dropping the redesign or main's contrast correction.
+- Repaired Observatory text, field, and outline-button contrast; preserved semantic hierarchy with the governed dark-shell tokens.
+- Cleared stale review output on input/example changes and added semantic headings/live regions.
+- Validation: focused Observatory/contrast/outline suites 85/85; deployment-equivalent build passed with baseline warnings; typecheck stayed at 505 baseline diagnostics with no Observatory match; diff check passed.
+### 2026-08-09 — Rankings v2 canonical identity boundary corrections
+- Resolved ranking producer IDs under explicit GSIS provenance before any canonical lookup, with duplicate and query-outage states that remain visible but never link.
+- Bumped Rankings v2 to `v2-canonical-identity-2026-08-09`; server and client schemas now enforce coherent canonical/resolved/unresolved states and equal canonical link keys.
+- Added mounted player-route, cache mutation, collision, outage, contract-negotiation, contradictory-render, and composite-row-key regressions.
+- Validation: eight focused suites 152/152 with coverage disabled; build passed with the existing OLC warning; reviewed-head typecheck stayed at 505 diagnostics with zero new touched-file errors; diff check passed.
+- Operator gate: no database census or production coverage was claimed without `DATABASE_URL`; uniqueness/migration activation still requires an operator-recorded census and cohort review.
+
+### 2026-08-12 — FORGE cache-audit governed Markdown verification
+- Added one bounded governed-document tokenizer shared by section discovery and boundaries, with fence/indent/container awareness, ATX and Setext headings, physical escaped-pipe handling, and fail-closed unsupported inline/HTML syntax.
+- Manifest-bound checks now cover exact §3 identity, §4.3 declared bounds and observed clamping, and §5.2 summary/top-five disagreement schemas, rows, values, qualitative templates, and total table counts.
+- Preserved the frozen cohort and manifest bytes; only the report's blank §3 header became explicit `measure | value`.
+- Validation: focused audit Jest suite 190/190; an independent finite replay rejected all 33 prior structural bypass probes and accepted seven inert-code controls; full branch 119 suites/1,240 passing with the same seven baseline suite failures as base (119/1,165); real committed-artifact `--check` passed; build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics with no changed-file matches; `git diff --check` passed; frozen cohort/manifest/static bytes stayed unchanged and the cohort digest remained `118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106`.
+
+### 2026-08-12 — FORGE cache-audit §5.2 narrative binding
+- Added a narrow manifest-derived exact-agreement sentence contract for §5.2 and reject any second visible prose claim rooted at `artifacts agree exactly on`.
+- Reused the existing bounded governed-document rules; fenced and indented code remain inert, while bounded inline presentation cannot hide a same-root contradiction. No general Markdown or arbitrary-English contradiction parser is claimed.
+- Split the governed report sentence into its own paragraph and removed the adjacent redundant ungoverned spread result.
+- Validation: focused audit Jest suite 196/196, including reference-link and strikethrough fail-closed regressions; real committed-artifact `--check` passed; `git diff --check` passed; frozen cohort, manifest, and static artifact retained SHA-256 `118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106`, `8b317b1376ab2ae18f06137730730968efa36f053e43e294b57053f13a58df7a`, and `de0e2c19a7054653c460b9b8597b620d37084b5407d035afb97310c694cd1cf9`.
+
+### 2026-08-12 — FORGE cache-audit rendered narrative boundaries
+- Replaced the custom §5.2 prose block scan with pinned Marked GFM tokens while leaving the existing governed section/table tokenizer authoritative and unchanged.
+- Paragraphs, headings, tight lists, blockquotes, Setext headings, thematic breaks, and fences now follow rendered block boundaries; code and tables remain inert narrative examples.
+- Inline text uses per-token HTML5 decoding for prose and one whole-attribute decode for image alt text, preventing both hidden visible claims and cross-presentation entity invention. Image alt text and strikethrough remain fail-closed as the sole governed sentence.
+- Added accumulated adversarial regressions for container boundaries, soft/hard breaks, nested fence exits, tight-list text, entities across inline/image presentation, and image-alt emphasis/link/code/deletion.
+- Validation: focused audit 246/246; real `--check`, build, and diff check pass; typecheck remains the exact 505-diagnostic baseline with no audit-file matches; final independent differential replay matched 768 ordinary-inline and 832 image-alt forms against actual Marked/DOM visibility; cohort/manifest/static bytes and hashes unchanged.
+- Development-only dependencies are exact-pinned (`marked@15.0.12`, `entities@4.5.0`) with minimal lockfile change. No report, runtime, deployment, readiness, or governed-artifact mutation.
+
+### 2026-08-12 — FORGE static comparison evidence admission
+- Added one pure comparison plan that selects only strict raw `player_specific` rows with finite numeric `forge_alpha`, derives the identifier intersection from those rows, and passes that exact collection into the descriptive comparison.
+- Baseline/default/unknown/missing/malformed rows remain diagnostic-only and cannot make §5.2 joinable. Duplicate IDs are detected across the entire raw artifact before filtering and fail closed in parity with the promoted adapter.
+- Added outcome-level adversarial tests for every non-evidence source, invalid alpha, mixed/intersecting/nonintersecting evidence, and eligible/non-evidence duplicate combinations.
+- Validation: focused audit 262/262; full branch 119 suites/1,313 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; independent final audit clean. Cohort/manifest/report/static bytes remain unchanged.
+
+### 2026-08-12 — FORGE static comparison canonical-ID spelling
+- Duplicate detection now keys every raw artifact ID by the same trimmed identity used by the promoted adapter, closing whitespace-only collision bypasses across eligible and non-evidence rows.
+- Whitespace-bearing upstream IDs are not normalized into evidence: they are excluded and produce a separate fail-closed blocker, including whitespace-only values.
+- Added outcome-level cases for baseline and malformed-alpha twins, lone whitespace evidence, and whitespace-only IDs.
+- Validation: focused audit 266/266; full branch 119 suites/1,321 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison adapter-ID aliases
+- Artifact-wide validity and duplicate diagnostics now resolve the adapter's six supported player-ID keys in exact trim-and-skip precedence before evidence filtering.
+- Missing/unresolvable IDs fail explicitly; aliases and normalized IDs are never substituted into the evidence comparison, which remains strict raw `player_id` only.
+- Added outcome coverage for all aliases, baseline/invalid-alpha twins, precedence, false-duplicate controls, malformed rows, and Unicode whitespace parity; malformed all-static diagnostics no longer crash the audit.
+- Validation: audit 294/294 plus adapter 11/11; full branch 119 suites/1,349 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison row-container parity
+- The artifact-level comparison plan now selects the first array under `rows`, `players`, or `data`, matching promoted-adapter precedence exactly; empty selected arrays and absent/invalid containers fail explicitly.
+- `auditComparability()` uses that one selected row collection for namespaces, names, baseline diagnostics, strict evidence, intersection, blockers, and descriptive comparison.
+- Regressions cover all containers, precedence/fallthrough, terminal empties, invalid roots, malformed rows, ignored lower containers, and alias collisions through alternate containers.
+- Validation: audit 311/311 plus adapter 11/11; full branch 119 suites/1,366 passing with the same seven baseline failures; real `--check`, build, baseline typecheck, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE static comparison runtime-admission parity
+- Added one pure contract shared by the promoted runtime client, adapter, and cache audit for root-rows digest verification plus declared artifact ID/version admission.
+- The audit now follows runtime order and fails closed before row selection when a present digest is malformed, has no root `rows`, mismatches, cannot canonicalize, or when the adapter would reject the declared ID/version. Digest-free legacy `rows`/`players`/`data` behavior remains unchanged.
+- Regressions cover digest syntax/content/root binding, lower-container non-rescue, legacy warning behavior, declaration aliases and precedence, nullish metadata chains, shallow merge order, and the adapter's existing broad v1 spellings.
+- Validation: audit 334/334; adapter/client 26/26; full branch 119 suites/1,398 tests with the same seven baseline failures; real `--check`, build, diff check, and frozen hashes pass; typecheck remains the exact 505 baseline with zero touched-file diagnostics; an independent 25,000-case JSON-round-trip differential audit found zero admission mismatches.
+### 2026-08-12 — Rankings v2 Rev16 season/cache honesty corrections
+- Made resolved phase/default weeks exact, retained newest-cache behavior only for genuinely weekless history, and rejected substituted/mismatched cache rows with explicit-versus-phase-default status honesty.
+- Nulled stale and no-forward-target live facts, enforced coherent phase/decision tuples plus the complete zero `no_rankable_source` invariant, and added safe UI copy for rejected-cache responses.
+- Validation: five focused suites 225/225; full branch 125 suites/1288 passing with the same seven baseline suite failures as base (125/1245); build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics; diff check passed.
+- No merge, deployment, readiness change, contract-version bump, or unrelated scope mutation.
+
+### 2026-08-12 — Rankings v2 Rev17 governed ingestion and unavailable-evidence UI corrections
+- Added one atomic, phase/calendar-aware evidence season/week resolver for active automated/admin ingestion and monitoring. Preseason, stale calendar, and config mismatch fail closed; January rollover resolves the 2026 football season and Week 17 together. Schedule sync retains a separately typed forward-looking season resolver.
+- Removed active UPH/Gold 2025 fallbacks and carried the governed tuple through Bronze, Silver, Gold, and season-fact quality receipts. Source tripwires prevent the active paths from re-importing the legacy 2025 availability helper.
+- Corrected the Nightly Buys/Sells summary boundary to carry one target object rather than reversible numeric arguments. Added a separate atomic source-observed target for Sleeper roster events (preseason movement remains attributable to 2026 Week 1), and replaced SeasonService's final wall-year fallback while preserving its Sleeper API and database-observed pairs.
+- Gated Data Lab fallback narrative on genuine snapshot availability and derived Tiers research-link season from validated response metadata, omitting it when unknown.
+- Validation: final focused replay 17 suites/333 tests plus API smoke 7/7; full branch 134 suites/1,365 passing versus exact-head base 125/1,288 with the same seven failures; build passed with the baseline OLC warning; typecheck stayed exactly 505 diagnostics; diff check passed.
+- Explicit archive pairs remain supported; legacy numeric response fields retain rolling compatibility. No merge, deployment, readiness change, database write, or Forecast work.
+
+### 2026-08-12 — NFLfastR completed-archive weekly sync compatibility
+- Restored the historical season-only `/api/weekly/sync` contract for the producer-supported 2024 archive with a local immutable Week 18 terminal bound, without widening the live presentation calendar.
+- Extracted the existing weekly-sync handler into a thin testable route module and made the route plus `fetchSeasonToDate()` consume the same bound resolver.
+- Added service and real HTTP boundary regressions for 2024 Week 18, unknown/future rejection, explicit live-preseason zero elapsed weeks, no-argument preseason fail-closed behavior, January 2026/Week 17 rollover, exact archive pairs, and week-only mismatch rejection.
+- Validation: focused ingestion/route/config suites passed 71/71; local curl passed; server build passed with the baseline OLC warning; typecheck stayed at the 505-diagnostic baseline with zero touched-file matches; `git diff --check` passed.
+
+### 2026-08-12 — Bronze-to-Silver season-wide default restoration
+- Restored the distinction between a governed default season and an explicitly requested week on `/api/etl/bronze-to-silver`: omitted week stays undefined through the Bronze service query instead of becoming the current evidence week.
+- Preserved explicit season-only archive/current processing, exact explicit-week filters, `processAll` limit removal, and preseason/stale fail-closed behavior for omitted targets.
+- Audited adjacent ETL routes: weekly writers/computations retain atomic season/week targets, while Bronze status was already season-wide.
+- Validation: five focused route/config/service suites passed 69/69; build passed with the baseline OLC warning; typecheck remained 505 diagnostics with the same four pre-existing `etlRoutes.ts` errors and no new test-file diagnostics; diff check passed.
+
+### 2026-08-12 — Automated derived-writer target isolation
+- Intelligent Scheduler weekly, incremental, and brand-recompute writers plus all-implicit admin brand streaming now resolve one governed evidence tuple and reuse it for mutations, exact result queries, and receipts; stale SeasonService database observations remain freshness input only.
+- Admin replay resolves before force deletion: matching current season-only requests use the governed week, mismatched half-pairs return 400, and explicit archive pairs remain exact. Governed the active RB-context derived writer and write-capable brand week-rollover path as well.
+- Preserved source-observed SeasonService behavior for non-writer freshness/status consumers.
+- Validation: seven focused suites passed 86/86; full branch passed 141 suites/1,416 tests with the same seven baseline failures; build passed with the baseline OLC warning; typecheck stayed at 505 baseline diagnostics with no new touched-file diagnostics; `git diff --check` passed.
+
+### 2026-08-12 — FORGE cache-audit Rankings v2 week-metadata alignment
+- The live-response guard now parses one anchored, closed current FORGE source-note grammar and requires `decisionTargetWeek` and `cacheDeclaredAsOfWeek` to independently match the audit's requested Week 18 before rows are admitted.
+- It also requires the exact two-entry cache/confidence source stack, a closed current fallback-reason value, matching structured decision/evidence season metadata, a nonempty same-position item set, and a canonical ISO observation time.
+- The superseded bare `asOfWeek` spelling is rejected rather than treated as compatibility evidence because it cannot prove the cache rows' declared week.
+- Regressions cover the current emitted shape, malformed/ambiguous note grammar, independently wrong note/structured scope fields, wrong/additional source layers, missing/empty/mixed-position items, invalid timestamps, and the old note shape.
+- Validation: focused audit plus real Rankings route 387/387 (380 + 7); real `--check`, build, and diff check pass; governed artifacts remain byte-identical.
+
+### 2026-08-12 — FORGE cache-audit source-clock evidence gate
+- The live observation guard now requires one canonical cache-evidence time repeated exactly by the FORGE source, confidence companion, top-level response, `seasonMeta.generatedAt`, and `trust.asOf`, with cache-`computedAt` freshness copy.
+- A valid UI response that synthesized top-level `asOf` because cache `computedAt` was null remains valid at runtime but is deliberately inadmissible as fresh audit evidence.
+- Adversarial clock/null/copy tests plus the real route branch pin the distinction.
+- Validation: focused audit and route suites 415/415; real `--check`, build, diff, and governed hashes pass unchanged.
+
+### 2026-08-12 — FORGE cache-audit per-item source-clock binding
+- Every admitted item must now carry an object `trust` with a canonical `asOf` exactly equal to the primary FORGE cache source clock; indexed errors identify the first invalid row.
+- Missing/null/malformed/divergent and mixed-item adversaries fail closed, while the real cache route proves all valid rows bind to the envelope source time.
+- The null-`computedAt` route still fails at the envelope clock first even though its items inherit the synthesized response time.
+- Validation: focused audit plus route 425/425; real `--check`, build, diff, and governed hashes pass unchanged.

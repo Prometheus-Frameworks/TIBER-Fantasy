@@ -186,7 +186,7 @@ function JsonExportCard({
             variant="outline"
             size="sm"
             onClick={handleCopy}
-            className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
             data-testid="button-copy-json"
           >
             {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
@@ -331,7 +331,7 @@ function PlayerMatchesCard({
           <Button
             onClick={handleFindMatches}
             disabled={loading}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="bg-cyan-700 hover:bg-cyan-800 text-white"
             data-testid="button-find-matches"
           >
             {loading ? (
@@ -559,7 +559,7 @@ export default function ForgeLabEquationSandbox() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="border-purple-600 text-purple-400 hover:bg-purple-600/20"
+                            className="border-purple-600 text-purple-700 hover:bg-purple-100 hover:text-purple-900"
                             data-testid="button-save-preset"
                           >
                             <Save className="h-4 w-4 mr-1" />
@@ -595,7 +595,7 @@ export default function ForgeLabEquationSandbox() {
                             </Button>
                             <Button
                               onClick={handleSavePreset}
-                              className="bg-purple-600 hover:bg-purple-700"
+                              className="bg-purple-600 hover:bg-purple-700 text-white"
                               data-testid="button-confirm-save"
                             >
                               Save Preset

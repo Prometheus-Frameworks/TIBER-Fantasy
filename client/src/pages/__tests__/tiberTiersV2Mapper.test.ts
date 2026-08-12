@@ -1,17 +1,42 @@
 import {
+  buildRankingRowKey,
+  EXACT_WEEK_UNAVAILABLE_STATUS,
+  SEASON_CONFIG_STALE_STATUS,
+  getLinkablePlayerId,
+  isExactWeekUnavailable,
+  isCalendarUnavailable,
   mapRankingsV2ItemsToTiersPlayers,
+  CACHE_ROWS_REJECTED_FRESHNESS_NOTE,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   resolveRankingsSourceView,
+  resolveCacheUnavailableMessage,
+  resolveRequestedSeason,
+  seasonMetaSchema,
   resolveTiersHeadline,
   resolveTiersViewState,
+  TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
+  TIERS_CACHE_UNCOMPUTED_MESSAGE,
+  TIERS_STALE_CALENDAR_MESSAGE,
+  TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE,
   validateRankingsV2WeeklyResponse,
 } from '../tiberTiersV2Mapper';
+
+const CANONICAL_IDENTITY = {
+  status: 'canonical' as const,
+  canonicalId: 'structured-player',
+  sourceId: 'structured-player',
+  sourceType: 'canonical' as const,
+  reason: null,
+  linkable: true as const,
+};
 
 describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('uses structured uiMeta fields instead of explanation/trust text parsing', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: CANONICAL_IDENTITY,
         rank: 1,
-        playerId: '00-structured',
+        playerId: 'structured-player',
         playerName: 'Structured Player',
         position: 'WR',
         team: 'MIA',
@@ -63,8 +88,9 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('maps nullable explanation/trust fields without crashing', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: { ...CANONICAL_IDENTITY, canonicalId: 'nullable-player', sourceId: 'nullable-player' },
         rank: 1,
-        playerId: '00-nullable',
+        playerId: 'nullable-player',
         playerName: 'Nullable Player',
         position: 'WR',
         team: 'BUF',
@@ -78,7 +104,7 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      playerId: '00-nullable',
+      playerId: 'nullable-player',
       playerName: 'Nullable Player',
       tier: 'T2',
       alpha: 77.2,
@@ -96,8 +122,9 @@ describe('mapRankingsV2ItemsToTiersPlayers', () => {
   it('degrades safely when uiMeta is missing or partial', () => {
     const rows = mapRankingsV2ItemsToTiersPlayers([
       {
+        identity: { ...CANONICAL_IDENTITY, canonicalId: 'partial-player', sourceId: 'partial-player' },
         rank: 2,
-        playerId: '00-partial',
+        playerId: 'partial-player',
         playerName: 'Partial Meta',
         position: 'RB',
         team: 'DET',
@@ -169,41 +196,361 @@ describe('resolveTiersHeadline', () => {
 describe('resolveTiersViewState', () => {
   it('prioritizes loading over every other signal', () => {
     expect(
-      resolveTiersViewState({ isLoading: true, isError: true, isCacheUncomputed: true, playersCount: 5 }),
+      resolveTiersViewState({
+        isLoading: true,
+        isError: true,
+        isCalendarStale: true,
+        isCacheUncomputed: true,
+        playersCount: 5,
+      }),
     ).toBe('loading');
   });
 
   it('treats a failed request as an error, not a genuine empty result', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: true, isCacheUncomputed: false, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: true,
+        isCalendarStale: true,
+        isCacheUncomputed: false,
+        playersCount: 0,
+      }),
     ).toBe('error');
+  });
+
+  it('reports a stale season calendar as its own unavailable state before cache/empty signals', () => {
+    expect(
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: true,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
+    ).toBe('calendar_unavailable');
+  });
+
+  it('reports an unanswerable exact week before the cache/empty signals', () => {
+    // The regression: with zero items and no other signal this fell through to
+    // `empty`, so a fail-closed response rendered as "no players match this
+    // filter". It has to win over both remaining states.
+    expect(
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isExactWeekUnavailable: true,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
+    ).toBe('exact_week_unavailable');
+  });
+
+  it('keeps loading, error and stale-calendar ahead of the exact-week state', () => {
+    const base = {
+      isCalendarStale: false,
+      isExactWeekUnavailable: true,
+      isCacheUncomputed: false,
+      playersCount: 0,
+    };
+    expect(resolveTiersViewState({ ...base, isLoading: true, isError: false })).toBe('loading');
+    expect(resolveTiersViewState({ ...base, isLoading: false, isError: true })).toBe('error');
+    expect(resolveTiersViewState({ ...base, isLoading: false, isError: false, isCalendarStale: true }))
+      .toBe('calendar_unavailable');
+  });
+
+  it('reads the signal off the server status, and only that status', () => {
+    expect(isExactWeekUnavailable({ status: EXACT_WEEK_UNAVAILABLE_STATUS })).toBe(true);
+    expect(isExactWeekUnavailable({ status: 'forge_cache_empty_uncomputed' })).toBe(false);
+    expect(isExactWeekUnavailable({ status: 'archive_season_not_current' })).toBe(false);
+    expect(isExactWeekUnavailable({ status: null })).toBe(false);
+    expect(isExactWeekUnavailable(null)).toBe(false);
+    expect(isExactWeekUnavailable(undefined)).toBe(false);
+  });
+
+  it('gives the exact-week state copy distinct from the empty and uncomputed copy', () => {
+    // Three different situations must not share one sentence: "nothing
+    // matched", "not computed yet", and "could not be produced" are different
+    // claims, and only the last is true here.
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toBe(TIERS_STALE_CALENDAR_MESSAGE);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).toMatch(/requested week is unavailable/i);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).toMatch(/does not substitute/i);
+    // And it must not imply the answer is simply "none" or "soon".
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toMatch(/no players match/i);
+    expect(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE).not.toMatch(/have not been computed yet/i);
   });
 
   it('reports an uncomputed FORGE cache as unavailable, distinct from a genuinely empty ranking', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: true, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: true,
+        playersCount: 0,
+      }),
     ).toBe('unavailable');
   });
 
   it('reports zero players with no error/uncomputed signal as a genuinely empty result', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 0 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: false,
+        playersCount: 0,
+      }),
     ).toBe('empty');
   });
 
   it('reports data once players are present and nothing else is wrong', () => {
     expect(
-      resolveTiersViewState({ isLoading: false, isError: false, isCacheUncomputed: false, playersCount: 12 }),
+      resolveTiersViewState({
+        isLoading: false,
+        isError: false,
+        isCalendarStale: false,
+        isCacheUncomputed: false,
+        playersCount: 12,
+      }),
     ).toBe('data');
+  });
+
+  it('reports season-metadata-unavailable ahead of every other signal but loading/error', () => {
+    // Every other signal (calendar staleness, exact-week, cache-uncomputed,
+    // empty, data) is itself read FROM seasonMeta, so none of them can be
+    // evaluated honestly once it is absent.
+    const base = {
+      isLoading: false,
+      isError: false,
+      isMetadataUnavailable: true,
+      isCalendarStale: true,
+      isExactWeekUnavailable: true,
+      isCacheUncomputed: true,
+      playersCount: 12,
+    };
+    expect(resolveTiersViewState(base)).toBe('season_metadata_unavailable');
+    expect(resolveTiersViewState({ ...base, isLoading: true })).toBe('loading');
+    expect(resolveTiersViewState({ ...base, isError: true })).toBe('error');
+  });
+
+  it('the stale-calendar-unavailable signal is read off the typed status, never off configStatus alone', () => {
+    // A successfully served configured archive still carries
+    // `configStatus: 'stale_calendar_config'` — gating on that alone hid its
+    // admitted rows behind the calendar-unavailable panel.
+    expect(isCalendarUnavailable({ status: SEASON_CONFIG_STALE_STATUS })).toBe(true);
+    expect(isCalendarUnavailable({ status: 'archive_season_not_current' })).toBe(false);
+    expect(isCalendarUnavailable({ status: null })).toBe(false);
+    expect(isCalendarUnavailable(null)).toBe(false);
+    expect(isCalendarUnavailable(undefined)).toBe(false);
+  });
+});
+
+describe('resolveCacheUnavailableMessage', () => {
+  it('renders parsed rejection facts only for the named rejection freshness signal', () => {
+    const message = resolveCacheUnavailableMessage({
+      trust: {
+        stabilityNote: 'forge_cache_empty_uncomputed',
+        freshnessNote: CACHE_ROWS_REJECTED_FRESHNESS_NOTE,
+      },
+      seasonMeta: {
+        statusDetail:
+          'FORGE cache rows were rejected for resolved target 11: ' +
+          'declaredAsOfWeek=7, requestedAsOfWeek=11, weekSubstituted=false. private diagnostic suffix',
+      },
+    });
+
+    expect(message).toMatch(/rejected/i);
+    expect(message).toMatch(/target week 11/i);
+    expect(message).toMatch(/cache week 7/i);
+    expect(message).not.toMatch(/private diagnostic suffix/i);
+    expect(message).not.toMatch(/not been computed yet/i);
+  });
+
+  it('keeps ordinary empty-cache copy and does not render arbitrary status detail', () => {
+    expect(resolveCacheUnavailableMessage({
+      trust: { stabilityNote: 'forge_cache_empty_uncomputed', freshnessNote: 'ordinary empty cache' },
+      seasonMeta: { statusDetail: 'do not render this backend detail' },
+    })).toBe(TIERS_CACHE_UNCOMPUTED_MESSAGE);
+  });
+});
+
+describe('resolveRequestedSeason', () => {
+  const CONFIGURED = [2025, 2026];
+
+  it('an explicit configured selection wins, live calendar ok', () => {
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2025);
+  });
+
+  it('an explicit configured selection wins even while the live calendar is stale', () => {
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: 2025,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBe(2025);
+  });
+
+  it('a stale calendar with no explicit selection keeps season null and fails closed', () => {
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: null,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('with no explicit selection and an ok calendar, the detected season is used', () => {
+    expect(
+      resolveRequestedSeason({ selectedSeason: null, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+  });
+
+  it('an unconfigured retained selection never becomes the request — it falls through instead of bypassing', () => {
+    // Live calendar ok: falls through to the detected season, not the stale
+    // retained value.
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2024, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+    // Live calendar stale: falls through to null (fail closed), not the
+    // unconfigured retained value either.
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: 2024,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('an explicit empty configured-season list never lets any selection through', () => {
+    // A REAL fact — the server explicitly reported zero configured seasons —
+    // distinct from `undefined` (never reported at all), tested below.
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: [], configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+  });
+
+  describe('configuredSeasons: undefined — no explicit list has ever been seen (Fantasy #307 correction round 5)', () => {
+    it('a direct legacy mount invents no season: falls through exactly like an unconfigured selection', () => {
+      expect(
+        resolveRequestedSeason({ selectedSeason: null, configuredSeasons: undefined, configStatus: 'ok', detectedSeason: 2026 }),
+      ).toBe(2026);
+      expect(
+        resolveRequestedSeason({
+          selectedSeason: null,
+          configuredSeasons: undefined,
+          configStatus: 'stale_calendar_config',
+          detectedSeason: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('an unvalidatable selection never survives, even one that would be valid against a list never actually seen', () => {
+      // `undefined` must not behave like "checked and matched" for any
+      // selectedSeason — there is nothing to check it against.
+      expect(
+        resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: undefined, configStatus: 'ok', detectedSeason: 2026 }),
+      ).toBe(2026);
+      expect(
+        resolveRequestedSeason({
+          selectedSeason: 2025,
+          configuredSeasons: undefined,
+          configStatus: 'stale_calendar_config',
+          detectedSeason: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('is NOT equivalent to an explicit empty list for a null selection under a stale calendar', () => {
+      // Both currently return null here (no selection to validate either
+      // way), but the two inputs mean different things upstream — the
+      // container must retain `undefined` rather than ever coalescing it to
+      // `[]`, which this pins by keeping the assertion but documenting why
+      // it is not a proof of equivalence.
+      const withUndefined = resolveRequestedSeason({
+        selectedSeason: null, configuredSeasons: undefined, configStatus: 'stale_calendar_config', detectedSeason: null,
+      });
+      const withEmpty = resolveRequestedSeason({
+        selectedSeason: null, configuredSeasons: [], configStatus: 'stale_calendar_config', detectedSeason: null,
+      });
+      expect(withUndefined).toBeNull();
+      expect(withEmpty).toBeNull();
+    });
+  });
+});
+
+describe('TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE', () => {
+  it('is distinct compatibility copy, not the stale-calendar or exact-week text', () => {
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).not.toBe(TIERS_STALE_CALENDAR_MESSAGE);
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).not.toBe(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE);
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).toMatch(/older server/i);
   });
 });
 
 describe('validateRankingsV2WeeklyResponse', () => {
-  const wellFormed = { asOf: '2026-04-12T00:00:00.000Z', sourceStack: [{ layer: 'forge' }], items: [] };
+  const SEASON_META = {
+  currentSeason: 2026,
+  forwardRankingSeason: 2026,
+  currentPhase: 'preseason' as const,
+  currentPhaseLabel: '2026 · Preseason',
+  currentRegularSeasonWeek: null,
+  targetSeason: 2026,
+  targetWeek: 1,
+  targetLabel: 'Target: Week 1',
+  scheduleSource: 'anchor_derived' as const,
+  configStatus: 'ok' as const,
+  configNote: null,
+  evidenceSeason: 2025,
+  evidenceWeek: 18,
+  decisionTargetSeason: 2026,
+  decisionTargetWeek: 1,
+  decisionTargetProvenance: 'anchor_derived' as const,
+  decisionTargetIsProvisional: true,
+  phaseTargetSeason: 2026,
+  phaseTargetWeek: 1,
+  phaseTargetProvenance: 'anchor_derived',
+  phaseTargetIsProvisional: true,
+  evidenceThroughSeason: 2025,
+  evidenceThroughWeek: 18,
+  evidenceProvenance: 'source_declared_as_of',
+  completionVerified: false,
+  finalizedThroughWeek: null,
+  completionCopy: 'Completion not verified.',
+  generatedAt: '2026-08-08T19:04:15.325Z',
+  isArchiveView: true,
+  status: 'archive_season_not_current',
+  statusDetail: 'Showing 2025 evidence while the league is in 2026 · Preseason.',
+};
+
+  const wellFormed = {
+    contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+    asOf: '2026-04-12T00:00:00.000Z',
+    sourceStack: [{ layer: 'forge' }],
+    items: [],
+    seasonMeta: SEASON_META,
+  };
+
+  const IDENTITY = {
+    status: 'resolved' as const,
+    canonicalId: 'tiber-amon-ra-st-brown',
+    sourceId: '00-0036963',
+    sourceType: 'gsis' as const,
+    reason: null,
+    linkable: true,
+  };
 
   const wellFormedItem = {
+    identity: IDENTITY,
     rank: 1,
-    playerId: '00-1',
+    playerId: 'tiber-amon-ra-st-brown',
     playerName: 'Justin Jefferson',
     position: 'WR',
     team: 'MIN',
@@ -222,10 +569,258 @@ describe('validateRankingsV2WeeklyResponse', () => {
     expect(validateRankingsV2WeeklyResponse(payload)).toEqual(payload);
   });
 
+  describe('rolling compatibility: seasonMeta absence vs. a present-but-invalid value', () => {
+    // Fantasy #307 correction round 4: a same-contract-version server that
+    // predates Phase A never sends `seasonMeta` at all. That is accepted —
+    // the legacy signal — but a response that TRIED to carry it and sent
+    // `null` or something malformed must still fail exactly as before.
+    it('accepts a response with seasonMeta entirely absent (the key omitted)', () => {
+      const { seasonMeta, ...withoutSeasonMeta } = wellFormed;
+      void seasonMeta;
+      const result = validateRankingsV2WeeklyResponse(withoutSeasonMeta);
+      expect(result.seasonMeta).toBeUndefined();
+      expect(result.items).toEqual([]);
+      expect(result.contractVersion).toBe(RANKINGS_V2_EXPECTED_CONTRACT_VERSION);
+    });
+
+    it('accepts a response with seasonMeta present but set to undefined (equivalent to absence)', () => {
+      const result = validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: undefined });
+      expect(result.seasonMeta).toBeUndefined();
+    });
+
+    it('still rejects an explicit null seasonMeta — absence, not null, is the compatibility signal', () => {
+      expect(() => validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: null })).toThrow();
+    });
+
+    it('still rejects a malformed present seasonMeta', () => {
+      expect(() =>
+        validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: { ...SEASON_META, currentPhase: 'bye_week' } }),
+      ).toThrow();
+      expect(() =>
+        validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: { ...SEASON_META, generatedAt: 'yesterday' } }),
+      ).toThrow();
+    });
+
+    it('the no_rankable_source/sourceStack refinement does not fire when seasonMeta is absent', () => {
+      // The response-level check reads `response.seasonMeta?.evidenceProvenance`;
+      // with no seasonMeta there is no provenance to contradict a nonempty
+      // sourceStack, so a legacy payload with a real sourceStack still passes.
+      const { seasonMeta, ...withoutSeasonMeta } = wellFormed;
+      void seasonMeta;
+      const payload = { ...withoutSeasonMeta, sourceStack: [{ layer: 'forge' }] };
+      expect(() => validateRankingsV2WeeklyResponse(payload)).not.toThrow();
+    });
+
+    it('current (non-legacy) payload rendering/validation is unchanged', () => {
+      expect(validateRankingsV2WeeklyResponse(wellFormed)).toEqual(wellFormed);
+      expect(validateRankingsV2WeeklyResponse(wellFormed).seasonMeta).toEqual(SEASON_META);
+    });
+  });
+
+  describe('nullable live metadata is a stale/no-forward-target state, never an unguarded widening', () => {
+    const stale = {
+      ...SEASON_META,
+      currentSeason: null,
+      forwardRankingSeason: null,
+      currentPhase: null,
+      currentPhaseLabel: null,
+      currentRegularSeasonWeek: null,
+      targetSeason: null,
+      targetWeek: null,
+      targetLabel: null,
+      scheduleSource: null,
+      configStatus: 'stale_calendar_config' as const,
+      decisionTargetSeason: 2025,
+      decisionTargetWeek: 18,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      decisionTargetOrigin: 'explicit_request' as const,
+      phaseTargetSeason: null,
+      phaseTargetWeek: null,
+      phaseTargetProvenance: null,
+      phaseTargetIsProvisional: false,
+    };
+
+    it('accepts truthful stale nulls and rejects each synthetic season/phase leak', () => {
+      expect(seasonMetaSchema.safeParse(stale).success).toBe(true);
+      for (const [field, value] of [
+        ['currentSeason', 2027],
+        ['forwardRankingSeason', 2027],
+        ['currentPhase', 'offseason'],
+        ['currentPhaseLabel', '2027 · Offseason'],
+      ] as const) {
+        expect(seasonMetaSchema.safeParse({ ...stale, [field]: value }).success).toBe(false);
+      }
+    });
+
+    it('rejects null current facts while config is ok and enforces forward-target coherence', () => {
+      for (const field of ['currentSeason', 'currentPhase', 'currentPhaseLabel'] as const) {
+        expect(seasonMetaSchema.safeParse({ ...SEASON_META, [field]: null }).success).toBe(false);
+      }
+      expect(seasonMetaSchema.safeParse({ ...SEASON_META, forwardRankingSeason: null }).success).toBe(false);
+      expect(seasonMetaSchema.safeParse({
+        ...SEASON_META,
+        forwardRankingSeason: null,
+        targetSeason: null,
+        targetWeek: null,
+        targetLabel: null,
+        phaseTargetSeason: null,
+        phaseTargetWeek: null,
+        phaseTargetProvenance: null,
+        phaseTargetIsProvisional: false,
+        scheduleSource: null,
+      }).success).toBe(true);
+      expect(seasonMetaSchema.safeParse({
+        ...SEASON_META,
+        forwardRankingSeason: null,
+        targetSeason: null,
+        targetWeek: null,
+        targetLabel: null,
+        phaseTargetSeason: null,
+        phaseTargetWeek: null,
+        phaseTargetProvenance: null,
+        phaseTargetIsProvisional: false,
+        scheduleSource: 'anchor_derived',
+      }).success).toBe(false);
+    });
+
+    it('mirrors phase/decision tuple coherence at the client boundary', () => {
+      const phaseDefault = {
+        ...SEASON_META,
+        decisionTargetOrigin: 'phase_default' as const,
+      };
+      expect(seasonMetaSchema.safeParse(phaseDefault).success).toBe(true);
+      for (const mutated of [
+        { ...phaseDefault, targetWeek: 2 },
+        { ...phaseDefault, phaseTargetWeek: null },
+        { ...phaseDefault, targetLabel: null },
+        { ...phaseDefault, scheduleSource: 'explicit_schedule' },
+        { ...phaseDefault, decisionTargetSeason: null },
+        { ...phaseDefault, decisionTargetWeek: 2 },
+        { ...phaseDefault, decisionTargetOrigin: 'explicit_request' },
+      ]) {
+        expect(seasonMetaSchema.safeParse(mutated).success).toBe(false);
+      }
+    });
+
+    it('stale metadata cannot publish decision schedule provenance or provisionality', () => {
+      expect(seasonMetaSchema.safeParse({
+        ...stale,
+        decisionTargetProvenance: 'anchor_derived',
+      }).success).toBe(false);
+      expect(seasonMetaSchema.safeParse({
+        ...stale,
+        decisionTargetIsProvisional: true,
+      }).success).toBe(false);
+    });
+  });
+
+  it('rejects rows and source claims when present seasonMeta says no_rankable_source', () => {
+    const noRankableMeta = {
+      ...SEASON_META,
+      evidenceSeason: null,
+      evidenceWeek: null,
+      decisionTargetSeason: null,
+      decisionTargetWeek: null,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      decisionTargetOrigin: null,
+      evidenceThroughSeason: null,
+      evidenceThroughWeek: null,
+      evidenceProvenance: 'no_rankable_source' as const,
+      generatedAt: null,
+      isArchiveView: false,
+    };
+    const base = { ...wellFormed, seasonMeta: noRankableMeta, sourceStack: [], items: [] };
+    expect(() => validateRankingsV2WeeklyResponse(base)).not.toThrow();
+    expect(() => validateRankingsV2WeeklyResponse({ ...base, sourceStack: [{ layer: 'forge' }] })).toThrow();
+    expect(() => validateRankingsV2WeeklyResponse({ ...base, items: [wellFormedItem] })).toThrow();
+  });
+
   it.each([
     ['a non-object payload', 'not-json'],
     ['null', null],
     ['an array instead of an object', []],
+    ['a null seasonMeta', { ...wellFormed, seasonMeta: null }],
+    ['a seasonMeta with an unknown phase', { ...wellFormed, seasonMeta: { ...SEASON_META, currentPhase: 'bye_week' } }],
+    ['a seasonMeta with a non-ISO generatedAt', { ...wellFormed, seasonMeta: { ...SEASON_META, generatedAt: 'yesterday' } }],
+    ['an item missing identity', { ...wellFormed, items: [{ ...wellFormedItem, identity: undefined }] }],
+    ['an item whose identity omits linkable', { ...wellFormed, items: [{ ...wellFormedItem, identity: { ...IDENTITY, linkable: undefined } }] }],
+    ['the previous public contract revision', { ...wellFormed, contractVersion: 'v2-scaffold-2026-04-02' }],
+    ['a missing contract version', { ...wellFormed, contractVersion: undefined }],
+    ['a linkable identity with a mismatched playerId', { ...wellFormed, items: [{ ...wellFormedItem, playerId: 'someone-else' }] }],
+    ['a linkable identity with a null playerId', { ...wellFormed, items: [{ ...wellFormedItem, playerId: null }] }],
+    [
+      'a resolved identity carrying an unresolved reason',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          identity: { ...IDENTITY, reason: 'gsis_ambiguous_duplicate_crosswalk_rows' },
+        }],
+      },
+    ],
+    [
+      'a canonical identity whose sourceId differs from canonicalId',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: 'canonical-player',
+          identity: {
+            status: 'canonical',
+            canonicalId: 'canonical-player',
+            sourceId: 'different-source',
+            sourceType: 'canonical',
+            reason: null,
+            linkable: true,
+          },
+        }],
+      },
+    ],
+    [
+      'two rows with the same rank',
+      {
+        ...wellFormed,
+        items: [wellFormedItem, { ...wellFormedItem, playerName: 'Different Player' }],
+      },
+    ],
+    [
+      'an unresolved identity with a non-null playerId',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: 'someone-else',
+          identity: {
+            status: 'unresolved',
+            canonicalId: null,
+            sourceId: '00-0099999',
+            sourceType: 'gsis',
+            reason: 'gsis_not_in_identity_map',
+            linkable: false,
+          },
+        }],
+      },
+    ],
+    [
+      'an unresolved identity that claims linkable true',
+      {
+        ...wellFormed,
+        items: [{
+          ...wellFormedItem,
+          playerId: null,
+          identity: {
+            status: 'unresolved',
+            canonicalId: null,
+            sourceId: '00-0099999',
+            sourceType: 'gsis',
+            reason: 'gsis_not_in_identity_map',
+            linkable: true,
+          },
+        }],
+      },
+    ],
     ['missing items entirely', { ...wellFormed, items: undefined }],
     ['a null items value', { ...wellFormed, items: null }],
     ['a non-array items value', { ...wellFormed, items: 'garbage' }],
@@ -260,5 +855,33 @@ describe('validateRankingsV2WeeklyResponse', () => {
     ['an item missing playerName', { ...wellFormed, items: [{ ...wellFormedItem, playerName: undefined }] }],
   ])('throws for %s — a 2xx body must not silently become a genuine empty result', (_label, payload) => {
     expect(() => validateRankingsV2WeeklyResponse(payload)).toThrow();
+  });
+});
+
+describe('identity-safe rendering helpers', () => {
+  const coherent = {
+    rank: 1,
+    position: 'WR',
+    playerId: 'tiber-amon-ra-st-brown',
+    identity: {
+      status: 'resolved' as const,
+      canonicalId: 'tiber-amon-ra-st-brown',
+      sourceId: '00-0036963',
+      sourceType: 'gsis' as const,
+      reason: null,
+      linkable: true as const,
+    },
+  };
+
+  it('returns a link only for the same non-null canonical key', () => {
+    expect(getLinkablePlayerId(coherent)).toBe('tiber-amon-ra-st-brown');
+    expect(getLinkablePlayerId({ ...coherent, playerId: null })).toBeNull();
+    expect(getLinkablePlayerId({ ...coherent, playerId: 'different-player' })).toBeNull();
+  });
+
+  it('uses a composite row key when the producer repeats a source id', () => {
+    expect(buildRankingRowKey(coherent)).not.toBe(buildRankingRowKey({ ...coherent, rank: 2 }));
+    expect(buildRankingRowKey(coherent)).toContain('00-0036963');
+    expect(buildRankingRowKey(coherent)).toContain('WR');
   });
 });

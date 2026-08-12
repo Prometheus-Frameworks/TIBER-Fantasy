@@ -110,12 +110,27 @@ export async function buildScoringPlayerInputFromData(input: {
   } as ScoringPlayerInput;
 }
 
+/**
+ * The governed result of the rankings input build.
+ *
+ * `maxRepresentedWeek` is the source-declared evidence extent: the greatest
+ * `weekly_stats.week` actually aggregated into these inputs. It is measured
+ * from the admitted rows, never taken from a calendar, a clock, or the query
+ * ceiling — `throughWeek` is only a filter, and a filter says what was ASKED
+ * FOR, not what the source contained. Null when the source held nothing, which
+ * must never be rendered as "full season".
+ */
+export interface RankingsScoringInputsResult {
+  players: ScoringPlayerInput[];
+  maxRepresentedWeek: number | null;
+}
+
 export async function buildRankingsScoringInputs(input: {
   season: number;
   throughWeek: number;
   position: 'QB' | 'RB' | 'WR' | 'TE' | 'ALL';
   limit: number;
-}): Promise<ScoringPlayerInput[]> {
+}): Promise<RankingsScoringInputsResult> {
   const rows = await db
     .select({
       playerId: weeklyStats.playerId,
@@ -127,6 +142,9 @@ export async function buildRankingsScoringInputs(input: {
       targetsPg: sql<number>`avg(${weeklyStats.targets})`,
       carriesPg: sql<number>`avg(${weeklyStats.rushAtt})`,
       pointsPprPg: sql<number>`avg(${weeklyStats.fantasyPointsPpr})`,
+      // The extent this player's aggregates actually reach, read from the rows
+      // themselves so the declared evidence can never exceed the data.
+      maxWeek: sql<number | null>`max(${weeklyStats.week})`,
     })
     .from(weeklyStats)
     .where(
@@ -140,7 +158,7 @@ export async function buildRankingsScoringInputs(input: {
     .orderBy(sql`avg(${weeklyStats.fantasyPointsPpr}) desc`)
     .limit(input.limit);
 
-  return rows.map((row) => ({
+  const players = rows.map((row) => ({
     player_id: row.playerId,
     player_name: row.playerName,
     team: row.team,
@@ -151,4 +169,13 @@ export async function buildRankingsScoringInputs(input: {
     carries_pg: toFiniteOrNull(row.carriesPg),
     fantasy_points_ppr_pg: toFiniteOrNull(row.pointsPprPg),
   })) as ScoringPlayerInput[];
+
+  const weekValues = rows
+    .map((row) => toFiniteOrNull(row.maxWeek))
+    .filter((week): week is number => week !== null);
+
+  return {
+    players,
+    maxRepresentedWeek: weekValues.length ? Math.max(...weekValues) : null,
+  };
 }

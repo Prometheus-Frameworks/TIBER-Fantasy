@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Crown, Info, RefreshCw, TrendingDown, TrendingUp, Minus, AlertTriangle } from 'lucide-react';
@@ -8,26 +8,49 @@ import { Badge } from '@/components/ui/badge';
 import { useCurrentNFLWeek } from '@/hooks/useCurrentNFLWeek';
 import { CoreResearchQuickLinks } from '@/components/data-lab/CoreResearchQuickLinks';
 import {
+  buildRankingRowKey,
+  getLinkablePlayerId,
   Position,
+  RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   RankingsV2Item,
+  RankingsSeasonMeta,
+  resolveArchiveNotice,
+  resolveCacheUnavailableMessage,
+  resolveEvidenceLine,
   resolveRankingsSourceView,
+  resolveSeasonPhaseHeadline,
   resolveTiersHeadline,
   resolveTiersViewState,
   validateRankingsV2WeeklyResponse,
   TIERS_GENERIC_ERROR_MESSAGE,
   TIERS_LOADING_LABEL,
+  TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
+  TIERS_STALE_CALENDAR_MESSAGE,
+  TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE,
+  isExactWeekUnavailable,
+  isCalendarUnavailable,
+  resolveRequestedSeason,
 } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
 
 export interface TiersApiResponse {
+  contractVersion: typeof RANKINGS_V2_EXPECTED_CONTRACT_VERSION;
   asOf: string;
   sourceStack: Array<{ layer?: string | null; asOf?: string | null }>;
   trust?: {
+    freshnessNote?: string | null;
     sampleNote?: string | null;
     stabilityNote?: string | null;
   } | null;
   items: RankingsV2Item[];
+  /**
+   * Optional for rolling compatibility (Fantasy #307 correction round 4): a
+   * same-contract-version server that predates Phase A never sent this
+   * field. Absence is the legacy signal; every read of it below must check
+   * for that rather than assume presence.
+   */
+  seasonMeta?: RankingsSeasonMeta;
 }
 
 function tierClass(tier: string) {
@@ -48,8 +71,12 @@ function TrajectoryIcon({ trajectory }: { trajectory?: string | null }) {
 }
 
 export interface TiberTiersViewProps {
-  season: number;
-  asOfWeek: number;
+  /** Season whose rows are being requested. Null until season state resolves. */
+  season: number | null;
+  /** Week filter for the request, or null for "whole season so far". */
+  decisionTargetWeek: number | null;
+  availableSeasons: number[];
+  onSeasonChange: (season: number) => void;
   position: Position;
   onPositionChange: (position: Position) => void;
   sortDirection: SortDirection;
@@ -66,7 +93,9 @@ export interface TiberTiersViewProps {
 // TiberTiers (below) owns only the data fetching and wires its result into this component.
 export function TiberTiersView({
   season,
-  asOfWeek,
+  decisionTargetWeek,
+  availableSeasons,
+  onSeasonChange,
   position,
   onPositionChange,
   sortDirection,
@@ -91,9 +120,35 @@ export function TiberTiersView({
     item.explanation.pillarNotes.find((note) => note.pillar === pillar)?.note ?? null;
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
+  // A response that parsed successfully (no isError) but carries no
+  // `seasonMeta` at all is the rolling-compatibility legacy case — distinct
+  // from "still loading", where `data` itself is undefined.
+  const isMetadataUnavailable = data !== undefined && !data.seasonMeta;
+  // Gated on the typed unavailable STATUS, not `configStatus`: a successfully
+  // served configured archive still carries `configStatus:
+  // 'stale_calendar_config'` (the live calendar's own state), and gating on
+  // that alone hid its admitted rows behind this panel.
+  const isCalendarStale = isCalendarUnavailable(data?.seasonMeta);
+  const exactWeekUnavailable = isExactWeekUnavailable(data?.seasonMeta);
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
-  const viewState = resolveTiersViewState({ isLoading, isError, isCacheUncomputed, playersCount: players.length });
+  const viewState = resolveTiersViewState({
+    isLoading,
+    isError,
+    isMetadataUnavailable,
+    isCalendarStale,
+    isExactWeekUnavailable: exactWeekUnavailable,
+    isCacheUncomputed,
+    playersCount: players.length,
+  });
   const showMetaLine = viewState === 'data' || viewState === 'empty';
+  const seasonMeta = data?.seasonMeta ?? null;
+  const archiveNotice = seasonMeta ? resolveArchiveNotice(seasonMeta) : null;
+  const cacheUnavailableMessage = resolveCacheUnavailableMessage(data);
+  // Research links describe the rendered ROWS, so their season must come
+  // from the validated rankings response — never the container's independently
+  // loading current-week state. Prefer the response's evidence season, then
+  // its decision season; omit the parameter when neither is known.
+  const rowResearchSeason = seasonMeta?.evidenceSeason ?? seasonMeta?.decisionTargetSeason ?? null;
 
   return (
     <TooltipProvider>
@@ -105,21 +160,79 @@ export function TiberTiersView({
                 <Crown className="h-8 w-8 text-purple-400" />
                 Tiber Tiers
               </h1>
-              <p className="text-slate-400 mt-1 text-sm md:text-base">
-                {resolveTiersHeadline(sourceView.layer)} ({season}, through week {asOfWeek}).
+              {/* Three separate facts, deliberately not collapsed into one line:
+                  where the league is, what the rows are, and what produced them. */}
+              <p className="text-slate-300 mt-1 text-sm md:text-base" data-testid="tiers-phase-line">
+                {isMetadataUnavailable
+                  ? TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE
+                  : seasonMeta ? resolveSeasonPhaseHeadline(seasonMeta) : 'Resolving season state…'}
+              </p>
+              {/* Both the source headline and the evidence line are derived from
+                  fields a legacy response still technically carries
+                  (`sourceStack`) or lacks (`seasonMeta`) — neither is rendered
+                  here while metadata is unavailable, so nothing on this line is
+                  inferred from a response this page cannot honestly describe. */}
+              <p className="text-slate-400 mt-0.5 text-sm" data-testid="tiers-evidence-line">
+                {!isMetadataUnavailable && (
+                  <>
+                    {resolveTiersHeadline(sourceView.layer)}
+                    {seasonMeta ? ` — ${resolveEvidenceLine(seasonMeta)}` : ''}
+                  </>
+                )}
               </p>
             </div>
             <Button
               variant="outline"
               onClick={onRefetch}
               disabled={isFetching}
-              className="border-slate-700 bg-slate-900/60"
+              className="border-slate-700 bg-slate-900/60 text-slate-100"
               data-testid="refresh-tiers"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
+
+          {archiveNotice && (
+            <div
+              className="mb-4 flex items-start gap-2 rounded-lg border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-sm text-amber-100"
+              data-testid="tiers-archive-notice"
+              role="status"
+            >
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{archiveNotice}</span>
+            </div>
+          )}
+
+          {/* Explicit season control — the surface must never imply that the only
+              season it can show is the current one (Fantasy #307 Phase A). */}
+          {availableSeasons.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3" data-testid="tiers-season-control">
+              <span className="text-xs uppercase tracking-wide text-slate-300">Season</span>
+              {availableSeasons.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => onSeasonChange(option)}
+                  aria-pressed={season === option}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    season === option
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  data-testid={`season-${option}`}
+                >
+                  {option}
+                  {seasonMeta &&
+                  (seasonMeta.forwardRankingSeason === null
+                    ? seasonMeta.configStatus === 'stale_calendar_config' ||
+                      (seasonMeta.currentSeason !== null && option !== seasonMeta.currentSeason)
+                    : option !== seasonMeta.forwardRankingSeason)
+                    ? ' · archive'
+                    : ''}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2 mb-4">
             {(['WR', 'RB', 'TE', 'QB'] as Position[]).map((pos) => (
@@ -148,7 +261,17 @@ export function TiberTiersView({
             <div className="text-xs text-slate-400 flex items-center gap-2 mb-4">
               <Info className="h-3.5 w-3.5" />
               <span>{players.length} players</span>
-              {data?.asOf && <span>• as of {new Date(data.asOf).toLocaleString()}</span>}
+              {/* "Computed" is when the score was produced; the evidence line above
+                  says what football it is about. A recent computation over old
+                  evidence must not read as fresh evidence (Fantasy #307). */}
+              {seasonMeta?.generatedAt && (
+                <span data-testid="tiers-generated-at">
+                  • Computed {new Date(seasonMeta.generatedAt).toLocaleString()}
+                </span>
+              )}
+              {seasonMeta && (
+                <span data-testid="tiers-evidence-meta">• Evidence: {resolveEvidenceLine(seasonMeta)}</span>
+              )}
               <span>• Source: {sourceView.sourceNote}</span>
             </div>
           )}
@@ -166,24 +289,50 @@ export function TiberTiersView({
                 <Button
                   variant="outline"
                   onClick={onRefetch}
-                  className="mt-4 border-slate-700 bg-slate-900/60"
+                  className="mt-4 border-slate-700 bg-slate-900/60 text-slate-100"
                   data-testid="retry-tiers"
                 >
                   Retry
                 </Button>
               </div>
+            ) : viewState === 'season_metadata_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-season-metadata-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">Season context unavailable</div>
+                <p className="text-slate-400 text-sm">{TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE}</p>
+              </div>
+            ) : viewState === 'calendar_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-calendar-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">Season calendar unavailable</div>
+                <p className="text-slate-400 text-sm">{TIERS_STALE_CALENDAR_MESSAGE}</p>
+              </div>
+            ) : viewState === 'exact_week_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-exact-week-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">
+                  Rankings unavailable for the requested week
+                </div>
+                <p className="text-slate-400 text-sm">{TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE}</p>
+                {/* The server's own detail names the season and week it could
+                    not answer for; showing it beats paraphrasing. */}
+                {seasonMeta?.statusDetail ? (
+                  <p className="text-slate-500 text-xs mt-2" data-testid="tiers-exact-week-detail">
+                    {seasonMeta.statusDetail}
+                  </p>
+                ) : null}
+              </div>
             ) : viewState === 'unavailable' ? (
-              <div className="p-10 text-center">
+              <div className="p-10 text-center" data-testid="tiers-cache-unavailable">
                 <div className="text-lg font-semibold text-amber-300 mb-2">Rankings are not available yet</div>
                 {/* Public, read-only copy only — no operator/admin mutation instructions here. */}
-                <p className="text-slate-400 text-sm">FORGE grades for this filter have not been computed yet. Please check back shortly.</p>
+                <p className="text-slate-400 text-sm" data-testid="tiers-cache-unavailable-detail">
+                  {cacheUnavailableMessage}
+                </p>
               </div>
             ) : viewState === 'empty' ? (
               <div className="p-10 text-center text-slate-400">No players match this filter yet.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1200px]" data-testid="tiers-table">
-                  <thead className="bg-[#0a0e1a] text-xs text-slate-500 uppercase">
+                  <thead className="bg-[#0a0e1a] text-xs text-slate-400 uppercase">
                     <tr>
                       <th className="py-3 px-3 text-center">#</th>
                       <th className="py-3 px-3 text-left">Player</th>
@@ -202,19 +351,51 @@ export function TiberTiersView({
                       const confidenceBand = player.tier ?? getPillarNote(player, 'confidence_band');
                       const floor = getPillarNote(player, 'floor');
                       const ceiling = getPillarNote(player, 'ceiling');
+                      const linkablePlayerId = getLinkablePlayerId(player);
                       return (
-                        <tr key={player.playerId} className="border-t border-gray-800 hover:bg-slate-900/25">
-                          <td className="py-3 px-3 text-center text-slate-500 font-mono">{idx + 1}</td>
+                        <tr key={buildRankingRowKey(player)} className="border-t border-gray-800 hover:bg-slate-900/25">
+                          {/* slate-400, not slate-500: the #309 contrast repair on this dark table. */}
+                          <td className="py-3 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                           <td className="py-3 px-3">
                             <div className="flex items-center gap-2">
-                              <Link href={`/player/${player.playerId}`} className="text-white hover:text-purple-400 text-sm font-medium">
-                                {player.playerName}
-                              </Link>
+                              {/* Only a resolved canonical key becomes a deep link. An
+                                  unresolved row stays fully visible — the board is never
+                                  blanked by sparse crosswalk coverage (#308). */}
+                              {linkablePlayerId ? (
+                                <Link
+                                  href={`/player/${linkablePlayerId}`}
+                                  className="text-white hover:text-purple-400 text-sm font-medium"
+                                  data-testid={`player-link-${linkablePlayerId}`}
+                                >
+                                  {player.playerName}
+                                </Link>
+                              ) : (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span
+                                      className="text-white text-sm font-medium border-b border-dotted border-amber-500/70 cursor-help"
+                                      data-testid={`player-unresolved-${player.identity?.sourceId ?? 'unknown'}`}
+                                    >
+                                      {player.playerName}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      No canonical player page for this row yet
+                                      {player.identity?.reason ? ` (${player.identity.reason})` : ''}.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               <TrajectoryIcon trajectory={player.uiMeta?.trajectory} />
                             </div>
                             <CoreResearchQuickLinks
-                              season={String(season)}
-                              playerId={player.playerId}
+                              season={rowResearchSeason === null ? undefined : String(rowResearchSeason)}
+                              // Canonical id only when the row actually resolved.
+                              // An unresolved row must not produce a player-specific
+                              // research link built from a raw source id (#308);
+                              // team/command-center links stay available.
+                              playerId={linkablePlayerId}
                               playerName={player.playerName}
                               team={player.team ?? null}
                               compact
@@ -251,13 +432,90 @@ export default function TiberTiers() {
   // server/contracts/rankingsV2.ts through /api/rankings/v2/weekly.
   const [position, setPosition] = useState<Position>('WR');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const { currentWeek, season } = useCurrentNFLWeek();
-  const asOfWeek = currentWeek || 17;
+  // `resolvedSeason` (not the legacy `season`) so an unresolved season stays
+  // null instead of becoming a plausible-but-unverified calendar year.
+  const {
+    resolvedSeason: detectedSeason, targetSeason, targetWeek, configStatus, configuredSeasons,
+  } = useCurrentNFLWeek();
+
+  // Explicit user season choice wins; otherwise follow detection. Neither path
+  // falls back to a hardcoded season or the old `currentWeek || 17` guess — an
+  // unresolved season simply omits the parameter and lets the server answer with
+  // its own typed phase state.
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
+
+  // The last EXPLICITLY reported configured-season list, retained across a
+  // response that omits the field (Fantasy #307 correction round 5). The
+  // hook exposes `configuredSeasons` as `undefined` — not `[]` — whenever the
+  // field was not actually present, so this ref updates only on a genuine
+  // report (including an explicit `[]`) and otherwise keeps whatever it last
+  // saw. A direct mount against a legacy server that has never once reported
+  // the field leaves this `undefined` too: the selector must not invent
+  // options, and no selection can be validated, from nothing.
+  //
+  // Mutated during render rather than in an effect: an effect would apply
+  // one render late, so a fresh explicit list would validate/invalidate the
+  // current selection a tick after the response that should have done it.
+  const retainedConfiguredSeasonsRef = useRef<number[] | undefined>(undefined);
+  if (configuredSeasons !== undefined) {
+    retainedConfiguredSeasonsRef.current = configuredSeasons;
+  }
+  const retainedConfiguredSeasons = retainedConfiguredSeasonsRef.current;
+
+  // Selection rules live in `resolveRequestedSeason` (Fantasy #307 correction
+  // round 4), unit-tested there directly. In short: an explicit selection
+  // wins as long as it remains configured — including while the live
+  // calendar is stale, since the server's own configured-history-only gate
+  // (rankingsV2Routes.ts) still serves that archive — and there is
+  // deliberately no effect clearing it on staleness. With no such selection,
+  // a stale calendar has nothing to fall back to and `season` stays null.
+  // Validated against the RETAINED list (above), not the current response's
+  // raw field, so a selection survives a response that merely omits the
+  // field while still being invalidated by one that explicitly excludes it.
+  const season = resolveRequestedSeason({
+    selectedSeason, configuredSeasons: retainedConfiguredSeasons, configStatus, detectedSeason,
+  });
+  // The week this page asks for is the DECISION TARGET — the week the forward
+  // board should be about — not `regularSeasonWeek`. The two agree while a
+  // week is in play, but once its final game window opens the target rolls
+  // forward while the in-play week number does not; sending the in-play week
+  // then builds a board about a week with nothing left to decide. The target
+  // applies only when the viewed season IS the target season; an archive
+  // selection has no forward target and sends no week, letting the server
+  // derive that season's own extent.
+  const decisionTargetWeek = season !== null && season === targetSeason ? targetWeek : null;
+  const decisionTargetOrigin =
+    season !== null &&
+    decisionTargetWeek !== null &&
+    season === targetSeason &&
+    decisionTargetWeek === targetWeek
+      ? 'phase_default'
+      : null;
+
+  // The exact retained list, not a synthesized `[current-1, current]` pair —
+  // that synthesis went blank the moment `detectedSeason` went null under a
+  // stale calendar, hiding the very archives this page must keep exposing.
+  // `[]` here means "no explicit list has ever been seen" (a legacy mount),
+  // which correctly renders no options rather than inventing any.
+  const availableSeasons = retainedConfiguredSeasons ?? [];
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
-    queryKey: ['/api/rankings/v2/weekly', season, position, asOfWeek],
+    // `configStatus` distinguishes the initial unresolved season-null request
+    // from a later stale-calendar season-null request. Without it, React Query
+    // can reuse the initial cached response during a mounted fresh → stale
+    // transition and never ask the route for its typed unavailable payload.
+    queryKey: [
+      '/api/rankings/v2/weekly', season, position, decisionTargetWeek, decisionTargetOrigin, configStatus,
+    ],
     queryFn: async () => {
-      const url = `/api/rankings/v2/weekly?season=${season}&position=${position}&asOfWeek=${asOfWeek}&limit=75`;
+      const params = new URLSearchParams({ position, limit: '75' });
+      if (season !== null) params.set('season', String(season));
+      // Sent under the public parameter name `asOfWeek` (the API type is
+      // preserved); the VALUE is the decision target, and the server publishes
+      // the evidence extent separately in seasonMeta.
+      if (decisionTargetWeek !== null) params.set('asOfWeek', String(decisionTargetWeek));
+      if (decisionTargetOrigin !== null) params.set('targetOrigin', decisionTargetOrigin);
+      const url = `/api/rankings/v2/weekly?${params.toString()}`;
       const res = await fetch(url);
       if (!res.ok) {
         // Malformed/failed upstream responses must surface as a genuine error, not
@@ -284,7 +542,9 @@ export default function TiberTiers() {
   return (
     <TiberTiersView
       season={season}
-      asOfWeek={asOfWeek}
+      decisionTargetWeek={decisionTargetWeek}
+      availableSeasons={availableSeasons}
+      onSeasonChange={setSelectedSeason}
       position={position}
       onPositionChange={setPosition}
       sortDirection={sortDirection}

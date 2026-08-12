@@ -574,7 +574,7 @@ function PlayerDrawer({
           <div className="pt-4">
             <Button 
               variant="outline" 
-              className="w-full border-blue-600 text-blue-400 hover:bg-blue-600/20"
+              className="w-full border-blue-600 text-blue-700 hover:bg-blue-100 hover:text-blue-900"
               onClick={handleAskTiber}
               data-testid="button-ask-tiber"
             >
@@ -1002,7 +1002,7 @@ export default function TiberDataLab() {
 
               <Button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isLoading || !searchReady}
                 data-testid="button-search"
               >

@@ -29,6 +29,10 @@ import {
   getResolverStats,
   clearResolverCache
 } from './identityResolver';
+import {
+  resolveSourceObservedTarget,
+  type SourceObservedTarget,
+} from '../../config/season';
 
 // Sleeper API client
 const sleeperApi = axios.create({
@@ -64,26 +68,6 @@ interface SleeperRoster {
   owner_id: string;
   players: string[] | null;
   starters: string[] | null;
-}
-
-/**
- * Get current NFL week (simplified)
- */
-function getCurrentNflWeek(): number {
-  const now = new Date();
-  const seasonStart = new Date(now.getFullYear(), 8, 5); // Approx Sept 5
-  const weekMs = 7 * 24 * 60 * 60 * 1000;
-  const weeksSinceStart = Math.floor((now.getTime() - seasonStart.getTime()) / weekMs) + 1;
-  return Math.max(1, Math.min(18, weeksSinceStart));
-}
-
-/**
- * Get current NFL season
- */
-function getCurrentNflSeason(): number {
-  const now = new Date();
-  // NFL season starts in September
-  return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
 }
 
 /**
@@ -175,6 +159,26 @@ function generateDedupeKey(
   return createHash('sha256').update(content).digest('hex').substring(0, 32);
 }
 
+/** Keep source-observed target attribution atomic at the ownership write boundary. */
+export function buildOwnershipEventValues(
+  leagueId: string,
+  events: RosterEvent[],
+  changeSeq: number,
+  target: SourceObservedTarget,
+) {
+  return events.map(event => ({
+    league_id: leagueId,
+    player_key: event.playerKey,
+    from_team_id: event.fromTeamId,
+    to_team_id: event.toTeamId,
+    event_type: event.eventType,
+    week: target.week,
+    season: target.season,
+    source: 'sleeper',
+    dedupe_key: generateDedupeKey(leagueId, event, changeSeq)
+  }));
+}
+
 /**
  * Update sync state
  * Note: changeSeq is ONLY incremented inside the transaction when roster changes.
@@ -230,12 +234,17 @@ export async function syncLeague(
   options: SyncOptions = {}
 ): Promise<SyncResult> {
   const startTime = Date.now();
-  const { force = false, week = getCurrentNflWeek(), season = getCurrentNflSeason() } = options;
+  const { force = false, week, season } = options;
   
   // Defensive guard: validate leagueId
   if (!leagueId || typeof leagueId !== 'string' || leagueId.trim() === '') {
     throw new Error('leagueId required: must be a non-empty string');
   }
+
+  // Resolve before touching sync state. Source observations are valid in the
+  // preseason, but a stale calendar or partial explicit tuple must fail closed
+  // without creating a `running` record under invented wall-clock metadata.
+  const target = resolveSourceObservedTarget({ week, season });
   
   // Reset resolver stats and cache for this sync
   resetResolverStats();
@@ -313,17 +322,12 @@ export async function syncLeague(
       // 7b. Insert ownership events with dedupe keys (ON CONFLICT for extra safety)
       // SKIP on baseline to avoid polluting churn data with initial ADDs
       if (events.length > 0 && !isBaseline) {
-        const eventValues = events.map(event => ({
-          league_id: leagueId,
-          player_key: event.playerKey,
-          from_team_id: event.fromTeamId,
-          to_team_id: event.toTeamId,
-          event_type: event.eventType,
-          week,
-          season,
-          source: 'sleeper',
-          dedupe_key: generateDedupeKey(leagueId, event, currentChangeSeq)
-        }));
+        const eventValues = buildOwnershipEventValues(
+          leagueId,
+          events,
+          currentChangeSeq,
+          target,
+        );
         
         // Runtime assertion: verify all rows have league_id before insert
         for (const row of eventValues) {

@@ -532,7 +532,7 @@ export default function ForgeSimulation() {
                       </div>
                     ) : (
                       <Button
-                        className="w-full bg-green-600 hover:bg-green-700"
+                        className="w-full bg-green-700 hover:bg-green-800 text-white"
                         onClick={() => runSimulation.mutate()}
                         data-testid="run-simulation-button"
                       >
@@ -662,13 +662,13 @@ export default function ForgeSimulation() {
                     <Separator />
                     
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={resetToDefaults} className="flex-1 text-gray-300 border-gray-600 hover:bg-gray-700" data-testid="reset-defaults-button">
+                      <Button variant="outline" size="sm" onClick={resetToDefaults} className="flex-1 text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900" data-testid="reset-defaults-button">
                         <RotateCcw className="w-3 h-3 mr-1" />
                         Reset
                       </Button>
                       <Dialog open={savePresetOpen} onOpenChange={setSavePresetOpen}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="flex-1 text-gray-300 border-gray-600 hover:bg-gray-700" data-testid="save-preset-button">
+                          <Button variant="outline" size="sm" className="flex-1 text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900" data-testid="save-preset-button">
                             <Save className="w-3 h-3 mr-1" />
                             Save Preset
                           </Button>
@@ -700,7 +700,7 @@ export default function ForgeSimulation() {
                             </div>
                           </div>
                           <DialogFooter>
-                            <Button variant="outline" className="text-gray-300 border-gray-600 hover:bg-gray-700" onClick={() => setSavePresetOpen(false)}>Cancel</Button>
+                            <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-gray-100 hover:text-gray-900" onClick={() => setSavePresetOpen(false)}>Cancel</Button>
                             <Button 
                               onClick={() => savePreset.mutate()}
                               disabled={!newPresetName || savePreset.isPending}

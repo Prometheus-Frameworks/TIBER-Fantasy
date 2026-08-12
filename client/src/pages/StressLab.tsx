@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   buildMockOperatorSignalNoteArtifact,
@@ -115,22 +115,24 @@ function SignalInventorySection() {
     : getTeamEnvironmentMovementReadinessDetails(response);
 
   return (
-    <Card className="border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+    <Card className="rounded-xl border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
       <CardHeader className="p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--tmd-text-muted)]">
               TIBER signal inventory (live)
             </div>
-            <CardTitle className="mt-1 text-sm font-semibold text-slate-100">
+            <h3 className="mt-1 text-sm font-semibold text-slate-100">
               Teamstate Movement artifact
-            </CardTitle>
+            </h3>
             <p className="mt-1 text-xs leading-5 text-slate-400">
               The only operator-wide artifact status currently measured here.
             </p>
           </div>
           <Badge
             variant="secondary"
+            role="status"
+            aria-live="polite"
             className={`w-fit border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${SIGNAL_STATUS_STYLES[status]}`}
           >
             {movementQuery.isLoading ? "Checking" : label}
@@ -142,10 +144,10 @@ function SignalInventorySection() {
         {movementQuery.isLoading ? (
           <p className="text-xs text-slate-400">Checking artifact status…</p>
         ) : (
-          <details className="rounded-lg border border-white/[0.07] bg-black/10">
+          <details className="rounded-xl border border-white/[0.07] bg-black/10">
             <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-medium text-slate-300">
               View provenance and contract detail
-              <span className="float-right font-normal text-slate-500">Technical detail</span>
+              <span className="float-right font-normal text-[var(--tmd-text-muted)]">Technical detail</span>
             </summary>
             <div className="border-t border-white/[0.07] px-3 py-3 text-xs leading-5 text-slate-400">
               <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
@@ -163,7 +165,7 @@ function SignalInventorySection() {
                   ))}
                 </ul>
               ) : null}
-              <p className="mt-3 break-all font-mono text-[10px] text-slate-600">
+              <p className="mt-3 break-all font-mono text-[10px] text-[var(--tmd-text-dim)]">
                 team_environment_movement_v1 · /api/data-lab/team-environment-movement
               </p>
             </div>
@@ -178,14 +180,14 @@ function RepoBoundaryPanel() {
   return (
     <div className="border-t border-white/[0.07] px-4 py-4 sm:px-5">
       <h3 className="text-sm font-semibold text-slate-200">Repo boundary awareness</h3>
-      <p className="mt-1 text-xs leading-5 text-slate-500">
+      <p className="mt-1 text-xs leading-5 text-[var(--tmd-text-muted)]">
         Route before reasoning. Preserve uncertainty. Do not patch upstream data problems with frontend assumptions.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {REPO_BOUNDARIES.map((boundary) => (
           <div
             key={boundary}
-            className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2 font-mono text-[11px] text-slate-400"
+            className="rounded-xl border border-white/[0.07] bg-black/10 px-3 py-2 font-mono text-[11px] text-slate-400"
           >
             {boundary}
           </div>
@@ -202,7 +204,7 @@ function SystemStatusSection() {
         <h2 id="system-context-title" className="text-base font-semibold text-slate-100">
           System context
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-[var(--tmd-text-muted)]">
           Live availability first; architecture detail when you need it.
         </p>
       </div>
@@ -213,17 +215,17 @@ function SystemStatusSection() {
         <details className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0e11]">
           <summary className="cursor-pointer list-none px-4 py-3.5 text-sm font-semibold text-slate-300 sm:px-5">
             Declared systems &amp; roles
-            <span className="float-right text-xs font-normal text-slate-600">Static map</span>
+            <span className="float-right text-xs font-normal text-[var(--tmd-text-dim)]">Static map</span>
           </summary>
           <div className="border-t border-white/[0.07] px-4 py-4 sm:px-5">
-            <p className="max-w-3xl text-xs leading-5 text-slate-500">
+            <p className="max-w-3xl text-xs leading-5 text-[var(--tmd-text-muted)]">
               A static ownership map, not a live health check. It makes no uptime, confidence, readiness, or performance claim.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {DECLARED_SYSTEMS.map((system) => (
-                <div key={system.name} className="rounded-lg border border-white/[0.07] bg-[#111316] p-3.5">
+                <div key={system.name} className="rounded-xl border border-white/[0.07] bg-[#111316] p-3.5">
                   <h3 className="text-sm font-semibold text-slate-200">{system.name}</h3>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">{system.description}</p>
+                  <p className="mt-2 text-xs leading-5 text-[var(--tmd-text-muted)]">{system.description}</p>
                   <p className="mt-3 border-t border-white/[0.06] pt-3 text-xs leading-5 text-slate-400">
                     {system.role}
                   </p>
@@ -285,7 +287,7 @@ function ReviewList({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-slate-500">{emptyLabel}</p>
+        <p className="mt-2 text-sm text-[var(--tmd-text-muted)]">{emptyLabel}</p>
       )}
     </section>
   );
@@ -293,7 +295,7 @@ function ReviewList({
 
 function FriendlyChips({ items, emptyLabel }: { items: string[]; emptyLabel: string }) {
   if (items.length === 0) {
-    return <p className="text-sm text-slate-500">{emptyLabel}</p>;
+    return <p className="text-sm text-[var(--tmd-text-muted)]">{emptyLabel}</p>;
   }
 
   return (
@@ -314,14 +316,14 @@ function SuggestedHandoffsPanel({ handoffs }: { handoffs: SuggestedTiberHandoff[
   return (
     <section aria-labelledby="handoff-title">
       <div className="flex items-start gap-3">
-        <div className="rounded-lg border border-orange-400/15 bg-orange-500/10 p-2 text-orange-300">
+        <div className="rounded-xl border border-orange-400/15 bg-orange-500/10 p-2 text-orange-300">
           <Route className="h-4 w-4" />
         </div>
         <div>
           <h3 id="handoff-title" className="text-sm font-semibold text-slate-100">
             Where should it go?
           </h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-xs leading-5 text-[var(--tmd-text-muted)]">
             Suggested verification owners, not recommendations or automated repo calls.
           </p>
         </div>
@@ -338,7 +340,7 @@ function SuggestedHandoffsPanel({ handoffs }: { handoffs: SuggestedTiberHandoff[
                 <h4 className="break-words text-sm font-semibold text-slate-200">
                   {handoff.repo.replace("TIBER-Fantasy / Stress Lab", "TIBER-Fantasy / Observatory")}
                 </h4>
-                <p className="mt-0.5 text-xs text-slate-500">{handoff.domain}</p>
+                <p className="mt-0.5 text-xs text-[var(--tmd-text-muted)]">{handoff.domain}</p>
               </div>
               <Badge
                 variant="secondary"
@@ -349,20 +351,20 @@ function SuggestedHandoffsPanel({ handoffs }: { handoffs: SuggestedTiberHandoff[
             </div>
 
             <div className="mt-3 border-l-2 border-orange-500/40 pl-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--tmd-text-dim)]">
                 Next check
               </div>
               <p className="mt-1 break-words text-sm leading-6 text-slate-300">{handoff.next_check}</p>
             </div>
 
             <details className="mt-3 border-t border-white/[0.07] pt-3">
-              <summary className="cursor-pointer list-none text-xs font-medium text-slate-500">
+              <summary className="cursor-pointer list-none text-xs font-medium text-[var(--tmd-text-muted)]">
                 Why this route and what it may require
               </summary>
-              <div className="mt-3 space-y-3 text-xs leading-5 text-slate-500">
+              <div className="mt-3 space-y-3 text-xs leading-5 text-[var(--tmd-text-muted)]">
                 <p>{handoff.reason}</p>
                 <div>
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--tmd-text-dim)]">
                     Claim class
                   </div>
                   <div className="mt-1 break-all font-mono text-slate-400">{handoff.claim_classification}</div>
@@ -371,7 +373,7 @@ function SuggestedHandoffsPanel({ handoffs }: { handoffs: SuggestedTiberHandoff[
                   {handoff.required_artifact_types.map((artifactType) => (
                     <li
                       key={artifactType}
-                      className="rounded-full border border-white/[0.07] px-2 py-1 font-mono text-[10px] text-slate-500"
+                      className="rounded-full border border-white/[0.07] px-2 py-1 font-mono text-[10px] text-[var(--tmd-text-muted)]"
                     >
                       {artifactType}
                     </li>
@@ -422,17 +424,17 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
   }
 
   return (
-    <Card className="min-w-0 overflow-hidden border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+    <Card className="min-w-0 overflow-hidden rounded-xl border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
       <CardHeader className="border-b border-white/[0.07] p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300/70">
               2 · Review the route
             </div>
-            <CardTitle className="mt-1.5 text-lg font-semibold text-slate-100">
+            <h2 className="mt-1.5 text-lg font-semibold text-slate-100">
               TIBER found a review path
-            </CardTitle>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-[var(--tmd-text-muted)]">
               Structured from your note. Still unverified and not fantasy advice.
             </p>
           </div>
@@ -461,7 +463,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
           </h3>
           <div className="mt-3 space-y-4">
             <div>
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--tmd-text-dim)]">
                 Entities
               </div>
               <FriendlyChips
@@ -470,13 +472,13 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
               />
             </div>
             <div>
-              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--tmd-text-dim)]">
                 Metric cues
               </div>
               <FriendlyChips items={metricLabels} emptyLabel="No conservative metric cues were detected." />
             </div>
             <details>
-              <summary className="cursor-pointer list-none text-xs font-medium text-slate-500">
+              <summary className="cursor-pointer list-none text-xs font-medium text-[var(--tmd-text-muted)]">
                 View {signalLabels.length} signal tags
               </summary>
               <div className="mt-2">
@@ -504,7 +506,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
         <details className="overflow-hidden rounded-xl border border-white/[0.07] bg-black/10">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-300">
             Guardrails
-            <span className="float-right text-xs font-normal text-slate-600">Do not apply</span>
+            <span className="float-right text-xs font-normal text-[var(--tmd-text-dim)]">Do not apply</span>
           </summary>
           <div className="border-t border-white/[0.07] p-4">
             <ReviewList
@@ -518,22 +520,22 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
         <details className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#0d0e11]">
           <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-slate-300">
             Artifact details &amp; export
-            <span className="float-right font-mono text-[10px] font-normal text-slate-600">
+            <span className="float-right font-mono text-[10px] font-normal text-[var(--tmd-text-dim)]">
               operator_signal_note_v0
             </span>
           </summary>
           <div className="space-y-4 border-t border-white/[0.07] p-4">
             <div className="grid gap-3 text-xs sm:grid-cols-3">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Note ID</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--tmd-text-dim)]">Note ID</div>
                 <div className="mt-1 break-all font-mono text-slate-400">{artifact.note_id}</div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Source</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--tmd-text-dim)]">Source</div>
                 <div className="mt-1 break-all font-mono text-slate-400">{artifact.source_type}</div>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.14em] text-slate-600">Created</div>
+                <div className="text-[10px] uppercase tracking-[0.14em] text-[var(--tmd-text-dim)]">Created</div>
                 <div className="mt-1 break-all font-mono text-slate-400">{artifact.created_at}</div>
               </div>
             </div>
@@ -544,7 +546,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
                 variant="outline"
                 size="sm"
                 onClick={copyJson}
-                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+                className="justify-center border-white/10 bg-[#0d0e11] text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Clipboard className="h-4 w-4" />
                 Copy JSON
@@ -554,7 +556,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
                 variant="outline"
                 size="sm"
                 onClick={downloadJson}
-                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+                className="justify-center border-white/10 bg-[#0d0e11] text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Download className="h-4 w-4" />
                 Download JSON
@@ -564,7 +566,7 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
                 variant="outline"
                 size="sm"
                 onClick={downloadCsv}
-                className="justify-center border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white"
+                className="justify-center border-white/10 bg-[#0d0e11] text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <Download className="h-4 w-4" />
                 Download CSV
@@ -572,7 +574,11 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
             </div>
 
             {exportStatus !== "idle" ? (
-              <p className={`text-xs ${exportStatus === "failed" ? "text-red-300" : "text-emerald-300"}`}>
+              <p
+                role={exportStatus === "failed" ? "alert" : "status"}
+                aria-live={exportStatus === "failed" ? "assertive" : "polite"}
+                className={`text-xs ${exportStatus === "failed" ? "text-red-300" : "text-emerald-300"}`}
+              >
                 {exportStatus === "copied"
                   ? "Artifact JSON copied to clipboard."
                   : exportStatus === "downloaded"
@@ -582,11 +588,11 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
             ) : null}
 
             <details className="border-t border-white/[0.07] pt-3">
-              <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-slate-500">
+              <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-[var(--tmd-text-muted)]">
                 <FileJson className="h-4 w-4 text-orange-300/70" />
                 Raw JSON viewer
               </summary>
-              <pre className="mt-3 max-h-[420px] max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg border border-white/[0.07] bg-black/30 p-3 text-[11px] leading-5 text-slate-300">
+              <pre className="mt-3 max-h-[420px] max-w-full overflow-auto whitespace-pre-wrap break-words rounded-xl border border-white/[0.07] bg-black/30 p-3 text-[11px] leading-5 text-slate-300">
                 {rawJson}
               </pre>
             </details>
@@ -599,16 +605,16 @@ function ArtifactSummary({ artifact }: { artifact: OperatorSignalNoteV0 }) {
 
 function EmptyReviewState() {
   return (
-    <Card className="flex min-h-[360px] min-w-0 items-center border-white/[0.08] bg-[#0d0e11] text-slate-100 shadow-none">
+    <Card className="flex min-h-[360px] min-w-0 items-center rounded-xl border-white/[0.08] bg-[#0d0e11] text-slate-100 shadow-none">
       <CardContent className="w-full p-5 sm:p-7">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--tmd-text-dim)]">
           2 · Review the route
         </div>
         <Telescope className="mt-6 h-8 w-8 text-slate-600" />
         <h2 className="mt-4 text-lg font-semibold text-slate-200">
           Your review path will appear here
         </h2>
-        <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
+        <p className="mt-2 max-w-md text-sm leading-6 text-[var(--tmd-text-muted)]">
           Inspect a note and TIBER will organize the next human questions without deciding whether the claim is true.
         </p>
         <ol className="mt-6 grid gap-2 text-sm text-slate-400 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
@@ -617,7 +623,7 @@ function EmptyReviewState() {
             "What still needs proof",
             "Which system owns the next check",
           ].map((step, index) => (
-            <li key={step} className="rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+            <li key={step} className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-3">
               <span className="mr-2 font-mono text-xs text-orange-300/70">0{index + 1}</span>
               {step}
             </li>
@@ -631,6 +637,11 @@ function EmptyReviewState() {
 export default function StressLab() {
   const [rawNote, setRawNote] = useState("");
   const [artifact, setArtifact] = useState<OperatorSignalNoteV0 | null>(null);
+
+  function updateRawNote(nextNote: string) {
+    setRawNote(nextNote);
+    setArtifact(null);
+  }
 
   function inspectNote() {
     if (!rawNote.trim()) return;
@@ -659,7 +670,7 @@ export default function StressLab() {
               <p className="mt-4 text-base leading-7 text-slate-300">
                 Turn a football observation into an explicit review path.
               </p>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p className="mt-1 text-sm leading-6 text-[var(--tmd-text-muted)]">
                 TIBER separates what it detected from what still needs evidence, then routes the claim to the system that owns the next check.
               </p>
             </div>
@@ -668,9 +679,9 @@ export default function StressLab() {
               <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-slate-300">
                 <ShieldCheck className="h-4 w-4 text-emerald-300" />
                 Read-only control surface
-                <span className="ml-auto text-xs font-normal text-slate-600">How it works</span>
+                <span className="ml-auto text-xs font-normal text-[var(--tmd-text-dim)]">How it works</span>
               </summary>
-              <p className="border-t border-white/[0.07] px-4 py-3 text-xs leading-5 text-slate-500">
+              <p className="border-t border-white/[0.07] px-4 py-3 text-xs leading-5 text-[var(--tmd-text-muted)]">
                 The take-checker is computed entirely client-side from the text you paste — no backend, database, LLM, RAG, or external API call. The live signal inventory makes one read-only status request. Nothing on this page writes, re-ranks, projects, or mutates upstream truth.
               </p>
             </details>
@@ -678,15 +689,15 @@ export default function StressLab() {
         </header>
 
         <section className="mt-6 grid min-w-0 gap-4 lg:grid-cols-[minmax(320px,0.82fr),minmax(0,1.45fr)] lg:items-start">
-          <Card className="min-w-0 border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
+          <Card className="min-w-0 rounded-xl border-white/[0.08] bg-[#111316] text-slate-100 shadow-none">
             <CardHeader className="p-4 sm:p-5">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-300/70">
                 1 · Add an observation
               </div>
-              <CardTitle className="mt-1 text-lg font-semibold text-slate-100">
+              <h2 className="mt-1 text-lg font-semibold text-slate-100">
                 What are you seeing?
-              </CardTitle>
-              <p className="text-sm leading-6 text-slate-500">
+              </h2>
+              <p className="text-sm leading-6 text-[var(--tmd-text-muted)]">
                 Paste a camp report, role note, matchup idea, or player take.
               </p>
             </CardHeader>
@@ -695,38 +706,38 @@ export default function StressLab() {
               <Textarea
                 id="observatory-note"
                 value={rawNote}
-                onChange={(event) => setRawNote(event.target.value)}
-                className="min-h-[180px] resize-y border-white/10 bg-[#090c12] text-sm leading-6 text-slate-100 placeholder:text-slate-600 focus-visible:ring-[#e2640d] focus-visible:ring-offset-[#111316]"
+                onChange={(event) => updateRawNote(event.target.value)}
+                className="min-h-[180px] resize-y border-slate-500 bg-[#090c12] text-sm leading-6 text-slate-100 placeholder:text-[var(--tmd-text-dim)] focus-visible:ring-[#e2640d] focus-visible:ring-offset-[#111316]"
                 placeholder="Paste your football observation here…"
               />
               <div className="flex items-center justify-between gap-3">
                 <button
                   type="button"
-                  onClick={() => setRawNote(SAMPLE_NOTE)}
-                  className="text-xs text-slate-500 transition-colors hover:text-slate-300"
+                  onClick={() => updateRawNote(SAMPLE_NOTE)}
+                  className="text-xs text-[var(--tmd-text-muted)] transition-colors hover:text-slate-300"
                 >
                   Use an example
                 </button>
-                <span className="text-xs text-slate-600">{rawNote.trim().length} characters</span>
+                <span className="text-xs text-[var(--tmd-text-dim)]">{rawNote.trim().length} characters</span>
               </div>
               <Button
                 type="button"
                 onClick={inspectNote}
                 disabled={!rawNote.trim()}
-                className="w-full bg-[#e2640d] text-white hover:bg-[#c7530b]"
+                className="w-full bg-ember text-primary-foreground hover:bg-ember/90"
               >
                 Inspect note
               </Button>
-              <p className="text-center text-[11px] text-slate-600">
+              <p className="text-center text-[11px] text-[var(--tmd-text-dim)]">
                 Local heuristic · no write · no ranking change
               </p>
 
               <details className="border-t border-white/[0.07] pt-3">
-                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-slate-500">
+                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-medium text-[var(--tmd-text-muted)]">
                   <AlertTriangle className="h-4 w-4 text-amber-400/70" />
                   What this does not do
                 </summary>
-                <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-500">
+                <ul className="mt-3 space-y-2 text-xs leading-5 text-[var(--tmd-text-muted)]">
                   <li>• Does not verify the analyst claim — it structures and routes the note for operator review.</li>
                   <li>• Does not check live NFL data, rankings, projections, injuries, betting lines, or social posts.</li>
                   <li>• No LLM or RAG: deterministic keyword heuristics only; canonical player and team IDs are not resolved.</li>

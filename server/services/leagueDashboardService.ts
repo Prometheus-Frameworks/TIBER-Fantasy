@@ -2,7 +2,7 @@ import { storage, type IStorage } from '../storage';
 import { sleeperClient, type SleeperPlayer, type SleeperRoster } from '../integrations/sleeperClient';
 import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
-import { inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { forgeService } from '../modules/forge/forgeService';
 import type { ForgeScore } from '../modules/forge/types';
 import { createPlaybookForgeLogger, type PlaybookForgeLogger } from '../utils/playbookForgeLogger';
@@ -288,6 +288,42 @@ function buildIdentityRowFromSleeperPlayer(sleeperId: string, player: SleeperPla
   };
 }
 
+type HydrationRow = NonNullable<ReturnType<typeof buildIdentityRowFromSleeperPlayer>>;
+
+/**
+ * Existing owners of the GSIS ids a hydration batch is about to write.
+ *
+ * `player_identity_map.gsis_id` carries **no unique index** — applying one is a
+ * documented operator step (Fantasy #308). `onConflictDoNothing()` therefore
+ * protects nothing here: it only suppresses conflicts the database actually
+ * declares. Without this lookup, hydrating a Sleeper player whose GSIS is
+ * already owned by a canonical row inserts a *second* owner of that GSIS, and
+ * the duplicate-aware resolvers then correctly refuse to resolve it — silently
+ * disabling Rankings and player links for that player after an ordinary
+ * dashboard read.
+ */
+async function resolveExistingGsisOwners(
+  database: LeagueDashboardDeps['db'],
+  gsisIds: string[],
+): Promise<Map<string, Array<{ canonicalId: string; sleeperId: string | null }>>> {
+  const owners = new Map<string, Array<{ canonicalId: string; sleeperId: string | null }>>();
+  if (gsisIds.length === 0) return owners;
+
+  const existing: any[] = await (database as any)
+    .select()
+    .from(playerIdentityMap)
+    .where(inArray(playerIdentityMap.gsisId, gsisIds));
+
+  for (const row of existing ?? []) {
+    const gsis = row?.gsisId;
+    if (!gsis) continue;
+    const list = owners.get(gsis) ?? [];
+    list.push({ canonicalId: row.canonicalId, sleeperId: row.sleeperId ?? null });
+    owners.set(gsis, list);
+  }
+  return owners;
+}
+
 async function hydrateMissingSleeperIdentities(
   sleeperIds: string[],
   deps: LeagueDashboardDeps,
@@ -314,19 +350,123 @@ async function hydrateMissingSleeperIdentities(
       return [];
     }
 
-    await deps.db
-      .insert(playerIdentityMap)
-      .values(rows as any)
-      .onConflictDoNothing();
+    // Fail closed on GSIS ownership before writing anything.
+    //
+    // `gsis_id` has no unique index — applying one is a documented operator
+    // step — so nothing in application code can make an INSERT carrying a GSIS
+    // safe. A pre-read is only a snapshot: two candidates in this same batch,
+    // or two concurrent hydration requests, can both observe zero owners and
+    // then both insert. Narrowing that window is not closing it.
+    //
+    // So hydration never inserts a GSIS at all. It may only ATTACH a Sleeper id
+    // to a row that already owns the GSIS, which cannot create a second owner
+    // by construction. Hydrated fallback rows carry `gsisId: null`; the
+    // crosswalk remains the authority for that mapping.
+    const owners = await resolveExistingGsisOwners(
+      deps.db,
+      Array.from(new Set(rows.map((row) => row.gsisId).filter((id): id is string => !!id))),
+    );
+
+    const toInsert: HydrationRow[] = [];
+    const toAttach: Array<{ gsisId: string; sleeperId: string; canonicalId: string }> = [];
+    const gsisWithheld: Array<{ sleeperId: string; gsisId: string; reason: string }> = [];
+    // Two rows in one batch can name the same GSIS; only the first may attach.
+    const claimedInBatch = new Set<string>();
+
+    for (const row of rows) {
+      const gsis = row.gsisId;
+      if (!gsis) { toInsert.push(row); continue; }
+
+      const existing = owners.get(gsis) ?? [];
+      const [owner] = existing;
+
+      if (existing.length === 1 && owner.sleeperId === row.sleeperId) {
+        continue; // The one owner already carries this Sleeper id.
+      }
+
+      if (existing.length === 1 && owner.sleeperId === null && !claimedInBatch.has(gsis)) {
+        claimedInBatch.add(gsis);
+        toAttach.push({ gsisId: gsis, sleeperId: row.sleeperId, canonicalId: owner.canonicalId });
+        continue;
+      }
+
+      const reason =
+        existing.length === 0 ? 'gsis_unowned_insert_would_race'
+        : existing.length > 1 ? 'gsis_already_ambiguous'
+        : claimedInBatch.has(gsis) ? 'gsis_claimed_earlier_in_batch'
+        : 'gsis_owned_by_different_sleeper_id';
+      gsisWithheld.push({ sleeperId: row.sleeperId, gsisId: gsis, reason });
+      toInsert.push({ ...row, gsisId: null });
+    }
+
+    // Conditional update bound to the exact owner selected above. The predicate
+    // re-checks canonical id, GSIS and unclaimed state, so a row that gained a
+    // Sleeper id between the read and the write is not overwritten; the
+    // affected-row count tells us whether this request actually won.
+    let attachedCount = 0;
+    for (const attach of toAttach) {
+      const statement = (deps.db as any)
+        .update(playerIdentityMap)
+        .set({ sleeperId: attach.sleeperId, updatedAt: new Date() })
+        .where(and(
+          eq(playerIdentityMap.canonicalId, attach.canonicalId),
+          eq(playerIdentityMap.gsisId, attach.gsisId),
+          isNull(playerIdentityMap.sleeperId),
+        ));
+      const affected = typeof statement?.returning === 'function'
+        ? await statement.returning()
+        : await statement;
+      if (!Array.isArray(affected) || affected.length > 0) attachedCount += 1;
+    }
+
+    if (toInsert.length > 0) {
+      await deps.db
+        .insert(playerIdentityMap)
+        .values(toInsert as any)
+        .onConflictDoNothing();
+    }
+
+    // Re-read authoritative rows for exactly the ids we were asked to hydrate.
+    // An attach updates an existing row that is not in `toInsert`, so returning
+    // only the inserts would leave the request that performed the repair still
+    // reporting that player unresolved until some later request.
+    //
+    // The read-back is the ONLY authority on what is persisted, so its result
+    // is taken as-is — including when it is empty. `toInsert` is a set of
+    // candidates, not an outcome: `onConflictDoNothing` may have suppressed
+    // every one of them, and falling back to the candidates would report rows
+    // that are not in the table as though they were. An empty read-back is a
+    // real answer; a failed read-back is no answer, and both must resolve to
+    // "nothing hydrated" rather than to the unpersisted candidate list.
+    let hydrated: any[] = [];
+    let readBackFailed = false;
+    try {
+      const authoritative = await (deps.db as any)
+        .select()
+        .from(playerIdentityMap)
+        .where(inArray(playerIdentityMap.sleeperId, uniqueMissingIds));
+      hydrated = Array.isArray(authoritative) ? authoritative : [];
+    } catch (readBackError) {
+      readBackFailed = true;
+      logger.log('identity-hydration-readback-failed', {
+        requestId: logger.requestId,
+        error: (readBackError as Error).message,
+      });
+    }
 
     logger.log('identity-hydration-complete', {
       requestId: logger.requestId,
       requested: uniqueMissingIds.length,
-      hydrated: rows.length,
-      sample: rows.slice(0, 5).map((row) => ({ sleeperId: row.sleeperId, canonicalId: row.canonicalId, fullName: row.fullName })),
+      inserted: toInsert.length,
+      attachedToExistingGsisOwner: attachedCount,
+      attachAttempted: toAttach.length,
+      gsisWithheld: gsisWithheld.length,
+      gsisWithheldSample: gsisWithheld.slice(0, 5),
+      returned: hydrated.length,
+      readBackFailed,
     });
 
-    return rows as any;
+    return hydrated as any;
   } catch (error) {
     logger.log('identity-hydration-failed', {
       requestId: logger.requestId,

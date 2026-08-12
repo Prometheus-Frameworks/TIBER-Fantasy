@@ -1,5 +1,8 @@
+/** @jest-environment jsdom */
+
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "react-dom/server.node";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import StressLab from "@/pages/StressLab";
 import {
@@ -18,6 +21,15 @@ function renderStressLab(): string {
     React.createElement(QueryClientProvider, { client }, React.createElement(StressLab)),
   );
 }
+
+function renderInteractiveStressLab() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    React.createElement(QueryClientProvider, { client }, React.createElement(StressLab)),
+  );
+}
+
+afterEach(cleanup);
 
 describe("Stress Lab v0 mock artifact builder", () => {
   it("builds deterministic operator_signal_note_v0 artifacts with contract-aligned metrics and guardrails", () => {
@@ -716,6 +728,22 @@ describe("Stress Lab v0 mock artifact builder", () => {
     expect(html).toContain("No LLM or RAG");
     expect(html).toContain("does not generate fantasy advice");
     expect(html).toContain("remain responsible for the final judgment");
+  });
+
+  it("clears a prior review when the operator edits or replaces its source note", () => {
+    renderInteractiveStressLab();
+
+    const note = screen.getByLabelText("Football observation");
+    fireEvent.change(note, { target: { value: "WR note: target share needs review." } });
+    fireEvent.click(screen.getByRole("button", { name: "Inspect note" }));
+    expect(screen.getByText("TIBER found a review path")).toBeTruthy();
+
+    fireEvent.change(note, { target: { value: "A different observation." } });
+    expect(screen.queryByText("TIBER found a review path")).toBeNull();
+    expect(screen.getByText("Your review path will appear here")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Use an example" }));
+    expect(screen.queryByText("TIBER found a review path")).toBeNull();
   });
 
 });

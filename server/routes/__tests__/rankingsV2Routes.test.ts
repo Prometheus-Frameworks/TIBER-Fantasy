@@ -1,6 +1,12 @@
 import express from 'express';
 import { AddressInfo } from 'net';
 
+// The route now resolves producer IDs to canonical keys at the ranking boundary
+// (Fantasy #308), so it imports the identity resolver and therefore `infra/db`,
+// which throws at import time without DATABASE_URL. Identity resolution itself is
+// covered by rankingIdentityResolver.test.ts and rankingsIdentityCrossSurface.test.ts.
+jest.mock('../../infra/db', () => ({ db: {} }));
+
 jest.mock('../../modules/externalModels/scoring/scoringService', () => ({
   scoringService: {
     getWeeklyRankings: jest.fn(),
@@ -17,15 +23,65 @@ jest.mock('../../modules/externalModels/scoring/scoringRequestMappers', () => ({
   hasMeaningfulScoringInputs: jest.fn(),
 }));
 
-import { createRankingsV2Router } from '../rankingsV2Routes';
+import { createRankingsV2Router, mapForgeCacheRowToRankingsV2Item } from '../rankingsV2Routes';
 import { scoringService } from '../../modules/externalModels/scoring/scoringService';
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
+import { RANKINGS_V2_CONTRACT_VERSION } from '../../contracts/rankingsV2';
+import { assertForgeCacheResponse } from '../../../scripts/audit/forgeCacheResponseGuard';
 
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
 const mockedBuildRankingsScoringInputs = buildRankingsScoringInputs as jest.MockedFunction<typeof buildRankingsScoringInputs>;
 const mockedHasMeaningfulScoringInputs = hasMeaningfulScoringInputs as jest.MockedFunction<typeof hasMeaningfulScoringInputs>;
+
+describe('rankings identity public-state normalization', () => {
+  const row = {
+    playerId: '00-0036963',
+    playerName: 'Amon-Ra St. Brown',
+    position: 'WR',
+    nflTeam: 'DET',
+    tier: 'T1',
+    alpha: 95,
+    rawAlpha: 77.2,
+  };
+
+  it('does not erase an ambiguity reason to promote a contradictory resolved state', () => {
+    const item = mapForgeCacheRowToRankingsV2Item(row, 1, '2026-08-09T00:00:00.000Z', {
+      status: 'resolved',
+      canonicalId: 'tiber-amon-ra-st-brown',
+      sourceId: '00-0036963',
+      sourceType: 'gsis',
+      reason: 'gsis_ambiguous_duplicate_crosswalk_rows',
+    });
+
+    expect(item.playerId).toBeNull();
+    expect(item.identity).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: 'gsis_ambiguous_duplicate_crosswalk_rows',
+      linkable: false,
+    });
+  });
+
+  it('fails closed when a canonical state has a different source id', () => {
+    const item = mapForgeCacheRowToRankingsV2Item(row, 1, '2026-08-09T00:00:00.000Z', {
+      status: 'canonical',
+      canonicalId: 'canonical-player',
+      sourceId: 'different-source',
+      sourceType: 'canonical',
+      reason: null,
+    });
+
+    expect(item.playerId).toBeNull();
+    expect(item.identity).toMatchObject({
+      status: 'unresolved',
+      canonicalId: null,
+      reason: 'identity_state_incoherent',
+      linkable: false,
+    });
+  });
+});
 
 async function call(path: string) {
   const app = express();
@@ -44,8 +100,8 @@ describe('rankingsV2Routes scoring integration', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     mockedCache.mockResolvedValue({ players: [], computedAt: new Date('2026-04-12T00:00:00.000Z'), asOfWeek: 5 } as any);
-    mockedBuildRankingsScoringInputs.mockResolvedValue([
-      ...Array.from({ length: 12 }).map((_, idx) => ({
+    mockedBuildRankingsScoringInputs.mockResolvedValue({
+      players: Array.from({ length: 12 }).map((_, idx) => ({
         player_id: `00-0036${idx}`,
         player_name: `Player ${idx}`,
         position: 'WR',
@@ -55,7 +111,9 @@ describe('rankingsV2Routes scoring integration', () => {
         targets_pg: 10,
         fantasy_points_ppr_pg: 19.5,
       })),
-    ]);
+      // The source-declared extent: max weekly_stats.week actually aggregated.
+      maxRepresentedWeek: 5,
+    } as any);
     mockedHasMeaningfulScoringInputs.mockReturnValue(true);
   });
 
@@ -85,6 +143,7 @@ describe('rankingsV2Routes scoring integration', () => {
     const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
 
     expect(res.status).toBe(200);
+    expect(res.body.contractVersion).toBe(RANKINGS_V2_CONTRACT_VERSION);
     expect(res.body.items[0].score).toBe(20.1);
     expect(res.body.items[0].value).toBe(3.4);
     expect(res.body.items[0].explanation.placementSummary).toContain('WR1');
@@ -117,10 +176,10 @@ describe('rankingsV2Routes scoring integration', () => {
         },
       ],
       computedAt: new Date('2026-04-12T00:00:00.000Z'),
-      asOfWeek: 5,
+      asOfWeek: 18,
     } as any);
 
-    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=18');
 
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
@@ -129,6 +188,18 @@ describe('rankingsV2Routes scoring integration', () => {
     // scoring-service failure is never indistinguishable from a genuinely empty ranking.
     const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
     expect(forgeLayer.notes).toContain('scoringFallbackReason=upstream_unavailable');
+    // This runs the real route payload through the audit boundary so producer
+    // metadata and the one-off observation guard cannot silently drift apart.
+    expect(res.body.sourceStack[0].asOf).toBe(res.body.asOf);
+    expect(res.body.sourceStack[1].asOf).toBe(res.body.asOf);
+    expect(res.body.seasonMeta.generatedAt).toBe(res.body.asOf);
+    expect(res.body.trust.asOf).toBe(res.body.asOf);
+    expect(res.body.items.length).toBeGreaterThan(0);
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
+    expect(assertForgeCacheResponse('WR', res.body)).toMatchObject({
+      layer: 'forge',
+      fallbackReason: 'upstream_unavailable',
+    });
   });
 
   it('falls back to FORGE cache and traces the reason when the scoring client rejects a malformed rankings collection', async () => {
@@ -153,6 +224,55 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
     const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
     expect(forgeLayer.notes).toContain('scoringFallbackReason=invalid_payload');
+  });
+
+  it('does not let a synthesized response clock qualify cache rows whose computedAt is unavailable as audit evidence', async () => {
+    mockedScoringService.getWeeklyRankings.mockResolvedValue({
+      ok: false,
+      code: 'upstream_unavailable',
+      message: 'down',
+    } as any);
+    mockedCache.mockResolvedValue({
+      players: [
+        {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+          position: 'WR',
+          nflTeam: 'MIN',
+          tier: 'T1',
+          alpha: 90,
+          rawAlpha: 88,
+        },
+      ],
+      computedAt: null,
+      asOfWeek: 18,
+    } as any);
+
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=18');
+
+    expect(res.status).toBe(200);
+    expect(res.body.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.sourceStack[0]).toMatchObject({
+      layer: 'forge',
+      asOf: null,
+    });
+    expect(res.body.sourceStack[1]).toMatchObject({
+      layer: 'confidence_stability',
+      asOf: null,
+      notes: 'No cache timestamp; using current server time as asOf fallback.',
+    });
+    expect(res.body.seasonMeta.generatedAt).toBeNull();
+    expect(res.body.trust.asOf).toBeNull();
+    expect(res.body.trust.freshnessNote).toBe(
+      'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
+    );
+    // Items inherit the synthesized response time too, but that agreement
+    // cannot rescue the missing primary cache clock: the envelope gate runs
+    // first and rejects this as fresh observation evidence.
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
+    expect(() => assertForgeCacheResponse('WR', res.body))
+      .toThrow(/confidence source asOf values must each be canonical ISO datetimes/);
   });
 
   it('logs and falls back to FORGE cache when the scoring service returns a schema-invalid payload', async () => {
@@ -199,9 +319,10 @@ describe('rankingsV2Routes scoring integration', () => {
   });
 
   it('does not prefer scoring rankings when mapped inputs are not meaningful', async () => {
-    mockedBuildRankingsScoringInputs.mockResolvedValue([
-      { player_id: '00-1', player_name: 'Thin Input WR', position: 'WR', team: 'FA', games_sampled: 1 } as any,
-    ]);
+    mockedBuildRankingsScoringInputs.mockResolvedValue({
+      players: [{ player_id: '00-1', player_name: 'Thin Input WR', position: 'WR', team: 'FA', games_sampled: 1 }],
+      maxRepresentedWeek: 1,
+    } as any);
     mockedHasMeaningfulScoringInputs.mockReturnValue(false);
     mockedCache.mockResolvedValue({
       players: [{ playerId: '00-1', playerName: 'Thin Input WR', position: 'WR', nflTeam: 'FA', tier: 'T5', alpha: 12, rawAlpha: 10 }],

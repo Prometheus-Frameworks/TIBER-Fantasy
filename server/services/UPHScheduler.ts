@@ -18,7 +18,7 @@
 
 import cron, { type ScheduledTask } from 'node-cron';
 import { UPHCoordinator, type ProcessingOptions, type JobResult, type JobStatus } from './UPHCoordinator';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import { requireEvidenceIngestionDefaultTarget } from '../config/season';
 
 export interface ScheduleConfig {
   name: string;
@@ -312,14 +312,19 @@ export class UPHScheduler {
         case 'SEASON':
           result = await this.uphCoordinator.runSeasonProcessing(
             processingScope.season,
-            config.options
+            config.options,
+            processingScope.evidenceThroughWeek,
           );
           break;
           
         case 'INCREMENTAL':
           result = await this.uphCoordinator.runIncrementalProcessing(
             processingScope.since,
-            config.options
+            config.options,
+            {
+              season: processingScope.season,
+              week: processingScope.week,
+            },
           );
           break;
           
@@ -434,28 +439,34 @@ export class UPHScheduler {
    * Determine processing scope based on job type and current context
    */
   private determineProcessingScope(jobType: 'WEEKLY' | 'SEASON' | 'INCREMENTAL'): any {
-    const currentSeason = 2024; // TODO: Make this dynamic based on NFL calendar
-    const currentWeek = parseInt(getCurrentNFLWeek());
-    
     switch (jobType) {
-      case 'WEEKLY':
+      case 'WEEKLY': {
+        const target = requireEvidenceIngestionDefaultTarget();
         return {
-          season: currentSeason,
-          week: currentWeek
+          season: target.season,
+          week: target.week,
         };
-        
-      case 'SEASON':
+      }
+
+      case 'SEASON': {
+        const target = requireEvidenceIngestionDefaultTarget();
         return {
-          season: currentSeason
+          season: target.season,
+          evidenceThroughWeek: target.week,
         };
-        
-      case 'INCREMENTAL':
+      }
+
+      case 'INCREMENTAL': {
+        const target = requireEvidenceIngestionDefaultTarget();
         // Process data changed in last 6 hours
         const since = new Date();
         since.setHours(since.getHours() - 6);
         return {
-          since
+          since,
+          season: target.season,
+          week: target.week,
         };
+      }
         
       default:
         throw new Error(`Unsupported job type for scope determination: ${jobType}`);

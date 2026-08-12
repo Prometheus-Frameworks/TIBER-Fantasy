@@ -31,6 +31,7 @@ import { PlayerIdentityService } from '../../services/PlayerIdentityService';
 import { QualityGateValidator } from '../../services/quality/QualityGateValidator';
 import { ConfidenceScorer } from '../../services/quality/ConfidenceScorer';
 import { DataLineageTracker } from '../../services/quality/DataLineageTracker';
+import { elapsedRegularSeasonWeeks } from '../../../shared/nflSeasonCalendar';
 
 export interface SeasonAggregationRequest {
   canonicalPlayerId: string;
@@ -38,6 +39,41 @@ export interface SeasonAggregationRequest {
   forceRecalculation?: boolean;
   includeProjections?: boolean;
   weekRange?: { start: number; end: number };
+  /** Atomic evidence bound supplied by governed jobs without narrowing aggregation. */
+  evidenceThroughWeek?: number;
+}
+
+/**
+ * Resolve the evidence week used only for season-quality freshness math.
+ * Governed jobs pass their atomic target. Explicit archive jobs may omit it;
+ * those use the named season's configured calendar, then observed source
+ * extent when the build has no calendar for that archive.
+ */
+export function resolveSeasonQualityEvidenceWeek(input: {
+  season: number;
+  weeklyFacts: Array<{ week?: unknown }>;
+  evidenceThroughWeek?: number;
+  now?: Date;
+}): number {
+  if (input.evidenceThroughWeek !== undefined) {
+    if (!Number.isInteger(input.evidenceThroughWeek) || input.evidenceThroughWeek < 1 || input.evidenceThroughWeek > 18) {
+      throw new Error('Season quality evidenceThroughWeek must be an integer between 1 and 18.');
+    }
+    return input.evidenceThroughWeek;
+  }
+
+  const elapsedWeek = elapsedRegularSeasonWeeks(input.season, input.now ?? new Date());
+  if (elapsedWeek !== null && elapsedWeek >= 1) {
+    return elapsedWeek;
+  }
+
+  const observedWeeks = input.weeklyFacts
+    .map((fact) => fact.week)
+    .filter((week): week is number => Number.isInteger(week) && Number(week) >= 1 && Number(week) <= 18);
+  if (observedWeeks.length === 0) {
+    throw new Error(`No valid evidence week is available for season ${input.season}.`);
+  }
+  return Math.max(...observedWeeks);
 }
 
 export interface SeasonFactsResult {
@@ -151,7 +187,11 @@ export class SeasonFactsProcessor {
       const marketData = await this.getMarketDataIntegration(request.canonicalPlayerId, request.season);
       
       // Calculate quality metrics
-      const qualityMetrics = this.calculateQualityMetrics(weeklyFacts, aggregatedStats);
+      const qualityMetrics = this.calculateQualityMetrics(
+        weeklyFacts,
+        request.season,
+        request.evidenceThroughWeek,
+      );
 
       // Prepare season facts record
       const seasonFactsData: InsertPlayerSeasonFacts = {
@@ -661,18 +701,22 @@ export class SeasonFactsProcessor {
   /**
    * Calculate quality metrics for season aggregation
    */
-  private calculateQualityMetrics(weeklyFacts: any[], aggregatedStats: any): any {
+  private calculateQualityMetrics(
+    weeklyFacts: any[],
+    season: number,
+    evidenceThroughWeek?: number,
+  ): any {
     // Calculate source mask from weekly facts
     const sourceMasks = weeklyFacts.map(w => w.sourceMask || 0);
     const combinedSourceMask = sourceMasks.reduce((mask, weekMask) => mask | weekMask, 0);
 
     // Calculate freshness score based on most recent data
     const mostRecentWeek = Math.max(...weeklyFacts.map(w => w.week));
-    // NFL 2025 season start: September 4, 2025
-    const seasonStart = new Date('2025-09-04');
-    const msSinceStart = new Date().getTime() - seasonStart.getTime();
-    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-    const currentWeek = Math.max(1, Math.min(18, Math.floor(msSinceStart / msPerWeek) + 1));
+    const currentWeek = resolveSeasonQualityEvidenceWeek({
+      season,
+      weeklyFacts,
+      evidenceThroughWeek,
+    });
     
     const weeksBehind = Math.max(0, currentWeek - mostRecentWeek);
     const freshnessScore = Math.max(0, 1 - (weeksBehind * 0.1));

@@ -82,8 +82,22 @@ export default function StrategyTab() {
   const [sosPosition, setSosPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   const [startSitPosition, setStartSitPosition] = useState<'ALL' | 'QB' | 'RB' | 'WR' | 'TE'>('ALL');
   
-  // Get current NFL week dynamically
-  const { upcomingWeek: startSitWeek, isLoading: weekLoading } = useCurrentNFLWeek();
+  // Start/sit and waivers are forward-looking decisions, so they key on the
+  // nullable DECISION TARGET, not the legacy numeric accessor whose `|| 1`
+  // fallback invented Week 1 whenever no week was resolvable. When the target
+  // is unresolved (offseason boundary, stale calendar) the requests are
+  // disabled below rather than fabricated.
+  //
+  // The target is a SEASON-AND-WEEK pair, and both halves travel together.
+  // Reading only the week discarded the season, so the requests omitted it and
+  // the server's legacy default filled in 2025 — the UI presenting the 2026
+  // Week 1 forward target over recommendations computed from a different
+  // season's football. A week number without its season is not a target.
+  const {
+    targetWeek: startSitWeek,
+    targetSeason: startSitSeason,
+    isLoading: weekLoading,
+  } = useCurrentNFLWeek();
 
   // Build query URLs with params
   const buildSosUrl = (type: 'defense' | 'offense') => {
@@ -107,10 +121,21 @@ export default function StrategyTab() {
     enabled: activeTab === 'sos' && sosView === 'offense',
   });
 
+  // Both halves of the target must be resolved before either request may run.
+  // The server's `season` parameter has a legacy 2025 default, so omitting the
+  // season is not a smaller request — it is a request about different football.
+  const targetResolved =
+    startSitWeek !== null && startSitWeek > 0 && startSitSeason !== null && !weekLoading;
+
   // Build query URLs with params
   const buildStartSitUrl = () => {
     const params = new URLSearchParams();
-    params.set('week', startSitWeek.toString());
+    // Guarded by `enabled` below; the throws are tripwires against a future
+    // caller bypassing the gate and silently querying an invented target.
+    if (startSitWeek === null) throw new Error('start/sit requested without a resolved target week');
+    if (startSitSeason === null) throw new Error('start/sit requested without a resolved target season');
+    params.set('season', String(startSitSeason));
+    params.set('week', String(startSitWeek));
     if (startSitPosition !== 'ALL') {
       params.set('position', startSitPosition);
     }
@@ -119,28 +144,34 @@ export default function StrategyTab() {
 
   const buildWaiverUrl = () => {
     const params = new URLSearchParams();
-    params.set('week', startSitWeek.toString());
+    if (startSitWeek === null) throw new Error('waivers requested without a resolved target week');
+    if (startSitSeason === null) throw new Error('waivers requested without a resolved target season');
+    params.set('season', String(startSitSeason));
+    params.set('week', String(startSitWeek));
     return `/api/strategy/targets?${params.toString()}`;
   };
 
-  // Fetch start/sit recommendations (wait for week data)
+  // Fetch start/sit recommendations (wait for week data). The season is in the
+  // query key as well as the URL: Week 1 of 2026 and Week 1 of 2025 are the
+  // same week number about different football, and a key holding only the week
+  // would let one serve the other's cached recommendations.
   const { data: startSitData, isLoading: startSitLoading } = useQuery<StartSitResponse>({
-    queryKey: ['/api/strategy/start-sit', startSitWeek, startSitPosition],
+    queryKey: ['/api/strategy/start-sit', startSitSeason, startSitWeek, startSitPosition],
     queryFn: async () => {
       const response = await fetch(buildStartSitUrl());
       return response.json();
     },
-    enabled: activeTab === 'startsit' && startSitWeek > 0 && !weekLoading,
+    enabled: activeTab === 'startsit' && targetResolved,
   });
 
   // Fetch waiver targets (wait for week data)
   const { data: waiverTargets, isLoading: waiversLoading } = useQuery<WaiverTargetsResponse>({
-    queryKey: ['/api/strategy/targets', startSitWeek],
+    queryKey: ['/api/strategy/targets', startSitSeason, startSitWeek],
     queryFn: async () => {
       const response = await fetch(buildWaiverUrl());
       return response.json();
     },
-    enabled: activeTab === 'waivers' && startSitWeek > 0 && !weekLoading,
+    enabled: activeTab === 'waivers' && targetResolved,
   });
 
   const isLoading = sosView === 'defense' ? defenseLoading : offenseLoading;

@@ -8,7 +8,7 @@ import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
 import { setupRBContextCheckCron } from './rbContextCheck';
 import { setupInjurySyncCron } from './injurySync';
 import { setupScheduleSyncCron } from './scheduleSync';
-import { getCurrentNFLWeek as getWeekFromConfig, CURRENT_NFL_SEASON } from '../../shared/config/seasons';
+import { requireEvidenceIngestionDefaultTarget } from '../config/season';
 
 /**
  * Setup nightly Buys/Sells computation cron job
@@ -19,11 +19,10 @@ export function setupNightlyBuysSellsCron() {
 
   // Run every day at 3 AM ET (after data ingestion is complete)
   cron.schedule('0 3 * * *', async () => {
-    const currentWeek = getCurrentNFLWeek();
-    console.log(`🌙 Nightly Buys/Sells cron triggered for Week ${currentWeek}`);
-    
     try {
-      const result = await nightlyBuysSellsETL.processNightlyBuysSells();
+      const target = requireEvidenceIngestionDefaultTarget();
+      console.log(`🌙 Nightly Buys/Sells cron triggered for ${target.season} Week ${target.week}`);
+      const result = await nightlyBuysSellsETL.processNightlyBuysSells(target);
       console.log(`✅ Nightly Buys/Sells computation completed:`);
       console.log(`   📊 ${result.totalRecords} recommendations generated`);
       console.log(`   🎯 ${result.positionsProcessed.length} positions processed`);
@@ -52,13 +51,12 @@ export function setupWeeklyDataProcessing() {
 
   // Run every Tuesday at 4 AM ET (after Hot List updates and nightly processing)
   cron.schedule('0 4 * * 2', async () => {
-    const currentWeek = getCurrentNFLWeek();
-    console.log(`📊 Weekly data processing triggered for Week ${currentWeek}`);
-    
     try {
+      const target = requireEvidenceIngestionDefaultTarget();
+      console.log(`📊 Weekly data processing triggered for ${target.season} Week ${target.week}`);
       // Run comprehensive Buys/Sells computation for the new week
       console.log('🔄 Running comprehensive Buys/Sells computation for new week...');
-      const result = await nightlyBuysSellsETL.processSpecificWeek(parseInt(currentWeek));
+      const result = await nightlyBuysSellsETL.processSpecificWeek(target.week, target.season);
       
       console.log(`✅ Weekly Buys/Sells computation completed:`);
       console.log(`   📊 ${result.totalRecords} recommendations generated`);
@@ -99,11 +97,12 @@ export function setupAllCronJobs() {
 
 /**
  * Get current NFL week as string (for backwards compatibility)
- * Uses centralized config from shared/config/seasons.ts
+ * Uses the same atomic, phase-aware evidence target as active ingestion jobs.
+ * Throws when the calendar/config cannot name a truthful evidence week; there
+ * is deliberately no Week 1 or Week 18 fallback.
  */
-function getCurrentNFLWeek(): string {
-  const week = getWeekFromConfig(CURRENT_NFL_SEASON);
-  return `${week ?? 1}`;
+function getCurrentNFLWeek(currentDate?: Date): string {
+  return String(requireEvidenceIngestionDefaultTarget(currentDate).week);
 }
 
 export { getCurrentNFLWeek };

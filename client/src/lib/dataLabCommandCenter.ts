@@ -164,10 +164,24 @@ export function readDataLabCommandCenterQuery(search: string): DataLabCommandCen
   };
 }
 
+/**
+ * A season is navigation state only when it is a real season.
+ *
+ * The previous truthy check accepted any non-empty string, so DISPLAY COPY
+ * became a query value: an unresolved season rendered as an em dash produced
+ * `?season=%E2%80%94`, and following that link failed the command-center API's
+ * numeric season validator with a 400. Callers should omit an unresolved
+ * season, and this guard makes doing otherwise impossible — the parameter is
+ * dropped rather than serialised as prose.
+ */
+function isRealSeason(season: string | null | undefined): season is string {
+  return typeof season === 'string' && /^\d{4}$/.test(season.trim());
+}
+
 export function buildDataLabCommandCenterHref(query: Partial<DataLabCommandCenterQueryState>): string {
   const params = new URLSearchParams();
-  if (query.season) {
-    params.set('season', query.season);
+  if (isRealSeason(query.season)) {
+    params.set('season', query.season.trim());
   }
   const serialized = params.toString();
   return serialized ? `/tiber-data-lab/command-center?${serialized}` : '/tiber-data-lab/command-center';

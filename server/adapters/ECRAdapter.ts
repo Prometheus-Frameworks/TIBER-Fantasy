@@ -13,7 +13,10 @@
  */
 
 import { bronzeLayerService, type RawPayloadInput } from '../services/BronzeLayerService';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  resolveEvidenceIngestionSeason,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 interface ECRRanking {
   player_name: string;
@@ -85,8 +88,10 @@ export class ECRAdapter {
    */
   async ingestECRRankings(options: ECRIngestionOptions = {}): Promise<number[]> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
-    const week = options.week; // undefined for season-long rankings
+    const target = options.week === undefined
+      ? { season: resolveEvidenceIngestionSeason(options.season), week: undefined }
+      : resolveEvidenceIngestionTarget({ season: options.season, week: options.week });
+    const { season, week } = target; // undefined week means season-long rankings
     const jobId = options.jobId || `ecr_rankings_${season}${week ? `_w${week}` : ''}_${Date.now()}`;
     
     const positions = options.positions || ['QB', 'RB', 'WR', 'TE'];
@@ -144,7 +149,7 @@ export class ECRAdapter {
    */
   async ingestADPData(options: ECRIngestionOptions = {}): Promise<number[]> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     const jobId = options.jobId || `ecr_adp_${season}_${Date.now()}`;
     
     const formats = options.formats || ['ppr', 'half-ppr', 'standard'];

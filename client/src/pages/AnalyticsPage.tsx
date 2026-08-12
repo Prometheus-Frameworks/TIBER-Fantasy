@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
                       key={pos}
                       onClick={() => handlePositionChange(pos)}
                       variant={position === pos ? 'default' : 'outline'}
-                      className={position === pos ? 'bg-primary text-white' : 'text-gray-400'}
+                      className={position === pos ? 'bg-primary text-primary-foreground' : 'text-gray-700'}
                       data-testid={`button-position-${pos.toLowerCase()}`}
                     >
                       {pos}
