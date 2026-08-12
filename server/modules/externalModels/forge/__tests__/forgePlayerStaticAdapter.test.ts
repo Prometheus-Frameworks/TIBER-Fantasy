@@ -230,6 +230,41 @@ describe('FORGE_PLAYER_STATIC_V1 adapter', () => {
     }, '/tmp/dup.json')).toThrow(/duplicate player ID/);
   });
 
+  it.each([
+    ['artifact ID', { artifact_type: 'OTHER_ARTIFACT' }, /Unsupported FORGE static artifact \(OTHER_ARTIFACT\)/],
+    ['contract version', { schema_version: 'v2' }, /Unsupported FORGE static artifact version \(v2\)/],
+  ])('fails closed on an unsupported declared %s', (_label, declaration, message) => {
+    expect(() => adaptForgePlayerStaticArtifact({
+      ...declaration,
+      rows: validPayload.rows,
+    }, '/tmp/unsupported.json')).toThrow(message);
+  });
+
+  it('preserves nullish metadata chains, shallow merge order, and declaration-key precedence', () => {
+    const lookup = adaptForgePlayerStaticArtifact({
+      artifact_type: 'OTHER_ROOT',
+      artifact_id: 'FORGE_PLAYER_STATIC_V1',
+      version: 'v2',
+      meta: null,
+      metadata: { artifact_type: 'OTHER_METADATA', version: 'v2' },
+      consumer_manifest: null,
+      downstream_consumer_manifest: {
+        artifact_type: 'FORGE_PLAYER_STATIC_V1',
+        version: 'v1',
+      },
+      rows: validPayload.rows,
+    }, '/tmp/merged-declaration.json');
+
+    expect(lookup.artifact.available).toBe(true);
+    expect(lookup.artifact.rowCount).toBe(2);
+
+    expect(() => adaptForgePlayerStaticArtifact({
+      artifact_type: 'OTHER_ARTIFACT',
+      artifact_id: 'FORGE_PLAYER_STATIC_V1',
+      rows: validPayload.rows,
+    }, '/tmp/key-precedence.json')).toThrow(/OTHER_ARTIFACT/);
+  });
+
   it('treats unknown score_source rows as non-evidence and non-baseline visibility', () => {
     const lookup = adaptForgePlayerStaticArtifact({
       meta: { artifact_id: 'FORGE_PLAYER_STATIC_V1' },

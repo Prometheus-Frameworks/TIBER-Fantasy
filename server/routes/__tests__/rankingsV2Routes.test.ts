@@ -28,6 +28,7 @@ import { scoringService } from '../../modules/externalModels/scoring/scoringServ
 import { getGradesFromCache } from '../../modules/forge/forgeGradeCache';
 import { buildRankingsScoringInputs, hasMeaningfulScoringInputs } from '../../modules/externalModels/scoring/scoringRequestMappers';
 import { RANKINGS_V2_CONTRACT_VERSION } from '../../contracts/rankingsV2';
+import { assertForgeCacheResponse } from '../../../scripts/audit/forgeCacheResponseGuard';
 
 const mockedScoringService = scoringService as jest.Mocked<typeof scoringService>;
 const mockedCache = getGradesFromCache as jest.MockedFunction<typeof getGradesFromCache>;
@@ -175,10 +176,10 @@ describe('rankingsV2Routes scoring integration', () => {
         },
       ],
       computedAt: new Date('2026-04-12T00:00:00.000Z'),
-      asOfWeek: 5,
+      asOfWeek: 18,
     } as any);
 
-    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=5');
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=18');
 
     expect(res.status).toBe(200);
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
@@ -187,6 +188,18 @@ describe('rankingsV2Routes scoring integration', () => {
     // scoring-service failure is never indistinguishable from a genuinely empty ranking.
     const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
     expect(forgeLayer.notes).toContain('scoringFallbackReason=upstream_unavailable');
+    // This runs the real route payload through the audit boundary so producer
+    // metadata and the one-off observation guard cannot silently drift apart.
+    expect(res.body.sourceStack[0].asOf).toBe(res.body.asOf);
+    expect(res.body.sourceStack[1].asOf).toBe(res.body.asOf);
+    expect(res.body.seasonMeta.generatedAt).toBe(res.body.asOf);
+    expect(res.body.trust.asOf).toBe(res.body.asOf);
+    expect(res.body.items.length).toBeGreaterThan(0);
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
+    expect(assertForgeCacheResponse('WR', res.body)).toMatchObject({
+      layer: 'forge',
+      fallbackReason: 'upstream_unavailable',
+    });
   });
 
   it('falls back to FORGE cache and traces the reason when the scoring client rejects a malformed rankings collection', async () => {
@@ -211,6 +224,55 @@ describe('rankingsV2Routes scoring integration', () => {
     expect(res.body.items[0].playerName).toBe('Justin Jefferson');
     const forgeLayer = res.body.sourceStack.find((item: any) => item.layer === 'forge');
     expect(forgeLayer.notes).toContain('scoringFallbackReason=invalid_payload');
+  });
+
+  it('does not let a synthesized response clock qualify cache rows whose computedAt is unavailable as audit evidence', async () => {
+    mockedScoringService.getWeeklyRankings.mockResolvedValue({
+      ok: false,
+      code: 'upstream_unavailable',
+      message: 'down',
+    } as any);
+    mockedCache.mockResolvedValue({
+      players: [
+        {
+          playerId: '00-0036322',
+          playerName: 'Justin Jefferson',
+          position: 'WR',
+          nflTeam: 'MIN',
+          tier: 'T1',
+          alpha: 90,
+          rawAlpha: 88,
+        },
+      ],
+      computedAt: null,
+      asOfWeek: 18,
+    } as any);
+
+    const res = await call('/api/rankings/v2/weekly?season=2025&position=WR&asOfWeek=18');
+
+    expect(res.status).toBe(200);
+    expect(res.body.asOf).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.sourceStack[0]).toMatchObject({
+      layer: 'forge',
+      asOf: null,
+    });
+    expect(res.body.sourceStack[1]).toMatchObject({
+      layer: 'confidence_stability',
+      asOf: null,
+      notes: 'No cache timestamp; using current server time as asOf fallback.',
+    });
+    expect(res.body.seasonMeta.generatedAt).toBeNull();
+    expect(res.body.trust.asOf).toBeNull();
+    expect(res.body.trust.freshnessNote).toBe(
+      'Cache computedAt unavailable; top-level asOf reflects server fallback time.',
+    );
+    // Items inherit the synthesized response time too, but that agreement
+    // cannot rescue the missing primary cache clock: the envelope gate runs
+    // first and rejects this as fresh observation evidence.
+    expect(res.body.items.every((item: any) => item.trust?.asOf === res.body.asOf)).toBe(true);
+    expect(() => assertForgeCacheResponse('WR', res.body))
+      .toThrow(/confidence source asOf values must each be canonical ISO datetimes/);
   });
 
   it('logs and falls back to FORGE cache when the scoring service returns a schema-invalid payload', async () => {
