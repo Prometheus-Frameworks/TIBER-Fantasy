@@ -1050,6 +1050,10 @@ export interface MarkdownSection {
   heading: string;
   /** Canonical ATX-shaped comparison form, including normalized inline text. */
   normalizedHeading: string;
+  /** Zero-based source line carrying the section heading. */
+  startLine: number;
+  /** Zero-based exclusive source-line boundary for this section. */
+  endLine: number;
   tables: MarkdownTable[];
 }
 
@@ -1114,6 +1118,8 @@ export function readMarkdownSections(report: string, heading: RegExp): MarkdownS
     sections.push({
       heading: parsedHeading.raw,
       normalizedHeading: parsedHeading.normalized,
+      startLine: parsedHeading.line,
+      endLine: end,
       tables,
     });
   }
@@ -1126,6 +1132,78 @@ export function readMarkdownTables(report: string, heading: RegExp): MarkdownTab
   // (or do not care) that the heading is unique. Uniqueness enforcement lives
   // with the callers that govern a section, via readMarkdownSections.
   return readMarkdownSections(report, heading)[0]?.tables ?? [];
+}
+
+interface GovernedNarrativeParagraph {
+  startLine: number;
+  endLine: number;
+  value: string;
+  problem: string | null;
+}
+
+/**
+ * Visible narrative paragraphs under the same bounded Markdown rules used for
+ * governed sections and tables.
+ *
+ * This is intentionally not a general Markdown AST. It only separates the
+ * constructs material to the claim guard below: fenced/indented code and pipe
+ * tables are inert, blockquote/list markers are removed by the existing
+ * bounded container view, and ordinary soft-wrapped prose is joined into one
+ * paragraph. Inline presentation is normalized with the same bounded helper
+ * used for governed headings and cells; an unsupported form is retained with
+ * a problem so a same-root claim cannot disappear behind syntax we do not
+ * claim to parse.
+ */
+function governedNarrativeParagraphs(report: string): GovernedNarrativeParagraph[] {
+  const lines = report.split('\n');
+  const visible = visibleMarkdownLines(lines);
+  const tableLines = markdownTableLineNumbers(lines, visible);
+  const containerViews = governedContainerViews(lines, visible);
+  const paragraphs: GovernedNarrativeParagraph[] = [];
+  let parts: string[] = [];
+  let startLine = -1;
+  let endLine = -1;
+
+  const flush = () => {
+    if (parts.length === 0) return;
+    const normalized = normalizeBoundedInline(parts.join(' '));
+    paragraphs.push({
+      startLine,
+      endLine,
+      value: normalized.value,
+      problem: normalized.problem,
+    });
+    parts = [];
+    startLine = -1;
+    endLine = -1;
+  };
+
+  lines.forEach((line, index) => {
+    if (!visible[index] || tableLines.has(index)) {
+      flush();
+      return;
+    }
+    const containerView = containerViews[index];
+    const structuralLine = containerView.stripped ? containerView.text : line;
+    if (!hasBoundedIndent(structuralLine)) {
+      flush();
+      return;
+    }
+
+    // Inline code is presentation inside a prose assertion, so retain it for
+    // normalizeBoundedInline() below. Only fenced/indented code blocks are
+    // inert structural examples.
+    const narrative = structuralLine.replace(/^ {0,3}/, '').trim();
+    if (narrative === '') {
+      flush();
+      return;
+    }
+    if (parts.length === 0) startLine = index;
+    parts.push(narrative);
+    endLine = index + 1;
+  });
+  flush();
+  return paragraphs;
 }
 
 /**
@@ -1656,6 +1734,96 @@ const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> =
  */
 export const COMPARISON_SECTION_HEADING = /^#{1,6}\s+5\.2(?!\w)(?!\.\d)/;
 
+const EXACT_AGREEMENT_NARRATIVE_ROOT = /\bartifacts agree exactly on\b/gi;
+
+/**
+ * Conservative root search for unsupported prose presentation.
+ *
+ * `normalizeBoundedInline()` intentionally refuses reference links,
+ * strikethrough, and imbalanced presentation instead of pretending to parse
+ * them. For this one governed root, refusal must not become invisibility:
+ * remove only the presentation fragments that can split its words, then fail
+ * closed if the root appears. This is a narrow ambiguity detector, not a claim
+ * that the syntax has otherwise been parsed or accepted.
+ */
+function exactAgreementRootSearchValue(paragraph: GovernedNarrativeParagraph): string {
+  if (!paragraph.problem) return paragraph.value;
+  return paragraph.value
+    .replace(/\[([^\]\n]+)\]\[[^\]\n]*\]/g, '$1')
+    .replace(/\[([^\]\n]+)\]/g, '$1')
+    .replace(/~~([^~\n]+)~~/g, '$1')
+    .replace(/[*_`]/g, '')
+    .replace(/[ \t]+/g, ' ');
+}
+
+/**
+ * Bind §5.2's redundant prose result to the same manifest fields as its table.
+ *
+ * This deliberately governs one exact sentence rather than attempting to
+ * infer whether arbitrary English agrees with the table. Every visible
+ * narrative use of the narrow "artifacts agree exactly on" root is counted
+ * across the report: the one allowed use must be a standalone paragraph in
+ * §5.2 and must match the manifest-derived template exactly. A second use is
+ * contradictory/ambiguous even when the required sentence is still present.
+ */
+function exactAgreementNarrativeProblems(
+  report: string,
+  section: MarkdownSection,
+  descriptiveComparison: any,
+): string[] {
+  const exactAgreement = descriptiveComparison.exactAgreement;
+  const joinedRows = descriptiveComparison.joinedRows;
+  if (
+    typeof exactAgreement !== 'number' || !Number.isSafeInteger(exactAgreement) ||
+    typeof joinedRows !== 'number' || !Number.isSafeInteger(joinedRows)
+  ) {
+    return ['manifest exact-agreement counts are not integers, so §5.2 narrative cannot be governed'];
+  }
+
+  const quantity = exactAgreement === 0
+    ? 'none'
+    : exactAgreement === joinedRows
+      ? 'all'
+      : String(exactAgreement);
+  const expected =
+    `The two artifacts agree exactly on ${quantity} of the ${joinedRows} shared players.`;
+  const rooted = governedNarrativeParagraphs(report).flatMap((paragraph) => {
+    const matches = [...exactAgreementRootSearchValue(paragraph).matchAll(EXACT_AGREEMENT_NARRATIVE_ROOT)];
+    return matches.map(() => paragraph);
+  });
+
+  if (rooted.length === 0) {
+    return [
+      'report has no governed exact-agreement narrative in §5.2; expected the manifest-derived sentence ' +
+      JSON.stringify(expected),
+    ];
+  }
+  if (rooted.length > 1) {
+    return [
+      `report carries ${rooted.length} visible narrative claims rooted at "artifacts agree exactly on"; ` +
+      'exactly one manifest-bound claim is allowed',
+    ];
+  }
+
+  const [claim] = rooted;
+  if (claim.problem) {
+    return [
+      `report's exact-agreement narrative uses ${claim.problem}; ` +
+      'the governed claim must use the directly tokenizable manifest-derived sentence',
+    ];
+  }
+  if (claim.startLine <= section.startLine || claim.endLine > section.endLine) {
+    return ['report states its governed exact-agreement narrative outside the unique §5.2 section'];
+  }
+  if (claim.value !== expected) {
+    return [
+      `report's exact-agreement narrative is ${JSON.stringify(claim.value)}; ` +
+      `the manifest requires ${JSON.stringify(expected)}`,
+    ];
+  }
+  return [];
+}
+
 /**
  * Problems in how the report states the manifest's descriptive comparison.
  *
@@ -1664,7 +1832,9 @@ export const COMPARISON_SECTION_HEADING = /^#{1,6}\s+5\.2(?!\w)(?!\.\d)/;
  * disagreements — so a reviewer could rewrite the summary cells and `--check`
  * would still print "report consistent". Each measure is now read from the row
  * that states it, in the table under the descriptive-comparison heading, and
- * compared numerically.
+ * compared numerically. The section's exact-agreement prose is also governed
+ * as one exact manifest-derived sentence; any additional visible narrative
+ * claim using the same narrow root is rejected as contradictory/ambiguous.
  *
  * Uniqueness is enforced at both the section and table level, mirroring
  * `reportClampingProblems`: a duplicated §5.2 heading — verbatim, retitled,
@@ -1690,6 +1860,7 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
       `report carries ${sections.length} sections whose heading matches §5.2; exactly one may state these findings`,
     ];
   }
+  problems.push(...exactAgreementNarrativeProblems(report, sections[0], dc));
   if (sections[0].tables.length !== 2) {
     problems.push(
       `report's §5.2 section carries ${sections[0].tables.length} tables; ` +

@@ -1317,6 +1317,8 @@ describe('report consistency is checked per row, not as a substring sweep', () =
   const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
   const report = fs.readFileSync(REPORT_PATH, 'utf8');
   const dc = manifest.comparability.descriptiveComparison;
+  const exactAgreementNarrative =
+    '**The two artifacts agree exactly on none of the 50 shared players.**';
 
   /** Rewrite one `| label | value |` cell of the comparison table. */
   const editCell = (label: string, replacement: string) => {
@@ -1392,6 +1394,74 @@ describe('report consistency is checked per row, not as a substring sweep', () =
     );
     expect(drifted).not.toBe(report);
     expect(reportComparisonProblems(drifted, dc).join('\n')).toMatch(/heading states/);
+  });
+
+  test('the exact none-to-all prose mutation is rejected while both governed tables stay intact', () => {
+    expect(report).toContain(exactAgreementNarrative);
+    const tampered = report.replace(
+      exactAgreementNarrative,
+      '**The two artifacts agree exactly on all of the 50 shared players.**',
+    );
+    expect(tampered).not.toBe(report);
+    expect(readMarkdownSections(tampered, COMPARISON_SECTION_HEADING)[0].tables).toHaveLength(2);
+    expect(reportComparisonProblems(tampered, dc).join('\n'))
+      .toMatch(/exact-agreement narrative.*manifest requires/i);
+  });
+
+  test('the exact prose template follows the manifest count rather than a pinned none/50 literal', () => {
+    const oneAgreement = { ...dc, exactAgreement: 1 };
+    const adjusted = editCell('exact agreement', '1').replace(
+      exactAgreementNarrative,
+      '**The two artifacts agree exactly on 1 of the 50 shared players.**',
+    );
+    expect(reportComparisonProblems(adjusted, oneAgreement)).toEqual([]);
+  });
+
+  test('a second visible same-root prose claim anywhere in the report is rejected while the required sentence remains', () => {
+    expect(report).toContain(exactAgreementNarrative);
+    const contradictory =
+      `${report}\n\nThese artifacts agree exactly on all of the 50 shared players.\n`;
+    expect(contradictory).not.toBe(report);
+    expect(reportComparisonProblems(contradictory, dc).join('\n'))
+      .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+  });
+
+  test('bounded inline presentation cannot hide a same-root contradiction', () => {
+    for (const presentedRoot of [
+      '`artifacts agree exactly on`',
+      '**artifacts agree exactly on**',
+      '[artifacts agree exactly on](https://example.invalid/claim)',
+    ]) {
+      const contradictory =
+        `${report}\n\nThese ${presentedRoot} all of the 50 shared players.\n`;
+      expect(reportComparisonProblems(contradictory, dc).join('\n'))
+        .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+    }
+  });
+
+  test('unsupported reference-link and strikethrough presentation fail closed around the same root', () => {
+    for (const contradiction of [
+      'These artifacts [agree][claim] exactly on all of the 50 shared players.\n\n[claim]: https://example.invalid/',
+      'These artifacts ~~agree~~ exactly on all of the 50 shared players.',
+    ]) {
+      const tampered = `${report}\n\n${contradiction}\n`;
+      expect(reportComparisonProblems(tampered, dc).join('\n'))
+        .toMatch(/2 visible narrative claims rooted at "artifacts agree exactly on"/i);
+    }
+  });
+
+  test('same-root examples in fenced or indented code remain inert under the bounded prose guard', () => {
+    expect(report).toContain(exactAgreementNarrative);
+    for (const inertExample of [
+      '```text\nThese artifacts agree exactly on all of the 50 shared players.\n```',
+      '    These artifacts agree exactly on all of the 50 shared players.',
+    ]) {
+      const withExample = report.replace(
+        exactAgreementNarrative,
+        `${exactAgreementNarrative}\n\n${inertExample}`,
+      );
+      expect(reportComparisonProblems(withExample, dc)).toEqual([]);
+    }
   });
 
   test('a deleted comparison table is a problem, not a silent pass', () => {

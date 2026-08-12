@@ -338,8 +338,9 @@ Largest absolute disagreements:
 | T.Hill | `00-0033040` | WR | 34.76 | 55.2 | +20.44 |
 | Brock Bowers | `00-0039338` | TE | 72.43 | 90 | +17.57 |
 
-**The two artifacts agree exactly on none of the 50 shared players**, and the
-spread reaches 26 alpha points. That is a measurement, not an explanation: it
+**The two artifacts agree exactly on none of the 50 shared players.**
+
+That is a measurement, not an explanation: it
 does not establish which artifact is closer to correct, nor why they differ.
 Answering that needs the input manifest, source snapshot identity and engine
 version pin that §6 shows the cache does not persist — which is precisely the
