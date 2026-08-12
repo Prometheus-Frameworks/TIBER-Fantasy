@@ -19,17 +19,20 @@ import {
   COMPARISON_SECTION_HEADING,
   CURRENT_SOURCE_DESCRIPTION,
   FROZEN_COHORT,
+  IDENTITY_SECTION_HEADING,
   OBSERVATION_EVIDENCE_STATUS,
   SUPERSEDED_TERMINAL_FINDING,
   TERMINAL_FINDING,
   computeJoinBlockers,
   formatClampPct,
+  governedMarkdownSyntaxProblems,
   parseAtxHeading,
   readMarkdownSections,
   readMarkdownTable,
   readMarkdownTables,
   reportClampingProblems,
   reportComparisonProblems,
+  reportIdentityProblems,
   rowIdentityFromCohortRow,
   rowIdentityFromResponseItem,
   unsupportedLineageClaims,
@@ -410,6 +413,847 @@ describe('provenance', () => {
   });
 });
 
+describe('the report identity summary is governed by cacheCohort.identity', () => {
+  const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
+  const report = fs.readFileSync(REPORT_PATH, 'utf8');
+  const identity = manifest.cacheCohort.identity;
+
+  const replaceIdentityValue = (label: string, replacement: string, source = report) => {
+    const pattern = new RegExp(`^(\\|\\s*${label}[^|]*\\|\\s*)([^|]*?)(\\s*\\|)$`, 'mi');
+    expect(source).toMatch(pattern);
+    return source.replace(pattern, `$1${replacement}$3`);
+  };
+
+  test('the committed §3 table agrees with every manifest identity field it states', () => {
+    expect(reportIdentityProblems(report, identity)).toEqual([]);
+    expect(readMarkdownSections(report, IDENTITY_SECTION_HEADING)).toHaveLength(1);
+  });
+
+  test.each([
+    ['rows', '999', /identity rows/],
+    ['distinct identifiers', '356 (zero duplicates)', /distinct identifiers/],
+    ['GSIS-shaped', '356 (99.7%)', /GSIS-shaped/],
+    ['other namespaces', '1', /other namespaces/],
+    ['canonical coverage', '100%', /canonical coverage/],
+    ['cross-surface resolvability', 'available', /cross-surface resolvability/],
+  ])('a drifted "%s" identity row fails', (label, replacement, expected) => {
+    expect(reportIdentityProblems(replaceIdentityValue(label, replacement), identity).join('\n')).toMatch(expected);
+  });
+
+  test('duplicateIds.length is checked independently of totalRows minus distinctIds', () => {
+    const duplicateIdentity = { ...identity, duplicateIds: ['00-0000001'] };
+    const problems = reportIdentityProblems(report, duplicateIdentity).join('\n');
+    expect(problems).toMatch(/manifest lists 1 duplicate IDs/);
+    expect(identity.totalRows - identity.distinctIds).toBe(0);
+  });
+
+  test('missing, duplicate and unexpected identity rows all fail', () => {
+    const row = '| rows | 357 |';
+    expect(report).toContain(row);
+    expect(reportIdentityProblems(report.replace(`${row}\n`, ''), identity).join('\n')).toMatch(/no "rows" row/);
+    expect(reportIdentityProblems(report.replace(row, `${row}\n${row}`), identity).join('\n')).toMatch(/repeats the "rows" row/);
+    expect(reportIdentityProblems(report.replace(row, `${row}\n| invented | 1 |`), identity).join('\n')).toMatch(/unexpected "invented" row/);
+  });
+
+  test('§3 requires exactly one numbered section and exactly one identity table', () => {
+    const duplicateSection = `${report}\n\n## 3 Retitled identity\n\n| measure | value |\n|---|---:|\n| rows | 1 |\n`;
+    expect(reportIdentityProblems(duplicateSection, identity).join('\n')).toMatch(/2 sections whose heading matches §3/);
+
+    const extraTable = report.replace(
+      '| cross-surface resolvability | **unavailable — requires database** |',
+      '| cross-surface resolvability | **unavailable — requires database** |\n\n| measure | value |\n|---|---:|\n| rows | 1 |',
+    );
+    expect(reportIdentityProblems(extraTable, identity).join('\n')).toMatch(/2 identity-summary tables/);
+  });
+
+  test('§3 accepts explicit reordered headers but rejects duplicate, unknown, and mixed blank headers', () => {
+    const lines = report.split('\n');
+    const sectionIndex = lines.findIndex((line) => /^## 3\./.test(line));
+    const headerIndex = lines.findIndex((line, index) => index > sectionIndex && line === '| measure | value |');
+    expect(headerIndex).toBeGreaterThan(-1);
+    lines[headerIndex] = '| value | measure |';
+    lines[headerIndex + 1] = '|---:|---|';
+    for (let i = headerIndex + 2; lines[i]?.startsWith('|'); i += 1) {
+      const cells = lines[i].split('|').slice(1, -1).map((cell) => cell.trim());
+      lines[i] = `| ${cells[1]} | ${cells[0]} |`;
+    }
+    const explicit = lines.join('\n');
+    expect(reportIdentityProblems(explicit, identity)).toEqual([]);
+
+    for (const header of [
+      '| measure | value | value |\n|---|---:|---:|',
+      '| measure | measure | value |\n|---|---|---:|',
+      '| measure | value | note |\n|---|---:|---|',
+      '| measure | |\n|---|---:|',
+    ]) {
+      const tamperedLines = report.split('\n');
+      const identitySection = tamperedLines.findIndex((line) => /^## 3\./.test(line));
+      const identityHeader = tamperedLines.findIndex((line, index) => index > identitySection && line === '| measure | value |');
+      tamperedLines.splice(identityHeader, 2, ...header.split('\n'));
+      const tampered = tamperedLines.join('\n');
+      expect(reportIdentityProblems(tampered, identity)).not.toEqual([]);
+    }
+  });
+});
+
+describe('governed Markdown parsing cannot hide duplicate sections or tables', () => {
+  const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
+  const report = fs.readFileSync(REPORT_PATH, 'utf8');
+  const clamping = manifest.clamping;
+  const dc = manifest.comparability.descriptiveComparison;
+
+  test.each([
+    ['4.3 Setext duplicate', '---'],
+    ['4.3 Setext H1 duplicate', '==='],
+  ])('a governed Setext %s is a real duplicate section', (title, underline) => {
+    const tampered = `${report}\n\n${title}\n${underline}\n\nRetained for reference.\n`;
+    expect(reportClampingProblems(tampered, clamping).join('\n')).toMatch(/2 sections whose heading matches §4\.3/);
+  });
+
+  test('a multiline Setext paragraph is tokenized as one visible governed heading', () => {
+    const tampered = `${report}\n\n4.3 Multiline duplicate\nwith a retitled continuation\n---\n`;
+    expect(reportClampingProblems(tampered, clamping).join('\n')).toMatch(/2 sections whose heading matches §4\.3/);
+
+    const withProsePipe = `${report}\n\n4.3 Hidden | still paragraph text\nwith a continuation\n---\n`;
+    expect(reportClampingProblems(withProsePipe, clamping).join('\n')).toMatch(/2 sections whose heading matches §4\.3/);
+  });
+
+  test('Setext duplicates remain visible after another Setext block or a pipe table', () => {
+    for (const prefix of [
+      'Other heading\n---',
+      '| a | b |\n|---|---|\n| x | y |',
+    ]) {
+      const tampered = `${report}\n\n${prefix}\n4.3 Hidden duplicate\n---\n`;
+      expect(reportClampingProblems(tampered, clamping)).not.toEqual([]);
+    }
+  });
+
+  test('Setext syntax cannot hide a duplicate §5.2 either', () => {
+    const tampered = `${report}\n\n5.2 Retitled comparison\n---\n\nRetained for reference.\n`;
+    expect(reportComparisonProblems(tampered, dc).join('\n')).toMatch(/2 sections whose heading matches §5\.2/);
+  });
+
+  test.each(['===', '---'])('a sole Setext §5.2 heading (%s) reads only its required shared-player count', (underline) => {
+    const lines = report.split('\n');
+    const start = lines.findIndex((line) => /^### 5\.2 /.test(line));
+    const end = lines.findIndex((line, index) => index > start && /^### 5\.2b /.test(line));
+    const document = [
+      '5.2 Descriptive comparison across the 50 shared players',
+      underline,
+      ...lines.slice(start + 1, end),
+    ].join('\n');
+    expect(reportComparisonProblems(document, dc)).toEqual([]);
+  });
+
+  test('a Setext heading is also a shared boundary, so its table is not attributed to the prior section', () => {
+    const doc = [
+      '4.3 Governed', '---', '',
+      '| position | n | min | max | at floor 25 | at ceiling 95 |',
+      '|---|---:|---:|---:|---:|---:|',
+      '| QB | 1 | 1 | 1 | 0 | 0 |', '',
+      '4.4 Next section', '---', '',
+      '| position | n | min | max | at floor 25 | at ceiling 95 |',
+      '|---|---:|---:|---:|---:|---:|',
+      '| WR | 1 | 1 | 1 | 0 | 0 |',
+    ].join('\n');
+    const section = readMarkdownSections(doc, CLAMPING_SECTION_HEADING)[0];
+    expect(section.tables).toHaveLength(1);
+    expect(section.tables[0].rows[0][0]).toBe('QB');
+  });
+
+  test.each([
+    ['**4.3** duplicate'],
+    ['`4.3` duplicate'],
+    ['[4.3](https://example.invalid) duplicate'],
+    ['4\\.3 duplicate'],
+    ['4&#46;3 duplicate'],
+    ['4&period;3 duplicate'],
+    ['<strong>4.3</strong> duplicate'],
+  ])('visually equivalent heading "%s" cannot bypass §4.3 uniqueness', (content) => {
+    const tampered = `${report}\n\n### ${content}\n\nRetained for reference.\n`;
+    expect(reportClampingProblems(tampered, clamping)).not.toEqual([]);
+  });
+
+  test('a second comparison table without outer pipes is still found', () => {
+    const tampered = report.replace(
+      '| range | -26.01 … +22.30 |',
+      '| range | -26.01 … +22.30 |\n\nmeasure | value\n---|---:\njoined rows | 999',
+    );
+    expect(reportComparisonProblems(tampered, dc).join('\n')).toMatch(/2 descriptive-comparison tables/);
+  });
+
+  test.each([
+    ['measure | value |', '---|---:|', 'joined rows | 50 |'],
+    ['| measure | value', '|---|---:', '| joined rows | 50'],
+    ['measure | value', '---|---:', 'joined rows | 50'],
+  ])('leading/trailing outer pipes are independently optional', (header, delimiter, row) => {
+    const doc = ['### 5.2 Comparison', '', header, delimiter, row].join('\n');
+    const sections = readMarkdownSections(doc, COMPARISON_SECTION_HEADING);
+    expect(sections[0].tables[0].header).toEqual(['measure', 'value']);
+    expect(sections[0].tables[0].rows[0]).toEqual(['joined rows', '50']);
+  });
+
+  test('escaped pipes stay inside cells and malformed arity cannot become a valid governed table', () => {
+    const escaped = ['### 5.2 Comparison', '', 'measure | value', '---|---:', 'joined \\| rows | 50'].join('\n');
+    expect(readMarkdownSections(escaped, COMPARISON_SECTION_HEADING)[0].tables[0].rows[0])
+      .toEqual(['joined | rows', '50']);
+
+    const malformed = report.replace(
+      '| measure | value |\n|---|---:|',
+      '| measure | value |\n|---|---:|---:|',
+    );
+    expect(reportComparisonProblems(malformed, dc)).not.toEqual([]);
+  });
+
+  test('odd escaped pipes stay literal while even backslashes expose a delimiter', () => {
+    const odd = ['### 5.2 Comparison', '', 'measure | value', '---|---:', 'joined \\\| rows | 50'].join('\n');
+    const even = ['### 5.2 Comparison', '', 'measure | value | note', '---|---:|---', 'joined \\\\| rows | 50'].join('\n');
+    expect(readMarkdownSections(odd, COMPARISON_SECTION_HEADING)[0].tables[0].rows[0])
+      .toEqual(['joined | rows', '50']);
+    expect(readMarkdownSections(even, COMPARISON_SECTION_HEADING)[0].tables[0].rows[0])
+      .toEqual(['joined \\', 'rows', '50']);
+  });
+
+  test('an escaped physical trailing pipe remains final-cell content, not an outer delimiter', () => {
+    const doc = [
+      '### 5.2 Comparison',
+      '',
+      'measure | value\\|',
+      '--- | ---',
+      'joined rows | 50\\|',
+    ].join('\n');
+    const table = readMarkdownSections(doc, COMPARISON_SECTION_HEADING)[0].tables[0];
+    expect(table.header).toEqual(['measure', 'value|']);
+    expect(table.rows[0]).toEqual(['joined rows', '50|']);
+  });
+
+  test('CRLF fence openers and closers retain the same visibility boundary', () => {
+    const doc = ['```\r', '### 4.3 Fenced\r', '```\r', '### 4.3 Real\r'].join('\n');
+    const sections = readMarkdownSections(doc, CLAMPING_SECTION_HEADING);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].heading).toContain('Real');
+  });
+
+  test('fenced and four-space-indented Setext/table lookalikes remain inert', () => {
+    for (const block of [
+      ['```', '4.3 fenced', '---', '```'],
+      ['    4.3 code', '    ---'],
+    ]) {
+      const tampered = `${report}\n\n${block.join('\n')}\n`;
+      expect(reportClampingProblems(tampered, clamping)).toEqual([]);
+    }
+  });
+
+  test('raw HTML headings and tables fail closed, except inside fenced or indented code', () => {
+    for (const html of [
+      '<h3>4.3 hidden duplicate</h3>',
+      '<table><tr><td>joined rows</td><td>999</td></tr></table>',
+    ]) {
+      const tampered = `${report}\n\n${html}\n`;
+      expect(governedMarkdownSyntaxProblems(tampered)).not.toEqual([]);
+      expect(reportClampingProblems(tampered, clamping)).not.toEqual([]);
+      expect(reportComparisonProblems(tampered, dc)).not.toEqual([]);
+
+      for (const inert of [`\`\`\`\n${html}\n\`\`\``, `    ${html}`]) {
+        const codeExample = `${report}\n\n${inert}\n`;
+        expect(governedMarkdownSyntaxProblems(codeExample)).toEqual([]);
+      }
+    }
+  });
+
+  test('only equal maximal backtick runs make raw HTML inert inline code', () => {
+    for (const exposed of [
+      '`<h3>4.3 hidden</h3>```',
+      '``<h3>4.3 hidden</h3>```',
+      '`<table><tr><td>999</td></tr></table>```',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(exposed)).not.toEqual([]);
+    }
+    for (const inert of [
+      '`<h3>4.3 code</h3>`',
+      '``<h3>4.3 code</h3>``',
+      '```<table><tr><td>999</td></tr></table>```',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(inert)).toEqual([]);
+    }
+  });
+
+  test('HTML comments and structural list/blockquote containers fail closed; ordinary blockquotes remain prose', () => {
+    expect(governedMarkdownSyntaxProblems(`${report}\n<!-- ### 4.3 hidden -->`)).not.toEqual([]);
+    for (const line of ['> ### 4.3 hidden', '- 5.2 hidden']) {
+      expect(governedMarkdownSyntaxProblems(`${report}\n${line}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems(`${report}\n> measure | value\n> ---|---:`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`${report}\n> Ordinary explanatory prose.`)).toEqual([]);
+  });
+
+  test.each([
+    '~~4.3~~ duplicate',
+    '[4.3][governed] duplicate',
+    '![4.3](https://example.invalid/section.png) duplicate',
+    '<span>4.3</span> duplicate',
+  ])(
+    'unsupported visible heading alias "%s" fails closed',
+    (content) => {
+      expect(reportClampingProblems(`${report}\n\n### ${content}\n`, clamping)).not.toEqual([]);
+    },
+  );
+
+  test('shortcut references and multiline raw HTML cannot hide a governed section', () => {
+    const shortcut = `${report}\n\n### [4.3]\n\n[4.3]: https://example.invalid\n`;
+    expect(reportClampingProblems(shortcut, clamping)).not.toEqual([]);
+    const multilineHtml = `${report}\n\n<h3\nclass=x>\n4.3 hidden\n</h3>\n`;
+    expect(governedMarkdownSyntaxProblems(multilineHtml)).not.toEqual([]);
+  });
+
+  test('container prose containing a pipe remains ordinary prose, but a real nested table fails', () => {
+    for (const prose of ['> Ordinary A | B comparison.', '- Choose A | B in prose.']) {
+      expect(governedMarkdownSyntaxProblems(`${report}\n${prose}`)).toEqual([]);
+    }
+    const nestedTable = `${report}\n> measure | value\n> --- | ---\n> joined rows | 999`;
+    expect(governedMarkdownSyntaxProblems(nestedTable)).not.toEqual([]);
+  });
+
+  test('table escapes are CommonMark-bounded and delimiter cells are raw-validated', () => {
+    const letterEscape = ['### 5.2 Comparison', '', 'mea\\sure | value', '---|---:', 'joined rows | 50'].join('\n');
+    expect(readMarkdownSections(letterEscape, COMPARISON_SECTION_HEADING)[0].tables[0].header[0]).toBe('mea\\sure');
+    const decoratedDelimiter = ['### 5.2 Comparison', '', 'measure | value', '**---**|---:', 'joined rows | 50'].join('\n');
+    expect(readMarkdownSections(decoratedDelimiter, COMPARISON_SECTION_HEADING)[0].tables).toHaveLength(0);
+  });
+
+  test('inline marker deletion cannot invent governed section numbers or numeric cells', () => {
+    expect(reportClampingProblems(`${report}\n\n### 4*.*3 hidden\n`, clamping)).not.toEqual([]);
+    expect(reportComparisonProblems(`${report}\n\n### 5*.*2 hidden\n`, dc)).not.toEqual([]);
+    expect(reportIdentityProblems(`${report}\n\n## 3**. hidden\n`, manifest.cacheCohort.identity)).not.toEqual([]);
+    expect(reportIdentityProblems(report.replace('| rows | 357 |', '| rows | 3**57 |'), manifest.cacheCohort.identity))
+      .not.toEqual([]);
+    expect(reportClampingProblems(
+      report.replace('| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |', '| QB | 3**8 | 33.8 | 86.5 | 0 (0.0%) | 0 |'),
+      clamping,
+    )).not.toEqual([]);
+    // The bounded forms used by the committed report remain presentation, not syntax errors.
+    expect(reportIdentityProblems(report, manifest.cacheCohort.identity)).toEqual([]);
+    expect(reportClampingProblems(report, clamping)).toEqual([]);
+    expect(reportComparisonProblems(report, dc)).toEqual([]);
+  });
+
+  test('escaped delimiter dashes cannot manufacture a table in §3, §4.3, or §5.2', () => {
+    const identityEscaped = report.replace(
+      '| measure | value |\n|---|---|',
+      '| measure | value |\n|\\---|---|',
+    );
+    expect(reportIdentityProblems(identityEscaped, manifest.cacheCohort.identity)).not.toEqual([]);
+    const clampingEscaped = report.replace(
+      '| position | p10 | p90 | outMin | outMax |\n|---|---:|---:|---:|---:|',
+      '| position | p10 | p90 | outMin | outMax |\n|\\---|---:|---:|---:|---:|',
+    );
+    expect(reportClampingProblems(clampingEscaped, clamping)).not.toEqual([]);
+    const comparisonEscaped = report.replace(
+      '| measure | value |\n|---|---:|',
+      '| measure | value |\n|\\---|---:|',
+    );
+    expect(reportComparisonProblems(comparisonEscaped, dc)).not.toEqual([]);
+  });
+
+  test('two-space list continuations cannot contain governed sections or tables', () => {
+    for (const nested of [
+      '- nested\n  ## 3. Hidden identity\n  | measure | value |\n  |---|---|\n  | rows | 999 |',
+      '- nested\n  ### 4.3 Hidden clamping\n  | position | n |\n  |---|---|\n  | QB | 999 |',
+      '- nested\n  ### 5.2 Descriptive comparison across the 50 shared players\n  | measure | value |\n  |---|---|\n  | joined rows | 999 |',
+      '- nested\n  | measure | value |\n  |---|---|\n  | rows | 999 |',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(`${report}\n\n${nested}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems('- nested\n\n### 4.3 Top-level after a blank')).toEqual([]);
+  });
+
+  test('container membership survives blank+indented and immediate lazy table continuations', () => {
+    const governedTables = [
+      '| measure | value |\n|---|---|\n| rows | 999 |',
+      '| position | n |\n|---|---|\n| QB | 999 |',
+      '| measure | value |\n|---|---|\n| joined rows | 999 |',
+    ];
+    for (const table of governedTables) {
+      const indented = table.split('\n').map((line) => `  ${line}`).join('\n');
+      expect(governedMarkdownSyntaxProblems(`- nested evidence\n\n${indented}`)).not.toEqual([]);
+      expect(governedMarkdownSyntaxProblems(`- nested evidence\n${table}`)).not.toEqual([]);
+      expect(governedMarkdownSyntaxProblems(`> nested evidence\n${table}`)).not.toEqual([]);
+      // A blank followed by unindented structure is outside the container.
+      expect(governedMarkdownSyntaxProblems(`- nested evidence\n\n${table}`)).toEqual([]);
+    }
+
+    const identityNested = `${report}\n\n- nested evidence\n\n  ## 3. Hidden\n  | measure | value |\n  |---|---|\n  | rows | 999 |`;
+    const clampingNested = `${report}\n\n- nested evidence\n### 4.3 Hidden\n| position | n |\n|---|---|\n| QB | 999 |`;
+    const comparisonNested = `${report}\n\n> nested evidence\n### 5.2 Descriptive comparison across the 50 shared players\n| measure | value |\n|---|---|\n| joined rows | 999 |`;
+    expect(reportIdentityProblems(identityNested, manifest.cacheCohort.identity)).not.toEqual([]);
+    expect(reportClampingProblems(clampingNested, clamping)).not.toEqual([]);
+    expect(reportComparisonProblems(comparisonNested, dc)).not.toEqual([]);
+  });
+
+  test('container continuation indentation follows list markers and blockquote blank boundaries', () => {
+    const table = '| measure | value |\n|---|---|\n| rows | 999 |';
+    const indent = (spaces: number) => table.split('\n').map((line) => `${' '.repeat(spaces)}${line}`).join('\n');
+
+    expect(governedMarkdownSyntaxProblems(`> quote\n\n${indent(2)}`)).toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`- list\n\n${indent(1)}`)).toEqual([]);
+    for (const spaces of [2, 4, 5]) {
+      expect(governedMarkdownSyntaxProblems(`- list\n\n${indent(spaces)}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems(`- list\n\n${indent(6)}`)).toEqual([]);
+
+    // Ordered markers require their full marker+space content indent.
+    expect(governedMarkdownSyntaxProblems(`10. list\n\n${indent(3)}`)).toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`10. list\n\n${indent(4)}`)).not.toEqual([]);
+
+    expect(governedMarkdownSyntaxProblems(`- list\n${table}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`> quote\n${table}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`- list\n\n${table}`)).toEqual([]);
+  });
+
+  test('list content indent includes leading spaces before bullet and ordered markers', () => {
+    const table = '| measure | value |\n|---|---|\n| rows | 999 |';
+    const indent = (spaces: number) => table.split('\n').map((line) => `${' '.repeat(spaces)}${line}`).join('\n');
+
+    for (const spaces of [2, 3]) {
+      expect(governedMarkdownSyntaxProblems(`  - list\n\n${indent(spaces)}`)).toEqual([]);
+    }
+    for (const spaces of [4, 5, 6, 7]) {
+      expect(governedMarkdownSyntaxProblems(`  - list\n\n${indent(spaces)}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems(`  - list\n\n${indent(8)}`)).toEqual([]);
+
+    for (const spaces of [5, 6, 7, 8]) {
+      expect(governedMarkdownSyntaxProblems(`   - list\n\n${indent(spaces)}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems(`   - list\n\n${indent(9)}`)).toEqual([]);
+
+    expect(governedMarkdownSyntaxProblems(`  10. list\n\n${indent(5)}`)).toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`  10. list\n\n${indent(8)}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`  10. list\n\n${indent(10)}`)).toEqual([]);
+
+    // CommonMark permits only 1–4 padding spaces and 1–9 ordered-marker digits.
+    expect(governedMarkdownSyntaxProblems(`-     list\n\n${indent(6)}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`123456789. list\n\n${indent(11)}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`1234567890. paragraph\n\n${table}`)).toEqual([]);
+
+    // Tabs after list markers are conservatively refused instead of guessing
+    // their visual content column.
+    expect(governedMarkdownSyntaxProblems(`-\tlist\n\n${indent(6)}`)).not.toEqual([]);
+    expect(governedMarkdownSyntaxProblems(`1.\tlist\n\n${indent(7)}`)).not.toEqual([]);
+  });
+
+  test('nested blockquote/list stacks cannot hide governed headings', () => {
+    for (const nested of [
+      '> - list\n    ### 4.3 hidden',
+      '> 1. list\n      ### 5.2 hidden',
+      '- outer\n    - inner\n      ### 4.3 hidden',
+      '- outer\n    - inner\n\n        ### 4.3 hidden',
+      '- outer\n  > quote\n    ### 4.3 hidden',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nested)).not.toEqual([]);
+    }
+
+    // A blank followed by unindented structure closes the nested container;
+    // the same heading is then genuinely top-level rather than hidden content.
+    expect(governedMarkdownSyntaxProblems('- outer\n    - inner\n\n### 4.3 top-level')).toEqual([]);
+    expect(governedMarkdownSyntaxProblems('> - list\n\n### 5.2 top-level')).toEqual([]);
+  });
+
+  test('nested blockquote/list stacks cannot hide governed tables', () => {
+    const table = '| measure | value |\n|---|---|\n| rows | 999 |';
+    const indent = (spaces: number) => table.split('\n').map((line) => `${' '.repeat(spaces)}${line}`).join('\n');
+
+    for (const spaces of [4, 5]) {
+      expect(governedMarkdownSyntaxProblems(`> - list\n${indent(spaces)}`)).not.toEqual([]);
+    }
+    for (const spaces of [6, 7, 8, 9]) {
+      expect(governedMarkdownSyntaxProblems(`- outer\n    - inner\n${indent(spaces)}`)).not.toEqual([]);
+    }
+    expect(governedMarkdownSyntaxProblems(`- outer\n  > quote\n${indent(4)}`)).not.toEqual([]);
+
+    // Four padding spaces after a list marker end that item before an
+    // unindented GFM table; one to three spaces retain the lazy table.
+    for (const marker of ['-    list', '1.    list']) {
+      expect(governedMarkdownSyntaxProblems(`${marker}\n${table}`)).toEqual([]);
+    }
+    for (const marker of ['- list', '1. list']) {
+      expect(governedMarkdownSyntaxProblems(`${marker}\n${table}`)).not.toEqual([]);
+    }
+
+    expect(governedMarkdownSyntaxProblems(`- outer\n    - inner\n\n${table}`)).toEqual([]);
+  });
+
+  test('tab-indented list continuations fail closed instead of hiding governed structure', () => {
+    for (const nestedHeading of [
+      '- list\n\t## 3. hidden identity',
+      '- list\n\t### 4.3 hidden clamping',
+      '1. list\n\t### 5.2 hidden comparison',
+      '- list\n \t### 4.3 space-tab hidden',
+      '- list\n\n\t4.3 hidden Setext\n\t---',
+      '1. list\n\n\t5.2 hidden Setext\n\t---',
+      '- outer\n    - inner\n\t### 4.3 nested-list tab hidden',
+      '- outer\n    - inner\n\t\t### 5.2 deep tab hidden',
+      '- \t### 4.3 marker-tab hidden',
+      '-  \t### 4.3 marker-space-tab hidden',
+      '1. \t### 5.2 ordered marker-tab hidden',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nestedHeading).join('\n')).toMatch(/tab indentation.*list container/i);
+    }
+
+    for (const nestedTable of [
+      '- list\n\t| measure | value |\n\t|---|---|\n\t| rows | 999 |',
+      '- list\n\t| position | n |\n\t|---|---|\n\t| QB | 999 |',
+      '1. list\n\t| measure | value |\n\t|---|---|\n\t| joined rows | 999 |',
+      '- \t| measure | value |\n  \t|---|---|\n  \t| rows | 999 |',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nestedTable).join('\n')).toMatch(/tab indentation.*list container/i);
+    }
+
+    // Without an active list, a leading tab is ordinary indented code and
+    // cannot become a governed heading/table in the rendered document.
+    expect(governedMarkdownSyntaxProblems('\t### 4.3 top-level code')).toEqual([]);
+    expect(governedMarkdownSyntaxProblems('\t| measure | value |\n\t|---|---|\n\t| rows | 999 |')).toEqual([]);
+    expect(governedMarkdownSyntaxProblems('- list\n\nclosed at top level\n\n\t### 5.2 top-level code')).toEqual([]);
+  });
+
+  test('tab-indented blockquote content fails closed instead of hiding governed structure', () => {
+    for (const nestedHeading of [
+      '> \t## 3. hidden identity',
+      '> quote\n> \t### 4.3 hidden clamping',
+      '> quote\n> \t### 5.2 hidden comparison',
+      '> quote\n> \t4.3 hidden Setext\n> \t---',
+      '>  \t### 4.3 two-space-tab hidden',
+      '> > \t### 5.2 nested-quote-tab hidden',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nestedHeading).join('\n')).toMatch(/tab indentation.*blockquote container/i);
+    }
+
+    for (const nestedTable of [
+      '> \t| measure | value |\n> \t|---|---|\n> \t| rows | 999 |',
+      '> quote\n> \t| position | n |\n> \t|---|---|\n> \t| QB | 999 |',
+      '> quote\n> \t| measure | value |\n> \t|---|---|\n> \t| joined rows | 999 |',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nestedTable).join('\n')).toMatch(/tab indentation.*blockquote container/i);
+    }
+
+    // A tab without a blockquote/list prefix remains ordinary top-level code.
+    expect(governedMarkdownSyntaxProblems('\t### 4.3 top-level code')).toEqual([]);
+    expect(governedMarkdownSyntaxProblems('\t| position | n |\n\t|---|---|\n\t| QB | 999 |')).toEqual([]);
+  });
+
+  test('marker-only list items retain their exact continuation indent', () => {
+    for (const nestedHeading of [
+      '-\n  ## 3. hidden identity',
+      '1.\n   ### 4.3 hidden clamping',
+      '10.\n    ### 5.2 hidden comparison',
+      '-\n  4.3 hidden Setext\n  ---',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(nestedHeading)).not.toEqual([]);
+    }
+
+    for (const [marker, spaces] of [['-', 2], ['1.', 3], ['10.', 4]] as const) {
+      const indent = ' '.repeat(spaces);
+      const nestedTable = `${marker}\n${indent}| measure | value |\n${indent}|---|---|\n${indent}| rows | 999 |`;
+      expect(governedMarkdownSyntaxProblems(nestedTable)).not.toEqual([]);
+    }
+
+    // A blank closes a marker-only item, unlike a nonempty item's indented
+    // continuation, so a following unindented heading is genuinely top-level.
+    expect(governedMarkdownSyntaxProblems('-\n\n### 4.3 top-level after empty item')).toEqual([]);
+  });
+
+  test('overlong list-marker padding fails closed without weakening valid padding', () => {
+    for (const ambiguous of [
+      '-     code\n    ### 4.3 hidden',
+      '1.     code\n    ### 5.2 hidden',
+      '-     code\n    | measure | value |\n    |---|---|\n    | rows | 999 |',
+    ]) {
+      expect(governedMarkdownSyntaxProblems(ambiguous).join('\n')).toMatch(/overlong padding/i);
+    }
+
+    for (const padding of [1, 2, 3, 4]) {
+      const spaces = ' '.repeat(padding);
+      const continuation = ' '.repeat(1 + padding);
+      expect(governedMarkdownSyntaxProblems(`-${spaces}list\n${continuation}### 4.3 hidden`)).not.toEqual([]);
+    }
+  });
+
+  test('thematic breaks do not create list-container state for the following table', () => {
+    const table = '| measure | value |\n|---|---|\n| rows | 999 |';
+    for (const thematicBreak of ['- - -', '* * *', '_ _ _']) {
+      expect(governedMarkdownSyntaxProblems(`${thematicBreak}\n${table}`)).toEqual([]);
+    }
+  });
+
+  test('escaped emphasis/code stays literal and cannot become numeric evidence on a second pass', () => {
+    for (const replacement of [
+      '\\*\\*357\\*\\*',
+      '\\`357\\`',
+      '&#42;&#42;357&#42;&#42;',
+      '3&#38;#53;7',
+      '&#042;&#042;357&#042;&#042;',
+      '&#x02a;&#x02a;357&#x02a;&#x02a;',
+      '3&#038;#53;7',
+      '3&#x026;#x35;7',
+      '3&#38;&#35;53;7',
+      '3&#x26;&#x23;x35;7',
+      '&#92;*&#92;*357&#92;*&#92;*',
+      '&#91;357&#93;(https://x)',
+      '[357]&#40;https://x&#41;',
+    ]) {
+      const identityEscaped = report.replace('| rows | 357 |', `| rows | ${replacement} |`);
+      expect(reportIdentityProblems(identityEscaped, manifest.cacheCohort.identity)).not.toEqual([]);
+    }
+
+    for (const replacement of ['\\*\\*38\\*\\*', '\\`38\\`']) {
+      const clampingEscaped = report.replace(
+        '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+        `| QB | ${replacement} | 33.8 | 86.5 | 0 (0.0%) | 0 |`,
+      );
+      expect(reportClampingProblems(clampingEscaped, clamping)).not.toEqual([]);
+    }
+
+    for (const replacement of ['\\*\\*50\\*\\*', '\\`50\\`']) {
+      expect(reportComparisonProblems(report.replace('| joined rows | 50 |', `| joined rows | ${replacement} |`), dc))
+        .not.toEqual([]);
+    }
+    // The real presentation used by the committed tables remains valid.
+    expect(reportIdentityProblems(report, manifest.cacheCohort.identity)).toEqual([]);
+    expect(reportClampingProblems(report, clamping)).toEqual([]);
+    expect(reportComparisonProblems(report, dc)).toEqual([]);
+  });
+
+  test('processing instructions, CDATA, and declarations fail closed outside code only', () => {
+    for (const html of ['<?audit hidden?>', '<![CDATA[### 4.3 hidden]]>', '<!DOCTYPE html>']) {
+      expect(governedMarkdownSyntaxProblems(`${report}\n${html}`)).not.toEqual([]);
+      expect(governedMarkdownSyntaxProblems(`${report}\n\`\`\`\n${html}\n\`\`\``)).toEqual([]);
+      expect(governedMarkdownSyntaxProblems(`${report}\n    ${html}`)).toEqual([]);
+    }
+  });
+});
+
+describe('governed table schemas are exact and order-independent', () => {
+  const REPORT_PATH = path.join(REPO_ROOT, 'docs/audits/2026-08-09-railway-forge-cache-audit.md');
+  const report = fs.readFileSync(REPORT_PATH, 'utf8');
+  const clamping = manifest.clamping;
+  const dc = manifest.comparability.descriptiveComparison;
+
+  const mutateTable = (
+    source: string,
+    headerLine: string,
+    transform: (rows: string[][]) => string[][],
+    afterHeading?: RegExp,
+  ) => {
+    const lines = source.split('\n');
+    const lowerBound = afterHeading ? lines.findIndex((line) => afterHeading.test(line)) : -1;
+    const start = lines.findIndex((line, index) => index > lowerBound && line === headerLine);
+    expect(start).toBeGreaterThan(-1);
+    let end = start;
+    while (lines[end]?.trim().startsWith('|')) end += 1;
+    const parse = (line: string) => line.trim().split('|').slice(1, -1).map((cell) => cell.trim());
+    const render = (cells: string[]) => `| ${cells.join(' | ')} |`;
+    lines.splice(start, end - start, ...transform(lines.slice(start, end).map(parse)).map(render));
+    return lines.join('\n');
+  };
+
+  test.each(['position', 'n', 'min', 'max', 'at floor 25.0', 'at ceiling 95.0'])('duplicate clamping column "%s" fails', (column) => {
+    const header = '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |';
+    const tampered = mutateTable(report, header, (rows) => {
+      const index = rows[0].indexOf(column);
+      return rows.map((row) => [...row, row[index]]);
+    });
+    expect(reportClampingProblems(tampered, clamping).join('\n')).toMatch(/repeats the/);
+  });
+
+  test('unknown clamping columns fail, while all six governed columns may be reordered', () => {
+    const header = '| position | n | min | max | at floor 25.0 | at ceiling 95.0 |';
+    const order = [5, 0, 4, 1, 3, 2];
+    const reordered = mutateTable(report, header, (rows) => rows.map((row) => order.map((index) => row[index])));
+    expect(reportClampingProblems(reordered, clamping)).toEqual([]);
+
+    const unknown = mutateTable(report, header, (rows) => rows.map((row, index) => [
+      ...row,
+      index === 0 ? 'note' : index === 1 ? '---' : 'x',
+    ]));
+    expect(reportClampingProblems(unknown, clamping).join('\n')).toMatch(/unknown "note" column/);
+  });
+
+  test.each(['measure', 'value'])('§5.2 rejects a duplicate "%s" column', (column) => {
+    const header = '| measure | value |';
+    const duplicated = mutateTable(report, header, (rows) => {
+      const index = rows[0].indexOf(column);
+      return rows.map((row) => [...row, row[index]]);
+    }, /^### 5\.2 /);
+    expect(reportComparisonProblems(duplicated, dc).join('\n')).toMatch(new RegExp(`repeats the "${column}" column`));
+  });
+
+  test('§5.2 rejects unknown columns but supports value/measure order', () => {
+    const header = '| measure | value |';
+    const unknown = mutateTable(report, header, (rows) => rows.map((row, index) => [
+      ...row,
+      index === 0 ? 'note' : index === 1 ? '---' : 'x',
+    ]), /^### 5\.2 /);
+    expect(reportComparisonProblems(unknown, dc).join('\n')).toMatch(/unknown "note" column/);
+
+    const reordered = mutateTable(report, header, (rows) => rows.map((row) => [row[1], row[0]]), /^### 5\.2 /);
+    expect(reportComparisonProblems(reordered, dc)).toEqual([]);
+  });
+
+  test('§5.2 rejects an unexpected summary row and a heading with no shared-player count', () => {
+    const unexpected = report.replace('| joined rows | 50 |', '| joined rows | 50 |\n| invented measure | 1 |');
+    expect(reportComparisonProblems(unexpected, dc).join('\n')).toMatch(/unexpected "invented measure" row/);
+
+    const noCount = report.replace(
+      '### 5.2 Descriptive comparison across the 50 shared players',
+      '### 5.2 Descriptive comparison across the shared players',
+    );
+    expect(reportComparisonProblems(noCount, dc).join('\n')).toMatch(/does not state the shared-player count/);
+  });
+
+  test('arbitrary extra tables fail the total-table invariant in §3, §4.3, and §5.2', () => {
+    const arbitrary = '\n\n| arbitrary | claim |\n|---|---|\n| x | y |';
+    const afterIdentity = report.replace(
+      '| cross-surface resolvability | **unavailable — requires database** |',
+      `| cross-surface resolvability | **unavailable — requires database** |${arbitrary}`,
+    );
+    expect(reportIdentityProblems(afterIdentity, manifest.cacheCohort.identity).join('\n')).toMatch(/§3 section carries 2 tables/);
+
+    const afterClamp = report.replace(
+      '| **total** | **357** | | | **116 (32.5%)** | **7** |',
+      `| **total** | **357** | | | **116 (32.5%)** | **7** |${arbitrary}`,
+    );
+    expect(reportClampingProblems(afterClamp, clamping).join('\n')).toMatch(/§4\.3 section carries 3 tables/);
+
+    const afterComparison = report.replace(
+      '| Brock Bowers | `00-0039338` | TE | 72.43 | 90 | +17.57 |',
+      `| Brock Bowers | \`00-0039338\` | TE | 72.43 | 90 | +17.57 |${arbitrary}`,
+    );
+    expect(reportComparisonProblems(afterComparison, dc).join('\n')).toMatch(/§5\.2 section carries 3 tables/);
+  });
+
+  test('declared bounds are checked by exact schema, exact rows, and manifest values', () => {
+    const header = '| position | p10 | p90 | outMin | outMax |';
+    const wrongValue = report.replace('| WR | 31 | 76 | 25 | 95 |', '| WR | 999 | 76 | 25 | 95 |');
+    expect(reportClampingProblems(wrongValue, clamping).join('\n')).toMatch(/WR declared p10/);
+
+    const duplicateColumn = mutateTable(report, header, (rows) => rows.map((row) => [...row, row[1]]));
+    expect(reportClampingProblems(duplicateColumn, clamping).join('\n')).toMatch(/repeats the "p10" column/);
+
+    const missingRow = report.replace('| QB | 35 | 73 | 25 | 95 |\n', '');
+    expect(reportClampingProblems(missingRow, clamping).join('\n')).toMatch(/no "QB" row/);
+
+    const unexpectedRow = report.replace(
+      '| QB | 35 | 73 | 25 | 95 |',
+      '| QB | 35 | 73 | 25 | 95 |\n| K | 1 | 2 | 25 | 95 |',
+    );
+    expect(reportClampingProblems(unexpectedRow, clamping).join('\n')).toMatch(/unexpected "k" row/);
+
+    const order = [4, 0, 2, 1, 3];
+    const reordered = mutateTable(report, header, (rows) => rows.map((row) => order.map((index) => row[index])));
+    expect(reportClampingProblems(reordered, clamping)).toEqual([]);
+  });
+
+  test('observed-clamping floor and ceiling header bounds are manifest-pinned with one decimal', () => {
+    for (const [from, to, expected] of [
+      ['at floor 25.0', 'at floor 25', /must render as "at floor 25\.0"/],
+      ['at ceiling 95.0', 'at ceiling 94.0', /must render as "at ceiling 95\.0"/],
+    ] as const) {
+      expect(reportClampingProblems(report.replace(from, to), clamping).join('\n')).toMatch(expected);
+    }
+  });
+
+  test('observed clamping rejects blank rows and invented ceiling percentages', () => {
+    const blank = report.replace(
+      '| **total** | **357** | | | **116 (32.5%)** | **7** |',
+      '| **total** | **357** | | | **116 (32.5%)** | **7** |\n| | 999 | 1 | 2 | 3 (4.0%) | 5 |',
+    );
+    expect(reportClampingProblems(blank, clamping).join('\n')).toMatch(/unexpected "\(blank\)" row/);
+    const ceilingPct = report.replace(
+      '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 |',
+      '| QB | 38 | 33.8 | 86.5 | 0 (0.0%) | 0 (99.9%) |',
+    );
+    expect(reportClampingProblems(ceilingPct, clamping).join('\n')).toMatch(/at-ceiling percentage/);
+  });
+
+  test('governed numeric cells reject prose that merely embeds the expected number', () => {
+    expect(reportClampingProblems(report.replace('| QB | 35 | 73 | 25 | 95 |', '| QB | not 35 | 73 | 25 | 95 |'), clamping)).not.toEqual([]);
+    expect(reportComparisonProblems(report.replace('| joined rows | 50 |', '| joined rows | not 50 |'), dc)).not.toEqual([]);
+    expect(reportComparisonProblems(
+      report.replace('| Mark Andrews | `00-0034753` | TE | 70.01 | 44 | -26.01 |', '| Mark Andrews | `00-0034753` | TE | not 70.01 | 44 | -26.01 |'),
+      dc,
+    )).not.toEqual([]);
+  });
+
+  test('comparison row aliases are exact, not numeric prefixes', () => {
+    expect(reportComparisonProblems(report.replace('within ±1.0 alpha', 'within ±10.0 alpha'), dc).join('\n'))
+      .toMatch(/no "within ±1\.0 alpha" row/);
+    expect(reportComparisonProblems(report.replace('within ±1.0 alpha', 'within ±1 std dev'), dc).join('\n'))
+      .toMatch(/unexpected "within ±1 std dev" row/);
+  });
+
+  test('qualitative identity and comparison templates reject embedded or contradictory clauses', () => {
+    const notCount = report.replace(
+      '### 5.2 Descriptive comparison across the 50 shared players',
+      '### 5.2 Descriptive comparison across the not 50 shared players',
+    );
+    expect(reportComparisonProblems(notCount, dc)).not.toEqual([]);
+
+    for (const tampered of [
+      report.replace('**357** (zero duplicates)', '**357** (zero duplicates, but 1 duplicate ID)'),
+      report.replace(
+        '**not recorded** — the capture predates the per-item identity envelope',
+        '**not recorded** — the capture predates the per-item identity envelope, but it was recorded at 100%',
+      ),
+      report.replace('**unavailable — requires database**', '**unavailable — requires database, but actually available**'),
+      report.replace('GSIS-shaped (`00-` + 7 digits)', 'GSIS-shaped impostors'),
+    ]) {
+      expect(reportIdentityProblems(tampered, manifest.cacheCohort.identity)).not.toEqual([]);
+    }
+  });
+
+  test('distinct and duplicate identifier counts are parsed independently', () => {
+    const identity = {
+      ...manifest.cacheCohort.identity,
+      totalRows: 360,
+      distinctIds: 357,
+      duplicateIds: ['00-0000001'],
+      gsisShaped: 360,
+      gsisShapedPct: 100,
+    };
+    const source = report
+      .replace('| rows | 357 |', '| rows | 360 |')
+      .replace('| distinct identifiers | **357** (zero duplicates) |', '| distinct identifiers | **357** (1 duplicate ID, 3 excess rows) |')
+      .replace('| GSIS-shaped (`00-` + 7 digits) | **357 (100.0%)** |', '| GSIS-shaped (`00-` + 7 digits) | **360 (100.0%)** |')
+      .replace('| other namespaces | 0 |', '| other namespaces | 0 |');
+    expect(reportIdentityProblems(source, identity)).toEqual([]);
+  });
+
+  test('largest-disagreement rows are manifest-pinned in order with an exact reorderable schema', () => {
+    const header = '| player | GSIS | pos | static alpha | cache alpha | delta |';
+    const wrong = report.replace(
+      '| Mark Andrews | `00-0034753` | TE | 70.01 | 44 | -26.01 |',
+      '| Mark Andrews | `00-0034753` | TE | 70.01 | 44 | -99 |',
+    );
+    expect(reportComparisonProblems(wrong, dc).join('\n')).toMatch(/row 1 states delta/);
+
+    const lines = report.split('\n');
+    const mark = lines.findIndex((line) => line.startsWith('| Mark Andrews |'));
+    const zay = lines.findIndex((line) => line.startsWith('| Zay Flowers |'));
+    [lines[mark], lines[zay]] = [lines[zay], lines[mark]];
+    expect(reportComparisonProblems(lines.join('\n'), dc).join('\n')).toMatch(/row 1 states player/);
+
+    const missing = report.replace('| Brock Bowers | `00-0039338` | TE | 72.43 | 90 | +17.57 |\n', '');
+    expect(reportComparisonProblems(missing, dc).join('\n')).toMatch(/carries 4 rows/);
+
+    const duplicateColumn = mutateTable(report, header, (rows) => rows.map((row) => [...row, row[5]]), /^### 5\.2 /);
+    expect(reportComparisonProblems(duplicateColumn, dc).join('\n')).toMatch(/repeats the "delta" column/);
+
+    const order = [1, 0, 5, 2, 4, 3];
+    const reordered = mutateTable(report, header, (rows) => rows.map((row) => order.map((index) => row[index])), /^### 5\.2 /);
+    expect(reportComparisonProblems(reordered, dc)).toEqual([]);
+  });
+});
+
 describe('--check derives the findings rather than spot-checking fields', () => {
   // Field pins are necessary but not sufficient: a hand-edited median,
   // clamping count or comparability verdict sits in none of them. `--check`
@@ -583,17 +1427,13 @@ describe('report consistency is checked per row, not as a substring sweep', () =
       expect(problems.join('\n')).toMatch(/repeats the "joined rows" row/);
     });
 
-    test('a textually different label that matches the SAME semantic regex still counts as a repeat', () => {
-      // "within ±1.0 alpha" and a differently-worded "within ±1 std dev" both
-      // match the governed `/^within ±1/` regex — a first-value-wins Map
-      // would key them separately as if unrelated; the real requirement is
-      // "exactly one row means this measure," not "exactly one exact label".
+    test('a textually different unsupported label is unexpected, not an alias', () => {
       const pattern = /^(\|\s*within ±1[^|]*\|\s*)([^|]*?)(\s*\|)$/m;
       expect(report).toMatch(pattern);
       const withExtraRow = report.replace(pattern, (full) => `${full}\n| within ±1 std dev | 9 |`);
       expect(withExtraRow).not.toBe(report);
       const problems = reportComparisonProblems(withExtraRow, dc);
-      expect(problems.join('\n')).toMatch(/repeats the "within ±1\.0 alpha" row/);
+      expect(problems.join('\n')).toMatch(/unexpected "within ±1 std dev" row/);
     });
 
     test('a repeated "range" row fails independently of the other governed measures', () => {

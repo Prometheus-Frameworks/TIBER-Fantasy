@@ -52,6 +52,7 @@ import {
   TERMINAL_FINDING,
   reportClampingProblems,
   reportComparisonProblems,
+  reportIdentityProblems,
   rowIdentityFromCohortRow,
   rowIdentityFromResponseItem,
   unsupportedLineageClaims,
@@ -665,6 +666,13 @@ function verifyCommitted(repoRoot: string): { ok: boolean; problems: string[] } 
       problems.push(problem);
     }
 
+    // §3 is the source-identity basis for the join and for every later
+    // comparison claim. Bind its summary rows to cacheCohort.identity just as
+    // tightly as the §4.3 clamping and §5.2 comparison tables below.
+    for (const problem of reportIdentityProblems(report, manifest.cacheCohort?.identity)) {
+      problems.push(problem);
+    }
+
     // The clamping table is checked the same way, and for the same reason: it
     // carries this audit's headline finding ("roughly a third of the served
     // board sits exactly on the floor"), and verifying only the comparison
@@ -716,7 +724,8 @@ async function main() {
         'committed audit artifacts agree: counts, positions, timestamps and digest all match; ' +
         `frozen cohort intact (${FROZEN_COHORT.sha256.slice(0, 8)}…, ${FROZEN_COHORT.row_count} rows, ` +
         `${FROZEN_COHORT.observed_at}); evidence status "${OBSERVATION_EVIDENCE_STATUS.status}"; ` +
-        `no unsupported lineage claim; terminal finding "${TERMINAL_FINDING}"; report consistent.`,
+        `no unsupported lineage claim; terminal finding "${TERMINAL_FINDING}"; ` +
+        'governed report sections (§3, §4.3, §5.2) consistent.',
       );
       process.exit(0);
     }

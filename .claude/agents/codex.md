@@ -764,3 +764,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added mounted player-route, cache mutation, collision, outage, contract-negotiation, contradictory-render, and composite-row-key regressions.
 - Validation: eight focused suites 152/152 with coverage disabled; build passed with the existing OLC warning; reviewed-head typecheck stayed at 505 diagnostics with zero new touched-file errors; diff check passed.
 - Operator gate: no database census or production coverage was claimed without `DATABASE_URL`; uniqueness/migration activation still requires an operator-recorded census and cohort review.
+
+### 2026-08-12 — FORGE cache-audit governed Markdown verification
+- Added one bounded governed-document tokenizer shared by section discovery and boundaries, with fence/indent/container awareness, ATX and Setext headings, physical escaped-pipe handling, and fail-closed unsupported inline/HTML syntax.
+- Manifest-bound checks now cover exact §3 identity, §4.3 declared bounds and observed clamping, and §5.2 summary/top-five disagreement schemas, rows, values, qualitative templates, and total table counts.
+- Preserved the frozen cohort and manifest bytes; only the report's blank §3 header became explicit `measure | value`.
+- Validation: focused audit Jest suite 190/190; an independent finite replay rejected all 33 prior structural bypass probes and accepted seven inert-code controls; full branch 119 suites/1,240 passing with the same seven baseline suite failures as base (119/1,165); real committed-artifact `--check` passed; build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics with no changed-file matches; `git diff --check` passed; frozen cohort/manifest/static bytes stayed unchanged and the cohort digest remained `118c5cc60bc59c6f3b9ca8d35ebcce4cf4e4442adacbb72fa77fd5109204f106`.

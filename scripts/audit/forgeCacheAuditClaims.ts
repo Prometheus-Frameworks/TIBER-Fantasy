@@ -235,6 +235,15 @@ export interface AtxHeading {
   content: string;
 }
 
+interface MarkdownHeading extends AtxHeading {
+  /** Source line containing the heading text (the line above a Setext underline). */
+  line: number;
+  /** First source line after the complete heading marker. */
+  contentStart: number;
+  raw: string;
+  normalized: string;
+}
+
 /**
  * Parse one line as a bounded ATX heading (CommonMark's `#`-style heading),
  * or return null.
@@ -285,7 +294,330 @@ export function parseAtxHeading(line: string): AtxHeading | null {
  * exact indentation or closing-hash spelling.
  */
 function normalizedHeadingLine(h: AtxHeading): string {
-  return h.content ? `${'#'.repeat(h.level)} ${h.content}` : '#'.repeat(h.level);
+  const content = normalizeHeadingContent(h.content);
+  return content ? `${'#'.repeat(h.level)} ${content}` : '#'.repeat(h.level);
+}
+
+/**
+ * Normalize inline spellings that render as the same heading text.
+ *
+ * Governed section identity is what a reader sees, not which inline spelling
+ * produced it. Without this bounded normalization, `**4.3**`, `4\.3`, and
+ * `4&#46;3` are three ways to publish a second visible §4.3 while evading a
+ * literal-prefix selector. Unknown entities are retained, never guessed.
+ */
+function decodeVisibleInlineText(content: string): string {
+  return content
+    .replace(/&#(\d+);/g, (whole, digits) => {
+      const code = Number(digits);
+      return Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : whole;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (whole, digits) => {
+      const code = Number.parseInt(digits, 16);
+      return Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : whole;
+    })
+    .replace(/&(period|dot);/gi, '.')
+    .replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/g, '$1');
+}
+
+function protectDecodedInlineSyntax(content: string): string {
+  return content
+    .replace(/&#(\d+);/g, (whole, digits) => {
+      const code = Number(digits);
+      if (!Number.isSafeInteger(code) || code < 0 || code > 0x10ffff) return whole;
+      const decoded = String.fromCodePoint(code);
+      return decoded === '*' ? '\uE000' : decoded === '_' ? '\uE001' : decoded === '`' ? '\uE002' : decoded;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (whole, digits) => {
+      const code = Number.parseInt(digits, 16);
+      if (!Number.isSafeInteger(code) || code < 0 || code > 0x10ffff) return whole;
+      const decoded = String.fromCodePoint(code);
+      return decoded === '*' ? '\uE000' : decoded === '_' ? '\uE001' : decoded === '`' ? '\uE002' : decoded;
+    })
+    .replace(/&(period|dot);/gi, '.')
+    .replace(/\\([*_`])/g, (_whole, char) => char === '*' ? '\uE000' : char === '_' ? '\uE001' : '\uE002');
+}
+
+interface NormalizedInline {
+  value: string;
+  problem: string | null;
+}
+
+/**
+ * Normalize only presentation spans whose boundaries are unambiguous.
+ *
+ * Blindly deleting every `*`, `_`, or backtick invents semantic text that the
+ * Markdown does not necessarily render: `4*.*3` became `4.3`, and `3**57`
+ * became `357`. The governed subset accepts the forms the report actually
+ * uses (bounded emphasis/strong/code spans and inline links), while retaining
+ * or rejecting anything imbalanced instead of guessing at its visible text.
+ */
+function normalizeBoundedInline(content: string): NormalizedInline {
+  if (/!\[/.test(content)) {
+    return { value: content.trim(), problem: 'images are not supported in governed inline content' };
+  }
+  const MARKDOWN_STRUCTURAL_CODEPOINTS = new Set([
+    33, 35, 38, 40, 41, 42, 60, 62, 91, 92, 93, 95, 96, 126,
+  ]);
+  const encodedSyntaxCodepoint = [...content.matchAll(/&#(x[0-9a-f]+|\d+);/gi)].some((match) => {
+    const codepoint = match[1].toLowerCase().startsWith('x')
+      ? Number.parseInt(match[1].slice(1), 16)
+      : Number(match[1]);
+    return MARKDOWN_STRUCTURAL_CODEPOINTS.has(codepoint);
+  });
+  const encodedAmpersandBeforeEntityTail = /&#(x[0-9a-f]+|\d+);#(?:x[0-9a-f]+|\d+);/gi;
+  const doubleDecodeOpener = [...content.matchAll(encodedAmpersandBeforeEntityTail)].some((match) => {
+    const codepoint = match[1].toLowerCase().startsWith('x')
+      ? Number.parseInt(match[1].slice(1), 16)
+      : Number(match[1]);
+    return codepoint === 38;
+  });
+  if (/\\[*_`]/.test(content) || encodedSyntaxCodepoint || doubleDecodeOpener) {
+    return {
+      value: decodeVisibleInlineText(content).trim(),
+      problem: 'escaped or entity-encoded presentation markers are literal in governed inline content',
+    };
+  }
+
+  const protectedChars: Record<string, string> = { '*': '\uE000', '_': '\uE001', '`': '\uE002' };
+  const restoreProtected = (value: string) => value
+    .replace(/\uE000/g, '*')
+    .replace(/\uE001/g, '_')
+    .replace(/\uE002/g, '`');
+  let text = protectDecodedInlineSyntax(content)
+    .replace(/\[([^\]\n]+)\]\([^()\n]*\)/g, '$1');
+  if (/\[[^\]]*\](?:\[[^\]]*\])?|~~|<\/?[a-z][^>]*>/i.test(text)) {
+    return { value: text.trim(), problem: 'unsupported link, strikethrough, or HTML inline syntax' };
+  }
+
+  const boundaryBefore = '(^|[\\s([{>:\\-—])';
+  const boundaryAfter = '(?=$|[\\s)\\]},.!?:;\\-—])';
+  const unwrap = (pattern: RegExp, literal = false) => {
+    let changed = false;
+    text = text.replace(pattern, (whole, before, inner) => {
+      if (!/[\p{L}\p{N}]/u.test(inner)) return whole;
+      changed = true;
+      const unwrapped = literal
+        ? inner.replace(/[\*_`]/g, (char: string) => protectedChars[char])
+        : inner;
+      return `${before}${unwrapped}`;
+    });
+    return changed;
+  };
+
+  // Iterate so a whole strong span may safely contain a bounded code span.
+  for (let pass = 0; pass < 4; pass += 1) {
+    const changed = [
+      unwrap(new RegExp(`${boundaryBefore}\\*\\*([^*\\n]+?)\\*\\*${boundaryAfter}`, 'gu')),
+      unwrap(new RegExp(`${boundaryBefore}__([^_\\n]+?)__${boundaryAfter}`, 'gu')),
+      unwrap(new RegExp(`${boundaryBefore}\\*([^*\\n]+?)\\*${boundaryAfter}`, 'gu')),
+      unwrap(new RegExp(`${boundaryBefore}_([^_\\n]+?)_${boundaryAfter}`, 'gu')),
+      unwrap(new RegExp(`${boundaryBefore}\`([^\`\\n]+?)\`${boundaryAfter}`, 'gu'), true),
+    ].some(Boolean);
+    if (!changed) break;
+  }
+
+  if (/[\*_`]/.test(text)) {
+    return { value: text.trim(), problem: 'unsupported or imbalanced emphasis/code markers' };
+  }
+
+  return {
+    value: restoreProtected(decodeVisibleInlineText(text)).replace(/[ \t]+/g, ' ').trim(),
+    problem: null,
+  };
+}
+
+function normalizeHeadingContent(content: string): string {
+  return normalizeBoundedInline(content).value;
+}
+
+/** Inline forms this bounded tokenizer deliberately does not interpret. */
+function hasUnsupportedInlineSyntax(content: string): boolean {
+  return normalizeBoundedInline(content).problem !== null;
+}
+
+interface ActiveListContainer {
+  /** Physical column at which this list item's flow content begins. */
+  indent: number;
+  /** Four-space marker padding ends the item before an unindented GFM table. */
+  allowsLazyTable: boolean;
+  /** The list was opened inside a blockquote and closes with that quote. */
+  quoteBound: boolean;
+  /** A marker-only item ends at a following blank rather than owning it. */
+  emptyItem: boolean;
+}
+
+interface ContainerPrefix {
+  text: string;
+  stripped: boolean;
+  lists: ActiveListContainer[];
+  hasBlockquote: boolean;
+}
+
+/**
+ * Strip every directly nested container marker and retain the physical content
+ * indents of all list items encountered. `baseOffset` is the already-stripped
+ * indentation of an enclosing list continuation.
+ */
+function stripContainerMarkers(
+  line: string,
+  baseOffset = 0,
+  inheritedQuote = false,
+): ContainerPrefix {
+  let text = line.replace(/\r$/, '');
+  let stripped = false;
+  let consumed = 0;
+  let hasBlockquote = inheritedQuote;
+  const lists: ActiveListContainer[] = [];
+  while (true) {
+    const blockquote = /^ {0,3}>[ \t]?/.exec(text);
+    if (blockquote) {
+      stripped = true;
+      hasBlockquote = true;
+      consumed += blockquote[0].length;
+      text = text.slice(blockquote[0].length);
+      continue;
+    }
+
+    // A thematic break is not a bullet followed by more container content.
+    const isThematicBreak = /^ {0,3}(?:(?:\*[ \t]*){3,}|(?:-[ \t]*){3,}|(?:_[ \t]*){3,})$/.test(text);
+    const list = isThematicBreak
+      ? null
+      : /^ {0,3}(?:[-+*]|\d{1,9}[.)])(?:( {1,4})(?! )|(?=$))/.exec(text);
+    if (!list) break;
+    stripped = true;
+    const emptyItem = !list[1];
+    consumed += list[0].length + (emptyItem ? 1 : 0);
+    lists.push({
+      indent: baseOffset + consumed,
+      allowsLazyTable: !emptyItem && list[1].length < 4,
+      quoteBound: hasBlockquote,
+      emptyItem,
+    });
+    text = text.slice(list[0].length);
+  }
+  return { text, stripped, lists, hasBlockquote };
+}
+
+/**
+ * Top-level view plus bounded blockquote/list continuation state.
+ *
+ * The active list state is a stack, not a single indent. A nested marker can
+ * begin after an enclosing list's content indent (or after a blockquote marker),
+ * and a later line may dedent back to an outer item. Retaining only the most
+ * recent container made deeply nested governed headings/tables look like
+ * four-space code and therefore disappear from verification.
+ */
+interface GovernedContainerView {
+  text: string;
+  stripped: boolean;
+  problem?: string;
+}
+
+function governedContainerViews(lines: string[], visible: boolean[]): GovernedContainerView[] {
+  const views: GovernedContainerView[] = [];
+  let lists: ActiveListContainer[] = [];
+  let blockquoteActive = false;
+  let blankSinceContainer = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].replace(/\r$/, '');
+    if (!visible[index]) {
+      views.push({ text: line, stripped: false });
+      continue;
+    }
+    if (line.trim() === '') {
+      blankSinceContainer = blockquoteActive || lists.length > 0;
+      if (blockquoteActive) {
+        blockquoteActive = false;
+        lists = lists.filter((container) => !container.quoteBound);
+      }
+      lists = lists.filter((container) => !container.emptyItem);
+      views.push({ text: line, stripped: false });
+      continue;
+    }
+
+    const leadingSpaces = /^ */.exec(line)?.[0].length ?? 0;
+    // Expanding tabs to CommonMark's four-column stops would make a leading
+    // tab (or a spaces+tab prefix) a continuation of some active list items,
+    // but the exact residual indent depends on every enclosing content column.
+    // This tokenizer intentionally stays bounded: while a list is active it
+    // refuses that ambiguous continuation instead of treating it as top-level
+    // tab-indented code and letting governed structure disappear. With no
+    // active list, ordinary tab-indented code remains inert and accepted.
+    let tabContinuationProblem = lists.length > 0 && /^[ \t]*\t/.test(line)
+      ? 'uses tab indentation while a list container is active; governed-document list continuations require spaces'
+      : undefined;
+    let view = line;
+    let inherited = false;
+    let direct = stripContainerMarkers(line);
+
+    let matchingList = -1;
+    for (let candidate = lists.length - 1; candidate >= 0; candidate -= 1) {
+      if (leadingSpaces >= lists[candidate].indent) {
+        matchingList = candidate;
+        break;
+      }
+    }
+
+    if (matchingList >= 0) {
+      lists = lists.slice(0, matchingList + 1);
+      const parent = lists[matchingList];
+      view = line.slice(parent.indent);
+      inherited = true;
+
+      // The continuation itself may open one or more deeper containers. Keep
+      // their absolute content indents so subsequent nested flow is checked
+      // at its own 0–3/4-space boundary instead of the outer item's boundary.
+      const nested = stripContainerMarkers(view, parent.indent, parent.quoteBound);
+      if (nested.stripped) {
+        lists.push(...nested.lists);
+        blockquoteActive ||= nested.hasBlockquote;
+        view = nested.text;
+        direct = nested;
+      }
+    } else if (direct.stripped) {
+      // A marker outside every active list starts a fresh bounded container
+      // chain. Checking active list indents first is material: `  > quote`
+      // may itself be content of an outer list, and discarding that outer list
+      // would make the quote's later nested heading/table disappear again.
+      lists = direct.lists;
+      blockquoteActive = direct.hasBlockquote;
+      view = direct.text;
+    } else {
+      const isTableShaped = /^ {0,3}\|/.test(line);
+      let lazyList = -1;
+      if (!blankSinceContainer && isTableShaped) {
+        for (let candidate = lists.length - 1; candidate >= 0; candidate -= 1) {
+          if (lists[candidate].allowsLazyTable) {
+            lazyList = candidate;
+            break;
+          }
+        }
+      }
+      const lazyBlockquote = !blankSinceContainer && isTableShaped && blockquoteActive;
+      if (lazyList >= 0 || lazyBlockquote) {
+        if (lazyList >= 0) lists = lists.slice(0, lazyList + 1);
+        view = line;
+        inherited = true;
+      } else {
+        lists = [];
+        blockquoteActive = false;
+      }
+    }
+    if (!tabContinuationProblem && direct.stripped && /^[ \t]*\t/.test(view)) {
+      const containerKind = direct.hasBlockquote ? 'blockquote' : 'list';
+      tabContinuationProblem =
+        `uses tab indentation after a ${containerKind} container marker; governed-document container content requires spaces`;
+    }
+    blankSinceContainer = false;
+
+    views.push({ text: view, stripped: direct.stripped || inherited, problem: tabContinuationProblem });
+  }
+  return views;
 }
 
 /**
@@ -328,7 +660,8 @@ export interface FenceDelimiter {
  *    cannot end the fence early either.
  */
 function parseFenceOpener(line: string): FenceDelimiter | null {
-  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  const normalized = line.replace(/\r$/, '');
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(normalized);
   if (!match) return null;
   const char = match[1][0] as '`' | '~';
   const infoString = match[2];
@@ -337,10 +670,329 @@ function parseFenceOpener(line: string): FenceDelimiter | null {
 }
 
 function isFenceCloser(line: string, opener: FenceDelimiter): boolean {
-  const match = /^ {0,3}(`+|~+)[ \t]*$/.exec(line);
+  const match = /^ {0,3}(`+|~+)[ \t]*$/.exec(line.replace(/\r$/, ''));
   if (!match) return false;
   const run = match[1];
   return run[0] === opener.char && run.length >= opener.length;
+}
+
+function regexMatches(pattern: RegExp, value: string): boolean {
+  pattern.lastIndex = 0;
+  return pattern.test(value);
+}
+
+/** Lines that are ordinary Markdown flow content rather than fenced code. */
+function visibleMarkdownLines(lines: string[]): boolean[] {
+  const visible = Array.from({ length: lines.length }, () => true);
+  let fence: FenceDelimiter | null = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (fence) {
+      visible[i] = false;
+      if (isFenceCloser(lines[i], fence)) fence = null;
+      continue;
+    }
+    const opener = parseFenceOpener(lines[i]);
+    if (opener) {
+      visible[i] = false;
+      fence = opener;
+    }
+  }
+  return visible;
+}
+
+/**
+ * Remove bounded same-line code spans before looking for raw HTML constructs.
+ * Backtick runs are maximal tokens: a one- or two-backtick opener cannot use a
+ * three-backtick run as its closer. The prior backreference regex matched a
+ * prefix of the longer run and could therefore hide visible raw HTML.
+ */
+function withoutBoundedCodeSpans(line: string): string {
+  let visible = '';
+  let cursor = 0;
+  while (cursor < line.length) {
+    if (line[cursor] !== '`') {
+      visible += line[cursor];
+      cursor += 1;
+      continue;
+    }
+
+    const openerStart = cursor;
+    while (cursor < line.length && line[cursor] === '`') cursor += 1;
+    const openerLength = cursor - openerStart;
+    let search = cursor;
+    let closerEnd = -1;
+    while (search < line.length) {
+      if (line[search] !== '`') {
+        search += 1;
+        continue;
+      }
+      const closerStart = search;
+      while (search < line.length && line[search] === '`') search += 1;
+      if (search - closerStart === openerLength) {
+        closerEnd = search;
+        break;
+      }
+    }
+
+    if (closerEnd >= 0) {
+      cursor = closerEnd;
+    } else {
+      visible += line.slice(openerStart, cursor);
+    }
+  }
+  return visible;
+}
+
+/**
+ * Constructs this bounded governed-document tokenizer deliberately refuses.
+ *
+ * It is not a complete CommonMark/HTML parser. Raw HTML headings and tables
+ * render as competing document structure, so accepting them without parsing
+ * them would recreate the duplicate-section/table bypass. Outside code blocks
+ * they therefore fail closed; inside fences or 4-space-indented code they are
+ * inert examples and remain allowed.
+ */
+export function governedMarkdownSyntaxProblems(report: string): string[] {
+  const lines = report.split('\n');
+  const visible = visibleMarkdownLines(lines);
+  const containerViews = governedContainerViews(lines, visible);
+  const problems: string[] = [];
+  let rawHtmlBlockStart: number | null = null;
+  lines.forEach((line, index) => {
+    if (!visible[index]) return;
+    if (/^ {0,3}(?:[-+*]|\d{1,9}[.)])\t/.test(line)) {
+      problems.push(
+        `report line ${index + 1} uses tab padding after a list marker; ` +
+        'the bounded governed-document tokenizer requires 1–4 spaces',
+      );
+    }
+    if (/^ {0,3}(?:[-+*]|\d{1,9}[.)]) {4}[ \t]/.test(line)) {
+      problems.push(
+        `report line ${index + 1} uses overlong padding after a list marker; ` +
+        'the bounded governed-document tokenizer refuses the five-or-more-space fallback',
+      );
+    }
+    const containerView = containerViews[index];
+    if (containerView.problem) {
+      problems.push(`report line ${index + 1} ${containerView.problem}`);
+    }
+    // Once a list's required content indent is removed, apply the usual 0–3
+    // flow / 4-space code boundary to the content, not to its physical column.
+    // Thus bullet continuations at 4/5 physical spaces remain nested flow,
+    // while 6 spaces leaves four content spaces and is inert nested code.
+    const structuralLine = containerView.stripped ? containerView.text : line;
+    if (!hasBoundedIndent(structuralLine)) return;
+    const structuralText = withoutBoundedCodeSpans(structuralLine);
+    if (/<!--|-->/.test(structuralText)) {
+      problems.push(`report line ${index + 1} uses an HTML comment; governed-document structure may not be hidden in comments`);
+    }
+    if (/<\?|<\!\[CDATA\[|<\![A-Z]/i.test(structuralText)) {
+      problems.push(
+        `report line ${index + 1} uses an HTML processing instruction, CDATA block, or declaration; ` +
+        'governed-document structure must use bounded Markdown syntax',
+      );
+    }
+    if (/<\/?h[1-6](?:\s|>)/i.test(structuralText)) {
+      problems.push(`report line ${index + 1} uses a raw HTML heading; governed sections must use Markdown headings`);
+    }
+    if (/<\/?(?:table|thead|tbody|tfoot|tr|th|td)(?:\s|>)/i.test(structuralText)) {
+      problems.push(`report line ${index + 1} uses a raw HTML table construct; governed findings must use Markdown pipe tables`);
+    }
+    if (/<\/?[a-z][^>]*>/i.test(structuralText)) {
+      problems.push(`report line ${index + 1} uses raw inline HTML; governed-document inline content must use Markdown syntax`);
+    }
+    if (rawHtmlBlockStart !== null) {
+      if (/>/.test(structuralText)) rawHtmlBlockStart = null;
+    } else if (/<\/?[a-z][^>]*$/i.test(structuralText)) {
+      rawHtmlBlockStart = index;
+      problems.push(
+        `report line ${index + 1} starts a multiline raw HTML construct; ` +
+        'governed-document inline content must use Markdown syntax',
+      );
+    }
+
+    const { text: container, stripped } = containerView;
+    if (stripped) {
+      const normalized = normalizeHeadingContent(container.trim());
+      const looksGoverned = /^(?:3(?![\w.]|\.\d)|4\.3(?!\w|\.\d)|5\.2(?!\w|\.\d))(?:\s|[.\-—:]|$)/.test(normalized);
+      const nextContainer = containerViews[index + 1]?.text ?? '';
+      const cells = splitMarkdownTableRow(container);
+      const delimiter = splitMarkdownTableCells(nextContainer);
+      const looksLikeTablePair = !!cells && isDelimiterRow(delimiter) && cells.length === delimiter.raw.length;
+      if (
+        parseAtxHeading(container) || setextLevel(container) || looksGoverned ||
+        looksLikeTablePair
+      ) {
+        problems.push(
+          `report line ${index + 1} places heading/table-shaped governed content inside a blockquote or list container; ` +
+          'governed structure must be top-level',
+        );
+      }
+    }
+  });
+  for (const heading of parseMarkdownHeadings(lines, visible)) {
+    if (hasUnsupportedInlineSyntax(heading.raw)) {
+      problems.push(
+        `report heading at line ${heading.line + 1} uses unsupported inline heading syntax; ` +
+        'governed section identity must be directly tokenizable',
+      );
+    }
+    const unsupportedEntity = heading.raw.match(/&(?:[a-z][a-z0-9]+|#x?[0-9a-f]+);/gi)?.find((entity) =>
+      !/^&(?:period|dot|#\d+|#x[0-9a-f]+);$/i.test(entity),
+    );
+    if (unsupportedEntity) {
+      problems.push(
+        `report heading at line ${heading.line + 1} uses unsupported entity "${unsupportedEntity}"; ` +
+        'governed section identity must be directly tokenizable',
+      );
+    }
+  }
+  return problems;
+}
+
+function setextLevel(line: string): 1 | 2 | null {
+  if (!hasBoundedIndent(line)) return null;
+  const match = /^ {0,3}(=+|-+)[ \t]*\r?$/.exec(line);
+  if (!match) return null;
+  return match[1][0] === '=' ? 1 : 2;
+}
+
+/**
+ * Parse every real heading once. The resulting token stream is shared by
+ * governed-section discovery and boundary detection, so ATX and Setext syntax
+ * cannot disagree between the two jobs.
+ */
+function parseMarkdownHeadings(lines: string[], visible: boolean[]): MarkdownHeading[] {
+  const headings: MarkdownHeading[] = [];
+  const consumed = new Set<number>();
+  const tableLines = markdownTableLineNumbers(lines, visible);
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!visible[i] || consumed.has(i)) continue;
+    const atx = parseAtxHeading(lines[i]);
+    if (atx) {
+      headings.push({
+        ...atx,
+        line: i,
+        contentStart: i + 1,
+        raw: lines[i],
+        normalized: normalizedHeadingLine(atx),
+      });
+      continue;
+    }
+
+    const level = lines[i].trim() !== '' && i + 1 < lines.length && visible[i + 1]
+      ? setextLevel(lines[i + 1])
+      : null;
+    let paragraphStart = i;
+    if (level) {
+      while (paragraphStart > 0) {
+        const previous = lines[paragraphStart - 1];
+        if (
+          !visible[paragraphStart - 1] || consumed.has(paragraphStart - 1) ||
+          !hasBoundedIndent(previous) || previous.trim() === '' ||
+          parseAtxHeading(previous) || setextLevel(previous) ||
+          tableLines.has(paragraphStart - 1) || /^ {0,3}\[[^\]]+\]:/.test(previous) ||
+          /^ {0,3}(?:>|(?:[-+*]|\d{1,9}[.)]) {1,4})/.test(previous)
+        ) break;
+        paragraphStart -= 1;
+      }
+    }
+    const paragraphLines = lines.slice(paragraphStart, i + 1);
+    const content = paragraphLines
+      .map((line) => line.replace(/^ {0,3}/, '').replace(/\r$/, '').trim())
+      .join(' ')
+      .trim();
+    if (
+      level && content && hasBoundedIndent(lines[i]) &&
+      // Block markers are not paragraph text that a Setext underline promotes.
+      !/^ {0,3}(?:>|(?:[-+*]|\d{1,9}[.)]) {1,4})/.test(lines[i])
+    ) {
+      const parsed = { level, content };
+      headings.push({
+        ...parsed,
+        line: paragraphStart,
+        contentStart: i + 2,
+        raw: paragraphLines.join('\n'),
+        normalized: normalizedHeadingLine(parsed),
+      });
+      for (let line = paragraphStart; line <= i + 1; line += 1) consumed.add(line);
+      i += 1; // the underline belongs to this heading, not to another block
+    }
+  }
+  return headings;
+}
+
+interface MarkdownTableCells {
+  /** Raw cell source with surrounding whitespace trimmed. */
+  raw: string[];
+  /** The same cells with bounded Markdown presentation normalized. */
+  clean: string[];
+}
+
+const COMMONMARK_ESCAPABLE_PUNCTUATION = /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~]/;
+
+/** Split a GFM pipe-table row on structurally unescaped pipes. */
+function splitMarkdownTableCells(line: string): MarkdownTableCells | null {
+  if (!hasBoundedIndent(line)) return null;
+  const text = line.replace(/^ {0,3}/, '').replace(/\r$/, '').trimEnd();
+  const cells: string[] = [];
+  const separators: number[] = [];
+  let cell = '';
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    if (char === '\\' && i + 1 < text.length && COMMONMARK_ESCAPABLE_PUNCTUATION.test(text[i + 1])) {
+      // Keep the physical escape in `raw`; delimiter validation must distinguish
+      // `---` from `\---`. Presentation normalization happens only in `clean`.
+      cell += `${char}${text[i + 1]}`;
+      i += 1;
+    } else if (char === '|') {
+      cells.push(cell);
+      separators.push(i);
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell);
+  if (separators.length === 0) return null;
+  if (separators[0] === 0) cells.shift();
+  if (separators[separators.length - 1] === text.length - 1) cells.pop();
+  const raw = cells.map((value) => value.trim());
+  // Normalize exactly once from physical source. Pre-decoding here and then
+  // passing through `cleanCell()` let escaped presentation (`\*\*357\*\*`)
+  // become real bold on a second interpretation and pass as numeric evidence.
+  return { raw, clean: raw.map(cleanCell) };
+}
+
+/** Split a GFM pipe-table row on unescaped pipes; outer pipes are optional. */
+function splitMarkdownTableRow(line: string): string[] | null {
+  return splitMarkdownTableCells(line)?.clean ?? null;
+}
+
+function isDelimiterRow(cells: MarkdownTableCells | null): cells is MarkdownTableCells {
+  return !!cells && cells.raw.length >= 2 && cells.raw.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+/** Physical lines belonging to syntactically valid top-level pipe tables. */
+function markdownTableLineNumbers(lines: string[], visible: boolean[]): Set<number> {
+  const tableLines = new Set<number>();
+  for (let i = 0; i + 1 < lines.length; i += 1) {
+    if (!visible[i] || !visible[i + 1]) continue;
+    const header = splitMarkdownTableCells(lines[i]);
+    const delimiter = splitMarkdownTableCells(lines[i + 1]);
+    if (!header || !isDelimiterRow(delimiter) || header.raw.length !== delimiter.raw.length) continue;
+    tableLines.add(i);
+    tableLines.add(i + 1);
+    let cursor = i + 2;
+    while (cursor < lines.length && visible[cursor]) {
+      const row = splitMarkdownTableCells(lines[cursor]);
+      if (!row) break;
+      tableLines.add(cursor);
+      cursor += 1;
+    }
+    i = cursor - 1;
+  }
+  return tableLines;
 }
 
 /**
@@ -350,42 +1002,16 @@ function isFenceCloser(line: string, opener: FenceDelimiter): boolean {
  * different problem from a wrong cell, and the caller reports it as one.
  */
 export function readMarkdownTable(report: string, heading: RegExp): Map<string, string> | null {
-  const lines = report.split('\n');
-  let start = -1;
-  let scanFence: FenceDelimiter | null = null;
-  for (let i = 0; i < lines.length; i += 1) {
-    if (scanFence) { if (isFenceCloser(lines[i], scanFence)) scanFence = null; continue; }
-    const opener = parseFenceOpener(lines[i]);
-    if (opener) { scanFence = opener; continue; }
-    const parsed = parseAtxHeading(lines[i]);
-    if (parsed && heading.test(normalizedHeadingLine(parsed))) { start = i; break; }
-  }
-  if (start === -1) return null;
-
+  const table = readMarkdownSections(report, heading)[0]?.tables[0];
+  if (!table) return null;
   const cells = new Map<string, string>();
-  let seen = false;
-  let fence: FenceDelimiter | null = null;
-  for (const line of lines.slice(start + 1)) {
-    if (fence) { if (isFenceCloser(line, fence)) fence = null; continue; }
-    const opener = parseFenceOpener(line);
-    if (opener) { fence = opener; continue; }
-
-    const trimmed = line.trim();
-    const isTableRow = trimmed.startsWith('|') && hasBoundedIndent(line);
-    if (!isTableRow) {
-      if (seen) break;      // the table ended
-      if (parseAtxHeading(line)) return null; // next section, no table here
-      continue;             // prose between the heading and the table
-    }
-    seen = true;
-    if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
-    const parts = trimmed.split('|').slice(1, -1).map((c) => c.trim());
+  for (const parts of table.rows) {
     if (parts.length < 2) continue;
-    const label = parts[0].replace(/\*\*/g, '').replace(/`/g, '').trim().toLowerCase();
-    const value = parts[1].replace(/\*\*/g, '').replace(/`/g, '').trim();
+    const label = normalizeHeadingContent(cleanCell(parts[0])).toLowerCase();
+    const value = cleanCell(parts[1]);
     if (label && !cells.has(label)) cells.set(label, value);
   }
-  return seen ? cells : null;
+  return cells;
 }
 
 /** Every number in a cell, so `-26.01 … +22.30` yields both ends. */
@@ -393,11 +1019,22 @@ function numbersIn(cell: string): number[] {
   return [...cell.matchAll(/[-+]?\d+(?:\.\d+)?/g)].map((m) => Number(m[0]));
 }
 
-const cleanCell = (cell: string) => cell.replace(/\*\*/g, '').replace(/`/g, '').trim();
+function strictNumber(cell: string): number | null {
+  const match = /^[-+]?\d+(?:\.\d+)?$/.exec(cleanCell(cell));
+  return match ? Number(match[0]) : null;
+}
+
+function strictNumberPair(cell: string): number[] | null {
+  const match = /^\s*([-+]?\d+(?:\.\d+)?)\s*(?:…|\.\.|-|—|to)\s*([-+]?\d+(?:\.\d+)?)\s*$/i.exec(cleanCell(cell));
+  return match ? [Number(match[1]), Number(match[2])] : null;
+}
+
+const cleanCell = (cell: string) => normalizeBoundedInline(cell).value.trim();
 
 export interface MarkdownTable {
   header: string[];
   rows: string[][];
+  problems: string[];
 }
 
 /**
@@ -411,6 +1048,8 @@ export interface MarkdownTable {
 export interface MarkdownSection {
   /** The heading line itself, verbatim. */
   heading: string;
+  /** Canonical ATX-shaped comparison form, including normalized inline text. */
+  normalizedHeading: string;
   tables: MarkdownTable[];
 }
 
@@ -427,48 +1066,56 @@ export interface MarkdownSection {
  */
 export function readMarkdownSections(report: string, heading: RegExp): MarkdownSection[] {
   const lines = report.split('\n');
+  const visible = visibleMarkdownLines(lines);
+  const headings = parseMarkdownHeadings(lines, visible);
   const sections: MarkdownSection[] = [];
 
-  let scanFence: FenceDelimiter | null = null;
-  for (let start = 0; start < lines.length; start += 1) {
-    if (scanFence) { if (isFenceCloser(lines[start], scanFence)) scanFence = null; continue; }
-    const scanOpener = parseFenceOpener(lines[start]);
-    if (scanOpener) { scanFence = scanOpener; continue; }
-
-    const parsedHeading = parseAtxHeading(lines[start]);
-    if (!parsedHeading || !heading.test(normalizedHeadingLine(parsedHeading))) continue;
-
-    const headingLevel = parsedHeading.level;
+  for (const parsedHeading of headings) {
+    if (!regexMatches(heading, parsedHeading.normalized)) continue;
+    const nextBoundary = headings.find((candidate) =>
+      candidate.line > parsedHeading.line && candidate.level <= parsedHeading.level,
+    );
+    const end = nextBoundary?.line ?? lines.length;
     const tables: MarkdownTable[] = [];
-    let current: string[][] | null = null;
-    let fence: FenceDelimiter | null = null;
 
-    for (const line of lines.slice(start + 1)) {
-      if (fence) { if (isFenceCloser(line, fence)) fence = null; continue; }
-      const opener = parseFenceOpener(line);
-      if (opener) { fence = opener; continue; }
+    for (let i = parsedHeading.contentStart; i + 1 < end; i += 1) {
+      if (!visible[i] || !visible[i + 1]) continue;
+      const headerCells = splitMarkdownTableCells(lines[i]);
+      const delimiter = splitMarkdownTableCells(lines[i + 1]);
+      if (!headerCells || !isDelimiterRow(delimiter) || headerCells.raw.length !== delimiter.raw.length) continue;
+      const header = headerCells.clean;
 
-      // Stop at the next heading of the same or a higher level, so a
-      // subsection's tables are not attributed to this section. A
-      // pseudo-heading indented 4+ spaces/a tab, or one living inside a
-      // fenced block (handled above), is not a heading via `parseAtxHeading`
-      // and so cannot end the section early.
-      const nextHeading = parseAtxHeading(line);
-      if (nextHeading && nextHeading.level <= headingLevel) break;
-
-      const trimmed = line.trim();
-      const isTableRow = trimmed.startsWith('|') && hasBoundedIndent(line);
-      if (!isTableRow) {
-        if (current) { tables.push({ header: current[0], rows: current.slice(1) }); current = null; }
-        continue;
+      const rows: string[][] = [];
+      const problems: string[] = headerCells.raw.flatMap((cell, column) => {
+        const problem = normalizeBoundedInline(cell).problem;
+        return problem ? [`table header column ${column + 1} uses ${problem}`] : [];
+      });
+      let cursor = i + 2;
+      while (cursor < end && visible[cursor]) {
+        if (headings.some((candidate) => candidate.line === cursor)) break;
+        const rowCells = splitMarkdownTableCells(lines[cursor]);
+        if (!rowCells) break;
+        const row = rowCells.clean;
+        if (row.length !== header.length) {
+          problems.push(
+            `table row ${cursor + 1} has ${row.length} cells; its header declares ${header.length}`,
+          );
+        }
+        rowCells.raw.forEach((cell, column) => {
+          const problem = normalizeBoundedInline(cell).problem;
+          if (problem) problems.push(`table row ${cursor + 1} column ${column + 1} uses ${problem}`);
+        });
+        rows.push(row);
+        cursor += 1;
       }
-      if (/^\|[\s:|-]+\|$/.test(trimmed)) continue; // the |---|---:| separator
-      const parts = trimmed.split('|').slice(1, -1).map(cleanCell);
-      if (!current) current = [parts];
-      else current.push(parts);
+      tables.push({ header, rows, problems });
+      i = cursor - 1;
     }
-    if (current) tables.push({ header: current[0], rows: current.slice(1) });
-    sections.push({ heading: lines[start], tables });
+    sections.push({
+      heading: parsedHeading.raw,
+      normalizedHeading: parsedHeading.normalized,
+      tables,
+    });
   }
 
   return sections;
@@ -498,7 +1145,222 @@ function parseCountCell(cell: string): { count: number | null; pct: string | nul
   return { count: Number(match[1]), pct: match[2] ?? null };
 }
 
+interface GovernedColumn {
+  key: string;
+  label: string;
+  matches: (header: string) => boolean;
+}
+
+/**
+ * Require one and only one column for every governed meaning.
+ *
+ * Returning indexes (rather than assuming row[0]/row[1]) makes legitimate
+ * reordering safe. Rejecting unknown columns matters just as much as rejecting
+ * duplicate ones: a second, differently-titled value column can otherwise
+ * contradict the governed cell while the checker validates only the first.
+ */
+function governedColumns(
+  table: MarkdownTable,
+  tableName: string,
+  expected: GovernedColumn[],
+): { indexes: Record<string, number>; problems: string[] } {
+  const problems = [...table.problems.map((problem) => `${tableName}: ${problem}`)];
+  const indexes: Record<string, number> = {};
+  const headers = table.header.map((header) => normalizeHeadingContent(cleanCell(header)).toLowerCase());
+
+  const claimed = new Set<number>();
+  for (const column of expected) {
+    const matches = headers
+      .map((header, index) => column.matches(header) ? index : -1)
+      .filter((index) => index !== -1);
+    if (matches.length === 0) {
+      problems.push(`${tableName} has no "${column.label}" column`);
+    } else if (matches.length > 1) {
+      problems.push(
+        `${tableName} repeats the "${column.label}" column (${matches.length} columns match); exactly one is allowed`,
+      );
+    } else {
+      indexes[column.key] = matches[0];
+      claimed.add(matches[0]);
+    }
+  }
+  headers.forEach((header, index) => {
+    if (!claimed.has(index)) {
+      problems.push(`${tableName} carries an unknown "${header || '(blank)'}" column`);
+    }
+  });
+  return { indexes, problems };
+}
+
+function exactTableRows(
+  table: MarkdownTable,
+  tableName: string,
+  labelColumn: number,
+  expected: Array<{ key: string; label: string; matches: (label: string) => boolean }>,
+): { rows: Record<string, string[]>; problems: string[] } {
+  const problems: string[] = [];
+  const rows: Record<string, string[]> = {};
+  const claimed = new Set<number>();
+  const labels = table.rows.map((row) => normalizeHeadingContent(cleanCell(row[labelColumn] ?? '')).toLowerCase());
+
+  for (const governed of expected) {
+    const matches = labels
+      .map((label, index) => governed.matches(label) ? index : -1)
+      .filter((index) => index !== -1);
+    if (matches.length === 0) {
+      problems.push(`${tableName} has no "${governed.label}" row`);
+    } else if (matches.length > 1) {
+      problems.push(
+        `${tableName} repeats the "${governed.label}" row (${matches.length} rows match); exactly one is allowed`,
+      );
+      matches.forEach((index) => claimed.add(index));
+    } else {
+      rows[governed.key] = table.rows[matches[0]];
+      claimed.add(matches[0]);
+    }
+  }
+  labels.forEach((label, index) => {
+    if (!claimed.has(index)) {
+      problems.push(`${tableName} carries an unexpected "${label || '(blank)'}" row`);
+    }
+  });
+  return { rows, problems };
+}
+
 const CLAMP_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
+
+export const IDENTITY_SECTION_HEADING = /^#{1,6}\s+3(?!\w)(?!\.\d)/;
+
+const IDENTITY_ROWS = [
+  { key: 'rows', label: 'rows', matches: (label: string) => label === 'rows' },
+  { key: 'distinct', label: 'distinct identifiers', matches: (label: string) => label === 'distinct identifiers' },
+  {
+    key: 'gsis',
+    label: 'GSIS-shaped identifiers',
+    matches: (label: string) =>
+      label === 'gsis-shaped (00- + 7 digits)' || label === 'gsis-shaped identifiers',
+  },
+  { key: 'other', label: 'other namespaces', matches: (label: string) => label === 'other namespaces' },
+  { key: 'canonical', label: 'canonical coverage', matches: (label: string) => label === 'canonical coverage' },
+  { key: 'crossSurface', label: 'cross-surface resolvability', matches: (label: string) => label === 'cross-surface resolvability' },
+] as const;
+
+/** Compare the report's §3 identity summary with cacheCohort.identity. */
+export function reportIdentityProblems(report: string, identity: any): string[] {
+  if (!identity) return [];
+  const syntaxProblems = governedMarkdownSyntaxProblems(report);
+  if (syntaxProblems.length) return syntaxProblems;
+  const sections = readMarkdownSections(report, IDENTITY_SECTION_HEADING);
+  if (sections.length === 0) {
+    return ['report has no §3 section for the manifest identity findings to be checked against'];
+  }
+  if (sections.length > 1) {
+    return [`report carries ${sections.length} sections whose heading matches §3; exactly one may state these findings`];
+  }
+
+  const structuralProblems = sections[0].tables.length === 1
+    ? []
+    : [`report's §3 section carries ${sections[0].tables.length} tables; exactly one identity-summary table is allowed`];
+
+  const candidates = sections[0].tables.filter((table) => {
+    const cells = table.rows.flat().map((cell) => normalizeHeadingContent(cleanCell(cell)).toLowerCase());
+    return cells.includes('rows') || cells.includes('distinct identifiers');
+  });
+  if (candidates.length === 0) {
+    return ['report has no identity-summary table for the manifest identity findings to be checked against'];
+  }
+  if (candidates.length > 1) {
+    return [`report carries ${candidates.length} identity-summary tables; exactly one may state these findings`];
+  }
+
+  const table = candidates[0];
+  const schema = governedColumns(table, "report's identity-summary table", [
+    { key: 'measure', label: 'measure', matches: (header) => header === 'measure' },
+    { key: 'value', label: 'value', matches: (header) => header === 'value' },
+  ]);
+  if (schema.problems.length) return schema.problems;
+  const exactRows = exactTableRows(
+    table,
+    "report's identity-summary table",
+    schema.indexes.measure,
+    [...IDENTITY_ROWS],
+  );
+  const problems = [...structuralProblems, ...exactRows.problems];
+  const value = (key: string) => cleanCell(exactRows.rows[key]?.[schema.indexes.value] ?? '');
+  const checkNumber = (key: string, label: string, expected: number) => {
+    const stated = strictNumber(value(key));
+    if (stated !== expected) {
+      problems.push(`report states identity ${label} as "${value(key)}"; the manifest measured ${expected}`);
+    }
+  };
+
+  checkNumber('rows', 'rows', Number(identity.totalRows));
+  const distinctCell = value('distinct');
+  const zeroDuplicateMatch = /^\s*(\d+)\s*\((?:zero|no) duplicates?\)\s*$/i.exec(distinctCell);
+  const countedDuplicateMatch =
+    /^\s*(\d+)\s*\((\d+) duplicate IDs?(?:,\s*(\d+) excess rows?)?\)\s*$/i.exec(distinctCell);
+  const statedDistinct = zeroDuplicateMatch?.[1] ?? countedDuplicateMatch?.[1];
+  if (Number(statedDistinct) !== Number(identity.distinctIds)) {
+    problems.push(
+      `report states distinct identifiers as "${distinctCell}"; the manifest measured ${identity.distinctIds}`,
+    );
+  }
+  const expectedDuplicateIds = Array.isArray(identity.duplicateIds) ? identity.duplicateIds.length : 0;
+  const statedDuplicateIds = zeroDuplicateMatch ? 0 : Number(countedDuplicateMatch?.[2]);
+  if (statedDuplicateIds !== expectedDuplicateIds) {
+    problems.push(
+      `report states duplicate identifiers as "${distinctCell}"; the manifest lists ${expectedDuplicateIds} duplicate IDs`,
+    );
+  }
+  if (countedDuplicateMatch?.[3] !== undefined) {
+    const expectedExcessRows = Number(identity.totalRows) - Number(identity.distinctIds);
+    if (Number(countedDuplicateMatch[3]) !== expectedExcessRows) {
+      problems.push(
+        `report states excess identity rows as ${countedDuplicateMatch[3]}; ` +
+        `totalRows minus distinctIds is ${expectedExcessRows}`,
+      );
+    }
+  }
+
+  const gsisCell = value('gsis');
+  const gsis = parseCountCell(gsisCell);
+  if (gsis.count !== Number(identity.gsisShaped)) {
+    problems.push(`report states GSIS-shaped identifiers as "${gsisCell}"; the manifest measured ${identity.gsisShaped}`);
+  }
+  const expectedGsisPct = Number(identity.gsisShapedPct).toFixed(1);
+  if (gsis.pct !== expectedGsisPct) {
+    problems.push(`report states the GSIS-shaped percentage as "${gsis.pct ?? 'none'}%"; the manifest measured ${expectedGsisPct}%`);
+  }
+  checkNumber('other', 'other namespaces', Number(identity.totalRows) - Number(identity.gsisShaped));
+
+  const canonicalCell = value('canonical');
+  const coverage = identity.canonicalCoverage;
+  if (coverage?.recorded === false) {
+    if (!/^not recorded — the capture predates the per-item identity envelope$/i.test(canonicalCell)) {
+      problems.push(`report states canonical coverage as "${canonicalCell}"; the manifest says it was not recorded`);
+    }
+  } else if (coverage?.recorded === true) {
+    const recordedMatch = /^(\d+) resolved(?:,| and) (\d+) unresolved$/i.exec(canonicalCell);
+    const stated = recordedMatch ? [Number(recordedMatch[1]), Number(recordedMatch[2])] : [];
+    const expected = [Number(coverage.resolved), Number(coverage.unresolved)];
+    if (stated.length !== 2 || stated[0] !== expected[0] || stated[1] !== expected[1]) {
+      problems.push(
+        `report states canonical coverage as "${canonicalCell}"; the manifest measured ${expected[0]} resolved and ${expected[1]} unresolved`,
+      );
+    }
+  }
+
+  const crossSurfaceCell = value('crossSurface');
+  if (
+    identity.crossSurfaceResolvability === 'unavailable_requires_database' &&
+    !/^unavailable — requires database$/i.test(crossSurfaceCell)
+  ) {
+    problems.push(
+      `report states cross-surface resolvability as "${crossSurfaceCell}"; the manifest says unavailable_requires_database`,
+    );
+  }
+  return problems;
+}
 
 /**
  * The governed clamping section, identified by its NUMBER.
@@ -546,6 +1408,9 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
   const byPosition = clamping?.byPosition;
   if (!byPosition) return [];
 
+  const syntaxProblems = governedMarkdownSyntaxProblems(report);
+  if (syntaxProblems.length) return syntaxProblems;
+
   const problems: string[] = [];
   // Uniqueness is enforced at BOTH levels, because each level was defeated in
   // turn. First the table: `.find()` took the first match inside the section
@@ -566,8 +1431,62 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
       'exactly one may state these findings',
     ];
   }
+  if (sections[0].tables.length !== 2) {
+    problems.push(
+      `report's §4.3 section carries ${sections[0].tables.length} tables; ` +
+      'exactly two governed tables (declared bounds and observed clamping) are allowed',
+    );
+  }
+  const declaredCandidates = sections[0].tables.filter((table) => {
+    const headers = table.header.map((header) => normalizeHeadingContent(cleanCell(header)).toLowerCase());
+    return headers.some((header) => /^outmin$/i.test(header)) || headers.some((header) => /^outmax$/i.test(header));
+  });
+  if (declaredCandidates.length === 0) {
+    problems.push('report has no declared-bounds table for the manifest clamping findings to be checked against');
+  } else if (declaredCandidates.length > 1) {
+    problems.push(`report carries ${declaredCandidates.length} declared-bounds tables; exactly one may state these findings`);
+  } else {
+    const declared = declaredCandidates[0];
+    const declaredSchema = governedColumns(declared, "report's declared-bounds table", [
+      { key: 'position', label: 'position', matches: (header) => header === 'position' },
+      { key: 'p10', label: 'p10', matches: (header) => header === 'p10' },
+      { key: 'p90', label: 'p90', matches: (header) => header === 'p90' },
+      { key: 'outMin', label: 'outMin', matches: (header) => header === 'outmin' },
+      { key: 'outMax', label: 'outMax', matches: (header) => header === 'outmax' },
+    ]);
+    problems.push(...declaredSchema.problems);
+    if (declaredSchema.problems.length === 0) {
+      const rows = exactTableRows(
+        declared,
+        "report's declared-bounds table",
+        declaredSchema.indexes.position,
+        CLAMP_POSITIONS.map((position) => ({
+          key: position,
+          label: position,
+          matches: (label: string) => label === position.toLowerCase(),
+        })),
+      );
+      problems.push(...rows.problems);
+      for (const position of CLAMP_POSITIONS) {
+        const row = rows.rows[position];
+        const measured = byPosition[position]?.declaredBounds;
+        if (!row || !measured) continue;
+        for (const key of ['p10', 'p90', 'outMin', 'outMax'] as const) {
+          const stated = strictNumber(row[declaredSchema.indexes[key]] ?? '');
+          const expected = Number(measured[key]);
+          if (stated !== expected) {
+            problems.push(
+              `report states ${position} declared ${key} as "${cleanCell(row[declaredSchema.indexes[key]] ?? '')}"; ` +
+              `the manifest measured ${expected}`,
+            );
+          }
+        }
+      }
+    }
+  }
+
   const candidates = sections[0].tables
-    .filter((t) => t.header.some((h) => /at floor/i.test(h)));
+    .filter((t) => t.header.some((h) => /at floor/i.test(normalizeHeadingContent(cleanCell(h)))));
   if (candidates.length === 0) {
     return ['report has no observed-clamping table for the manifest clamping findings to be checked against'];
   }
@@ -578,36 +1497,52 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
   }
   const table = candidates[0];
 
-  const columnOf = (pattern: RegExp) => table.header.findIndex((h) => pattern.test(h));
-  const columns = {
-    n: columnOf(/^n$/i),
-    min: columnOf(/^min$/i),
-    max: columnOf(/^max$/i),
-    floor: columnOf(/at floor/i),
-    ceiling: columnOf(/at ceiling/i),
-  };
-  for (const [name, index] of Object.entries(columns)) {
-    if (index === -1) problems.push(`report's clamping table has no "${name}" column`);
+  const schema = governedColumns(table, "report's clamping table", [
+    { key: 'position', label: 'position', matches: (header) => header === 'position' },
+    { key: 'n', label: 'n', matches: (header) => header === 'n' },
+    { key: 'min', label: 'min', matches: (header) => header === 'min' },
+    { key: 'max', label: 'max', matches: (header) => header === 'max' },
+    { key: 'floor', label: 'at floor', matches: (header) => /^at floor(?:\s|$)/.test(header) },
+    { key: 'ceiling', label: 'at ceiling', matches: (header) => /^at ceiling(?:\s|$)/.test(header) },
+  ]);
+  problems.push(...schema.problems);
+  if (problems.length) return problems;
+  const columns = schema.indexes;
+
+  const declaredBounds = CLAMP_POSITIONS
+    .map((position) => byPosition[position]?.declaredBounds)
+    .filter(Boolean);
+  for (const [key, label, values] of [
+    ['floor', 'at floor', new Set(declaredBounds.map((bound: any) => Number(bound.outMin)))],
+    ['ceiling', 'at ceiling', new Set(declaredBounds.map((bound: any) => Number(bound.outMax)))],
+  ] as const) {
+    const header = normalizeHeadingContent(cleanCell(table.header[columns[key]] ?? '')).toLowerCase();
+    if (values.size !== 1) {
+      problems.push(`manifest has no single common ${label} bound across positions`);
+      continue;
+    }
+    const expected = [...values][0];
+    const expectedHeader = `${label} ${expected.toFixed(1)}`;
+    if (header !== expectedHeader) {
+      problems.push(
+        `report's clamping table states its ${label} header as "${header}"; ` +
+        `the manifest common bound must render as "${expectedHeader}"`,
+      );
+    }
   }
   if (problems.length) return problems;
 
-  const seen = new Map<string, string[]>();
-  for (const row of table.rows) {
-    const key = (row[0] ?? '').toLowerCase();
-    if (!key) continue;
-    if (seen.has(key)) {
-      problems.push(`report's clamping table repeats the "${row[0]}" row`);
-      continue;
-    }
-    seen.set(key, row);
-  }
-
-  const expectedKeys = [...CLAMP_POSITIONS.map((p) => p.toLowerCase()), 'total'];
-  for (const key of seen.keys()) {
-    if (!expectedKeys.includes(key)) {
-      problems.push(`report's clamping table carries an unexpected "${key}" row`);
-    }
-  }
+  const observedRows = exactTableRows(
+    table,
+    "report's clamping table",
+    columns.position,
+    [...CLAMP_POSITIONS, 'total'].map((position) => ({
+      key: position.toLowerCase(),
+      label: position,
+      matches: (label: string) => label === position.toLowerCase(),
+    })),
+  );
+  problems.push(...observedRows.problems);
 
   const cell = (row: string[], index: number) => cleanCell(row[index] ?? '');
 
@@ -638,7 +1573,7 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
     totalFloor += Number(measured.atFloor);
     totalCeiling += Number(measured.atCeiling);
 
-    const row = seen.get(position.toLowerCase());
+    const row = observedRows.rows[position.toLowerCase()];
     if (!row) {
       problems.push(`report's clamping table has no "${position}" row`);
       continue;
@@ -648,8 +1583,8 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
       ['min', columns.min, Number(measured.min)],
       ['max', columns.max, Number(measured.max)],
     ] as const) {
-      const stated = numbersIn(cell(row, index));
-      if (stated.length !== 1 || stated[0] !== expected) {
+      const stated = strictNumber(cell(row, index));
+      if (stated !== expected) {
         problems.push(`report states ${position} ${label} as "${cell(row, index)}"; the manifest measured ${expected}`);
       }
     }
@@ -658,14 +1593,17 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
       Number(measured.atFloor), formatClampPct(Number(measured.atFloor), Number(measured.n)),
     );
     checkCount(`${position} at-ceiling`, row, columns.ceiling, Number(measured.atCeiling));
+    if (parseCountCell(cell(row, columns.ceiling)).pct !== null) {
+      problems.push(`report states a ${position} at-ceiling percentage; this governed cell must carry a count only`);
+    }
   }
 
-  const totalRow = seen.get('total');
+  const totalRow = observedRows.rows.total;
   if (!totalRow) {
     problems.push('report\'s clamping table has no "total" row');
   } else {
-    const stated = numbersIn(cell(totalRow, columns.n));
-    if (stated.length !== 1 || stated[0] !== totalN) {
+    const stated = strictNumber(cell(totalRow, columns.n));
+    if (stated !== totalN) {
       problems.push(`report states the clamping total n as "${cell(totalRow, columns.n)}"; the positions sum to ${totalN}`);
     }
     // The total row's min/max are deliberately blank, and must stay blank.
@@ -686,6 +1624,9 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
     }
     checkCount('total at-floor', totalRow, columns.floor, totalFloor, formatClampPct(totalFloor, totalN));
     checkCount('total at-ceiling', totalRow, columns.ceiling, totalCeiling);
+    if (parseCountCell(cell(totalRow, columns.ceiling)).pct !== null) {
+      problems.push('report states a total at-ceiling percentage; this governed cell must carry a count only');
+    }
   }
 
   return problems;
@@ -698,9 +1639,9 @@ export function reportClampingProblems(report: string, clamping: any): string[] 
 const COMPARISON_ROWS: Array<{ label: RegExp; describe: string; key: string }> = [
   { label: /^joined rows$/, describe: 'joined rows', key: 'joinedRows' },
   { label: /^exact agreement$/, describe: 'exact agreement', key: 'exactAgreement' },
-  { label: /^within ±1/, describe: 'within ±1.0 alpha', key: 'within1' },
-  { label: /^within ±5/, describe: 'within ±5.0 alpha', key: 'within5' },
-  { label: /^median delta/, describe: 'median delta', key: 'medianDelta' },
+  { label: /^within ±1(?:\.0)? alpha$/, describe: 'within ±1.0 alpha', key: 'within1' },
+  { label: /^within ±5(?:\.0)? alpha$/, describe: 'within ±5.0 alpha', key: 'within5' },
+  { label: /^median delta(?: \(cache − static\))?$/, describe: 'median delta', key: 'medianDelta' },
 ];
 
 /**
@@ -736,6 +1677,9 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
   const dc = descriptiveComparison;
   if (!dc || dc.status !== 'available') return [];
 
+  const syntaxProblems = governedMarkdownSyntaxProblems(report);
+  if (syntaxProblems.length) return syntaxProblems;
+
   const problems: string[] = [];
   const sections = readMarkdownSections(report, COMPARISON_SECTION_HEADING);
   if (sections.length === 0) {
@@ -746,13 +1690,31 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
       `report carries ${sections.length} sections whose heading matches §5.2; exactly one may state these findings`,
     ];
   }
+  if (sections[0].tables.length !== 2) {
+    problems.push(
+      `report's §5.2 section carries ${sections[0].tables.length} tables; ` +
+      'exactly two governed tables (summary and largest disagreements) are allowed',
+    );
+  }
 
   // The descriptive-comparison table is identified by its shape (a "joined
   // rows" row), not by position — §5.2 also carries a second, unrelated
   // "largest absolute disagreements" table that must not be mistaken for it.
-  const candidates = sections[0].tables.filter((t) =>
-    t.rows.some((row) => /^joined rows$/i.test(cleanCell(row[0] ?? ''))),
-  );
+  const candidateDetails = sections[0].tables.map((table) => ({
+    table,
+    schema: governedColumns(table, "report's descriptive-comparison table", [
+      { key: 'measure', label: 'measure', matches: (header) => header === 'measure' },
+      { key: 'value', label: 'value', matches: (header) => header === 'value' },
+    ]),
+  }));
+  const candidates = candidateDetails.filter(({ table }) => {
+    const measureColumns = table.header
+      .map((header, index) => normalizeHeadingContent(cleanCell(header)).toLowerCase() === 'measure' ? index : -1)
+      .filter((index) => index !== -1);
+    return measureColumns.some((measure) =>
+      table.rows.some((row) => /^joined rows$/i.test(normalizeHeadingContent(cleanCell(row[measure] ?? '')))),
+    );
+  });
   if (candidates.length === 0) {
     return ['report has no descriptive-comparison table for the manifest comparison to be checked against'];
   }
@@ -768,9 +1730,29 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
   // to whichever value was seen first, silently discarding a conflicting —
   // or even identical — duplicate rather than reporting it. "Exactly one
   // semantic match" is enforced explicitly below instead.
+  const candidate = candidates[0];
+  problems.push(...candidate.schema.problems);
+  if (problems.length) return problems;
+  const summaryRows = exactTableRows(
+    candidate.table,
+    "report's descriptive-comparison table",
+    candidate.schema.indexes.measure,
+    [
+      ...COMPARISON_ROWS.map(({ label, describe, key }) => ({
+        key,
+        label: describe,
+        matches: (rowLabel: string) => label.test(rowLabel),
+      })),
+      { key: 'range', label: 'range', matches: (rowLabel: string) => /^range$/.test(rowLabel) },
+    ],
+  );
+  problems.push(...summaryRows.problems);
   const rowsMatching = (label: RegExp) =>
-    candidates[0].rows
-      .map((row) => ({ label: cleanCell(row[0] ?? '').toLowerCase(), value: cleanCell(row[1] ?? '') }))
+    candidate.table.rows
+      .map((row) => ({
+        label: normalizeHeadingContent(cleanCell(row[candidate.schema.indexes.measure] ?? '')).toLowerCase(),
+        value: cleanCell(row[candidate.schema.indexes.value] ?? ''),
+      }))
       .filter((r) => r.label && label.test(r.label));
 
   for (const { label, describe, key } of COMPARISON_ROWS) {
@@ -793,8 +1775,8 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
       problems.push(`report's descriptive-comparison table has no "${describe}" row`);
       continue;
     }
-    const stated = numbersIn(matches[0].value);
-    if (stated.length !== 1 || stated[0] !== Number(expected)) {
+    const stated = strictNumber(matches[0].value);
+    if (stated !== Number(expected)) {
       problems.push(
         `report states ${describe} as "${matches[0].value}"; the manifest measured ${expected}`,
       );
@@ -815,11 +1797,11 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
     if (rangeMatches.length === 0) {
       problems.push('report\'s descriptive-comparison table has no "range" row');
     } else if (dc.maxDelta !== null && dc.maxDelta !== undefined) {
-      const stated = numbersIn(rangeMatches[0].value);
+      const stated = strictNumberPair(rangeMatches[0].value);
       const expected = [Number(dc.minDelta), Number(dc.maxDelta)];
-      if (stated.length !== 2 || stated[0] !== expected[0] || stated[1] !== expected[1]) {
+      if (!stated || stated[0] !== expected[0] || stated[1] !== expected[1]) {
         problems.push(
-          `report's range row states [${stated.join(', ')}]; the manifest measured ` +
+          `report's range row states [${stated?.join(', ') ?? 'invalid'}]; the manifest measured ` +
           `[${expected.join(', ')}] in that order (minimum first)`,
         );
       }
@@ -830,15 +1812,86 @@ export function reportComparisonProblems(report: string, descriptiveComparison: 
   // disagrees with its own table is exactly the drift this check exists for.
   // Read from the section the scanner already found above (fence/indent
   // aware), not a second, separately-matched raw line.
-  const headingLine = sections[0].heading;
+  const headingLine = sections[0].normalizedHeading;
   if (dc.joinedRows !== null && dc.joinedRows !== undefined) {
     // Drop the leading section number ("### 5.2 ") so only counts stated in the
     // heading's prose are read.
-    const counts = numbersIn(headingLine.replace(/^#{2,4}\s*[\d.]*\s*/, ''));
-    if (counts.length && !counts.includes(Number(dc.joinedRows))) {
+    const headingProse = headingLine.replace(
+      /^#{1,6}\s+5\.2(?!\w)(?!\.\d)[.\s—:-]*/,
+      '',
+    );
+    const headingMatch = /^descriptive comparison across the (\d+) shared players$/i.exec(headingProse);
+    if (!headingMatch) {
       problems.push(
-        `report's descriptive-comparison heading states ${counts.join('/')} shared players; the manifest measured ${dc.joinedRows}`,
+        'report\'s descriptive-comparison heading does not state the shared-player count with the exact governed template ' +
+        '"Descriptive comparison across the N shared players"',
       );
+    } else if (Number(headingMatch[1]) !== Number(dc.joinedRows)) {
+      problems.push(
+        `report's descriptive-comparison heading states ${headingMatch[1]} shared players; the manifest measured ${dc.joinedRows}`,
+      );
+    }
+  }
+
+  const detailCandidates = sections[0].tables.filter((table) => {
+    const headers = table.header.map((header) => normalizeHeadingContent(cleanCell(header)).toLowerCase());
+    return headers.includes('gsis') || headers.includes('delta');
+  });
+  if (detailCandidates.length === 0) {
+    problems.push('report has no largest-absolute-deltas table for the manifest comparison to be checked against');
+  } else if (detailCandidates.length > 1) {
+    problems.push(`report carries ${detailCandidates.length} largest-absolute-deltas tables; exactly one may state these findings`);
+  } else {
+    const detail = detailCandidates[0];
+    const detailSchema = governedColumns(detail, "report's largest-absolute-deltas table", [
+      { key: 'player', label: 'player', matches: (header) => header === 'player' },
+      { key: 'gsis', label: 'GSIS', matches: (header) => header === 'gsis' },
+      { key: 'position', label: 'pos', matches: (header) => header === 'pos' },
+      { key: 'staticAlpha', label: 'static alpha', matches: (header) => header === 'static alpha' },
+      { key: 'cacheAlpha', label: 'cache alpha', matches: (header) => header === 'cache alpha' },
+      { key: 'delta', label: 'delta', matches: (header) => header === 'delta' },
+    ]);
+    problems.push(...detailSchema.problems);
+    if (detailSchema.problems.length === 0) {
+      const expected = Array.isArray(dc.largestAbsoluteDeltas) ? dc.largestAbsoluteDeltas.slice(0, 5) : [];
+      if (detail.rows.length !== expected.length) {
+        problems.push(
+          `report's largest-absolute-deltas table carries ${detail.rows.length} rows; ` +
+          `the manifest publishes ${expected.length} rendered rows`,
+        );
+      }
+      for (let i = 0; i < Math.min(detail.rows.length, expected.length); i += 1) {
+        const row = detail.rows[i];
+        const measured = expected[i];
+        const textual = [
+          ['player', measured.playerName],
+          ['gsis', measured.gsisPlayerId],
+          ['position', measured.position],
+        ] as const;
+        for (const [key, expectedValue] of textual) {
+          const stated = cleanCell(row[detailSchema.indexes[key]] ?? '');
+          if (stated !== String(expectedValue)) {
+            problems.push(
+              `report's largest-absolute-deltas row ${i + 1} states ${key} as "${stated}"; ` +
+              `the manifest measured "${expectedValue}" in that position`,
+            );
+          }
+        }
+        for (const [key, expectedValue] of [
+          ['staticAlpha', measured.staticAlpha],
+          ['cacheAlpha', measured.cacheAlpha],
+          ['delta', measured.delta],
+        ] as const) {
+          const cell = cleanCell(row[detailSchema.indexes[key]] ?? '');
+          const stated = strictNumber(cell);
+          if (stated !== Number(expectedValue)) {
+            problems.push(
+              `report's largest-absolute-deltas row ${i + 1} states ${key} as "${cell}"; ` +
+              `the manifest measured ${expectedValue} in that position`,
+            );
+          }
+        }
+      }
     }
   }
 

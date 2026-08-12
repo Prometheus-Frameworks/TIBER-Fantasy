@@ -201,7 +201,7 @@ cohort, not a subset.
 
 ## 3. Identity coverage
 
-| | |
+| measure | value |
 |---|---|
 | rows | 357 |
 | distinct identifiers | **357** (zero duplicates) |
