@@ -329,6 +329,45 @@ export const rankingsV2SeasonMetaSchema = z.object({
   isArchiveView: z.boolean(),
   status: z.string().nullable(),
   statusDetail: z.string().nullable(),
+}).superRefine((meta, ctx) => {
+  // `no_rankable_source` means nothing was admitted, so there is nothing to
+  // describe: publishing an evidence season/week/timestamp alongside it let a
+  // fail-closed response read as evidence for football it never returned —
+  // "2025 evidence" or an archive banner for a response with zero rows.
+  //
+  // Enforced HERE, not by `buildSeasonMeta` silently nulling these fields
+  // based on provenance: a producer that forgets this contradicts its own
+  // contract and fails loudly (the route's `sendUnavailable`/final
+  // `safeParse` turns it into a 500) rather than being quietly patched up
+  // after the fact. `source_extent_unknown` is a different claim — a
+  // nonempty admitted source that truthfully knows its season without
+  // knowing its week extent — and is deliberately NOT covered here.
+  if (meta.evidenceProvenance !== 'no_rankable_source') return;
+
+  const mustBeNull: Array<[string, unknown]> = [
+    ['evidenceSeason', meta.evidenceSeason],
+    ['evidenceWeek', meta.evidenceWeek],
+    ['evidenceThroughSeason', meta.evidenceThroughSeason],
+    ['evidenceThroughWeek', meta.evidenceThroughWeek],
+    ['generatedAt', meta.generatedAt],
+  ];
+  for (const [field, value] of mustBeNull) {
+    if (value !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: `evidenceProvenance "no_rankable_source" requires ${field} to be null — nothing was admitted, so there is no evidence to describe.`,
+      });
+    }
+  }
+
+  if (meta.isArchiveView !== false) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['isArchiveView'],
+      message: 'evidenceProvenance "no_rankable_source" requires isArchiveView to be false — with no evidence season there is no season to compare against the forward board.',
+    });
+  }
 });
 export type RankingsV2SeasonMeta = z.infer<typeof rankingsV2SeasonMetaSchema>;
 
@@ -360,5 +399,18 @@ export const rankingsV2ResponseSchema = z.object({
     }
     seenRanks.set(item.rank, index);
   });
+
+  // `sourceStack` names the layers that produced admitted rows. When nothing
+  // was admitted (`no_rankable_source`), no layer answered, so the stack must
+  // be empty — a nonempty one here claimed a layer served rows that do not
+  // exist. This is a response-level check because sourceStack is a sibling of
+  // seasonMeta, not a field of it.
+  if (response.seasonMeta.evidenceProvenance === 'no_rankable_source' && response.sourceStack.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['sourceStack'],
+      message: 'evidenceProvenance "no_rankable_source" requires an empty sourceStack — no layer produced admitted rows.',
+    });
+  }
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;

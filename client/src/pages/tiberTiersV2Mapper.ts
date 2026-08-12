@@ -326,6 +326,40 @@ export const seasonMetaSchema = z.object({
   isArchiveView: z.boolean(),
   status: z.string().nullable(),
   statusDetail: z.string().nullable(),
+}).superRefine((meta, ctx) => {
+  // Mirrors the invariant enforced in `rankingsV2SeasonMetaSchema` in
+  // server/contracts/rankingsV2.ts. `no_rankable_source` means nothing was
+  // admitted, so a response contradicting that (an evidence season/week/
+  // timestamp, or an archive flag, alongside it) fails HERE rather than being
+  // silently trusted and rendered as "2025 evidence" or an archive banner
+  // for a board this response never returned. `source_extent_unknown` is a
+  // different, nonempty-source claim and is deliberately not covered.
+  if (meta.evidenceProvenance !== 'no_rankable_source') return;
+
+  const mustBeNull: Array<[string, unknown]> = [
+    ['evidenceSeason', meta.evidenceSeason],
+    ['evidenceWeek', meta.evidenceWeek],
+    ['evidenceThroughSeason', meta.evidenceThroughSeason],
+    ['evidenceThroughWeek', meta.evidenceThroughWeek],
+    ['generatedAt', meta.generatedAt],
+  ];
+  for (const [field, value] of mustBeNull) {
+    if (value !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: `evidenceProvenance "no_rankable_source" requires ${field} to be null — nothing was admitted, so there is no evidence to describe.`,
+      });
+    }
+  }
+
+  if (meta.isArchiveView !== false) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['isArchiveView'],
+      message: 'evidenceProvenance "no_rankable_source" requires isArchiveView to be false — with no evidence season there is no season to compare against the forward board.',
+    });
+  }
 });
 export type RankingsSeasonMeta = z.infer<typeof seasonMetaSchema>;
 
@@ -399,6 +433,18 @@ const rankingsV2WeeklyResponseSchema = z
       }
       seenRanks.set(item.rank, index);
     });
+
+    // Mirrors the server's response-level check: `no_rankable_source` means no
+    // layer produced admitted rows, so a nonempty sourceStack alongside it is
+    // contradictory and must not be trusted into a "Canonical FORGE Alpha
+    // ranks" headline for a response that answered nothing.
+    if (response.seasonMeta.evidenceProvenance === 'no_rankable_source' && response.sourceStack.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['sourceStack'],
+        message: 'evidenceProvenance "no_rankable_source" requires an empty sourceStack — no layer produced admitted rows.',
+      });
+    }
   });
 
 export type RankingsV2WeeklyResponseShape = z.infer<typeof rankingsV2WeeklyResponseSchema>;

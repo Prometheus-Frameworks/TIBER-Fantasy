@@ -144,6 +144,75 @@ describe('TiberTiersView rendered output', () => {
     expect(html).not.toContain('Source:');
   });
 
+  it('renders no evidence-season claim, no archive banner, and no FORGE headline for a no_rankable_source empty-cache response', () => {
+    // The complete no_rankable_source invariant, as the UI actually receives
+    // it post-fix: null evidence fields, isArchiveView false, empty
+    // sourceStack. Neither path that can produce this state may render text
+    // implying evidence exists.
+    const noRankableSourceMeta = {
+      ...SEASON_META,
+      evidenceSeason: null,
+      evidenceWeek: null,
+      evidenceThroughSeason: null,
+      evidenceThroughWeek: null,
+      evidenceProvenance: 'no_rankable_source' as const,
+      generatedAt: null,
+      isArchiveView: false,
+      status: 'forge_cache_empty_uncomputed',
+      statusDetail: 'FORGE grades for this filter have not been computed yet.',
+    };
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-04-12T00:00:00.000Z',
+      seasonMeta: noRankableSourceMeta,
+      sourceStack: [],
+      trust: { sampleNote: 'FORGE grades for this filter have not been computed yet. Please check back shortly.', stabilityNote: 'forge_cache_empty_uncomputed' },
+      items: [],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).not.toMatch(/\d{4} evidence/);
+    expect(html).not.toContain('extent not stated');
+    expect(html).not.toContain('Archive:');
+    expect(html).not.toContain('data-testid="tiers-archive-notice"');
+    expect(html).not.toContain('Canonical FORGE Alpha ranks');
+    expect(html).toContain('No ranking evidence available.');
+  });
+
+  it('renders no evidence-season claim, no archive banner, and no FORGE headline for a no_rankable_source exact-week-unavailable response', () => {
+    const noRankableSourceMeta = {
+      ...SEASON_META,
+      evidenceSeason: null,
+      evidenceWeek: null,
+      evidenceThroughSeason: null,
+      evidenceThroughWeek: null,
+      evidenceProvenance: 'no_rankable_source' as const,
+      generatedAt: null,
+      isArchiveView: false,
+      status: 'exact_week_evidence_unavailable',
+      statusDetail: 'Rankings for the requested week 7 are unavailable; the exact week was not substituted.',
+    };
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-04-12T00:00:00.000Z',
+      seasonMeta: noRankableSourceMeta,
+      sourceStack: [],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('data-testid="tiers-exact-week-unavailable"');
+    expect(html).not.toMatch(/\d{4} evidence/);
+    expect(html).not.toContain('extent not stated');
+    expect(html).not.toContain('Archive:');
+    expect(html).not.toContain('data-testid="tiers-archive-notice"');
+    expect(html).not.toContain('Canonical FORGE Alpha ranks');
+    expect(html).toContain('No ranking evidence available.');
+  });
+
   it('renders the genuine-empty state distinctly, with metadata visible', () => {
     const data: TiersApiResponse = {
       contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,

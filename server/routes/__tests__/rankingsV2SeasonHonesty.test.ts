@@ -313,6 +313,12 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.evidenceProvenance).toBe('source_extent_unknown');
     // Null is "unknown", not "18": nothing downstream may widen it.
     expect(body.seasonMeta.evidenceWeek).not.toBe(18);
+    // Negative control for the no_rankable_source fix: a nonempty admitted
+    // source that merely doesn't state its week extent still truthfully
+    // identifies its season. This must not have been swept into the same
+    // null-everything treatment as no_rankable_source.
+    expect(body.seasonMeta.evidenceSeason).toBe(2025);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
   });
 
   test('the scoring path publishes the measured max represented week, not the query ceiling', async () => {
@@ -380,6 +386,16 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.evidenceWeek).toBeNull();
     expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
     expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+    // The complete no_rankable_source invariant: no evidence season either,
+    // no archive flag, no generatedAt, and no layer claiming it answered.
+    expect(body.seasonMeta.evidenceSeason).toBeNull();
+    expect(body.seasonMeta.evidenceThroughSeason).toBeNull();
+    expect(body.seasonMeta.generatedAt).toBeNull();
+    expect(body.seasonMeta.isArchiveView).toBe(false);
+    expect(body.sourceStack).toEqual([]);
+    // The attempted-source diagnostics still surface, just not as evidence.
+    expect(body.seasonMeta.statusDetail).toMatch(/2025 week 18/);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
   });
 
   test('the unavailable payload declares no rankable source', async () => {
@@ -389,6 +405,15 @@ describe('evidence is what the source declares, never the request or a calendar'
 
     expect(body.seasonMeta.evidenceWeek).toBeNull();
     expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+    // Same complete invariant as the empty-cache path: buildUnavailablePayload
+    // is the other producer site and must not leak the requested season as
+    // evidence either.
+    expect(body.seasonMeta.evidenceSeason).toBeNull();
+    expect(body.seasonMeta.evidenceThroughSeason).toBeNull();
+    expect(body.seasonMeta.generatedAt).toBeNull();
+    expect(body.seasonMeta.isArchiveView).toBe(false);
+    expect(body.sourceStack).toEqual([]);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
   });
 
   test('completion is never asserted: no finalization source exists', async () => {
@@ -409,6 +434,117 @@ describe('evidence is what the source declares, never the request or a calendar'
     expect(body.seasonMeta.decisionTargetProvenance).toBe('anchor_derived');
     expect(body.seasonMeta.decisionTargetOrigin).toBe('phase_default');
     expect(body.seasonMeta.decisionTargetIsProvisional).toBe(true);
+  });
+});
+
+describe('no_rankable_source rejects contradictory evidence metadata at the schema boundary', () => {
+  // A minimal, otherwise-valid no_rankable_source seasonMeta. Each adversarial
+  // test below mutates exactly one prohibited field away from its required
+  // null/false value and asserts the schema — not buildSeasonMeta — is what
+  // catches it. Enforcement lives in the .superRefine(), so a producer that
+  // regresses this fails loudly at the contract boundary rather than being
+  // silently patched up.
+  const VALID_NO_RANKABLE_SOURCE_META = {
+    currentSeason: 2025,
+    forwardRankingSeason: 2025,
+    currentPhase: 'regular_season' as const,
+    currentPhaseLabel: 'Regular Season',
+    currentRegularSeasonWeek: 11,
+    targetSeason: 2025,
+    targetWeek: 11,
+    targetLabel: 'Week 11',
+    scheduleSource: 'anchor_derived' as const,
+    configStatus: 'ok' as const,
+    configNote: null,
+    evidenceSeason: null,
+    evidenceWeek: null,
+    decisionTargetSeason: null,
+    decisionTargetWeek: null,
+    decisionTargetProvenance: null,
+    decisionTargetIsProvisional: false,
+    decisionTargetOrigin: null,
+    phaseTargetSeason: 2025,
+    phaseTargetWeek: 11,
+    phaseTargetProvenance: 'anchor_derived' as const,
+    phaseTargetIsProvisional: true,
+    evidenceThroughSeason: null,
+    evidenceThroughWeek: null,
+    evidenceProvenance: 'no_rankable_source' as const,
+    completionVerified: false,
+    finalizedThroughWeek: null,
+    completionCopy: 'Completion not verified.',
+    generatedAt: null,
+    isArchiveView: false,
+    status: 'forge_cache_empty_uncomputed',
+    statusDetail: 'FORGE grades for this filter have not been computed yet.',
+  };
+
+  test('the valid base object itself is accepted (sanity check for the adversarial tests below)', () => {
+    expect(rankingsV2SeasonMetaSchema.safeParse(VALID_NO_RANKABLE_SOURCE_META).success).toBe(true);
+  });
+
+  test.each([
+    ['evidenceSeason', 2025],
+    ['evidenceWeek', 11],
+    ['evidenceThroughSeason', 2025],
+    ['evidenceThroughWeek', 11],
+    ['generatedAt', '2025-11-16T18:00:00.000Z'],
+  ])('%s must independently fail the server schema when non-null under no_rankable_source', (field, badValue) => {
+    const mutated = { ...VALID_NO_RANKABLE_SOURCE_META, [field]: badValue };
+    const result = rankingsV2SeasonMetaSchema.safeParse(mutated);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path.join('.') === field)).toBe(true);
+    }
+  });
+
+  test('isArchiveView must independently fail the server schema when true under no_rankable_source', () => {
+    const mutated = { ...VALID_NO_RANKABLE_SOURCE_META, isArchiveView: true };
+    const result = rankingsV2SeasonMetaSchema.safeParse(mutated);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path.join('.') === 'isArchiveView')).toBe(true);
+    }
+  });
+
+  test('a nonempty sourceStack must independently fail the response schema under no_rankable_source', () => {
+    const response = {
+      contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+      mode: 'weekly' as const,
+      lens: 'lineup_decision' as const,
+      horizon: 'week' as const,
+      asOf: '2025-11-16T18:00:00.000Z',
+      sourceStack: [{ layer: 'forge' as const, source: 'api/forge/tiers cache', asOf: null, notes: null }],
+      items: [],
+      trust: {},
+      seasonMeta: VALID_NO_RANKABLE_SOURCE_META,
+      identityCoverage: {
+        total: 0, canonical: 0, resolved: 0, unresolved: 0, ambiguous: 0, coverageRatio: 0, byReason: {},
+      },
+    };
+    const result = rankingsV2ResponseSchema.safeParse(response);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path.join('.') === 'sourceStack')).toBe(true);
+    }
+  });
+
+  test('an empty sourceStack under no_rankable_source is accepted by the response schema', () => {
+    const response = {
+      contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+      mode: 'weekly' as const,
+      lens: 'lineup_decision' as const,
+      horizon: 'week' as const,
+      asOf: '2025-11-16T18:00:00.000Z',
+      sourceStack: [],
+      items: [],
+      trust: {},
+      seasonMeta: VALID_NO_RANKABLE_SOURCE_META,
+      identityCoverage: {
+        total: 0, canonical: 0, resolved: 0, unresolved: 0, ambiguous: 0, coverageRatio: 0, byReason: {},
+      },
+    };
+    expect(rankingsV2ResponseSchema.safeParse(response).success).toBe(true);
   });
 });
 
@@ -515,6 +651,9 @@ describe('an explicit asOfWeek is exact, and fails closed', () => {
     // Evidence is not claimed through any week at all.
     expect(body.seasonMeta.evidenceWeek).toBeNull();
     expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+    expect(body.seasonMeta.evidenceSeason).toBeNull();
+    expect(body.seasonMeta.isArchiveView).toBe(false);
+    expect(body.sourceStack).toEqual([]);
   });
 
   test('an exact week that IS present is served normally', async () => {
@@ -544,6 +683,21 @@ describe('an explicit asOfWeek is exact, and fails closed', () => {
 
     expect(body.seasonMeta.status).toBe('forge_cache_empty_uncomputed');
     expect(body.seasonMeta.status).not.toBe('exact_week_evidence_unavailable');
+    // The ordinary empty-cache response is the second producer path named in
+    // the finding: it must publish the requested/decision season as
+    // decisionTargetSeason, never as evidenceSeason.
+    expect(body.seasonMeta.decisionTargetSeason).toBe(2025);
+    expect(body.seasonMeta.evidenceProvenance).toBe('no_rankable_source');
+    expect(body.seasonMeta.evidenceSeason).toBeNull();
+    expect(body.seasonMeta.evidenceWeek).toBeNull();
+    expect(body.seasonMeta.evidenceThroughSeason).toBeNull();
+    expect(body.seasonMeta.evidenceThroughWeek).toBeNull();
+    expect(body.seasonMeta.generatedAt).toBeNull();
+    expect(body.seasonMeta.isArchiveView).toBe(false);
+    expect(body.sourceStack).toEqual([]);
+    // Attempted-source diagnostics are folded into statusDetail, not dropped.
+    expect(body.seasonMeta.statusDetail).toMatch(/season=2025/);
+    expect(rankingsV2ResponseSchema.safeParse(body).success).toBe(true);
   });
 });
 

@@ -265,7 +265,13 @@ function buildUnavailablePayload(input: {
       boardSeason: input.season ?? input.phase.season,
       boardWeek: null,
       boardWeekIsExplicit: false,
-      evidenceSeason: input.season,
+      // `no_rankable_source`: nothing was admitted, so there is no evidence
+      // season either — not the requested season, not a guess. Publishing
+      // `input.season` here read as "2025 evidence" for a request this path
+      // never answered. `input.season` is still preserved above, as
+      // `boardSeason` / `decisionTargetSeason` — the requested/decision
+      // target, a different fact from what football was actually admitted.
+      evidenceSeason: null,
       evidenceWeek: null,
       evidenceProvenance: 'no_rankable_source',
       generatedAt: null,
@@ -817,35 +823,44 @@ export function createRankingsV2Router(): Router {
         );
       }
 
+      // `sourceStack` names the layers that PRODUCED admitted rows. An empty
+      // cache produced none — the two entries below used to describe the
+      // attempt anyway, which is exactly what `no_rankable_source` must not
+      // do: the attempted-source diagnostics (scoringFallbackReason, the
+      // decision target, the cache's declared week) still matter, but they
+      // belong in `statusDetail`/`trust`, not in a source stack that claims a
+      // layer answered.
+      const emptyCacheDiagnostics =
+        `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, ` +
+        `decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, position=${position}`;
+
       const payload = {
         contractVersion: RANKINGS_V2_CONTRACT_VERSION,
         mode: 'weekly' as const,
         lens: 'lineup_decision' as const,
         horizon: 'week' as const,
         asOf: derivedAsOf,
-        sourceStack: [
-          {
-            layer: 'forge' as const,
-            source: 'api/forge/tiers cache (forge_grade_cache)',
-            asOf: toIso(cache.computedAt),
-            // score/value below are FORGE alpha/rawAlpha, NOT scoring-service Expected Points/VORP.
-            // scoringFallbackReason records why this layer is serving instead of the scoring service,
-            // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
-            notes: isCacheEmpty
-              ? `status=${CACHE_EMPTY_STATUS}; scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, position=${position}`
-              : `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, position=${position}`,
-          },
-          {
-            layer: 'confidence_stability' as const,
-            source: 'forge cache confidence + trajectory metadata',
-            asOf: toIso(cache.computedAt),
-            notes: isCacheEmpty
-              ? 'FORGE grades not yet computed for this filter.'
-              : cache.computedAt
-                ? 'Freshness derived from cache computedAt.'
-                : 'No cache timestamp; using current server time as asOf fallback.',
-          },
-        ],
+        sourceStack: isCacheEmpty
+          ? []
+          : [
+              {
+                layer: 'forge' as const,
+                source: 'api/forge/tiers cache (forge_grade_cache)',
+                asOf: toIso(cache.computedAt),
+                // score/value below are FORGE alpha/rawAlpha, NOT scoring-service Expected Points/VORP.
+                // scoringFallbackReason records why this layer is serving instead of the scoring service,
+                // so a real upstream failure is never indistinguishable from a genuinely empty ranking.
+                notes: `scoringFallbackReason=${scoringFallbackReason ?? 'none'}; season=${season}, decisionTargetWeek=${decisionTargetWeek ?? 'unknown'}, cacheDeclaredAsOfWeek=${cache.asOfWeek ?? 'none'}, position=${position}`,
+              },
+              {
+                layer: 'confidence_stability' as const,
+                source: 'forge cache confidence + trajectory metadata',
+                asOf: toIso(cache.computedAt),
+                notes: cache.computedAt
+                  ? 'Freshness derived from cache computedAt.'
+                  : 'No cache timestamp; using current server time as asOf fallback.',
+              },
+            ],
         items,
         trust: {
           confidence: null,
@@ -869,7 +884,14 @@ export function createRankingsV2Router(): Router {
           boardSeason: season,
           boardWeek: decisionTargetWeek ?? null,
           boardWeekIsExplicit: Number.isFinite(requestedWeek),
-          evidenceSeason: season,
+          // `no_rankable_source` describes NOTHING about the football: an
+          // empty cache is not a source that happens to omit its extent, it
+          // is no source at all. Publishing the requested season alongside it
+          // let a preseason request read as "2025 evidence" (or "Archive:
+          // 2025") when zero rows were actually admitted. Explicit here, not
+          // derived — the response schema below rejects a mismatch rather
+          // than this function silently reconciling one.
+          evidenceSeason: isCacheEmpty ? null : season,
           // The cache's OWN declared as-of week — the one value the serving
           // source states about its evidence extent. The caller's target must
           // not stand in for it: `?? asOfWeek` here previously let a requested
@@ -887,10 +909,10 @@ export function createRankingsV2Router(): Router {
           evidenceProvenance: isCacheEmpty
             ? 'no_rankable_source'
             : cache.asOfWeek != null ? 'source_declared_as_of' : 'source_extent_unknown',
-          generatedAt: toIso(cache.computedAt),
+          generatedAt: isCacheEmpty ? null : toIso(cache.computedAt),
           status: isCacheEmpty ? CACHE_EMPTY_STATUS : null,
           statusDetail: isCacheEmpty
-            ? 'FORGE grades for this filter have not been computed yet.'
+            ? `FORGE grades for this filter have not been computed yet. ${emptyCacheDiagnostics}.`
             : null,
         }),
         identityCoverage: resolution.coverage,
