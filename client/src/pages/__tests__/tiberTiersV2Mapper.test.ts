@@ -1,15 +1,19 @@
 import {
   buildRankingRowKey,
   EXACT_WEEK_UNAVAILABLE_STATUS,
+  SEASON_CONFIG_STALE_STATUS,
   getLinkablePlayerId,
   isExactWeekUnavailable,
+  isCalendarUnavailable,
   mapRankingsV2ItemsToTiersPlayers,
   RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
   resolveRankingsSourceView,
+  resolveRequestedSeason,
   resolveTiersHeadline,
   resolveTiersViewState,
   TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
   TIERS_STALE_CALENDAR_MESSAGE,
+  TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE,
   validateRankingsV2WeeklyResponse,
 } from '../tiberTiersV2Mapper';
 
@@ -307,6 +311,105 @@ describe('resolveTiersViewState', () => {
       }),
     ).toBe('data');
   });
+
+  it('reports season-metadata-unavailable ahead of every other signal but loading/error', () => {
+    // Every other signal (calendar staleness, exact-week, cache-uncomputed,
+    // empty, data) is itself read FROM seasonMeta, so none of them can be
+    // evaluated honestly once it is absent.
+    const base = {
+      isLoading: false,
+      isError: false,
+      isMetadataUnavailable: true,
+      isCalendarStale: true,
+      isExactWeekUnavailable: true,
+      isCacheUncomputed: true,
+      playersCount: 12,
+    };
+    expect(resolveTiersViewState(base)).toBe('season_metadata_unavailable');
+    expect(resolveTiersViewState({ ...base, isLoading: true })).toBe('loading');
+    expect(resolveTiersViewState({ ...base, isError: true })).toBe('error');
+  });
+
+  it('the stale-calendar-unavailable signal is read off the typed status, never off configStatus alone', () => {
+    // A successfully served configured archive still carries
+    // `configStatus: 'stale_calendar_config'` — gating on that alone hid its
+    // admitted rows behind the calendar-unavailable panel.
+    expect(isCalendarUnavailable({ status: SEASON_CONFIG_STALE_STATUS })).toBe(true);
+    expect(isCalendarUnavailable({ status: 'archive_season_not_current' })).toBe(false);
+    expect(isCalendarUnavailable({ status: null })).toBe(false);
+    expect(isCalendarUnavailable(null)).toBe(false);
+    expect(isCalendarUnavailable(undefined)).toBe(false);
+  });
+});
+
+describe('resolveRequestedSeason', () => {
+  const CONFIGURED = [2025, 2026];
+
+  it('an explicit configured selection wins, live calendar ok', () => {
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2025);
+  });
+
+  it('an explicit configured selection wins even while the live calendar is stale', () => {
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: 2025,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBe(2025);
+  });
+
+  it('a stale calendar with no explicit selection keeps season null and fails closed', () => {
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: null,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('with no explicit selection and an ok calendar, the detected season is used', () => {
+    expect(
+      resolveRequestedSeason({ selectedSeason: null, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+  });
+
+  it('an unconfigured retained selection never becomes the request — it falls through instead of bypassing', () => {
+    // Live calendar ok: falls through to the detected season, not the stale
+    // retained value.
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2024, configuredSeasons: CONFIGURED, configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+    // Live calendar stale: falls through to null (fail closed), not the
+    // unconfigured retained value either.
+    expect(
+      resolveRequestedSeason({
+        selectedSeason: 2024,
+        configuredSeasons: CONFIGURED,
+        configStatus: 'stale_calendar_config',
+        detectedSeason: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('an empty configured-season list (older server) never lets any selection through', () => {
+    expect(
+      resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: [], configStatus: 'ok', detectedSeason: 2026 }),
+    ).toBe(2026);
+  });
+});
+
+describe('TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE', () => {
+  it('is distinct compatibility copy, not the stale-calendar or exact-week text', () => {
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).not.toBe(TIERS_STALE_CALENDAR_MESSAGE);
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).not.toBe(TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE);
+    expect(TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE).toMatch(/older server/i);
+  });
 });
 
 describe('validateRankingsV2WeeklyResponse', () => {
@@ -383,11 +486,58 @@ describe('validateRankingsV2WeeklyResponse', () => {
     expect(validateRankingsV2WeeklyResponse(payload)).toEqual(payload);
   });
 
+  describe('rolling compatibility: seasonMeta absence vs. a present-but-invalid value', () => {
+    // Fantasy #307 correction round 4: a same-contract-version server that
+    // predates Phase A never sends `seasonMeta` at all. That is accepted —
+    // the legacy signal — but a response that TRIED to carry it and sent
+    // `null` or something malformed must still fail exactly as before.
+    it('accepts a response with seasonMeta entirely absent (the key omitted)', () => {
+      const { seasonMeta, ...withoutSeasonMeta } = wellFormed;
+      void seasonMeta;
+      const result = validateRankingsV2WeeklyResponse(withoutSeasonMeta);
+      expect(result.seasonMeta).toBeUndefined();
+      expect(result.items).toEqual([]);
+      expect(result.contractVersion).toBe(RANKINGS_V2_EXPECTED_CONTRACT_VERSION);
+    });
+
+    it('accepts a response with seasonMeta present but set to undefined (equivalent to absence)', () => {
+      const result = validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: undefined });
+      expect(result.seasonMeta).toBeUndefined();
+    });
+
+    it('still rejects an explicit null seasonMeta — absence, not null, is the compatibility signal', () => {
+      expect(() => validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: null })).toThrow();
+    });
+
+    it('still rejects a malformed present seasonMeta', () => {
+      expect(() =>
+        validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: { ...SEASON_META, currentPhase: 'bye_week' } }),
+      ).toThrow();
+      expect(() =>
+        validateRankingsV2WeeklyResponse({ ...wellFormed, seasonMeta: { ...SEASON_META, generatedAt: 'yesterday' } }),
+      ).toThrow();
+    });
+
+    it('the no_rankable_source/sourceStack refinement does not fire when seasonMeta is absent', () => {
+      // The response-level check reads `response.seasonMeta?.evidenceProvenance`;
+      // with no seasonMeta there is no provenance to contradict a nonempty
+      // sourceStack, so a legacy payload with a real sourceStack still passes.
+      const { seasonMeta, ...withoutSeasonMeta } = wellFormed;
+      void seasonMeta;
+      const payload = { ...withoutSeasonMeta, sourceStack: [{ layer: 'forge' }] };
+      expect(() => validateRankingsV2WeeklyResponse(payload)).not.toThrow();
+    });
+
+    it('current (non-legacy) payload rendering/validation is unchanged', () => {
+      expect(validateRankingsV2WeeklyResponse(wellFormed)).toEqual(wellFormed);
+      expect(validateRankingsV2WeeklyResponse(wellFormed).seasonMeta).toEqual(SEASON_META);
+    });
+  });
+
   it.each([
     ['a non-object payload', 'not-json'],
     ['null', null],
     ['an array instead of an object', []],
-    ['missing seasonMeta entirely', { ...wellFormed, seasonMeta: undefined }],
     ['a null seasonMeta', { ...wellFormed, seasonMeta: null }],
     ['a seasonMeta with an unknown phase', { ...wellFormed, seasonMeta: { ...SEASON_META, currentPhase: 'bye_week' } }],
     ['a seasonMeta with a non-ISO generatedAt', { ...wellFormed, seasonMeta: { ...SEASON_META, generatedAt: 'yesterday' } }],

@@ -38,6 +38,8 @@ interface WeekInfo {
   targetIsProvisional: boolean;
   configStatus: 'ok' | 'stale_calendar_config';
   configNote: string | null;
+  /** Absent on an older server; the hook treats that as `[]`, never a guess. */
+  configuredSeasons?: number[];
 }
 
 /**
@@ -102,6 +104,11 @@ export function useCurrentNFLWeek() {
     targetIsProvisional: data?.targetIsProvisional ?? false,
     configStatus: data?.configStatus ?? null,
     configNote: data?.configNote ?? null,
+    // The seasons a caller may explicitly select, independent of whether the
+    // live calendar is stale. An older server that predates this field is
+    // read as `[]` — no synthesized fallback, since a guessed season list
+    // could let an unconfigured value slip into a request.
+    configuredSeasons: data?.configuredSeasons ?? [],
 
     isLoading,
     error,

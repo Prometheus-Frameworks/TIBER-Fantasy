@@ -416,7 +416,16 @@ const rankingsV2WeeklyResponseSchema = z
       .nullable()
       .optional(),
     items: z.array(rankingsItemSchema),
-    seasonMeta: seasonMetaSchema,
+    // Optional ONLY on this side of the wire, and only via `.optional()` —
+    // never `.nullable()`. This is the rolling-compatibility seam: an absent
+    // key is what a pre-#307 server, still on the SAME contract version,
+    // actually sends, and the client must keep accepting that version's
+    // responses rather than breaking on deploy order. An explicit `null` or a
+    // malformed object is a different thing entirely — a response that TRIED
+    // to carry seasonMeta and got it wrong — and must still fail exactly as
+    // before; `.optional()` alone does not relax either of those, only
+    // "the key was never sent" is accepted as absence.
+    seasonMeta: seasonMetaSchema.optional(),
   })
   .passthrough()
   .superRefine((response, ctx) => {
@@ -437,8 +446,10 @@ const rankingsV2WeeklyResponseSchema = z
     // Mirrors the server's response-level check: `no_rankable_source` means no
     // layer produced admitted rows, so a nonempty sourceStack alongside it is
     // contradictory and must not be trusted into a "Canonical FORGE Alpha
-    // ranks" headline for a response that answered nothing.
-    if (response.seasonMeta.evidenceProvenance === 'no_rankable_source' && response.sourceStack.length > 0) {
+    // ranks" headline for a response that answered nothing. Guarded on
+    // presence first — a legacy response with no seasonMeta at all makes no
+    // provenance claim to check.
+    if (response.seasonMeta?.evidenceProvenance === 'no_rankable_source' && response.sourceStack.length > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['sourceStack'],
@@ -513,6 +524,23 @@ export const TIERS_STALE_CALENDAR_MESSAGE =
 export const EXACT_WEEK_UNAVAILABLE_STATUS = 'exact_week_evidence_unavailable';
 
 /**
+ * The server's status for "the live calendar is stale and this request has
+ * no configured archive to fall back to" — the genuinely unavailable case.
+ *
+ * Distinct from `seasonMeta.configStatus === 'stale_calendar_config'`, which
+ * describes the live calendar and stays true even for a SUCCESSFULLY served
+ * configured archive requested during that stale window (the server's
+ * configured-history-only gate still serves it). Gating the unavailable panel
+ * on `configStatus` alone hid those admitted archive rows behind the
+ * calendar-unavailable state; this status is what the server actually sets
+ * only on the fail-closed response. Kept as a named constant for the same
+ * reason as `EXACT_WEEK_UNAVAILABLE_STATUS`: it is a protocol value, and
+ * `server/routes/rankingsV2Routes.ts` exports the same literal as
+ * `SEASON_CONFIG_STALE_STATUS`, pinned together in the suite.
+ */
+export const SEASON_CONFIG_STALE_STATUS = 'season_calendar_config_stale';
+
+/**
  * Distinct from both the uncomputed-cache copy and the empty-filter copy.
  *
  * "No players match this filter yet" says the question was answered and the
@@ -525,6 +553,20 @@ export const TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE =
   'Governed evidence for the requested week is unavailable, so this board could not be produced. ' +
   'TIBER does not substitute another week\'s rankings in its place. Try a different week, or check back once that week has been graded.';
 
+/**
+ * Shown when a successfully parsed response carries no `seasonMeta` at all —
+ * the rolling-compatibility case: a same-contract-version server that
+ * predates #307 Phase A and never sent the field. Explicit copy, not a
+ * silent fallthrough, because nothing about season, week, evidence extent,
+ * or archive/completion status can be honestly stated without it — and
+ * rendering rows under a guessed or omitted context is exactly what #307
+ * exists to prevent.
+ */
+export const TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE =
+  'This response came from an older server release that did not include season/week context. ' +
+  'Rankings are not shown here rather than rendered without their evidence season, target week, ' +
+  'or archive/completion status. Refresh once the season-aware release is live.';
+
 export function resolveTiersHeadline(layer: RankingsSourceView['layer']): string {
   if (layer === 'promoted_artifact') return 'Weekly Forecast Rankings';
   if (layer === 'forge') return 'Canonical FORGE Alpha ranks';
@@ -534,6 +576,7 @@ export function resolveTiersHeadline(layer: RankingsSourceView['layer']): string
 export type TiersViewState =
   | 'loading'
   | 'error'
+  | 'season_metadata_unavailable'
   | 'calendar_unavailable'
   | 'exact_week_unavailable'
   | 'unavailable'
@@ -542,10 +585,14 @@ export type TiersViewState =
 
 // Single source of truth for which panel the page renders, so "truthful state" logic is
 // unit-testable independent of JSX. Priority: a failed/loading request always wins over
-// what would otherwise look like an empty result.
+// what would otherwise look like an empty result. `isMetadataUnavailable` sits right after
+// loading/error and before every other signal, because every signal below it (stale
+// calendar, exact-week, cache-uncomputed, empty, data) is itself READ FROM `seasonMeta` —
+// none of them can be evaluated honestly once it is absent.
 export function resolveTiersViewState(input: {
   isLoading: boolean;
   isError: boolean;
+  isMetadataUnavailable?: boolean;
   isCalendarStale: boolean;
   isExactWeekUnavailable?: boolean;
   isCacheUncomputed: boolean;
@@ -553,6 +600,7 @@ export function resolveTiersViewState(input: {
 }): TiersViewState {
   if (input.isLoading) return 'loading';
   if (input.isError) return 'error';
+  if (input.isMetadataUnavailable) return 'season_metadata_unavailable';
   if (input.isCalendarStale) return 'calendar_unavailable';
   // Before the cache/empty signals. The server returns zero items with this
   // status, so falling through to `empty` told the user "no players match this
@@ -570,10 +618,50 @@ export function resolveTiersViewState(input: {
  * A helper rather than an inline comparison at the call site, so the container
  * cannot drift from the protocol value or forget the check the way it did.
  */
+/**
+ * Which season a request should carry, given the local selection state and
+ * what the current-week hook reports.
+ *
+ * A pure function (rather than inline component logic) so the selection
+ * rules are unit-testable directly, independent of rendering:
+ *  - An explicit selection wins as long as it is still a CONFIGURED season —
+ *    including while the live calendar is stale, since the server's
+ *    configured-history-only gate still serves that archive.
+ *  - With no such explicit selection, a stale calendar has nothing to fall
+ *    back to: the result is null, and the caller must fail the live board
+ *    closed rather than request anything.
+ *  - A retained selection that is no longer configured is never returned —
+ *    it falls through to the rule above instead of becoming a request.
+ */
+export function resolveRequestedSeason(input: {
+  selectedSeason: number | null;
+  configuredSeasons: number[];
+  configStatus: 'ok' | 'stale_calendar_config' | null;
+  detectedSeason: number | null;
+}): number | null {
+  if (input.selectedSeason !== null && input.configuredSeasons.includes(input.selectedSeason)) {
+    return input.selectedSeason;
+  }
+  return input.configStatus === 'stale_calendar_config' ? null : input.detectedSeason;
+}
+
 export function isExactWeekUnavailable(
   seasonMeta: { status?: string | null } | null | undefined,
 ): boolean {
   return seasonMeta?.status === EXACT_WEEK_UNAVAILABLE_STATUS;
+}
+
+/**
+ * Read the calendar-unavailable signal off a response's seasonMeta.
+ *
+ * Tests `status`, never `configStatus` — see `SEASON_CONFIG_STALE_STATUS`.
+ * `configStatus` alone would also hide a successfully served configured
+ * archive's rows behind this panel.
+ */
+export function isCalendarUnavailable(
+  seasonMeta: { status?: string | null } | null | undefined,
+): boolean {
+  return seasonMeta?.status === SEASON_CONFIG_STALE_STATUS;
 }
 
 export function mapRankingsV2ItemsToTiersPlayers(items: RankingsV2Item[]): TiersApiPlayer[] {

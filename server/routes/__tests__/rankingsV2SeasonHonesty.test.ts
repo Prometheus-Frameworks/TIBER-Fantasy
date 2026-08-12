@@ -59,8 +59,11 @@ jest.mock('@shared/weekDetection', () => ({
   resolveSeasonPhase: (...args: unknown[]) => mockResolveSeasonPhase(...args),
 }));
 
-import { createRankingsV2Router, EXACT_WEEK_UNAVAILABLE_STATUS } from '../rankingsV2Routes';
-import { EXACT_WEEK_UNAVAILABLE_STATUS as CLIENT_EXACT_WEEK_UNAVAILABLE_STATUS } from '@/pages/tiberTiersV2Mapper';
+import { createRankingsV2Router, EXACT_WEEK_UNAVAILABLE_STATUS, SEASON_CONFIG_STALE_STATUS } from '../rankingsV2Routes';
+import {
+  EXACT_WEEK_UNAVAILABLE_STATUS as CLIENT_EXACT_WEEK_UNAVAILABLE_STATUS,
+  SEASON_CONFIG_STALE_STATUS as CLIENT_SEASON_CONFIG_STALE_STATUS,
+} from '@/pages/tiberTiersV2Mapper';
 import {
   RANKINGS_V2_CONTRACT_VERSION,
   rankingsV2ResponseSchema,
@@ -546,6 +549,34 @@ describe('no_rankable_source rejects contradictory evidence metadata at the sche
     };
     expect(rankingsV2ResponseSchema.safeParse(response).success).toBe(true);
   });
+
+  test('the SERVER response schema still requires seasonMeta — rolling compatibility is a client-only relaxation', () => {
+    // Fantasy #307 correction round 4 made `seasonMeta` optional on the
+    // CLIENT transport schema only, for a same-contract-version legacy
+    // server. The server's own canonical contract is unchanged: this
+    // producer must always emit seasonMeta, and a response missing it fails
+    // its own contract exactly as before.
+    const { seasonMeta, ...responseWithoutSeasonMeta } = {
+      contractVersion: RANKINGS_V2_CONTRACT_VERSION,
+      mode: 'weekly' as const,
+      lens: 'lineup_decision' as const,
+      horizon: 'week' as const,
+      asOf: '2025-11-16T18:00:00.000Z',
+      sourceStack: [],
+      items: [],
+      trust: {},
+      seasonMeta: VALID_NO_RANKABLE_SOURCE_META,
+      identityCoverage: {
+        total: 0, canonical: 0, resolved: 0, unresolved: 0, ambiguous: 0, coverageRatio: 0, byReason: {},
+      },
+    };
+    void seasonMeta;
+    const result = rankingsV2ResponseSchema.safeParse(responseWithoutSeasonMeta);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path.join('.') === 'seasonMeta')).toBe(true);
+    }
+  });
 });
 
 describe('an explicit asOfWeek is exact, and fails closed', () => {
@@ -590,6 +621,19 @@ describe('an explicit asOfWeek is exact, and fails closed', () => {
     // would make the client fall through to its ordinary empty state — which is
     // exactly the defect this status exists to prevent, reappearing silently.
     expect(EXACT_WEEK_UNAVAILABLE_STATUS).toBe(CLIENT_EXACT_WEEK_UNAVAILABLE_STATUS);
+  });
+
+  test('the stale-calendar unavailable status is likewise pinned across the wire', () => {
+    expect(SEASON_CONFIG_STALE_STATUS).toBe(CLIENT_SEASON_CONFIG_STALE_STATUS);
+  });
+
+  test('a stale LIVE PHASE is a different fact from the typed stale-calendar UNAVAILABLE response (Fantasy #307 round 4)', () => {
+    // `configStatus: 'stale_calendar_config'` describes the live calendar and
+    // survives even a successfully served configured archive; only the
+    // dedicated `status` literal marks the response itself as the fail-closed
+    // one. Collapsing the two is exactly the bug this status exists to
+    // prevent from reappearing.
+    expect(SEASON_CONFIG_STALE_STATUS).not.toBe('stale_calendar_config');
   });
 
   test('a missing exact cache week fails closed instead of serving another week', async () => {

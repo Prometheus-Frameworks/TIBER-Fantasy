@@ -531,14 +531,13 @@ describe('TiberTiersView rendered output', () => {
     expect(() => validateRankingsV2WeeklyResponse({ items: null, sourceStack: [], asOf: '2026-04-12T00:00:00.000Z' })).toThrow();
     expect(() => validateRankingsV2WeeklyResponse({ items: [], sourceStack: null, asOf: '2026-04-12T00:00:00.000Z' })).toThrow();
     expect(() => validateRankingsV2WeeklyResponse({ items: [], sourceStack: [], asOf: 'not-a-date' })).toThrow();
-    // A response without the season/phase envelope is malformed too: without it the
-    // page has no verified season state and would have to guess (Fantasy #307).
+    // A response missing the contract version entirely is malformed regardless
+    // of seasonMeta — the version negotiation is unconditional.
     expect(() =>
       validateRankingsV2WeeklyResponse({ items: [], sourceStack: [], asOf: '2026-04-12T00:00:00.000Z' }),
     ).toThrow();
     // An explicit, well-formed empty array with the negotiated contract version
-    // AND the season/phase envelope is the only genuine empty result — dropping
-    // either one is malformed.
+    // AND the season/phase envelope is the current-era genuine empty result.
     expect(() =>
       validateRankingsV2WeeklyResponse({
         contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
@@ -548,6 +547,11 @@ describe('TiberTiersView rendered output', () => {
         seasonMeta: SEASON_META,
       }),
     ).not.toThrow();
+    // Rolling compatibility (Fantasy #307 correction round 4): the contract
+    // version is unchanged, so a same-version response that simply omits
+    // `seasonMeta` — a pre-Phase-A server — is accepted too, not thrown. The
+    // container renders it as the dedicated `season_metadata_unavailable`
+    // state (see below) rather than treating it as malformed.
     expect(() =>
       validateRankingsV2WeeklyResponse({
         contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
@@ -555,7 +559,10 @@ describe('TiberTiersView rendered output', () => {
         sourceStack: [],
         asOf: '2026-04-12T00:00:00.000Z',
       }),
-    ).toThrow();
+    ).not.toThrow();
+    // Missing the contract version is still malformed even with a well-formed
+    // seasonMeta present — omission of seasonMeta is the only thing rolling
+    // compatibility relaxes.
     expect(() =>
       validateRankingsV2WeeklyResponse({
         items: [],
@@ -564,5 +571,53 @@ describe('TiberTiersView rendered output', () => {
         seasonMeta: SEASON_META,
       }),
     ).toThrow();
+  });
+
+  it('renders explicit compatibility copy and suppresses the table/links/phase/evidence/archive claims for a legacy response with no seasonMeta', () => {
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-04-12T00:00:00.000Z',
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [makeItem()],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).toContain('data-testid="tiers-season-metadata-unavailable"');
+    expect(html).toContain('Season context unavailable');
+    // No table, no player row, no player link.
+    expect(html).not.toContain('Justin Jefferson');
+    expect(html).not.toContain('/player/');
+    // No phase/target claim, no evidence-extent claim, no archive/completion
+    // claim, no empty-result copy, and no headline fabricated from sourceStack.
+    expect(html).not.toContain('Preseason');
+    expect(html).not.toContain('Target: Week');
+    expect(html).not.toMatch(/\d{4} evidence/);
+    expect(html).not.toContain('Archive:');
+    expect(html).not.toContain('Completion not verified');
+    expect(html).not.toContain('No players match this filter yet.');
+    expect(html).not.toMatch(/\d+ players/);
+    expect(html).not.toContain('Source:');
+    expect(html).not.toContain('Canonical FORGE Alpha ranks');
+    expect(html).not.toContain('Weekly Rankings');
+    expect(html).not.toContain('data-testid="tiers-archive-notice"');
+  });
+
+  it('renders the current, non-legacy state unchanged when seasonMeta is present', () => {
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-04-12T00:00:00.000Z',
+      seasonMeta: SEASON_META,
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [makeItem()],
+    };
+
+    const html = render(baseProps({ data }));
+
+    expect(html).not.toContain('tiers-season-metadata-unavailable');
+    expect(html).not.toContain('Season context unavailable');
+    expect(html).toContain('Justin Jefferson');
   });
 });

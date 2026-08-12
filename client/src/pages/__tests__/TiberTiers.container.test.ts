@@ -53,6 +53,7 @@ const FRESH_CURRENT_WEEK = {
   targetIsProvisional: true,
   configStatus: 'ok',
   configNote: null,
+  configuredSeasons: [2025, 2026],
 };
 
 const STALE_CURRENT_WEEK = {
@@ -70,6 +71,9 @@ const STALE_CURRENT_WEEK = {
   targetIsProvisional: false,
   configStatus: 'stale_calendar_config',
   configNote: 'NFL season calendar ends after 2026.',
+  // Which seasons are CONFIGURED is independent of the live calendar's own
+  // staleness — a stale live phase does not un-configure an archive.
+  configuredSeasons: [2025, 2026],
 };
 
 function currentWeekResponse(payload: Record<string, unknown> = FRESH_CURRENT_WEEK) {
@@ -382,17 +386,23 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(screen.queryByTestId('tiers-exact-week-unavailable')).toBeNull();
   });
 
-  it('clears a retained season and omits it from the actual request when the mounted page becomes stale', async () => {
-    const fetchMock = mockFetch(async (url) => {
-      const request = new URL(url, 'http://localhost');
-      const requestedSeason = request.searchParams.get('season');
-
+  /**
+   * A single mock rankings responder shared by the stale-calendar regressions
+   * below: `season` absent -> the typed calendar-unavailable payload;
+   * `season` present -> an admitted archive/live response for that season,
+   * still carrying `configStatus: 'stale_calendar_config'` whenever the
+   * mounted current-week state is stale — a successfully served configured
+   * archive does NOT stop the live calendar itself from being stale.
+   */
+  function mockConfiguredArchiveResponder(isLiveCalendarStale: () => boolean) {
+    return async (url: string) => {
+      const requestedSeason = new URL(url, 'http://localhost').searchParams.get('season');
       if (requestedSeason === null) {
         return {
           ok: true,
           status: 200,
           json: async () => ({
-          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+            contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
             asOf: '2031-10-01T12:00:00.000Z',
             seasonMeta: STALE_SEASON_META,
             sourceStack: [],
@@ -422,25 +432,70 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
               evidenceSeason === 2026
                 ? null
                 : 'Showing 2025 evidence while the forward board targets 2026 (2026 · Preseason).',
+            // Configured-history-only serving does not depend on the live
+            // calendar's own state — this stays whatever the mounted
+            // current-week state says, independent of `evidenceSeason`.
+            configStatus: isLiveCalendarStale() ? 'stale_calendar_config' : 'ok',
           },
           sourceStack: [{ layer: 'forge' }],
           trust: { sampleNote: null, stabilityNote: null },
           items: [wellFormedItem()],
         }),
       };
-    });
+    };
+  }
+
+  it('fresh -> stale retains an explicit configured selection and refetches it', async () => {
+    let liveCalendarStale = false;
+    const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => liveCalendarStale));
     const { queryClient } = renderContainer();
 
     expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
     fireEvent.click(screen.getByTestId('season-2025'));
     await waitFor(() => {
       expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    const rankingsCallCountBeforeStale = fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes('/api/rankings/v2/weekly'),
+    ).length;
+
+    liveCalendarStale = true;
+    await act(async () => {
+      queryClient.setQueryData(['/api/system/current-week'], STALE_CURRENT_WEEK);
+    });
+
+    // The explicit, still-configured 2025 selection survives the stale
+    // transition: it is refetched (a new request fires) and its admitted
+    // rows render — the panel is NOT the calendar-unavailable one, even
+    // though the response's own `configStatus` says the live calendar is
+    // stale.
+    await waitFor(() => {
+      const rankingsUrls = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'));
+      expect(rankingsUrls.length).toBeGreaterThan(rankingsCallCountBeforeStale);
+      const latest = rankingsUrls[rankingsUrls.length - 1];
+      expect(new URL(latest, 'http://localhost').searchParams.get('season')).toBe('2025');
+    });
+    expect(screen.queryByTestId('tiers-calendar-unavailable')).toBeNull();
+    expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+    expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('fresh -> stale without an explicit selection omits season and remains calendar-unavailable', async () => {
+    let liveCalendarStale = false;
+    const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => liveCalendarStale));
+    const { queryClient } = renderContainer();
+
+    // 2026 is the detected season here, not an explicit selection.
+    await waitFor(() => {
       expect(
         fetchMock.mock.calls.some(([input]) => {
           const url = String(input);
           return (
             url.includes('/api/rankings/v2/weekly') &&
-            new URL(url, 'http://localhost').searchParams.get('season') === '2025'
+            new URL(url, 'http://localhost').searchParams.get('season') === '2026'
           );
         }),
       ).toBe(true);
@@ -450,11 +505,12 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       String(input).includes('/api/rankings/v2/weekly'),
     ).length;
 
+    liveCalendarStale = true;
     await act(async () => {
       queryClient.setQueryData(['/api/system/current-week'], STALE_CURRENT_WEEK);
     });
 
-    expect(await screen.findByText('Season calendar unavailable')).toBeTruthy();
+    expect(await screen.findByTestId('tiers-calendar-unavailable')).toBeTruthy();
     const rankingsUrls = fetchMock.mock.calls
       .map(([input]) => String(input))
       .filter((url) => url.includes('/api/rankings/v2/weekly'));
@@ -463,17 +519,47 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(new URL(staleTransitionUrls[0], 'http://localhost').searchParams.has('season')).toBe(false);
     expect(screen.queryByText('No players match this filter yet.')).toBeNull();
     expect(screen.queryByText('0 players')).toBeNull();
-    expect(screen.queryByText('Rankings are not available yet')).toBeNull();
-    expect(screen.queryByText(/FORGE grades for this filter/i)).toBeNull();
+  });
 
-    // The effect clears the retained 2025 choice, not merely masks it while
-    // stale. Once configured state returns, the detected 2026 season wins.
-    await act(async () => {
-      queryClient.setQueryData(['/api/system/current-week'], FRESH_CURRENT_WEEK);
-    });
+  it('direct stale mount exposes exactly the configured seasons; the initial parameterless request fails closed', async () => {
+    const fetchMock = mockFetch(
+      mockConfiguredArchiveResponder(() => true),
+      STALE_CURRENT_WEEK,
+    );
+    renderContainer();
+
+    expect(await screen.findByTestId('tiers-calendar-unavailable')).toBeTruthy();
+    expect(screen.getByTestId('season-2025')).toBeTruthy();
+    expect(screen.getByTestId('season-2026')).toBeTruthy();
     await waitFor(() => {
-      expect(screen.getByTestId('season-2026').getAttribute('aria-pressed')).toBe('true');
-      expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('false');
+      const rankingsUrls = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'));
+      expect(rankingsUrls.length).toBeGreaterThan(0);
+      expect(new URL(rankingsUrls[0], 'http://localhost').searchParams.has('season')).toBe(false);
+    });
+  });
+
+  it('selecting 2025 sends season=2025 without asOfWeek and renders admitted rows despite stale configStatus', async () => {
+    const fetchMock = mockFetch(
+      mockConfiguredArchiveResponder(() => true),
+      STALE_CURRENT_WEEK,
+    );
+    renderContainer();
+    expect(await screen.findByTestId('tiers-calendar-unavailable')).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId('season-2025'));
+
+    expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+    expect(screen.queryByTestId('tiers-calendar-unavailable')).toBeNull();
+    await waitFor(() => {
+      const rankingsUrls = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'));
+      const latest = rankingsUrls[rankingsUrls.length - 1];
+      const params = new URL(latest, 'http://localhost').searchParams;
+      expect(params.get('season')).toBe('2025');
+      expect(params.has('asOfWeek')).toBe(false);
     });
   });
 
@@ -549,6 +635,35 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
 
     expect(await screen.findByText('No players match this filter yet.')).toBeTruthy();
     expect(await screen.findByText('0 players')).toBeTruthy();
+  });
+
+  it('the real chain accepts a main-era payload with no seasonMeta and renders the compatibility state, not an error', async () => {
+    // Fantasy #307 correction round 4, the other deployment direction: a
+    // same-contract-version server that predates Phase A and never sends
+    // `seasonMeta`. Exercised through the actual container ->
+    // useQuery -> fetch -> validateRankingsV2WeeklyResponse -> render chain,
+    // not just the mapper/view in isolation.
+    mockFetch(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+          asOf: '2026-04-12T00:00:00.000Z',
+          sourceStack: [{ layer: 'forge' }],
+          trust: { sampleNote: null, stabilityNote: null },
+          items: [wellFormedItem()],
+        }),
+      }),
+    );
+    renderContainer();
+
+    expect(await screen.findByTestId('tiers-season-metadata-unavailable')).toBeTruthy();
+    expect(screen.getByText('Season context unavailable')).toBeTruthy();
+    // Not the error state — this is a well-formed, accepted legacy response.
+    expect(screen.queryByText('Unable to load rankings')).toBeNull();
+    // No player row rendered.
+    expect(screen.queryByText('Justin Jefferson')).toBeNull();
   });
 
   it('renders Forecast/scoring data with the source-specific headline and Expected/VORP labels', async () => {

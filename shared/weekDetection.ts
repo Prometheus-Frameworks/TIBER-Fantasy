@@ -143,6 +143,14 @@ export interface WeekInfo {
   targetIsProvisional: boolean;
   configStatus: SeasonConfigStatus;
   configNote: string | null;
+  /**
+   * Seasons this build can describe, additive alongside `configStatus`
+   * (Fantasy #307 correction round 4). Present regardless of whether the
+   * live calendar is stale: a stale live phase still names which archives a
+   * caller may explicitly request, distinct from "which season is the
+   * current live target" (which `configStatus` governs).
+   */
+  configuredSeasons: number[];
 }
 
 const TOTAL_GAMES_PER_WEEK = 16;
@@ -494,6 +502,7 @@ export function getCurrentWeek(currentDate?: Date): WeekInfo {
     targetIsProvisional: phase.targetIsProvisional,
     configStatus: phase.configStatus,
     configNote: phase.configNote,
+    configuredSeasons: phase.configuredSeasons,
   };
 }
 
@@ -539,6 +548,7 @@ export function getWeekInfo(week: number, season?: number, currentDate?: Date): 
     targetIsProvisional: phase.targetIsProvisional,
     configStatus: phase.configStatus,
     configNote: phase.configNote,
+    configuredSeasons: phase.configuredSeasons,
   };
 }
 

@@ -25,7 +25,10 @@ import {
   TIERS_LOADING_LABEL,
   TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE,
   TIERS_STALE_CALENDAR_MESSAGE,
+  TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE,
   isExactWeekUnavailable,
+  isCalendarUnavailable,
+  resolveRequestedSeason,
 } from './tiberTiersV2Mapper';
 
 type SortDirection = 'asc' | 'desc';
@@ -39,7 +42,13 @@ export interface TiersApiResponse {
     stabilityNote?: string | null;
   } | null;
   items: RankingsV2Item[];
-  seasonMeta: RankingsSeasonMeta;
+  /**
+   * Optional for rolling compatibility (Fantasy #307 correction round 4): a
+   * same-contract-version server that predates Phase A never sent this
+   * field. Absence is the legacy signal; every read of it below must check
+   * for that rather than assume presence.
+   */
+  seasonMeta?: RankingsSeasonMeta;
 }
 
 function tierClass(tier: string) {
@@ -109,12 +118,21 @@ export function TiberTiersView({
     item.explanation.pillarNotes.find((note) => note.pillar === pillar)?.note ?? null;
 
   const isCacheUncomputed = data?.trust?.stabilityNote === 'forge_cache_empty_uncomputed';
-  const isCalendarStale = data?.seasonMeta.configStatus === 'stale_calendar_config';
+  // A response that parsed successfully (no isError) but carries no
+  // `seasonMeta` at all is the rolling-compatibility legacy case — distinct
+  // from "still loading", where `data` itself is undefined.
+  const isMetadataUnavailable = data !== undefined && !data.seasonMeta;
+  // Gated on the typed unavailable STATUS, not `configStatus`: a successfully
+  // served configured archive still carries `configStatus:
+  // 'stale_calendar_config'` (the live calendar's own state), and gating on
+  // that alone hid its admitted rows behind this panel.
+  const isCalendarStale = isCalendarUnavailable(data?.seasonMeta);
   const exactWeekUnavailable = isExactWeekUnavailable(data?.seasonMeta);
   const sourceView = resolveRankingsSourceView(data?.sourceStack);
   const viewState = resolveTiersViewState({
     isLoading,
     isError,
+    isMetadataUnavailable,
     isCalendarStale,
     isExactWeekUnavailable: exactWeekUnavailable,
     isCacheUncomputed,
@@ -137,11 +155,22 @@ export function TiberTiersView({
               {/* Three separate facts, deliberately not collapsed into one line:
                   where the league is, what the rows are, and what produced them. */}
               <p className="text-slate-300 mt-1 text-sm md:text-base" data-testid="tiers-phase-line">
-                {seasonMeta ? resolveSeasonPhaseHeadline(seasonMeta) : 'Resolving season state…'}
+                {isMetadataUnavailable
+                  ? TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE
+                  : seasonMeta ? resolveSeasonPhaseHeadline(seasonMeta) : 'Resolving season state…'}
               </p>
+              {/* Both the source headline and the evidence line are derived from
+                  fields a legacy response still technically carries
+                  (`sourceStack`) or lacks (`seasonMeta`) — neither is rendered
+                  here while metadata is unavailable, so nothing on this line is
+                  inferred from a response this page cannot honestly describe. */}
               <p className="text-slate-400 mt-0.5 text-sm" data-testid="tiers-evidence-line">
-                {resolveTiersHeadline(sourceView.layer)}
-                {seasonMeta ? ` — ${resolveEvidenceLine(seasonMeta)}` : ''}
+                {!isMetadataUnavailable && (
+                  <>
+                    {resolveTiersHeadline(sourceView.layer)}
+                    {seasonMeta ? ` — ${resolveEvidenceLine(seasonMeta)}` : ''}
+                  </>
+                )}
               </p>
             </div>
             <Button
@@ -252,6 +281,11 @@ export function TiberTiersView({
                   Retry
                 </Button>
               </div>
+            ) : viewState === 'season_metadata_unavailable' ? (
+              <div className="p-10 text-center" data-testid="tiers-season-metadata-unavailable">
+                <div className="text-lg font-semibold text-amber-300 mb-2">Season context unavailable</div>
+                <p className="text-slate-400 text-sm">{TIERS_SEASON_METADATA_UNAVAILABLE_MESSAGE}</p>
+              </div>
             ) : viewState === 'calendar_unavailable' ? (
               <div className="p-10 text-center" data-testid="tiers-calendar-unavailable">
                 <div className="text-lg font-semibold text-amber-300 mb-2">Season calendar unavailable</div>
@@ -265,9 +299,9 @@ export function TiberTiersView({
                 <p className="text-slate-400 text-sm">{TIERS_EXACT_WEEK_UNAVAILABLE_MESSAGE}</p>
                 {/* The server's own detail names the season and week it could
                     not answer for; showing it beats paraphrasing. */}
-                {data?.seasonMeta.statusDetail ? (
+                {seasonMeta?.statusDetail ? (
                   <p className="text-slate-500 text-xs mt-2" data-testid="tiers-exact-week-detail">
-                    {data.seasonMeta.statusDetail}
+                    {seasonMeta.statusDetail}
                   </p>
                 ) : null}
               </div>
@@ -384,18 +418,24 @@ export default function TiberTiers() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   // `resolvedSeason` (not the legacy `season`) so an unresolved season stays
   // null instead of becoming a plausible-but-unverified calendar year.
-  const { resolvedSeason: detectedSeason, targetSeason, targetWeek, configStatus } = useCurrentNFLWeek();
+  const {
+    resolvedSeason: detectedSeason, targetSeason, targetWeek, configStatus, configuredSeasons,
+  } = useCurrentNFLWeek();
 
   // Explicit user season choice wins; otherwise follow detection. Neither path
   // falls back to a hardcoded season or the old `currentWeek || 17` guess — an
   // unresolved season simply omits the parameter and lets the server answer with
   // its own typed phase state.
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  // A mounted page can retain a user-selected season while the current-week
-  // query rolls from a configured calendar into `stale_calendar_config`. Do
-  // not let that stale local selection become an explicit query-string bypass:
-  // fail closed immediately, then clear it for the next configured state.
-  const season = configStatus === 'stale_calendar_config' ? null : selectedSeason ?? detectedSeason;
+
+  // Selection rules live in `resolveRequestedSeason` (Fantasy #307 correction
+  // round 4), unit-tested there directly. In short: an explicit selection
+  // wins as long as it remains configured — including while the live
+  // calendar is stale, since the server's own configured-history-only gate
+  // (rankingsV2Routes.ts) still serves that archive — and there is
+  // deliberately no effect clearing it on staleness. With no such selection,
+  // a stale calendar has nothing to fall back to and `season` stays null.
+  const season = resolveRequestedSeason({ selectedSeason, configuredSeasons, configStatus, detectedSeason });
   // The week this page asks for is the DECISION TARGET — the week the forward
   // board should be about — not `regularSeasonWeek`. The two agree while a
   // week is in play, but once its final game window opens the target rolls
@@ -406,16 +446,13 @@ export default function TiberTiers() {
   // derive that season's own extent.
   const decisionTargetWeek = season !== null && season === targetSeason ? targetWeek : null;
 
-  useEffect(() => {
-    if (configStatus === 'stale_calendar_config') setSelectedSeason(null);
-  }, [configStatus]);
-
-  const availableSeasons = useMemo(() => {
-    if (detectedSeason === null) return [];
-    // Current season plus the immediately preceding one, which is the archive
-    // that #307 requires to remain reachable.
-    return [detectedSeason - 1, detectedSeason];
-  }, [detectedSeason]);
+  // The exact list the server configures, not a synthesized `[current-1,
+  // current]` pair — that synthesis went blank the moment `detectedSeason`
+  // went null under a stale calendar, hiding the very archives this page
+  // must keep exposing. An older server omitting the field already reads as
+  // `[]` at the hook boundary (see useCurrentNFLWeek), so this stays honest
+  // there too.
+  const availableSeasons = configuredSeasons;
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
     // `configStatus` distinguishes the initial unresolved season-null request

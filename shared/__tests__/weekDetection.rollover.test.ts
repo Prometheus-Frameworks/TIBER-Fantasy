@@ -14,7 +14,12 @@ import {
   isRisersFallersDataAvailable,
   resolveSeasonPhase,
 } from '../weekDetection';
-import { NFL_SEASON_CALENDARS, deriveWeekWindowsFromAnchor, getSeasonCalendar } from '../nflSeasonCalendar';
+import {
+  NFL_SEASON_CALENDARS,
+  deriveWeekWindowsFromAnchor,
+  getConfiguredSeasons,
+  getSeasonCalendar,
+} from '../nflSeasonCalendar';
 
 const at = (iso: string) => new Date(iso);
 
@@ -197,6 +202,25 @@ describe('getCurrentWeek — backward-compatible adapter', () => {
     expect(info.seasonPhaseLabel).toBe('2026 · Preseason');
     expect(info.targetLabel).toBe('Target: Week 1');
   });
+
+  // Fantasy #307 correction round 4: `configuredSeasons` must travel through
+  // this adapter additively, on both the live-calendar-ok and stale paths, so
+  // `/api/system/current-week` -> `useCurrentNFLWeek` can expose exactly the
+  // seasons this build can serve regardless of whether the live phase itself
+  // has resolved.
+  test('publishes the exact configured-season list, live calendar ok', () => {
+    const info = getCurrentWeek(at('2026-08-09T12:00:00Z'));
+    expect(info.configuredSeasons).toEqual(getConfiguredSeasons());
+  });
+
+  test('publishes the exact configured-season list even when the live calendar is stale', () => {
+    const info = getCurrentWeek(at('2031-10-01T12:00:00Z'));
+    expect(info.configStatus).toBe('stale_calendar_config');
+    // Which seasons are CONFIGURED does not depend on whether the live phase
+    // itself resolved — a stale clock does not un-configure an archive.
+    expect(info.configuredSeasons).toEqual(getConfiguredSeasons());
+    expect(info.configuredSeasons.length).toBeGreaterThan(0);
+  });
 });
 
 describe('getWeekInfo / risers-fallers', () => {
@@ -211,6 +235,11 @@ describe('getWeekInfo / risers-fallers', () => {
 
   test('returns null for an unconfigured season', () => {
     expect(getWeekInfo(3, 1999, at('2025-11-16T18:00:00Z'))).toBeNull();
+  });
+
+  test('getWeekInfo also publishes the exact configured-season list', () => {
+    const info = getWeekInfo(3, 2025, at('2025-11-16T18:00:00Z'));
+    expect(info?.configuredSeasons).toEqual(getConfiguredSeasons());
   });
 
   test('best risers/fallers week is null outside the regular season', () => {
