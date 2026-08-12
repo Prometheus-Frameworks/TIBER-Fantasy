@@ -790,3 +790,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Baseline/default/unknown/missing/malformed rows remain diagnostic-only and cannot make §5.2 joinable. Duplicate IDs are detected across the entire raw artifact before filtering and fail closed in parity with the promoted adapter.
 - Added outcome-level adversarial tests for every non-evidence source, invalid alpha, mixed/intersecting/nonintersecting evidence, and eligible/non-evidence duplicate combinations.
 - Validation: focused audit 262/262; full branch 119 suites/1,313 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; independent final audit clean. Cohort/manifest/report/static bytes remain unchanged.
+
+### 2026-08-12 — FORGE static comparison canonical-ID spelling
+- Duplicate detection now keys every raw artifact ID by the same trimmed identity used by the promoted adapter, closing whitespace-only collision bypasses across eligible and non-evidence rows.
+- Whitespace-bearing upstream IDs are not normalized into evidence: they are excluded and produce a separate fail-closed blocker, including whitespace-only values.
+- Added outcome-level cases for baseline and malformed-alpha twins, lone whitespace evidence, and whitespace-only IDs.
+- Validation: focused audit 266/266; full branch 119 suites/1,321 passing with the same seven baseline failures; real `--check`, build, and diff check pass; typecheck remains the 505 baseline with no audit diagnostics; governed artifacts remain byte-identical.

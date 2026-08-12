@@ -160,8 +160,10 @@ export function computeJoinBlockers(input: { directIdIntersection: number }): st
 export interface PlayerSpecificStaticEvidenceSelection {
   /** One row per eligible player_id, suitable for an evidence comparison. */
   rows: any[];
-  /** Any artifact ID repeated in the artifact. Adapter parity makes this fatal. */
+  /** Any adapter-normalized artifact ID repeated in the artifact. */
   duplicatePlayerIds: string[];
+  /** IDs whose raw spelling is not the closed, canonical artifact spelling. */
+  nonCanonicalPlayerIds: string[];
 }
 
 /**
@@ -174,9 +176,12 @@ export interface PlayerSpecificStaticEvidenceSelection {
  * audit also requires the raw `forge_alpha` used by that comparison to be a
  * finite number; it does not silently normalize strings or alternate fields.
  *
- * Duplicate eligible IDs fail closed at the caller. Returning a de-duplicated
+ * Duplicate eligible IDs fail closed at the caller. Duplicate detection uses
+ * the promoted adapter's trimmed identity key, but this audit does not silently
+ * normalize the upstream row: any surrounding whitespace is separately fatal
+ * and that row cannot enter the evidence comparison. Returning a de-duplicated
  * row collection prevents the diagnostic intersection itself from being
- * inflated while `duplicatePlayerIds` preserves the reason the comparison
+ * inflated while the reported identity problems preserve why the comparison
  * must remain unavailable.
  */
 export function selectPlayerSpecificStaticEvidenceRows(
@@ -186,10 +191,16 @@ export function selectPlayerSpecificStaticEvidenceRows(
   // property of the artifact, not only of whichever duplicate happens to be
   // evidence-eligible. Otherwise a baseline/default/malformed twin could make
   // an admitted ID look unique after filtering.
-  const rawIdCounts = new Map<string, number>();
+  const normalizedIdCounts = new Map<string, number>();
+  const nonCanonicalPlayerIds = new Set<string>();
   for (const row of staticRows) {
-    if (typeof row?.player_id !== 'string' || row.player_id === '') continue;
-    rawIdCounts.set(row.player_id, (rawIdCounts.get(row.player_id) ?? 0) + 1);
+    if (typeof row?.player_id !== 'string') continue;
+    const normalizedId = row.player_id.trim();
+    if (row.player_id !== normalizedId) {
+      nonCanonicalPlayerIds.add(normalizedId || '<empty>');
+    }
+    if (normalizedId === '') continue;
+    normalizedIdCounts.set(normalizedId, (normalizedIdCounts.get(normalizedId) ?? 0) + 1);
   }
 
   const eligible = staticRows.filter((row) =>
@@ -197,7 +208,8 @@ export function selectPlayerSpecificStaticEvidenceRows(
     typeof row?.forge_alpha === 'number' &&
     Number.isFinite(row.forge_alpha) &&
     typeof row?.player_id === 'string' &&
-    row.player_id !== '',
+    row.player_id !== '' &&
+    row.player_id === row.player_id.trim(),
   );
 
   const seen = new Set<string>();
@@ -212,10 +224,11 @@ export function selectPlayerSpecificStaticEvidenceRows(
 
   return {
     rows,
-    duplicatePlayerIds: [...rawIdCounts.entries()]
+    duplicatePlayerIds: [...normalizedIdCounts.entries()]
       .filter(([, count]) => count > 1)
       .map(([id]) => id)
       .sort(),
+    nonCanonicalPlayerIds: [...nonCanonicalPlayerIds].sort(),
   };
 }
 
@@ -249,6 +262,9 @@ export function planStaticEvidenceComparison(
       ...computeJoinBlockers({ directIdIntersection }),
       ...selection.duplicatePlayerIds.map(
         (id) => `duplicate player_id in the static artifact: ${id}`,
+      ),
+      ...selection.nonCanonicalPlayerIds.map(
+        (id) => `non-canonical player_id whitespace in the static artifact: ${id}`,
       ),
     ],
   };

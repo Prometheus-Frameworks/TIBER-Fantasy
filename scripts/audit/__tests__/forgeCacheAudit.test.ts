@@ -322,6 +322,7 @@ describe('comparability', () => {
       ]);
       expect(selected.rows).toEqual([]);
       expect(selected.duplicatePlayerIds).toEqual([]);
+      expect(selected.nonCanonicalPlayerIds).toEqual([]);
     });
 
     test('mixed artifacts admit only strict finite player-specific rows', () => {
@@ -393,6 +394,43 @@ describe('comparability', () => {
       expect(plan.evidenceRows).toEqual([admitted]);
       expect(plan.directIdIntersection).toBe(1);
       expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000002/);
+    });
+
+    test.each([
+      ['baseline twin', 'generated_baseline', 99],
+      ['invalid-alpha evidence twin', 'player_specific', Number.NaN],
+    ])('adapter-normalized whitespace collisions with a %s fail closed', (_label, source, alpha) => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, row(' 00-0000001 ', source, alpha)],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/duplicate player_id.*00-0000001/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+    });
+
+    test('a whitespace-bearing evidence ID is never silently normalized into the comparison', () => {
+      const plan = planStaticEvidenceComparison(
+        [row('\t00-0000001\n', 'player_specific', 50)],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([]);
+      expect(plan.directIdIntersection).toBe(0);
+      expect(plan.joinBlockers.join(' ')).toMatch(/zero direct identifier intersection/);
+      expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*00-0000001/);
+    });
+
+    test('a whitespace-only player ID is rejected rather than disappearing from artifact diagnostics', () => {
+      const admitted = row('00-0000001', 'player_specific', 50);
+      const plan = planStaticEvidenceComparison(
+        [admitted, row(' \t ', 'generated_baseline', 99)],
+        new Set(['00-0000001']),
+      );
+      expect(plan.evidenceRows).toEqual([admitted]);
+      expect(plan.directIdIntersection).toBe(1);
+      expect(plan.joinBlockers.join(' ')).toMatch(/non-canonical player_id whitespace.*<empty>/);
     });
   });
 
