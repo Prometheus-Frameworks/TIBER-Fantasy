@@ -14,8 +14,8 @@ import { z } from 'zod';
 import { eq, and, sql } from 'drizzle-orm';
 import { db } from '../infra/db';
 import { playerWeekFacts, players, type InsertPlayerWeekFacts } from '@shared/schema';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 import { getAllPlayers, resolvePlayer } from '../../src/data/resolvers/playerResolver';
+import { resolveEvidenceIngestionTarget, requireEvidenceIngestionDefaultTarget } from '../config/season';
 
 // Configuration constants
 const COVERAGE_REQUIREMENTS = {
@@ -25,7 +25,6 @@ const COVERAGE_REQUIREMENTS = {
   TE: 64
 } as const;
 
-const CURRENT_SEASON = 2025;
 const NFL_TEAMS = [
   'ARI', 'ATL', 'BAL', 'BUF', 'CAR', 'CHI', 'CIN', 'CLE', 'DAL', 'DEN',
   'DET', 'GB', 'HOU', 'IND', 'JAX', 'KC', 'LV', 'LAC', 'LAR', 'MIA',
@@ -89,9 +88,11 @@ export class CoreWeekIngestETL {
   /**
    * Main entry point for weekly data ingestion
    */
-  async ingestWeeklyData(week?: number, season: number = CURRENT_SEASON): Promise<IngestResult> {
+  async ingestWeeklyData(week?: number, season?: number): Promise<IngestResult> {
     const startTime = Date.now();
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    const target = resolveEvidenceIngestionTarget({ week, season });
+    const targetWeek = target.week;
+    season = target.season;
     
     console.log(`🔄 Starting Core Week Ingest for Week ${targetWeek}, Season ${season}...`);
     
@@ -970,8 +971,7 @@ export class CoreWeekIngestETL {
    */
   async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'unhealthy'; details: any }> {
     try {
-      const currentWeek = parseInt(getCurrentNFLWeek());
-      const season = CURRENT_SEASON;
+      const { week: currentWeek, season } = requireEvidenceIngestionDefaultTarget();
       
       // Check if we have recent player week facts
       const { count } = await import('drizzle-orm');

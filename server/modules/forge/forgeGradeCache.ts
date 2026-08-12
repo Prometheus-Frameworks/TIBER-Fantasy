@@ -200,14 +200,30 @@ export async function computeAllGrades(
   return results;
 }
 
+export interface GetGradesFromCacheOptions {
+  /**
+   * Refuse the latest-week substitution below.
+   *
+   * A caller that resolved a target week is asking about *that* football,
+   * whether the target came from a query parameter or a phase default. Quietly
+   * serving a different week's grades under that label is not a degraded
+   * answer, it is a wrong one. Callers that want "whatever is newest" express
+   * that by passing no week at all.
+   */
+  exactWeek?: boolean;
+}
+
 export async function getGradesFromCache(
   season: number,
   asOfWeek: number | undefined,
   position: Position | 'ALL',
   limit: number,
-  version: string = CACHE_VERSION
+  version: string = CACHE_VERSION,
+  options: GetGradesFromCacheOptions = {}
 ) {
+  const requestedAsOfWeek = asOfWeek ?? null;
   let resolvedAsOfWeek = asOfWeek ?? (await getLatestAsOfWeek(season, version));
+  let weekSubstituted = false;
 
   if (resolvedAsOfWeek) {
     const hasData = await db
@@ -222,10 +238,27 @@ export async function getGradesFromCache(
         )
       );
     if (Number(hasData[0]?.cnt ?? 0) === 0) {
+      if (options.exactWeek) {
+        // Exact request, no rows for that week: return the true empty result.
+        // The caller decides what to do about it; this function does not
+        // answer a different question than the one it was asked.
+        console.log(`[ForgeGradeCache] No data for week ${resolvedAsOfWeek}; exact request, not substituting`);
+        return {
+          season,
+          asOfWeek: requestedAsOfWeek,
+          requestedAsOfWeek,
+          weekSubstituted: false,
+          position,
+          version,
+          players: [] as typeof forgeGradeCache.$inferSelect[],
+          computedAt: null as Date | null,
+        };
+      }
       const fallbackWeek = await getLatestAsOfWeek(season, version);
       if (fallbackWeek && fallbackWeek !== resolvedAsOfWeek) {
         console.log(`[ForgeGradeCache] No data for week ${resolvedAsOfWeek}, falling back to latest week ${fallbackWeek}`);
         resolvedAsOfWeek = fallbackWeek;
+        weekSubstituted = true;
       }
     }
   }
@@ -234,6 +267,8 @@ export async function getGradesFromCache(
     return {
       season,
       asOfWeek: asOfWeek ?? null,
+      requestedAsOfWeek,
+      weekSubstituted: false,
       position,
       version,
       players: [],
@@ -273,6 +308,10 @@ export async function getGradesFromCache(
   return {
     season,
     asOfWeek: resolvedAsOfWeek,
+    requestedAsOfWeek,
+    // True when these rows are for a different week than the one requested.
+    // Surfaced so a caller can refuse to label them as the requested board.
+    weekSubstituted,
     position,
     version,
     players: rows,

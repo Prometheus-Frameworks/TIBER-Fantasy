@@ -35,6 +35,7 @@ import { UPHCoordinator, type ProcessingOptions, type JobResult } from './UPHCoo
 import { brandSignalsIntegration } from './BrandSignalsIntegration';
 import { MonitoringService } from './MonitoringService';
 import { SeasonService } from './SeasonService';
+import { requireEvidenceIngestionDefaultTarget } from '../config/season';
 
 // Types and interfaces
 export interface FreshnessState {
@@ -666,8 +667,11 @@ export class IntelligentScheduler {
     console.log(`   📋 Reason: ${context.reason}`);
     console.log(`   📊 Fresh datasets: ${context.freshnessStates.filter(f => f.staleness === 'fresh').length}`);
 
-    // Get season context before try block so it's available in catch
-    const seasonContext = await this.seasonService.current();
+    // Every action in this method produces governed football evidence. An
+    // API/DB observation from SeasonService is useful to freshness readers,
+    // but it is not an operator-explicit override and must not steer an
+    // automated writer or its receipt.
+    const seasonContext = requireEvidenceIngestionDefaultTarget();
 
     try {
       let jobResult: JobResult | null = null;
@@ -682,7 +686,8 @@ export class IntelligentScheduler {
               maxConcurrency: Math.max(1, Math.floor(4 * (1 - context.systemLoad.cpuPercent / 100))),
               retryAttempts: context.systemLoad.errorRate > 0.05 ? 1 : 2,
               timeoutMs: 15 * 60 * 1000
-            }
+            },
+            seasonContext,
           );
           break;
 

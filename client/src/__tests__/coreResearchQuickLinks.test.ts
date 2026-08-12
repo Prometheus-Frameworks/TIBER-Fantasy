@@ -44,3 +44,28 @@ describe('CoreResearchQuickLinks', () => {
     expect(buildDataLabCommandCenterHref({ season: '2025' })).toBe('/tiber-data-lab/command-center?season=2025');
   });
 });
+
+describe('a season is navigation state only when it is a real season', () => {
+  // Reproduces the reported defect: display copy reaching the href builder.
+  // An unresolved season renders as an em dash, and the previous truthy check
+  // serialised it — `?season=%E2%80%94`, which the command-center API's
+  // numeric season validator answers with a 400.
+  test('the em dash the UI renders for an unresolved season is never a query value', () => {
+    const href = buildDataLabCommandCenterHref({ season: '—' });
+    expect(href).toBe('/tiber-data-lab/command-center');
+    expect(href).not.toContain('%E2%80%94');
+    expect(href).not.toContain('season=');
+  });
+
+  test.each(['', ' ', 'unknown', 'null', 'undefined', 'TBD', '20', '20255'])(
+    'the non-season %p is dropped rather than serialised',
+    (season) => {
+      expect(buildDataLabCommandCenterHref({ season })).toBe('/tiber-data-lab/command-center');
+    },
+  );
+
+  test('a real season is still carried, and whitespace-trimmed', () => {
+    expect(buildDataLabCommandCenterHref({ season: '2025' })).toBe('/tiber-data-lab/command-center?season=2025');
+    expect(buildDataLabCommandCenterHref({ season: ' 2026 ' })).toBe('/tiber-data-lab/command-center?season=2026');
+  });
+});

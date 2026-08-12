@@ -22,8 +22,15 @@ const router = Router();
 const syncRunSchema = z.object({
   leagueId: z.string().min(1, 'leagueId is required'),
   force: z.boolean().optional().default(false),
-  week: z.number().int().positive().optional(),
+  week: z.number().int().min(1).max(18).optional(),
   season: z.number().int().min(2020).max(2030).optional()
+}).superRefine((value, context) => {
+  if ((value.season === undefined) !== (value.week === undefined)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'season and week must be provided together, or both omitted',
+    });
+  }
 });
 
 /**
@@ -70,7 +77,8 @@ router.post('/run', async (req: Request, res: Response) => {
     
   } catch (error: any) {
     console.error('[SleeperSyncV2Routes] Sync run error:', error);
-    return res.status(500).json({
+    const statusCode = typeof error?.statusCode === 'number' ? error.statusCode : 500;
+    return res.status(statusCode).json({
       success: false,
       error: error?.message || 'Internal server error'
     });

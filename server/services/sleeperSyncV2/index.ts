@@ -21,6 +21,7 @@ export {
 
 export {
   syncLeague,
+  buildOwnershipEventValues,
   getSyncStatus,
   getUnresolvedPlayerCount,
   type SyncOptions,

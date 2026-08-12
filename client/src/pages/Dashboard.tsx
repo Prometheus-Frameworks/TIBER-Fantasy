@@ -144,21 +144,55 @@ const entryLanes = [
 export default function Dashboard() {
   const [activeFilter, setActiveFilter] = useState("WR");
   const [searchQuery, setSearchQuery] = useState("");
-  const { season } = useCurrentNFLWeek();
+  // Nullable phase-aware season, not the legacy accessor whose fallback
+  // invented the wall-clock year when detection had nothing to report. An
+  // unresolved season disables the request instead of fabricating one.
+  const { resolvedSeason } = useCurrentNFLWeek();
 
-  const { data: labData, isLoading } = useQuery<{ data: LabPlayer[]; count: number }>({
-    queryKey: ["/api/data-lab/lab-agg", activeFilter, season],
-    queryFn: () =>
-      fetch(`/api/data-lab/lab-agg?season=${season}&position=${activeFilter}&limit=100`).then((r) => r.json()),
-  });
-
-  const { data: healthData } = useQuery<{
+  const { data: healthData, isLoading: isHealthLoading } = useQuery<{
     status: string;
     latestSnapshot?: { season: number; week: number; rowCount: number };
     tableCounts?: { snapshotPlayerSeason: number; snapshotPlayerWeek: number };
   }>({
     queryKey: ["/api/data-lab/health"],
   });
+
+  // The aggregate is RETROSPECTIVE: it summarises the football the pipeline
+  // has actually snapshotted, so its season is the SOURCE-DECLARED evidence
+  // season — `latestSnapshot.season` from the pipeline's own health report.
+  // The forward decision season (`resolvedSeason`) is a different fact: during
+  // the 2026 preseason the decision context is 2026 while every snapshot row
+  // is 2025 football, and querying the aggregate by decision season returned
+  // an empty 2026 board rendered as zeros under a current-looking heading.
+  // Neither is the other's fallback; with no official snapshot there is no
+  // evidence season, and the aggregate is unavailable rather than guessed.
+  const evidenceSeason = healthData?.latestSnapshot?.season ?? null;
+
+  const { data: labData, isLoading: isLabLoading, isError: isLabError } = useQuery<{ data: LabPlayer[]; count: number }>({
+    queryKey: ["/api/data-lab/lab-agg", activeFilter, evidenceSeason],
+    queryFn: async () => {
+      const res = await fetch(`/api/data-lab/lab-agg?season=${evidenceSeason}&position=${activeFilter}&limit=100`);
+      // A non-OK body is a failure to answer, not an answer. Parsing it as
+      // data rendered a 4xx/5xx as an empty board of zeros.
+      if (!res.ok) throw new Error(`lab-agg request failed: ${res.status}`);
+      return res.json();
+    },
+    enabled: evidenceSeason !== null,
+  });
+
+  // Unavailable is a stated condition, not an empty result: health reported no
+  // official snapshot (once it has answered), or the aggregate request failed.
+  const isEvidenceUnavailable = (!isHealthLoading && evidenceSeason === null) || isLabError;
+  const isSnapshotLoading = isHealthLoading || (evidenceSeason !== null && isLabLoading);
+  // Propagated into `DataLabDiscoveryWidget` (Fantasy #307 correction round
+  // 5): the same lifecycle the Player Snapshot table below already renders
+  // explicitly must also gate the widget's Players/Avg PPG/Elite metrics, so
+  // it cannot say "snapshot evidence unavailable" in one place while showing
+  // measured-looking `0`s in another. A successfully resolved, genuinely
+  // empty aggregate is `'available'` — its zeros are real, not a stand-in for
+  // "we don't know yet."
+  const fallbackSummaryState: 'loading' | 'available' | 'unavailable' =
+    isSnapshotLoading ? 'loading' : isEvidenceUnavailable ? 'unavailable' : 'available';
 
   const { data: commandCenterData, isLoading: isCommandCenterLoading } = useQuery<DataLabCommandCenterResponse>({
     queryKey: ["/api/data-lab/command-center", "dashboard-widget-default"],
@@ -188,6 +222,17 @@ export default function Dashboard() {
     return getPpgTier(ppg, activeFilter).cls === "tier-1";
   }).length;
   const topScorer = players[0];
+
+  // Navigation state, not display copy. When neither source has a real season
+  // the prop is empty and the command-center link drops the parameter — rather
+  // than serialising the em dash the status card renders, which produced
+  // `?season=%E2%80%94` and a 400 from the numeric season validator.
+  const widgetSeason =
+    commandCenterData?.data.season != null
+      ? String(commandCenterData.data.season)
+      : resolvedSeason != null
+        ? String(resolvedSeason)
+        : '';
 
   return (
     <>
@@ -227,21 +272,28 @@ export default function Dashboard() {
         <div className="status-row">
           <div className="status-card">
             <div className="status-label">Season Context</div>
-            <div className="status-value">{season}</div>
+            <div className="status-value">{resolvedSeason ?? '—'}</div>
             <div className="status-sub">Current default season across tools</div>
           </div>
           <div className="status-card">
             <div className="status-label">Players Tracked</div>
-            <div className="status-value">{players.length || "—"}</div>
-            <div className="status-sub">{activeFilter} pool · 4+ games played</div>
+            {/* Unavailable evidence must not read as a measured zero. */}
+            <div className="status-value">{isEvidenceUnavailable ? "—" : players.length || "—"}</div>
+            <div className="status-sub">
+              {isEvidenceUnavailable
+                ? "Snapshot evidence unavailable"
+                : `${activeFilter} pool · 4+ games played`}
+            </div>
           </div>
           <div className="status-card">
             <div className="status-label">T1 Elite</div>
             <div className="status-value">
-              {t1Count}
-              {t1Count > 0 && <span className="status-delta delta-up">Top tier</span>}
+              {isEvidenceUnavailable ? "—" : t1Count}
+              {!isEvidenceUnavailable && t1Count > 0 && <span className="status-delta delta-up">Top tier</span>}
             </div>
-            <div className="status-sub">Top PPG tier in this position view</div>
+            <div className="status-sub">
+              {isEvidenceUnavailable ? "Snapshot evidence unavailable" : "Top PPG tier in this position view"}
+            </div>
           </div>
           <div className="status-card">
             <div className="status-label">Data Pipeline</div>
@@ -267,9 +319,10 @@ export default function Dashboard() {
             </div>
           </div>
           <DataLabDiscoveryWidget
-            season={String(commandCenterData?.data.season ?? season)}
+            season={widgetSeason}
             data={commandCenterData?.data ?? null}
             isLoading={isCommandCenterLoading}
+            fallbackSummaryState={fallbackSummaryState}
             fallbackSummary={{
               playersTracked: players.length,
               avgPpg,
@@ -284,6 +337,19 @@ export default function Dashboard() {
           <div className="section-title">
             <span className="section-dot" />
             Player Snapshot — {activeFilter}
+            {/* The aggregate is labelled with the season its evidence is FROM,
+                so a 2026 decision context cannot make 2025 football look
+                current. This is the source-declared snapshot season, not the
+                forward decision season rendered in Season Context above. */}
+            {evidenceSeason !== null && (
+              <span
+                className="mono dim"
+                style={{ marginLeft: 8, fontSize: 12 }}
+                data-testid="snapshot-evidence-season"
+              >
+                {evidenceSeason} evidence
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {["WR", "RB", "QB", "TE"].map((pos) => (
@@ -322,7 +388,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
+              {isSnapshotLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i}>
                     <td className="mono dim">{i + 1}</td>
@@ -349,6 +415,22 @@ export default function Dashboard() {
                     </td>
                   </tr>
                 ))
+              ) : isEvidenceUnavailable ? (
+                // A stated condition, checked BEFORE the empty branch: "No
+                // players found" claims the evidence was searched and held
+                // nothing, which is false here — either the pipeline has
+                // published no official snapshot, or the aggregate request
+                // failed. Neither may render as zeros or an empty board.
+                <tr>
+                  <td
+                    colSpan={8}
+                    style={{ textAlign: "center", padding: 40, color: "var(--text-tertiary)" }}
+                    data-testid="snapshot-evidence-unavailable"
+                  >
+                    Snapshot evidence unavailable — the data pipeline has not published a usable
+                    official snapshot for this view, so no player aggregate can be shown.
+                  </td>
+                </tr>
               ) : topPlayers.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: "center", padding: 40, color: "var(--text-tertiary)" }}>

@@ -13,6 +13,19 @@ interface DataLabDiscoveryWidgetProps {
     topScorerName: string | null;
     topScorerPpg: number | null;
   };
+  /**
+   * The snapshot aggregate's own lifecycle (Fantasy #307 correction round
+   * 5), additive alongside `isLoading` (which governs only the promoted
+   * Command Center copy above). Without this, the widget rendered
+   * `fallbackSummary`'s Players/Avg PPG/Elite numbers unconditionally —
+   * including the caller's zeroed defaults while a snapshot was still
+   * pending or had failed to load — reading as a measured "0 players"
+   * alongside a Dashboard that, one section down, explicitly said snapshot
+   * evidence was unavailable. `'available'` is required for a genuine,
+   * possibly-empty aggregate's `0 / 0 / 0` to render as real numbers rather
+   * than em dashes.
+   */
+  fallbackSummaryState: 'loading' | 'available' | 'unavailable';
 }
 
 export function DataLabDiscoveryWidget({
@@ -20,7 +33,9 @@ export function DataLabDiscoveryWidget({
   data,
   isLoading = false,
   fallbackSummary,
+  fallbackSummaryState,
 }: DataLabDiscoveryWidgetProps) {
+  const isFallbackSummaryAvailable = fallbackSummaryState === 'available';
   const commandCenterHref = buildDataLabCommandCenterHref({ season });
   const priorities = data?.priorities.slice(0, 2) ?? [];
   const teamHighlights = data?.sections.teamEnvironments.items.slice(0, 2) ?? [];
@@ -39,7 +54,7 @@ export function DataLabDiscoveryWidget({
           ? 'Loading the promoted research front door so you can jump into the strongest current player and team signals without opening the full lab first.'
           : data
           ? `${getCommandCenterStateLabel(data.state)}. Use these promoted summaries as lightweight discovery hooks into Player Research, Team Research, and the Command Center.`
-          : fallbackSummary.topScorerName
+          : isFallbackSummaryAvailable && fallbackSummary.topScorerName
           ? `${fallbackSummary.topScorerName} currently leads this board at ${fallbackSummary.topScorerPpg?.toFixed(1) ?? '—'} PPG. Open the Command Center to see promoted read-only player and team research starting points.`
           : 'Open the Command Center to find promoted read-only player and team research starting points.'}
       </div>
@@ -106,18 +121,38 @@ export function DataLabDiscoveryWidget({
         </Link>
       </div>
 
-      <div className="insight-metrics">
+      <div className="insight-metrics" data-testid="widget-fallback-summary" data-summary-state={fallbackSummaryState}>
         <div>
           <div className="insight-metric-label">Players</div>
-          <div className="insight-metric-value">{fallbackSummary.playersTracked}</div>
+          {/* `.dim` is this codebase's existing non-measured/muted styling
+              (see index.css) — reused here rather than a new class, so an
+              unmeasured metric reads visually the same as it does elsewhere
+              on the Dashboard. */}
+          <div
+            className={isFallbackSummaryAvailable ? 'insight-metric-value' : 'insight-metric-value dim'}
+            data-testid="widget-metric-players"
+          >
+            {isFallbackSummaryAvailable ? fallbackSummary.playersTracked : '—'}
+          </div>
         </div>
         <div>
           <div className="insight-metric-label">Avg PPG</div>
-          <div className="insight-metric-value" style={{ color: 'var(--ember)' }}>{fallbackSummary.avgPpg}</div>
+          <div
+            className={isFallbackSummaryAvailable ? 'insight-metric-value' : 'insight-metric-value dim'}
+            style={isFallbackSummaryAvailable ? { color: 'var(--ember)' } : undefined}
+            data-testid="widget-metric-avg-ppg"
+          >
+            {isFallbackSummaryAvailable ? fallbackSummary.avgPpg : '—'}
+          </div>
         </div>
         <div>
           <div className="insight-metric-label">Elite</div>
-          <div className="insight-metric-value">{fallbackSummary.t1Count}</div>
+          <div
+            className={isFallbackSummaryAvailable ? 'insight-metric-value' : 'insight-metric-value dim'}
+            data-testid="widget-metric-elite"
+          >
+            {isFallbackSummaryAvailable ? fallbackSummary.t1Count : '—'}
+          </div>
         </div>
       </div>
     </div>

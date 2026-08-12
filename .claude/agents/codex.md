@@ -7,6 +7,16 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### Unreleased — 2026-08-09: Rankings season-honesty review corrections
+- **Branch:** `codex/pr311-correction-round`
+- **Summary:** Closed the remaining Fantasy #307 Phase A review findings across postseason defaults/archive labels and stale-calendar API/UI behavior, including a real mounted fresh-to-stale container regression.
+- **Key Files:**
+  - `client/src/pages/TiberTiers.tsx` — forward-season archive suffix, retained-selection fail-close, stale-aware query key, calendar-specific unavailable render
+  - `client/src/pages/tiberTiersV2Mapper.ts` — distinct calendar-unavailable state and public copy
+  - `server/routes/rankingsV2Routes.ts` — target-season default and configured-history-only stale gate
+  - focused container, rendered-output, mapper, and Express-route regressions
+- **Validation:** Eight focused suites passed 128/128 with `--coverage=false`; build passed with the existing OLC warning; typecheck stayed at the reviewed head's 505 diagnostics with zero new normalized errors; diff check passed.
+
 ## Completed Tasks
 
 ### Unreleased — 2026-07-31: Active Node admin route authentication hardening
@@ -764,3 +774,35 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Added mounted player-route, cache mutation, collision, outage, contract-negotiation, contradictory-render, and composite-row-key regressions.
 - Validation: eight focused suites 152/152 with coverage disabled; build passed with the existing OLC warning; reviewed-head typecheck stayed at 505 diagnostics with zero new touched-file errors; diff check passed.
 - Operator gate: no database census or production coverage was claimed without `DATABASE_URL`; uniqueness/migration activation still requires an operator-recorded census and cohort review.
+
+### 2026-08-12 — Rankings v2 Rev16 season/cache honesty corrections
+- Made resolved phase/default weeks exact, retained newest-cache behavior only for genuinely weekless history, and rejected substituted/mismatched cache rows with explicit-versus-phase-default status honesty.
+- Nulled stale and no-forward-target live facts, enforced coherent phase/decision tuples plus the complete zero `no_rankable_source` invariant, and added safe UI copy for rejected-cache responses.
+- Validation: five focused suites 225/225; full branch 125 suites/1288 passing with the same seven baseline suite failures as base (125/1245); build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics; diff check passed.
+- No merge, deployment, readiness change, contract-version bump, or unrelated scope mutation.
+
+### 2026-08-12 — Rankings v2 Rev17 governed ingestion and unavailable-evidence UI corrections
+- Added one atomic, phase/calendar-aware evidence season/week resolver for active automated/admin ingestion and monitoring. Preseason, stale calendar, and config mismatch fail closed; January rollover resolves the 2026 football season and Week 17 together. Schedule sync retains a separately typed forward-looking season resolver.
+- Removed active UPH/Gold 2025 fallbacks and carried the governed tuple through Bronze, Silver, Gold, and season-fact quality receipts. Source tripwires prevent the active paths from re-importing the legacy 2025 availability helper.
+- Corrected the Nightly Buys/Sells summary boundary to carry one target object rather than reversible numeric arguments. Added a separate atomic source-observed target for Sleeper roster events (preseason movement remains attributable to 2026 Week 1), and replaced SeasonService's final wall-year fallback while preserving its Sleeper API and database-observed pairs.
+- Gated Data Lab fallback narrative on genuine snapshot availability and derived Tiers research-link season from validated response metadata, omitting it when unknown.
+- Validation: final focused replay 17 suites/333 tests plus API smoke 7/7; full branch 134 suites/1,365 passing versus exact-head base 125/1,288 with the same seven failures; build passed with the baseline OLC warning; typecheck stayed exactly 505 diagnostics; diff check passed.
+- Explicit archive pairs remain supported; legacy numeric response fields retain rolling compatibility. No merge, deployment, readiness change, database write, or Forecast work.
+
+### 2026-08-12 — NFLfastR completed-archive weekly sync compatibility
+- Restored the historical season-only `/api/weekly/sync` contract for the producer-supported 2024 archive with a local immutable Week 18 terminal bound, without widening the live presentation calendar.
+- Extracted the existing weekly-sync handler into a thin testable route module and made the route plus `fetchSeasonToDate()` consume the same bound resolver.
+- Added service and real HTTP boundary regressions for 2024 Week 18, unknown/future rejection, explicit live-preseason zero elapsed weeks, no-argument preseason fail-closed behavior, January 2026/Week 17 rollover, exact archive pairs, and week-only mismatch rejection.
+- Validation: focused ingestion/route/config suites passed 71/71; local curl passed; server build passed with the baseline OLC warning; typecheck stayed at the 505-diagnostic baseline with zero touched-file matches; `git diff --check` passed.
+
+### 2026-08-12 — Bronze-to-Silver season-wide default restoration
+- Restored the distinction between a governed default season and an explicitly requested week on `/api/etl/bronze-to-silver`: omitted week stays undefined through the Bronze service query instead of becoming the current evidence week.
+- Preserved explicit season-only archive/current processing, exact explicit-week filters, `processAll` limit removal, and preseason/stale fail-closed behavior for omitted targets.
+- Audited adjacent ETL routes: weekly writers/computations retain atomic season/week targets, while Bronze status was already season-wide.
+- Validation: five focused route/config/service suites passed 69/69; build passed with the baseline OLC warning; typecheck remained 505 diagnostics with the same four pre-existing `etlRoutes.ts` errors and no new test-file diagnostics; diff check passed.
+
+### 2026-08-12 — Automated derived-writer target isolation
+- Intelligent Scheduler weekly, incremental, and brand-recompute writers plus all-implicit admin brand streaming now resolve one governed evidence tuple and reuse it for mutations, exact result queries, and receipts; stale SeasonService database observations remain freshness input only.
+- Admin replay resolves before force deletion: matching current season-only requests use the governed week, mismatched half-pairs return 400, and explicit archive pairs remain exact. Governed the active RB-context derived writer and write-capable brand week-rollover path as well.
+- Preserved source-observed SeasonService behavior for non-writer freshness/status consumers.
+- Validation: seven focused suites passed 86/86; full branch passed 141 suites/1,416 tests with the same seven baseline failures; build passed with the baseline OLC warning; typecheck stayed at 505 baseline diagnostics with no new touched-file diagnostics; `git diff --check` passed.

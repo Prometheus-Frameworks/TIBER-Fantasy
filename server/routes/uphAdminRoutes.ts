@@ -56,6 +56,7 @@ const SeasonProcessingSchema = z.object({
 });
 
 const BackfillProcessingSchema = z.object({
+  season: z.number().int().min(2020).max(2030),
   dateRange: z.object({
     start: z.string().datetime(),
     end: z.string().datetime()
@@ -65,7 +66,16 @@ const BackfillProcessingSchema = z.object({
 
 const IncrementalProcessingSchema = z.object({
   since: z.string().datetime().optional(),
+  season: z.number().int().min(2020).max(2030).optional(),
+  week: z.number().int().min(1).max(18).optional(),
   options: ProcessingOptionsSchema.optional()
+}).superRefine((value, context) => {
+  if ((value.season === undefined) !== (value.week === undefined)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Incremental processing requires season and week together.',
+    });
+  }
 });
 
 const JobFiltersSchema = z.object({
@@ -189,14 +199,14 @@ router.post('/run/season', async (req: Request, res: Response) => {
  */
 router.post('/run/backfill', async (req: Request, res: Response) => {
   try {
-    const { dateRange, options } = BackfillProcessingSchema.parse(req.body);
+    const { season, dateRange, options } = BackfillProcessingSchema.parse(req.body);
     
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
     
     console.log(`🚀 [Admin API] Starting backfill processing from ${start.toISOString()} to ${end.toISOString()}`);
     
-    const result = await uphCoordinator.runBackfillProcessing({ start, end }, options || {});
+    const result = await uphCoordinator.runBackfillProcessing({ start, end }, season, options || {});
     
     res.json({
       success: true,
@@ -206,7 +216,7 @@ router.post('/run/backfill', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('❌ [Admin API] Backfill processing failed:', error);
-    res.status(500).json({
+    res.status(error instanceof z.ZodError ? 400 : 500).json({
       success: false,
       error: 'Failed to start backfill processing',
       details: error instanceof Error ? error.message : String(error)
@@ -220,14 +230,18 @@ router.post('/run/backfill', async (req: Request, res: Response) => {
  */
 router.post('/run/incremental', async (req: Request, res: Response) => {
   try {
-    const { since, options } = IncrementalProcessingSchema.parse(req.body);
+    const { since, season, week, options } = IncrementalProcessingSchema.parse(req.body);
     
     // Default to 24 hours ago if no since date provided
     const sinceDate = since ? new Date(since) : new Date(Date.now() - 24 * 60 * 60 * 1000);
     
     console.log(`🚀 [Admin API] Starting incremental processing since ${sinceDate.toISOString()}`);
     
-    const result = await uphCoordinator.runIncrementalProcessing(sinceDate, options || {});
+    const result = await uphCoordinator.runIncrementalProcessing(
+      sinceDate,
+      options || {},
+      season !== undefined && week !== undefined ? { season, week } : undefined,
+    );
     
     res.json({
       success: true,
@@ -237,7 +251,12 @@ router.post('/run/incremental', async (req: Request, res: Response) => {
 
   } catch (error) {
     console.error('❌ [Admin API] Incremental processing failed:', error);
-    res.status(500).json({
+    const statusCode = error instanceof z.ZodError
+      ? 400
+      : typeof (error as { statusCode?: unknown })?.statusCode === 'number'
+        ? (error as { statusCode: number }).statusCode
+        : 500;
+    res.status(statusCode).json({
       success: false,
       error: 'Failed to start incremental processing',
       details: error instanceof Error ? error.message : String(error)

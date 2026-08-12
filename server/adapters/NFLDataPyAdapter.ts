@@ -12,7 +12,10 @@
  */
 
 import { bronzeLayerService, type RawPayloadInput } from '../services/BronzeLayerService';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  resolveEvidenceIngestionSeason,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 export interface NFLDataPyPlayer {
   player_id: string;
@@ -73,8 +76,10 @@ export class NFLDataPyAdapter {
    */
   async ingestAdvancedStats(options: NFLDataPyIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
-    const week = options.week || parseInt(getCurrentNFLWeek());
+    const { season, week } = resolveEvidenceIngestionTarget({
+      season: options.season,
+      week: options.week,
+    });
     const jobId = options.jobId || `nfl_data_py_advanced_${season}_w${week}_${Date.now()}`;
     
     try {
@@ -211,7 +216,7 @@ export class NFLDataPyAdapter {
    */
   async ingestRosterData(options: NFLDataPyIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     const jobId = options.jobId || `nfl_data_py_roster_${season}_${Date.now()}`;
     
     try {
