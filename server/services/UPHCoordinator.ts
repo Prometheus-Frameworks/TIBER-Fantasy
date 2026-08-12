@@ -38,6 +38,12 @@ import { GoldLayerService, type GoldProcessingResult } from './GoldLayerService'
 import { PlayerIdentityService } from './PlayerIdentityService';
 import { QualityGateValidator, qualityGateValidator, type QualityValidationResult } from './quality/QualityGateValidator';
 import { DataLineageTracker, dataLineageTracker } from './quality/DataLineageTracker';
+import {
+  InvalidEvidenceIngestionTargetError,
+  resolveEvidenceIngestionSeason,
+  resolveEvidenceIngestionTarget,
+  type EvidenceIngestionTarget,
+} from '../config/season';
 
 // Forward declaration to avoid circular dependency
 declare class IntelligentScheduler {
@@ -263,20 +269,20 @@ export class UPHCoordinator {
     week: number, 
     options: ProcessingOptions = {}
   ): Promise<JobResult> {
-    const jobId = this.generateJobId('WEEKLY', { season, week });
+    const target = resolveEvidenceIngestionTarget({ season, week });
+    const jobId = this.generateJobId('WEEKLY', target);
     const startTime = Date.now();
 
-    console.log(`🚀 [UPHCoordinator] Starting WEEKLY processing for ${season} Week ${week} (Job: ${jobId})`);
+    console.log(`🚀 [UPHCoordinator] Starting WEEKLY processing for ${target.season} Week ${target.week} (Job: ${jobId})`);
 
     try {
       // Create job record
-      await this.createJob(jobId, 'WEEKLY', { season, week }, options);
+      await this.createJob(jobId, 'WEEKLY', target, options);
       
       // Execute DAG pipeline
       const result = await this.executeDAG(jobId, {
         type: 'WEEKLY',
-        season,
-        week,
+        ...target,
         sources: options.sources || ['sleeper', 'nfl_data_py', 'fantasypros']
       }, options);
 
@@ -311,21 +317,27 @@ export class UPHCoordinator {
    */
   async runSeasonProcessing(
     season: number, 
-    options: ProcessingOptions = {}
+    options: ProcessingOptions = {},
+    evidenceThroughWeek?: number,
   ): Promise<JobResult> {
-    const jobId = this.generateJobId('SEASON', { season });
+    const resolvedSeason = resolveEvidenceIngestionSeason(season);
+    if (evidenceThroughWeek !== undefined) {
+      resolveEvidenceIngestionTarget({ season: resolvedSeason, week: evidenceThroughWeek });
+    }
+    const jobId = this.generateJobId('SEASON', { season: resolvedSeason, evidenceThroughWeek });
     const startTime = Date.now();
 
-    console.log(`🚀 [UPHCoordinator] Starting SEASON processing for ${season} (Job: ${jobId})`);
+    console.log(`🚀 [UPHCoordinator] Starting SEASON processing for ${resolvedSeason} (Job: ${jobId})`);
 
     try {
       // Create job record
-      await this.createJob(jobId, 'SEASON', { season }, options);
+      await this.createJob(jobId, 'SEASON', { season: resolvedSeason, evidenceThroughWeek }, options);
       
       // Execute DAG pipeline for full season
       const result = await this.executeDAG(jobId, {
         type: 'SEASON',
-        season,
+        season: resolvedSeason,
+        evidenceThroughWeek,
         sources: options.sources || ['sleeper', 'nfl_data_py', 'fantasypros']
       }, {
         ...options,
@@ -362,22 +374,25 @@ export class UPHCoordinator {
    * Processes data for specified date range with batch optimization
    */
   async runBackfillProcessing(
-    dateRange: DateRange, 
+    dateRange: DateRange,
+    season: number,
     options: ProcessingOptions = {}
   ): Promise<JobResult> {
-    const jobId = this.generateJobId('BACKFILL', { dateRange });
+    const resolvedSeason = resolveEvidenceIngestionSeason(season);
+    const jobId = this.generateJobId('BACKFILL', { dateRange, season: resolvedSeason });
     const startTime = Date.now();
 
     console.log(`🚀 [UPHCoordinator] Starting BACKFILL processing from ${dateRange.start.toISOString()} to ${dateRange.end.toISOString()} (Job: ${jobId})`);
 
     try {
       // Create job record
-      await this.createJob(jobId, 'BACKFILL', { dateRange }, options);
+      await this.createJob(jobId, 'BACKFILL', { dateRange, season: resolvedSeason }, options);
       
       // Execute DAG pipeline for date range
       const result = await this.executeDAG(jobId, {
         type: 'BACKFILL',
         dateRange,
+        season: resolvedSeason,
         sources: options.sources || ['sleeper', 'nfl_data_py']
       }, {
         ...options,
@@ -415,21 +430,27 @@ export class UPHCoordinator {
    */
   async runIncrementalProcessing(
     since: Date, 
-    options: ProcessingOptions = {}
+    options: ProcessingOptions = {},
+    target?: EvidenceIngestionTarget,
   ): Promise<JobResult> {
-    const jobId = this.generateJobId('INCREMENTAL', { since });
+    // Resolve before creating a job record: an implicit incremental run must
+    // fail closed during preseason/stale-calendar states without mutating job
+    // state or manufacturing a season/week downstream.
+    const resolvedTarget = resolveEvidenceIngestionTarget(target ?? {});
+    const jobId = this.generateJobId('INCREMENTAL', { since, ...resolvedTarget });
     const startTime = Date.now();
 
     console.log(`🚀 [UPHCoordinator] Starting INCREMENTAL processing since ${since.toISOString()} (Job: ${jobId})`);
 
     try {
       // Create job record
-      await this.createJob(jobId, 'INCREMENTAL', { since }, options);
+      await this.createJob(jobId, 'INCREMENTAL', { since, ...resolvedTarget }, options);
       
       // Execute DAG pipeline for incremental data
       const result = await this.executeDAG(jobId, {
         type: 'INCREMENTAL',
         since,
+        ...resolvedTarget,
         sources: options.sources || ['sleeper', 'nfl_data_py', 'fantasypros']
       }, options);
 
@@ -1182,6 +1203,7 @@ export class UPHCoordinator {
     options: ProcessingOptions
   ): Promise<any> {
     console.log(`🥈 [UPHCoordinator] Executing Silver transform for job ${jobId}`);
+    const season = this.requireScopeSeason(scope);
 
     return await db.transaction(async (tx) => {
       try {
@@ -1192,7 +1214,7 @@ export class UPHCoordinator {
           .where(
             and(
               eq(ingestPayloads.status, 'PENDING'),
-              eq(ingestPayloads.season, scope.season || 2025),
+              eq(ingestPayloads.season, season),
               scope.week ? eq(ingestPayloads.week, scope.week) : sql`1=1`
             )
           )
@@ -1651,6 +1673,7 @@ export class UPHCoordinator {
   ): Promise<RawPayloadInput[]> {
     const payloads: RawPayloadInput[] = [];
     const sources = scope.sources || options.sources || ['sleeper', 'nfl_data_py'];
+    const season = this.requireScopeSeason(scope);
 
     // This is a simplified implementation - in reality would fetch from external APIs
     for (const source of sources) {
@@ -1660,8 +1683,8 @@ export class UPHCoordinator {
         payload: { mockData: true, scope }, // Would be real API data
         version: '1.0',
         jobId: scope.jobId || 'unknown',
-        season: scope.season || 2025,
-        week: scope.week || null,
+        season,
+        week: scope.week ?? null,
         metadata: {
           extractedAt: new Date(),
           requestUrl: `${source}/api/data`
@@ -1677,12 +1700,24 @@ export class UPHCoordinator {
    */
   private prepareGoldFilters(scope: any, options: ProcessingOptions): any {
     return {
-      season: scope.season,
-      weeks: scope.week ? [scope.week] : undefined,
+      season: this.requireScopeSeason(scope),
+      weeks: scope.week !== undefined ? [scope.week] : undefined,
+      evidenceThroughWeek: scope.evidenceThroughWeek ?? scope.week,
       forceRefresh: options.forceRefresh,
       includeMarketFacts: true,
       includeCompositeFacts: true
     };
+  }
+
+  /** Evidence-producing DAG scopes must never invent a fallback season. */
+  private requireScopeSeason(scope: any): number {
+    const season = scope?.season;
+    if (!Number.isInteger(season) || season < 2000 || season > 2100) {
+      throw new InvalidEvidenceIngestionTargetError(
+        'UPH evidence processing requires an explicit, validated season.',
+      );
+    }
+    return season;
   }
 
   /**

@@ -1,7 +1,10 @@
 import { WeeklyRow } from '../../shared/types/fantasy';
 import { hydrateFantasyVariants } from '../lib/scoring';
-import { getCurrentNFLWeek } from '../lib/timebox';
-import { CURRENT_NFL_SEASON } from '../../shared/config/seasons';
+import {
+  InvalidEvidenceIngestionTargetError,
+  requireEvidenceIngestionDefaultTarget,
+} from '../config/season';
+import { resolveNflfastrSeasonToDateWeekBound } from './nflfastrSeasonBounds';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -11,6 +14,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const execAsync = promisify(exec);
+
+export {
+  NFLFASTR_COMPLETED_ARCHIVE_WEEK_BOUNDS,
+  resolveNflfastrSeasonToDateWeekBound,
+} from './nflfastrSeasonBounds';
 
 /**
  * Fetch weekly stats from NFLfastR via Python wrapper.
@@ -107,14 +115,37 @@ export async function ingestBronzeNflfastrSeason(season: number): Promise<void> 
  * Fetch season-to-date weekly stats (weeks 1..N).
  * Never tries to fetch "full season" for current year.
  *
- * @param season - NFL season year (defaults to CURRENT_NFL_SEASON from config)
+ * @param season - explicit NFL season year; omitted uses the governed evidence tuple
+ * @param throughWeek - optional explicit evidence bound for the selected season
  * @returns Array of all weekly stats for completed weeks
  */
-export async function fetchSeasonToDate(season: number = CURRENT_NFL_SEASON): Promise<WeeklyRow[]> {
-  const endWeek = getCurrentNFLWeek(season);
+export async function fetchSeasonToDate(
+  season?: number,
+  throughWeek?: number,
+): Promise<WeeklyRow[]> {
+  let targetSeason = season;
+  let endWeek = throughWeek;
+
+  if (targetSeason === undefined) {
+    const target = requireEvidenceIngestionDefaultTarget();
+    targetSeason = target.season;
+    endWeek ??= target.week;
+  }
+
+  if (!Number.isInteger(targetSeason) || targetSeason < 2000 || targetSeason > 2100) {
+    throw new InvalidEvidenceIngestionTargetError('Season must be an integer between 2000 and 2100.');
+  }
+
+  if (endWeek === undefined) {
+    endWeek = resolveNflfastrSeasonToDateWeekBound(targetSeason);
+  }
+
+  if (!Number.isInteger(endWeek) || endWeek < 0 || endWeek > 18) {
+    throw new InvalidEvidenceIngestionTargetError('Through week must be an integer between 0 and 18.');
+  }
 
   if (endWeek === 0) {
-    console.warn(`[NFLfastR] Season ${season} has not started yet`);
+    console.warn(`[NFLfastR] Season ${targetSeason} has not started yet`);
     return [];
   }
 
@@ -122,17 +153,17 @@ export async function fetchSeasonToDate(season: number = CURRENT_NFL_SEASON): Pr
 
   for (let w = 1; w <= endWeek; w++) {
     try {
-      console.log(`[NFLfastR] Fetching season=${season} week=${w}...`);
-      const wk = await fetchWeeklyFromNflfastR(season, w);
+      console.log(`[NFLfastR] Fetching season=${targetSeason} week=${w}...`);
+      const wk = await fetchWeeklyFromNflfastR(targetSeason, w);
       all.push(...wk);
       console.log(`[NFLfastR] ✓ Week ${w}: ${wk.length} player records`);
     } catch (e) {
-      console.warn(`[NFLfastR] ✗ Skip season=${season} week=${w}:`, (e as Error).message);
+      console.warn(`[NFLfastR] ✗ Skip season=${targetSeason} week=${w}:`, (e as Error).message);
       // Continue to next week instead of failing the entire job
     }
   }
 
-  console.log(`[NFLfastR] Season ${season} complete: ${all.length} total records (weeks 1-${endWeek})`);
+  console.log(`[NFLfastR] Season ${targetSeason} complete: ${all.length} total records (weeks 1-${endWeek})`);
   return all;
 }
 

@@ -25,6 +25,13 @@ import { BrandSignalsIntegration } from './BrandSignalsIntegration';
 import { SeasonService } from './SeasonService';
 import { MonitoringService } from './MonitoringService';
 import { brandBus } from './BrandBus';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  requireEvidenceIngestionDefaultTarget,
+  resolveEvidenceIngestionTarget,
+  type EvidenceIngestionTarget,
+} from '../config/season';
 import { 
   createDatasetCommittedEvent, 
   createRollWeekEvent,
@@ -119,6 +126,8 @@ export interface BrandStreamResponse {
   success: boolean;
   brands: string[];
   targetDatasets: string[];
+  season?: number;
+  week?: number;
   results: {
     eventsTriggered: number;
     brandsProcessed: number;
@@ -236,8 +245,9 @@ export class AdminService {
    */
   async replayBrandSignals(request: BrandReplayRequest): Promise<BrandReplayResponse> {
     console.log(`🔄 [AdminService] Replaying brand signals: ${request.brand} S${request.season}${request.week ? ` W${request.week}` : ''}`);
-    
+
     const startTime = Date.now();
+    let target: EvidenceIngestionTarget | undefined;
     const response: BrandReplayResponse = {
       success: false,
       brand: request.brand,
@@ -251,6 +261,15 @@ export class AdminService {
     };
 
     try {
+      // Resolve the complete tuple before a force-recompute delete. A supplied
+      // archive season cannot silently borrow a source-observed live week.
+      target = resolveEvidenceIngestionTarget({
+        season: request.season,
+        week: request.week,
+      });
+      response.season = target.season;
+      response.week = target.week;
+
       let signalsCleared = 0;
 
       // Clear existing signals if forceRecompute is true
@@ -259,8 +278,8 @@ export class AdminService {
         
         const whereClause = and(
           eq(brandSignals.brand, request.brand as any),
-          eq(brandSignals.season, request.season),
-          request.week ? eq(brandSignals.week, request.week) : undefined
+          eq(brandSignals.season, target.season),
+          eq(brandSignals.week, target.week),
         );
 
         const deleteResult = await db.delete(brandSignals).where(whereClause);
@@ -270,15 +289,11 @@ export class AdminService {
         response.results.signalsCleared = signalsCleared;
       }
 
-      // Trigger dataset committed events for brand replay
-      const currentSeason = await this.seasonService.current();
-      const targetWeek = request.week || currentSeason.week;
-      
       // Simulate dataset committed event to trigger brand processing
       await this.brandSignalsIntegration.triggerDatasetCommitted(
         'gold_player_week', // Primary dataset for brand signals
-        request.season,
-        targetWeek,
+        target.season,
+        target.week,
         1000, // Placeholder row count
         'admin_replay',
         `admin-replay-${request.brand}-${Date.now()}`
@@ -293,8 +308,8 @@ export class AdminService {
         .from(brandSignals)
         .where(and(
           eq(brandSignals.brand, request.brand as any),
-          eq(brandSignals.season, request.season),
-          request.week ? eq(brandSignals.week, request.week) : undefined,
+          eq(brandSignals.season, target.season),
+          eq(brandSignals.week, target.week),
           gte(brandSignals.createdAt, new Date(startTime))
         ));
 
@@ -312,8 +327,8 @@ export class AdminService {
         duration,
         {
           brand: request.brand,
-          season: request.season,
-          week: request.week,
+          season: target.season,
+          week: target.week,
           forceRecompute: request.forceRecompute,
           signalsCleared,
           newSignalsGenerated
@@ -335,9 +350,20 @@ export class AdminService {
         'admin_brand_replay',
         'error',
         duration,
-        { error: (error as Error).message, request }
+        {
+          error: (error as Error).message,
+          request,
+          ...(target ? { season: target.season, week: target.week } : {}),
+        }
       );
-      
+
+      if (
+        error instanceof InvalidEvidenceIngestionTargetError ||
+        error instanceof EvidenceIngestionTargetUnavailableError
+      ) {
+        throw error;
+      }
+
       return response;
     }
   }
@@ -347,8 +373,9 @@ export class AdminService {
    */
   async streamBrandSignals(request: BrandStreamRequest): Promise<BrandStreamResponse> {
     console.log(`🚀 [AdminService] Starting brand signal streaming for ${request.brands.length} brands`);
-    
+
     const startTime = Date.now();
+    let target: EvidenceIngestionTarget | undefined;
     const response: BrandStreamResponse = {
       success: false,
       brands: request.brands,
@@ -363,7 +390,12 @@ export class AdminService {
     };
 
     try {
-      const currentSeason = await this.seasonService.current();
+      // Streaming is an all-implicit evidence write. Resolve the governed pair
+      // directly rather than accepting a possibly stale API/DB observation.
+      target = requireEvidenceIngestionDefaultTarget();
+      response.season = target.season;
+      response.week = target.week;
+
       let totalEventsTriggered = 0;
       let totalSignalsGenerated = 0;
 
@@ -373,8 +405,8 @@ export class AdminService {
         
         await this.brandSignalsIntegration.triggerDatasetCommitted(
           dataset,
-          currentSeason.season,
-          currentSeason.week,
+          target.season,
+          target.week,
           1000, // Placeholder row count
           'admin_stream',
           `admin-stream-${dataset}-${Date.now()}`
@@ -392,8 +424,8 @@ export class AdminService {
             .from(brandSignals)
             .where(and(
               eq(brandSignals.brand, brand as any),
-              eq(brandSignals.season, currentSeason.season),
-              eq(brandSignals.week, currentSeason.week),
+              eq(brandSignals.season, target.season),
+              eq(brandSignals.week, target.week),
               gte(brandSignals.createdAt, new Date(startTime))
             ));
 
@@ -433,6 +465,8 @@ export class AdminService {
         {
           brands: request.brands,
           datasets: request.targetDatasets,
+          season: target.season,
+          week: target.week,
           eventsTriggered: totalEventsTriggered,
           totalSignalsGenerated
         }
@@ -452,9 +486,17 @@ export class AdminService {
         'admin_brand_streaming',
         'error',
         duration,
-        { error: (error as Error).message, request }
+        {
+          error: (error as Error).message,
+          request,
+          ...(target ? { season: target.season, week: target.week } : {}),
+        }
       );
-      
+
+      if (error instanceof EvidenceIngestionTargetUnavailableError) {
+        throw error;
+      }
+
       return response;
     }
   }

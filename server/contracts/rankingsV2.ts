@@ -235,6 +235,350 @@ export const rankingsV2ItemSchema = z.object({
 });
 export type RankingsV2Item = z.infer<typeof rankingsV2ItemSchema>;
 
+export const rankingsV2PhaseSchema = z.enum(['offseason', 'preseason', 'regular_season', 'postseason']);
+
+/**
+ * Season/phase + freshness envelope (Fantasy #307 Phase A).
+ *
+ * The current league phase, the forward target week, and the evidence actually
+ * behind the returned rows are three separate things. `generatedAt` (when the
+ * score was computed) is deliberately distinct from `evidenceSeason`/
+ * `evidenceWeek` (what football the score is about) so a recent computation over
+ * old evidence cannot read as current-season evidence.
+ */
+export const rankingsV2SeasonMetaSchema = z.object({
+  /** Null when the configured calendar cannot identify a live season. */
+  currentSeason: z.number().nullable(),
+  /**
+   * The season the forward board is about, which is not always the season the
+   * league is in — during the 2025 postseason the phase is 2025 while the
+   * forward board targets 2026. Archive status is computed against this.
+   */
+  forwardRankingSeason: z.number().nullable(),
+  currentPhase: rankingsV2PhaseSchema.nullable(),
+  currentPhaseLabel: z.string().nullable(),
+  currentRegularSeasonWeek: z.number().nullable(),
+  targetSeason: z.number().nullable(),
+  targetWeek: z.number().nullable(),
+  targetLabel: z.string().nullable(),
+  scheduleSource: z.enum(['explicit_schedule', 'anchor_derived']).nullable(),
+  configStatus: z.enum(['ok', 'stale_calendar_config']),
+  configNote: z.string().nullable(),
+
+  evidenceSeason: z.number().nullable(),
+  evidenceWeek: z.number().nullable(),
+
+  /**
+   * The decision-target / evidence split (Fantasy #307 Phase A).
+   *
+   * The entire `seasonMeta` envelope is additive relative to deployed main,
+   * whose transport validator passes unknown fields through. That is the
+   * rolling-compatibility boundary; unpublished intermediate shapes on this
+   * branch do not constrain these fields' truthful nullability.
+   *
+   * `decisionTarget*` describes **the board carried in this response** — the
+   * effective request target. `phaseTarget*` is the live league target, which
+   * is a different fact whenever the caller asks for anything but the current
+   * forward board: publishing the phase target for both meant an explicit
+   * `season=2025&asOfWeek=7` request returned correct rows under a label
+   * describing 2026 Week 1. The legacy `targetSeason`/`targetWeek` keep their
+   * pre-existing meaning — the phase target — and are unchanged.
+   *
+   * `decisionTargetProvenance` keeps its existing closed membership. It answers
+   * "how trustworthy is the schedule behind this week", and an explicitly
+   * requested week rests on no schedule at all, so it is null there — an
+   * already-valid value. Who chose the week is a different question, answered
+   * by the separate optional `decisionTargetOrigin`. Adding a value to the
+   * provenance enum instead would break an existing client switching on it
+   * exhaustively, mid-rolling-deployment, without a contract-version change —
+   * which is why the contract version is unchanged and the enum is untouched.
+   *
+   * `evidenceThroughWeek` is the extent the admitted SOURCE declares — the
+   * cache's own asOfWeek, or the measured maximum stats week — never a
+   * calendar/clock derivation and never the query ceiling. Null means the
+   * extent is unknown, which must not render as "full season".
+   *
+   * `completionVerified` is independent of evidence extent and is false until
+   * a real finalization source exists; `finalizedThroughWeek` is reserved for
+   * that source and is null today.
+   */
+  decisionTargetSeason: z.number().nullable(),
+  decisionTargetWeek: z.number().nullable(),
+  decisionTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  decisionTargetIsProvisional: z.boolean(),
+  /**
+   * Who chose the board's week. Optional so a client written against the
+   * pre-change schema still validates a response that carries it.
+   */
+  decisionTargetOrigin: z.enum(['explicit_request', 'phase_default']).nullable().optional(),
+  phaseTargetSeason: z.number().nullable(),
+  phaseTargetWeek: z.number().nullable(),
+  phaseTargetProvenance: z.enum(['verified_schedule', 'anchor_derived']).nullable(),
+  phaseTargetIsProvisional: z.boolean(),
+  evidenceThroughSeason: z.number().nullable(),
+  evidenceThroughWeek: z.number().nullable(),
+  evidenceProvenance: z.enum([
+    'source_declared_as_of',
+    'source_max_represented_week',
+    'source_extent_unknown',
+    'no_rankable_source',
+  ]),
+  completionVerified: z.boolean(),
+  finalizedThroughWeek: z.number().nullable(),
+  completionCopy: z.string().nullable(),
+
+  generatedAt: z.string().datetime().nullable(),
+  isArchiveView: z.boolean(),
+  status: z.string().nullable(),
+  statusDetail: z.string().nullable(),
+}).superRefine((meta, ctx) => {
+  // The stale resolver retains a synthetic `newest configured season + 1`
+  // internally for legacy numeric accessors. None of those sentinel-derived
+  // live facts may cross the public contract. A configured historical archive
+  // can still carry real decision/evidence fields independently.
+  if (meta.configStatus === 'stale_calendar_config') {
+    const staleLiveFacts: Array<[string, unknown]> = [
+      ['currentSeason', meta.currentSeason],
+      ['forwardRankingSeason', meta.forwardRankingSeason],
+      ['currentPhase', meta.currentPhase],
+      ['currentPhaseLabel', meta.currentPhaseLabel],
+      ['currentRegularSeasonWeek', meta.currentRegularSeasonWeek],
+      ['targetSeason', meta.targetSeason],
+      ['targetWeek', meta.targetWeek],
+      ['targetLabel', meta.targetLabel],
+      ['scheduleSource', meta.scheduleSource],
+      ['phaseTargetSeason', meta.phaseTargetSeason],
+      ['phaseTargetWeek', meta.phaseTargetWeek],
+      ['phaseTargetProvenance', meta.phaseTargetProvenance],
+    ];
+    for (const [field, value] of staleLiveFacts) {
+      if (value !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `configStatus "stale_calendar_config" requires ${field} to be null — live season state is unavailable.`,
+        });
+      }
+    }
+    if (meta.phaseTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['phaseTargetIsProvisional'],
+        message: 'A stale calendar cannot publish a provisional phase target it did not resolve.',
+      });
+    }
+    if (meta.decisionTargetProvenance !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetProvenance'],
+        message: 'A stale calendar cannot publish schedule provenance for an explicit historical decision target.',
+      });
+    }
+    if (meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetIsProvisional'],
+        message: 'A stale calendar cannot publish a provisional decision target.',
+      });
+    }
+  } else {
+    const requiredLiveFacts: Array<[string, unknown]> = [
+      ['currentSeason', meta.currentSeason],
+      ['currentPhase', meta.currentPhase],
+      ['currentPhaseLabel', meta.currentPhaseLabel],
+    ];
+    for (const [field, value] of requiredLiveFacts) {
+      if (value === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `configStatus "ok" requires ${field} — live season state is available.`,
+        });
+      }
+    }
+    if (meta.targetSeason !== meta.phaseTargetSeason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetSeason'],
+        message: 'targetSeason and phaseTargetSeason must describe the same live phase target.',
+      });
+    }
+    if (meta.forwardRankingSeason !== meta.phaseTargetSeason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['forwardRankingSeason'],
+        message: 'forwardRankingSeason must equal phaseTargetSeason, including null when no forward target exists.',
+      });
+    }
+    if (meta.targetWeek !== meta.phaseTargetWeek) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetWeek'],
+        message: 'targetWeek and phaseTargetWeek must describe the same live phase target.',
+      });
+    }
+
+    const hasPhaseTargetSeason = meta.phaseTargetSeason !== null;
+    const hasPhaseTargetWeek = meta.phaseTargetWeek !== null;
+    if (hasPhaseTargetSeason !== hasPhaseTargetWeek) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasPhaseTargetSeason ? ['phaseTargetWeek'] : ['phaseTargetSeason'],
+        message: 'phaseTargetSeason and phaseTargetWeek must either both be present or both be null.',
+      });
+    } else if (!hasPhaseTargetSeason) {
+      const absentTargetFacts: Array<[string, unknown]> = [
+        ['targetLabel', meta.targetLabel],
+        ['scheduleSource', meta.scheduleSource],
+        ['phaseTargetProvenance', meta.phaseTargetProvenance],
+      ];
+      for (const [field, value] of absentTargetFacts) {
+        if (value !== null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: `A null phase target requires ${field} to be null.`,
+          });
+        }
+      }
+      if (meta.phaseTargetIsProvisional) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phaseTargetIsProvisional'],
+          message: 'A null phase target cannot be provisional.',
+        });
+      }
+    } else {
+      for (const [field, value] of [
+        ['targetLabel', meta.targetLabel],
+        ['scheduleSource', meta.scheduleSource],
+        ['phaseTargetProvenance', meta.phaseTargetProvenance],
+      ] as Array<[string, unknown]>) {
+        if (value === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field],
+            message: `A present phase target requires ${field}.`,
+          });
+        }
+      }
+      if (meta.phaseTargetProvenance !== null) {
+        const expectedScheduleSource = meta.phaseTargetProvenance === 'verified_schedule'
+          ? 'explicit_schedule'
+          : 'anchor_derived';
+        if (meta.scheduleSource !== expectedScheduleSource) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['scheduleSource'],
+            message: 'scheduleSource must agree with phaseTargetProvenance.',
+          });
+        }
+        const shouldBeProvisional = meta.phaseTargetProvenance === 'anchor_derived';
+        if (meta.phaseTargetIsProvisional !== shouldBeProvisional) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['phaseTargetIsProvisional'],
+            message: 'phaseTargetIsProvisional must agree with phaseTargetProvenance.',
+          });
+        }
+      }
+    }
+  }
+
+  if (meta.decisionTargetWeek !== null && meta.decisionTargetSeason === null) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['decisionTargetSeason'],
+      message: 'A present decisionTargetWeek requires a decisionTargetSeason.',
+    });
+  }
+
+  if (meta.decisionTargetWeek === null) {
+    const absentDecisionFacts: Array<[string, unknown]> = [
+      ['decisionTargetProvenance', meta.decisionTargetProvenance],
+      ['decisionTargetOrigin', meta.decisionTargetOrigin ?? null],
+    ];
+    for (const [field, value] of absentDecisionFacts) {
+      if (value !== null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `A null decisionTargetWeek requires ${field} to be null or absent.`,
+        });
+      }
+    }
+    if (meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetIsProvisional'],
+        message: 'A null decision target cannot be provisional.',
+      });
+    }
+  } else if (meta.decisionTargetOrigin === 'explicit_request') {
+    if (meta.decisionTargetProvenance !== null || meta.decisionTargetIsProvisional) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetOrigin'],
+        message: 'An explicit request has no schedule provenance and is not provisional.',
+      });
+    }
+  } else if (meta.decisionTargetOrigin === 'phase_default') {
+    const matchesPhaseTarget =
+      meta.configStatus === 'ok' &&
+      meta.decisionTargetSeason === meta.phaseTargetSeason &&
+      meta.decisionTargetWeek === meta.phaseTargetWeek &&
+      meta.decisionTargetProvenance === meta.phaseTargetProvenance &&
+      meta.decisionTargetIsProvisional === meta.phaseTargetIsProvisional;
+    if (!matchesPhaseTarget) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['decisionTargetOrigin'],
+        message: 'A phase-default decision target must exactly match the available live phase target.',
+      });
+    }
+  }
+
+  // `no_rankable_source` means nothing was admitted, so there is nothing to
+  // describe: publishing an evidence season/week/timestamp alongside it let a
+  // fail-closed response read as evidence for football it never returned —
+  // "2025 evidence" or an archive banner for a response with zero rows.
+  //
+  // Enforced HERE, not by `buildSeasonMeta` silently nulling these fields
+  // based on provenance: a producer that forgets this contradicts its own
+  // contract and fails loudly (the route's `sendUnavailable`/final
+  // `safeParse` turns it into a 500) rather than being quietly patched up
+  // after the fact. `source_extent_unknown` is a different claim — a
+  // nonempty admitted source that truthfully knows its season without
+  // knowing its week extent — and is deliberately NOT covered here.
+  if (meta.evidenceProvenance !== 'no_rankable_source') return;
+
+  const mustBeNull: Array<[string, unknown]> = [
+    ['evidenceSeason', meta.evidenceSeason],
+    ['evidenceWeek', meta.evidenceWeek],
+    ['evidenceThroughSeason', meta.evidenceThroughSeason],
+    ['evidenceThroughWeek', meta.evidenceThroughWeek],
+    ['generatedAt', meta.generatedAt],
+  ];
+  for (const [field, value] of mustBeNull) {
+    if (value !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [field],
+        message: `evidenceProvenance "no_rankable_source" requires ${field} to be null — nothing was admitted, so there is no evidence to describe.`,
+      });
+    }
+  }
+
+  if (meta.isArchiveView !== false) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['isArchiveView'],
+      message: 'evidenceProvenance "no_rankable_source" requires isArchiveView to be false — with no evidence season there is no season to compare against the forward board.',
+    });
+  }
+});
+export type RankingsV2SeasonMeta = z.infer<typeof rankingsV2SeasonMetaSchema>;
+
 export const rankingsV2ResponseSchema = z.object({
   contractVersion: z.literal(RANKINGS_V2_CONTRACT_VERSION),
   mode: rankingsV2ModeSchema,
@@ -244,6 +588,7 @@ export const rankingsV2ResponseSchema = z.object({
   sourceStack: z.array(rankingsV2SourceStackItemSchema),
   items: z.array(rankingsV2ItemSchema),
   trust: rankingsV2TrustSchema,
+  seasonMeta: rankingsV2SeasonMetaSchema,
   identityCoverage: rankingsV2IdentityCoverageSchema,
 }).superRefine((response, ctx) => {
   // Rank is part of the UI's deterministic composite row key. Reject duplicate
@@ -262,5 +607,56 @@ export const rankingsV2ResponseSchema = z.object({
     }
     seenRanks.set(item.rank, index);
   });
+
+  // `sourceStack` names the layers that produced admitted rows. When nothing
+  // was admitted (`no_rankable_source`), no layer answered, so the stack must
+  // be empty — a nonempty one here claimed a layer served rows that do not
+  // exist. This is a response-level check because sourceStack is a sibling of
+  // seasonMeta, not a field of it.
+  if (response.seasonMeta.evidenceProvenance !== 'no_rankable_source') return;
+
+  if (response.sourceStack.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['sourceStack'],
+      message: 'evidenceProvenance "no_rankable_source" requires an empty sourceStack — no layer produced admitted rows.',
+    });
+  }
+  if (response.items.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['items'],
+      message: 'evidenceProvenance "no_rankable_source" requires empty items — no rankable rows were admitted.',
+    });
+  }
+
+  for (const field of ['total', 'canonical', 'resolved', 'unresolved', 'ambiguous', 'coverageRatio'] as const) {
+    if (response.identityCoverage[field] !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['identityCoverage', field],
+        message: `evidenceProvenance "no_rankable_source" requires identityCoverage.${field} to be zero.`,
+      });
+    }
+  }
+  for (const [reason, count] of Object.entries(response.identityCoverage.byReason)) {
+    if (count !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['identityCoverage', 'byReason', reason],
+        message: 'evidenceProvenance "no_rankable_source" cannot report a nonzero identity-resolution reason.',
+      });
+    }
+  }
+
+  for (const field of ['asOf', 'confidence'] as const) {
+    if (response.trust[field] != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['trust', field],
+        message: `evidenceProvenance "no_rankable_source" requires trust.${field} to be null or absent.`,
+      });
+    }
+  }
 });
 export type RankingsV2Response = z.infer<typeof rankingsV2ResponseSchema>;

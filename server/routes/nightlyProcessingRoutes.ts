@@ -8,11 +8,26 @@
  */
 import { Router } from 'express';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
 import { requireAdminAuth } from '../middleware/adminAuth';
 import { rateLimiters } from '../middleware/rateLimit';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  requireEvidenceIngestionDefaultTarget,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 const router = Router();
+
+function ingestionTargetStatus(error: unknown): number {
+  if (
+    error instanceof EvidenceIngestionTargetUnavailableError ||
+    error instanceof InvalidEvidenceIngestionTargetError
+  ) {
+    return error.statusCode;
+  }
+  return 500;
+}
 
 /**
  * Manual trigger for nightly Buys/Sells processing
@@ -42,7 +57,7 @@ router.post('/buys-sells/process', requireAdminAuth, rateLimiters.heavyOperation
     
   } catch (error) {
     console.error('❌ Manual nightly processing failed:', error);
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Nightly processing failed',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -59,7 +74,9 @@ router.post('/buys-sells/process', requireAdminAuth, rateLimiters.heavyOperation
 router.post('/buys-sells/process/:week', requireAdminAuth, rateLimiters.heavyOperation, async (req, res) => {
   try {
     const week = parseInt(req.params.week);
-    const season = parseInt(req.query.season as string) || 2025;
+    const seasonParam = req.query.season === undefined
+      ? undefined
+      : Number.parseInt(String(req.query.season), 10);
     
     if (isNaN(week) || week < 1 || week > 18) {
       return res.status(400).json({
@@ -68,13 +85,14 @@ router.post('/buys-sells/process/:week', requireAdminAuth, rateLimiters.heavyOpe
       });
     }
     
-    console.log(`🎯 Manual trigger: Processing Week ${week}, Season ${season}...`);
+    const target = resolveEvidenceIngestionTarget({ week, season: seasonParam });
+    console.log(`🎯 Manual trigger: Processing Week ${target.week}, Season ${target.season}...`);
     
-    const result = await nightlyBuysSellsETL.processSpecificWeek(week, season);
+    const result = await nightlyBuysSellsETL.processSpecificWeek(target.week, target.season);
     
     res.json({
       success: true,
-      message: `Processing completed for Week ${week}, Season ${season}`,
+      message: `Processing completed for Week ${target.week}, Season ${target.season}`,
       data: {
         week: result.week,
         season: result.season,
@@ -88,7 +106,7 @@ router.post('/buys-sells/process/:week', requireAdminAuth, rateLimiters.heavyOpe
     
   } catch (error) {
     console.error(`❌ Week-specific processing failed:`, error);
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Week-specific processing failed',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -107,15 +125,15 @@ router.get('/buys-sells/health', rateLimiters.statusCheck, async (req, res) => {
     console.log('🏥 Running nightly processing health check...');
     
     const healthCheck = await nightlyBuysSellsETL.healthCheck();
-    const currentWeek = getCurrentNFLWeek();
+    const target = requireEvidenceIngestionDefaultTarget();
     
     res.json({
       success: true,
       message: 'Health check completed',
       data: {
         systemStatus: healthCheck.status,
-        currentWeek: parseInt(currentWeek),
-        season: 2025,
+        currentWeek: target.week,
+        season: target.season,
         timestamp: new Date().toISOString(),
         details: healthCheck.details
       }
@@ -123,7 +141,7 @@ router.get('/buys-sells/health', rateLimiters.statusCheck, async (req, res) => {
     
   } catch (error) {
     console.error('❌ Health check failed:', error);
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Health check failed',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -139,8 +157,7 @@ router.get('/buys-sells/health', rateLimiters.statusCheck, async (req, res) => {
  */
 router.get('/buys-sells/status', rateLimiters.statusCheck, async (req, res) => {
   try {
-    const currentWeek = parseInt(getCurrentNFLWeek());
-    const season = 2025;
+    const { week: currentWeek, season } = requireEvidenceIngestionDefaultTarget();
     
     // Get recent processing statistics
     const { buysSells } = await import('@shared/schema');
@@ -229,7 +246,7 @@ router.get('/buys-sells/status', rateLimiters.statusCheck, async (req, res) => {
     
   } catch (error) {
     console.error('❌ Status check failed:', error);
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Status check failed',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -246,7 +263,7 @@ router.get('/buys-sells/status', rateLimiters.statusCheck, async (req, res) => {
 router.get('/buys-sells/logs', rateLimiters.statusCheck, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
-    const currentWeek = getCurrentNFLWeek();
+    const target = requireEvidenceIngestionDefaultTarget();
     
     // Return basic log information
     // In a production system, you'd want to read from actual log files
@@ -254,8 +271,8 @@ router.get('/buys-sells/logs', rateLimiters.statusCheck, async (req, res) => {
       success: true,
       message: 'Logs retrieved successfully',
       data: {
-        currentWeek: parseInt(currentWeek),
-        season: 2025,
+        currentWeek: target.week,
+        season: target.season,
         timestamp: new Date().toISOString(),
         recentActivity: [
           {
@@ -274,7 +291,7 @@ router.get('/buys-sells/logs', rateLimiters.statusCheck, async (req, res) => {
     
   } catch (error) {
     console.error('❌ Logs retrieval failed:', error);
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Logs retrieval failed',
       error: error instanceof Error ? error.message : 'Unknown error'

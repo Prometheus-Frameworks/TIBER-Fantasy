@@ -6,7 +6,7 @@
  */
 import cron from 'node-cron';
 import { rbContextCheckService } from '../services/rbContextCheck';
-import { seasonService } from '../services/SeasonService';
+import { requireEvidenceIngestionDefaultTarget } from '../config/season';
 
 export function setupRBContextCheckCron() {
   console.log('🏃 Setting up RB Context Check nightly cron job...');
@@ -14,11 +14,12 @@ export function setupRBContextCheckCron() {
   // Run every day at 2:45 AM ET (15 min after QB EPA cron)
   cron.schedule('45 2 * * *', async () => {
     try {
-      // Get current season dynamically from SeasonService
-      const seasonSnapshot = await seasonService.current();
-      const season = seasonSnapshot.season;
+      // These derived metrics are football evidence, so a source-observed API
+      // or DB tuple cannot override the governed automated-write target.
+      const target = requireEvidenceIngestionDefaultTarget();
+      const season = target.season;
       
-      console.log(`🏃 RB Context Check cron triggered for season ${season} (week ${seasonSnapshot.week}, source: ${seasonSnapshot.source})...`);
+      console.log(`🏃 RB Context Check cron triggered for season ${season} (governed evidence week ${target.week})...`);
       
       // Validate season before processing
       if (!season || season < 2020 || season > 2030) {

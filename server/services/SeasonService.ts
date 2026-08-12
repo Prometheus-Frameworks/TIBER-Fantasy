@@ -6,6 +6,11 @@
 import { db } from '../infra/db';
 import { seasonState } from '@shared/schema';
 import { desc, sql } from 'drizzle-orm';
+import {
+  INGESTION_DEFAULT_SEASON,
+  resolveSourceObservedTarget,
+} from '../config/season';
+import { resolveSeasonPhase } from '../../shared/weekDetection';
 
 type SeasonSnapshot = { 
   season: number; 
@@ -83,7 +88,8 @@ export class SeasonService {
       logError('Database detection failed', error);
     }
 
-    // 3. ENV fallback (always works)
+    // 3. Configured phase fallback. Unlike API/DB observations, this has no
+    // independent source evidence, so stale calendar state must fail closed.
     const snapshot = this.detectFromEnv();
     await this.persist(snapshot.source, snapshot.season, snapshot.week, snapshot.seasonType);
     this.cachedSnapshot = snapshot;
@@ -172,14 +178,25 @@ export class SeasonService {
    * Detect season/week from environment variables (fallback)
    */
   private detectFromEnv(): SeasonSnapshot {
-    const currentYear = new Date().getFullYear();
-    const season = Number(process.env.TIBER_SEASON) || currentYear;
-    const week = Number(process.env.TIBER_WEEK) || this.estimateCurrentWeek();
+    const now = new Date();
+    const configuredWeek = process.env.TIBER_WEEK?.trim();
+    const target = configuredWeek
+      ? resolveSourceObservedTarget({
+          season: INGESTION_DEFAULT_SEASON,
+          week: Number(configuredWeek),
+          now,
+        })
+      : resolveSourceObservedTarget({ now });
+    const phase = resolveSeasonPhase(now);
+    const seasonType = phase.regularSeasonWeek !== null
+      ? 'regular'
+      : phase.targetSeason === target.season
+        ? 'pre'
+        : this.inferSeasonType(target.week);
     
     return {
-      season,
-      week,
-      seasonType: this.inferSeasonType(week),
+      ...target,
+      seasonType,
       source: 'env'
     };
   }
@@ -210,24 +227,6 @@ export class SeasonService {
     if (week <= 0) return 'pre';
     if (week >= 19) return 'post'; // Week 19+ is typically playoffs
     return 'regular';
-  }
-
-  /**
-   * Estimate current NFL week based on calendar date
-   */
-  private estimateCurrentWeek(): number {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-based
-    
-    // NFL season typically starts first Thursday after Labor Day (early September)
-    // Rough estimation: September = Week 1, October = Week 5, etc.
-    if (month < 8) return 1; // Before September
-    if (month === 8) return Math.min(4, Math.floor(now.getDate() / 7)); // September
-    if (month === 9) return Math.min(8, 4 + Math.floor(now.getDate() / 7)); // October
-    if (month === 10) return Math.min(12, 8 + Math.floor(now.getDate() / 7)); // November
-    if (month === 11) return Math.min(17, 12 + Math.floor(now.getDate() / 7)); // December
-    return 18; // January = playoffs/post-season
   }
 
   /**

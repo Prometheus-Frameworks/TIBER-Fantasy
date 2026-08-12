@@ -122,6 +122,13 @@ import { TIBER_SIGNATURE } from '../shared/tiberSignature';
 import fs from 'fs';
 import path from 'path';
 import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  requireScheduleSyncDefaultSeason,
+} from './config/season';
+import { systemCurrentWeekHandler } from './routes/systemCurrentWeekRoute';
+import { handleWeeklySync } from './routes/weeklySyncRoute';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import dataLabRoutes from './modules/datalab/snapshots/snapshotRoutes';
@@ -142,14 +149,16 @@ import adminForgeRouter from './routes/adminForge';
 import playerMappingRoutes, { metricsRouter, forgeLabRouter, adminPlayerMappingRouter } from './routes/playerMappingRoutes';
 import { monitoringService } from './services/MonitoringService';
 import { adminService } from './services/AdminService';
+import {
+  handleAdminBrandReplay,
+  handleAdminBrandStream,
+} from './routes/adminBrandRoutes';
 import { requireAdminAuth } from './middleware/adminAuth';
 import { rateLimiters } from './middleware/rateLimit';
 import { securityHeaders } from './middleware/security';
 import { createCompassRouter } from './services/predictionEngine';
 import {
   validateSetSeason,
-  validateBrandReplay,
-  validateBrandStream,
   validateSignalsStatus,
   validateSignalsPurge,
   ADMIN_API_CONFIG
@@ -340,17 +349,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current week info
       const currentWeekInfo = getCurrentWeek();
+      // Outside the regular season there is no completed week to compare against,
+      // so `best_week` is null rather than a fabricated week number.
       const bestRisersFallersWeek = getBestRisersFallersWeek();
-      const risersFallersAvailable = isRisersFallersDataAvailable(bestRisersFallersWeek);
-      
+      const risersFallersAvailable =
+        bestRisersFallersWeek !== null &&
+        isRisersFallersDataAvailable(bestRisersFallersWeek, currentWeekInfo.season);
+
       const response = {
         ...currentWeekInfo,
         risers_fallers: {
           best_week: bestRisersFallersWeek,
           data_available: risersFallersAvailable,
-          note: risersFallersAvailable 
+          note: risersFallersAvailable
             ? `Week ${bestRisersFallersWeek} risers/fallers data ready`
-            : 'Waiting for more games to complete'
+            : currentWeekInfo.phase === 'regular_season'
+              ? 'Waiting for more games to complete'
+              : `No completed regular-season week is available during ${currentWeekInfo.seasonPhaseLabel}.`
         },
         api_usage: {
           recommended_week_param: currentWeekInfo.currentWeek,
@@ -2911,17 +2926,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SYSTEM ENDPOINTS =====
   // Universal current week detection endpoint
-  app.get('/api/system/current-week', (req, res) => {
-    const weekInfo = getCurrentWeek();
-    res.json({
-      success: true,
-      ...weekInfo,
-      // For convenience, include the week to use for upcoming games
-      upcomingWeek: weekInfo.weekStatus === 'completed' 
-        ? Math.min(weekInfo.currentWeek + 1, 18)
-        : weekInfo.currentWeek
-    });
-  });
+  app.get('/api/system/current-week', systemCurrentWeekHandler);
   console.log('⏰ System current week endpoint mounted at /api/system/current-week');
 
   // Feature Audit endpoint - System integrity checks
@@ -5654,86 +5659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
    * 2. POST /api/admin/brand/replay - Replay brand signal generation for specific period
    */
   app.post('/api/admin/brand/replay', requireAdminAuth, async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    
-    try {
-      console.log('🔄 [AdminAPI] Brand replay request received');
-      
-      // Validate request body
-      const validatedData = validateBrandReplay(req.body);
-      
-      // Execute brand replay
-      const result = await adminService.replayBrandSignals(validatedData);
-      
-      const duration = Date.now() - startTime;
-      console.log(`${result.success ? '✅' : '❌'} [AdminAPI] Brand replay completed in ${duration}ms`);
-      
-      res.json({
-        ...result,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_replay'
-      });
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error('❌ [AdminAPI] Brand replay failed:', error);
-      
-      const statusCode = error instanceof z.ZodError ? 400 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        error: error instanceof z.ZodError 
-          ? 'Validation error: ' + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
-          : (error as Error).message || 'Unknown error',
-        details: error instanceof z.ZodError ? error.errors : undefined,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_replay',
-        processingTimeMs: duration
-      });
-    }
+    await handleAdminBrandReplay(req, res, adminService);
   });
 
   /**
    * 3. POST /api/admin/brand/stream - Trigger live brand signal streaming
    */
   app.post('/api/admin/brand/stream', requireAdminAuth, async (req: Request, res: Response) => {
-    const startTime = Date.now();
-    
-    try {
-      console.log('🚀 [AdminAPI] Brand streaming request received');
-      
-      // Validate request body
-      const validatedData = validateBrandStream(req.body);
-      
-      // Execute brand streaming
-      const result = await adminService.streamBrandSignals(validatedData);
-      
-      const duration = Date.now() - startTime;
-      console.log(`${result.success ? '✅' : '❌'} [AdminAPI] Brand streaming completed in ${duration}ms`);
-      
-      res.json({
-        ...result,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_streaming'
-      });
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      console.error('❌ [AdminAPI] Brand streaming failed:', error);
-      
-      const statusCode = error instanceof z.ZodError ? 400 : 500;
-      
-      res.status(statusCode).json({
-        success: false,
-        error: error instanceof z.ZodError 
-          ? 'Validation error: ' + error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')
-          : (error as Error).message || 'Unknown error',
-        details: error instanceof z.ZodError ? error.errors : undefined,
-        timestamp: new Date().toISOString(),
-        operation: 'brand_streaming',
-        processingTimeMs: duration
-      });
-    }
+    await handleAdminBrandStream(req, res, adminService);
   });
 
   /**
@@ -8285,43 +8218,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST /api/weekly/sync - Trigger weekly data sync
   app.post('/api/weekly/sync', async (req: Request, res: Response) => {
-    try {
-      const { season = 2025, week } = req.body;
-      const { fetchSeasonToDate, fetchWeeklyFromNflfastR } = await import('./ingest/nflfastr');
-      
-      let stats;
-      if (week) {
-        console.log(`🔄 [Weekly Sync] Fetching season=${season} week=${week}...`);
-        stats = await fetchWeeklyFromNflfastR(season, week);
-      } else {
-        console.log(`🔄 [Weekly Sync] Fetching season=${season} (season-to-date)...`);
-        stats = await fetchSeasonToDate(season);
-      }
-      
-      const result = await storage.upsertWeeklyStats(stats);
-      
-      console.log(`✅ [Weekly Sync] Synced ${result.inserted} records for season=${season}`);
-      
-      res.json({
-        success: true,
-        season,
-        week: week || 'all',
-        records: result.inserted,
-        message: `Successfully synced ${result.inserted} weekly stat records`
-      });
-    } catch (error) {
-      console.error('❌ [Weekly Sync] Sync failed:', error);
-      res.status(500).json({
-        success: false,
-        error: (error as Error).message || 'Unknown error'
-      });
-    }
+    await handleWeeklySync(req, res, {
+      loadNflfastR: async () => {
+        const nflfastr = await import('./ingest/nflfastr');
+        return {
+          fetchSeasonToDate: nflfastr.fetchSeasonToDate,
+          fetchWeeklyFromNflfastR: nflfastr.fetchWeeklyFromNflfastR,
+          resolveSeasonToDateWeekBound: nflfastr.resolveNflfastrSeasonToDateWeekBound,
+        };
+      },
+      upsertWeeklyStats: (stats) => storage.upsertWeeklyStats(stats),
+    });
   });
 
   // POST /api/schedule/sync - Sync NFL schedule from NFLverse
   app.post('/api/schedule/sync', async (req: Request, res: Response) => {
     try {
-      const { season = 2025 } = req.body;
+      const requestedSeason = req.body?.season as number | undefined;
+      if (
+        requestedSeason !== undefined &&
+        (!Number.isInteger(requestedSeason) || requestedSeason < 2000 || requestedSeason > 2100)
+      ) {
+        throw new InvalidEvidenceIngestionTargetError(
+          'Season must be an integer between 2000 and 2100.',
+        );
+      }
+      const season = requestedSeason ?? requireScheduleSyncDefaultSeason();
       const { syncScheduleFromNFLverse } = await import('./cron/scheduleSync');
       
       console.log(`📅 [Schedule Sync] Triggering sync for season ${season}...`);
@@ -8345,7 +8267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error('❌ [Schedule Sync] Failed:', error);
-      res.status(500).json({
+      const status =
+        error instanceof EvidenceIngestionTargetUnavailableError ||
+        error instanceof InvalidEvidenceIngestionTargetError
+          ? error.statusCode
+          : 500;
+      res.status(status).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
       });

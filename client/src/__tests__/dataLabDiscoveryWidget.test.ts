@@ -116,6 +116,7 @@ describe('DataLabDiscoveryWidget', () => {
       React.createElement(DataLabDiscoveryWidget, {
         season: '2025',
         data: commandCenterData,
+        fallbackSummaryState: 'available',
         fallbackSummary: {
           playersTracked: 24,
           avgPpg: 15.2,
@@ -139,6 +140,7 @@ describe('DataLabDiscoveryWidget', () => {
         season: '2025',
         data: null,
         isLoading: false,
+        fallbackSummaryState: 'available',
         fallbackSummary: {
           playersTracked: 18,
           avgPpg: 14.1,
@@ -152,5 +154,68 @@ describe('DataLabDiscoveryWidget', () => {
     expect(html).toContain('Amon-Ra St. Brown');
     expect(html).toContain('Open the Command Center');
     expect(html).toContain('Players');
+  });
+
+  // Fantasy #307 correction round 5: the widget's Players/Avg PPG/Elite
+  // metrics must reflect the snapshot aggregate's own lifecycle, not just
+  // whatever numbers the caller happened to pass — a caller with a pending
+  // or failed aggregate still has to pass SOME `fallbackSummary` object, and
+  // rendering its (typically zeroed) numbers unconditionally would read as
+  // measured data the widget never actually had.
+  describe('fallbackSummaryState gates the Players/Avg PPG/Elite metrics', () => {
+    const ZERO_SUMMARY = { playersTracked: 0, avgPpg: 0, t1Count: 0, topScorerName: null, topScorerPpg: null };
+    const POPULATED_SUMMARY = { playersTracked: 24, avgPpg: 15.2, t1Count: 4, topScorerName: 'Justin Jefferson', topScorerPpg: 21.4 };
+
+    function renderWidget(fallbackSummaryState: 'loading' | 'available' | 'unavailable', fallbackSummary: typeof ZERO_SUMMARY) {
+      return renderToStaticMarkup(
+        React.createElement(DataLabDiscoveryWidget, {
+          season: '2025',
+          data: null,
+          fallbackSummaryState,
+          fallbackSummary,
+        }),
+      );
+    }
+
+    it('unavailable: renders em dashes, not the caller\'s (typically zeroed) numbers', () => {
+      const html = renderWidget('unavailable', ZERO_SUMMARY);
+      expect(html).toContain('data-summary-state="unavailable"');
+      expect(html).toMatch(/data-testid="widget-metric-players"[^>]*>—</);
+      expect(html).toMatch(/data-testid="widget-metric-avg-ppg"[^>]*>—</);
+      expect(html).toMatch(/data-testid="widget-metric-elite"[^>]*>—</);
+      expect(html).not.toContain('>0<');
+    });
+
+    it('unavailable: does not narrate a populated but inadmissible cached top scorer', () => {
+      const html = renderWidget('unavailable', POPULATED_SUMMARY);
+
+      expect(html).not.toContain('Justin Jefferson currently leads');
+      expect(html).not.toContain('21.4 PPG');
+      expect(html).toContain('Open the Command Center to find promoted read-only player and team research starting points.');
+    });
+
+    it('loading: also renders em dashes, distinctly pending rather than resolved-empty', () => {
+      const html = renderWidget('loading', ZERO_SUMMARY);
+      expect(html).toContain('data-summary-state="loading"');
+      expect(html).toMatch(/data-testid="widget-metric-players"[^>]*>—</);
+    });
+
+    it('available with a genuinely empty aggregate: renders REAL 0 / 0 / 0, not em dashes', () => {
+      // The one case that must NOT be swept into the em-dash treatment: a
+      // successfully resolved aggregate that is legitimately empty.
+      const html = renderWidget('available', ZERO_SUMMARY);
+      expect(html).toContain('data-summary-state="available"');
+      expect(html).toMatch(/data-testid="widget-metric-players"[^>]*>0</);
+      expect(html).toMatch(/data-testid="widget-metric-avg-ppg"[^>]*>0</);
+      expect(html).toMatch(/data-testid="widget-metric-elite"[^>]*>0</);
+      expect(html).not.toContain('data-testid="widget-metric-players">—<');
+    });
+
+    it('available with a populated aggregate: renders the real measured numbers', () => {
+      const html = renderWidget('available', POPULATED_SUMMARY);
+      expect(html).toMatch(/data-testid="widget-metric-players"[^>]*>24</);
+      expect(html).toMatch(/data-testid="widget-metric-avg-ppg"[^>]*>15\.2</);
+      expect(html).toMatch(/data-testid="widget-metric-elite"[^>]*>4</);
+    });
   });
 });

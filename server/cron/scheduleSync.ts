@@ -6,6 +6,10 @@
 import cron from 'node-cron';
 import { spawn } from 'child_process';
 import path from 'path';
+import {
+  InvalidEvidenceIngestionTargetError,
+  requireScheduleSyncDefaultSeason,
+} from '../config/season';
 
 export interface ScheduleSyncResult {
   success: boolean;
@@ -18,15 +22,19 @@ export interface ScheduleSyncResult {
 /**
  * Run the Python schedule sync script
  */
-export async function syncScheduleFromNFLverse(season: number = 2025): Promise<ScheduleSyncResult> {
+export async function syncScheduleFromNFLverse(season?: number): Promise<ScheduleSyncResult> {
   const startTime = Date.now();
+  const targetSeason = season ?? requireScheduleSyncDefaultSeason();
+  if (!Number.isInteger(targetSeason) || targetSeason < 2000 || targetSeason > 2100) {
+    throw new InvalidEvidenceIngestionTargetError('Season must be an integer between 2000 and 2100.');
+  }
   
   return new Promise((resolve) => {
     const scriptPath = path.join(process.cwd(), 'scripts', 'sync_schedule.py');
     
-    console.log(`[ScheduleSync] Starting sync for season ${season}...`);
+    console.log(`[ScheduleSync] Starting sync for season ${targetSeason}...`);
     
-    const python = spawn('python', [scriptPath, '--season', season.toString(), '--verify']);
+    const python = spawn('python', [scriptPath, '--season', targetSeason.toString(), '--verify']);
     
     let stdout = '';
     let stderr = '';
@@ -53,7 +61,7 @@ export async function syncScheduleFromNFLverse(season: number = 2025): Promise<S
         
         resolve({
           success: true,
-          season,
+          season: targetSeason,
           gamesSync,
           duration
         });
@@ -61,7 +69,7 @@ export async function syncScheduleFromNFLverse(season: number = 2025): Promise<S
         console.error(`[ScheduleSync] Failed with code ${code}`);
         resolve({
           success: false,
-          season,
+          season: targetSeason,
           gamesSync: 0,
           duration,
           error: stderr || `Process exited with code ${code}`
@@ -73,7 +81,7 @@ export async function syncScheduleFromNFLverse(season: number = 2025): Promise<S
       console.error(`[ScheduleSync] Spawn error:`, error);
       resolve({
         success: false,
-        season,
+        season: targetSeason,
         gamesSync: 0,
         duration: Date.now() - startTime,
         error: error.message
@@ -91,11 +99,10 @@ export function setupScheduleSyncCron() {
   
   // Run every Tuesday at 1 AM ET
   cron.schedule('0 1 * * 2', async () => {
-    const currentYear = new Date().getFullYear();
-    console.log(`📅 Schedule sync cron triggered for season ${currentYear}`);
-    
     try {
-      const result = await syncScheduleFromNFLverse(currentYear);
+      const targetSeason = requireScheduleSyncDefaultSeason();
+      console.log(`📅 Schedule sync cron triggered for season ${targetSeason}`);
+      const result = await syncScheduleFromNFLverse(targetSeason);
       
       if (result.success) {
         console.log(`✅ Schedule sync completed:`);

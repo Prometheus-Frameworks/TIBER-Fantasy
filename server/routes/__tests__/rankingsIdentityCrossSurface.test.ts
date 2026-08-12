@@ -177,7 +177,7 @@ async function fetchPlayer(id: string) {
 describe('Rankings v2 → player identity, cross-surface', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedBuild.mockResolvedValue([]);
+    mockedBuild.mockResolvedValue({ players: [], maxRepresentedWeek: null } as any);
     mockedMeaningful.mockReturnValue(false);
     mockedCache.mockResolvedValue({
       players: [

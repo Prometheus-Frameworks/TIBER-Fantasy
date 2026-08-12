@@ -74,8 +74,9 @@ export interface GoldProcessingResult {
 
 export interface GoldProcessingFilters {
   players?: string[]; // Canonical player IDs
-  season?: number;
+  season: number;
   weeks?: number[];
+  evidenceThroughWeek?: number;
   positions?: string[];
   forceRefresh?: boolean;
   skipQualityGates?: boolean;
@@ -156,6 +157,9 @@ export class GoldLayerService {
     filters: GoldProcessingFilters,
     options: { validateOnly?: boolean; batchSize?: number } = {}
   ): Promise<GoldProcessingResult> {
+    if (!Number.isInteger(filters.season) || filters.season < 2000 || filters.season > 2100) {
+      throw new Error('Gold processing requires an explicit, validated season.');
+    }
     const startTime = Date.now();
     const jobId = `gold_processing_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
@@ -558,7 +562,7 @@ export class GoldLayerService {
 
     for (const week of filters.weeks) {
       // Create weekly facts input (this would normally come from Silver layer data)
-      const weeklyInput = await this.createWeeklyFactsInput(playerId, filters.season || 2025, week);
+      const weeklyInput = await this.createWeeklyFactsInput(playerId, filters.season, week);
       
       if (weeklyInput) {
         await this.weeklyProcessor.processPlayerWeeklyFacts(
@@ -576,10 +580,11 @@ export class GoldLayerService {
   private async processPlayerSeasonFacts(playerId: string, filters: GoldProcessingFilters, jobId: string): Promise<{created: boolean, updated: boolean}> {
     const seasonRequest = {
       canonicalPlayerId: playerId,
-      season: filters.season || 2025,
+      season: filters.season,
       forceRecalculation: filters.forceRefresh || false,
       includeProjections: true,
-      weekRange: filters.weeks ? { start: Math.min(...filters.weeks), end: Math.max(...filters.weeks) } : undefined
+      weekRange: filters.weeks ? { start: Math.min(...filters.weeks), end: Math.max(...filters.weeks) } : undefined,
+      evidenceThroughWeek: filters.evidenceThroughWeek,
     };
 
     const result = await this.seasonProcessor.processPlayerSeasonFacts(seasonRequest, jobId);
@@ -592,7 +597,7 @@ export class GoldLayerService {
   private async processPlayerMarketFacts(playerId: string, filters: GoldProcessingFilters, jobId: string): Promise<{created: boolean, updated: boolean}> {
     const marketRequest = {
       canonicalPlayerId: playerId,
-      season: filters.season || 2025,
+      season: filters.season,
       week: filters.weeks && filters.weeks.length === 1 ? filters.weeks[0] : undefined,
       lookbackPeriod: 30,
       includeVolatilityAnalysis: true,
@@ -609,7 +614,7 @@ export class GoldLayerService {
   private async processPlayerCompositeFacts(playerId: string, filters: GoldProcessingFilters, jobId: string): Promise<{created: boolean, updated: boolean}> {
     const compositeRequest = {
       canonicalPlayerId: playerId,
-      season: filters.season || 2025,
+      season: filters.season,
       includeProjections: true,
       includeRiskAnalysis: true,
       formats: ['dynasty', 'redraft', 'bestball', 'trade_value'] as const,

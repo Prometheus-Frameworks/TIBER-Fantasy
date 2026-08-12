@@ -5,7 +5,8 @@ import { buildPlayerResearchHref } from '@/lib/playerResearch';
 import { buildTeamResearchHref } from '@/lib/teamResearch';
 
 interface CoreResearchQuickLinksProps {
-  season: string;
+  /** Omitted when the owning response cannot validate a football season. */
+  season?: string | null;
   playerId?: string | null;
   playerName?: string | null;
   team?: string | null;

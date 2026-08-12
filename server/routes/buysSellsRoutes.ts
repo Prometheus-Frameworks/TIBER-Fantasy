@@ -9,7 +9,11 @@ import {
   SCORE_CONFIG
 } from '../compute';
 import { requireAdminAuth } from '../middleware/adminAuth';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 const router = Router();
 
@@ -17,7 +21,7 @@ const router = Router();
 router.get('/recommendations', async (req, res) => {
   try {
     const querySchema = z.object({
-      season: z.coerce.number().default(2025),
+      season: z.coerce.number().int().min(2000).max(2100).optional(),
       week: z.coerce.number().min(1).max(18).optional(),
       position: z.string().optional(),
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
@@ -29,15 +33,15 @@ router.get('/recommendations', async (req, res) => {
 
     const filters = querySchema.parse(req.query);
 
-    // Default to current NFL week if not specified
-    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
+    const target = resolveEvidenceIngestionTarget({ season: filters.season, week: filters.week });
+    const defaultWeek = target.week;
     
     // Normalize position to uppercase for database query
     const normalizedPosition = filters.position?.toUpperCase();
 
     // Build conditions array, filtering out undefined values
     const conditions = [
-      eq(buysSells.season, filters.season),
+      eq(buysSells.season, target.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
       eq(buysSells.week, defaultWeek),
@@ -62,6 +66,7 @@ router.get('/recommendations', async (req, res) => {
         count: recommendations.length,
         filters: {
           ...filters,
+          season: target.season,
           week: defaultWeek,
           position: normalizedPosition,
           min_conf: filters.min_conf
@@ -75,7 +80,12 @@ router.get('/recommendations', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching buys/sells recommendations:', error);
-    res.status(500).json({
+    const status =
+      error instanceof EvidenceIngestionTargetUnavailableError ||
+      error instanceof InvalidEvidenceIngestionTargetError
+        ? error.statusCode
+        : 500;
+    res.status(status).json({
       ok: false,
       error: 'Failed to fetch recommendations'
     });
@@ -86,7 +96,7 @@ router.get('/recommendations', async (req, res) => {
 router.get('/player/:playerId', async (req, res) => {
   try {
     const querySchema = z.object({
-      season: z.coerce.number().default(2025),
+      season: z.coerce.number().int().min(2000).max(2100).optional(),
       week: z.coerce.number().min(1).max(18).optional(),
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
       ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
@@ -95,13 +105,13 @@ router.get('/player/:playerId', async (req, res) => {
     const filters = querySchema.parse(req.query);
     const { playerId } = req.params;
     
-    // Default to current NFL week if not specified
-    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
+    const target = resolveEvidenceIngestionTarget({ season: filters.season, week: filters.week });
+    const defaultWeek = target.week;
 
     // Build conditions array, filtering out undefined values
     const conditions = [
       eq(buysSells.playerId, playerId),
-      eq(buysSells.season, filters.season),
+      eq(buysSells.season, target.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
       eq(buysSells.week, defaultWeek)
@@ -132,7 +142,12 @@ router.get('/player/:playerId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching player trade advice:', error);
-    res.status(500).json({
+    const status =
+      error instanceof EvidenceIngestionTargetUnavailableError ||
+      error instanceof InvalidEvidenceIngestionTargetError
+        ? error.statusCode
+        : 500;
+    res.status(status).json({
       ok: false,
       error: 'Failed to fetch player advice'
     });
@@ -147,20 +162,20 @@ router.post('/compute', requireAdminAuth, async (req, res) => {
       position: z.string().optional(),
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
       ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
-      season: z.number().default(2025),
+      season: z.number().int().min(2000).max(2100).optional(),
     });
 
     const { week, position, format, ppr, season } = bodySchema.parse(req.body);
-    
-    // Default to current NFL week if not specified
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    const target = resolveEvidenceIngestionTarget({ week, season });
+    const targetWeek = target.week;
+    const targetSeason = target.season;
     
     // Normalize position to uppercase for consistency
     const normalizedPosition = position?.toUpperCase();
 
     if (normalizedPosition && normalizedPosition.length > 0) {
       // Compute for specific position
-      const results = await computeBuysSellsForWeek(targetWeek, normalizedPosition, format, ppr, season);
+      const results = await computeBuysSellsForWeek(targetWeek, normalizedPosition, format, ppr, targetSeason);
       res.json({
         ok: true,
         message: `Computed buys/sells for ${normalizedPosition} Week ${targetWeek}`,
@@ -170,26 +185,31 @@ router.post('/compute', requireAdminAuth, async (req, res) => {
           position: normalizedPosition,
           format,
           ppr,
-          season,
+          season: targetSeason,
           resultsCount: results?.length || 0
         }
       });
     } else {
       // Compute for all positions
-      await computeBuysSellsForAllPositions(targetWeek, season);
+      await computeBuysSellsForAllPositions(targetWeek, targetSeason);
       res.json({
         ok: true,
         message: `Computed buys/sells for all positions Week ${targetWeek}`,
         meta: {
           week: targetWeek,
-          season,
+          season: targetSeason,
           allPositions: true
         }
       });
     }
   } catch (error) {
     console.error('Error computing buys/sells:', error);
-    res.status(500).json({
+    const status =
+      error instanceof EvidenceIngestionTargetUnavailableError ||
+      error instanceof InvalidEvidenceIngestionTargetError
+        ? error.statusCode
+        : 500;
+    res.status(status).json({
       ok: false,
       error: 'Failed to compute recommendations'
     });
@@ -200,7 +220,7 @@ router.post('/compute', requireAdminAuth, async (req, res) => {
 router.get('/top-picks', async (req, res) => {
   try {
     const querySchema = z.object({
-      season: z.coerce.number().default(2025),
+      season: z.coerce.number().int().min(2000).max(2100).optional(),
       week: z.coerce.number().min(1).max(18).optional(),
       format: z.enum(['redraft', 'dynasty']).default('redraft'),
       ppr: z.enum(['ppr', 'half', 'standard']).default('half'),
@@ -209,12 +229,12 @@ router.get('/top-picks', async (req, res) => {
 
     const filters = querySchema.parse(req.query);
     
-    // Default to current NFL week if not specified
-    const defaultWeek = filters.week || parseInt(getCurrentNFLWeek());
+    const target = resolveEvidenceIngestionTarget({ season: filters.season, week: filters.week });
+    const defaultWeek = target.week;
 
     // Build conditions array, filtering out undefined values
     const conditions = [
-      eq(buysSells.season, filters.season),
+      eq(buysSells.season, target.season),
       eq(buysSells.format, filters.format),
       eq(buysSells.ppr, filters.ppr),
       eq(buysSells.week, defaultWeek)
@@ -245,6 +265,7 @@ router.get('/top-picks', async (req, res) => {
       meta: {
         filters: {
           ...filters,
+          season: target.season,
           week: defaultWeek
         },
         buyCount: topBuys.length,
@@ -253,7 +274,12 @@ router.get('/top-picks', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching top picks:', error);
-    res.status(500).json({
+    const status =
+      error instanceof EvidenceIngestionTargetUnavailableError ||
+      error instanceof InvalidEvidenceIngestionTargetError
+        ? error.statusCode
+        : 500;
+    res.status(status).json({
       ok: false,
       error: 'Failed to fetch top picks'
     });

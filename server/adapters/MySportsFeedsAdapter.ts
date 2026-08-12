@@ -13,7 +13,10 @@
  */
 
 import { bronzeLayerService, type RawPayloadInput } from '../services/BronzeLayerService';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  resolveEvidenceIngestionSeason,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 interface MySportsFeedsPlayer {
   id: number;
@@ -110,7 +113,7 @@ export class MySportsFeedsAdapter {
    */
   async ingestPlayerRosters(options: MySportsFeedsIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     const jobId = options.jobId || `msf_rosters_${season}_${Date.now()}`;
     
     try {
@@ -279,8 +282,10 @@ export class MySportsFeedsAdapter {
    */
   async ingestWeeklyGameLogs(options: MySportsFeedsIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
-    const week = options.week || parseInt(getCurrentNFLWeek());
+    const { season, week } = resolveEvidenceIngestionTarget({
+      season: options.season,
+      week: options.week,
+    });
     const jobId = options.jobId || `msf_gamelogs_${season}_w${week}_${Date.now()}`;
     
     try {
@@ -435,7 +440,7 @@ export class MySportsFeedsAdapter {
    */
   async ingestInjuryReports(options: MySportsFeedsIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     const jobId = options.jobId || `msf_injuries_${season}_${Date.now()}`;
     
     try {
