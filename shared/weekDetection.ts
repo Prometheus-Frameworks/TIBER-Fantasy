@@ -580,13 +580,16 @@ export function getBestRisersFallersWeek(currentDate?: Date): number | null {
  * silently disagreeing (Fantasy #307 Phase A acceptance criterion).
  *
  * `ingestionSeason` is the value ingestion paths are pinned to — e.g. the
- * `TIBER_SEASON` / `CURRENT_SEASON` config. Presentation uses the season that
- * owns the current phase.
+ * `TIBER_SEASON` / `INGESTION_DEFAULT_SEASON` config. Presentation uses the
+ * season that owns the current phase.
  */
 export interface SeasonConfigAgreement {
   agrees: boolean;
   ingestionSeason: number | null;
+  /** Legacy numeric field retained for rolling clients; stale state may contain the internal sentinel. */
   presentationSeason: number;
+  /** Truthful phase season, null when the configured live calendar is stale. */
+  resolvedPresentationSeason?: number | null;
   reason: string | null;
 }
 
@@ -595,13 +598,27 @@ export function checkSeasonConfigAgreement(
   currentDate?: Date,
 ): SeasonConfigAgreement {
   const phase = resolveSeasonPhase(currentDate);
+  // Past the governed calendar, `phase.season` is newest+1 solely as an
+  // internal stale sentinel. It is not a presentation season fact.
   const presentationSeason = phase.season;
+  const resolvedPresentationSeason = phase.configStatus === 'ok' ? phase.season : null;
+
+  if (resolvedPresentationSeason === null) {
+    return {
+      agrees: false,
+      ingestionSeason: ingestionSeason ?? null,
+      presentationSeason,
+      resolvedPresentationSeason: null,
+      reason: 'Presentation season is unavailable because the NFL season calendar is stale.',
+    };
+  }
 
   if (ingestionSeason === null || ingestionSeason === undefined) {
     return {
       agrees: false,
       ingestionSeason: null,
       presentationSeason,
+      resolvedPresentationSeason,
       reason: 'No ingestion season configured; cannot verify agreement with presentation season.',
     };
   }
@@ -611,13 +628,20 @@ export function checkSeasonConfigAgreement(
       agrees: false,
       ingestionSeason,
       presentationSeason,
+      resolvedPresentationSeason,
       reason:
         `Ingestion season ${ingestionSeason} does not match presentation season ${presentationSeason} ` +
         `(${phase.seasonPhaseLabel}).`,
     };
   }
 
-  return { agrees: true, ingestionSeason, presentationSeason, reason: null };
+  return {
+    agrees: true,
+    ingestionSeason,
+    presentationSeason,
+    resolvedPresentationSeason,
+    reason: null,
+  };
 }
 
 /** Debug helper retained for the existing `/api/current-week?debug=true` path. */

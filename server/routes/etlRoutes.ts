@@ -7,7 +7,12 @@ import { Router, Request, Response } from 'express';
 import { requireAdminAuth } from '../middleware/adminAuth';
 import { coreWeekIngestETL } from '../etl/CoreWeekIngest';
 import { nightlyBuysSellsETL } from '../etl/nightlyBuysSellsUpdate';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  requireEvidenceIngestionDefaultTarget,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 import { playerIdentityService } from '../services/PlayerIdentityService';
 import { playerIdentityMigration } from '../services/PlayerIdentityMigration';
 // Bronze Layer integrations
@@ -18,6 +23,16 @@ import { ecrAdapter } from '../adapters/ECRAdapter';
 import { silverLayerService } from '../services/SilverLayerService';
 
 const router = Router();
+
+function ingestionTargetStatus(error: unknown): number {
+  if (
+    error instanceof EvidenceIngestionTargetUnavailableError ||
+    error instanceof InvalidEvidenceIngestionTargetError
+  ) {
+    return error.statusCode;
+  }
+  return 500;
+}
 
 // Apply admin authentication to all ETL routes
 router.use(requireAdminAuth);
@@ -37,8 +52,8 @@ router.post('/ingest-week', async (req: Request, res: Response) => {
     const { week, season, force = false } = req.body;
     
     // Validate parameters
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
-    const targetSeason = season || 2025;
+    const target = resolveEvidenceIngestionTarget({ week, season });
+    const { week: targetWeek, season: targetSeason } = target;
     
     if (targetWeek < 1 || targetWeek > 18) {
       return res.status(400).json({
@@ -115,7 +130,7 @@ router.post('/ingest-week', async (req: Request, res: Response) => {
     
     console.error(`❌ [ETL] Core Week Ingest failed:`, error);
     
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Core Week Ingest failed',
       error: errorMessage,
@@ -136,8 +151,8 @@ router.post('/buys-sells', async (req: Request, res: Response) => {
     console.log(`🔄 [ETL] Manual Buys/Sells computation triggered by admin from ${req.ip}`);
     
     const { week, season } = req.body;
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
-    const targetSeason = season || 2025;
+    const target = resolveEvidenceIngestionTarget({ week, season });
+    const { week: targetWeek, season: targetSeason } = target;
     
     console.log(`💡 Processing Buys/Sells for Week ${targetWeek}, Season ${targetSeason}`);
     
@@ -176,7 +191,7 @@ router.post('/buys-sells', async (req: Request, res: Response) => {
     if (week && season) {
       result = await nightlyBuysSellsETL.processSpecificWeek(targetWeek, targetSeason);
     } else {
-      result = await nightlyBuysSellsETL.processNightlyBuysSells();
+      result = await nightlyBuysSellsETL.processNightlyBuysSells(target);
     }
     
     const duration = Date.now() - startTime;
@@ -200,7 +215,7 @@ router.post('/buys-sells', async (req: Request, res: Response) => {
     
     console.error(`❌ [ETL] Buys/Sells computation failed:`, error);
     
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Buys/Sells computation failed',
       error: errorMessage,
@@ -312,8 +327,7 @@ router.post('/full-pipeline', async (req: Request, res: Response) => {
     console.log(`🔄 [ETL] Full pipeline triggered by admin from ${req.ip}`);
     
     const { week, season, force = false } = req.body;
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
-    const targetSeason = season || 2025;
+    const { week: targetWeek, season: targetSeason } = resolveEvidenceIngestionTarget({ week, season });
     
     console.log(`🚀 Running full ETL pipeline for Week ${targetWeek}, Season ${targetSeason}`);
     
@@ -349,7 +363,7 @@ router.post('/full-pipeline', async (req: Request, res: Response) => {
     
     console.error(`❌ [ETL] Full pipeline failed:`, error);
     
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Full ETL pipeline failed',
       error: errorMessage,
@@ -366,8 +380,7 @@ router.get('/status', async (req: Request, res: Response) => {
   try {
     console.log(`📊 [ETL] Status check requested by admin from ${req.ip}`);
     
-    const currentWeek = parseInt(getCurrentNFLWeek());
-    const currentSeason = 2025;
+    const { week: currentWeek, season: currentSeason } = requireEvidenceIngestionDefaultTarget();
     
     // Check Core Week Ingest health
     const ingestHealth = await coreWeekIngestETL.healthCheck();
@@ -442,7 +455,7 @@ router.get('/status', async (req: Request, res: Response) => {
     
     console.error(`❌ [ETL] Status check failed:`, error);
     
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'ETL status check failed',
       error: errorMessage
@@ -551,8 +564,7 @@ router.post('/bronze-ingest', async (req: Request, res: Response) => {
       jobId
     } = req.body;
 
-    const targetSeason = season || new Date().getFullYear();
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
+    const { season: targetSeason, week: targetWeek } = resolveEvidenceIngestionTarget({ season, week });
     const etlJobId = jobId || `etl_bronze_${targetSeason}_w${targetWeek}_${Date.now()}`;
 
     console.log(`📊 Processing Bronze Layer ingestion: Sources [${sources.join(', ')}], Season ${targetSeason}, Week ${targetWeek}`);
@@ -643,7 +655,7 @@ router.post('/bronze-ingest', async (req: Request, res: Response) => {
 
     console.error(`❌ [ETL-Bronze] Raw data ingestion failed:`, error);
 
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Bronze Layer ingestion failed',
       error: errorMessage,
@@ -672,8 +684,7 @@ router.post('/bronze-to-silver', async (req: Request, res: Response) => {
       processAll = false
     } = req.body;
 
-    const targetSeason = season || new Date().getFullYear();
-    const targetWeek = week;
+    const { season: targetSeason, week: targetWeek } = resolveEvidenceIngestionTarget({ season, week });
 
     console.log(`📊 Processing Bronze to Silver: Source [${source || 'all'}], Status [${status}], Season ${targetSeason}${targetWeek ? `, Week ${targetWeek}` : ''}`);
 
@@ -750,7 +761,7 @@ router.post('/bronze-to-silver', async (req: Request, res: Response) => {
 
     console.error(`❌ [ETL-Bronze] Bronze to Silver processing failed:`, error);
 
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Bronze to Silver processing failed',
       error: errorMessage,
@@ -787,8 +798,7 @@ router.get('/bronze-status', async (req: Request, res: Response) => {
     }
 
     // Get recent activity
-    const currentWeek = parseInt(getCurrentNFLWeek());
-    const currentSeason = new Date().getFullYear();
+    const { week: currentWeek, season: currentSeason } = requireEvidenceIngestionDefaultTarget();
     
     const recentPayloads = await bronzeLayerService.getRawPayloads({
       season: currentSeason,
@@ -835,7 +845,7 @@ router.get('/bronze-status', async (req: Request, res: Response) => {
 
     console.error(`❌ [ETL-Bronze] Bronze status check failed:`, error);
 
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Bronze Layer status check failed',
       error: errorMessage
@@ -863,8 +873,7 @@ router.post('/full-pipeline-with-bronze', async (req: Request, res: Response) =>
       mockData = false
     } = req.body;
     
-    const targetWeek = week || parseInt(getCurrentNFLWeek());
-    const targetSeason = season || new Date().getFullYear();
+    const { week: targetWeek, season: targetSeason } = resolveEvidenceIngestionTarget({ week, season });
     const pipelineJobId = `full_bronze_pipeline_${targetSeason}_w${targetWeek}_${Date.now()}`;
 
     console.log(`🔄 Running full pipeline with Bronze Layer for Week ${targetWeek}, Season ${targetSeason}`);
@@ -990,7 +999,7 @@ router.post('/full-pipeline-with-bronze', async (req: Request, res: Response) =>
 
     console.error(`❌ [ETL-Bronze] Full pipeline with Bronze Layer failed:`, error);
 
-    res.status(500).json({
+    res.status(ingestionTargetStatus(error)).json({
       success: false,
       message: 'Full pipeline with Bronze Layer failed',
       error: errorMessage,

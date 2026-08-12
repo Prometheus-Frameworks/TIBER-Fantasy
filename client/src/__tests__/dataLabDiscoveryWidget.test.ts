@@ -186,6 +186,14 @@ describe('DataLabDiscoveryWidget', () => {
       expect(html).not.toContain('>0<');
     });
 
+    it('unavailable: does not narrate a populated but inadmissible cached top scorer', () => {
+      const html = renderWidget('unavailable', POPULATED_SUMMARY);
+
+      expect(html).not.toContain('Justin Jefferson currently leads');
+      expect(html).not.toContain('21.4 PPG');
+      expect(html).toContain('Open the Command Center to find promoted read-only player and team research starting points.');
+    });
+
     it('loading: also renders em dashes, distinctly pending rather than resolved-empty', () => {
       const html = renderWidget('loading', ZERO_SUMMARY);
       expect(html).toContain('data-summary-state="loading"');

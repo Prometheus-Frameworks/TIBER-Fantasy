@@ -13,7 +13,10 @@
  */
 
 import { bronzeLayerService, type RawPayloadInput } from '../services/BronzeLayerService';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  resolveEvidenceIngestionSeason,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 interface SleeperPlayerResponse {
   [playerId: string]: {
@@ -114,7 +117,7 @@ export class SleeperAdapter {
   async ingestAllPlayers(options: SleeperIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
     const jobId = options.jobId || `sleeper_players_${Date.now()}`;
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     
     try {
       console.log(`🔄 [SleeperAdapter] Starting player ingestion for season ${season}`);
@@ -190,8 +193,10 @@ export class SleeperAdapter {
    */
   async ingestWeeklyStats(options: SleeperIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
-    const season = options.season || new Date().getFullYear();
-    const week = options.week || parseInt(getCurrentNFLWeek());
+    const { season, week } = resolveEvidenceIngestionTarget({
+      season: options.season,
+      week: options.week,
+    });
     const jobId = options.jobId || `sleeper_stats_${season}_w${week}_${Date.now()}`;
     
     try {
@@ -253,7 +258,7 @@ export class SleeperAdapter {
   async ingestTrendingPlayers(options: SleeperIngestionOptions = {}): Promise<number> {
     const startTime = Date.now();
     const jobId = options.jobId || `sleeper_trending_${Date.now()}`;
-    const season = options.season || new Date().getFullYear();
+    const season = resolveEvidenceIngestionSeason(options.season);
     
     try {
       console.log(`🔄 [SleeperAdapter] Starting trending players ingestion`);

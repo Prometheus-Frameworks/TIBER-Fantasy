@@ -266,6 +266,7 @@ describe('checkSeasonConfigAgreement — ingestion vs presentation', () => {
     const result = checkSeasonConfigAgreement(2026, at('2026-08-09T12:00:00Z'));
     expect(result.agrees).toBe(true);
     expect(result.presentationSeason).toBe(2026);
+    expect(result.resolvedPresentationSeason).toBe(2026);
   });
 
   test('disagreement is reported, not silently tolerated', () => {
@@ -276,6 +277,18 @@ describe('checkSeasonConfigAgreement — ingestion vs presentation', () => {
 
   test('a missing ingestion season is a disagreement, not a pass', () => {
     expect(checkSeasonConfigAgreement(undefined, at('2026-08-09T12:00:00Z')).agrees).toBe(false);
+  });
+
+  test('stale calendar adds a truthful resolved season beside the legacy numeric field', () => {
+    const result = checkSeasonConfigAgreement(2026, at('2031-10-01T12:00:00Z'));
+    expect(result).toEqual({
+      agrees: false,
+      ingestionSeason: 2026,
+      presentationSeason: 2027,
+      resolvedPresentationSeason: null,
+      reason: 'Presentation season is unavailable because the NFL season calendar is stale.',
+    });
+    expect(result.resolvedPresentationSeason).toBeNull();
   });
 });
 

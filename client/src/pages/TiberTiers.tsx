@@ -144,6 +144,11 @@ export function TiberTiersView({
   const seasonMeta = data?.seasonMeta ?? null;
   const archiveNotice = seasonMeta ? resolveArchiveNotice(seasonMeta) : null;
   const cacheUnavailableMessage = resolveCacheUnavailableMessage(data);
+  // Research links describe the rendered ROWS, so their season must come
+  // from the validated rankings response — never the container's independently
+  // loading current-week state. Prefer the response's evidence season, then
+  // its decision season; omit the parameter when neither is known.
+  const rowResearchSeason = seasonMeta?.evidenceSeason ?? seasonMeta?.decisionTargetSeason ?? null;
 
   return (
     <TooltipProvider>
@@ -385,7 +390,7 @@ export function TiberTiersView({
                               <TrajectoryIcon trajectory={player.uiMeta?.trajectory} />
                             </div>
                             <CoreResearchQuickLinks
-                              season={String(season)}
+                              season={rowResearchSeason === null ? undefined : String(rowResearchSeason)}
                               // Canonical id only when the row actually resolved.
                               // An unresolved row must not produce a player-specific
                               // research link built from a raw source id (#308);

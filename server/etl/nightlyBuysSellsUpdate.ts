@@ -4,7 +4,11 @@
  */
 import { computeBuysSellsForAllPositions } from '../compute';
 import { db } from '../infra/db';
-import { getCurrentNFLWeek } from '../cron/weeklyUpdate';
+import {
+  type EvidenceIngestionTarget,
+  requireEvidenceIngestionDefaultTarget,
+  resolveEvidenceIngestionTarget,
+} from '../config/season';
 
 interface ProcessingResult {
   week: number;
@@ -17,7 +21,6 @@ interface ProcessingResult {
 }
 
 export class NightlyBuysSellsETL {
-  private readonly CURRENT_SEASON = 2025;
   private readonly POSITIONS = ['QB', 'RB', 'WR', 'TE'];
   private readonly FORMATS = ['redraft', 'dynasty'] as const;
   private readonly PPR_SETTINGS = ['ppr', 'half', 'standard'] as const;
@@ -26,10 +29,13 @@ export class NightlyBuysSellsETL {
    * Main nightly processing entry point
    * Computes Buys/Sells for all positions and formats
    */
-  async processNightlyBuysSells(): Promise<ProcessingResult> {
+  async processNightlyBuysSells(target?: EvidenceIngestionTarget): Promise<ProcessingResult> {
     const startTime = Date.now();
-    const currentWeek = parseInt(getCurrentNFLWeek());
-    const season = this.CURRENT_SEASON;
+    const governedTarget = target
+      ? resolveEvidenceIngestionTarget(target)
+      : requireEvidenceIngestionDefaultTarget();
+    const currentWeek = governedTarget.week;
+    const season = governedTarget.season;
     
     console.log(`🌙 Starting nightly Buys/Sells computation for Week ${currentWeek}, Season ${season}...`);
     
@@ -51,7 +57,7 @@ export class NightlyBuysSellsETL {
       await this.processAllCombinations(currentWeek, season, result);
       
       // Generate summary statistics
-      await this.generateSummaryStats(currentWeek, season);
+      await this.generateSummaryStats(governedTarget);
       
       result.duration = Date.now() - startTime;
       console.log(`✅ Nightly Buys/Sells computation completed in ${result.duration}ms`);
@@ -162,7 +168,8 @@ export class NightlyBuysSellsETL {
   /**
    * Generate summary statistics after processing
    */
-  private async generateSummaryStats(season: number, week: number): Promise<void> {
+  private async generateSummaryStats(target: EvidenceIngestionTarget): Promise<void> {
+    const { season, week } = target;
     console.log('📈 Generating summary statistics...');
     
     try {
@@ -227,7 +234,10 @@ export class NightlyBuysSellsETL {
   /**
    * Manual trigger for processing a specific week
    */
-  async processSpecificWeek(week: number, season: number = this.CURRENT_SEASON): Promise<ProcessingResult> {
+  async processSpecificWeek(week: number, season?: number): Promise<ProcessingResult> {
+    const target = resolveEvidenceIngestionTarget({ week, season });
+    week = target.week;
+    season = target.season;
     console.log(`🎯 Manual trigger: Processing Week ${week}, Season ${season}`);
     
     const startTime = Date.now();
@@ -246,7 +256,7 @@ export class NightlyBuysSellsETL {
       await computeBuysSellsForAllPositions(week, season);
       
       // Generate summary stats
-      await this.generateSummaryStats(week, season);
+      await this.generateSummaryStats(target);
       
       result.duration = Date.now() - startTime;
       console.log(`✅ Manual processing completed for Week ${week} in ${result.duration}ms`);
@@ -268,8 +278,7 @@ export class NightlyBuysSellsETL {
    */
   async healthCheck(): Promise<{ status: 'healthy' | 'degraded' | 'unhealthy'; details: any }> {
     try {
-      const currentWeek = parseInt(getCurrentNFLWeek());
-      const season = this.CURRENT_SEASON;
+      const { week: currentWeek, season } = requireEvidenceIngestionDefaultTarget();
       
       // Check if we have recent recommendations
       const { buysSells } = await import('@shared/schema');

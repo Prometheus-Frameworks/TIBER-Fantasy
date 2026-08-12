@@ -13,7 +13,7 @@
  * chain (component -> useQuery -> fetch) with a mocked network layer only.
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Dashboard from '../Dashboard';
 
@@ -239,6 +239,34 @@ describe('the snapshot lifecycle propagates into DataLabDiscoveryWidget (Fantasy
 
     expect(await screen.findByTestId('snapshot-evidence-unavailable')).toBeTruthy();
     expect(await summaryState()).toBe('unavailable');
+  });
+
+  it('a failed background refetch does not narrate the retained prior top scorer as current', async () => {
+    const scenario: Scenario = {
+      health: { status: 'healthy', latestSnapshot: { season: 2025, week: 18, rowCount: 5000 } },
+      labAggData: [LAB_PLAYER],
+    };
+    mockFetch(scenario);
+    const client = renderDashboard();
+
+    // Establish real prior data first. React Query retains this successful
+    // value when a later background refetch fails — the exact lifecycle that
+    // exposed the stale narrative while the numeric summary was already
+    // correctly unavailable.
+    expect(await screen.findByText(/Amon-Ra St\. Brown currently leads this board/)).toBeTruthy();
+
+    scenario.labAggOk = false;
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: ['/api/data-lab/lab-agg', 'WR', 2025],
+        exact: true,
+      });
+    });
+
+    expect(await screen.findByTestId('snapshot-evidence-unavailable')).toBeTruthy();
+    expect(await summaryState()).toBe('unavailable');
+    expect(screen.queryByText(/Amon-Ra St\. Brown currently leads this board/)).toBeNull();
+    expect(screen.getByText('Open the Command Center to find promoted read-only player and team research starting points.')).toBeTruthy();
   });
 
   it('a pending aggregate: the widget summary is loading, distinct from resolved-unavailable or resolved-empty', async () => {

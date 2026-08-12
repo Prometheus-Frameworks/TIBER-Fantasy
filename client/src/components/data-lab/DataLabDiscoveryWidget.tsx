@@ -54,7 +54,7 @@ export function DataLabDiscoveryWidget({
           ? 'Loading the promoted research front door so you can jump into the strongest current player and team signals without opening the full lab first.'
           : data
           ? `${getCommandCenterStateLabel(data.state)}. Use these promoted summaries as lightweight discovery hooks into Player Research, Team Research, and the Command Center.`
-          : fallbackSummary.topScorerName
+          : isFallbackSummaryAvailable && fallbackSummary.topScorerName
           ? `${fallbackSummary.topScorerName} currently leads this board at ${fallbackSummary.topScorerPpg?.toFixed(1) ?? '—'} PPG. Open the Command Center to see promoted read-only player and team research starting points.`
           : 'Open the Command Center to find promoted read-only player and team research starting points.'}
       </div>

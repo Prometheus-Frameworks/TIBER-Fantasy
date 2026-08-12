@@ -99,10 +99,15 @@ function currentWeekResponse(payload: Record<string, unknown> = FRESH_CURRENT_WE
 function mockFetch(
   rankingsResponse: (url: string) => Promise<MockHttpResponse>,
   currentWeekPayload: Record<string, unknown> = FRESH_CURRENT_WEEK,
+  currentWeekOk = true,
 ) {
   const fetchMock = jest.fn((input: unknown) => {
     const url = String(input);
-    if (url.includes('/api/system/current-week')) return currentWeekResponse(currentWeekPayload);
+    if (url.includes('/api/system/current-week')) {
+      return currentWeekOk
+        ? currentWeekResponse(currentWeekPayload)
+        : Promise.resolve({ ok: false, status: 503, json: async () => ({ error: 'calendar unavailable' }) });
+    }
     if (url.includes('/api/rankings/v2/weekly')) return rankingsResponse(url);
     return Promise.reject(new Error(`Unexpected fetch call in test: ${url}`));
   });
@@ -941,5 +946,35 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
     expect(screen.getByText('Canonical FORGE Alpha ranks', { exact: false })).toBeTruthy();
     expect(screen.getByText('FORGE Alpha')).toBeTruthy();
     expect(screen.getByText('Raw Alpha')).toBeTruthy();
+  });
+
+  it('uses validated response evidence for row research links when current-week resolution fails', async () => {
+    const fetchMock = mockFetch(
+      () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+            asOf: '2026-04-12T00:00:00.000Z',
+            seasonMeta: SEASON_META,
+            sourceStack: [{ layer: 'forge' }],
+            trust: { sampleNote: null, stabilityNote: null },
+            items: [wellFormedItem()],
+          }),
+        }),
+      FRESH_CURRENT_WEEK,
+      false,
+    );
+    renderContainer();
+
+    const researchLink = await screen.findByTestId('link-player-research');
+    const href = researchLink.getAttribute('href');
+    expect(href).toContain('season=2025');
+    expect(href).not.toContain('season=null');
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/api/system/current-week'))).toBe(true);
+    // The row still rendered from the independently validated rankings
+    // response even though no container season was available.
+    expect(screen.getByText('Justin Jefferson')).toBeTruthy();
   });
 });

@@ -780,3 +780,11 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Nulled stale and no-forward-target live facts, enforced coherent phase/decision tuples plus the complete zero `no_rankable_source` invariant, and added safe UI copy for rejected-cache responses.
 - Validation: five focused suites 225/225; full branch 125 suites/1288 passing with the same seven baseline suite failures as base (125/1245); build passed with the baseline OLC warning; typecheck stayed identical at 505 diagnostics; diff check passed.
 - No merge, deployment, readiness change, contract-version bump, or unrelated scope mutation.
+
+### 2026-08-12 — Rankings v2 Rev17 governed ingestion and unavailable-evidence UI corrections
+- Added one atomic, phase/calendar-aware evidence season/week resolver for active automated/admin ingestion and monitoring. Preseason, stale calendar, and config mismatch fail closed; January rollover resolves the 2026 football season and Week 17 together. Schedule sync retains a separately typed forward-looking season resolver.
+- Removed active UPH/Gold 2025 fallbacks and carried the governed tuple through Bronze, Silver, Gold, and season-fact quality receipts. Source tripwires prevent the active paths from re-importing the legacy 2025 availability helper.
+- Corrected the Nightly Buys/Sells summary boundary to carry one target object rather than reversible numeric arguments. Added a separate atomic source-observed target for Sleeper roster events (preseason movement remains attributable to 2026 Week 1), and replaced SeasonService's final wall-year fallback while preserving its Sleeper API and database-observed pairs.
+- Gated Data Lab fallback narrative on genuine snapshot availability and derived Tiers research-link season from validated response metadata, omitting it when unknown.
+- Validation: final focused replay 17 suites/333 tests plus API smoke 7/7; full branch 134 suites/1,365 passing versus exact-head base 125/1,288 with the same seven failures; build passed with the baseline OLC warning; typecheck stayed exactly 505 diagnostics; diff check passed.
+- Explicit archive pairs remain supported; legacy numeric response fields retain rolling compatibility. No merge, deployment, readiness change, database write, or Forecast work.

@@ -121,8 +121,15 @@ import {
 import { TIBER_SIGNATURE } from '../shared/tiberSignature';
 import fs from 'fs';
 import path from 'path';
-import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection, checkSeasonConfigAgreement } from '../shared/weekDetection';
-import { CURRENT_SEASON } from './config/season';
+import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRisersFallersWeek, debugWeekDetection } from '../shared/weekDetection';
+import {
+  EvidenceIngestionTargetUnavailableError,
+  InvalidEvidenceIngestionTargetError,
+  requireEvidenceIngestionDefaultTarget,
+  requireScheduleSyncDefaultSeason,
+  resolveEvidenceIngestionTarget,
+} from './config/season';
+import { systemCurrentWeekHandler } from './routes/systemCurrentWeekRoute';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import dataLabRoutes from './modules/datalab/snapshots/snapshotRoutes';
@@ -2918,27 +2925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== SYSTEM ENDPOINTS =====
   // Universal current week detection endpoint
-  app.get('/api/system/current-week', (req, res) => {
-    const weekInfo = getCurrentWeek();
-    // PR #306 landed the ingestion season config, so the two can now be
-    // reconciled for real rather than left as a seam (Fantasy #307 AC:
-    // "ingestion season config and presentation season/phase cannot silently
-    // disagree"). Reported, never silently reconciled.
-    const seasonAgreement = checkSeasonConfigAgreement(CURRENT_SEASON);
-    if (!seasonAgreement.agrees) {
-      console.warn(`[Week API] season config disagreement: ${seasonAgreement.reason}`);
-    }
-
-    res.json({
-      success: true,
-      ...weekInfo,
-      // `upcomingWeek` is the phase-aware target week. It is null outside the
-      // regular season / when the calendar is stale, instead of being clamped
-      // to the final configured week (Fantasy #307).
-      upcomingWeek: weekInfo.targetWeek,
-      seasonConfigAgreement: seasonAgreement,
-    });
-  });
+  app.get('/api/system/current-week', systemCurrentWeekHandler);
   console.log('⏰ System current week endpoint mounted at /api/system/current-week');
 
   // Feature Audit endpoint - System integrity checks
@@ -8303,16 +8290,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/weekly/sync - Trigger weekly data sync
   app.post('/api/weekly/sync', async (req: Request, res: Response) => {
     try {
-      const { season = 2025, week } = req.body;
+      const requestedSeason = req.body?.season as number | undefined;
+      const requestedWeek = req.body?.week as number | undefined;
       const { fetchSeasonToDate, fetchWeeklyFromNflfastR } = await import('./ingest/nflfastr');
-      
+
+      let season: number;
+      let week: number | undefined;
+      let defaultThroughWeek: number | undefined;
+
+      if (requestedSeason === undefined && requestedWeek === undefined) {
+        const target = requireEvidenceIngestionDefaultTarget();
+        season = target.season;
+        defaultThroughWeek = target.week;
+      } else if (requestedWeek !== undefined) {
+        const target = resolveEvidenceIngestionTarget({
+          season: requestedSeason,
+          week: requestedWeek,
+        });
+        season = target.season;
+        week = target.week;
+      } else {
+        if (!Number.isInteger(requestedSeason) || requestedSeason! < 2000 || requestedSeason! > 2100) {
+          throw new InvalidEvidenceIngestionTargetError(
+            'Season must be an integer between 2000 and 2100.',
+          );
+        }
+        season = requestedSeason!;
+      }
+
       let stats;
-      if (week) {
+      if (week !== undefined) {
         console.log(`🔄 [Weekly Sync] Fetching season=${season} week=${week}...`);
         stats = await fetchWeeklyFromNflfastR(season, week);
       } else {
         console.log(`🔄 [Weekly Sync] Fetching season=${season} (season-to-date)...`);
-        stats = await fetchSeasonToDate(season);
+        stats = await fetchSeasonToDate(season, defaultThroughWeek);
       }
       
       const result = await storage.upsertWeeklyStats(stats);
@@ -8328,7 +8340,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('❌ [Weekly Sync] Sync failed:', error);
-      res.status(500).json({
+      const status =
+        error instanceof EvidenceIngestionTargetUnavailableError ||
+        error instanceof InvalidEvidenceIngestionTargetError
+          ? error.statusCode
+          : 500;
+      res.status(status).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
       });
@@ -8338,7 +8355,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/schedule/sync - Sync NFL schedule from NFLverse
   app.post('/api/schedule/sync', async (req: Request, res: Response) => {
     try {
-      const { season = 2025 } = req.body;
+      const requestedSeason = req.body?.season as number | undefined;
+      if (
+        requestedSeason !== undefined &&
+        (!Number.isInteger(requestedSeason) || requestedSeason < 2000 || requestedSeason > 2100)
+      ) {
+        throw new InvalidEvidenceIngestionTargetError(
+          'Season must be an integer between 2000 and 2100.',
+        );
+      }
+      const season = requestedSeason ?? requireScheduleSyncDefaultSeason();
       const { syncScheduleFromNFLverse } = await import('./cron/scheduleSync');
       
       console.log(`📅 [Schedule Sync] Triggering sync for season ${season}...`);
@@ -8362,7 +8388,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error('❌ [Schedule Sync] Failed:', error);
-      res.status(500).json({
+      const status =
+        error instanceof EvidenceIngestionTargetUnavailableError ||
+        error instanceof InvalidEvidenceIngestionTargetError
+          ? error.statusCode
+          : 500;
+      res.status(status).json({
         success: false,
         error: (error as Error).message || 'Unknown error'
       });

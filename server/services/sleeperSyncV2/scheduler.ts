@@ -12,6 +12,7 @@ import { db } from '../../infra/db';
 import { sleeperSyncState } from '@shared/schema';
 import { desc } from 'drizzle-orm';
 import { syncLeague } from './syncService';
+import { requireSourceObservedDefaultTarget } from '../../config/season';
 
 // Scheduler state
 interface SchedulerState {
@@ -69,7 +70,7 @@ function randomJitter(maxSeconds: number): Promise<void> {
 /**
  * Run a single sync cycle for all leagues
  */
-async function runSyncCycle(): Promise<void> {
+export async function runSyncCycle(): Promise<void> {
   if (schedulerState.running) {
     console.log('[SleeperScheduler] Skipped tick (already running)');
     return;
@@ -89,6 +90,11 @@ async function runSyncCycle(): Promise<void> {
       return;
     }
 
+    // Resolve once per cycle so every league is attributed to the same
+    // phase-aware source-observed tuple. Preseason Week 1 is valid here;
+    // stale calendar state fails the entire cycle before any league mutation.
+    const target = requireSourceObservedDefaultTarget();
+
     console.log(`[SleeperScheduler] Starting sync cycle for ${leagues.length} leagues`);
     
     let okCount = 0;
@@ -96,7 +102,7 @@ async function runSyncCycle(): Promise<void> {
 
     for (const league of leagues) {
       try {
-        const result = await syncLeague(league.leagueId);
+        const result = await syncLeague(league.leagueId, target);
         
         if (result.success) {
           okCount++;

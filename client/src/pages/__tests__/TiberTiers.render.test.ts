@@ -663,12 +663,17 @@ describe('TiberTiersView rendered output', () => {
       items: [resolved],
     };
 
-    const html = render(baseProps({ data }));
+    // The current-week/container season may still be unresolved while a
+    // validated rankings response already has rows. Row research links must
+    // use the response's evidence season, not stringify that null state.
+    const html = render(baseProps({ data, season: null }));
 
     expect(html).toContain('/player/tiber-amon-ra-st-brown');
     // Never the raw GSIS.
     expect(html).not.toContain('/player/00-0036963');
     expect(html).toContain('link-player-research');
+    expect(html).toContain('/tiber-data-lab/player-research?season=2025&amp;playerId=tiber-amon-ra-st-brown');
+    expect(html).not.toContain('season=null');
   });
 
   it('proves malformed 2xx JSON is rejected before it can render as a genuine empty result', () => {
