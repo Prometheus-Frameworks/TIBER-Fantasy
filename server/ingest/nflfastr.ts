@@ -1,10 +1,10 @@
 import { WeeklyRow } from '../../shared/types/fantasy';
 import { hydrateFantasyVariants } from '../lib/scoring';
-import { elapsedRegularSeasonWeeks } from '../../shared/nflSeasonCalendar';
 import {
   InvalidEvidenceIngestionTargetError,
   requireEvidenceIngestionDefaultTarget,
 } from '../config/season';
+import { resolveNflfastrSeasonToDateWeekBound } from './nflfastrSeasonBounds';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -14,6 +14,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const execAsync = promisify(exec);
+
+export {
+  NFLFASTR_COMPLETED_ARCHIVE_WEEK_BOUNDS,
+  resolveNflfastrSeasonToDateWeekBound,
+} from './nflfastrSeasonBounds';
 
 /**
  * Fetch weekly stats from NFLfastR via Python wrapper.
@@ -132,13 +137,7 @@ export async function fetchSeasonToDate(
   }
 
   if (endWeek === undefined) {
-    const elapsed = elapsedRegularSeasonWeeks(targetSeason, new Date());
-    if (elapsed === null) {
-      throw new InvalidEvidenceIngestionTargetError(
-        `Season ${targetSeason} is not present in the configured NFL calendar.`,
-      );
-    }
-    endWeek = elapsed;
+    endWeek = resolveNflfastrSeasonToDateWeekBound(targetSeason);
   }
 
   if (!Number.isInteger(endWeek) || endWeek < 0 || endWeek > 18) {

@@ -788,3 +788,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Gated Data Lab fallback narrative on genuine snapshot availability and derived Tiers research-link season from validated response metadata, omitting it when unknown.
 - Validation: final focused replay 17 suites/333 tests plus API smoke 7/7; full branch 134 suites/1,365 passing versus exact-head base 125/1,288 with the same seven failures; build passed with the baseline OLC warning; typecheck stayed exactly 505 diagnostics; diff check passed.
 - Explicit archive pairs remain supported; legacy numeric response fields retain rolling compatibility. No merge, deployment, readiness change, database write, or Forecast work.
+
+### 2026-08-12 — NFLfastR completed-archive weekly sync compatibility
+- Restored the historical season-only `/api/weekly/sync` contract for the producer-supported 2024 archive with a local immutable Week 18 terminal bound, without widening the live presentation calendar.
+- Extracted the existing weekly-sync handler into a thin testable route module and made the route plus `fetchSeasonToDate()` consume the same bound resolver.
+- Added service and real HTTP boundary regressions for 2024 Week 18, unknown/future rejection, explicit live-preseason zero elapsed weeks, no-argument preseason fail-closed behavior, January 2026/Week 17 rollover, exact archive pairs, and week-only mismatch rejection.
+- Validation: focused ingestion/route/config suites passed 71/71; local curl passed; server build passed with the baseline OLC warning; typecheck stayed at the 505-diagnostic baseline with zero touched-file matches; `git diff --check` passed.

@@ -125,11 +125,10 @@ import { getCurrentWeek, getWeekInfo, isRisersFallersDataAvailable, getBestRiser
 import {
   EvidenceIngestionTargetUnavailableError,
   InvalidEvidenceIngestionTargetError,
-  requireEvidenceIngestionDefaultTarget,
   requireScheduleSyncDefaultSeason,
-  resolveEvidenceIngestionTarget,
 } from './config/season';
 import { systemCurrentWeekHandler } from './routes/systemCurrentWeekRoute';
+import { handleWeeklySync } from './routes/weeklySyncRoute';
 import { createRagRouter, initRagOnBoot } from './routes/ragRoutes';
 import tiberMemoryRoutes from './routes/tiberMemoryRoutes';
 import dataLabRoutes from './modules/datalab/snapshots/snapshotRoutes';
@@ -8289,67 +8288,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // POST /api/weekly/sync - Trigger weekly data sync
   app.post('/api/weekly/sync', async (req: Request, res: Response) => {
-    try {
-      const requestedSeason = req.body?.season as number | undefined;
-      const requestedWeek = req.body?.week as number | undefined;
-      const { fetchSeasonToDate, fetchWeeklyFromNflfastR } = await import('./ingest/nflfastr');
-
-      let season: number;
-      let week: number | undefined;
-      let defaultThroughWeek: number | undefined;
-
-      if (requestedSeason === undefined && requestedWeek === undefined) {
-        const target = requireEvidenceIngestionDefaultTarget();
-        season = target.season;
-        defaultThroughWeek = target.week;
-      } else if (requestedWeek !== undefined) {
-        const target = resolveEvidenceIngestionTarget({
-          season: requestedSeason,
-          week: requestedWeek,
-        });
-        season = target.season;
-        week = target.week;
-      } else {
-        if (!Number.isInteger(requestedSeason) || requestedSeason! < 2000 || requestedSeason! > 2100) {
-          throw new InvalidEvidenceIngestionTargetError(
-            'Season must be an integer between 2000 and 2100.',
-          );
-        }
-        season = requestedSeason!;
-      }
-
-      let stats;
-      if (week !== undefined) {
-        console.log(`🔄 [Weekly Sync] Fetching season=${season} week=${week}...`);
-        stats = await fetchWeeklyFromNflfastR(season, week);
-      } else {
-        console.log(`🔄 [Weekly Sync] Fetching season=${season} (season-to-date)...`);
-        stats = await fetchSeasonToDate(season, defaultThroughWeek);
-      }
-      
-      const result = await storage.upsertWeeklyStats(stats);
-      
-      console.log(`✅ [Weekly Sync] Synced ${result.inserted} records for season=${season}`);
-      
-      res.json({
-        success: true,
-        season,
-        week: week || 'all',
-        records: result.inserted,
-        message: `Successfully synced ${result.inserted} weekly stat records`
-      });
-    } catch (error) {
-      console.error('❌ [Weekly Sync] Sync failed:', error);
-      const status =
-        error instanceof EvidenceIngestionTargetUnavailableError ||
-        error instanceof InvalidEvidenceIngestionTargetError
-          ? error.statusCode
-          : 500;
-      res.status(status).json({
-        success: false,
-        error: (error as Error).message || 'Unknown error'
-      });
-    }
+    await handleWeeklySync(req, res, {
+      loadNflfastR: async () => {
+        const nflfastr = await import('./ingest/nflfastr');
+        return {
+          fetchSeasonToDate: nflfastr.fetchSeasonToDate,
+          fetchWeeklyFromNflfastR: nflfastr.fetchWeeklyFromNflfastR,
+          resolveSeasonToDateWeekBound: nflfastr.resolveNflfastrSeasonToDateWeekBound,
+        };
+      },
+      upsertWeeklyStats: (stats) => storage.upsertWeeklyStats(stats),
+    });
   });
 
   // POST /api/schedule/sync - Sync NFL schedule from NFLverse
