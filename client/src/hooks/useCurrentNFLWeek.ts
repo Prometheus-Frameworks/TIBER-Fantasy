@@ -38,7 +38,15 @@ interface WeekInfo {
   targetIsProvisional: boolean;
   configStatus: 'ok' | 'stale_calendar_config';
   configNote: string | null;
-  /** Absent on an older server; the hook treats that as `[]`, never a guess. */
+  /**
+   * Absent on an older server, or while the query hasn't resolved yet — both
+   * read as `undefined` here, deliberately NOT coalesced to `[]`. Omission is
+   * "unknown," not "no seasons": a caller that treats them the same cannot
+   * tell a legacy server (which may still serve any configured archive) from
+   * a genuinely empty configuration, and would either invent options or
+   * wrongly invalidate a still-valid retained selection. See
+   * `resolveRequestedSeason` for how the container uses this distinction.
+   */
   configuredSeasons?: number[];
 }
 
@@ -105,10 +113,12 @@ export function useCurrentNFLWeek() {
     configStatus: data?.configStatus ?? null,
     configNote: data?.configNote ?? null,
     // The seasons a caller may explicitly select, independent of whether the
-    // live calendar is stale. An older server that predates this field is
-    // read as `[]` — no synthesized fallback, since a guessed season list
-    // could let an unconfigured value slip into a request.
-    configuredSeasons: data?.configuredSeasons ?? [],
+    // live calendar is stale. `undefined` — not `[]` — whenever the field
+    // was not actually reported (older server, or the query hasn't resolved
+    // yet): omission and "explicitly zero configured seasons" are different
+    // facts, and coalescing them here would destroy that distinction before
+    // any consumer ever saw it.
+    configuredSeasons: data?.configuredSeasons,
 
     isLoading,
     error,

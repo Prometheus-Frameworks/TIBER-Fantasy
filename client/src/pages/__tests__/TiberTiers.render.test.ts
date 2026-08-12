@@ -426,6 +426,62 @@ describe('TiberTiersView rendered output', () => {
     expect(html).not.toContain('FORGE grades for this filter have not been computed yet');
   });
 
+  it('renders a successfully served configured-history archive under a stale calendar: "Archive:" framing ALONGSIDE, not instead of, the stale-calendar warning', () => {
+    // Fantasy #307 correction round 5: the route's own stale-calendar gate
+    // proves an admitted response here can only be an explicitly requested,
+    // configured historical season — `isArchiveView: true` — but the live
+    // calendar is still stale (`configStatus` unchanged), so the phase
+    // heading and the archive/stale warning banner still say so too.
+    const staleArchiveMeta = {
+      ...SEASON_META,
+      configStatus: 'stale_calendar_config' as const,
+      configNote: 'NFL season calendar ends after 2026.',
+      evidenceSeason: 2025,
+      evidenceWeek: 18,
+      decisionTargetSeason: 2025,
+      decisionTargetWeek: 18,
+      decisionTargetProvenance: null,
+      decisionTargetIsProvisional: false,
+      phaseTargetSeason: null,
+      phaseTargetWeek: null,
+      phaseTargetProvenance: null,
+      phaseTargetIsProvisional: false,
+      evidenceThroughSeason: 2025,
+      evidenceThroughWeek: 18,
+      evidenceProvenance: 'source_declared_as_of',
+      completionVerified: false,
+      finalizedThroughWeek: null,
+      completionCopy: 'Completion not verified.',
+      generatedAt: '2026-08-08T19:04:15.325Z',
+      targetWeek: null,
+      targetLabel: null,
+      isArchiveView: true,
+      status: 'archive_season_not_current',
+      statusDetail: 'Showing configured historical 2025 evidence while live season state is unavailable.',
+    };
+    const data: TiersApiResponse = {
+      contractVersion: RANKINGS_V2_EXPECTED_CONTRACT_VERSION,
+      asOf: '2026-08-08T19:04:15.325Z',
+      seasonMeta: staleArchiveMeta,
+      sourceStack: [{ layer: 'forge' }],
+      trust: { sampleNote: null, stabilityNote: null },
+      items: [makeItem()],
+    };
+
+    const html = render(baseProps({ data }));
+
+    // The archive framing renders...
+    expect(html).toContain('Archive: 2025 evidence, through week 18');
+    // ...ALONGSIDE the stale-calendar warning, not in place of it.
+    expect(html).toContain('Season state unavailable');
+    expect(html).toContain('NFL season calendar ends after 2026.');
+    // Neither claims a live forward target/season the calendar cannot supply.
+    expect(html).not.toMatch(/forward board targets/);
+    // The admitted rows actually render — this is NOT the calendar-unavailable panel.
+    expect(html).not.toContain('data-testid="tiers-calendar-unavailable"');
+    expect(html).toContain('Justin Jefferson');
+  });
+
   it('renders an unresolved row with no player link and no player-research link (Fantasy #308)', () => {
     const unresolved = makeItem({
       playerId: null,

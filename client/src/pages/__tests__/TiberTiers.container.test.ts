@@ -76,6 +76,18 @@ const STALE_CURRENT_WEEK = {
   configuredSeasons: [2025, 2026],
 };
 
+// A same-contract-version server that predates `configuredSeasons` entirely —
+// the key is OMITTED, not sent as `[]`. Built by deleting the key rather than
+// setting it to `undefined`: `JSON.stringify`/a real fetch response would
+// drop an `undefined` value the same way, but building the fixture by
+// deletion keeps that omission explicit and doesn't rely on JSON semantics
+// the mock's `json: async () => payload` bypasses anyway.
+const LEGACY_CURRENT_WEEK = (() => {
+  const { configuredSeasons, ...rest } = FRESH_CURRENT_WEEK;
+  void configuredSeasons;
+  return rest;
+})();
+
 function currentWeekResponse(payload: Record<string, unknown> = FRESH_CURRENT_WEEK) {
   return Promise.resolve({
     ok: true,
@@ -416,6 +428,18 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       }
 
       const evidenceSeason = Number(requestedSeason);
+      // Fantasy #307 correction round 5: while the live calendar is stale,
+      // ANY admitted evidence is archive by construction — the route's own
+      // stale-calendar gate already proved this can only be an explicitly
+      // requested, configured historical season, with no forward target to
+      // compare against. While the live calendar is ok, archive stays a
+      // comparison against the forward season (2026 here).
+      const isArchiveView = isLiveCalendarStale() ? true : evidenceSeason !== 2026;
+      const statusDetail = !isArchiveView
+        ? null
+        : isLiveCalendarStale()
+          ? `Showing configured historical ${evidenceSeason} evidence while live season state is unavailable.`
+          : 'Showing 2025 evidence while the forward board targets 2026 (2026 · Preseason).';
       return {
         ok: true,
         status: 200,
@@ -426,12 +450,9 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
             ...SEASON_META,
             evidenceSeason,
             evidenceWeek: evidenceSeason === 2025 ? 18 : 1,
-            isArchiveView: evidenceSeason !== 2026,
-            status: evidenceSeason === 2026 ? null : 'archive_season_not_current',
-            statusDetail:
-              evidenceSeason === 2026
-                ? null
-                : 'Showing 2025 evidence while the forward board targets 2026 (2026 · Preseason).',
+            isArchiveView,
+            status: isArchiveView ? 'archive_season_not_current' : null,
+            statusDetail,
             // Configured-history-only serving does not depend on the live
             // calendar's own state — this stays whatever the mounted
             // current-week state says, independent of `evidenceSeason`.
@@ -560,6 +581,134 @@ describe('TiberTiers container (real useQuery -> fetch -> validator -> render ch
       const params = new URL(latest, 'http://localhost').searchParams;
       expect(params.get('season')).toBe('2025');
       expect(params.has('asOfWeek')).toBe(false);
+    });
+  });
+
+  describe('configuredSeasons: an omitted field is unknown, not an explicit empty list (Fantasy #307 correction round 5)', () => {
+    it('new -> legacy omission: an explicit 2025 selection survives a response that merely omits configuredSeasons', async () => {
+      const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => false));
+      const { queryClient } = renderContainer();
+
+      expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('season-2025'));
+      await waitFor(() => {
+        expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+      });
+      await waitFor(() => {
+        const rankingsUrls = fetchMock.mock.calls
+          .map(([input]) => String(input))
+          .filter((url) => url.includes('/api/rankings/v2/weekly'));
+        expect(new URL(rankingsUrls[rankingsUrls.length - 1], 'http://localhost').searchParams.get('season'))
+          .toBe('2025');
+      });
+
+      // The server alternates to a legacy response that omits the field
+      // entirely — NOT an explicit `[]`.
+      await act(async () => {
+        queryClient.setQueryData(['/api/system/current-week'], LEGACY_CURRENT_WEEK);
+      });
+
+      // The retained list (still [2025, 2026] from the prior response) still
+      // validates the selection: the request season stays 2025 (no refetch
+      // is even expected — nothing the rankings request depends on changed —
+      // and the selector still shows it selected).
+      await waitFor(() => {
+        expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+      });
+      const rankingsUrls = fetchMock.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes('/api/rankings/v2/weekly'));
+      expect(new URL(rankingsUrls[rankingsUrls.length - 1], 'http://localhost').searchParams.get('season'))
+        .toBe('2025');
+      // The selector still shows both retained options — nothing was invented,
+      // but nothing valid was discarded either.
+      expect(screen.getByTestId('season-2026')).toBeTruthy();
+    });
+
+    it('an explicit newer list excluding 2025 invalidates a previously valid selection', async () => {
+      // A third configured season (2024) keeps 2+ options after 2025 is
+      // dropped, so the selector itself stays visible (it renders only for
+      // `availableSeasons.length > 1`, unrelated to this fix) and the
+      // "invalidated, not merely narrowed to a single default" signal stays
+      // legible: season-2024 remains offered, season-2025 does not.
+      const THREE_SEASONS_CURRENT_WEEK = { ...FRESH_CURRENT_WEEK, configuredSeasons: [2024, 2025, 2026] };
+      const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => false), THREE_SEASONS_CURRENT_WEEK);
+      const { queryClient } = renderContainer();
+
+      expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+      fireEvent.click(screen.getByTestId('season-2025'));
+      await waitFor(() => {
+        expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
+      });
+      expect(fetchMock.mock.calls.some(([input]) => {
+        const url = String(input);
+        return url.includes('/api/rankings/v2/weekly')
+          && new URL(url, 'http://localhost').searchParams.get('season') === '2025';
+      })).toBe(true);
+
+      // A fresh EXPLICIT list arrives that no longer configures 2025.
+      await act(async () => {
+        queryClient.setQueryData(['/api/system/current-week'], {
+          ...THREE_SEASONS_CURRENT_WEEK,
+          configuredSeasons: [2024, 2026],
+        });
+      });
+
+      // The retained selection is invalidated: the selector no longer offers
+      // 2025 at all, and falls back to the detected season (2026).
+      await waitFor(() => {
+        expect(screen.queryByTestId('season-2025')).toBeNull();
+      });
+      expect(screen.getByTestId('season-2024')).toBeTruthy();
+      expect(screen.getByTestId('season-2026').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('a direct legacy mount (configuredSeasons never reported) invents no options and no selection', async () => {
+      const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => false), LEGACY_CURRENT_WEEK);
+      renderContainer();
+
+      expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+      // No explicit list has EVER been seen: the selector renders no options
+      // at all (not an invented `[current-1, current]` pair, not `[]`
+      // treated as "checked and empty").
+      expect(screen.queryByTestId('season-2025')).toBeNull();
+      expect(screen.queryByTestId('season-2026')).toBeNull();
+      expect(screen.queryByTestId('tiers-season-control')).toBeNull();
+      // The request still uses the detected live season normally — omission
+      // of the configured-season list does not fail the live board closed.
+      await waitFor(() => {
+        const rankingsUrls = fetchMock.mock.calls
+          .map(([input]) => String(input))
+          .filter((url) => url.includes('/api/rankings/v2/weekly'));
+        expect(new URL(rankingsUrls[rankingsUrls.length - 1], 'http://localhost').searchParams.get('season'))
+          .toBe('2026');
+      });
+    });
+
+    it('subsequent restoration: a fresh explicit list after omission revalidates a new selection', async () => {
+      const fetchMock = mockFetch(mockConfiguredArchiveResponder(() => false), LEGACY_CURRENT_WEEK);
+      const { queryClient } = renderContainer();
+
+      expect(await screen.findByText('Justin Jefferson')).toBeTruthy();
+      expect(screen.queryByTestId('season-2025')).toBeNull();
+
+      // The explicit list is restored.
+      await act(async () => {
+        queryClient.setQueryData(['/api/system/current-week'], FRESH_CURRENT_WEEK);
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId('season-2025')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByTestId('season-2025'));
+      await waitFor(() => {
+        const rankingsUrls = fetchMock.mock.calls
+          .map(([input]) => String(input))
+          .filter((url) => url.includes('/api/rankings/v2/weekly'));
+        expect(new URL(rankingsUrls[rankingsUrls.length - 1], 'http://localhost').searchParams.get('season'))
+          .toBe('2025');
+      });
+      expect(screen.getByTestId('season-2025').getAttribute('aria-pressed')).toBe('true');
     });
   });
 

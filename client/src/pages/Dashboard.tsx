@@ -184,6 +184,15 @@ export default function Dashboard() {
   // official snapshot (once it has answered), or the aggregate request failed.
   const isEvidenceUnavailable = (!isHealthLoading && evidenceSeason === null) || isLabError;
   const isSnapshotLoading = isHealthLoading || (evidenceSeason !== null && isLabLoading);
+  // Propagated into `DataLabDiscoveryWidget` (Fantasy #307 correction round
+  // 5): the same lifecycle the Player Snapshot table below already renders
+  // explicitly must also gate the widget's Players/Avg PPG/Elite metrics, so
+  // it cannot say "snapshot evidence unavailable" in one place while showing
+  // measured-looking `0`s in another. A successfully resolved, genuinely
+  // empty aggregate is `'available'` — its zeros are real, not a stand-in for
+  // "we don't know yet."
+  const fallbackSummaryState: 'loading' | 'available' | 'unavailable' =
+    isSnapshotLoading ? 'loading' : isEvidenceUnavailable ? 'unavailable' : 'available';
 
   const { data: commandCenterData, isLoading: isCommandCenterLoading } = useQuery<DataLabCommandCenterResponse>({
     queryKey: ["/api/data-lab/command-center", "dashboard-widget-default"],
@@ -313,6 +322,7 @@ export default function Dashboard() {
             season={widgetSeason}
             data={commandCenterData?.data ?? null}
             isLoading={isCommandCenterLoading}
+            fallbackSummaryState={fallbackSummaryState}
             fallbackSummary={{
               playersTracked: players.length,
               avgPpg,

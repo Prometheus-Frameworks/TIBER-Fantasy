@@ -130,6 +130,9 @@ describe('Rankings v2 route stale-calendar gate', () => {
     expect(body.seasonMeta.configStatus).toBe('stale_calendar_config');
     expect(body.seasonMeta.status).toBe('season_calendar_config_stale');
     expect(body.seasonMeta.evidenceSeason).toBeNull();
+    // No source was admitted, so this stays non-archive regardless of the
+    // stale calendar (Fantasy #307 correction round 5).
+    expect(body.seasonMeta.isArchiveView).toBe(false);
     expect(mockedCache).not.toHaveBeenCalled();
     expect(mockedBuild).not.toHaveBeenCalled();
   });
@@ -154,7 +157,7 @@ describe('Rankings v2 route stale-calendar gate', () => {
   );
 
   it.each([2025, 2026])(
-    'still permits explicitly requested configured historical season %s',
+    'still permits explicitly requested configured historical season %s, and marks it as archive',
     async (season) => {
       mockResolveSeasonPhase.mockReturnValue(STALE);
 
@@ -167,8 +170,43 @@ describe('Rankings v2 route stale-calendar gate', () => {
       expect(mockedBuild).toHaveBeenCalledWith(expect.objectContaining({ season, throughWeek: 18 }));
       expect(body.items).toHaveLength(1);
       expect(body.seasonMeta.evidenceSeason).toBe(season);
+      // The route's own stale-calendar gate above already proved this can
+      // only be an explicitly requested, configured historical season —
+      // that alone is enough to classify it as an archive (Fantasy #307
+      // correction round 5), without pretending a live forward target is
+      // known.
+      expect(body.seasonMeta.isArchiveView).toBe(true);
+      expect(body.seasonMeta.status).toBe('archive_season_not_current');
+      expect(body.seasonMeta.statusDetail).toBe(
+        `Showing configured historical ${season} evidence while live season state is unavailable.`,
+      );
+      // Must not compare to, or claim, the synthetic stale live target.
+      expect(body.seasonMeta.statusDetail).not.toMatch(/forward board targets/);
+      expect(body.seasonMeta.statusDetail).not.toContain(String(body.seasonMeta.currentSeason));
     },
   );
+
+  it('marks a configured historical season with an unknown extent as archive too', async () => {
+    // `source_extent_unknown`: the cache admitted rows for the configured
+    // season but did not declare its week extent. Still an admitted source —
+    // the archive classification does not depend on the extent being known.
+    mockResolveSeasonPhase.mockReturnValue(STALE);
+    mockedCache.mockResolvedValue({
+      players: [cacheRow],
+      computedAt: new Date('2026-08-08T19:04:15.325Z'),
+      asOfWeek: undefined,
+    } as any);
+
+    const { status, body } = await callRankings(
+      '/api/rankings/v2/weekly?position=WR&season=2025&asOfWeek=18',
+    );
+
+    expect(status).toBe(200);
+    expect(body.seasonMeta.evidenceProvenance).toBe('source_extent_unknown');
+    expect(body.seasonMeta.evidenceSeason).toBe(2025);
+    expect(body.seasonMeta.isArchiveView).toBe(true);
+    expect(body.seasonMeta.status).toBe('archive_season_not_current');
+  });
 });
 
 describe('Rankings v2 route forward-season default', () => {

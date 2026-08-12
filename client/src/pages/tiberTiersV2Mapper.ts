@@ -632,14 +632,28 @@ export function resolveTiersViewState(input: {
  *    closed rather than request anything.
  *  - A retained selection that is no longer configured is never returned —
  *    it falls through to the rule above instead of becoming a request.
+ *
+ * `configuredSeasons` is `number[] | undefined`, not just `number[]`: the
+ * caller passes its RETAINED explicit list (see `useRetainedConfiguredSeasons`
+ * below), and `undefined` there means "no explicit list has ever been seen" —
+ * a direct mount against a legacy server. In that state a selection can never
+ * be validated, so it can never survive here either; this function must not
+ * treat an unvalidatable selection as if it had been checked against `[]`
+ * (which would behave identically to a validated, genuinely empty list, but
+ * means something different — "checked and there are none" vs. "never
+ * checked at all").
  */
 export function resolveRequestedSeason(input: {
   selectedSeason: number | null;
-  configuredSeasons: number[];
+  configuredSeasons: number[] | undefined;
   configStatus: 'ok' | 'stale_calendar_config' | null;
   detectedSeason: number | null;
 }): number | null {
-  if (input.selectedSeason !== null && input.configuredSeasons.includes(input.selectedSeason)) {
+  if (
+    input.selectedSeason !== null &&
+    input.configuredSeasons !== undefined &&
+    input.configuredSeasons.includes(input.selectedSeason)
+  ) {
     return input.selectedSeason;
   }
   return input.configStatus === 'stale_calendar_config' ? null : input.detectedSeason;

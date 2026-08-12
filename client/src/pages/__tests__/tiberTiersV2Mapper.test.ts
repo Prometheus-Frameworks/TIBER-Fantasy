@@ -397,10 +397,60 @@ describe('resolveRequestedSeason', () => {
     ).toBeNull();
   });
 
-  it('an empty configured-season list (older server) never lets any selection through', () => {
+  it('an explicit empty configured-season list never lets any selection through', () => {
+    // A REAL fact — the server explicitly reported zero configured seasons —
+    // distinct from `undefined` (never reported at all), tested below.
     expect(
       resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: [], configStatus: 'ok', detectedSeason: 2026 }),
     ).toBe(2026);
+  });
+
+  describe('configuredSeasons: undefined — no explicit list has ever been seen (Fantasy #307 correction round 5)', () => {
+    it('a direct legacy mount invents no season: falls through exactly like an unconfigured selection', () => {
+      expect(
+        resolveRequestedSeason({ selectedSeason: null, configuredSeasons: undefined, configStatus: 'ok', detectedSeason: 2026 }),
+      ).toBe(2026);
+      expect(
+        resolveRequestedSeason({
+          selectedSeason: null,
+          configuredSeasons: undefined,
+          configStatus: 'stale_calendar_config',
+          detectedSeason: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('an unvalidatable selection never survives, even one that would be valid against a list never actually seen', () => {
+      // `undefined` must not behave like "checked and matched" for any
+      // selectedSeason — there is nothing to check it against.
+      expect(
+        resolveRequestedSeason({ selectedSeason: 2025, configuredSeasons: undefined, configStatus: 'ok', detectedSeason: 2026 }),
+      ).toBe(2026);
+      expect(
+        resolveRequestedSeason({
+          selectedSeason: 2025,
+          configuredSeasons: undefined,
+          configStatus: 'stale_calendar_config',
+          detectedSeason: null,
+        }),
+      ).toBeNull();
+    });
+
+    it('is NOT equivalent to an explicit empty list for a null selection under a stale calendar', () => {
+      // Both currently return null here (no selection to validate either
+      // way), but the two inputs mean different things upstream — the
+      // container must retain `undefined` rather than ever coalescing it to
+      // `[]`, which this pins by keeping the assertion but documenting why
+      // it is not a proof of equivalence.
+      const withUndefined = resolveRequestedSeason({
+        selectedSeason: null, configuredSeasons: undefined, configStatus: 'stale_calendar_config', detectedSeason: null,
+      });
+      const withEmpty = resolveRequestedSeason({
+        selectedSeason: null, configuredSeasons: [], configStatus: 'stale_calendar_config', detectedSeason: null,
+      });
+      expect(withUndefined).toBeNull();
+      expect(withEmpty).toBeNull();
+    });
   });
 });
 

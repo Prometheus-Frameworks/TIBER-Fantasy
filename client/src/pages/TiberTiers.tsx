@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { Crown, Info, RefreshCw, TrendingDown, TrendingUp, Minus, AlertTriangle } from 'lucide-react';
@@ -428,6 +428,24 @@ export default function TiberTiers() {
   // its own typed phase state.
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
 
+  // The last EXPLICITLY reported configured-season list, retained across a
+  // response that omits the field (Fantasy #307 correction round 5). The
+  // hook exposes `configuredSeasons` as `undefined` — not `[]` — whenever the
+  // field was not actually present, so this ref updates only on a genuine
+  // report (including an explicit `[]`) and otherwise keeps whatever it last
+  // saw. A direct mount against a legacy server that has never once reported
+  // the field leaves this `undefined` too: the selector must not invent
+  // options, and no selection can be validated, from nothing.
+  //
+  // Mutated during render rather than in an effect: an effect would apply
+  // one render late, so a fresh explicit list would validate/invalidate the
+  // current selection a tick after the response that should have done it.
+  const retainedConfiguredSeasonsRef = useRef<number[] | undefined>(undefined);
+  if (configuredSeasons !== undefined) {
+    retainedConfiguredSeasonsRef.current = configuredSeasons;
+  }
+  const retainedConfiguredSeasons = retainedConfiguredSeasonsRef.current;
+
   // Selection rules live in `resolveRequestedSeason` (Fantasy #307 correction
   // round 4), unit-tested there directly. In short: an explicit selection
   // wins as long as it remains configured — including while the live
@@ -435,7 +453,12 @@ export default function TiberTiers() {
   // (rankingsV2Routes.ts) still serves that archive — and there is
   // deliberately no effect clearing it on staleness. With no such selection,
   // a stale calendar has nothing to fall back to and `season` stays null.
-  const season = resolveRequestedSeason({ selectedSeason, configuredSeasons, configStatus, detectedSeason });
+  // Validated against the RETAINED list (above), not the current response's
+  // raw field, so a selection survives a response that merely omits the
+  // field while still being invalidated by one that explicitly excludes it.
+  const season = resolveRequestedSeason({
+    selectedSeason, configuredSeasons: retainedConfiguredSeasons, configStatus, detectedSeason,
+  });
   // The week this page asks for is the DECISION TARGET — the week the forward
   // board should be about — not `regularSeasonWeek`. The two agree while a
   // week is in play, but once its final game window opens the target rolls
@@ -446,13 +469,12 @@ export default function TiberTiers() {
   // derive that season's own extent.
   const decisionTargetWeek = season !== null && season === targetSeason ? targetWeek : null;
 
-  // The exact list the server configures, not a synthesized `[current-1,
-  // current]` pair — that synthesis went blank the moment `detectedSeason`
-  // went null under a stale calendar, hiding the very archives this page
-  // must keep exposing. An older server omitting the field already reads as
-  // `[]` at the hook boundary (see useCurrentNFLWeek), so this stays honest
-  // there too.
-  const availableSeasons = configuredSeasons;
+  // The exact retained list, not a synthesized `[current-1, current]` pair —
+  // that synthesis went blank the moment `detectedSeason` went null under a
+  // stale calendar, hiding the very archives this page must keep exposing.
+  // `[]` here means "no explicit list has ever been seen" (a legacy mount),
+  // which correctly renders no options rather than inventing any.
+  const availableSeasons = retainedConfiguredSeasons ?? [];
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<TiersApiResponse>({
     // `configStatus` distinguishes the initial unresolved season-null request

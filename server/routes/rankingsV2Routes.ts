@@ -125,10 +125,26 @@ function buildSeasonMeta(input: {
         ? 'explicit_request'
         : 'phase_default';
 
+  // Archive status has two independent sources, and they must not be
+  // conflated (Fantasy #307 correction round 5):
+  //
+  // - A live calendar (`configStatus: 'ok'`) makes it a comparison: archive
+  //   iff the admitted evidence season differs from the live forward target.
+  // - A stale calendar makes it a PROOF, not a comparison. The route's own
+  //   stale-calendar gate (see the `/weekly` handler) already refused every
+  //   request except an explicitly named, configured historical season
+  //   before any cache/scoring read — so reaching here at all, with a
+  //   non-null evidence season (i.e., NOT `no_rankable_source`), means this
+  //   response can only be that configured archive. There is no live
+  //   forward target to compare against (`phase.season`/`targetSeason` are
+  //   themselves synthetic/unresolved here), so none is claimed — see the
+  //   stale-specific detail text below, which names neither.
   const isArchive =
-    input.evidenceSeason !== null &&
-    input.phase.configStatus === 'ok' &&
-    input.evidenceSeason !== forwardRankingSeason;
+    input.evidenceSeason === null
+      ? false
+      : input.phase.configStatus === 'ok'
+        ? input.evidenceSeason !== forwardRankingSeason
+        : true;
 
   return {
     currentSeason: input.phase.season,
@@ -191,7 +207,13 @@ function buildSeasonMeta(input: {
     statusDetail:
       input.statusDetail ??
       (isArchive
-        ? `Showing ${input.evidenceSeason} evidence while the forward board targets ${forwardRankingSeason} (${input.phase.seasonPhaseLabel}).`
+        ? input.phase.configStatus === 'ok'
+          ? `Showing ${input.evidenceSeason} evidence while the forward board targets ${forwardRankingSeason} (${input.phase.seasonPhaseLabel}).`
+          // Stale calendar: no live forward target/season is claimed, since
+          // none is known — `phase.season`/`forwardRankingSeason` here are
+          // themselves the synthetic value the stale calendar produced, not
+          // a real board to compare against.
+          : `Showing configured historical ${input.evidenceSeason} evidence while live season state is unavailable.`
         : null),
   };
 }

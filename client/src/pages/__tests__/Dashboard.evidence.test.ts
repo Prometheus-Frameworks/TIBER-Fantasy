@@ -56,6 +56,10 @@ type Scenario = {
   health: Record<string, unknown>;
   labAggOk?: boolean;
   currentWeek?: Record<string, unknown>;
+  /** Rows the (successful) lab-agg response carries. Defaults to one row. */
+  labAggData?: unknown[];
+  /** Never resolves the lab-agg fetch — for pinning the pending/loading state. */
+  labAggPending?: boolean;
 };
 
 let fetchCalls: string[];
@@ -72,10 +76,14 @@ function mockFetch(scenario: Scenario) {
       return { ok: true, status: 200, json: async () => scenario.health };
     }
     if (url.includes('/api/data-lab/lab-agg')) {
+      if (scenario.labAggPending) {
+        return new Promise(() => {}); // deliberately never resolves
+      }
       if (scenario.labAggOk === false) {
         return { ok: false, status: 500, json: async () => ({ data: [LAB_PLAYER], count: 1 }) };
       }
-      return { ok: true, status: 200, json: async () => ({ data: [LAB_PLAYER], count: 1 }) };
+      const rows = scenario.labAggData ?? [LAB_PLAYER];
+      return { ok: true, status: 200, json: async () => ({ data: rows, count: rows.length }) };
     }
     if (url.includes('/api/data-lab/command-center')) {
       return { ok: false, status: 503, json: async () => ({}) };
@@ -202,5 +210,83 @@ describe('the Dashboard aggregate uses the source-declared evidence season', () 
     // Distinct keys: one evidence season's aggregate can never be served from
     // the other's cache entry.
     expect(keys2026).toEqual([['/api/data-lab/lab-agg', 'WR', 2026]]);
+  });
+});
+
+describe('the snapshot lifecycle propagates into DataLabDiscoveryWidget (Fantasy #307 correction round 5)', () => {
+  // The regression: the Dashboard could say "snapshot evidence unavailable"
+  // in the Player Snapshot section while the widget above it rendered
+  // measured-looking `0` Players/Avg PPG/Elite from the same unresolved or
+  // failed aggregate. `widget-fallback-summary`'s `data-summary-state`
+  // attribute is the stable signal these tests pin against.
+  const summaryState = async () => (await screen.findByTestId('widget-fallback-summary')).getAttribute('data-summary-state');
+
+  it('no snapshot: the widget summary is unavailable, not zeroed', async () => {
+    mockFetch({ health: { status: 'degraded' } });
+    renderDashboard();
+
+    expect(await screen.findByTestId('snapshot-evidence-unavailable')).toBeTruthy();
+    expect(await summaryState()).toBe('unavailable');
+    expect((await screen.findByTestId('widget-metric-players')).textContent).toBe('—');
+  });
+
+  it('a failed aggregate request: the widget summary is unavailable', async () => {
+    mockFetch({
+      health: { status: 'healthy', latestSnapshot: { season: 2025, week: 18, rowCount: 5000 } },
+      labAggOk: false,
+    });
+    renderDashboard();
+
+    expect(await screen.findByTestId('snapshot-evidence-unavailable')).toBeTruthy();
+    expect(await summaryState()).toBe('unavailable');
+  });
+
+  it('a pending aggregate: the widget summary is loading, distinct from resolved-unavailable or resolved-empty', async () => {
+    mockFetch({
+      health: { status: 'healthy', latestSnapshot: { season: 2025, week: 18, rowCount: 5000 } },
+      labAggPending: true,
+    });
+    renderDashboard();
+
+    // Health has answered (so the health-loading window has passed) and the
+    // lab-agg request is in flight but deliberately never resolves.
+    await waitFor(() => expect(labAggCalls().length).toBeGreaterThan(0));
+    expect(await summaryState()).toBe('loading');
+    expect((await screen.findByTestId('widget-metric-players')).textContent).toBe('—');
+    expect(screen.queryByTestId('snapshot-evidence-unavailable')).toBeNull();
+  });
+
+  it('a successfully resolved, genuinely EMPTY aggregate: the widget summary is available with real 0 / 0 / 0', async () => {
+    mockFetch({
+      health: { status: 'healthy', latestSnapshot: { season: 2025, week: 18, rowCount: 5000 } },
+      labAggData: [],
+    });
+    renderDashboard();
+
+    await waitFor(() => expect(labAggCalls().length).toBeGreaterThan(0));
+    expect(await summaryState()).toBe('available');
+    await waitFor(() => {
+      expect(screen.getByTestId('widget-metric-players').textContent).toBe('0');
+    });
+    expect(screen.getByTestId('widget-metric-avg-ppg').textContent).toBe('0');
+    expect(screen.getByTestId('widget-metric-elite').textContent).toBe('0');
+    expect(screen.queryByTestId('snapshot-evidence-unavailable')).toBeNull();
+  });
+
+  it('a populated aggregate: the widget summary is available with the real measured numbers', async () => {
+    mockFetch({
+      health: { status: 'healthy', latestSnapshot: { season: 2025, week: 18, rowCount: 5000 } },
+      labAggData: [LAB_PLAYER],
+    });
+    renderDashboard();
+
+    await waitFor(() => expect(labAggCalls().length).toBeGreaterThan(0));
+    expect(await summaryState()).toBe('available');
+    await waitFor(() => {
+      expect(screen.getByTestId('widget-metric-players').textContent).toBe('1');
+    });
+    // Real PPG for a 16-game, 320-point player, not an em dash or a zero.
+    expect(screen.getByTestId('widget-metric-avg-ppg').textContent).not.toBe('—');
+    expect(screen.getByTestId('widget-metric-avg-ppg').textContent).not.toBe('0');
   });
 });
