@@ -1,0 +1,57 @@
+{
+  "record_id": "pclr_20260812_tunsil_jacory_croskey_merritt_r1",
+  "ledger_entry_id": "pcl_20260812_tunsil_jacory_croskey_merritt",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-12T23:40:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "00-0040242",
+      "display_name": "Jacory Croskey-Merritt",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-12",
+    "event_type": "injury_update",
+    "observations": [
+      "Washington LT Laremy Tunsil suffered a torn triceps during practice on 2026-08-08 and requires surgery.",
+      "The team confirmed an extended absence but has not published a full-season timetable.",
+      "Washington's stated replacement plan: Brandon Coleman to LT, Chris Paul at LG, Josh Conerly Jr. remaining at RT, Andrew Wylie as swing-tackle depth."
+    ],
+    "inferences": [
+      "Croskey-Merritt could lose passing-down/two-minute participation if protection-capable backs are preferred there.",
+      "Fewer passing-down snaps would not imply fewer early-down carries; the direction of net fantasy pressure is unresolved."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "low",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.commanders.com/news/commanders-training-camp-notebook-laremy-tunsil-brandon-coleman",
+        "note": "Team confirmation of injury and replacement discussion.",
+        "verified": false
+      },
+      {
+        "ref": "https://github.com/Prometheus-Frameworks/TIBER-Research/issues/3",
+        "note": "Bounded research pilot definition capturing the event, subjects, and preregistered hypotheses.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Do not treat passing-down participation loss as proof of early-down carry loss (issue #3 hard boundary).",
+      "Causal mechanisms are preregistered in TIBER-Research issue #3; no governed protection, route, or participation evidence exists yet (TIBER-Data #245/#246). Do not translate this event into an arbitrary fantasy penalty.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Croskey-Merritt's third-down/two-minute participation change relative to his early-down carry share?",
+      "When is seasonal-ppr-2026-forward-001 executed and frozen, so this entry can be re-bound to an immutable baseline?"
+    ],
+    "unrecognized_fields": []
+  }
+}
