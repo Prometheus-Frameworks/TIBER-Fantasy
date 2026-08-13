@@ -6,7 +6,7 @@
   "recorded_at": "2026-08-12T23:40:00.000Z",
   "change_note": null,
   "entry": {
-    "baseline_run_id": "seasonal-ppr-2026-forward-001",
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
     "player_ref": {
       "canonical_player_id": "00-0037256",
       "display_name": "Rachaad White",
@@ -23,7 +23,7 @@
       "White could gain passing-down snaps through pass-block and chip participation.",
       "Additional snaps must not be assumed to be routes, targets, or fantasy points; pass blocks, chip-and-release routes, and full routes are distinct."
     ],
-    "forecast_pressure": "mixed",
+    "forecast_pressure": "unresolved",
     "confidence": "low",
     "status": "candidate_operator_observation",
     "source_refs": [
@@ -51,10 +51,11 @@
     "limitations": [
       "Snaps gained while protecting confer no fantasy opportunity by themselves (issue #3 hard boundary).",
       "Causal mechanisms are preregistered in TIBER-Research issue #3; no governed protection, route, or participation evidence exists yet (TIBER-Data #245/#246). Do not translate this event into an arbitrary fantasy penalty.",
-      "Baseline run seasonal-ppr-2026-forward-001 is designated but not executed/frozen in TIBER-Forecast as of 2026-08-12 (forwardRun1 packages bind but do not execute the run)."
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
     ],
     "open_questions": [
-      "Are added White snaps pass blocks, chip-and-release routes, or full routes? (Issue #3 atomic claim 4.)"
+      "Are added White snaps pass blocks, chip-and-release routes, or full routes? (Issue #3 atomic claim 4.)",
+      "When is seasonal-ppr-2026-forward-001 executed and frozen, so this entry can be re-bound to an immutable baseline?"
     ],
     "unrecognized_fields": []
   }

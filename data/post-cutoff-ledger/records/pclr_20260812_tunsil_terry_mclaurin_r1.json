@@ -6,7 +6,7 @@
   "recorded_at": "2026-08-12T23:40:00.000Z",
   "change_note": null,
   "entry": {
-    "baseline_run_id": "seasonal-ppr-2026-forward-001",
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
     "player_ref": {
       "canonical_player_id": "00-0035659",
       "display_name": "Terry McLaurin",
@@ -24,7 +24,7 @@
       "If Washington adapts with quick game and redistributed protection (H2), target opportunity may hold better than target depth or explosive efficiency.",
       "Opportunity and efficiency must be assessed separately; effects are likely opponent- and game-context dependent."
     ],
-    "forecast_pressure": "mixed",
+    "forecast_pressure": "unresolved",
     "confidence": "low",
     "status": "candidate_operator_observation",
     "source_refs": [
@@ -46,11 +46,12 @@
     },
     "limitations": [
       "Causal mechanisms are preregistered in TIBER-Research issue #3; no governed protection, route, or participation evidence exists yet (TIBER-Data #245/#246). Do not translate this event into an arbitrary fantasy penalty.",
-      "Baseline run seasonal-ppr-2026-forward-001 is designated but not executed/frozen in TIBER-Forecast as of 2026-08-12 (forwardRun1 packages bind but do not execute the run)."
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
     ],
     "open_questions": [
       "Does McLaurin's first-read/target opportunity change independently of his air-yard profile? (Issue #3 atomic claim 5.)",
-      "Do chip/double-team and six-/seven-man protection rates rise in preseason and early-season usage?"
+      "Do chip/double-team and six-/seven-man protection rates rise in preseason and early-season usage?",
+      "When is seasonal-ppr-2026-forward-001 executed and frozen, so this entry can be re-bound to an immutable baseline?"
     ],
     "unrecognized_fields": []
   }
