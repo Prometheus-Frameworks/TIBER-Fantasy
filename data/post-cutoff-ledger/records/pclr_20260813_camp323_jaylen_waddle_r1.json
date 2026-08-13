@@ -1,0 +1,61 @@
+{
+  "record_id": "pclr_20260813_camp323_jaylen_waddle_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_jaylen_waddle",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:01:00.000Z",
+  "change_note": "#323 reconciliation: secondary candidate admitted on a recoverable, material availability event.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:7526",
+      "display_name": "Jaylen Waddle",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-05",
+    "event_type": "injury_update",
+    "observations": [
+      "2026-08-05: Waddle (now DEN, acquired from Miami for first-, third-, and fourth-round 2026 picks) sustained a left leg strain exiting a one-on-one drill Wednesday; he sat out Thursday 08-06 with a visible limp. Sean Payton (team-official): 'He has a strain. I think we'll see him back in the next 4 to 5 days.' (A to Z Sports, 08-06 — the timeline is a coach projection.)",
+      "2026-08-10: Waddle remained sidelined Monday (NBC Sports player news, 08-10 — surfaced via search; body not independently fetched).",
+      "2026-08-11: present at Tuesday practice but not participating in team drills (CBS Sports — surfaced via search; body not independently fetched).",
+      "No recovered report of a full practice return through 2026-08-13."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): short-term downward availability pressure; the absence has already exceeded Payton's 4-to-5-day projection, which mildly raises timeline uncertainty without any source characterizing the strain as serious."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://atozsports.com/nfl/denver-broncos-news/broncos-sean-payton-jaylen-waddle-leg-strain-limping-training-camp-recovery-timeline/",
+        "note": "A to Z Sports, 2026-08-06. Strain event, Payton timeline projection, trade-package context. Fetched and content-verified.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.nbcsports.com/fantasy/football/player-news/2026-08-10/jaylen-waddle-remains-sidelined-on-monday",
+        "note": "NBC Sports player news, 2026-08-10. Still sidelined Monday. Surfaced via search; body not independently fetched.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.cbssports.com/fantasy/football/news/broncos-jaylen-waddle-still-not-practicing/",
+        "note": "CBS Sports, 2026-08-11. At practice, not in team drills. Surfaced via search; body not independently fetched.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "The 08-10 and 08-11 status items rest on search-surfaced headlines whose page bodies were not independently fetched; they are flagged accordingly and weighted below the fetched 08-06 report.",
+      "Reports of a strong camp start before the strain (DNVR) were paywalled and are excluded.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "When does Waddle return to full team drills?"
+    ],
+    "unrecognized_fields": []
+  }
+}
