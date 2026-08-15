@@ -66,3 +66,23 @@ function encodeRandom(): string {
 export function mintTiberPlayerId(timeMs: number = Date.now()): string {
   return `${TIBER_PLAYER_ID_PREFIX}${encodeTime(timeMs)}${encodeRandom()}`;
 }
+
+/**
+ * Stamp a new `player_identity_map` row with its canonical identity.
+ *
+ * Every registry insert path MUST route its row through this helper (or
+ * `PlayerIdentityService.createPlayerIdentity`, which uses it): a surviving
+ * row born without `tiber_player_id` would silently reopen the backfill
+ * population and ship a null canonical identity to consumers. A
+ * `tiberPlayerId` already present on the row is a bug, not an override.
+ */
+export function withMintedTiberPlayerId<T extends object>(
+  row: T,
+): T & { tiberPlayerId: string } {
+  if ('tiberPlayerId' in row && (row as Record<string, unknown>).tiberPlayerId != null) {
+    throw new Error(
+      'tiberPlayerId: refusing to re-stamp a row that already carries a canonical id',
+    );
+  }
+  return { ...row, tiberPlayerId: mintTiberPlayerId() };
+}

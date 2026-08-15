@@ -3,6 +3,7 @@ import { sleeperClient, type SleeperPlayer, type SleeperRoster } from '../integr
 import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { withMintedTiberPlayerId } from './identity/tiberPlayerId';
 import { forgeService } from '../modules/forge/forgeService';
 import type { ForgeScore } from '../modules/forge/types';
 import { createPlaybookForgeLogger, type PlaybookForgeLogger } from '../utils/playbookForgeLogger';
@@ -262,7 +263,10 @@ function buildIdentityRowFromSleeperPlayer(sleeperId: string, player: SleeperPla
     ? null
     : String(player.fantasy_data_id);
 
-  return {
+  // Every registry insert path mints the canonical TIBER identity at birth
+  // (Fantasy #327/#329) — a surviving row born without one would reopen the
+  // backfill population and ship a null canonical identity to consumers.
+  return withMintedTiberPlayerId({
     canonicalId: `sleeper:${sleeperId}`,
     fullName,
     firstName: player.first_name?.trim() || null,
@@ -285,7 +289,7 @@ function buildIdentityRowFromSleeperPlayer(sleeperId: string, player: SleeperPla
     lastVerified: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  });
 }
 
 type HydrationRow = NonNullable<ReturnType<typeof buildIdentityRowFromSleeperPlayer>>;

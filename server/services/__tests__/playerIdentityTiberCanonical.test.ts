@@ -264,3 +264,44 @@ describe('backfillTiberPlayerIds', () => {
     });
   });
 });
+
+describe('censusTiberPlayerIds', () => {
+  test('post-backfill census reports zero active nulls, and catches a bypassing writer', async () => {
+    TABLE = [
+      { canonicalId: 'sleeper:1', tiberPlayerId: null, mergedInto: null, fullName: 'A', position: 'WR' },
+      { canonicalId: 'sleeper:2', tiberPlayerId: null, mergedInto: 'sleeper:1', fullName: 'B', position: 'WR' },
+    ];
+    await service.backfillTiberPlayerIds();
+
+    await expect(service.censusTiberPlayerIds()).resolves.toEqual({
+      activeMinted: 1,
+      activeNull: 0,
+      mergedRows: 1,
+      lookupStatus: 'available',
+    });
+
+    // A writer that bypasses withMintedTiberPlayerId reopens the backfill
+    // population — the census is the receipt that catches it.
+    TABLE.push({ canonicalId: 'sleeper:rogue', tiberPlayerId: null, mergedInto: null, fullName: 'R', position: 'RB' });
+    const after = await service.censusTiberPlayerIds();
+    expect(after.activeNull).toBe(1);
+  });
+
+  test('reports unavailable on outage instead of a clean-looking zero census', async () => {
+    QUERY_ERROR = new Error('connection refused');
+    await expect(service.censusTiberPlayerIds()).resolves.toEqual({
+      activeMinted: 0,
+      activeNull: 0,
+      mergedRows: 0,
+      lookupStatus: 'unavailable',
+    });
+  });
+});
+
+describe('withMintedTiberPlayerId helper contract', () => {
+  test('refuses to re-stamp a row that already carries a canonical id', async () => {
+    const { withMintedTiberPlayerId } = await import('../identity/tiberPlayerId');
+    const stamped = withMintedTiberPlayerId({ canonicalId: 'sleeper:1' });
+    expect(() => withMintedTiberPlayerId(stamped)).toThrow(/re-stamp/);
+  });
+});

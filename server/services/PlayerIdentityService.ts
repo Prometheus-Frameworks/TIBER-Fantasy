@@ -12,7 +12,7 @@ import { db } from '../infra/db';
 import { playerIdentityMap, type PlayerIdentityMap } from '@shared/schema';
 import { eq, and, sql, or, ilike, desc, inArray, isNull } from 'drizzle-orm';
 import { cacheKey, getCache, setCache } from '../../src/data/cache';
-import { looksLikeTiberPlayerId, mintTiberPlayerId } from './identity/tiberPlayerId';
+import { looksLikeTiberPlayerId, mintTiberPlayerId, withMintedTiberPlayerId } from './identity/tiberPlayerId';
 
 export interface ExternalIdMapping {
   externalId: string;
@@ -445,6 +445,48 @@ export class PlayerIdentityService {
   }
 
   /**
+   * Read-only canonical-identity census (Fantasy #329).
+   *
+   * The operational receipt that every surviving row carries its canonical
+   * identity: after the backfill, `activeNull` must be zero and must STAY
+   * zero, because every insert path mints at birth. A non-zero value means
+   * some writer bypassed `withMintedTiberPlayerId` and the backfill
+   * population has been reopened.
+   */
+  async censusTiberPlayerIds(): Promise<{
+    activeMinted: number;
+    activeNull: number;
+    mergedRows: number;
+    lookupStatus: 'available' | 'unavailable';
+  }> {
+    try {
+      const rows = await db
+        .select({
+          tiberPlayerId: playerIdentityMap.tiberPlayerId,
+          mergedInto: playerIdentityMap.mergedInto,
+        })
+        .from(playerIdentityMap);
+
+      let activeMinted = 0;
+      let activeNull = 0;
+      let mergedRows = 0;
+      for (const row of rows) {
+        if (row.mergedInto) {
+          mergedRows++;
+        } else if (row.tiberPlayerId == null) {
+          activeNull++;
+        } else {
+          activeMinted++;
+        }
+      }
+      return { activeMinted, activeNull, mergedRows, lookupStatus: 'available' };
+    } catch (error) {
+      console.error('[PlayerIdentityService] tiber_player_id census failed:', error);
+      return { activeMinted: 0, activeNull: 0, mergedRows: 0, lookupStatus: 'unavailable' };
+    }
+  }
+
+  /**
    * Batch exact GSIS → canonical resolution for a cohort.
    *
    * One query for the whole set rather than N round trips, so the ranking
@@ -736,11 +778,10 @@ export class PlayerIdentityService {
         return false;
       }
 
-      const insertData: any = {
+      // Every new registry row is born with its canonical TIBER identity;
+      // only pre-#327 rows await the backfill (Fantasy #327).
+      const insertData: any = withMintedTiberPlayerId({
         canonicalId: playerData.canonicalId,
-        // Every new registry row is born with its canonical TIBER identity;
-        // only pre-#327 rows await the backfill (Fantasy #327).
-        tiberPlayerId: mintTiberPlayerId(),
         fullName: playerData.fullName,
         firstName: playerData.firstName,
         lastName: playerData.lastName,
@@ -751,7 +792,7 @@ export class PlayerIdentityService {
         lastVerified: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
-      };
+      });
 
       // Add external IDs if provided
       if (playerData.externalIds) {

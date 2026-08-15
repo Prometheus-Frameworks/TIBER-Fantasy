@@ -6,6 +6,7 @@
  */
 
 import { db } from '../infra/db';
+import { withMintedTiberPlayerId } from '../services/identity/tiberPlayerId';
 import { 
   playerIdentityMap,
   type IngestPayload,
@@ -481,8 +482,11 @@ export class PlayersDimProcessor {
       if (!existingPlayer) {
         // Create new player
         canonicalId = canonicalId || this.generateCanonicalId(playerData);
-        
-        await db.insert(playerIdentityMap).values({
+
+        // Every registry insert path mints the canonical TIBER identity at
+        // birth (Fantasy #327/#329) — a surviving row born without one would
+        // reopen the backfill population.
+        await db.insert(playerIdentityMap).values(withMintedTiberPlayerId({
           canonicalId,
           fullName: playerData.fullName,
           firstName: playerData.firstName,
@@ -506,7 +510,7 @@ export class PlayersDimProcessor {
           lastVerified: new Date(),
           createdAt: new Date(),
           updatedAt: new Date()
-        });
+        }));
 
         return { created: true, updated: false, canonicalId };
       } else {
