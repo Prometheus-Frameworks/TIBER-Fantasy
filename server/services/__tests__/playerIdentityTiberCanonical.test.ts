@@ -170,6 +170,54 @@ describe('getByTiberPlayerId', () => {
     QUERY_ERROR = new Error('connection refused');
     await expect(service.getByTiberPlayerId(ID)).resolves.toEqual({ status: 'unavailable' });
   });
+
+  test('a merged row redirects to the survivor, whose own id is the entity identity', async () => {
+    // Merge paths set merged_into without touching tiber_player_id, so a row
+    // minted before a merge keeps its id as a stable historical redirect.
+    const loserId = mintTiberPlayerId();
+    const survivorId = mintTiberPlayerId();
+    TABLE = [
+      { canonicalId: 'sleeper:loser', tiberPlayerId: loserId, mergedInto: 'sleeper:survivor', fullName: 'Dupe', position: 'WR' },
+      { canonicalId: 'sleeper:survivor', tiberPlayerId: survivorId, mergedInto: null, fullName: 'Real', position: 'WR' },
+    ];
+    const resolution = await service.getByTiberPlayerId(loserId);
+    expect(resolution.status).toBe('resolved');
+    if (resolution.status === 'resolved') {
+      expect(resolution.player.canonicalId).toBe('sleeper:survivor');
+      expect(resolution.player.tiberPlayerId).toBe(survivorId);
+    }
+  });
+
+  test('a chained merge resolves through to the final survivor', async () => {
+    const first = mintTiberPlayerId();
+    TABLE = [
+      { canonicalId: 'a', tiberPlayerId: first, mergedInto: 'b', fullName: 'A', position: 'WR' },
+      { canonicalId: 'b', tiberPlayerId: null, mergedInto: 'c', fullName: 'B', position: 'WR' },
+      { canonicalId: 'c', tiberPlayerId: mintTiberPlayerId(), mergedInto: null, fullName: 'C', position: 'WR' },
+    ];
+    const resolution = await service.getByTiberPlayerId(first);
+    expect(resolution.status).toBe('resolved');
+    if (resolution.status === 'resolved') {
+      expect(resolution.player.canonicalId).toBe('c');
+    }
+  });
+
+  test('a merged_into cycle fails closed as merge_broken', async () => {
+    const cycled = mintTiberPlayerId();
+    TABLE = [
+      { canonicalId: 'a', tiberPlayerId: cycled, mergedInto: 'b', fullName: 'A', position: 'WR' },
+      { canonicalId: 'b', tiberPlayerId: null, mergedInto: 'a', fullName: 'B', position: 'WR' },
+    ];
+    await expect(service.getByTiberPlayerId(cycled)).resolves.toEqual({ status: 'merge_broken' });
+  });
+
+  test('a missing merge survivor fails closed as merge_broken', async () => {
+    const orphaned = mintTiberPlayerId();
+    TABLE = [
+      { canonicalId: 'a', tiberPlayerId: orphaned, mergedInto: 'vanished', fullName: 'A', position: 'WR' },
+    ];
+    await expect(service.getByTiberPlayerId(orphaned)).resolves.toEqual({ status: 'merge_broken' });
+  });
 });
 
 describe('getByAnyId with a canonical identifier', () => {

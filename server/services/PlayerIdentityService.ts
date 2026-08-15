@@ -46,6 +46,8 @@ export type TiberPlayerIdResolution =
   | { status: 'resolved'; player: PlayerIdentityResult }
   | { status: 'not_found' }
   | { status: 'ambiguous'; matches: number }
+  /** The merged_into chain is broken (missing survivor or cycle); refusing to answer from corrupt registry state. */
+  | { status: 'merge_broken' }
   | { status: 'unavailable' };
 
 export interface NameSearchResult {
@@ -357,7 +359,36 @@ export class PlayerIdentityService {
         console.warn(`[PlayerIdentityService] Ambiguous tiber_player_id ${id} (${rows.length} matches); refusing to guess.`);
         return { status: 'ambiguous', matches: rows.length };
       }
-      return { status: 'resolved', player: this.mapToPlayerIdentityResult(rows[0]) };
+
+      // A row can be merged AFTER its id was minted (resolve-duplicate /
+      // identityConsolidation set merged_into without touching
+      // tiber_player_id — deliberately: destroying the loser's id would break
+      // every external reference already holding it, and would not survive
+      // the existing merge rollback). The minted id on a merged row is a
+      // stable historical redirect: resolution follows merged_into to the
+      // surviving row, whose own tiberPlayerId is the entity's identity. A
+      // broken or cyclic chain is corrupt registry state and fails closed.
+      let row: PlayerIdentityMap = rows[0] as PlayerIdentityMap;
+      const visited = new Set<string>([row.canonicalId]);
+      while (row.mergedInto) {
+        const survivorId: string = row.mergedInto;
+        if (visited.has(survivorId)) {
+          console.warn(`[PlayerIdentityService] merged_into cycle at ${survivorId} while resolving tiber_player_id ${id}; refusing to guess.`);
+          return { status: 'merge_broken' };
+        }
+        visited.add(survivorId);
+        const survivors = await db
+          .select()
+          .from(playerIdentityMap)
+          .where(eq(playerIdentityMap.canonicalId, survivorId))
+          .limit(1);
+        if (survivors.length === 0) {
+          console.warn(`[PlayerIdentityService] merged_into survivor ${survivorId} missing while resolving tiber_player_id ${id}; refusing to guess.`);
+          return { status: 'merge_broken' };
+        }
+        row = survivors[0] as PlayerIdentityMap;
+      }
+      return { status: 'resolved', player: this.mapToPlayerIdentityResult(row) };
     } catch (error) {
       console.error(`[PlayerIdentityService] tiber_player_id lookup failed for ${id}:`, error);
       return { status: 'unavailable' };
