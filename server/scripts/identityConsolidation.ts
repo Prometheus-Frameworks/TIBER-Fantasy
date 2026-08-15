@@ -17,6 +17,7 @@
 import { db } from '../infra/db';
 import { playerIdentityMap } from '@shared/schema';
 import { eq, sql, and, isNull, isNotNull } from 'drizzle-orm';
+import { mintTiberPlayerId } from '../services/identity/tiberPlayerId';
 import { 
   generateNameFingerprint, 
   calculateNameSimilarity, 
@@ -347,29 +348,35 @@ async function executeAutoMerges(dryRun: boolean = true): Promise<{ merged: numb
   return { merged, failed };
 }
 
-async function rollbackMerge(canonicalId: string): Promise<{ success: boolean; error?: string }> {
+export async function rollbackMerge(canonicalId: string): Promise<{ success: boolean; error?: string }> {
   console.log(`🔄 Rolling back merge for ${canonicalId}...`);
-  
+
   try {
     const record = await db
       .select()
       .from(playerIdentityMap)
       .where(eq(playerIdentityMap.canonicalId, canonicalId))
       .limit(1);
-    
+
     if (!record[0]) {
       return { success: false, error: 'Record not found' };
     }
-    
+
     if (!record[0].mergedInto) {
       return { success: false, error: 'Record was not merged' };
     }
-    
+
     await db
       .update(playerIdentityMap)
       .set({
         mergedInto: null,
         isActive: true,
+        // A row merged before migration 0014 was skipped by the tiber
+        // backfill (its identity lived on the survivor), so reactivating it
+        // makes it a surviving entity again and it must be born with a
+        // canonical id here (Fantasy #329). An id issued earlier is
+        // preserved — issued canonical ids are never reminted.
+        ...(record[0].tiberPlayerId ? {} : { tiberPlayerId: mintTiberPlayerId() }),
         updatedAt: new Date(),
       })
       .where(eq(playerIdentityMap.canonicalId, canonicalId));
@@ -466,7 +473,11 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main().catch((error) => {
-  console.error('Fatal error:', error);
-  process.exit(1);
-});
+// Not under test: this file self-executes as a CLI script; the guard lets
+// rollbackMerge be imported by regression tests without running main().
+if (process.env.JEST_WORKER_ID === undefined) {
+  main().catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}
