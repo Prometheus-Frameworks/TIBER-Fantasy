@@ -32,22 +32,54 @@ def download_roster_data(season):
         print(f"❌ Error downloading roster: {e}", file=sys.stderr)
         return None
 
+def refuse_if_canonical_identity_contract_present(cur):
+    """Fantasy #327/#329 retirement guard — do not remove.
+
+    Once the registry carries the canonical `tiber_player_id` contract
+    (migration 0014), every insert path must mint the canonical identity at
+    birth through the single governed TypeScript mint
+    (server/services/identity/tiberPlayerId.ts). This script predates that
+    contract, inserts rows without a canonical identity, and mints name-slug
+    canonical_ids — so it is retired: it hard-fails rather than reopening
+    the active-null population behind the backfill.
+    """
+    cur.execute(
+        """
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'player_identity_map'
+          AND column_name = 'tiber_player_id'
+        """
+    )
+    if cur.fetchone() is not None:
+        print(
+            "❌ RETIRED: player_identity_map now carries the canonical "
+            "tiber_player_id contract (Fantasy #327). This script cannot mint "
+            "canonical identities and would create active rows with NULL "
+            "tiber_player_id. Use the governed registry paths instead "
+            "(PlayerIdentityService / PlayersDimProcessor), then verify with "
+            "censusTiberPlayerIds().",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def populate_players(season=2024):
     """Populate player_identity_map from roster data"""
-    
+
     # Download rosters for the specified season
     rosters = download_roster_data(season)
     if rosters is None:
         return
-    
+
     # Filter to skill positions
     skill_positions = ['QB', 'RB', 'WR', 'TE']
     rosters = rosters[rosters['position'].isin(skill_positions)].copy()
-    
+
     print(f"📊 Processing {len(rosters)} skill position players", file=sys.stderr)
-    
+
     conn = get_db_connection()
     cur = conn.cursor()
+    refuse_if_canonical_identity_contract_present(cur)
     
     try:
         # Prepare batch insert data

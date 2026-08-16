@@ -436,7 +436,12 @@ export const seasonState = pgTable("season_state", {
 
 // Player Identity Map - Central cross-platform ID resolution
 export const playerIdentityMap = pgTable("player_identity_map", {
-  canonicalId: text("canonical_id").primaryKey(), // Our canonical player ID
+  canonicalId: text("canonical_id").primaryKey(), // Legacy internal join key (provider-namespaced, e.g. "sleeper:<id>"); NOT the entity identity
+  // Canonical TIBER entity identity (Fantasy #327): opaque `tbr_p_<ULID>`.
+  // Provider identifiers below are typed aliases, never the entity itself.
+  // Nullable only during backfill; merged rows (merged_into set) stay null
+  // and resolve through the surviving row's identity.
+  tiberPlayerId: text("tiber_player_id"),
   fullName: text("full_name").notNull(),
   firstName: text("first_name"),
   lastName: text("last_name"),
@@ -484,7 +489,16 @@ export const playerIdentityMap = pgTable("player_identity_map", {
   fantasyprosIdIdx: uniqueIndex("pim_fantasypros_id_idx").on(table.fantasyprosId).where(sql`${table.fantasyprosId} IS NOT NULL`),
   mysportsfeedsIdIdx: uniqueIndex("pim_mysportsfeeds_id_idx").on(table.mysportsfeedsId).where(sql`${table.mysportsfeedsId} IS NOT NULL`),
   nflDataPyIdIdx: uniqueIndex("pim_nfl_data_py_id_idx").on(table.nflDataPyId).where(sql`${table.nflDataPyId} IS NOT NULL`),
-  
+
+  // Canonical TIBER identity (Fantasy #327): unique among rows that carry one
+  // (merged rows keep NULL and resolve through merged_into).
+  tiberPlayerIdIdx: uniqueIndex("pim_tiber_player_id_idx").on(table.tiberPlayerId).where(sql`${table.tiberPlayerId} IS NOT NULL`),
+  // GSIS alias uniqueness (Fantasy #327): the previously missing index that
+  // forced every GSIS read path to fail closed on duplicates. Migration 0014
+  // gates its creation behind a duplicate/whitespace census; the fail-closed
+  // resolver behavior is retained regardless (operator decision #6).
+  gsisIdIdx: uniqueIndex("pim_gsis_id_idx").on(table.gsisId).where(sql`${table.gsisId} IS NOT NULL`),
+
   // Search performance indexes
   positionTeamIdx: index("pim_position_team_idx").on(table.position, table.nflTeam),
   nameIdx: index("pim_name_idx").on(table.fullName),

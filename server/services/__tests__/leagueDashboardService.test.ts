@@ -857,6 +857,10 @@ describe('computeLeagueDashboard', () => {
       // Hydration never inserts a GSIS: gsis_id has no unique index, so any
       // insert carrying one is a race that can mint a second owner.
       gsisId: null,
+      // Every registry insert path mints the canonical TIBER identity at
+      // birth (#327/#329): a hydrated row born without one would reopen the
+      // backfill population.
+      tiberPlayerId: expect.stringMatching(/^tbr_p_[0-9ABCDEFGHJKMNPQRSTVWXYZ]{26}$/),
     })]);
     expect(result.teams[0].roster[0]).toEqual(expect.objectContaining({
       rosterKey: 'sleeper:s1',

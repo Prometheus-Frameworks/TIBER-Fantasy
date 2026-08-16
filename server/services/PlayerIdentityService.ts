@@ -10,8 +10,9 @@
 
 import { db } from '../infra/db';
 import { playerIdentityMap, type PlayerIdentityMap } from '@shared/schema';
-import { eq, and, sql, or, ilike, desc, inArray } from 'drizzle-orm';
+import { eq, and, sql, or, ilike, desc, inArray, isNull } from 'drizzle-orm';
 import { cacheKey, getCache, setCache } from '../../src/data/cache';
+import { looksLikeTiberPlayerId, mintTiberPlayerId, withMintedTiberPlayerId } from './identity/tiberPlayerId';
 
 export interface ExternalIdMapping {
   externalId: string;
@@ -21,6 +22,13 @@ export interface ExternalIdMapping {
 
 export interface PlayerIdentityResult {
   canonicalId: string;
+  /**
+   * Canonical TIBER entity identity (`tbr_p_<ULID>`, Fantasy #327). Null only
+   * until the backfill has minted this row (or forever, for merged rows —
+   * their identity lives on the surviving row). Everything in `externalIds`
+   * is a typed provider alias, never the entity itself.
+   */
+  tiberPlayerId: string | null;
   fullName: string;
   position: string;
   nflTeam?: string;
@@ -29,6 +37,18 @@ export interface PlayerIdentityResult {
   isActive: boolean;
   lastVerified: Date;
 }
+
+/**
+ * Typed result for canonical-id resolution. Mirrors the GSIS resolution
+ * union: ambiguity and lookup outages are explicit, never guessed through.
+ */
+export type TiberPlayerIdResolution =
+  | { status: 'resolved'; player: PlayerIdentityResult }
+  | { status: 'not_found' }
+  | { status: 'ambiguous'; matches: number }
+  /** The merged_into chain is broken (missing survivor or cycle); refusing to answer from corrupt registry state. */
+  | { status: 'merge_broken' }
+  | { status: 'unavailable' };
 
 export interface NameSearchResult {
   canonicalId: string;
@@ -211,6 +231,19 @@ export class PlayerIdentityService {
     try {
       let player: PlayerIdentityResult | null = null;
 
+      // Canonical TIBER identity resolves first: it is the entity key, is
+      // format-disjoint from every provider namespace, and is unique-indexed.
+      if (looksLikeTiberPlayerId(normalizedId)) {
+        const resolution = await this.getByTiberPlayerId(normalizedId);
+        if (resolution.status === 'resolved') {
+          setCache(cacheKeyStr, resolution.player, this.defaultCacheTtl);
+          return resolution.player;
+        }
+        // A tiber-shaped identifier is never anything else; do not fall
+        // through to provider columns on not_found/ambiguous/unavailable.
+        return null;
+      }
+
       if (isGsisShaped) {
         const resolution = await this.getCanonicalIdByGsisId(normalizedId);
         if (resolution.status === 'ambiguous') {
@@ -298,6 +331,158 @@ export class PlayerIdentityService {
     } catch (error) {
       console.error(`[PlayerIdentityService] GSIS lookup failed for ${id}:`, error);
       return { status: 'unavailable' };
+    }
+  }
+
+  /**
+   * Exact canonical TIBER identity lookup (Fantasy #327).
+   *
+   * `tiber_player_id` carries a partial unique index, but the read still uses
+   * `.limit(2)` and fails closed on more than one match — defense in depth
+   * matching the GSIS discipline, and honest during any window where the
+   * index has not yet been applied. Outages are `unavailable`, never an
+   * empty-namespace conclusion.
+   */
+  async getByTiberPlayerId(tiberPlayerId: string): Promise<TiberPlayerIdResolution> {
+    const id = tiberPlayerId.trim();
+    if (!looksLikeTiberPlayerId(id)) return { status: 'not_found' };
+
+    try {
+      const rows = await db
+        .select()
+        .from(playerIdentityMap)
+        .where(eq(playerIdentityMap.tiberPlayerId, id))
+        .limit(2);
+
+      if (rows.length === 0) return { status: 'not_found' };
+      if (rows.length > 1) {
+        console.warn(`[PlayerIdentityService] Ambiguous tiber_player_id ${id} (${rows.length} matches); refusing to guess.`);
+        return { status: 'ambiguous', matches: rows.length };
+      }
+
+      // A row can be merged AFTER its id was minted (resolve-duplicate /
+      // identityConsolidation set merged_into without touching
+      // tiber_player_id — deliberately: destroying the loser's id would break
+      // every external reference already holding it, and would not survive
+      // the existing merge rollback). The minted id on a merged row is a
+      // stable historical redirect: resolution follows merged_into to the
+      // surviving row, whose own tiberPlayerId is the entity's identity. A
+      // broken or cyclic chain is corrupt registry state and fails closed.
+      let row: PlayerIdentityMap = rows[0] as PlayerIdentityMap;
+      const visited = new Set<string>([row.canonicalId]);
+      while (row.mergedInto) {
+        const survivorId: string = row.mergedInto;
+        if (visited.has(survivorId)) {
+          console.warn(`[PlayerIdentityService] merged_into cycle at ${survivorId} while resolving tiber_player_id ${id}; refusing to guess.`);
+          return { status: 'merge_broken' };
+        }
+        visited.add(survivorId);
+        const survivors = await db
+          .select()
+          .from(playerIdentityMap)
+          .where(eq(playerIdentityMap.canonicalId, survivorId))
+          .limit(1);
+        if (survivors.length === 0) {
+          console.warn(`[PlayerIdentityService] merged_into survivor ${survivorId} missing while resolving tiber_player_id ${id}; refusing to guess.`);
+          return { status: 'merge_broken' };
+        }
+        row = survivors[0] as PlayerIdentityMap;
+      }
+      return { status: 'resolved', player: this.mapToPlayerIdentityResult(row) };
+    } catch (error) {
+      console.error(`[PlayerIdentityService] tiber_player_id lookup failed for ${id}:`, error);
+      return { status: 'unavailable' };
+    }
+  }
+
+  /**
+   * Mint canonical TIBER identities for pre-#327 registry rows.
+   *
+   * Idempotent: only rows with no tiber_player_id are touched. Merged rows
+   * (merged_into set) are intentionally skipped — their entity identity lives
+   * on the surviving row, and giving them their own id would mint two
+   * identities for one entity. Each row is updated individually with its own
+   * freshly minted id; a failure stops the batch and reports progress rather
+   * than continuing past an inconsistent state.
+   */
+  async backfillTiberPlayerIds(): Promise<{
+    minted: number;
+    skippedMerged: number;
+    status: 'complete' | 'failed';
+  }> {
+    let minted = 0;
+    try {
+      const pending = await db
+        .select({
+          canonicalId: playerIdentityMap.canonicalId,
+          mergedInto: playerIdentityMap.mergedInto,
+        })
+        .from(playerIdentityMap)
+        .where(isNull(playerIdentityMap.tiberPlayerId));
+
+      const eligible = pending.filter((row) => !row.mergedInto);
+      const skippedMerged = pending.length - eligible.length;
+
+      for (const row of eligible) {
+        await db
+          .update(playerIdentityMap)
+          .set({ tiberPlayerId: mintTiberPlayerId(), updatedAt: new Date() })
+          .where(
+            and(
+              eq(playerIdentityMap.canonicalId, row.canonicalId),
+              isNull(playerIdentityMap.tiberPlayerId),
+            ),
+          );
+        minted++;
+      }
+
+      console.log(`[PlayerIdentityService] tiber_player_id backfill: ${minted} minted, ${skippedMerged} merged rows skipped.`);
+      return { minted, skippedMerged, status: 'complete' };
+    } catch (error) {
+      console.error(`[PlayerIdentityService] tiber_player_id backfill failed after ${minted} mints:`, error);
+      return { minted, skippedMerged: 0, status: 'failed' };
+    }
+  }
+
+  /**
+   * Read-only canonical-identity census (Fantasy #329).
+   *
+   * The operational receipt that every surviving row carries its canonical
+   * identity: after the backfill, `activeNull` must be zero and must STAY
+   * zero, because every insert path mints at birth. A non-zero value means
+   * some writer bypassed `withMintedTiberPlayerId` and the backfill
+   * population has been reopened.
+   */
+  async censusTiberPlayerIds(): Promise<{
+    activeMinted: number;
+    activeNull: number;
+    mergedRows: number;
+    lookupStatus: 'available' | 'unavailable';
+  }> {
+    try {
+      const rows = await db
+        .select({
+          tiberPlayerId: playerIdentityMap.tiberPlayerId,
+          mergedInto: playerIdentityMap.mergedInto,
+        })
+        .from(playerIdentityMap);
+
+      let activeMinted = 0;
+      let activeNull = 0;
+      let mergedRows = 0;
+      for (const row of rows) {
+        if (row.mergedInto) {
+          mergedRows++;
+        } else if (row.tiberPlayerId == null) {
+          activeNull++;
+        } else {
+          activeMinted++;
+        }
+      }
+      return { activeMinted, activeNull, mergedRows, lookupStatus: 'available' };
+    } catch (error) {
+      console.error('[PlayerIdentityService] tiber_player_id census failed:', error);
+      return { activeMinted: 0, activeNull: 0, mergedRows: 0, lookupStatus: 'unavailable' };
     }
   }
 
@@ -593,7 +778,9 @@ export class PlayerIdentityService {
         return false;
       }
 
-      const insertData: any = {
+      // Every new registry row is born with its canonical TIBER identity;
+      // only pre-#327 rows await the backfill (Fantasy #327).
+      const insertData: any = withMintedTiberPlayerId({
         canonicalId: playerData.canonicalId,
         fullName: playerData.fullName,
         firstName: playerData.firstName,
@@ -605,7 +792,7 @@ export class PlayerIdentityService {
         lastVerified: new Date(),
         createdAt: new Date(),
         updatedAt: new Date()
-      };
+      });
 
       // Add external IDs if provided
       if (playerData.externalIds) {
@@ -747,6 +934,7 @@ export class PlayerIdentityService {
 
     return {
       canonicalId: player.canonicalId,
+      tiberPlayerId: player.tiberPlayerId ?? null,
       fullName: player.fullName,
       position: player.position,
       nflTeam: player.nflTeam || undefined,
