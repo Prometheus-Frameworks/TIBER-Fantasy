@@ -436,7 +436,9 @@ export class PlayerIdentityService {
         minted++;
       }
 
-      console.log(`[PlayerIdentityService] tiber_player_id backfill: ${minted} minted, ${skippedMerged} merged rows skipped.`);
+      // Progress logging goes to stderr so a CLI caller's stdout stays a pure
+      // JSON receipt (`... > receipt.json` must remain parseable).
+      console.error(`[PlayerIdentityService] tiber_player_id backfill: ${minted} minted, ${skippedMerged} merged rows skipped.`);
       return { minted, skippedMerged, status: 'complete' };
     } catch (error) {
       console.error(`[PlayerIdentityService] tiber_player_id backfill failed after ${minted} mints:`, error);
