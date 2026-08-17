@@ -5816,3 +5816,119 @@ export const rookieProfiles = pgTable("rookie_profiles", {
 
 export type RookieProfile = typeof rookieProfiles.$inferSelect;
 export type InsertRookieProfile = typeof rookieProfiles.$inferInsert;
+
+// ============================================================================
+// CONTEXT-BOUND ENTITY MODELS — operator-local durable context (Fantasy #332)
+// ============================================================================
+//
+// Storage for the context-bound entity model pilot: an operator records, in
+// their own workspace, why a canonical TIBER entity matters to them, and a
+// later session retrieves that context without any conversational memory.
+//
+// Deliberate boundaries (see server/modules/contextEntityModel/MODULE.md):
+//   - Provider-neutral. No position, role, scoring, league, or other
+//     football-use-case field appears here. The subject is an opaque
+//     (subject_type, subject_id) pair; v0 only accepts the canonical
+//     `tiber_player_id` namespace from Fantasy #327.
+//   - Operator-local only. `authority_state` / `visibility` mark these rows as
+//     private operator state; nothing here is a promoted artifact or Shared
+//     Reality content, and no read path in this repo consumes them as model
+//     input.
+//   - Immutable rows. A model row is written once and never updated: a changed
+//     interpretation is a new `version` row, and observations are a separate
+//     append-only table. There is no UPDATE path against either table.
+//   - No default clocks. Timestamps are supplied by the application from a
+//     single observed clock, so a persisted time is always a real time.
+
+export const contextEntityModels = pgTable("context_entity_models", {
+  /** Opaque model identity (`tbr_cem_<32 hex>`); carries no domain facts. */
+  modelId: varchar("model_id", { length: 64 }).primaryKey(),
+  /** Immutable version of this interpretation; 1-based, one row per version. */
+  version: integer("version").notNull(),
+  /** Operator-chosen workspace label (e.g. an operator's private workspace). */
+  workspaceId: varchar("workspace_id", { length: 64 }).notNull(),
+  /** Operator attribution for the write. v0 has no workspace/user registry. */
+  operatorId: varchar("operator_id", { length: 128 }).notNull(),
+  /** Entity namespace. v0: `tiber_player` only. */
+  subjectType: varchar("subject_type", { length: 32 }).notNull(),
+  /** Canonical entity id within `subject_type` (a `tbr_p_<ULID>` for v0). */
+  subjectId: varchar("subject_id", { length: 64 }).notNull(),
+  /** The operator's own words: why this entity matters in this workspace. */
+  operatorContext: text("operator_context").notNull(),
+  /** Generic management/research horizon; no season or league semantics. */
+  horizon: varchar("horizon", { length: 32 }).notNull(),
+  /**
+   * Structured map payload, stored verbatim. This repo does not define,
+   * validate, or vendor the payload's contract — it records which contract the
+   * producing agent declared and keeps the bytes identifiable via digest.
+   */
+  structuredMap: jsonb("structured_map").notNull(),
+  /** Declared payload contract id, e.g. `agent-thesis-proposal/v0`. */
+  structuredMapContract: varchar("structured_map_contract", { length: 128 }).notNull(),
+  /** `sha256:<hex>` over the canonicalised structured map. */
+  structuredMapDigest: varchar("structured_map_digest", { length: 71 }).notNull(),
+  /** Creation provenance: producing agent, session reference, confirmation. */
+  provenance: jsonb("provenance").notNull(),
+  /** Authority state. v0 writes `operator_local` and nothing else. */
+  authorityState: varchar("authority_state", { length: 32 }).notNull(),
+  /** Privacy state. v0 writes `operator_private` and nothing else. */
+  visibility: varchar("visibility", { length: 32 }).notNull(),
+  /** `sha256:<hex>` over the canonicalised model content; drives idempotency. */
+  contentDigest: varchar("content_digest", { length: 71 }).notNull(),
+  /** Real observed creation time (application clock, never a column default). */
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  uniqueIndex("context_entity_models_version_uq").on(
+    table.workspaceId, table.subjectType, table.subjectId, table.version,
+  ),
+  // Idempotency: an identical save in the same workspace for the same subject
+  // resolves to the row already stored instead of minting a second version.
+  uniqueIndex("context_entity_models_content_uq").on(
+    table.workspaceId, table.subjectType, table.subjectId, table.contentDigest,
+  ),
+  index("context_entity_models_subject_idx").on(table.workspaceId, table.subjectId),
+]);
+
+export type ContextEntityModel = typeof contextEntityModels.$inferSelect;
+export type InsertContextEntityModel = typeof contextEntityModels.$inferInsert;
+
+export const contextEntityObservations = pgTable("context_entity_observations", {
+  /** Opaque observation identity (`tbr_ceo_<32 hex>`). */
+  observationId: varchar("observation_id", { length: 64 }).primaryKey(),
+  /**
+   * The model version that was current when this observation was appended.
+   * Provenance, not ownership: the lineage below belongs to the
+   * (workspace, subject) pair, so an observation stays visible after a later
+   * version of the model is written.
+   */
+  modelId: varchar("model_id", { length: 64 })
+    .notNull()
+    .references(() => contextEntityModels.modelId),
+  /** Lineage key — matches the model's (workspace, subject) coordinates. */
+  workspaceId: varchar("workspace_id", { length: 64 }).notNull(),
+  subjectType: varchar("subject_type", { length: 32 }).notNull(),
+  subjectId: varchar("subject_id", { length: 64 }).notNull(),
+  /** 1-based position in this entity's append-only lineage. */
+  sequence: integer("sequence").notNull(),
+  /** The observation itself, in the words of whoever supplied it. */
+  body: text("body").notNull(),
+  /** `operator_supplied` | `agent_synthetic`; never inferred from the body. */
+  observationSource: varchar("observation_source", { length: 32 }).notNull(),
+  /** Attribution for the write (operator or agent reference). */
+  recordedBy: varchar("recorded_by", { length: 128 }).notNull(),
+  /** When the thing observed actually happened (may predate the write). */
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  /** Real observed write time (application clock, never a column default). */
+  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  uniqueIndex("context_entity_observations_sequence_uq").on(
+    table.workspaceId, table.subjectType, table.subjectId, table.sequence,
+  ),
+  index("context_entity_observations_lineage_idx").on(
+    table.workspaceId, table.subjectType, table.subjectId,
+  ),
+  index("context_entity_observations_model_idx").on(table.modelId),
+]);
+
+export type ContextEntityObservation = typeof contextEntityObservations.$inferSelect;
+export type InsertContextEntityObservation = typeof contextEntityObservations.$inferInsert;
