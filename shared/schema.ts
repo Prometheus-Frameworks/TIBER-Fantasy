@@ -5858,13 +5858,18 @@ export const contextEntityModels = pgTable("context_entity_models", {
   /** Generic management/research horizon; no season or league semantics. */
   horizon: varchar("horizon", { length: 32 }).notNull(),
   /**
-   * Structured map payload, stored verbatim. This repo does not define,
-   * validate, or vendor the payload's contract — it records which contract the
-   * producing agent declared and keeps the bytes identifiable via digest.
+   * Structured map payload, stored verbatim, together with the contract its
+   * producer declared and an explicit validation state (always `not_performed`
+   * in v0). This repo does not define, validate, or vendor that contract; it
+   * records the claim and keeps the bytes identifiable via digest.
    */
   structuredMap: jsonb("structured_map").notNull(),
-  /** Declared payload contract id, e.g. `agent-thesis-proposal/v0`. */
-  structuredMapContract: varchar("structured_map_contract", { length: 128 }).notNull(),
+  /**
+   * Contract id the producing agent *declared*, e.g. `agent-thesis-proposal/v0`.
+   * Named "declared" because nothing here validates it: the payload is stored
+   * as given, and reading this column as "conforms to" would overclaim.
+   */
+  declaredStructuredMapContract: varchar("declared_structured_map_contract", { length: 128 }).notNull(),
   /** `sha256:<hex>` over the canonicalised structured map. */
   structuredMapDigest: varchar("structured_map_digest", { length: 71 }).notNull(),
   /** Creation provenance: producing agent, session reference, confirmation. */

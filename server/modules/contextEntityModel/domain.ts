@@ -90,6 +90,25 @@ export const VISIBILITIES = ['operator_private'] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
 
 /**
+ * How a confirmation was obtained. This distinction is the honest part.
+ *
+ * - `operator_elicited` — TIBER asked the operator directly, through the MCP
+ *   client's elicitation channel, and the operator answered. The calling agent
+ *   cannot produce this outcome by asserting it; the answer came back from the
+ *   client, out of the agent's reach.
+ * - `agent_attested` — the calling agent *says* the operator confirmed. TIBER
+ *   has not independently verified that a human approved anything. This is a
+ *   claim on the record, not an enforced authorisation, and every surface that
+ *   shows a confirmation has to say so.
+ *
+ * Recording the method rather than a bare boolean is the difference between an
+ * auditable authority trail and one that merely looks like one.
+ */
+export const CONFIRMATION_METHODS = ['operator_elicited', 'agent_attested'] as const;
+export type ConfirmationMethod = (typeof CONFIRMATION_METHODS)[number];
+export const confirmationMethodSchema = z.enum(CONFIRMATION_METHODS);
+
+/**
  * Operator confirmation captured at creation.
  *
  * Confirmation authorises *persistence of the interpretation*. It is not a
@@ -98,20 +117,39 @@ export type Visibility = (typeof VISIBILITIES)[number];
  */
 export const operatorConfirmationSchema = z.object({
   confirmed: z.literal(true),
-  /** What the operator confirmed, in the operator's or agent's own words. */
+  method: confirmationMethodSchema,
+  /** What was confirmed — the operator's words when elicited, the agent's when attested. */
   statement: z.string().trim().min(1).max(2000),
 });
 export type OperatorConfirmation = z.infer<typeof operatorConfirmationSchema>;
 
-/** Who produced this model and in which conversation. Audit metadata only. */
-export const provenanceSchema = z.object({
+/** True only when TIBER itself obtained the approval. */
+export function isOperatorVerified(confirmation: OperatorConfirmation): boolean {
+  return confirmation.method === 'operator_elicited';
+}
+
+/**
+ * Who produced this model and in which conversation. Audit metadata only.
+ *
+ * Note what a caller may *not* supply: the confirmation record. Callers
+ * provide this much, and the service attaches the confirmation it actually
+ * obtained. If a caller could hand in a finished confirmation, it could hand
+ * in `method: 'operator_elicited'` for an approval that never happened, and
+ * the distinction would be worthless.
+ */
+export const provenanceInputSchema = z.object({
   /** Producing agent/client reference, e.g. `claude-code`. */
   agentRef: z.string().trim().min(1).max(128),
   /** Opaque session reference; must not carry conversation content. */
   sessionRef: z.string().trim().min(1).max(128),
-  confirmation: operatorConfirmationSchema,
   /** Optional free-text note about how the interpretation was reached. */
   note: z.string().trim().max(2000).optional(),
+});
+export type ModelProvenanceInput = z.infer<typeof provenanceInputSchema>;
+
+/** Stored provenance: what the caller declared, plus the confirmation obtained. */
+export const provenanceSchema = provenanceInputSchema.extend({
+  confirmation: operatorConfirmationSchema,
 });
 export type ModelProvenance = z.infer<typeof provenanceSchema>;
 
@@ -120,20 +158,38 @@ export type ModelProvenance = z.infer<typeof provenanceSchema>;
 // ---------------------------------------------------------------------------
 
 /**
+ * Validation state of a declared payload contract.
+ *
+ * v0 has exactly one value, and it is deliberately explicit rather than
+ * implied by silence: this service does not check payloads against the
+ * contract they claim to follow. Recording `not_performed` on every row keeps
+ * a reader from mistaking "contract: agent-thesis-proposal/v0" for "conforms
+ * to agent-thesis-proposal/v0", and leaves room for a later value if some
+ * version does start validating.
+ */
+export const CONTRACT_VALIDATION_STATES = ['not_performed'] as const;
+export type ContractValidationState = (typeof CONTRACT_VALIDATION_STATES)[number];
+
+/**
  * The structured interpretation, carried verbatim.
  *
  * TIBER-Research's `agent-thesis-proposal/v0` is a *pre-freeze proposal*
  * contract owned by another repository. This repo therefore does not define,
  * validate, vendor, or mutate that shape. It stores whatever JSON object the
- * producing agent supplies, records which contract the agent declared it to
+ * producing agent supplies, records which contract the agent *declared* it to
  * be, and digests the canonicalised bytes so the payload stays identifiable
- * and comparable later. If the proposal contract and the durable wrapper ever
- * diverge, that divergence is visible as a contract id + digest, never as a
- * silent rewrite.
+ * and comparable later.
+ *
+ * The field is `declaredContract`, not `contract`, because that is all it is:
+ * an unverified producer claim. Nothing here checks that the payload actually
+ * satisfies it, so naming it `contract` — or rendering it as though the
+ * service had confirmed it — would overclaim.
  */
 export const structuredMapSchema = z.object({
-  /** Declared contract id, e.g. `agent-thesis-proposal/v0`. */
-  contract: z.string().trim().min(1).max(128),
+  /** Contract id the producing agent declared, e.g. `agent-thesis-proposal/v0`. */
+  declaredContract: z.string().trim().min(1).max(128),
+  /** Always `not_performed` in v0. Stored so the claim is never read as verified. */
+  validation: z.enum(CONTRACT_VALIDATION_STATES),
   /** Payload bytes, stored as given. Not interpreted by this repo. */
   payload: z.record(z.unknown()),
 });

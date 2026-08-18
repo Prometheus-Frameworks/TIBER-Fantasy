@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS context_entity_models (
   operator_context        text         NOT NULL,
   horizon                 varchar(32)  NOT NULL,
   structured_map          jsonb        NOT NULL,
-  structured_map_contract varchar(128) NOT NULL,
+  declared_structured_map_contract varchar(128) NOT NULL,
   structured_map_digest   varchar(71)  NOT NULL,
   provenance              jsonb        NOT NULL,
   authority_state         varchar(32)  NOT NULL,

@@ -66,12 +66,20 @@ exception to swallow.
    `ContextEntityStoreUnavailableError`, which surfaces as `store_unavailable`.
    A fresh session must never read a database problem as "the operator never
    saved anything".
-6. **Writes are attributed and confirmed.** Workspace and operator are required
-   on every write; persistence additionally requires an operator confirmation.
-   Enforced in the service, so it holds for any transport. The whole provenance
-   record is validated, not just the boolean — `confirmed: true` with an empty
-   statement is not a confirmation, and checking only the flag would make the
-   guarantee cosmetic.
+6. **Writes are attributed, and confirmation is obtained rather than accepted.**
+   Workspace and operator are required on every write. For persistence the
+   service *asks* through an `OperatorConfirmationGateway` instead of trusting a
+   confirmation handed to it — a caller that can assemble a confirmation record
+   is witnessing its own request. Over MCP that gateway is elicitation, so the
+   answer comes from the client, outside the calling agent's reach; a decline is
+   a refusal that no attestation can override. Callers cannot reach the
+   `method` field at all: the service sets it. Where no channel to the operator
+   exists, the caller's attestation is recorded as `agent_attested` and every
+   surface that renders it says it was not verified.
+7. **Declared contracts are never rendered as validated.** The structured-map
+   contract is stored as `declaredContract` with a `validation` state of
+   `not_performed`, set by the service. Nothing here checks a payload against
+   the contract it claims, so nothing here may present the claim as a fact.
 
 ## Storage
 

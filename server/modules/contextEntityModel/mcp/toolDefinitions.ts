@@ -38,10 +38,24 @@ import type {
   ResolveEntityResult,
   SaveEntityModelResult,
 } from '../contextEntityModelService';
+import type { OperatorConfirmationGateway } from '../operatorConfirmation';
 
 export interface ToolResult {
   text: string;
   isError: boolean;
+}
+
+/**
+ * Per-call collaborators the transport supplies.
+ *
+ * The confirmation gateway is the important one: it is how a write reaches the
+ * human. The stdio adapter backs it with MCP elicitation, so the answer comes
+ * from the client rather than from the agent making the request. When the
+ * client cannot elicit, there is no gateway and the write is recorded as
+ * agent-attested.
+ */
+export interface ToolCallContext {
+  confirmation?: OperatorConfirmationGateway;
 }
 
 export interface ContextEntityToolDefinition {
@@ -57,7 +71,11 @@ export interface ContextEntityToolDefinition {
     idempotentHint: boolean;
     openWorldHint: boolean;
   };
-  handler: (args: unknown, service: ContextEntityModelService) => Promise<ToolResult>;
+  handler: (
+    args: unknown,
+    service: ContextEntityModelService,
+    context?: ToolCallContext,
+  ) => Promise<ToolResult>;
 }
 
 // ---------------------------------------------------------------------------
@@ -117,6 +135,24 @@ function renderObservations(observations: ContextEntityObservationRecord[]): str
 }
 
 /**
+ * How the confirmation was obtained, stated plainly.
+ *
+ * An agent-attested confirmation must never read like a verified approval: a
+ * later reader deciding how much weight this model carries needs to know
+ * whether TIBER asked the operator or the agent said it did.
+ */
+function renderConfirmation(model: ContextBoundEntityModel): string {
+  const { method, statement } = model.provenance.confirmation;
+  if (method === 'operator_elicited') {
+    return `Operator confirmation at creation (operator-elicited via MCP): ${statement}`;
+  }
+  return (
+    `Operator confirmation at creation (agent-attested, NOT verified by TIBER — the client ` +
+    `could not ask the operator directly): ${statement}`
+  );
+}
+
+/**
  * Human-readable rendering of a stored model.
  *
  * Laid out as prose fields rather than serialised so a retrieving session can
@@ -139,8 +175,11 @@ function renderModel(
     `Horizon: ${model.horizon}`,
     'Operator context:',
     `  ${model.operatorContext}`,
-    `Operator confirmation at creation: ${model.provenance.confirmation.statement}`,
-    `Structured map: contract ${model.structuredMap.contract}, digest ${model.structuredMapDigest}, ` +
+    renderConfirmation(model),
+    `Declared structured-map contract: ${model.structuredMap.declaredContract} ` +
+      `(declared by the producing agent; validation ${model.structuredMap.validation} — this ` +
+      'service did not check the payload against it)',
+    `Structured map digest: ${model.structuredMapDigest}, ` +
       `top-level keys [${Object.keys(model.structuredMap.payload).sort().join(', ')}]`,
     renderObservations(observations),
   ];
@@ -179,11 +218,12 @@ const saveEntityModelInput = z.object({
     .string()
     .describe("Why this entity matters in this workspace, in the operator's own framing."),
   horizon: z.enum(HORIZONS).describe('Generic management/research horizon.'),
-  structuredMapContract: z
+  declaredStructuredMapContract: z
     .string()
     .describe(
-      'Contract id the payload claims to follow, e.g. agent-thesis-proposal/v0. Recorded and ' +
-        'digested as declared; this repo does not define or validate that contract.',
+      'Contract id the payload claims to follow, e.g. agent-thesis-proposal/v0. Recorded as a ' +
+        'declaration and digested as given. This service does NOT validate the payload against ' +
+        'it, and stores the validation state as not_performed — declare only what is true.',
     ),
   structuredMap: z
     .record(z.unknown())
@@ -192,13 +232,17 @@ const saveEntityModelInput = z.object({
   sessionRef: z
     .string()
     .describe('Opaque session reference for provenance. Must not carry conversation content.'),
-  operatorConfirmationStatement: z
+  agentAttestedConfirmation: z
     .string()
     .trim()
     .min(1)
     .describe(
-      'What the operator confirmed. Persistence requires it. Confirmation authorises storing ' +
-        'the interpretation — it is not a request to print the model into the conversation.',
+      'Your attestation that the operator approved persisting this interpretation. Used ONLY ' +
+        'as a fallback when your client cannot ask the operator directly: where the client ' +
+        'supports elicitation, TIBER asks the operator itself and that answer decides. An ' +
+        'attestation is recorded as agent-attested and is not treated as verified human ' +
+        'approval. Confirmation authorises storing the interpretation — it is not a request ' +
+        'to print the model into the conversation.',
     ),
   provenanceNote: z.string().optional().describe('Optional note on how the interpretation was reached.'),
 });
@@ -278,7 +322,7 @@ export const CONTEXT_ENTITY_TOOLS: ContextEntityToolDefinition[] = [
     inputSchema: saveEntityModelInput,
     access: 'write',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    async handler(args, service) {
+    async handler(args, service, context) {
       const input = saveEntityModelInput.parse(args);
       const result: SaveEntityModelResult = await service.saveEntityModel({
         workspaceId: input.workspaceId,
@@ -286,14 +330,17 @@ export const CONTEXT_ENTITY_TOOLS: ContextEntityToolDefinition[] = [
         locator: input.locator,
         operatorContext: input.operatorContext,
         horizon: input.horizon,
-        structuredMap: { contract: input.structuredMapContract, payload: input.structuredMap },
+        structuredMap: {
+          declaredContract: input.declaredStructuredMapContract,
+          payload: input.structuredMap,
+        },
         provenance: {
           agentRef: input.agentRef,
           sessionRef: input.sessionRef,
-          confirmation: { confirmed: true, statement: input.operatorConfirmationStatement },
           note: input.provenanceNote,
         },
-      });
+        agentAttestedConfirmation: input.agentAttestedConfirmation,
+      }, { confirmation: context?.confirmation });
       if (result.status === 'refused') return refusalResult(result);
 
       const name = result.subject.displayName;
@@ -301,9 +348,14 @@ export const CONTEXT_ENTITY_TOOLS: ContextEntityToolDefinition[] = [
         result.outcome === 'created'
           ? `Saved ${name} to ${result.model.workspaceId}.`
           : `${name} was already saved to ${result.model.workspaceId}; nothing changed.`;
+      const confirmation =
+        result.model.provenance.confirmation.method === 'operator_elicited'
+          ? 'Confirmation: operator-elicited via MCP.'
+          : 'Confirmation: agent-attested — TIBER could not ask the operator directly and has ' +
+            'not verified a human approval.';
       return ok(
         `${headline}\nModel ${result.model.modelId} v${result.model.version}, ` +
-          `recorded ${result.model.createdAt.toISOString()}.`,
+          `recorded ${result.model.createdAt.toISOString()}. ${confirmation}`,
       );
     },
   },

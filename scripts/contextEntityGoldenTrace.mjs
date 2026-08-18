@@ -28,6 +28,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { ElicitRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 function arg(flag, fallback) {
   const index = process.argv.indexOf(flag);
@@ -49,15 +50,38 @@ const OPERATOR_CONTEXT =
   'very efficient receiver out of the backfield. I mainly want to monitor whether he’s getting ' +
   'consistent passing-game work and remains serviceable as an RB2/flex play.';
 
-async function openSession(label) {
+/**
+ * Open one session, standing in for the operator's MCP client.
+ *
+ * The client declares the `elicitation` capability and answers the server's
+ * confirmation prompt, which is what makes this a real test of the operator
+ * boundary: the server asks *the client*, and the answer comes back from
+ * outside whatever agent called the write tool. `approve` decides how this
+ * stand-in operator answers.
+ */
+async function openSession(label, { approve = true } = {}) {
   const transport = new StdioClientTransport({
     command: 'npx',
     args: ['tsx', 'server/mcp/contextEntityStdioServer.ts'],
     env: { ...process.env },
     stderr: 'inherit',
   });
-  const client = new Client({ name: `golden-trace-${label}`, version: '0.1.0' });
+  const client = new Client(
+    { name: `golden-trace-${label}`, version: '0.1.0' },
+    { capabilities: { elicitation: {} } },
+  );
+  const prompts = [];
+  client.setRequestHandler(ElicitRequestSchema, async (request) => {
+    prompts.push(request.params.message);
+    return approve
+      ? {
+          action: 'accept',
+          content: { decision: 'approve', statement: 'Operator approved in the client.' },
+        }
+      : { action: 'accept', content: { decision: 'reject' } };
+  });
   await client.connect(transport);
+  client.elicitationPrompts = prompts;
   return client;
 }
 
@@ -118,19 +142,31 @@ async function main() {
         locator: { kind: 'tiber_player_id', tiberPlayerId: canonicalId },
         operatorContext: OPERATOR_CONTEXT,
         horizon: 'medium_term',
-        structuredMapContract: 'agent-thesis-proposal/v0',
+        declaredStructuredMapContract: 'tiber-fantasy-pilot-thesis/v0',
         structuredMap: {
           thesis: 'Passing-game usage stability is the thing worth monitoring here.',
           watch_conditions: ['route participation', 'share of backfield targets'],
         },
         agentRef: 'claude-code',
         sessionRef: 'golden-trace-session-a',
-        operatorConfirmationStatement:
-          'Operator confirmed the interpretation before persistence.',
+        agentAttestedConfirmation:
+          'Fallback attestation, used only if this client cannot ask the operator.',
       },
     }),
   );
   expect(!saved.isError, 'model persists after operator confirmation');
+  expect(
+    sessionA.elicitationPrompts.length === 1,
+    'TIBER asked the operator through the client before writing',
+  );
+  expect(
+    sessionA.elicitationPrompts[0].includes(OPERATOR_CONTEXT),
+    'the operator was shown the interpretation they were approving',
+  );
+  expect(
+    saved.text.includes('Confirmation: operator-elicited via MCP.'),
+    'the confirmation is recorded as operator-elicited, not agent-attested',
+  );
   expect(
     saved.text.split('\n')[0].startsWith('Saved '),
     'human-facing completion is a concise sentence',
@@ -149,15 +185,15 @@ async function main() {
         locator: { kind: 'tiber_player_id', tiberPlayerId: canonicalId },
         operatorContext: OPERATOR_CONTEXT,
         horizon: 'medium_term',
-        structuredMapContract: 'agent-thesis-proposal/v0',
+        declaredStructuredMapContract: 'tiber-fantasy-pilot-thesis/v0',
         structuredMap: {
           thesis: 'Passing-game usage stability is the thing worth monitoring here.',
           watch_conditions: ['route participation', 'share of backfield targets'],
         },
         agentRef: 'claude-code',
         sessionRef: 'golden-trace-session-a-retry',
-        operatorConfirmationStatement:
-          'Operator confirmed the interpretation before persistence.',
+        agentAttestedConfirmation:
+          'Fallback attestation, used only if this client cannot ask the operator.',
       },
     }),
   );
@@ -228,6 +264,49 @@ async function main() {
     reread.text.includes(OPERATOR_CONTEXT),
     'the original operator context was not rewritten by the append',
   );
+
+  // ---- The operator's refusal is decisive ------------------------------
+  // A separate session whose operator says no. The agent still supplies an
+  // attestation claiming approval; if that could override the human, the
+  // confirmation boundary would be decorative.
+  console.log('\n=== SESSION C (operator declines) ===');
+  const sessionC = await openSession('c', { approve: false });
+  const declined = show(
+    'tiber_save_entity_model (operator declines)',
+    await sessionC.callTool({
+      name: 'tiber_save_entity_model',
+      arguments: {
+        workspaceId: WORKSPACE,
+        operatorId: OPERATOR,
+        locator: { kind: 'tiber_player_id', tiberPlayerId: canonicalId },
+        operatorContext: `${OPERATOR_CONTEXT} An addition the operator will reject.`,
+        horizon: 'medium_term',
+        declaredStructuredMapContract: 'tiber-fantasy-pilot-thesis/v0',
+        structuredMap: { thesis: 'Should not be persisted.' },
+        agentRef: 'claude-code',
+        sessionRef: 'golden-trace-session-c',
+        agentAttestedConfirmation: 'The operator definitely approved this.',
+      },
+    }),
+  );
+  expect(declined.isError, 'a declined confirmation refuses the write');
+  expect(
+    declined.text.includes('confirmation_declined'),
+    'the refusal names the operator decision, not a generic error',
+  );
+
+  const afterDecline = show(
+    'tiber_get_entity_model (after decline)',
+    await sessionC.callTool({
+      name: 'tiber_get_entity_model',
+      arguments: { workspaceId: WORKSPACE, locator: { kind: 'player_name', name: PLAYER_NAME } },
+    }),
+  );
+  expect(
+    modelHeadline(afterDecline.text) === modelLineBefore,
+    'the declined write left the stored model untouched',
+  );
+  await sessionC.close();
 
   await sessionB.close();
 

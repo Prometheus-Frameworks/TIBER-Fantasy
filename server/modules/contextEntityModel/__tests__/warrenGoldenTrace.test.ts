@@ -53,20 +53,14 @@ describe('Warren / H4MMER golden trace', () => {
       operatorContext: WARREN_CONTEXT,
       horizon: 'medium_term',
       structuredMap: {
-        contract: 'agent-thesis-proposal/v0',
+        declaredContract: 'tiber-fantasy-pilot-thesis/v0',
         payload: {
           thesis: 'Passing-game usage is the thing worth monitoring here.',
           watch_conditions: ['route participation', 'share of backfield targets'],
         },
       },
-      provenance: {
-        agentRef: 'claude-code',
-        sessionRef: 'session-a',
-        confirmation: {
-          confirmed: true,
-          statement: 'Operator confirmed the Warren interpretation for H4MMER.',
-        },
-      },
+      provenance: { agentRef: 'claude-code', sessionRef: 'session-a' },
+      agentAttestedConfirmation: 'Operator confirmed the Warren interpretation for H4MMER.',
     });
     expect(saved.status).toBe('saved');
     if (saved.status !== 'saved') throw new Error('unreachable');

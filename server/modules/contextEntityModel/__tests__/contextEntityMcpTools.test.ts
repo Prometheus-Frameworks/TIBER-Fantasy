@@ -53,11 +53,11 @@ const SAVE_ARGS = {
   locator: { kind: 'player_name', name: 'Jaylen Warren' },
   operatorContext: WARREN_CONTEXT,
   horizon: 'medium_term',
-  structuredMapContract: 'agent-thesis-proposal/v0',
+  declaredStructuredMapContract: 'tiber-fantasy-pilot-thesis/v0',
   structuredMap: { thesis: 'Monitor passing-game usage stability' },
   agentRef: 'claude-code',
   sessionRef: 'session-a',
-  operatorConfirmationStatement: 'Operator confirmed the interpretation.',
+  agentAttestedConfirmation: 'Operator confirmed the interpretation.',
 };
 
 describe('context entity MCP tool surface', () => {
@@ -99,14 +99,14 @@ describe('context entity MCP tool surface', () => {
 
   it('requires an operator confirmation statement to persist', async () => {
     const { service, store } = harness();
-    const { operatorConfirmationStatement, ...withoutConfirmation } = SAVE_ARGS;
+    const { agentAttestedConfirmation, ...withoutConfirmation } = SAVE_ARGS;
 
     await expect(tool('tiber_save_entity_model').handler(withoutConfirmation, service)).rejects.toThrow();
     // A blank statement is not a confirmation either — the schema rejects it
     // rather than passing a hollow `confirmed: true` down to the service.
     await expect(
       tool('tiber_save_entity_model').handler(
-        { ...SAVE_ARGS, operatorConfirmationStatement: '   ' },
+        { ...SAVE_ARGS, agentAttestedConfirmation: '   ' },
         service,
       ),
     ).rejects.toThrow();
@@ -139,6 +139,78 @@ describe('context entity MCP tools — behaviour', () => {
     // back into the conversation just because the write succeeded.
     expect(result.text).not.toContain(WARREN_CONTEXT);
     expect(result.text).not.toContain('thesis');
+  });
+
+  it('routes the write through the operator channel the transport supplies', async () => {
+    const { service } = harness();
+    const asked: string[] = [];
+
+    const result = await tool('tiber_save_entity_model').handler(SAVE_ARGS, service, {
+      confirmation: {
+        async requestConfirmation(request) {
+          asked.push(request.interpretation);
+          return { status: 'approved', statement: 'Operator said yes in the client.' };
+        },
+      },
+    });
+
+    expect(result.isError).toBe(false);
+    expect(asked).toEqual([WARREN_CONTEXT]);
+    expect(result.text).toContain('Confirmation: operator-elicited via MCP.');
+  });
+
+  it('refuses the write when the operator declines in the client', async () => {
+    const { service, store } = harness();
+
+    const result = await tool('tiber_save_entity_model').handler(SAVE_ARGS, service, {
+      confirmation: {
+        async requestConfirmation() {
+          return { status: 'declined', detail: 'operator declined to save this context' };
+        },
+      },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.text).toContain('confirmation_declined');
+    expect(store.snapshotModels()).toHaveLength(0);
+  });
+
+  it('labels an attested save as unverified rather than letting it read as approval', async () => {
+    const { service } = harness();
+
+    // No context: nothing can reach the operator, so the agent's attestation
+    // is all there is — and the completion has to say that.
+    const result = await tool('tiber_save_entity_model').handler(SAVE_ARGS, service);
+
+    expect(result.isError).toBe(false);
+    expect(result.text).toContain('agent-attested');
+    expect(result.text).toContain('has not verified a human approval');
+  });
+
+  it('marks a retrieved attested confirmation as unverified', async () => {
+    const { service } = harness();
+    await tool('tiber_save_entity_model').handler(SAVE_ARGS, service);
+
+    const result = await tool('tiber_get_entity_model').handler(
+      { workspaceId: WORKSPACE, locator: { kind: 'player_name', name: 'Jaylen Warren' } },
+      service,
+    );
+
+    expect(result.text).toContain('agent-attested, NOT verified by TIBER');
+  });
+
+  it('renders the declared contract as a claim, not as a validated fact', async () => {
+    const { service } = harness();
+    await tool('tiber_save_entity_model').handler(SAVE_ARGS, service);
+
+    const result = await tool('tiber_get_entity_model').handler(
+      { workspaceId: WORKSPACE, locator: { kind: 'player_name', name: 'Jaylen Warren' } },
+      service,
+    );
+
+    expect(result.text).toContain('Declared structured-map contract: tiber-fantasy-pilot-thesis/v0');
+    expect(result.text).toContain('validation not_performed');
+    expect(result.text).toContain('did not check the payload against it');
   });
 
   it('reports an idempotent re-save as unchanged', async () => {
@@ -179,7 +251,7 @@ describe('context entity MCP tools — behaviour', () => {
     expect(result.text).toContain('operator_local / operator_private');
     // Payload withheld unless deliberately requested.
     expect(result.text).not.toContain('Monitor passing-game usage stability');
-    expect(result.text).toContain('agent-thesis-proposal/v0');
+    expect(result.text).toContain('tiber-fantasy-pilot-thesis/v0');
   });
 
   it('returns the verbatim payload only when explicitly requested', async () => {

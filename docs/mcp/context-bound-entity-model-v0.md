@@ -58,8 +58,8 @@ check".
 
 - every write names the `workspaceId` it belongs to and the `operatorId`
   responsible for it — there is no ambient operator;
-- persistence additionally requires an operator confirmation statement. The
-  agent must have actually asked you, and records what you confirmed;
+- persistence additionally requires a confirmation, and TIBER asks *you* for it
+  rather than taking an agent's word (see below);
 - saving is idempotent by content. Re-saving the same interpretation resolves
   to the model already stored instead of creating a second version. A genuinely
   changed interpretation becomes a new version, and the earlier one is left
@@ -70,6 +70,40 @@ check".
 
 **The tools being available is not authority to write.** An agent that can see
 `tiber_save_entity_model` still has to have your confirmation to use it.
+
+### How confirmation actually works
+
+This is worth being precise about, because it is easy to build a version that
+only looks like protection.
+
+If the server simply accepted a field saying "the operator confirmed", the
+agent making the request would also be the witness to its own approval — the
+gate would check the agent's own claim. So the server does not do that.
+
+When your client supports MCP **elicitation**, TIBER asks the client to put the
+question to you directly: it shows what it wants to save, and your answer comes
+back from the client. The agent is not on that path and cannot produce the
+answer by asserting it. If you decline, the write is refused — an agent's
+attestation cannot override you.
+
+When your client does **not** support elicitation, there is no channel to you,
+and TIBER falls back to the agent's attestation. It then records the
+confirmation as `agent_attested`, and says so everywhere it is shown:
+
+```
+Confirmation: agent-attested — TIBER could not ask the operator directly
+and has not verified a human approval.
+```
+
+That is the honest reading: a claim on the record, not an enforced
+authorisation. Every stored confirmation carries which of the two it was, so a
+later reader can tell how much weight it deserves.
+
+One limit worth stating: on local stdio the client is your own process, so this
+boundary constrains the *agent*, not a hostile client. A client that lied about
+supporting elicitation could take the attested path. Closing that would require
+authenticating the client itself, which is part of the deferred remote/multi-user
+work below.
 
 One consequence worth stating plainly: confirming an interpretation authorises
 *storing* it. It is not a request to print the model into the chat. Save
@@ -131,6 +165,10 @@ The named player must already exist in the identity registry with a minted
 canonical `tiber_player_id`. The script never creates identity, and it writes
 only the one model and one observation it exists to demonstrate.
 
+The script's client declares elicitation and answers the confirmation prompt
+automatically, standing in for you — including a third session where it
+declines, to show the write being refused despite the agent attesting approval.
+
 ## What is deliberately not built yet
 
 This is a single-operator pilot on local stdio, and the deferrals below are
@@ -140,7 +178,9 @@ that is not there.
 
 - **No authentication of the caller.** Stdio inherits your trust: anyone who
   can start this process on your machine is already you. There is no login, no
-  token, and no OAuth, because there is no remote surface to protect.
+  token, and no OAuth, because there is no remote surface to protect. This is
+  also what bounds the confirmation guarantee above: TIBER can keep an *agent*
+  from self-approving, but it cannot verify the client relaying your answer.
 - **No multi-user isolation.** `workspaceId` is a label you choose, not an
   authenticated tenant. It scopes reads and writes — a model saved in one
   workspace is not visible in another, and an append naming the wrong workspace
@@ -154,6 +194,22 @@ All of these become real requirements the moment this stops being local and
 single-operator. That is a separate decision with its own review — not
 something to grow into quietly.
 
+## About the SDK version
+
+This pilot uses `@modelcontextprotocol/sdk` 1.30.0 — the **v1** line.
+
+MCP's v2 TypeScript packages (`@modelcontextprotocol/core`, `/server`,
+`/client`, all 2.0.0) are the current stable line for the 2026-07-28 protocol
+revision. This pilot deliberately stays on v1, for a concrete reason rather
+than inertia: v2 requires `zod ^4.2.0`, while this repository is on zod 3.25
+with `drizzle-zod` bound to zod 3 and `shared/schema.ts` building its insert
+schemas at import time. Adopting v2 therefore means a repo-wide zod major
+upgrade, which is far outside a persistence pilot's remit.
+
+v1 remains maintained (1.30.0 published 2026-07-27) and supports
+`zod ^3.25 || ^4.0`, so it fits this repo as-is. Migrating to v2 is a sensible
+separate piece of work once zod 4 is on the table for the repository as a whole.
+
 ## Where the boundaries are drawn
 
 - **Identity** is the canonical opaque `tiber_player_id` from Fantasy #327. A
@@ -162,11 +218,24 @@ something to grow into quietly.
   cross-repo identity consumption is introduced (Fantasy #328 still governs
   that).
 - **The structured payload** is stored verbatim under whichever contract the
-  producing agent declares (for example `agent-thesis-proposal/v0`, owned by
+  producing agent *declares* (for example `agent-thesis-proposal/v0`, owned by
   TIBER-Research). This repository does not define, validate, vendor, or modify
   that contract; it records the declared contract id and a digest of the bytes,
   so the payload stays identifiable and any future divergence is visible rather
   than silent.
+
+  Because nothing here checks the payload against the contract it claims, the
+  claim is stored and rendered as exactly that — a declaration with an explicit
+  validation state of `not_performed`:
+
+  ```
+  Declared structured-map contract: agent-thesis-proposal/v0 (declared by the
+  producing agent; validation not_performed — this service did not check the
+  payload against it)
+  ```
+
+  Declaring a contract your payload does not satisfy is therefore visible as a
+  false declaration rather than laundered into an apparent guarantee.
 - **MCP is transport.** The application operations in
   `server/modules/contextEntityModel/` work without it, and are tested without
   it. Removing the MCP adapter would not change what the pilot can do — only

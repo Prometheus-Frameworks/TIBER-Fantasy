@@ -122,7 +122,7 @@ export class DrizzleContextEntityModelStore<
         operatorContext: model.operatorContext,
         horizon: model.horizon,
         structuredMap: model.structuredMap,
-        structuredMapContract: model.structuredMap.contract,
+        declaredStructuredMapContract: model.structuredMap.declaredContract,
         structuredMapDigest: model.structuredMapDigest,
         provenance: model.provenance,
         authorityState: model.authorityState,

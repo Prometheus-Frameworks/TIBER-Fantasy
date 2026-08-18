@@ -14,6 +14,11 @@ import { ContextEntityResolver } from '../entityResolver';
 import { MODEL_ID_PATTERN, OBSERVATION_ID_PATTERN, sha256Digest } from '../domain';
 import { FakeIdentityGateway, WARREN_TIBER_ID } from './fakeIdentityGateway';
 import { InMemoryContextEntityModelStore } from './inMemoryContextEntityModelStore';
+import type {
+  ConfirmationOutcome,
+  ConfirmationRequest,
+  OperatorConfirmationGateway,
+} from '../operatorConfirmation';
 
 const WORKSPACE = 'H4MMER';
 const OPERATOR = 'operator:user-zero';
@@ -35,17 +40,14 @@ function saveInput(overrides: Partial<SaveEntityModelInput> = {}): SaveEntityMod
     operatorContext: WARREN_CONTEXT,
     horizon: 'medium_term',
     structuredMap: {
-      contract: 'agent-thesis-proposal/v0',
+      declaredContract: 'tiber-fantasy-pilot-thesis/v0',
       payload: {
         thesis: 'Monitor passing-game usage stability',
         watch_conditions: ['route participation', 'target share of backfield'],
       },
     },
-    provenance: {
-      agentRef: 'claude-code',
-      sessionRef: 'session-a',
-      confirmation: { confirmed: true, statement: 'Operator confirmed the interpretation.' },
-    },
+    provenance: { agentRef: 'claude-code', sessionRef: 'session-a' },
+    agentAttestedConfirmation: 'Operator confirmed the interpretation.',
     ...overrides,
   };
 }
@@ -116,8 +118,12 @@ describe('ContextEntityModelService — save', () => {
     if (result.status !== 'saved') throw new Error('unreachable');
     // The wrapper records what the producing agent declared and keeps the
     // payload identifiable by digest; it never rewrites or reinterprets it.
-    expect(result.model.structuredMap).toEqual(input.structuredMap);
-    expect(result.model.structuredMapDigest).toBe(sha256Digest(input.structuredMap));
+    expect(result.model.structuredMap.declaredContract).toBe(input.structuredMap.declaredContract);
+    expect(result.model.structuredMap.payload).toEqual(input.structuredMap.payload);
+    // And it never lets the declaration read as verified: the validation state
+    // is stamped by the service, not accepted from the caller.
+    expect(result.model.structuredMap.validation).toBe('not_performed');
+    expect(result.model.structuredMapDigest).toBe(sha256Digest(result.model.structuredMap));
   });
 
   it('is idempotent: an identical re-save returns the stored model, not a new version', async () => {
@@ -128,13 +134,7 @@ describe('ContextEntityModelService — save', () => {
     const second = await service.saveEntityModel(
       // A genuine retry comes from a new session at a new time; neither is
       // part of the content, so both calls must land on the same stored row.
-      saveInput({
-        provenance: {
-          agentRef: 'claude-code',
-          sessionRef: 'session-a-retry',
-          confirmation: { confirmed: true, statement: 'Operator confirmed the interpretation.' },
-        },
-      }),
+      saveInput({ provenance: { agentRef: 'claude-code', sessionRef: 'session-a-retry' } }),
     );
 
     if (first.status !== 'saved' || second.status !== 'saved') throw new Error('unreachable');
@@ -166,40 +166,24 @@ describe('ContextEntityModelService — save', () => {
     expect(versions[0]).toEqual(originalSnapshot);
   });
 
-  it('refuses persistence without an operator confirmation', async () => {
+  it('refuses persistence when nothing confirms it', async () => {
     const { service, store } = harness();
 
-    const result = await service.saveEntityModel(
-      saveInput({
-        provenance: {
-          agentRef: 'claude-code',
-          sessionRef: 'session-a',
-          // Confirmation authorises persistence; without it there is nothing
-          // to authorise the write, whatever transport it arrived over.
-          confirmation: { confirmed: false as unknown as true, statement: 'not confirmed' },
-        },
-      }),
-    );
+    // No operator channel and no attestation: there is nothing authorising the
+    // write, whatever transport it arrived over.
+    const { agentAttestedConfirmation, ...withoutAttestation } = saveInput();
+    const result = await service.saveEntityModel(withoutAttestation);
 
     expect(result).toMatchObject({ status: 'refused', reason: 'invalid_input' });
     expect(store.snapshotModels()).toHaveLength(0);
   });
 
-  it('refuses a confirmation flag carrying an empty statement', async () => {
+  it('refuses an empty attestation', async () => {
     const { service, store } = harness();
 
-    // `confirmed: true` with nothing behind it is not a confirmation. If only
-    // the boolean were checked, any caller able to set the flag could persist
-    // without the operator having said anything at all.
-    for (const statement of ['', '   ']) {
+    for (const attestation of ['', '   ']) {
       const result = await service.saveEntityModel(
-        saveInput({
-          provenance: {
-            agentRef: 'claude-code',
-            sessionRef: 'session-a',
-            confirmation: { confirmed: true, statement },
-          },
-        }),
+        saveInput({ agentAttestedConfirmation: attestation }),
       );
       expect(result).toMatchObject({ status: 'refused', reason: 'invalid_input' });
     }
@@ -278,6 +262,121 @@ describe('ContextEntityModelService — save', () => {
     const result = await service.saveEntityModel(saveInput());
 
     expect(result).toMatchObject({ status: 'refused', reason: 'store_unavailable' });
+  });
+});
+
+describe('ContextEntityModelService — the operator confirmation boundary', () => {
+  /** A gateway standing in for a human answering through the MCP client. */
+  function operatorWhoAnswers(outcome: ConfirmationOutcome): OperatorConfirmationGateway & {
+    calls: ConfirmationRequest[];
+  } {
+    const calls: ConfirmationRequest[] = [];
+    return {
+      calls,
+      async requestConfirmation(request) {
+        calls.push(request);
+        return outcome;
+      },
+    };
+  }
+
+  it('records an elicited approval as operator-verified, in the operator’s words', async () => {
+    const { service } = harness();
+    const gateway = operatorWhoAnswers({
+      status: 'approved',
+      statement: 'Yes — that is what I want tracked.',
+    });
+
+    const result = await service.saveEntityModel(saveInput(), { confirmation: gateway });
+
+    if (result.status !== 'saved') throw new Error('unreachable');
+    expect(result.model.provenance.confirmation).toEqual({
+      confirmed: true,
+      method: 'operator_elicited',
+      statement: 'Yes — that is what I want tracked.',
+    });
+    // The operator was shown what they were approving, not just asked to agree.
+    expect(gateway.calls).toHaveLength(1);
+    expect(gateway.calls[0].interpretation).toBe(WARREN_CONTEXT);
+    expect(gateway.calls[0].subject.displayName).toBe('Jaylen Warren');
+  });
+
+  it('refuses when the operator declines, even though the agent attested otherwise', async () => {
+    const { service, store } = harness();
+    const gateway = operatorWhoAnswers({ status: 'declined', detail: 'operator said no' });
+
+    // The attestation says the operator confirmed. The operator, asked
+    // directly, said no. If the attestation could win here, asking would be
+    // theatre.
+    const result = await service.saveEntityModel(
+      saveInput({ agentAttestedConfirmation: 'Operator definitely confirmed this.' }),
+      { confirmation: gateway },
+    );
+
+    expect(result).toMatchObject({ status: 'refused', reason: 'confirmation_declined' });
+    expect(store.snapshotModels()).toHaveLength(0);
+  });
+
+  it('falls back to an attested confirmation only when there is no channel, and says so', async () => {
+    const { service } = harness();
+    const gateway = operatorWhoAnswers({ status: 'no_channel', detail: 'client cannot elicit' });
+
+    const result = await service.saveEntityModel(saveInput(), { confirmation: gateway });
+
+    if (result.status !== 'saved') throw new Error('unreachable');
+    expect(result.model.provenance.confirmation.method).toBe('agent_attested');
+    expect(result.model.provenance.confirmation.statement).toBe(
+      'Operator confirmed the interpretation.',
+    );
+  });
+
+  it('records a truthful placeholder when the operator approves without comment', async () => {
+    const { service } = harness();
+    const gateway = operatorWhoAnswers({ status: 'approved', statement: '   ' });
+
+    const result = await service.saveEntityModel(saveInput(), { confirmation: gateway });
+
+    if (result.status !== 'saved') throw new Error('unreachable');
+    // Records what happened rather than inventing words for the operator.
+    expect(result.model.provenance.confirmation.method).toBe('operator_elicited');
+    expect(result.model.provenance.confirmation.statement).toBe(
+      'Operator approved persistence without additional comment.',
+    );
+  });
+
+  it('does not interrupt the operator for a save that would change nothing', async () => {
+    const { service } = harness();
+    const first = operatorWhoAnswers({ status: 'approved', statement: 'Approved.' });
+    await service.saveEntityModel(saveInput(), { confirmation: first });
+
+    const second = operatorWhoAnswers({ status: 'approved', statement: 'Approved.' });
+    const result = await service.saveEntityModel(saveInput(), { confirmation: second });
+
+    if (result.status !== 'saved') throw new Error('unreachable');
+    expect(result.outcome).toBe('unchanged');
+    // Asking a human to approve a no-op teaches them to approve without reading.
+    expect(second.calls).toHaveLength(0);
+  });
+
+  it('does not let a caller declare its own confirmation method', async () => {
+    const { service } = harness();
+
+    // The caller supplies provenance and, at most, an attestation. There is no
+    // input path that reaches `method`, so `operator_elicited` cannot be
+    // claimed by whoever is making the request.
+    const result = await service.saveEntityModel({
+      ...saveInput(),
+      provenance: {
+        agentRef: 'claude-code',
+        sessionRef: 'session-a',
+        // Deliberately smuggled: an older shape that carried its own verdict.
+        confirmation: { confirmed: true, method: 'operator_elicited', statement: 'I say so.' },
+      } as unknown as SaveEntityModelInput['provenance'],
+    });
+
+    if (result.status !== 'saved') throw new Error('unreachable');
+    expect(result.model.provenance.confirmation.method).toBe('agent_attested');
+    expect(result.model.provenance).not.toHaveProperty('confirmation.confirmed', undefined);
   });
 });
 

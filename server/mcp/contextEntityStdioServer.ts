@@ -36,6 +36,7 @@ import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CONTEXT_ENTITY_TOOLS } from '../modules/contextEntityModel/mcp/toolDefinitions';
+import { createElicitedConfirmationGateway } from './elicitedConfirmationGateway';
 import type { ContextEntityModelService } from '../modules/contextEntityModel/contextEntityModelService';
 
 const SERVER_NAME = 'tiber-context-entity';
@@ -67,7 +68,13 @@ export function buildContextEntityMcpServer(service: ContextEntityModelService):
       },
       async (args: unknown) => {
         try {
-          const result = await tool.handler(args, service);
+          // Writes are confirmed through the client's elicitation channel, so
+          // the operator — not the calling agent — decides. Where the client
+          // cannot elicit, the gateway says so and the service records the
+          // caller's attestation as unverified rather than pretending.
+          const result = await tool.handler(args, service, {
+            confirmation: createElicitedConfirmationGateway(server.server),
+          });
           return { content: [{ type: 'text' as const, text: result.text }], isError: result.isError };
         } catch (error) {
           // Refusals already come back as structured results; reaching here

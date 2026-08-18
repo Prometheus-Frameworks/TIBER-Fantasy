@@ -27,7 +27,7 @@ import {
   computeContentDigest,
   isValidSubjectId,
   looksLikeModelId,
-  provenanceSchema,
+  provenanceInputSchema,
   sha256Digest,
   type AuthorityState,
   type ContextBoundEntityModel,
@@ -35,13 +35,15 @@ import {
   type ContextEntityObservationRecord,
   type EntitySubject,
   type Horizon,
-  type ModelProvenance,
+  type ModelProvenanceInput,
   type ObservationSource,
+  type OperatorConfirmation,
   type StructuredMap,
   type SubjectType,
   type Visibility,
 } from './domain';
 import type { ContextEntityResolver, EntityLocator, EntityResolution } from './entityResolver';
+import { noOperatorChannel, type OperatorConfirmationGateway } from './operatorConfirmation';
 import {
   ContextEntityStoreUnavailableError,
   type ContextEntityModelStore,
@@ -85,8 +87,24 @@ export interface SaveEntityModelInput extends OperatorContextInput {
   /** The operator's own framing of why this entity matters here. */
   operatorContext: string;
   horizon: Horizon;
-  structuredMap: StructuredMap;
-  provenance: ModelProvenance;
+  /** Declared contract + payload. `validation` is set by the service. */
+  structuredMap: Omit<StructuredMap, 'validation'>;
+  provenance: ModelProvenanceInput;
+  /**
+   * The caller's attestation that the operator confirmed, used **only** when
+   * no operator channel is available on this call. Recorded as
+   * `agent_attested`, never as a verified approval.
+   */
+  agentAttestedConfirmation?: string;
+}
+
+/** Per-call collaborators. Request-scoped, so not constructor dependencies. */
+export interface SaveEntityModelOptions {
+  /**
+   * Channel to the human. When it can reach the operator, their answer — not
+   * the caller's claim — decides whether the write happens.
+   */
+  confirmation?: OperatorConfirmationGateway;
 }
 
 export interface GetEntityModelInput {
@@ -116,6 +134,7 @@ export type RefusalReason =
   | 'identity_merge_broken'
   | 'identity_incomplete'
   | 'identity_unavailable'
+  | 'confirmation_declined'
   | 'model_not_found'
   | 'workspace_mismatch'
   | 'store_unavailable';
@@ -225,7 +244,10 @@ export class ContextEntityModelService {
    * `createdAt` is taken from this service's clock and is not caller-
    * supplied: a persisted creation time is always a real observed time.
    */
-  async saveEntityModel(input: SaveEntityModelInput): Promise<SaveEntityModelResult> {
+  async saveEntityModel(
+    input: SaveEntityModelInput,
+    options?: SaveEntityModelOptions,
+  ): Promise<SaveEntityModelResult> {
     const workspaceId = normaliseWorkspaceId(input.workspaceId);
     if (!workspaceId) return refuse('invalid_input', 'workspaceId is required');
 
@@ -240,20 +262,9 @@ export class ContextEntityModelService {
       return refuse('invalid_input', `operatorContext exceeds ${MAX_OPERATOR_CONTEXT} characters`);
     }
 
-    // Confirmation authorises *this* persistence. It is checked here, in the
-    // application layer, so the guarantee does not depend on which transport
-    // the call arrived over.
-    //
-    // The whole provenance record is validated, not just the boolean: a
-    // `confirmed: true` carrying an empty statement is not a confirmation, and
-    // a caller that can set the flag can just as easily leave the statement
-    // blank. Checking the flag alone would make the guarantee cosmetic.
-    if (input.provenance?.confirmation?.confirmed !== true) {
-      return refuse('invalid_input', 'operator confirmation is required before persistence');
-    }
-    const provenance = provenanceSchema.safeParse(input.provenance);
-    if (!provenance.success) {
-      const detail = provenance.error.issues
+    const provenanceInput = provenanceInputSchema.safeParse(input.provenance);
+    if (!provenanceInput.success) {
+      const detail = provenanceInput.error.issues
         .map((issue) => `${issue.path.join('.') || 'provenance'}: ${issue.message}`)
         .join('; ');
       return refuse('invalid_input', `provenance is incomplete — ${detail}`);
@@ -267,6 +278,14 @@ export class ContextEntityModelService {
       return refuse('identity_incomplete', 'resolved subject is outside the v0 identity namespace');
     }
 
+    const structuredMap: StructuredMap = {
+      declaredContract: input.structuredMap.declaredContract,
+      // Fixed by the service, not the caller: a caller able to write this field
+      // could claim its payload had been validated when nothing validated it.
+      validation: 'not_performed',
+      payload: input.structuredMap.payload,
+    };
+
     const contentDigest = computeContentDigest({
       workspaceId,
       operatorId,
@@ -274,7 +293,7 @@ export class ContextEntityModelService {
       subjectId: subject.subjectId,
       operatorContext,
       horizon: input.horizon,
-      structuredMap: input.structuredMap,
+      structuredMap,
       authorityState: V0_AUTHORITY_STATE,
       visibility: V0_VISIBILITY,
     });
@@ -282,10 +301,35 @@ export class ContextEntityModelService {
     const ref = refFor(workspaceId, subject);
 
     try {
+      // Checked before asking anyone anything: re-saving identical content
+      // changes nothing, and interrupting an operator to approve a write that
+      // will not happen would train them to approve without reading.
       const existing = await this.store.findModelByContentDigest(ref, contentDigest);
       if (existing) {
         return { status: 'saved', outcome: 'unchanged', model: existing, subject };
       }
+
+      // Confirmation authorises *this* persistence, and is obtained here — in
+      // the application layer — so the guarantee does not depend on which
+      // transport the call arrived over.
+      //
+      // The service asks the gateway rather than trusting a confirmation
+      // handed to it, because a caller that can assemble a confirmation record
+      // is witnessing its own request. What the caller may supply is an
+      // attestation, used only when no channel to the operator exists, and
+      // recorded as `agent_attested` so nothing downstream mistakes it for a
+      // verified human approval.
+      const confirmation = await this.obtainConfirmation({
+        workspaceId,
+        operatorId,
+        subject,
+        interpretation: operatorContext,
+        attestation: input.agentAttestedConfirmation,
+        gateway: options?.confirmation,
+      });
+      if ('status' in confirmation) return confirmation;
+
+      const provenance = { ...provenanceInput.data, confirmation };
 
       const latest = await this.store.findLatestModel(ref);
       const model: ContextBoundEntityModel = {
@@ -297,9 +341,9 @@ export class ContextEntityModelService {
         subjectId: subject.subjectId,
         operatorContext,
         horizon: input.horizon,
-        structuredMap: input.structuredMap,
-        structuredMapDigest: sha256Digest(input.structuredMap),
-        provenance: provenance.data,
+        structuredMap,
+        structuredMapDigest: sha256Digest(structuredMap),
+        provenance,
         authorityState: V0_AUTHORITY_STATE,
         visibility: V0_VISIBILITY,
         contentDigest,
@@ -405,6 +449,60 @@ export class ContextEntityModelService {
     } catch (error) {
       return storeRefusal(error);
     }
+  }
+
+  /**
+   * Obtain the confirmation that authorises one persistence.
+   *
+   * Asks the operator through the supplied channel when there is one. Only if
+   * there is genuinely no channel does it fall back to the caller's
+   * attestation — and then the record says `agent_attested`, so a reader can
+   * tell the two apart. A decline is a refusal, never a fallback: if the
+   * operator was reachable and said no, an attestation must not override them.
+   */
+  private async obtainConfirmation(request: {
+    workspaceId: string;
+    operatorId: string;
+    subject: EntitySubject;
+    interpretation: string;
+    attestation?: string;
+    gateway?: OperatorConfirmationGateway;
+  }): Promise<OperatorConfirmation | Refusal> {
+    const gateway = request.gateway ?? noOperatorChannel;
+    const outcome = await gateway.requestConfirmation({
+      workspaceId: request.workspaceId,
+      operatorId: request.operatorId,
+      subject: request.subject,
+      interpretation: request.interpretation,
+    });
+
+    if (outcome.status === 'approved') {
+      const statement = outcome.statement.trim();
+      return {
+        confirmed: true,
+        method: 'operator_elicited',
+        // The operator may approve without typing anything. Recording what
+        // actually happened is truthful; inventing words for them is not.
+        statement: statement || 'Operator approved persistence without additional comment.',
+      };
+    }
+
+    if (outcome.status === 'declined') {
+      return refuse('confirmation_declined', outcome.detail);
+    }
+
+    const attestation = request.attestation?.trim();
+    if (!attestation) {
+      return refuse(
+        'invalid_input',
+        'no operator channel is available and no agent attestation was supplied; ' +
+          'persistence requires one or the other',
+      );
+    }
+    if (attestation.length > 2000) {
+      return refuse('invalid_input', 'agent attestation exceeds 2000 characters');
+    }
+    return { confirmed: true, method: 'agent_attested', statement: attestation };
   }
 
   private async resolveAppendTarget(
