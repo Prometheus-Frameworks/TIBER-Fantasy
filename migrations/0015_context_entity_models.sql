@@ -17,6 +17,11 @@
 -- much larger change than this pilot is authorised to make. The DDL below is
 -- transcribed from `contextEntityModels` / `contextEntityObservations` in
 -- shared/schema.ts.
+--
+-- Accepted by the operator in #333 as a bounded exception for this pilot; the
+-- snapshot-chain debt itself is tracked in #334. This note is here so a future
+-- reader finds the authorisation next to the deviation rather than having to
+-- reconstruct it from review history.
 
 CREATE TABLE IF NOT EXISTS context_entity_models (
   model_id                varchar(64)  PRIMARY KEY,

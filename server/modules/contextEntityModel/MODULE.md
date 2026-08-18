@@ -100,7 +100,8 @@ schema is roughly eleven migrations ahead, so `drizzle-kit generate` diffs
 against 0003 and proposes re-creating unrelated tables behind interactive
 create-or-rename prompts. Migrations 0004–0014 are hand-authored for the same
 reason. Repairing that chain is a real piece of work, and a much larger one
-than this pilot.
+than this pilot — accepted by the operator in #333 as a bounded exception, with
+the snapshot-chain debt tracked in #334.
 
 `__tests__/inMemoryContextEntityModelStore.ts` is a **test fixture**, not an
 alternative persistence authority — it lives under `__tests__/` so nothing in
