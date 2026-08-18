@@ -188,7 +188,14 @@ export class ContextEntityResolver {
         detail: 'matched registry row carries no canonical tiber_player_id',
       };
     }
-    return { status: 'resolved', subject: toSubject(player.tiberPlayerId, player) };
+
+    // Finish through the merge-aware lookup rather than binding to this row
+    // directly. The registry's name search does not filter merged rows, and a
+    // merged loser keeps its minted id as a historical redirect — so an exact
+    // name match can legitimately land on a row that is no longer the entity.
+    // Binding operator context to that id would split the entity's history:
+    // every later lookup redirects to the survivor and would not find it.
+    return this.resolveByTiberPlayerId(player.tiberPlayerId);
   }
 }
 

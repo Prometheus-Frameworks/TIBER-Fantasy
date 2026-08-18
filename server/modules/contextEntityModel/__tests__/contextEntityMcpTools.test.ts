@@ -102,6 +102,14 @@ describe('context entity MCP tool surface', () => {
     const { operatorConfirmationStatement, ...withoutConfirmation } = SAVE_ARGS;
 
     await expect(tool('tiber_save_entity_model').handler(withoutConfirmation, service)).rejects.toThrow();
+    // A blank statement is not a confirmation either — the schema rejects it
+    // rather than passing a hollow `confirmed: true` down to the service.
+    await expect(
+      tool('tiber_save_entity_model').handler(
+        { ...SAVE_ARGS, operatorConfirmationStatement: '   ' },
+        service,
+      ),
+    ).rejects.toThrow();
     expect(store.snapshotModels()).toHaveLength(0);
   });
 });

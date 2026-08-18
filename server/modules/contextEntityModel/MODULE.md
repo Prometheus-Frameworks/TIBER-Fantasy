@@ -45,7 +45,11 @@ exception to swallow.
 1. **A name is never an identity.** Names locate a registry row; the canonical
    `tiber_player_id` that row returns is what gets stored. Name resolution
    requires an exact normalised match, above a confidence floor, with exactly
-   one candidate — anything else is refused.
+   one candidate — anything else is refused. The match then finishes through
+   the merge-aware `getByTiberPlayerId` path, because the registry's name
+   search does not filter merged rows and a merged loser keeps its minted id
+   as a historical redirect; binding to that id would split the entity's
+   history.
 2. **Stored models are immutable.** There is no update or delete anywhere in
    the store port or its Postgres implementation. A changed interpretation is a
    new version row; new information is a new observation row. This is what makes
@@ -64,7 +68,10 @@ exception to swallow.
    saved anything".
 6. **Writes are attributed and confirmed.** Workspace and operator are required
    on every write; persistence additionally requires an operator confirmation.
-   Enforced in the service, so it holds for any transport.
+   Enforced in the service, so it holds for any transport. The whole provenance
+   record is validated, not just the boolean — `confirmed: true` with an empty
+   statement is not a confirmation, and checking only the flag would make the
+   guarantee cosmetic.
 
 ## Storage
 

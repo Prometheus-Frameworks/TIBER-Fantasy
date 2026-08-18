@@ -194,6 +194,8 @@ const saveEntityModelInput = z.object({
     .describe('Opaque session reference for provenance. Must not carry conversation content.'),
   operatorConfirmationStatement: z
     .string()
+    .trim()
+    .min(1)
     .describe(
       'What the operator confirmed. Persistence requires it. Confirmation authorises storing ' +
         'the interpretation — it is not a request to print the model into the conversation.',

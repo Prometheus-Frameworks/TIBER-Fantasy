@@ -26,14 +26,15 @@
  * See docs/mcp/context-bound-entity-model-v0.md for the operator-facing note.
  */
 
-// Must be first: stdout is the JSON-RPC channel on stdio transport.
-import './stdioSafety';
-
+// Only side-effect-free imports at module scope. The two things that *do* have
+// side effects — the console patch and the composition root, which opens a
+// database connection — are loaded inside `main()`, so importing this module to
+// inspect or reuse `buildContextEntityMcpServer` neither requires DATABASE_URL
+// nor patches the host process's console.
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createContextEntityModelService } from '../modules/contextEntityModel/composition';
 import { CONTEXT_ENTITY_TOOLS } from '../modules/contextEntityModel/mcp/toolDefinitions';
 import type { ContextEntityModelService } from '../modules/contextEntityModel/contextEntityModelService';
 
@@ -88,6 +89,14 @@ export function buildContextEntityMcpServer(service: ContextEntityModelService):
 }
 
 async function main(): Promise<void> {
+  // Order matters: stdout is the JSON-RPC channel, so the console patch has to
+  // be in place before anything that logs is loaded — the database pool prints
+  // pool statistics on a timer outside production.
+  await import('./stdioSafety');
+  const { createContextEntityModelService } = await import(
+    '../modules/contextEntityModel/composition'
+  );
+
   const service = createContextEntityModelService();
   const server = buildContextEntityMcpServer(service);
   await server.connect(new StdioServerTransport());

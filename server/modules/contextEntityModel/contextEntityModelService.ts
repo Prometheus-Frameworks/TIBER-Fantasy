@@ -27,6 +27,7 @@ import {
   computeContentDigest,
   isValidSubjectId,
   looksLikeModelId,
+  provenanceSchema,
   sha256Digest,
   type AuthorityState,
   type ContextBoundEntityModel,
@@ -242,8 +243,20 @@ export class ContextEntityModelService {
     // Confirmation authorises *this* persistence. It is checked here, in the
     // application layer, so the guarantee does not depend on which transport
     // the call arrived over.
+    //
+    // The whole provenance record is validated, not just the boolean: a
+    // `confirmed: true` carrying an empty statement is not a confirmation, and
+    // a caller that can set the flag can just as easily leave the statement
+    // blank. Checking the flag alone would make the guarantee cosmetic.
     if (input.provenance?.confirmation?.confirmed !== true) {
       return refuse('invalid_input', 'operator confirmation is required before persistence');
+    }
+    const provenance = provenanceSchema.safeParse(input.provenance);
+    if (!provenance.success) {
+      const detail = provenance.error.issues
+        .map((issue) => `${issue.path.join('.') || 'provenance'}: ${issue.message}`)
+        .join('; ');
+      return refuse('invalid_input', `provenance is incomplete — ${detail}`);
     }
 
     const resolution = await this.resolver.resolve(input.locator);
@@ -286,7 +299,7 @@ export class ContextEntityModelService {
         horizon: input.horizon,
         structuredMap: input.structuredMap,
         structuredMapDigest: sha256Digest(input.structuredMap),
-        provenance: input.provenance,
+        provenance: provenance.data,
         authorityState: V0_AUTHORITY_STATE,
         visibility: V0_VISIBILITY,
         contentDigest,

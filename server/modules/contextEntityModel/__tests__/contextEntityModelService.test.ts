@@ -185,6 +185,44 @@ describe('ContextEntityModelService — save', () => {
     expect(store.snapshotModels()).toHaveLength(0);
   });
 
+  it('refuses a confirmation flag carrying an empty statement', async () => {
+    const { service, store } = harness();
+
+    // `confirmed: true` with nothing behind it is not a confirmation. If only
+    // the boolean were checked, any caller able to set the flag could persist
+    // without the operator having said anything at all.
+    for (const statement of ['', '   ']) {
+      const result = await service.saveEntityModel(
+        saveInput({
+          provenance: {
+            agentRef: 'claude-code',
+            sessionRef: 'session-a',
+            confirmation: { confirmed: true, statement },
+          },
+        }),
+      );
+      expect(result).toMatchObject({ status: 'refused', reason: 'invalid_input' });
+    }
+    expect(store.snapshotModels()).toHaveLength(0);
+  });
+
+  it('refuses persistence with incomplete provenance attribution', async () => {
+    const { service, store } = harness();
+
+    const result = await service.saveEntityModel(
+      saveInput({
+        provenance: {
+          agentRef: '',
+          sessionRef: 'session-a',
+          confirmation: { confirmed: true, statement: 'Operator confirmed.' },
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ status: 'refused', reason: 'invalid_input' });
+    expect(store.snapshotModels()).toHaveLength(0);
+  });
+
   it('refuses persistence without workspace or operator attribution', async () => {
     const { service } = harness();
 

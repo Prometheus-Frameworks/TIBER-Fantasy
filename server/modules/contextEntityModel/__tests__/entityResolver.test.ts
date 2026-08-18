@@ -129,6 +129,40 @@ describe('ContextEntityResolver', () => {
     expect(result.subject.subjectId).toBe(survivorId);
   });
 
+  it('follows a merge redirect when a name lands on a merged loser row', async () => {
+    // The registry's name search does not filter merged rows, and a merged
+    // loser keeps its minted id as a historical redirect. Binding context to
+    // that id would split the entity's history, because every later lookup
+    // resolves to the survivor instead.
+    const loserId = 'tbr_p_01J8ZQ3M7K4N6P8R9SATVWXYZ2';
+    const survivorId = 'tbr_p_01J8ZQ3M7K4N6P8R9SATVWXYZ3';
+    const gateway = FakeIdentityGateway.withWarren();
+    gateway.byCanonicalId.set(WARREN_CANONICAL_ID, warrenIdentity({ tiberPlayerId: loserId }));
+    gateway.byTiberId.set(loserId, {
+      status: 'resolved',
+      player: warrenIdentity({ tiberPlayerId: survivorId }),
+    });
+    const resolver = new ContextEntityResolver(gateway);
+
+    const result = await resolver.resolve({ kind: 'player_name', name: 'Jaylen Warren' });
+
+    expect(result.status).toBe('resolved');
+    if (result.status !== 'resolved') throw new Error('unreachable');
+    expect(result.subject.subjectId).toBe(survivorId);
+  });
+
+  it('refuses a name match whose registry row has a broken merge chain', async () => {
+    const loserId = 'tbr_p_01J8ZQ3M7K4N6P8R9SATVWXYZ4';
+    const gateway = FakeIdentityGateway.withWarren();
+    gateway.byCanonicalId.set(WARREN_CANONICAL_ID, warrenIdentity({ tiberPlayerId: loserId }));
+    gateway.byTiberId.set(loserId, { status: 'merge_broken' });
+    const resolver = new ContextEntityResolver(gateway);
+
+    const result = await resolver.resolve({ kind: 'player_name', name: 'Jaylen Warren' });
+
+    expect(result.status).toBe('merge_broken');
+  });
+
   it('refuses two exact name matches instead of choosing the higher-scoring one', async () => {
     const gateway = FakeIdentityGateway.withWarren();
     gateway.nameSearches.set('jaylen warren', [
