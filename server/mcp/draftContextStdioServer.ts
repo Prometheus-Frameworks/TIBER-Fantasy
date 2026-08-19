@@ -8,14 +8,26 @@ import {
   calculateReplacementGeometry,
   DEFAULT_REPLACEMENT_BUFFER,
 } from './draftContextReplacementGeometry';
+import {
+  calculateTrailingVor,
+  TRAILING_PRODUCTION_CACHE_PATH,
+  type ReplacementRanks,
+  type TrailingProductionArtifact,
+} from './draftContextTrailingVor';
 
 const SERVER_NAME = 'tiber-draft-context';
-const SERVER_VERSION = '0.1.0';
+const SERVER_VERSION = '0.2.0';
 const STALE_AFTER_DAYS = 3;
 const REPLACEMENT_GEOMETRY_REFERENCE = {
   repository: 'Prometheus-Frameworks/TIBER-Forecast',
   path: 'src/calculators/replacement/calculateReplacementBaselines.ts',
   blob_sha: '8c57fb1a884618c371b9172051e7b1d0155264fc',
+} as const;
+const TRAILING_VOR_METHOD_REFERENCE = {
+  repository: 'Prometheus-Frameworks/TIBER-Ops',
+  issue: 60,
+  method:
+    'trailing-season fantasy points as the base metric, VOR against league-specific replacement, operator context layered on top',
 } as const;
 
 const SNAPSHOTS: Record<string, string> = {
@@ -58,14 +70,35 @@ async function loadSnapshot(format: string, teams: number): Promise<{ path: stri
   return { path, snapshot: JSON.parse(text) as AdpSnapshot };
 }
 
+async function loadTrailingProduction(): Promise<{ path: string; artifact: TrailingProductionArtifact } | null> {
+  const path = TRAILING_PRODUCTION_CACHE_PATH;
+  try {
+    const text = await readFile(resolve(process.cwd(), path), 'utf8');
+    const artifact = JSON.parse(text) as TrailingProductionArtifact;
+    if (
+      artifact.schema_version !== 'draft_trailing_production_v0' ||
+      artifact.authority !== 'promoted_governed_historical_evidence' ||
+      artifact.season !== 2025 ||
+      artifact.scoring !== 'ppr' ||
+      !Array.isArray(artifact.players) ||
+      artifact.player_count !== artifact.players.length
+    ) {
+      throw new Error('local trailing-production cache failed shape/authority validation');
+    }
+    return { path, artifact };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 export function buildDraftContextMcpServer(): McpServer {
   const server = new McpServer(
     { name: SERVER_NAME, version: SERVER_VERSION },
     {
       instructions:
-        'Read-only TIBER draft context pilot. It exposes only already-committed artifacts and deterministic league geometry. ' +
-        'It does not fetch live market data, write state, draft players, publish rankings, or ' +
-        'claim that trailing evidence is a 2026 projection. Unsupported league shapes fail closed.',
+        'Read-only TIBER draft context pilot. It exposes committed ADP artifacts, deterministic league geometry, and—when the source-pinned local cache has been built—backward-looking 2025 production/VOR context. ' +
+        'The MCP runtime performs no network fetch, writes no state, drafts no players, publishes no ranking, and makes no 2026 projection claim. Unsupported league shapes fail closed.',
     },
   );
 
@@ -117,9 +150,9 @@ export function buildDraftContextMcpServer(): McpServer {
 
       const { path, snapshot } = loaded;
       const daysOld = ageDays(snapshot.source.fetched_at);
-      const wanted = candidateNames?.map((name) => name.trim().toLowerCase());
+      const wanted = candidateNames?.map((name) => ({ raw: name, normalized: name.trim().toLowerCase() }));
       const players = snapshot.players
-        .filter((player) => !wanted || wanted.includes(player.name.toLowerCase()))
+        .filter((player) => !wanted || wanted.some(({ normalized }) => normalized === player.name.toLowerCase()))
         .slice(0, limit)
         .map((player) => ({
           name: player.name,
@@ -133,6 +166,8 @@ export function buildDraftContextMcpServer(): McpServer {
           low: player.low ?? null,
           stdev: player.stdev ?? null,
         }));
+      const matched = new Set(players.map((player) => player.name.toLowerCase()));
+      const unmatchedCandidates = wanted?.filter(({ normalized }) => !matched.has(normalized)).map(({ raw }) => raw) ?? [];
 
       const payload = {
         status: 'available',
@@ -152,6 +187,7 @@ export function buildDraftContextMcpServer(): McpServer {
         player_count_in_artifact: snapshot.player_count,
         returned_player_count: players.length,
         players,
+        unmatched_candidates: unmatchedCandidates,
         disclosures: [
           'This tool performs no network request; it reads an already-committed snapshot only.',
           'ADP is a source-specific market coordinate, not a TIBER ranking or projection.',
@@ -168,7 +204,7 @@ export function buildDraftContextMcpServer(): McpServer {
     {
       title: 'Get trailing VOR context',
       description:
-        'Returns deterministic league replacement-rank geometry for full-PPR QB/RB/WR/TE using the bounded TIBER-Forecast replacement semantics. Numeric trailing VOR remains unavailable until a committed production artifact is locally bound and validated.',
+        'Returns deterministic league replacement geometry for full-PPR QB/RB/WR/TE and, when the pinned 2025 production cache is present, backward-looking season-PPR VOR plus games/PPG context. This is descriptive historical evidence, not a 2026 projection or ranking.',
       inputSchema: {
         teams: z.number().int().positive(),
         scoring: z.string().min(1),
@@ -227,6 +263,63 @@ export function buildDraftContextMcpServer(): McpServer {
         flexAllocation,
         replacementBuffer ?? DEFAULT_REPLACEMENT_BUFFER,
       );
+      const replacementRanks = geometry.replacementRank as ReplacementRanks;
+
+      let trailingProduction: Awaited<ReturnType<typeof loadTrailingProduction>> = null;
+      let cacheError: string | null = null;
+      try {
+        trailingProduction = await loadTrailingProduction();
+      } catch (error) {
+        cacheError = error instanceof Error ? error.message : String(error);
+      }
+
+      let numericVor: Record<string, unknown>;
+      let overallStatus = 'replacement_geometry_available_vor_unavailable';
+      let authority = 'deterministic_league_geometry_only';
+
+      if (cacheError) {
+        numericVor = {
+          status: 'unavailable_invalid_local_cache',
+          cache_path: TRAILING_PRODUCTION_CACHE_PATH,
+          reason: cacheError,
+          setup_command: 'npx tsx scripts/buildDraftTrailingProductionSnapshot.ts',
+        };
+      } else if (!trailingProduction) {
+        numericVor = {
+          status: 'unavailable_local_cache_not_built',
+          cache_path: TRAILING_PRODUCTION_CACHE_PATH,
+          reason:
+            'The source-pinned 2025 production cache has not been built on this machine. MCP runtime network access stays disabled.',
+          setup_command: 'npx tsx scripts/buildDraftTrailingProductionSnapshot.ts',
+        };
+      } else {
+        const calculation = calculateTrailingVor(trailingProduction.artifact, replacementRanks, candidateNames);
+        if (calculation.status === 'insufficient_population') {
+          numericVor = {
+            status: 'unavailable_insufficient_population',
+            ...calculation,
+          };
+        } else {
+          overallStatus = 'replacement_geometry_and_trailing_vor_available';
+          authority = 'deterministic_league_geometry_plus_promoted_historical_evidence';
+          numericVor = {
+            status: 'available',
+            authority: 'backward_looking_descriptive_trailing_vor',
+            season: trailingProduction.artifact.season,
+            scoring: trailingProduction.artifact.scoring,
+            metric: '2025 season PPR minus the 2025 season PPR of the positional player at the league-specific replacement rank',
+            method_reference: TRAILING_VOR_METHOD_REFERENCE,
+            cache_path: trailingProduction.path,
+            source: trailingProduction.artifact.source,
+            source_player_count: trailingProduction.artifact.player_count,
+            replacement: calculation.replacement,
+            candidates: calculation.candidates,
+            unmatched_candidates: calculation.unmatched_candidates,
+            ppg_context:
+              'Games played, season PPG, and PPG delta versus the same replacement player are context fields only; the registered trailing-VOR metric remains season-total PPR.',
+          };
+        }
+      }
 
       return {
         content: [
@@ -234,7 +327,7 @@ export function buildDraftContextMcpServer(): McpServer {
             type: 'text' as const,
             text: JSON.stringify(
               {
-                status: 'replacement_geometry_available_vor_unavailable',
+                status: overallStatus,
                 requested: {
                   teams,
                   scoring: normalizedScoring,
@@ -242,7 +335,7 @@ export function buildDraftContextMcpServer(): McpServer {
                   bench: bench ?? null,
                   candidateNames: candidateNames ?? null,
                 },
-                authority: 'deterministic_league_geometry_only',
+                authority,
                 not_a_2026_projection: true,
                 geometry: {
                   flex_slots_league_wide: geometry.flexSlots,
@@ -257,18 +350,14 @@ export function buildDraftContextMcpServer(): McpServer {
                   relationship:
                     'Bounded local reimplementation of starter/flex demand and replacement-rank geometry only; no Forecast runtime or projection activation is implied.',
                 },
-                numeric_vor: {
-                  status: 'unavailable_not_wired',
-                  reason:
-                    'No committed local trailing-production artifact is yet bound to this MCP branch. The tool will not fetch Sleeper, reach across repositories at runtime, or manufacture replacement points.',
-                  next_safe_step:
-                    'Bind a compact committed trailing-production artifact with explicit provenance, then calculate historical player PPG minus the PPG at the league-specific replacement rank.',
-                },
+                numeric_vor: numericVor,
                 disclosures: [
                   'Bench size is recorded but does not enter the current replacement-rank geometry.',
                   'Kicker and DST are outside this pilot and do not enter the QB/RB/WR/TE geometry.',
                   'Replacement ranks are league-demand coordinates, not player values, rankings, or 2026 projections.',
-                  'Numeric VOR remains unavailable until historical production is bound reproducibly.',
+                  'When numeric trailing VOR is available, it is backward-looking 2025 descriptive evidence only and is not product advice.',
+                  'Season-total VOR reflects missed games by design. Games played and PPG are returned so an agent/operator can see that context rather than silently treating availability as talent.',
+                  'The one-time cache builder fetches one exact SHA-pinned promoted TIBER-Data artifact from GitHub; the MCP runtime itself remains network-free.',
                 ],
               },
               null,
