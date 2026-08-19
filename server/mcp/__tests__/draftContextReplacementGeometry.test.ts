@@ -1,4 +1,4 @@
-import { calculateReplacementGeometry } from '../draftContextStdioServer';
+import { calculateReplacementGeometry } from '../draftContextReplacementGeometry';
 
 describe('draft-context replacement geometry', () => {
   test('matches the Forecast v0 geometry for a 10-team 1/2/2/1 + 2 FLEX league', () => {
