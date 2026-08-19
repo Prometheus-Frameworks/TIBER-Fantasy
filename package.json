@@ -20,6 +20,8 @@
     "qa:gold": "tsx server/scripts/qaGoldDatadiveSanityCheck.ts",
     "qa:fantasy-lab": "tsx server/scripts/qaFantasyLabPhase1.ts",
     "qa:fantasy-lab-phase3": "tsx server/scripts/qaFantasyLabPhase3.ts",
+    "identity:census": "tsx server/scripts/tiberPlayerIdBackfill.ts census",
+    "identity:backfill": "tsx server/scripts/tiberPlayerIdBackfill.ts backfill",
     "forge:parity": "tsx server/modules/externalModels/forge/runForgeParityHarness.ts",
     "forge:parity:report": "tsx server/modules/externalModels/forge/runForgeParityReport.ts",
     "security:audit": "npm audit --audit-level=high",

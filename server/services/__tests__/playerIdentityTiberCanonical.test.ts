@@ -263,6 +263,24 @@ describe('backfillTiberPlayerIds', () => {
       status: 'failed',
     });
   });
+
+  test('progress logging stays off stdout so CLI receipts remain parseable', async () => {
+    // The operations CLI writes its JSON receipt to stdout and operators
+    // capture it with `> receipt.json`; any console.log here would corrupt it.
+    TABLE = [
+      { canonicalId: 'sleeper:1', tiberPlayerId: null, mergedInto: null, fullName: 'A', position: 'WR' },
+    ];
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await service.backfillTiberPlayerIds();
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
 });
 
 describe('censusTiberPlayerIds', () => {
