@@ -1,5 +1,12 @@
 # CURRENT_PHASE — Management Product Surface Consolidation
 
+> [!IMPORTANT]
+> **Status: historical June 2026 phase snapshot — not the current program frontier.**
+>
+> This file records Management Product Surface Consolidation as it stood on June 2, 2026. Preserve its milestone and fail-closed guardrails, but do not infer authority to continue Management, Team Delta, rankings, or dashboard expansion.
+>
+> Current product direction is recorded in [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64): a Pulse / Shared Reality front door, clear ways to use TIBER through an operator-chosen agent, and canonical UI reserved for shared inspection/control needs. No broad Fantasy front-door implementation or route retirement is activated by that direction alone. Any current implementation task must cite a newer scoped issue or operator decision.
+
 Phase Name: Management Product Surface Consolidation
 Last Updated: June 2, 2026
 Previous Phase: Feature Consolidation & Validation (documented February 21, 2026)

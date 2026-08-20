@@ -1,5 +1,12 @@
 # ARCHITECTURE.md — Tiber Fantasy
 
+> [!IMPORTANT]
+> **Current product-boundary update — 2026-08-18.**
+>
+> For UI, agent-interface, and product-surface decisions, the current authority is [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md), promoted from [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64). TIBER owns governed football state, durable context, provenance, and shared inspection/control surfaces. Operators may use their chosen agent as the primary reasoning interface; MCP remains a transport adapter rather than TIBER's domain architecture. Rankings, roster cockpits, research boards, and other dashboards may be generated projections rather than permanent canonical UI.
+>
+> The June milestone and route/module counts below remain useful historical and navigation context, not an active roadmap or implementation authority. This notice removes no existing route, contract, or capability.
+
 > Top-level navigation document for coding agents. Read this first.
 
 **Project**: Tiber Fantasy — Free NFL fantasy football analytics platform  

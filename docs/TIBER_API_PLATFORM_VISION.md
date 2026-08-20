@@ -1,5 +1,12 @@
 # TiberClaw — Platform Vision Document
 
+> [!IMPORTANT]
+> **Status: historical March 2026 vision — superseded as current product authority on 2026-08-18.**
+>
+> Preserve this document as project history. Do **not** use it to define the current TIBER brand, public API inventory, API-key scope, MCP surface, website information architecture, or an active implementation frontier. Current direction is recorded in [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and its source record, [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64): TIBER owns governed football state, durable context, provenance, and shared inspection/control surfaces; the operator may use a chosen external agent; MCP is transport over provider-neutral domain/application contracts, not the product architecture itself.
+>
+> As of 2026-08-20, [Fantasy PR #333](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/333) is a bounded local-stdio context-model pilot, not the broad remote or multi-user platform described below. Existing endpoint and authentication contracts remain governed by current code and security documentation. Security hardening, including API-key enforcement, does not by itself activate this rollout. This banner authorizes no route, model, connector, UI, or public-access change.
+
 **Last updated:** March 1, 2026  
 **Status:** Live — API v1 operational, auth layer deployed
 
