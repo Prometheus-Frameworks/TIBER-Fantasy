@@ -5,9 +5,9 @@
 >
 > The route table and promotion/retention recommendations below describe an earlier dashboard-and-orchestration information architecture. They are not a current route inventory and grant no implementation authority. In particular, statements that `/tiers` is a permanent core surface, that Command Center or Data Lab should be promoted as the front door, or that TiberClaw is a canonical navigation brand must be re-evaluated under [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md).
 >
-> The current product test is: **Does this need to be canonical TIBER inspection/control UI, or is it one possible projection an agent can construct from TIBER state?** The intended front door is Pulse / Shared Reality plus Use TIBER. Rankings, personalized roster cockpits, research boards, draft dashboards, and weekly briefs may instead be generated projections.
+> The current sequence is Phase 1 audit and classification ([TIBER-Fantasy #338](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/338) plus [TIBER-Ops #67](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/67)); Phase 2 agent-substrate work only after explicit lane rotation and with the bounded substrate acceptance test as its completion gate; and Phase 3 Pulse / Use TIBER packaging only after that loop exists. The continuing product test is: **Does this need to be canonical TIBER inspection/control UI, or is it one possible projection an agent can construct from TIBER state?**
 >
-> Do not delete, retain, hide, or promote a route based on the table below. Run a fresh route, consumer, and readiness audit and obtain separate implementation authority. The historical content is retained unchanged.
+> Do not delete, retain, hide, or promote a route based on the table below. Obtain separate implementation authority under [TIBER-Ops #66](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/66). The historical content is retained unchanged.
 
 ## A) Current-state diagnosis
 
