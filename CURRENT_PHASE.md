@@ -5,7 +5,9 @@
 >
 > This file records Management Product Surface Consolidation as it stood on June 2, 2026. Preserve its milestone and fail-closed guardrails, but do not infer authority to continue Management, Team Delta, rankings, or dashboard expansion.
 >
-> Current product direction is recorded in [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64): a Pulse / Shared Reality front door, clear ways to use TIBER through an operator-chosen agent, and canonical UI reserved for shared inspection/control needs. No broad Fantasy front-door implementation or route retirement is activated by that direction alone. Any current implementation task must cite a newer scoped issue or operator decision.
+> Current direction is recorded in [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64). Phase 1 is audit and classification only: [TIBER-Fantasy #338](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/338) and the brought-agent capability-parity inventory in [TIBER-Ops #67](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/67) may proceed alongside the active ML / modeling lane. Phase 2 agent-substrate implementation begins only after an explicit lane rotation and is complete only when its bounded persist / retrieve / append / inspect / validate / explain acceptance test passes. Pulse and Use TIBER are Phase 3 packaging only after that loop exists.
+>
+> No broad Fantasy front-door implementation or route retirement is activated by that direction alone. Any current implementation task must cite a newer scoped issue and valid consequential authority under [TIBER-Ops #66](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/66).
 
 Phase Name: Management Product Surface Consolidation
 Last Updated: June 2, 2026
