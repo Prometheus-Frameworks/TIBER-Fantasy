@@ -57,8 +57,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
-export type { ScoringContractWarning } from './types';
-import type { ScoringContractWarning } from './types';
+export type { ScoringContractIssue, ScoringContractWarning } from './types';
+import type { ScoringContractIssue, ScoringContractWarning } from './types';
 
 export type BuildWeeklyPlayerCardV1RequestResult =
   | { ok: true; request: Record<string, unknown> }
@@ -225,6 +225,8 @@ export type NormalizeWeeklyPlayerCardV1Result =
       message: string;
       /** Envelope warnings when the failure envelope was schema-valid (e.g. STALE_SOURCE_WINDOW). */
       warnings: ScoringContractWarning[];
+      /** Structured envelope errors (with details) when the failure envelope was schema-valid. */
+      errors: ScoringContractIssue[];
     };
 
 interface ManifestExchangeRule {
@@ -244,6 +246,7 @@ export const normalizeWeeklyPlayerCardV1Response = (
       kind: 'invalid_payload',
       message: `Scoring service response is not a valid ${FANTASY_FORECAST_WEEKLY_PLAYER_CARD_RESPONSE_CONTRACT} v1 document: ${schemaIssues.join(' | ')}`,
       warnings: [],
+      errors: [],
     };
   }
 
@@ -260,15 +263,28 @@ export const normalizeWeeklyPlayerCardV1Response = (
   }));
 
   if (envelope.ok !== true) {
-    const errors = (envelope.errors as Array<{ code: string; message: string }>) ?? [];
+    // Errors, like warnings, keep their schema-permitted structured details.
+    const envelopeErrors: ScoringContractIssue[] = (
+      (envelope.errors as Array<{ code: string; message: string; details?: unknown }>) ?? []
+    ).map((error) => ({
+      code: error.code,
+      message: error.message,
+      ...(error.details !== undefined ? { details: error.details } : {}),
+    }));
     const message = [
-      errors.map((error) => `${error.code}: ${error.message}`).join(' | '),
+      envelopeErrors.map((error) => `${error.code}: ${error.message}`).join(' | '),
       envelopeWarnings.length > 0 ? `(warnings: ${envelopeWarnings.map((warning) => warning.code).join(', ')})` : '',
     ]
       .filter(Boolean)
       .join(' ');
-    const unavailable = errors.some((error) => error.code === 'WEEKLY_PLAYER_CARD_UNAVAILABLE');
-    return { ok: false, kind: unavailable ? 'unavailable' : 'rejected', message, warnings: envelopeWarnings };
+    const unavailable = envelopeErrors.some((error) => error.code === 'WEEKLY_PLAYER_CARD_UNAVAILABLE');
+    return {
+      ok: false,
+      kind: unavailable ? 'unavailable' : 'rejected',
+      message,
+      warnings: envelopeWarnings,
+      errors: envelopeErrors,
+    };
   }
 
   const card = (envelope.data as { card: Record<string, unknown> }).card;
@@ -293,6 +309,7 @@ export const normalizeWeeklyPlayerCardV1Response = (
       kind: 'invalid_payload',
       message: `Exchange violation: ${exchangeIssues.join(' ')}`,
       warnings: envelopeWarnings,
+      errors: [],
     };
   }
 

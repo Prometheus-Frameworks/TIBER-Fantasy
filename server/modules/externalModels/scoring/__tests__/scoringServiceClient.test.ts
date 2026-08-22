@@ -124,6 +124,8 @@ describe('ScoringServiceClient', () => {
         'utf8',
       ),
     );
+    // Attach schema-permitted structured details to the error entry too:
+    unavailable.errors[0].details = { requested_week: 1, reason: 'no_admissible_sample' };
     fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => unavailable });
 
     const service = new ScoringService(new ScoringServiceClient({ baseUrl: 'http://scoring.test' }));
@@ -133,6 +135,13 @@ describe('ScoringServiceClient', () => {
     if (result.ok) return;
     expect(result.code).toBe('weekly_card_unavailable');
     expect(result.warnings).toEqual([expect.objectContaining({ code: 'STALE_SOURCE_WINDOW' })]);
+    // Structured error entries (with details) survive the service wrapper:
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        code: 'WEEKLY_PLAYER_CARD_UNAVAILABLE',
+        details: { requested_week: 1, reason: 'no_admissible_sample' },
+      }),
+    ]);
   });
 
   it('classifies the pre-contract alias card shape as invalid_payload now', async () => {

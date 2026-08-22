@@ -144,12 +144,15 @@ export interface ScoringWeeklyCompareRequest {
   playerB: ScoringPlayerInput;
 }
 
-/** Contract warning preserved with its structured details, when present. */
-export interface ScoringContractWarning {
+/** v1 envelope entry (warning or error) preserved with its structured details, when present. */
+export interface ScoringContractIssue {
   code: string;
   message: string;
   details?: unknown;
 }
+
+/** Contract warning preserved with its structured details, when present. */
+export type ScoringContractWarning = ScoringContractIssue;
 
 export type ScoringResult<T> =
   | { ok: true; data: T }
@@ -164,4 +167,10 @@ export type ScoringResult<T> =
        * not just an error code.
        */
       warnings?: ScoringContractWarning[];
+      /**
+       * Structured v1 envelope errors (with their details) that accompanied a
+       * contract-level failure — the machine-readable rejection/unavailability
+       * context, preserved alongside the flattened code/message.
+       */
+      errors?: ScoringContractIssue[];
     };
