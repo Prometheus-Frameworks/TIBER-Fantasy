@@ -57,6 +57,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
+/** Contract warning preserved with its structured details, when present. */
+export interface ScoringContractWarning {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
 export type BuildWeeklyPlayerCardV1RequestResult =
   | { ok: true; request: Record<string, unknown> }
   | { ok: false; issues: string[] };
@@ -193,10 +200,10 @@ export interface ScoringWeeklyPlayerCardV1 {
   viewType: 'player_card';
   /**
    * Contract warnings from the response envelope (e.g. STALE_SOURCE_WINDOW),
-   * preserved so a degraded/stale-but-available card stays distinguishable
-   * from an ordinary one — never silently dropped.
+   * preserved with their structured details so a degraded/stale-but-available
+   * card stays distinguishable from an ordinary one — never silently dropped.
    */
-  warnings: Array<{ code: string; message: string }>;
+  warnings: ScoringContractWarning[];
   /** @deprecated alias of confidenceBand */
   confidence: string;
   /** @deprecated alias of volatilityTag */
@@ -221,7 +228,7 @@ export type NormalizeWeeklyPlayerCardV1Result =
       kind: 'unavailable' | 'rejected' | 'invalid_payload';
       message: string;
       /** Envelope warnings when the failure envelope was schema-valid (e.g. STALE_SOURCE_WINDOW). */
-      warnings: Array<{ code: string; message: string }>;
+      warnings: ScoringContractWarning[];
     };
 
 interface ManifestExchangeRule {
@@ -245,9 +252,16 @@ export const normalizeWeeklyPlayerCardV1Response = (
   }
 
   const envelope = payload as Record<string, unknown>;
-  const envelopeWarnings = ((envelope.warnings as Array<{ code: string; message: string }>) ?? []).map(
-    (warning) => ({ code: warning.code, message: warning.message }),
-  );
+  const envelopeWarnings: ScoringContractWarning[] = (
+    (envelope.warnings as Array<{ code: string; message: string; details?: unknown }>) ?? []
+  ).map((warning) => ({
+    code: warning.code,
+    message: warning.message,
+    // The vendored schema explicitly permits structured details on warnings
+    // (source windows, provenance); preserve them rather than flattening the
+    // warning to code+message.
+    ...(warning.details !== undefined ? { details: warning.details } : {}),
+  }));
 
   if (envelope.ok !== true) {
     const errors = (envelope.errors as Array<{ code: string; message: string }>) ?? [];

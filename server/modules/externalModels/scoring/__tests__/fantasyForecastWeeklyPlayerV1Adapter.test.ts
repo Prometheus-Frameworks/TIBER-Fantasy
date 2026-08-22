@@ -197,14 +197,25 @@ describe('normalizeWeeklyPlayerCardV1Response against the frozen golden fixtures
     expect(clean.ok).toBe(true);
     if (clean.ok) expect(clean.card.warnings).toEqual([]);
 
-    // A schema-valid success envelope carrying a warning keeps it on the card:
+    // A schema-valid success envelope carrying a warning keeps it on the
+    // card, INCLUDING its structured details (source windows, provenance):
     const warned = readFixture('valid_weekly_player_card_response') as Record<string, unknown>;
-    warned.warnings = [{ code: 'STALE_SOURCE_WINDOW', message: 'Sample window predates the requested week.' }];
+    warned.warnings = [
+      {
+        code: 'STALE_SOURCE_WINDOW',
+        message: 'Sample window predates the requested week.',
+        details: { last_admissible_week: 16, requested_week: 1 },
+      },
+    ];
     const result = normalizeWeeklyPlayerCardV1Response(frozenValidRequest, warned);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.card.warnings).toEqual([
-      { code: 'STALE_SOURCE_WINDOW', message: 'Sample window predates the requested week.' },
+      {
+        code: 'STALE_SOURCE_WINDOW',
+        message: 'Sample window predates the requested week.',
+        details: { last_admissible_week: 16, requested_week: 1 },
+      },
     ]);
   });
 

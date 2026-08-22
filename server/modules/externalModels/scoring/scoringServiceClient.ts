@@ -280,7 +280,20 @@ export class ScoringServiceClient {
         );
       }
 
-      return { status: response.status, payload: await response.json() };
+      // Once an HTTP response has arrived, a body that fails to parse is
+      // malformed contract output, not a connectivity failure — classify it
+      // as invalid_payload rather than letting it fall into the generic
+      // upstream_unavailable catch below.
+      try {
+        return { status: response.status, payload: await response.json() };
+      } catch (parseError) {
+        throw new ScoringServiceIntegrationError(
+          'invalid_payload',
+          `Scoring service returned a non-JSON body for ${path} (HTTP ${response.status}).`,
+          502,
+          parseError,
+        );
+      }
     } catch (error) {
       if (error instanceof ScoringServiceIntegrationError) throw error;
       if (error instanceof Error && error.name === 'AbortError') {

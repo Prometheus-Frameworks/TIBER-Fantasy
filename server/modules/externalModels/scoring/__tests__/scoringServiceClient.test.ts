@@ -94,6 +94,21 @@ describe('ScoringServiceClient', () => {
     >({ code: 'weekly_card_unavailable' });
   });
 
+  it('classifies a non-JSON body on a received response as invalid_payload, not connectivity failure', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token < in JSON at position 0');
+      },
+    });
+
+    const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
+    await expect(client.getWeeklyPlayerCard(fixturePlayerRequest)).rejects.toMatchObject<
+      Partial<ScoringServiceIntegrationError>
+    >({ code: 'invalid_payload' });
+  });
+
   it('classifies the pre-contract alias card shape as invalid_payload now', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
