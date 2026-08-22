@@ -1,5 +1,12 @@
 # TIBER Rankings v2 Explanation Surface (Phase-2 Spec)
 
+> [!IMPORTANT]
+> **Status: retained explanation-contract reference — partially superseded where it assumes a canonical Rankings destination.**
+>
+> The typed explanation, trust, provenance, and transitional `uiMeta` design below remains useful contract and migration evidence where it matches the runtime. [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64) supersede only the assumption that this capability must culminate in a permanent TIBER-owned Rankings / Tiers page.
+>
+> Phase 1 now audits callers, contracts, and reusable calculations through [TIBER-Fantasy #338](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/338) and [TIBER-Ops #67](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/67). Ranking explanations may survive as a domain or MCP capability, generated projection, or justified shared inspection surface; that disposition requires separate evidence and authority. This banner changes no ranking math, schema, route, adapter, UI, or live mode and authorizes no implementation or retirement.
+
 **Status:** Draft architecture/spec (spec-first).  
 **Scope:** Define how Rankings v2 explanation objects evolve beyond phase-1 `uiMeta` bridging.  
 **Non-goal:** No ranking math changes, no UI rebuild, no live mode expansion, no route behavior rewrite.

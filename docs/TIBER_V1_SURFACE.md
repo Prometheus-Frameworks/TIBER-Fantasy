@@ -1,5 +1,12 @@
 # TIBER v1 – Product Surface Specification
 
+> [!IMPORTANT]
+> **Status: historical product-surface specification — partially superseded for product-boundary and canonical-front-door decisions.**
+>
+> Preserve the goals, inventories, and implementation evidence below as project history. Where this file treats stable rankings, Data Lab, Draft Assistant, Management, or a particular page set as inherently v1-critical or canonical, [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [TIBER-Ops #64](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/64) now control. Those older labels do not decide whether the underlying calculation survives as a reusable capability, generated projection, canonical inspection/control surface, or archive candidate.
+>
+> Current work is Phase 1 audit and classification through [TIBER-Fantasy #338](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/338) and [TIBER-Ops #67](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/67). Phase 2 agent-substrate implementation requires explicit lane rotation and completion of its bounded acceptance loop; Pulse and Use TIBER remain Phase 3 packaging. This banner removes no route, contract, model, or capability and grants no implementation or retirement authority.
+
 **Audience:** Codex, future contributors, and future Joe  
 **Purpose:** Define exactly what TIBER v1 must deliver to be considered a "real product."  
 **Status:** Living document (update as features land)

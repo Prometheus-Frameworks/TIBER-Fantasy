@@ -1,5 +1,14 @@
 # TIBER Rankings v2 Definition (Spec / Audit)
 
+> [!IMPORTANT]
+> **Status: contract and migration reference retained; canonical-product-surface assumption superseded pending revalidation.**
+>
+> The code-backed contract scaffold, identity invariants, trust/provenance semantics, and historical route inventory below remain useful where they match the current runtime. The product assertions that Rankings / Tiers is inherently canonical, a core recurring decision surface, or the next permanent UI rebuild no longer provide authority after [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md).
+>
+> Under the current boundary, ranking capability may remain useful through an API, MCP tool, generated report, or agent-created projection. A permanent TIBER-owned rankings screen requires a separately recorded shared-inspection justification.
+>
+> This banner does not remove `/tiers`, deprecate the Rankings v2 contract, activate Forecast scoring, change ranking math, or authorize endpoint cleanup. Limit work to separately authorized correctness, security, and compatibility changes until a post-#64 product-surface audit records a new disposition. Preserve the historical content below.
+
 **Status:** Draft architecture + product definition (spec-first, no ranking rebuild in this PR).
 
 ## 1) Current-state diagnosis
