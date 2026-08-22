@@ -95,13 +95,24 @@ describe('ScoringServiceClient', () => {
     >({ code: 'weekly_card_unavailable' });
   });
 
-  it('rejects an HTTP 400 that carries a v1 success envelope (status/envelope mismatch)', async () => {
-    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => frozenValidCardResponse() });
+  it('rejects an HTTP 400 that carries a v1 success envelope (status/envelope mismatch), preserving warnings', async () => {
+    const mismatched = frozenValidCardResponse();
+    mismatched.warnings = [{ code: 'STALE_SOURCE_WINDOW', message: 'Sample window predates the requested week.' }];
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => mismatched });
 
     const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
     await expect(client.getWeeklyPlayerCard(fixturePlayerRequest)).rejects.toMatchObject<
       Partial<ScoringServiceIntegrationError>
     >({ code: 'invalid_payload' });
+
+    // Through the service wrapper, the envelope warnings survive the mismatch path too:
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => mismatched });
+    const service = new ScoringService(new ScoringServiceClient({ baseUrl: 'http://scoring.test' }));
+    const result = await service.getWeeklyPlayerCard(fixturePlayerRequest);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('invalid_payload');
+    expect(result.warnings).toEqual([expect.objectContaining({ code: 'STALE_SOURCE_WINDOW' })]);
   });
 
   it('classifies a non-JSON body on a received response as invalid_payload, not connectivity failure', async () => {

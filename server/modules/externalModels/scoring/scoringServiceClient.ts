@@ -208,6 +208,9 @@ export class ScoringServiceClient {
         'invalid_payload',
         `Scoring service returned HTTP ${status} with a v1 success envelope; status/envelope mismatch violates the weekly player-card seam.`,
         502,
+        // Same warning fidelity as every other failure path: the envelope's
+        // warnings ride the cause so safeRun surfaces them on the result.
+        { warnings: normalized.card.warnings },
       );
     }
 
