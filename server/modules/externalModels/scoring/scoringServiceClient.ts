@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import {
+  buildWeeklyPlayerCardV1Request,
+  normalizeWeeklyPlayerCardV1Response,
+  type ScoringWeeklyPlayerCardV1,
+} from './fantasyForecastWeeklyPlayerV1Adapter';
+import {
   ScoringRosPlayerCard,
   ScoringServiceClientConfig,
   ScoringServiceIntegrationError,
@@ -11,7 +16,6 @@ import {
   ScoringWeeklyRankingsRequest,
   scoringRosPlayerCardSchema,
   scoringWeeklyCompareSchema,
-  scoringWeeklyPlayerCardSchema,
   scoringWeeklyRankingsSchema,
 } from './types';
 
@@ -155,13 +159,43 @@ export class ScoringServiceClient {
     };
   }
 
-  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringWeeklyPlayerCard> {
-    const payload = await this.postJson('/api/tiber/weekly/player-card', {
-      players: [request.player],
-      league_context: toUpstreamLeagueContext(request.leagueContext),
-    });
-    const envelope = unwrapServiceEnvelope(payload);
-    return scoringWeeklyPlayerCardSchema.parse(normalizePlayerCard(envelope.card));
+  /**
+   * FFI-3: the weekly player-card seam speaks the fantasy_forecast.weekly_player
+   * v1 contract. The request is built and schema-gated by the vendored frozen
+   * contract before it is sent; the response (success OR failure envelope) is
+   * validated against the frozen response schema and the manifest's exchange
+   * rule before it is trusted. Unavailable, rejected, and malformed remain
+   * distinct error codes — none of them ever degrades to a zeroed card.
+   */
+  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringWeeklyPlayerCardV1> {
+    const built = buildWeeklyPlayerCardV1Request({ leagueContext: request.leagueContext, player: request.player });
+    if (!built.ok) {
+      throw new ScoringServiceIntegrationError(
+        'invalid_request',
+        `Cannot build a valid v1 weekly player-card request: ${built.issues.join(' | ')}`,
+        400,
+      );
+    }
+
+    const { status, payload } = await this.postJsonAllowingContractRejection('/api/tiber/weekly/player-card', built.request);
+    const normalized = normalizeWeeklyPlayerCardV1Response(built.request, payload);
+
+    if (!normalized.ok) {
+      switch (normalized.kind) {
+        case 'unavailable':
+          throw new ScoringServiceIntegrationError('weekly_card_unavailable', normalized.message, 503);
+        case 'rejected':
+          throw new ScoringServiceIntegrationError('upstream_rejected_request', normalized.message, 502);
+        default:
+          throw new ScoringServiceIntegrationError(
+            'invalid_payload',
+            `Scoring service returned a payload that violates the v1 weekly player-card contract (HTTP ${status}): ${normalized.message}`,
+            502,
+          );
+      }
+    }
+
+    return normalized.card;
   }
 
   async getWeeklyRankings(request: ScoringWeeklyRankingsRequest): Promise<ScoringWeeklyRankings> {
@@ -206,6 +240,52 @@ export class ScoringServiceClient {
         recommendation: asStringOrNull(source.recommendation ?? source.summary),
       },
     });
+  }
+
+  /**
+   * POST for the v1 contract seam: a 400 is not an anonymous transport error —
+   * it carries an identified v1 failure envelope that the caller must
+   * interpret (rejected vs unavailable vs malformed). Other non-2xx statuses
+   * keep the transport-error semantics of postJson.
+   */
+  private async postJsonAllowingContractRejection(
+    path: string,
+    body: unknown,
+  ): Promise<{ status: number; payload: unknown }> {
+    if (!this.baseUrl) {
+      throw new ScoringServiceIntegrationError('config_error', 'SCORING_SERVICE_BASE_URL is not configured.', 503);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    try {
+      const url = new URL(path, this.baseUrl);
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok && response.status !== 400) {
+        throw new ScoringServiceIntegrationError(
+          'upstream_error',
+          `Scoring service returned HTTP ${response.status} for ${path}.`,
+          response.status >= 500 ? 503 : 502,
+        );
+      }
+
+      return { status: response.status, payload: await response.json() };
+    } catch (error) {
+      if (error instanceof ScoringServiceIntegrationError) throw error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ScoringServiceIntegrationError('upstream_timeout', `Scoring service timed out after ${this.timeoutMs}ms.`, 504, error);
+      }
+      throw new ScoringServiceIntegrationError('upstream_unavailable', 'Scoring service request failed.', 503, error);
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   private async postJson(path: string, body: unknown): Promise<unknown> {

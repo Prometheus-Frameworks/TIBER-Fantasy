@@ -1,10 +1,10 @@
+import type { ScoringWeeklyPlayerCardV1 } from './fantasyForecastWeeklyPlayerV1Adapter';
 import { ScoringServiceClient } from './scoringServiceClient';
 import {
   ScoringResult,
   ScoringRosPlayerCard,
   ScoringWeeklyCompare,
   ScoringWeeklyCompareRequest,
-  ScoringWeeklyPlayerCard,
   ScoringWeeklyPlayerCardRequest,
   ScoringWeeklyRankings,
   ScoringWeeklyRankingsRequest,
@@ -16,13 +16,16 @@ export class ScoringService {
 
   getStatus() {
     const config = this.client.getConfig();
+    // FFI-3: a configured base URL is NOT readiness. Readiness requires a
+    // successful semantic handshake against the v1 contract, which this
+    // status endpoint has not performed — so it never reports 'ready'.
     return {
       ...config,
-      readiness: config.configured ? 'ready' : 'not_ready',
+      readiness: config.configured ? 'configured_unverified' : 'not_ready',
     };
   }
 
-  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringResult<ScoringWeeklyPlayerCard>> {
+  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringResult<ScoringWeeklyPlayerCardV1>> {
     return this.safeRun(() => this.client.getWeeklyPlayerCard(request));
   }
 

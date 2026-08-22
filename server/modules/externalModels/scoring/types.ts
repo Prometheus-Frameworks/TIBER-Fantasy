@@ -69,7 +69,15 @@ export type ScoringServiceErrorCode =
   | 'upstream_unavailable'
   | 'upstream_timeout'
   | 'upstream_error'
-  | 'invalid_payload';
+  | 'invalid_payload'
+  // FFI-3 v1 seam states — deliberately distinct so callers can tell
+  // "we could not build an honest contract request" (invalid_request),
+  // "Forecast rejected the request" (upstream_rejected_request), and
+  // "Forecast answered: no card exists" (weekly_card_unavailable) apart
+  // from transport failures and malformed payloads.
+  | 'invalid_request'
+  | 'upstream_rejected_request'
+  | 'weekly_card_unavailable';
 
 export class ScoringServiceIntegrationError extends Error {
   readonly code: ScoringServiceErrorCode;
@@ -95,6 +103,13 @@ export interface ScoringLeagueContextInput {
   week?: number;
   scoringFormat?: string;
   teams?: number;
+  /**
+   * Starter slots for the v1 weekly contract's replacement context. When a
+   * caller has resolved real league settings it should pass them; otherwise
+   * the adapter applies its documented standard-lineup default
+   * (see DEFAULT_LEAGUE_STARTERS in fantasyForecastWeeklyPlayerV1Adapter).
+   */
+  starters?: { QB: number; RB: number; WR: number; TE: number; FLEX?: number };
 }
 
 export interface ScoringPlayerInput {
