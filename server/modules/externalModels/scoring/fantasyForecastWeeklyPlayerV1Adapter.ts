@@ -29,14 +29,13 @@ export const FANTASY_FORECAST_WEEKLY_PLAYER_CONTRACT_VERSION = '1.0.0';
 export const FANTASY_FORECAST_SCORING_PROFILE = 'tiber-generic-full-ppr-v1';
 
 /**
- * Adapter policy: when the caller has not resolved explicit league starters,
- * Fantasy declares this standard-lineup default rather than omitting the
- * replacement context Forecast requires. This is Fantasy-owned league-state
- * resolution (the contract requires SOME complete context), documented here
- * so a default can never be mistaken for a user's actual league settings.
+ * Adapter policy (AGENTS.md §9/§11: explicit failure over implicit defaults):
+ * the replacement context — league size and starter slots — materially shapes
+ * replacement points and VORP, so this adapter NEVER fabricates it. Callers
+ * must pass resolved `teams` and `starters`; until they do, the build fails
+ * closed with `invalid_request` rather than returning a card silently
+ * computed for a lineup the user never configured.
  */
-export const DEFAULT_LEAGUE_TEAMS = 12;
-export const DEFAULT_LEAGUE_STARTERS = Object.freeze({ QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 });
 
 /** Scoring formats this v1 contract can honestly represent (full PPR only). */
 const FULL_PPR_FORMATS = new Set(['ppr', 'full_ppr', 'full-ppr', FANTASY_FORECAST_SCORING_PROFILE]);
@@ -96,6 +95,17 @@ export const buildWeeklyPlayerCardV1Request = (input: {
     issues.push('player.games_sampled is required (integer count of sampled games).');
   }
 
+  if (!Number.isInteger(leagueContext.teams)) {
+    issues.push(
+      'leagueContext.teams is required (resolved league size); the adapter does not fabricate replacement context.',
+    );
+  }
+  if (!isRecord(leagueContext.starters)) {
+    issues.push(
+      'leagueContext.starters is required (resolved starter slots QB/RB/WR/TE, optional FLEX); the adapter does not fabricate replacement context.',
+    );
+  }
+
   if (issues.length > 0) {
     return { ok: false, issues };
   }
@@ -114,8 +124,6 @@ export const buildWeeklyPlayerCardV1Request = (input: {
     }
   }
 
-  const starters = isRecord(leagueContext.starters) ? leagueContext.starters : DEFAULT_LEAGUE_STARTERS;
-
   const request: Record<string, unknown> = {
     contract: FANTASY_FORECAST_WEEKLY_PLAYER_REQUEST_CONTRACT,
     contract_version: FANTASY_FORECAST_WEEKLY_PLAYER_CONTRACT_VERSION,
@@ -125,8 +133,8 @@ export const buildWeeklyPlayerCardV1Request = (input: {
     scoring_profile: FANTASY_FORECAST_SCORING_PROFILE,
     players: [requestPlayer],
     league_context: {
-      teams: Number.isInteger(leagueContext.teams) ? leagueContext.teams : DEFAULT_LEAGUE_TEAMS,
-      starters: { ...starters },
+      teams: leagueContext.teams,
+      starters: { ...(leagueContext.starters as Record<string, unknown>) },
     },
   };
 
@@ -183,6 +191,12 @@ export interface ScoringWeeklyPlayerCardV1 {
   generatedAt: string;
   scoringMode: 'weekly';
   viewType: 'player_card';
+  /**
+   * Contract warnings from the response envelope (e.g. STALE_SOURCE_WINDOW),
+   * preserved so a degraded/stale-but-available card stays distinguishable
+   * from an ordinary one — never silently dropped.
+   */
+  warnings: Array<{ code: string; message: string }>;
   /** @deprecated alias of confidenceBand */
   confidence: string;
   /** @deprecated alias of volatilityTag */
@@ -206,6 +220,8 @@ export type NormalizeWeeklyPlayerCardV1Result =
        */
       kind: 'unavailable' | 'rejected' | 'invalid_payload';
       message: string;
+      /** Envelope warnings when the failure envelope was schema-valid (e.g. STALE_SOURCE_WINDOW). */
+      warnings: Array<{ code: string; message: string }>;
     };
 
 interface ManifestExchangeRule {
@@ -224,16 +240,25 @@ export const normalizeWeeklyPlayerCardV1Response = (
       ok: false,
       kind: 'invalid_payload',
       message: `Scoring service response is not a valid ${FANTASY_FORECAST_WEEKLY_PLAYER_CARD_RESPONSE_CONTRACT} v1 document: ${schemaIssues.join(' | ')}`,
+      warnings: [],
     };
   }
 
   const envelope = payload as Record<string, unknown>;
+  const envelopeWarnings = ((envelope.warnings as Array<{ code: string; message: string }>) ?? []).map(
+    (warning) => ({ code: warning.code, message: warning.message }),
+  );
 
   if (envelope.ok !== true) {
     const errors = (envelope.errors as Array<{ code: string; message: string }>) ?? [];
-    const message = errors.map((error) => `${error.code}: ${error.message}`).join(' | ');
+    const message = [
+      errors.map((error) => `${error.code}: ${error.message}`).join(' | '),
+      envelopeWarnings.length > 0 ? `(warnings: ${envelopeWarnings.map((warning) => warning.code).join(', ')})` : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
     const unavailable = errors.some((error) => error.code === 'WEEKLY_PLAYER_CARD_UNAVAILABLE');
-    return { ok: false, kind: unavailable ? 'unavailable' : 'rejected', message };
+    return { ok: false, kind: unavailable ? 'unavailable' : 'rejected', message, warnings: envelopeWarnings };
   }
 
   const card = (envelope.data as { card: Record<string, unknown> }).card;
@@ -253,7 +278,12 @@ export const normalizeWeeklyPlayerCardV1Response = (
     }
   }
   if (exchangeIssues.length > 0) {
-    return { ok: false, kind: 'invalid_payload', message: `Exchange violation: ${exchangeIssues.join(' ')}` };
+    return {
+      ok: false,
+      kind: 'invalid_payload',
+      message: `Exchange violation: ${exchangeIssues.join(' ')}`,
+      warnings: envelopeWarnings,
+    };
   }
 
   const components = card.scoring_components as Record<string, number>;
@@ -294,6 +324,7 @@ export const normalizeWeeklyPlayerCardV1Response = (
       generatedAt: card.generated_at as string,
       scoringMode: card.scoring_mode as 'weekly',
       viewType: card.view_type as 'player_card',
+      warnings: envelopeWarnings,
       confidence: card.confidence_band as string,
       volatility: card.volatility_tag as string,
       fragility: card.fragility_tag as string,

@@ -181,16 +181,20 @@ export class ScoringServiceClient {
     const normalized = normalizeWeeklyPlayerCardV1Response(built.request, payload);
 
     if (!normalized.ok) {
+      // Envelope warnings (e.g. STALE_SOURCE_WINDOW) ride along as the error
+      // cause so degraded-evidence context survives the failure path too.
+      const cause = { warnings: normalized.warnings };
       switch (normalized.kind) {
         case 'unavailable':
-          throw new ScoringServiceIntegrationError('weekly_card_unavailable', normalized.message, 503);
+          throw new ScoringServiceIntegrationError('weekly_card_unavailable', normalized.message, 503, cause);
         case 'rejected':
-          throw new ScoringServiceIntegrationError('upstream_rejected_request', normalized.message, 502);
+          throw new ScoringServiceIntegrationError('upstream_rejected_request', normalized.message, 502, cause);
         default:
           throw new ScoringServiceIntegrationError(
             'invalid_payload',
             `Scoring service returned a payload that violates the v1 weekly player-card contract (HTTP ${status}): ${normalized.message}`,
             502,
+            cause,
           );
       }
     }

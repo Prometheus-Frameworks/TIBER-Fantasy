@@ -11,7 +11,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
-  DEFAULT_LEAGUE_STARTERS,
   buildWeeklyPlayerCardV1Request,
   normalizeWeeklyPlayerCardV1Response,
 } from '../fantasyForecastWeeklyPlayerV1Adapter';
@@ -22,7 +21,13 @@ const readFixture = (name: string): unknown => JSON.parse(readFileSync(path.join
 
 const frozenValidRequest = readFixture('valid_weekly_player_request') as Record<string, unknown>;
 
-const leagueContext = { season: 2026, week: 1, scoringFormat: 'ppr', teams: 12 };
+const leagueContext = {
+  season: 2026,
+  week: 1,
+  scoringFormat: 'ppr',
+  teams: 12,
+  starters: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 },
+};
 
 const player: ScoringPlayerInput = {
   player_id: '00-0036322',
@@ -65,7 +70,7 @@ describe('buildWeeklyPlayerCardV1Request', () => {
           carries_pg: 0.4,
         },
       ],
-      league_context: { teams: 12, starters: { ...DEFAULT_LEAGUE_STARTERS } },
+      league_context: { teams: 12, starters: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 } },
     });
     // The dropped fields must not leak into the wire request under any key:
     const wire = JSON.stringify(built.request);
@@ -74,7 +79,20 @@ describe('buildWeeklyPlayerCardV1Request', () => {
     }
   });
 
-  it('uses caller-resolved starters when present instead of the default lineup', () => {
+  it('fails closed when the replacement context is unresolved — no fabricated lineup', () => {
+    const built = buildWeeklyPlayerCardV1Request({
+      leagueContext: { season: 2026, week: 1, scoringFormat: 'ppr' },
+      player,
+    });
+    expect(built.ok).toBe(false);
+    if (built.ok) return;
+    const issues = built.issues.join('\n');
+    expect(issues).toContain('leagueContext.teams is required');
+    expect(issues).toContain('leagueContext.starters is required');
+    expect(issues).toContain('does not fabricate replacement context');
+  });
+
+  it('uses caller-resolved starters when present', () => {
     const built = buildWeeklyPlayerCardV1Request({
       leagueContext: { ...leagueContext, teams: 10, starters: { QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 2 } },
       player,
@@ -159,7 +177,7 @@ describe('normalizeWeeklyPlayerCardV1Response against the frozen golden fixtures
     expect(card.fragility).toBe('LOW');
   });
 
-  it('reports the unavailable/stale envelope as a distinct no-data state, never zeros', () => {
+  it('reports the unavailable/stale envelope as a distinct no-data state, never zeros — warnings preserved', () => {
     const result = normalizeWeeklyPlayerCardV1Response(
       frozenValidRequest,
       readFixture('weekly_player_card_unavailable_or_stale_state'),
@@ -167,6 +185,27 @@ describe('normalizeWeeklyPlayerCardV1Response against the frozen golden fixtures
     expect(result).toEqual(
       expect.objectContaining({ ok: false, kind: 'unavailable', message: expect.stringContaining('WEEKLY_PLAYER_CARD_UNAVAILABLE') }),
     );
+    if (result.ok) return;
+    // The stale-evidence warning survives the failure path:
+    expect(result.warnings).toEqual([expect.objectContaining({ code: 'STALE_SOURCE_WINDOW' })]);
+    expect(result.message).toContain('(warnings: STALE_SOURCE_WINDOW)');
+  });
+
+  it('carries success-envelope warnings onto the normalized card', () => {
+    // The frozen valid response has no warnings — normalized card reflects that:
+    const clean = normalizeWeeklyPlayerCardV1Response(frozenValidRequest, readFixture('valid_weekly_player_card_response'));
+    expect(clean.ok).toBe(true);
+    if (clean.ok) expect(clean.card.warnings).toEqual([]);
+
+    // A schema-valid success envelope carrying a warning keeps it on the card:
+    const warned = readFixture('valid_weekly_player_card_response') as Record<string, unknown>;
+    warned.warnings = [{ code: 'STALE_SOURCE_WINDOW', message: 'Sample window predates the requested week.' }];
+    const result = normalizeWeeklyPlayerCardV1Response(frozenValidRequest, warned);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.card.warnings).toEqual([
+      { code: 'STALE_SOURCE_WINDOW', message: 'Sample window predates the requested week.' },
+    ]);
   });
 
   it('rejects the frozen malformed response fixture', () => {

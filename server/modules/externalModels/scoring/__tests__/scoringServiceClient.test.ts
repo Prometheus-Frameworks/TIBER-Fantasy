@@ -22,7 +22,13 @@ describe('ScoringServiceClient', () => {
   // Matches the frozen golden fixture's player identity so the exchange rule
   // (card must echo the requested player and horizon) is satisfied.
   const fixturePlayerRequest = {
-    leagueContext: { season: 2026, week: 1, scoringFormat: 'ppr', teams: 12 },
+    leagueContext: {
+      season: 2026,
+      week: 1,
+      scoringFormat: 'ppr',
+      teams: 12,
+      starters: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 },
+    },
     player: {
       player_id: 'TIBER-FIXTURE-WR-0001',
       player_name: 'Fixture Wideout',

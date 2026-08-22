@@ -104,10 +104,10 @@ export interface ScoringLeagueContextInput {
   scoringFormat?: string;
   teams?: number;
   /**
-   * Starter slots for the v1 weekly contract's replacement context. When a
-   * caller has resolved real league settings it should pass them; otherwise
-   * the adapter applies its documented standard-lineup default
-   * (see DEFAULT_LEAGUE_STARTERS in fantasyForecastWeeklyPlayerV1Adapter).
+   * Starter slots for the v1 weekly contract's replacement context. The
+   * adapter never fabricates this (AGENTS.md: explicit failure over implicit
+   * defaults) — v1 weekly player-card calls fail closed with invalid_request
+   * until the caller passes resolved teams and starters.
    */
   starters?: { QB: number; RB: number; WR: number; TE: number; FLEX?: number };
 }
