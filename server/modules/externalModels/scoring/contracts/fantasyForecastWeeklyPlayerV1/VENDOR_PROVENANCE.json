@@ -1,0 +1,14 @@
+{
+  "contract_family": "fantasy_forecast.weekly_player",
+  "contract_version": "1.0.0",
+  "semantic_owner": "Prometheus-Frameworks/TIBER-Forecast",
+  "source_commit": "e295e3de745b676df571348cb8541fb5e35e3a02",
+  "source_directory": "data/contracts/fantasyForecastWeeklyPlayerV1",
+  "vendored_under": "FFI-3 (TIBER-Forecast #182, TIBER-Ops #71)",
+  "vendored_on": "2026-08-22",
+  "manifest_sha256": "d0196df87bcf7c5714097ed55f6c9c5a1cd6a64b67d32e8b89860451423f8c99",
+  "vendored_validator_path": "validateJsonSchemaSubset.vendored.ts",
+  "vendored_validator_sha256": "733b954c85011a8c086744d0eca35ce17455e17b71381a2072ebf175bf4348bb",
+  "verification": "server/modules/externalModels/scoring/contracts/__tests__/vendoredContractIntegrity.test.ts recomputes sha256 for every vendored artifact against manifest.v1.json and this pinned manifest digest.",
+  "notes": "Frozen bytes are the contract. TIBER-Fantasy must not edit these files; refresh only by re-vendoring from a pinned Forecast commit and updating source_commit and manifest_sha256 together. validateJsonSchemaSubset.vendored.ts is a verbatim copy of src/validation/validateJsonSchemaSubset.ts at the same commit, plus a provenance header."
+}

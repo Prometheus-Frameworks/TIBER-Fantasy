@@ -69,7 +69,15 @@ export type ScoringServiceErrorCode =
   | 'upstream_unavailable'
   | 'upstream_timeout'
   | 'upstream_error'
-  | 'invalid_payload';
+  | 'invalid_payload'
+  // FFI-3 v1 seam states — deliberately distinct so callers can tell
+  // "we could not build an honest contract request" (invalid_request),
+  // "Forecast rejected the request" (upstream_rejected_request), and
+  // "Forecast answered: no card exists" (weekly_card_unavailable) apart
+  // from transport failures and malformed payloads.
+  | 'invalid_request'
+  | 'upstream_rejected_request'
+  | 'weekly_card_unavailable';
 
 export class ScoringServiceIntegrationError extends Error {
   readonly code: ScoringServiceErrorCode;
@@ -95,6 +103,13 @@ export interface ScoringLeagueContextInput {
   week?: number;
   scoringFormat?: string;
   teams?: number;
+  /**
+   * Starter slots for the v1 weekly contract's replacement context. The
+   * adapter never fabricates this (AGENTS.md: explicit failure over implicit
+   * defaults) — v1 weekly player-card calls fail closed with invalid_request
+   * until the caller passes resolved teams and starters.
+   */
+  starters?: { QB: number; RB: number; WR: number; TE: number; FLEX?: number };
 }
 
 export interface ScoringPlayerInput {
@@ -129,6 +144,33 @@ export interface ScoringWeeklyCompareRequest {
   playerB: ScoringPlayerInput;
 }
 
+/** v1 envelope entry (warning or error) preserved with its structured details, when present. */
+export interface ScoringContractIssue {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+/** Contract warning preserved with its structured details, when present. */
+export type ScoringContractWarning = ScoringContractIssue;
+
 export type ScoringResult<T> =
   | { ok: true; data: T }
-  | { ok: false; code: ScoringServiceErrorCode; message: string };
+  | {
+      ok: false;
+      code: ScoringServiceErrorCode;
+      message: string;
+      /**
+       * v1 contract envelope warnings (e.g. STALE_SOURCE_WINDOW with its
+       * source-window details) that accompanied a failure — preserved through
+       * the service wrapper so API consumers see degraded-evidence context,
+       * not just an error code.
+       */
+      warnings?: ScoringContractWarning[];
+      /**
+       * Structured v1 envelope errors (with their details) that accompanied a
+       * contract-level failure — the machine-readable rejection/unavailability
+       * context, preserved alongside the flattened code/message.
+       */
+      errors?: ScoringContractIssue[];
+    };

@@ -1,10 +1,12 @@
+import type { ScoringWeeklyPlayerCardV1 } from './fantasyForecastWeeklyPlayerV1Adapter';
 import { ScoringServiceClient } from './scoringServiceClient';
 import {
+  ScoringContractIssue,
+  ScoringContractWarning,
   ScoringResult,
   ScoringRosPlayerCard,
   ScoringWeeklyCompare,
   ScoringWeeklyCompareRequest,
-  ScoringWeeklyPlayerCard,
   ScoringWeeklyPlayerCardRequest,
   ScoringWeeklyRankings,
   ScoringWeeklyRankingsRequest,
@@ -16,13 +18,16 @@ export class ScoringService {
 
   getStatus() {
     const config = this.client.getConfig();
+    // FFI-3: a configured base URL is NOT readiness. Readiness requires a
+    // successful semantic handshake against the v1 contract, which this
+    // status endpoint has not performed — so it never reports 'ready'.
     return {
       ...config,
-      readiness: config.configured ? 'ready' : 'not_ready',
+      readiness: config.configured ? 'configured_unverified' : 'not_ready',
     };
   }
 
-  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringResult<ScoringWeeklyPlayerCard>> {
+  async getWeeklyPlayerCard(request: ScoringWeeklyPlayerCardRequest): Promise<ScoringResult<ScoringWeeklyPlayerCardV1>> {
     return this.safeRun(() => this.client.getWeeklyPlayerCard(request));
   }
 
@@ -44,7 +49,19 @@ export class ScoringService {
       return { ok: true, data };
     } catch (error) {
       if (error instanceof ScoringServiceIntegrationError) {
-        return { ok: false, code: error.code, message: error.message };
+        // v1 contract warnings AND structured errors ride the integration
+        // error's cause; carry both into the failure result so route consumers
+        // see degraded-evidence and rejection context, not just a code.
+        const cause = error.cause as
+          | { warnings?: ScoringContractWarning[]; errors?: ScoringContractIssue[] }
+          | undefined;
+        return {
+          ok: false,
+          code: error.code,
+          message: error.message,
+          ...(cause?.warnings?.length ? { warnings: cause.warnings } : {}),
+          ...(cause?.errors?.length ? { errors: cause.errors } : {}),
+        };
       }
 
       return {
