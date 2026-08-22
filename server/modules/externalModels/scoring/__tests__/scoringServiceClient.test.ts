@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { ScoringService } from '../scoringService';
 import { ScoringServiceClient } from '../scoringServiceClient';
 import { ScoringServiceIntegrationError } from '../types';
 
@@ -107,6 +108,31 @@ describe('ScoringServiceClient', () => {
     await expect(client.getWeeklyPlayerCard(fixturePlayerRequest)).rejects.toMatchObject<
       Partial<ScoringServiceIntegrationError>
     >({ code: 'invalid_payload' });
+  });
+
+  it('carries failure warnings through ScoringService into the ScoringResult the routes consume', async () => {
+    const unavailable = JSON.parse(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'contracts',
+          'fantasyForecastWeeklyPlayerV1',
+          'fixtures',
+          'weekly_player_card_unavailable_or_stale_state.json',
+        ),
+        'utf8',
+      ),
+    );
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => unavailable });
+
+    const service = new ScoringService(new ScoringServiceClient({ baseUrl: 'http://scoring.test' }));
+    const result = await service.getWeeklyPlayerCard(fixturePlayerRequest);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe('weekly_card_unavailable');
+    expect(result.warnings).toEqual([expect.objectContaining({ code: 'STALE_SOURCE_WINDOW' })]);
   });
 
   it('classifies the pre-contract alias card shape as invalid_payload now', async () => {

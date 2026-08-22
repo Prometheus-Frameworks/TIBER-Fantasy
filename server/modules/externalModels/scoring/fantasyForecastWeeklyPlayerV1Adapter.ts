@@ -57,12 +57,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.trim().length > 0;
 
-/** Contract warning preserved with its structured details, when present. */
-export interface ScoringContractWarning {
-  code: string;
-  message: string;
-  details?: unknown;
-}
+export type { ScoringContractWarning } from './types';
+import type { ScoringContractWarning } from './types';
 
 export type BuildWeeklyPlayerCardV1RequestResult =
   | { ok: true; request: Record<string, unknown> }

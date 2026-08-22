@@ -144,6 +144,24 @@ export interface ScoringWeeklyCompareRequest {
   playerB: ScoringPlayerInput;
 }
 
+/** Contract warning preserved with its structured details, when present. */
+export interface ScoringContractWarning {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
 export type ScoringResult<T> =
   | { ok: true; data: T }
-  | { ok: false; code: ScoringServiceErrorCode; message: string };
+  | {
+      ok: false;
+      code: ScoringServiceErrorCode;
+      message: string;
+      /**
+       * v1 contract envelope warnings (e.g. STALE_SOURCE_WINDOW with its
+       * source-window details) that accompanied a failure — preserved through
+       * the service wrapper so API consumers see degraded-evidence context,
+       * not just an error code.
+       */
+      warnings?: ScoringContractWarning[];
+    };

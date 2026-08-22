@@ -1,6 +1,7 @@
 import type { ScoringWeeklyPlayerCardV1 } from './fantasyForecastWeeklyPlayerV1Adapter';
 import { ScoringServiceClient } from './scoringServiceClient';
 import {
+  ScoringContractWarning,
   ScoringResult,
   ScoringRosPlayerCard,
   ScoringWeeklyCompare,
@@ -47,7 +48,16 @@ export class ScoringService {
       return { ok: true, data };
     } catch (error) {
       if (error instanceof ScoringServiceIntegrationError) {
-        return { ok: false, code: error.code, message: error.message };
+        // v1 contract warnings ride the integration error's cause; carry them
+        // into the failure result so route consumers see degraded-evidence
+        // context (e.g. STALE_SOURCE_WINDOW details), not just a code.
+        const causeWarnings = (error.cause as { warnings?: ScoringContractWarning[] } | undefined)?.warnings;
+        return {
+          ok: false,
+          code: error.code,
+          message: error.message,
+          ...(causeWarnings?.length ? { warnings: causeWarnings } : {}),
+        };
       }
 
       return {
