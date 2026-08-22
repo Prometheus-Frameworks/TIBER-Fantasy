@@ -199,6 +199,18 @@ export class ScoringServiceClient {
       }
     }
 
+    // The 400 exception in postJsonAllowingContractRejection exists ONLY for
+    // v1 failure envelopes. A rejected HTTP status carrying a success
+    // envelope is a status/envelope mismatch — fail closed instead of
+    // admitting a card the transport layer disowned.
+    if (status !== 200) {
+      throw new ScoringServiceIntegrationError(
+        'invalid_payload',
+        `Scoring service returned HTTP ${status} with a v1 success envelope; status/envelope mismatch violates the weekly player-card seam.`,
+        502,
+      );
+    }
+
     return normalized.card;
   }
 

@@ -95,6 +95,15 @@ describe('ScoringServiceClient', () => {
     >({ code: 'weekly_card_unavailable' });
   });
 
+  it('rejects an HTTP 400 that carries a v1 success envelope (status/envelope mismatch)', async () => {
+    fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => frozenValidCardResponse() });
+
+    const client = new ScoringServiceClient({ baseUrl: 'http://scoring.test' });
+    await expect(client.getWeeklyPlayerCard(fixturePlayerRequest)).rejects.toMatchObject<
+      Partial<ScoringServiceIntegrationError>
+    >({ code: 'invalid_payload' });
+  });
+
   it('classifies a non-JSON body on a received response as invalid_payload, not connectivity failure', async () => {
     fetchMock.mockResolvedValue({
       ok: true,
