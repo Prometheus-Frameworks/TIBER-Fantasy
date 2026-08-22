@@ -80,10 +80,17 @@ export const buildWeeklyPlayerCardV1Request = (input: {
     issues.push('leagueContext.week is required (integer) to declare the weekly horizon.');
   }
 
-  const scoringFormat = String(leagueContext.scoringFormat ?? 'ppr').toLowerCase();
-  if (!FULL_PPR_FORMATS.has(scoringFormat)) {
+  // An omitted format is UNRESOLVED, not full PPR: defaulting it would send
+  // the full-PPR profile for a league whose format was never established and
+  // return misleading expected points (same implicit-default class as the
+  // starters finding; AGENTS.md: explicit failure over implicit defaults).
+  if (!isNonEmptyString(leagueContext.scoringFormat)) {
     issues.push(
-      `leagueContext.scoringFormat "${String(leagueContext.scoringFormat)}" cannot be represented by the ` +
+      'leagueContext.scoringFormat is required (resolved scoring format); the adapter does not assume full PPR.',
+    );
+  } else if (!FULL_PPR_FORMATS.has(leagueContext.scoringFormat.toLowerCase())) {
+    issues.push(
+      `leagueContext.scoringFormat "${leagueContext.scoringFormat}" cannot be represented by the ` +
         `${FANTASY_FORECAST_SCORING_PROFILE} contract; refusing to relabel a non-full-PPR league as full PPR.`,
     );
   }

@@ -111,6 +111,17 @@ describe('buildWeeklyPlayerCardV1Request', () => {
     expect(built.issues.join('\n')).toContain('week is required');
   });
 
+  it('fails closed when the scoring format is unresolved — omission is not full PPR', () => {
+    const built = buildWeeklyPlayerCardV1Request({
+      leagueContext: { season: 2026, week: 1, teams: 12, starters: { QB: 1, RB: 2, WR: 2, TE: 1, FLEX: 1 } },
+      player,
+    });
+    expect(built.ok).toBe(false);
+    if (built.ok) return;
+    expect(built.issues.join('\n')).toContain('leagueContext.scoringFormat is required');
+    expect(built.issues.join('\n')).toContain('does not assume full PPR');
+  });
+
   it('refuses to relabel a non-full-PPR league as full PPR', () => {
     const built = buildWeeklyPlayerCardV1Request({
       leagueContext: { ...leagueContext, scoringFormat: 'half_ppr' },
