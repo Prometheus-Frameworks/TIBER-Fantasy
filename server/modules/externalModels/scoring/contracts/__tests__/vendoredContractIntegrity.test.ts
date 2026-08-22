@@ -19,6 +19,8 @@ const provenance = JSON.parse(readFileSync(path.join(CONTRACT_DIR, 'VENDOR_PROVE
   contract_version: string;
   source_commit: string;
   manifest_sha256: string;
+  vendored_validator_path: string;
+  vendored_validator_sha256: string;
 };
 
 const manifest = JSON.parse(readFileSync(path.join(CONTRACT_DIR, 'manifest.v1.json'), 'utf8')) as {
@@ -39,6 +41,15 @@ describe('vendored fantasy_forecast.weekly_player v1 contract integrity', () => 
     for (const entry of [...manifest.schemas, ...manifest.fixtures]) {
       expect(sha256(entry.path)).toBe(entry.sha256);
     }
+  });
+
+  it('pins the vendored validator bytes — validation semantics cannot drift silently', () => {
+    // The runtime validator is a verbatim commit-pinned copy; it is not listed
+    // in the Forecast-generated manifest, so it is pinned here via the
+    // provenance record instead. An accidental edit or a partial re-vendor
+    // from a different Forecast revision fails this check.
+    expect(provenance.vendored_validator_path).toBe('validateJsonSchemaSubset.vendored.ts');
+    expect(sha256(provenance.vendored_validator_path)).toBe(provenance.vendored_validator_sha256);
   });
 
   it('carries the seven golden fixture classes and the exchange rule', () => {
