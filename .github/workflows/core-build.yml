@@ -30,4 +30,4 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Build application
-        run: npm run build
+        run: sh build.sh
