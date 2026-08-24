@@ -15,7 +15,7 @@ The earlier record claimed that a `lint` script, `eslint.config.js`, and `@types
 - no workflow enforces lint;
 - the existing Ratings QA and Sleeper Sync workflows are path-scoped, while Security Audit is advisory-only.
 
-The `Core Build` workflow added with this correction is intentionally narrower and truthful: it runs `npm ci` and `npm run build` for every pull request and push to `main`.
+The `Core Build` workflow added with this correction is intentionally narrower and truthful: it runs `npm ci` and the deployment-equivalent `sh build.sh` for every pull request and push to `main`. That build bundles the server, compiles the Vite frontend, and installs the production bootstrap.
 
 ## Still unresolved
 
@@ -29,9 +29,10 @@ Do not describe these items as resolved until the corresponding command exists, 
 
 ## Verified local commands
 
-1. `npm run build`
-2. `npm run typecheck`
-3. `npm run test`
+1. `npm run build` (server bundle only)
+2. `sh build.sh` (deployment-equivalent server, frontend, and bootstrap build)
+3. `npm run typecheck`
+4. `npm run test`
 
 `typecheck` and the full test suite remain available local commands; their presence here does not claim that current CI runs or passes them.
 
