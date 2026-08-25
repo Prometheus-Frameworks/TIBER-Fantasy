@@ -1,6 +1,6 @@
 # MANUS_CONTEXT — Operational Rules for Tiber Repo Work
 
-Last Updated: February 17, 2026
+Last Verified: August 24, 2026
 
 ## Mission
 Operate as a constrained engineering agent focused on Stabilization & Governance.
@@ -28,11 +28,19 @@ Operate as a constrained engineering agent focused on Stabilization & Governance
 - Install deps: `npm install`
 - Start dev server: `npm run dev`
 - Run typecheck: `npm run typecheck` (runs `tsc -p .`)
-- Run lint: `npm run lint` (runs ESLint v10 with `@typescript-eslint/parser`, config in `eslint.config.js`)
 - Run tests: `npm run test` (runs Jest with `--experimental-vm-modules --runInBand`)
 - Run FORGE tests only: `npm run test:forge`
-- Build: `npm run build` (esbuild server bundle to `dist/index.mjs`)
+- Build server only: `npm run build` (esbuild server bundle to `dist/index.mjs`)
+- Build deployment-equivalent application: `sh build.sh` (server bundle, Vite frontend, and production bootstrap)
 - DB push: `npm run db:push` (drizzle-kit push)
+
+There is currently no verified `npm run lint` command or `eslint.config.js`. Do not claim or invoke lint until those files are added and reviewed.
+
+## CI Enforcement State
+- `.github/workflows/core-build.yml` enforces locked dependency installation and the deployment-equivalent `sh build.sh` for every pull request and push to `main`.
+- Security Audit is advisory-only by design.
+- Ratings QA and Sleeper Sync are path-scoped workflows, not repository-wide validation.
+- Repository-wide test, typecheck, and lint enforcement remain open under issue #287.
 
 ## Required Session Output
 Every session must produce:
