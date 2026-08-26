@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { attachSignatureHeader } from "./middleware/signature";
 import { baselineSecurityHeaders } from "./middleware/security";
+import { draftReviewRouter } from "./routes/draftReviewRoutes";
 
 const log = (...args: any[]) => console.log(...args);
 
@@ -63,6 +64,11 @@ app.use(baselineSecurityHeaders());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(attachSignatureHeader);
+
+// Public, state-isolated redraft context compiler. Mount this before the
+// database-backed background router so the pilot remains available when
+// dynasty Management dependencies are unavailable.
+app.use(draftReviewRouter);
 
 // Tiny API request logger
 app.use((req, res, next) => {

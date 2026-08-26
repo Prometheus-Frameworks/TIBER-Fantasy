@@ -33,6 +33,17 @@ export interface SleeperRoster {
   co_owners?: string[] | null;
   players?: string[];
   starters?: string[] | null;
+  reserve?: string[] | null;
+  taxi?: string[] | null;
+}
+
+export interface SleeperDraftPick {
+  player_id: string;
+  roster_id: number;
+  round: number;
+  pick_no: number;
+  picked_by?: string | null;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SleeperTradedPick {
@@ -70,8 +81,8 @@ async function fetchJson<T>(path: string): Promise<T> {
 }
 
 export const sleeperClient = {
-  async getLeague(leagueId: string): Promise<SleeperLeague> {
-    return fetchJson<SleeperLeague>(`/league/${leagueId}`);
+  async getLeague(leagueId: string): Promise<SleeperLeagueDetail> {
+    return fetchJson<SleeperLeagueDetail>(`/league/${leagueId}`);
   },
 
   async getUser(userIdOrUsername: string): Promise<SleeperUser> {
@@ -96,6 +107,10 @@ export const sleeperClient = {
 
   async getNflPlayers(): Promise<Record<string, SleeperPlayer>> {
     return fetchJson<Record<string, SleeperPlayer>>('/players/nfl');
+  },
+
+  async getDraftPicks(draftId: string): Promise<SleeperDraftPick[]> {
+    return fetchJson<SleeperDraftPick[]>(`/draft/${draftId}/picks`);
   },
 };
 

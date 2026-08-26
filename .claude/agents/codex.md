@@ -886,3 +886,9 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Missing/null/malformed/divergent and mixed-item adversaries fail closed, while the real cache route proves all valid rows bind to the envelope source time.
 - The null-`computedAt` route still fails at the envelope clock first even though its items inherit the synthesized response time.
 - Validation: focused audit plus route 425/425; real `--check`, build, diff, and governed hashes pass unchanged.
+
+### 2026-08-26 — Public redraft Draft Review pilot
+- Added a public, read-only Sleeper roster deep-link flow at `/draft-review` backed by a state-isolated context compiler.
+- Preserved observed/derived/Forecast claim separation and excluded stale FFC ADP from the default surface.
+- Added an agent-ready JSON context export while keeping Forecast projections explicitly unavailable.
+- Validated the exact external-user roster, focused tests, deployment build, and diff hygiene.
