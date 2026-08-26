@@ -42,6 +42,7 @@ import PlayerResearchLab from "@/pages/PlayerResearchLab";
 import TeamResearchLab from "@/pages/TeamResearchLab";
 import DataLabCommandCenterLab from "@/pages/DataLabCommandCenterLab";
 import TiberManagementDashboard from "@/pages/TiberManagementDashboard";
+import TiberDraftReview from "@/pages/TiberDraftReview";
 import StressLab from "@/pages/StressLab";
 import PostCutoffLedger from "@/pages/PostCutoffLedger";
 import FantasyLab from "@/pages/FantasyLab";
@@ -61,6 +62,7 @@ function Router() {
             <Switch>
               <Route path="/management" component={TiberManagementDashboard} />
               <Route path="/team-management" component={TiberManagementDashboard} />
+              <Route path="/draft-review" component={TiberDraftReview} />
               {/*
                 Observatory surface (user-facing name). The implementation component is
                 still named `StressLab` (legacy/internal name retained — see the naming

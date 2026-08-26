@@ -886,3 +886,14 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Missing/null/malformed/divergent and mixed-item adversaries fail closed, while the real cache route proves all valid rows bind to the envelope source time.
 - The null-`computedAt` route still fails at the envelope clock first even though its items inherit the synthesized response time.
 - Validation: focused audit plus route 425/425; real `--check`, build, diff, and governed hashes pass unchanged.
+
+### 2026-08-26 — Public redraft Draft Review pilot
+- Added a public, read-only Sleeper roster deep-link flow at `/draft-review` backed by a state-isolated context compiler.
+- Preserved observed/derived/Forecast claim separation and excluded stale FFC ADP from the default surface.
+- Added an agent-ready JSON context export while keeping Forecast projections explicitly unavailable.
+- Validated the exact external-user roster, focused tests, deployment build, and diff hygiene.
+
+### 2026-08-26 — Draft Review public-boundary repair
+- Repaired PR #343's five P2s: bounded Sleeper reads, in-flight player-cache dedupe, flex-aware geometry, draft endpoint provenance, and explicit unavailable draft UI.
+- Added strict HTTPS roster-link parsing, no-store/sanitized public responses, unnecessary-owner-ID minimization, route rate limiting, and untrusted-display-string guidance in the copied agent packet.
+- Validation: focused service/route 6/6; exact Shawn1KK live roster 15/15; deployment and server builds green; diff clean; no touched-file typecheck diagnostics. Full Jest: 156/162 suites and 2,002/2,002 collected tests, with six unrelated existing suite failures. Dependency audit remains a separate repository backlog (44 advisories); dependencies were untouched.

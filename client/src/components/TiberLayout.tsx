@@ -38,6 +38,7 @@ const navSections: NavSectionConfig[] = [
 
 function getSection(location: string): string {
   if (location === "/" || location.startsWith("/observatory") || location.startsWith("/stress-lab")) return "Observatory";
+  if (location.startsWith("/draft-review")) return "Draft Review";
   if (location.startsWith("/management") || location.startsWith("/team-management")) return "Management";
   if (location.startsWith("/tiers") || location.startsWith("/rankings")) return "Rankings";
   if (location.startsWith("/rookies")) return "Rookies";
