@@ -55,6 +55,7 @@
 .drp-draft-pick > span { color: var(--drp-orange); font: 700 10px/1 var(--font-mono); }
 .drp-draft-pick strong { font-size: 12px; }
 .drp-draft-pick small { color: rgba(236,238,242,.4); font: 600 9px/1 var(--font-mono); }
+.drp-draft-unavailable > p { color: rgba(236,238,242,.58); line-height: 1.55; }
 .drp-agent { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px; border: 1px solid rgba(240,122,42,.3); border-radius: 15px; background: linear-gradient(120deg,rgba(240,122,42,.1),rgba(255,255,255,.025)); }
 .drp-agent h2 { max-width: 660px; margin: 10px 0 8px; font: 600 25px/1.12 var(--font-serif); }
 .drp-agent p { max-width: 720px; color: rgba(236,238,242,.58); line-height: 1.55; }

@@ -115,6 +115,16 @@ export const rateLimiters = {
     skipSuccessfulRequests: false
   }),
 
+  // Public Draft Review fans one request into several bounded Sleeper reads.
+  // Keep normal interactive use comfortable while limiting accidental or
+  // abusive upstream amplification on the unauthenticated pilot route.
+  publicDraftReview: createRateLimit({
+    windowMs: 60 * 1000,
+    maxRequests: 30,
+    message: 'Draft Review rate limit exceeded. Try again in a minute.',
+    skipSuccessfulRequests: false
+  }),
+
   // Light rate limiting for status/health endpoints
   statusCheck: createRateLimit({
     windowMs: 1 * 60 * 1000,   // 1 minute

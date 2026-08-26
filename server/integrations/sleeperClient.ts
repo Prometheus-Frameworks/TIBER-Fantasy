@@ -1,4 +1,5 @@
 const BASE_URL = 'https://api.sleeper.app/v1';
+const SLEEPER_REQUEST_TIMEOUT_MS = 10_000;
 
 export interface SleeperLeague {
   league_id: string;
@@ -72,12 +73,18 @@ export interface SleeperPlayer {
 }
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Sleeper API error ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SLEEPER_REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Sleeper API error ${res.status}: ${text}`);
+    }
+    return await res.json() as T;
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json() as Promise<T>;
 }
 
 export const sleeperClient = {
