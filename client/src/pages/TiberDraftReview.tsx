@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Check, Clipboard, Loader2 } from 'lucide-react';
 import './TiberDraftReview.css';
 
@@ -7,6 +7,8 @@ type ReviewPlayer = {
   name: string;
   position: string | null;
   team: string | null;
+  status: string | null;
+  active: boolean | null;
   roster_state: 'starter' | 'bench' | 'reserve' | 'taxi';
 };
 
@@ -17,6 +19,8 @@ type DraftPick = {
   team: string | null;
   round: number;
   pick_no: number;
+  draft_slot: number | null;
+  next_turn_distance: number | null;
 };
 
 type DraftReview = {
@@ -31,10 +35,45 @@ type DraftReview = {
       league_mode: 'redraft' | 'keeper' | 'dynasty' | 'unknown';
       scoring_format: string | null;
       lineup_slots: Record<string, number>;
+      scoring_summary?: {
+        format: string | null;
+        reception_points: number | null;
+        passing: {
+          touchdown_points: number | null;
+          interception_points: number | null;
+          yards_per_point: number | null;
+        };
+        rushing: { touchdown_points: number | null; yards_per_point: number | null };
+        receiving: {
+          touchdown_points: number | null;
+          yards_per_point: number | null;
+          tight_end_premium: number | null;
+        };
+        additional_nonzero_rule_count: number;
+        additional_rules_truncated: boolean;
+        additional_nonzero_rules: Array<{ rule: string; label: string; points: number }>;
+      };
+      reserve?: {
+        configured_slots: number;
+        occupied_slots: number;
+        open_slots: number;
+        configured_eligibility: Record<string, boolean | null>;
+        current_player_eligibility: { status: 'unavailable'; reason: string };
+      };
     };
     team: { display_name: string; manager_name: string | null; roster_id: number };
     current_roster: ReviewPlayer[];
-    draft: { status: 'available' | 'unavailable'; reason: string | null; draft_id: string | null; picks: DraftPick[] };
+    draft: {
+      status: 'available' | 'unavailable';
+      reason: string | null;
+      draft_id: string | null;
+      pick_timer_seconds?: number | null;
+      team_draft_slot?: number | null;
+      picks: DraftPick[];
+      full_board_status?: 'available' | 'unavailable';
+      full_board_reason?: string | null;
+      full_board?: DraftPick[];
+    };
   };
   derived: {
     roster_count: number;
@@ -43,6 +82,13 @@ type DraftReview = {
     reserve_count: number;
     position_counts: Record<string, number>;
     roster_flags: string[];
+    bye_week_geometry: { status: 'unavailable'; reason: string; fabricated_values: false };
+    decision_context: {
+      league_mode: 'redraft' | 'keeper' | 'dynasty' | 'unknown';
+      scoring_format: string | null;
+      lineup_slots: Record<string, number>;
+      evaluation_horizons: string[];
+    };
   };
   forecast: {
     status: 'unavailable';
@@ -53,7 +99,25 @@ type DraftReview = {
   provenance: { authority: string; disclosures: string[] };
 };
 
-const EXAMPLE = 'https://sleeper.com/roster/1392906445938266112/7';
+type TeamChoice = {
+  roster_id: number;
+  display_name: string;
+  manager_name: string | null;
+  canonicalUrl: string;
+};
+
+type TeamSelection = {
+  status: 'team_selection_required';
+  league: { league_id: string; name: string; season: string; total_rosters: number };
+  teams: TeamChoice[];
+};
+
+type InputResolution = TeamSelection | {
+  status: 'roster_resolved';
+  canonicalUrl: string;
+};
+
+const EXAMPLE = 'Sleeper roster/draft link or league ID';
 const STATE_ORDER: ReviewPlayer['roster_state'][] = ['starter', 'bench', 'reserve', 'taxi'];
 const POSITION_ORDER = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
 
@@ -65,11 +129,26 @@ function formatScoring(format: string | null) {
 }
 
 function lineupSummary(slots: Record<string, number>) {
-  const nonStartingSlots = new Set(['BN', 'IR', 'TAXI']);
+  const nonStartingSlots = new Set(['BN', 'IR', 'RESERVE', 'TAXI']);
   return Object.entries(slots)
     .filter(([slot, count]) => count > 0 && !nonStartingSlots.has(slot))
     .map(([slot, count]) => `${count} ${slot}`)
     .join(' · ');
+}
+
+function scoringSummary(review: DraftReview) {
+  const summary = review.observed.league.scoring_summary;
+  if (!summary) return null;
+  const parts = [];
+  if (summary.reception_points !== null) parts.push(`${summary.reception_points} per reception`);
+  if (summary.passing.touchdown_points !== null) parts.push(`${summary.passing.touchdown_points}-pt pass TD`);
+  if ((summary.receiving.tight_end_premium ?? 0) > 0) {
+    parts.push(`+${summary.receiving.tight_end_premium} TE reception`);
+  }
+  if (summary.additional_nonzero_rule_count) {
+    parts.push(`${summary.additional_nonzero_rule_count} additional scoring rule${summary.additional_nonzero_rule_count === 1 ? '' : 's'}`);
+  }
+  return parts.join(' · ');
 }
 
 function positionSort(a: ReviewPlayer, b: ReviewPlayer) {
@@ -79,16 +158,20 @@ function positionSort(a: ReviewPlayer, b: ReviewPlayer) {
 }
 
 export default function TiberDraftReview() {
-  const initialUrl = new URLSearchParams(window.location.search).get('sleeper_url') ?? '';
-  const [sleeperUrl, setSleeperUrl] = useState(initialUrl);
+  const query = new URLSearchParams(window.location.search);
+  const initialInput = query.get('sleeper_input') ?? query.get('sleeper_url') ?? '';
+  const [sleeperInput, setSleeperInput] = useState(initialInput);
+  const [teamSelection, setTeamSelection] = useState<TeamSelection | null>(null);
   const [review, setReview] = useState<DraftReview | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const requestSequence = useRef(0);
 
-  async function loadReview(url = sleeperUrl) {
+  async function loadReview(url: string) {
     const value = url.trim();
     if (!value) return;
+    const requestId = ++requestSequence.current;
     setLoading(true);
     setError('');
     setReview(null);
@@ -96,19 +179,53 @@ export default function TiberDraftReview() {
       const response = await fetch(`/api/draft-review?sleeper_url=${encodeURIComponent(value)}`);
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || `TIBER could not read this roster (HTTP ${response.status}).`);
+      if (requestSequence.current !== requestId) return;
       setReview(payload as DraftReview);
+      setTeamSelection(null);
+      setSleeperInput((payload as DraftReview).input.canonicalUrl);
       const next = new URL(window.location.href);
+      next.searchParams.delete('sleeper_input');
       next.searchParams.set('sleeper_url', (payload as DraftReview).input.canonicalUrl);
       window.history.replaceState({}, '', next);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'TIBER could not read this roster.');
+      if (requestSequence.current === requestId) {
+        setError(caught instanceof Error ? caught.message : 'TIBER could not read this roster.');
+      }
     } finally {
-      setLoading(false);
+      if (requestSequence.current === requestId) setLoading(false);
+    }
+  }
+
+  async function resolveInput(input = sleeperInput) {
+    const value = input.trim();
+    if (!value) return;
+    const requestId = ++requestSequence.current;
+    setLoading(true);
+    setError('');
+    setReview(null);
+    setTeamSelection(null);
+    try {
+      const response = await fetch(`/api/draft-review/resolve?sleeper_input=${encodeURIComponent(value)}`);
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || `TIBER could not read this Sleeper input (HTTP ${response.status}).`);
+      if (requestSequence.current !== requestId) return;
+      const resolution = payload as InputResolution;
+      if (resolution.status === 'roster_resolved') {
+        await loadReview(resolution.canonicalUrl);
+        return;
+      }
+      setTeamSelection(resolution);
+    } catch (caught) {
+      if (requestSequence.current === requestId) {
+        setError(caught instanceof Error ? caught.message : 'TIBER could not read this Sleeper input.');
+      }
+    } finally {
+      if (requestSequence.current === requestId) setLoading(false);
     }
   }
 
   useEffect(() => {
-    if (initialUrl) void loadReview(initialUrl);
+    if (initialInput) void resolveInput(initialInput);
     // The deep-link input is intentionally read once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -120,6 +237,7 @@ export default function TiberDraftReview() {
       players: review.observed.current_roster.filter((player) => player.roster_state === state).sort(positionSort),
     })).filter((group) => group.players.length > 0);
   }, [review]);
+  const readableScoring = useMemo(() => review ? scoringSummary(review) : null, [review]);
 
   async function copyAgentPacket() {
     if (!review) return;
@@ -138,39 +256,61 @@ export default function TiberDraftReview() {
         <div className="drp-kicker">TIBER · Draft Review pilot</div>
         <h1>Let TIBER read the team you actually drafted.</h1>
         <p>
-          Paste a public Sleeper roster link. TIBER will compile the league settings, current roster,
-          draft record and structural context without taking control of any fantasy decision.
+          Paste a public Sleeper roster or draft link—or enter a league ID. TIBER will help you select
+          the roster, then compile its settings, current team, draft record and structural context.
         </p>
 
-        <form className="drp-input-row" onSubmit={(event) => { event.preventDefault(); void loadReview(); }}>
-          <label className="sr-only" htmlFor="sleeper-roster-url">Sleeper roster URL</label>
+        <form className="drp-input-row" onSubmit={(event) => { event.preventDefault(); void resolveInput(); }}>
+          <label className="sr-only" htmlFor="sleeper-roster-url">Sleeper link or league ID</label>
           <input
             id="sleeper-roster-url"
-            value={sleeperUrl}
-            onChange={(event) => setSleeperUrl(event.target.value)}
+            value={sleeperInput}
+            onChange={(event) => setSleeperInput(event.target.value)}
             placeholder={EXAMPLE}
-            inputMode="url"
+            inputMode="text"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
           />
-          <button type="submit" disabled={!sleeperUrl.trim() || loading}>
+          <button type="submit" disabled={!sleeperInput.trim() || loading}>
             {loading ? <Loader2 size={16} className="drp-spin" /> : null}
             {loading ? 'Reading…' : 'Read my team'}
           </button>
         </form>
-        <div className="drp-input-note">Public Sleeper data only · no login · no roster actions</div>
+        <div className="drp-input-note">Public Sleeper data only · choose a roster, not an authenticated owner · no roster actions</div>
         {error ? <div className="drp-error" role="alert">{error}</div> : null}
       </section>
 
-      {!review && !loading ? (
+      {teamSelection ? (
+        <section className="drp-team-select" aria-live="polite" aria-busy={loading}>
+          <div>
+            <div className="drp-kicker">Observed public league</div>
+            <h2>Which roster should TIBER review?</h2>
+            <p>{teamSelection.league.name} · {teamSelection.league.total_rosters} teams · {teamSelection.league.season}</p>
+          </div>
+          <div className="drp-team-options">
+            {teamSelection.teams.map((team) => (
+              <button type="button" key={team.roster_id} disabled={loading} onClick={() => void loadReview(team.canonicalUrl)}>
+                <strong>{team.display_name}</strong>
+                <span>{team.manager_name ? `${team.manager_name} · Roster ${team.roster_id}` : `Roster ${team.roster_id}`}</span>
+              </button>
+            ))}
+          </div>
+          <p className="drp-boundary">Selecting a roster identifies what to review. It does not verify account ownership.</p>
+        </section>
+      ) : null}
+
+      {!review && !loading && !teamSelection ? (
         <section className="drp-empty">
           <div>
             <span className="drp-step">01</span>
-            <h2>Paste the roster URL</h2>
-            <p>The roster ID tells TIBER which manager to inspect—no shared account state.</p>
+            <h2>Enter Sleeper context</h2>
+            <p>Use a roster link, draft link or league ID. No shared account state is consulted.</p>
           </div>
           <div>
             <span className="drp-step">02</span>
             <h2>Inspect the evidence</h2>
-            <p>Observed Sleeper state remains separate from structural derivations and unavailable models.</p>
+            <p>Choose a public roster, then keep observations separate from derivations and unavailable models.</p>
           </div>
           <div>
             <span className="drp-step">03</span>
@@ -192,10 +332,14 @@ export default function TiberDraftReview() {
           </section>
 
           <section className="drp-summary-grid" aria-label="League summary">
-            <article><span>Format</span><strong>{review.observed.league.total_rosters}-team {formatScoring(review.observed.league.scoring_format)} · {review.observed.league.league_mode}</strong></article>
+            <article>
+              <span>Format</span>
+              <strong>{review.observed.league.total_rosters}-team {formatScoring(review.observed.league.scoring_format)} · {review.observed.league.league_mode}</strong>
+              {readableScoring ? <small>{readableScoring}</small> : null}
+            </article>
             <article><span>Starting shape</span><strong>{lineupSummary(review.observed.league.lineup_slots)}</strong></article>
-            <article><span>Roster state</span><strong>{review.derived.starter_count} starters · {review.derived.bench_count} bench</strong></article>
-            <article><span>Evidence time</span><strong>{new Date(review.generated_at).toLocaleString()}</strong></article>
+            <article><span>Roster state</span><strong>{review.derived.starter_count} starters · {review.derived.bench_count} bench{review.observed.league.reserve && (review.observed.league.reserve.configured_slots > 0 || review.observed.league.reserve.occupied_slots > 0) ? ` · ${review.observed.league.reserve.occupied_slots}/${review.observed.league.reserve.configured_slots} reserve` : ''}</strong></article>
+            <article><span>Compiled at</span><strong>{new Date(review.generated_at).toLocaleString()}</strong></article>
           </section>
 
           <section className="drp-two-column">
@@ -232,8 +376,15 @@ export default function TiberDraftReview() {
                 </div>
                 {review.derived.roster_flags.length ? (
                   <ul className="drp-flags">{review.derived.roster_flags.map((flag) => <li key={flag}>{flag}</li>)}</ul>
-                ) : <p className="drp-muted">No roster count exceeds the number of weekly slots eligible for that position.</p>}
+                ) : <p className="drp-muted">No deterministic roster-shape flags are active.</p>}
                 <p className="drp-boundary">Counts describe construction. They do not prove that a player should be traded, held or waived.</p>
+                {review.observed.league.reserve && (review.observed.league.reserve.configured_slots > 0 || review.observed.league.reserve.occupied_slots > 0) ? (
+                  <p className="drp-boundary">
+                    Reserve capacity: {review.observed.league.reserve.open_slots} open of {review.observed.league.reserve.configured_slots} configured.
+                    TIBER does not infer current eligibility from an injury label alone.
+                  </p>
+                ) : null}
+                <p className="drp-boundary">Bye-week geometry: {review.derived.bye_week_geometry.reason}</p>
               </article>
 
               <article className="drp-panel drp-forecast">
@@ -253,8 +404,15 @@ export default function TiberDraftReview() {
             <section className="drp-panel">
               <div className="drp-panel-heading">
                 <div><span className="drp-label observed">Observed</span><h3>Original draft</h3></div>
-                <span>{review.observed.draft.picks.length} selections</span>
+                <span>
+                  {review.observed.draft.picks.length} selections
+                  {review.observed.draft.pick_timer_seconds ? ` · ${review.observed.draft.pick_timer_seconds}s timer` : ''}
+                  {review.observed.draft.team_draft_slot ? ` · slot ${review.observed.draft.team_draft_slot}` : ''}
+                </span>
               </div>
+              {review.observed.draft.full_board?.length ? (
+                <p className="drp-boundary">The agent packet includes all {review.observed.draft.full_board.length} observed room selections for counterfactual and turn-distance review.</p>
+              ) : null}
               <div className="drp-draft-grid">
                 {review.observed.draft.picks.map((pick) => (
                   <div className="drp-draft-pick" key={`${pick.pick_no}-${pick.player_id}`}>

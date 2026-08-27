@@ -38,7 +38,7 @@ does not own the user's final roster, trade, waiver, draft, or lineup decision.
 | --- | --- | --- |
 | **Observatory** | `/` or `/observatory` | Inspect system state, research notes, uncertainty, and known capability gaps. |
 | **Management** | `/management` | Sync and inspect a Sleeper dynasty team, future-pick context, Team Direction, model signals, and missing evidence. |
-| **Draft Review pilot** | `/draft-review` | Read a public Sleeper redraft roster URL without shared account state; inspect current roster, original draft, deterministic construction, and explicit Forecast availability. |
+| **Draft Review pilot** | `/draft-review` | Enter a Sleeper league ID or public league, draft, or roster URL; select a roster without shared account state, then inspect its current team, complete draft context, deterministic construction, and explicit unavailable evidence. |
 | **Rankings** | `/tiers` | Inspect weekly rankings with explicit source, freshness, expected-points, range, confidence, and fallback metadata. |
 | **Rookies** | `/rookies` | Read promoted TIBER-Rookies evidence through an artifact boundary. |
 | **Data Lab** | `/tiber-data-lab` | Enter promoted research lanes and inspect their readiness and provenance. |

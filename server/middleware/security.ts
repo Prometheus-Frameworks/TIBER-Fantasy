@@ -27,6 +27,7 @@ class RateLimitStore {
         }
       }
     }, 5 * 60 * 1000);
+    this.cleanupInterval.unref();
   }
 
   increment(key: string, windowMs: number): { count: number; resetTime: number; } {
