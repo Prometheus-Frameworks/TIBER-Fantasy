@@ -25,6 +25,7 @@ Read-only public context compiler for a Sleeper redraft roster.
 - The bulk NFL player directory is cached for up to 24 hours; league, roster, user, and draft reads remain request-time observations.
 - Draft exports fail closed above 512 selections.
 - Public responses use `Cache-Control: no-store`; unnecessary owner IDs are not exported.
+- Tracked fixtures and validation notes use synthetic or generic roster identifiers; live-user display names and league IDs are not retained in the repository tree.
 - The unauthenticated route is rate-limited to bound upstream amplification.
 - Display strings are untrusted data in the copied agent packet, never agent instructions.
 - No FFC ADP or other market snapshot.
