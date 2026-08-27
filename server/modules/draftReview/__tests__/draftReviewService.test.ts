@@ -26,16 +26,16 @@ function response(body: unknown) {
 
 describe('Draft Review Sleeper context compiler', () => {
   test('accepts only an exact public Sleeper roster URL at the build boundary', () => {
-    expect(parseSleeperRosterUrl('https://sleeper.com/roster/1392906445938266112/7')).toEqual({
-      leagueId: '1392906445938266112',
+    expect(parseSleeperRosterUrl('https://sleeper.com/roster/999999999999999999/7')).toEqual({
+      leagueId: '999999999999999999',
       rosterId: 7,
-      canonicalUrl: 'https://sleeper.com/roster/1392906445938266112/7',
+      canonicalUrl: 'https://sleeper.com/roster/999999999999999999/7',
     });
     expect(() => parseSleeperRosterUrl('https://example.com/roster/123/7')).toThrow('Only exact public HTTPS Sleeper');
     expect(() => parseSleeperRosterUrl('http://sleeper.com/roster/123/7')).toThrow('Only exact public HTTPS Sleeper');
     expect(() => parseSleeperRosterUrl('https://sleeper.com/foo/roster/123/7')).toThrow('Use a numeric Sleeper league ID');
     expect(() => parseSleeperRosterUrl('https://sleeper.com/roster/123/0')).toThrow('positive integer');
-    expect(() => parseSleeperRosterUrl('1392906445938266112')).toThrow('ending in');
+    expect(() => parseSleeperRosterUrl('999999999999999999')).toThrow('ending in');
     expect(() => parseSleeperRosterUrl('https://sleeper.com/roster/123/7?redirect=https://evil.test')).toThrow('Only exact public HTTPS');
     expect(() => parseSleeperRosterUrl('https://sleeper.com.evil.test/roster/123/7')).toThrow('Only exact public HTTPS');
     expect(() => parseSleeperRosterUrl('https://user@sleeper.com/roster/123/7')).toThrow('Only exact public HTTPS');
