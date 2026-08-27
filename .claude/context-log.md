@@ -682,8 +682,8 @@ Every agent should append an entry here after completing work.
 - **Validation:** Focused Draft Review compiler/route suites passed 11/11 and exited normally; deployment-equivalent `sh build.sh` passed with the existing OLC duplicate-member warning; `git diff --check` passed; repo-wide typecheck retained existing unrelated diagnostics with no touched-file matches. Full Jest ran 162 suites: 156 passed, the same six unrelated baseline suites failed to load, and all 2,007 collected tests passed.
 - **Notes:** Live pre-final smoke checks resolved an operator-owned 12-team draft input to 12 public roster choices and an external pilot roster to its 10-team redraft context without Management/default-user state. Actual bye weeks, current per-player reserve eligibility, FFC ADP, and redraft Forecast outputs remain explicitly unavailable rather than inferred.
 
-### 2026-08-27 — Codex: Draft Review pilot-operator privacy cleanup
-- **What changed:** Replaced a live external roster URL used by the Draft Review parser test with a synthetic identifier and generalized tracked validation notes so they do not retain an external pilot operator's display name, league ID, or an operator-owned league name.
+### 2026-08-27 — Codex: Draft Review fixture privacy hygiene
+- **What changed:** Replaced a live external roster URL used by the Draft Review parser test with a synthetic identifier and generalized tracked validation notes so they do not retain live external display names, league IDs, or league names.
 - **Files modified:** `server/modules/draftReview/__tests__/draftReviewService.test.ts`, `server/modules/draftReview/MODULE.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
-- **Validation:** Focused Draft Review service suite passed 8/8; repository search found no remaining tracked references to the removed external display name, league ID, or league name; `git diff --check` passed.
+- **Validation:** Focused Draft Review service suite passed 8/8; repository search found no remaining tracked references to the removed live identifiers; `git diff --check` passed.
 - **Notes:** Runtime behavior and public packet contents are unchanged. Draft Review fixtures and validation notes now explicitly require synthetic or generic roster identifiers.
