@@ -41,10 +41,25 @@ export interface SleeperRoster {
 export interface SleeperDraftPick {
   player_id: string;
   roster_id: number;
+  draft_slot?: number;
   round: number;
   pick_no: number;
   picked_by?: string | null;
   metadata?: Record<string, unknown>;
+}
+
+export interface SleeperDraft {
+  draft_id: string;
+  league_id?: string | null;
+  status?: string | null;
+  type?: string | null;
+  season?: string | null;
+  settings?: Record<string, any> & {
+    teams?: number;
+    rounds?: number;
+    pick_timer?: number;
+  };
+  slot_to_roster_id?: Record<string, number | string> | null;
 }
 
 export interface SleeperTradedPick {
@@ -118,6 +133,10 @@ export const sleeperClient = {
 
   async getDraftPicks(draftId: string): Promise<SleeperDraftPick[]> {
     return fetchJson<SleeperDraftPick[]>(`/draft/${draftId}/picks`);
+  },
+
+  async getDraft(draftId: string): Promise<SleeperDraft> {
+    return fetchJson<SleeperDraft>(`/draft/${draftId}`);
   },
 };
 
