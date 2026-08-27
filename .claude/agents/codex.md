@@ -904,7 +904,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Hardened IDs, strings, collections, response size, source-error classification, route headers, and the player-directory cache boundary; unref'd the legacy security cleanup timer so focused tests exit.
 - Validation: focused 11/11; full Jest 156/162 suites with the same six baseline load failures and 2,007/2,007 collected tests passing; deployment build and diff check pass; no touched-file typecheck diagnostics.
 
-### 2026-08-27 — Draft Review pilot-operator privacy cleanup
-- Replaced the live external roster URL in the parser fixture with a synthetic identifier and generalized validation records that retained an external pilot operator's display name or league context.
+### 2026-08-27 — Draft Review fixture privacy hygiene
+- Replaced the live external roster URL in the parser fixture with a synthetic identifier and generalized validation records that retained live external display names or league context.
 - Added the Draft Review module rule that tracked fixtures and logs use synthetic or generic roster identifiers rather than live-user display names or league IDs.
 - Validation: focused Draft Review service suite 8/8, repository identifier scan clean, and `git diff --check` passed. Runtime behavior is unchanged.
