@@ -896,10 +896,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 ### 2026-08-26 — Draft Review public-boundary repair
 - Repaired PR #343's five P2s: bounded Sleeper reads, in-flight player-cache dedupe, flex-aware geometry, draft endpoint provenance, and explicit unavailable draft UI.
 - Added strict HTTPS roster-link parsing, no-store/sanitized public responses, unnecessary-owner-ID minimization, route rate limiting, and untrusted-display-string guidance in the copied agent packet.
-- Validation: focused service/route 6/6; exact Shawn1KK live roster 15/15; deployment and server builds green; diff clean; no touched-file typecheck diagnostics. Full Jest: 156/162 suites and 2,002/2,002 collected tests, with six unrelated existing suite failures. Dependency audit remains a separate repository backlog (44 advisories); dependencies were untouched.
+- Validation: focused service/route 6/6; external live roster 15/15; deployment and server builds green; diff clean; no touched-file typecheck diagnostics. Full Jest: 156/162 suites and 2,002/2,002 collected tests, with six unrelated existing suite failures. Dependency audit remains a separate repository backlog (44 advisories); dependencies were untouched.
 
 ### 2026-08-27 — Draft Review v0.1 public operator entry
 - Added league ID plus exact Sleeper league/draft/roster input resolution and a minimal public roster selector without ownership authentication or shared Management state.
 - Added normalized scoring, reserve rules/capacity, exact missing-starter and bench flags, complete-board/timer/native-slot/turn-distance evidence, mobile request-race protection, and explicit unavailable eligibility/bye/Forecast states.
 - Hardened IDs, strings, collections, response size, source-error classification, route headers, and the player-directory cache boundary; unref'd the legacy security cleanup timer so focused tests exit.
 - Validation: focused 11/11; full Jest 156/162 suites with the same six baseline load failures and 2,007/2,007 collected tests passing; deployment build and diff check pass; no touched-file typecheck diagnostics.
+
+### 2026-08-27 — Draft Review fixture privacy hygiene
+- Replaced the live external roster URL in the parser fixture with a synthetic identifier and generalized validation records that retained live external display names or league context.
+- Added the Draft Review module rule that tracked fixtures and logs use synthetic or generic roster identifiers rather than live-user display names or league IDs.
+- Validation: focused Draft Review service suite 8/8, repository identifier scan clean, and `git diff --check` passed. Runtime behavior is unchanged.
