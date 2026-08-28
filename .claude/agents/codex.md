@@ -908,3 +908,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Replaced the live external roster URL in the parser fixture with a synthetic identifier and generalized validation records that retained live external display names or league context.
 - Added the Draft Review module rule that tracked fixtures and logs use synthetic or generic roster identifiers rather than live-user display names or league IDs.
 - Validation: focused Draft Review service suite 8/8, repository identifier scan clean, and `git diff --check` passed. Runtime behavior is unchanged.
+### 2026-08-28 — Public Draft Review containment profile
+- Added one explicit `TIBER_RUNTIME_PROFILE=public-draft-review` boundary that never imports or starts the database-backed/private runtime and terminates every non-Draft-Review API request uniformly before lookup or mutation.
+- The client reads the server-enforced profile and renders a Draft Review-only shell; profile failure is UI fail-closed, public response bodies are not logged, and unknown configured profiles stop startup.
+- Validation: focused security/routing suites 10/10, deployment-equivalent build green, no touched-file typecheck diagnostics, diff clean. No deployment or merge authority was exercised.

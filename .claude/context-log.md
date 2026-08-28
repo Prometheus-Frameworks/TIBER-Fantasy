@@ -687,3 +687,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `server/modules/draftReview/__tests__/draftReviewService.test.ts`, `server/modules/draftReview/MODULE.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
 - **Validation:** Focused Draft Review service suite passed 8/8; repository search found no remaining tracked references to the removed live identifiers; `git diff --check` passed.
 - **Notes:** Runtime behavior and public packet contents are unchanged. Draft Review fixtures and validation notes now explicitly require synthetic or generic roster identifiers.
+### 2026-08-28 — Codex: Public Draft Review containment profile
+
+- **What changed:** Added a fail-closed `public-draft-review` runtime profile. It mounts only health, runtime-profile, Draft Review, and the Draft Review-only SPA shell; the full route graph, migrations, sync, schedulers, integrations, and cron are not loaded. All other API methods/paths receive the same generic 404 before lookup or mutation, and response bodies are not logged in this profile.
+- **Files modified:** `server/runtimeProfile.ts`, `server/index.ts`, `server/__tests__/publicDraftReviewProfile.test.ts`, `client/src/App.tsx`, `client/src/components/TiberLayout.tsx`, `.env.example`, and `docs/SECURITY_RUNBOOK.md`.
+- **Validation:** Focused runtime/Draft Review/production-routing suites passed 10/10; deployment-equivalent `sh build.sh` passed; repository typecheck retained its existing unrelated diagnostics with no touched-file matches; `git diff --check` passed.
+- **Notes:** This is source containment only. No environment was changed and nothing was deployed. Enabling the profile and smoking an exact release SHA remain separately authorized operator actions.

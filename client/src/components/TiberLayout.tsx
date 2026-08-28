@@ -167,7 +167,13 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export default function TiberLayout({ children }: { children: React.ReactNode }) {
+export default function TiberLayout({
+  children,
+  publicDraftReviewOnly = false,
+}: {
+  children: React.ReactNode;
+  publicDraftReviewOnly?: boolean;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
 
@@ -181,6 +187,23 @@ export default function TiberLayout({ children }: { children: React.ReactNode })
       document.body.style.overflow = "";
     };
   }, [mobileOpen]);
+
+  if (publicDraftReviewOnly) {
+    return (
+      <>
+        <header className="tiber-topbar">
+          <div className="tiber-topbar-brand">
+            <Link href="/draft-review" className="tiber-topbar-logo-link">
+              <span className="tiber-topbar-logo">TIBER</span>
+            </Link>
+            <span className="tiber-topbar-sep" />
+            <span className="tiber-topbar-section">Draft Review</span>
+          </div>
+        </header>
+        <main className="tiber-main">{children}</main>
+      </>
+    );
+  }
 
   return (
     <>

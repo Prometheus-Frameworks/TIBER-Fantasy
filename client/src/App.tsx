@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation, Redirect } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -52,7 +52,26 @@ import RookieBoard from "@/pages/RookieBoard";
 import TiberClawPage from "@/pages/TiberClawPage";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+type RuntimeProfile = "full" | "public-draft-review";
+
+function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
+  if (runtimeProfile === "public-draft-review") {
+    return (
+      <Switch>
+        <Route>
+          {() => (
+            <TiberLayout publicDraftReviewOnly>
+              <Switch>
+                <Route path="/draft-review" component={TiberDraftReview} />
+                <Route>{() => <Redirect to="/draft-review" />}</Route>
+              </Switch>
+            </TiberLayout>
+          )}
+        </Route>
+      </Switch>
+    );
+  }
+
   return (
     <Switch>
       {/* All routes share the unified dark TiberLayout shell */}
@@ -144,6 +163,28 @@ function Router() {
 
 function AppContent() {
   const [location] = useLocation();
+  const [runtimeProfile, setRuntimeProfile] = useState<RuntimeProfile | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/runtime-profile", { headers: { Accept: "application/json" } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`runtime profile returned ${response.status}`);
+        const body = await response.json() as { profile?: unknown };
+        if (body.profile !== "full" && body.profile !== "public-draft-review") {
+          throw new Error("runtime profile response was invalid");
+        }
+        if (active) setRuntimeProfile(body.profile);
+      })
+      // Fail closed to the public-only shell if the local capability endpoint is
+      // unavailable or malformed. The server remains the security boundary.
+      .catch(() => {
+        if (active) setRuntimeProfile("public-draft-review");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -153,7 +194,11 @@ function AppContent() {
   
   return (
     <TooltipProvider>
-      <Router />
+      {runtimeProfile == null ? (
+        <main className="tiber-main" aria-busy="true">Loading TIBER…</main>
+      ) : (
+        <Router runtimeProfile={runtimeProfile} />
+      )}
       <Toaster />
     </TooltipProvider>
   );
