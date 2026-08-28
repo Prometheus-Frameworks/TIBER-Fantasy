@@ -5,6 +5,12 @@ import fs from "node:fs";
 import { attachSignatureHeader } from "./middleware/signature";
 import { baselineSecurityHeaders } from "./middleware/security";
 import { draftReviewRouter } from "./routes/draftReviewRoutes";
+import {
+  createRuntimeProfileRouter,
+  installPublicApiBoundary,
+  PUBLIC_DRAFT_REVIEW_PROFILE,
+  resolveRuntimeProfile,
+} from "./runtimeProfile";
 
 const log = (...args: any[]) => console.log(...args);
 
@@ -21,6 +27,7 @@ function sanitizeErrorMessage(err: any, status: number): string {
 
 // Exported so bootstrap.mjs can use it as the request handler.
 export const app = express();
+export const runtimeProfile = resolveRuntimeProfile();
 
 // Deployed behind a single proxy hop (Railway), which sets X-Forwarded-For.
 // Without this, req.ip is the proxy address, so IP-keyed rate limiting would
@@ -65,6 +72,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(attachSignatureHeader);
 
+// A tiny non-stateful capability response lets the SPA render the same runtime
+// profile the server is enforcing. It is mounted before the public boundary.
+app.use(createRuntimeProfileRouter(runtimeProfile));
+
 // Public, state-isolated redraft context compiler. Mount this before the
 // database-backed background router so the pilot remains available when
 // dynasty Management dependencies are unavailable.
@@ -82,7 +93,14 @@ app.use((req, res, next) => {
     if (!pathStr.startsWith("/api")) return;
     const ms = Date.now() - start;
     let line = `${req.method} ${pathStr} ${res.statusCode} in ${ms}ms`;
-    try { if (captured) line += ` :: ${JSON.stringify(captured)}`; } catch {/* */}
+    // The containment profile never logs response bodies. Public Sleeper
+    // display strings are untrusted/user-selected data and private route bodies
+    // must never become reachable or observable through this deployment.
+    try {
+      if (captured && runtimeProfile !== PUBLIC_DRAFT_REVIEW_PROFILE) {
+        line += ` :: ${JSON.stringify(captured)}`;
+      }
+    } catch {/* */}
     if (line.length > 160) line = line.slice(0, 159) + "…";
     log(line);
   });
@@ -107,6 +125,26 @@ export async function initBackground(): Promise<void> {
   const t = () => `[+${((Date.now() - _initStart) / 1000).toFixed(1)}s]`;
   const _initStart = Date.now();
   log(`🚀 Tiber Fantasy – loading routes in background`);
+
+  if (runtimeProfile === PUBLIC_DRAFT_REVIEW_PROFILE) {
+    // Containment profile: Draft Review, runtime profile, health, and static SPA
+    // only. Do not import the database-backed route graph or initialize any
+    // migration, scheduler, integration, synchronization, or cron surface.
+    installPublicApiBoundary(app);
+
+    if (process.env.NODE_ENV !== "development") {
+      const publicDir = path.resolve(process.cwd(), "dist", "public");
+      const mountedFrontend = mountProductionFrontend(app, publicDir);
+      if (mountedFrontend.mounted) {
+        log(`🗂️  Public Draft Review assets → ${mountedFrontend.publicDir}`);
+      } else {
+        log(`⚠️  Public Draft Review frontend unavailable (${mountedFrontend.reason})`);
+      }
+    }
+
+    log("🔒 Public Draft Review containment profile active; private runtime not loaded");
+    return;
+  }
 
   // Step 1: LLM provider — fire-and-forget, never blocks route mounting.
   // In production the LLM import can stall indefinitely (no error, no resolve),
@@ -191,6 +229,18 @@ export async function initBackground(): Promise<void> {
 if (process.env.NODE_ENV === "development") {
   const PORT = Number(process.env.PORT ?? 5000);
   (async () => {
+    if (runtimeProfile === PUBLIC_DRAFT_REVIEW_PROFILE) {
+      const { createServer } = await import("node:http");
+      installPublicApiBoundary(app);
+      const httpServer = createServer(app);
+      const { setupVite } = await import("./vite");
+      await setupVite(app, httpServer);
+      httpServer.listen(PORT, "0.0.0.0", () => {
+        log(`[express] public Draft Review profile serving on port ${PORT}`);
+      });
+      return;
+    }
+
     const { default: v1Router } = await import("./api/v1/routes");
     app.use("/api/v1", v1Router);
 

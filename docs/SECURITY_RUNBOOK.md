@@ -66,6 +66,22 @@ Add anything found to the running list below. Open a GitHub issue for anything H
 
 ## 9. Deferred security work (known, intentional)
 
+### Public Draft Review containment profile
+
+`TIBER_RUNTIME_PROFILE=public-draft-review` is the temporary, fail-closed public
+deployment profile. It mounts only `/health`, `/api/runtime-profile`,
+`/api/draft-review`, and the Draft Review-only SPA shell. It does not import the
+full v1/database-backed route graph and does not start migrations, sync jobs,
+schedulers, integrations, or cron work. Every other `/api/*` request receives
+the same body-free `404` before any resource lookup or mutation handler.
+
+Do not treat merging this profile as deployment approval. Enabling or changing
+the production environment remains a separate operator action. After that
+approval, smoke the exact release SHA with synthetic identifiers only: Draft
+Review must succeed, representative Management/integration/sync/dashboard
+GET/POST requests must all return the generic `404`, and no private response
+body may appear in application logs.
+
 - **Content-Security-Policy for the app shell (M6 phase 2).** The SPA HTML
   currently has no CSP. `baselineSecurityHeaders()` (M6 phase 1) intentionally
   ships HSTS / Referrer-Policy / Permissions-Policy / nosniff / frame headers

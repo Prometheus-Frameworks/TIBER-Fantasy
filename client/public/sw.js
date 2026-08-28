@@ -1,6 +1,5 @@
-const CACHE_NAME = 'tiber-fantasy-v1';
-const STATIC_CACHE = 'tiber-static-v1';
-const DYNAMIC_CACHE = 'tiber-dynamic-v1';
+const STATIC_CACHE = 'tiber-static-v2';
+const DOCUMENT_CACHE = 'tiber-document-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -8,8 +7,6 @@ const STATIC_ASSETS = [
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
-
-const API_CACHE_DURATION = 5 * 60 * 1000;
 
 self.addEventListener('install', (event) => {
   console.log('[ServiceWorker] Installing...');
@@ -31,7 +28,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
+          .filter((name) => name !== STATIC_CACHE && name !== DOCUMENT_CACHE)
           .map((name) => {
             console.log('[ServiceWorker] Deleting old cache:', name);
             return caches.delete(name);
@@ -53,8 +50,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
+  if (url.pathname.toLowerCase().startsWith('/api/')) {
+    // API responses may contain private state or runtime capabilities. They must
+    // never survive a profile change or be replayed while the network is down.
+    event.respondWith(apiNetworkOnly(request));
     return;
   }
 
@@ -66,11 +65,15 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(staleWhileRevalidate(request));
 });
 
+async function apiNetworkOnly(request) {
+  return fetch(request, { cache: 'no-store' });
+}
+
 async function networkFirst(request) {
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      const cache = await caches.open(DYNAMIC_CACHE);
+      const cache = await caches.open(DOCUMENT_CACHE);
       cache.put(request, networkResponse.clone());
     }
     return networkResponse;
