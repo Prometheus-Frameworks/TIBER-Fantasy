@@ -1,4 +1,6 @@
 import express from "express";
+import fs from "node:fs";
+import path from "node:path";
 import request from "supertest";
 import { createDraftReviewRouter } from "../routes/draftReviewRoutes";
 import {
@@ -19,6 +21,18 @@ function makePublicApp(privateHandler: jest.Mock) {
 }
 
 describe("public Draft Review runtime profile", () => {
+  test("keeps all API responses out of the service-worker caches", () => {
+    const serviceWorker = fs.readFileSync(
+      path.resolve(process.cwd(), "client/public/sw.js"),
+      "utf8",
+    );
+
+    expect(serviceWorker).toContain("event.respondWith(apiNetworkOnly(request))");
+    expect(serviceWorker).toContain("fetch(request, { cache: 'no-store' })");
+    expect(serviceWorker).not.toMatch(/networkFirst\(request\)[\s\S]*startsWith\('\/api\/'\)/);
+    expect(serviceWorker).not.toContain("DYNAMIC_CACHE");
+  });
+
   test("defaults to full but rejects an unknown configured profile", () => {
     expect(resolveRuntimeProfile(undefined)).toBe("full");
     expect(resolveRuntimeProfile("public-draft-review")).toBe("public-draft-review");

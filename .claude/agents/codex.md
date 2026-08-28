@@ -911,4 +911,5 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 ### 2026-08-28 — Public Draft Review containment profile
 - Added one explicit `TIBER_RUNTIME_PROFILE=public-draft-review` boundary that never imports or starts the database-backed/private runtime and terminates every non-Draft-Review API request uniformly before lookup or mutation.
 - The client reads the server-enforced profile and renders a Draft Review-only shell; profile failure is UI fail-closed, public response bodies are not logged, and unknown configured profiles stop startup.
-- Validation: focused security/routing suites 10/10, deployment-equivalent build green, no touched-file typecheck diagnostics, diff clean. No deployment or merge authority was exercised.
+- Validation: focused security/routing suites 11/11, deployment-equivalent build green, no touched-file typecheck diagnostics, diff clean. No deployment or merge authority was exercised.
+- Exact-head review repair: API GETs are network-only in the service worker and explicitly bypass browser HTTP caching; service-worker activation deletes the legacy dynamic API cache. This prevents a cached `full` capability or private GET response from surviving a profile change or being replayed during an outage. Static/document caching remains versioned and separate.
