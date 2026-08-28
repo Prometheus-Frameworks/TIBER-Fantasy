@@ -168,6 +168,10 @@ html, body {
   min-height: 100vh;
 }
 
+.tiber-main-public {
+  margin-left: 0;
+}
+
 .tiber-content {
   padding: 30px 36px;
   max-width: 1180px;

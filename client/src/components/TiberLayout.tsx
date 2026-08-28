@@ -200,7 +200,7 @@ export default function TiberLayout({
             <span className="tiber-topbar-section">Draft Review</span>
           </div>
         </header>
-        <main className="tiber-main">{children}</main>
+        <main className="tiber-main tiber-main-public">{children}</main>
       </>
     );
   }

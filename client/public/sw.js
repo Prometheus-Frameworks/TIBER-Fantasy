@@ -50,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.toLowerCase().startsWith('/api/')) {
     // API responses may contain private state or runtime capabilities. They must
     // never survive a profile change or be replayed while the network is down.
     event.respondWith(apiNetworkOnly(request));

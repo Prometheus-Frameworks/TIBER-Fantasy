@@ -27,10 +27,22 @@ describe("public Draft Review runtime profile", () => {
       "utf8",
     );
 
+    expect(serviceWorker).toContain("url.pathname.toLowerCase().startsWith('/api/')");
     expect(serviceWorker).toContain("event.respondWith(apiNetworkOnly(request))");
     expect(serviceWorker).toContain("fetch(request, { cache: 'no-store' })");
     expect(serviceWorker).not.toMatch(/networkFirst\(request\)[\s\S]*startsWith\('\/api\/'\)/);
     expect(serviceWorker).not.toContain("DYNAMIC_CACHE");
+
+    const layout = fs.readFileSync(
+      path.resolve(process.cwd(), "client/src/components/TiberLayout.tsx"),
+      "utf8",
+    );
+    const styles = fs.readFileSync(
+      path.resolve(process.cwd(), "client/src/index.css"),
+      "utf8",
+    );
+    expect(layout).toContain('className="tiber-main tiber-main-public"');
+    expect(styles).toMatch(/\.tiber-main-public\s*{\s*margin-left:\s*0;/);
   });
 
   test("defaults to full but rejects an unknown configured profile", () => {
