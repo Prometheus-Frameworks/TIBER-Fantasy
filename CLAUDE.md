@@ -117,7 +117,7 @@ Unified resolution across fantasy platforms (Sleeper, ESPN, Yahoo, MySportsFeeds
 
 - Dark navy background (`bg-[#0a0e1a]`), slate cards (`bg-[#141824]`)
 - Blue-purple gradient accents, white/light typography
-- Wouter for client-side routing (ESLint enforces no `window.location` usage)
+- Prefer Wouter for client-side routing over direct `window.location` usage. A restriction is checked into `.eslintrc.json`, but no configured lint command or CI step currently enforces it.
 - TanStack Query for data fetching/caching
 - shadcn/ui components with Tailwind
 
