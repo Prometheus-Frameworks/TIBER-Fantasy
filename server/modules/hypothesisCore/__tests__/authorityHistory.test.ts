@@ -159,4 +159,14 @@ describe('authority and append-only history proposals', () => {
       expect(proposeAuthorizedAppend(activeHead,unit.receipt,unit.intent,unit.records)).toMatchObject({status:'refused',reason_code:'hypothesis_successor_authority_mismatch'});
     }
   });
+
+  it('requires the current R3 predecessor to exist, verify, and match the head', () => {
+    const unit=makeHypothesisSuccessorUnit();
+    expect(proposeAuthorizedAppend({...activeHead,existing_records:[]},unit.receipt,unit.intent,unit.records)).toMatchObject({status:'refused',reason_code:'hypothesis_successor_authority_mismatch'});
+    expect(proposeAuthorizedAppend({...activeHead,existing_records:[{...version,statement:'Forged predecessor content.'}]},unit.receipt,unit.intent,unit.records)).toMatchObject({status:'refused',reason_code:'hypothesis_successor_authority_mismatch'});
+
+    const differentHeadHypothesis=`tbr_hyp_${'2'.repeat(32)}`;
+    const mismatchedUnit=makeHypothesisSuccessorUnit({binding:{predecessor_hypothesis_id:differentHeadHypothesis}});
+    expect(proposeAuthorizedAppend({...activeHead,hypothesis_id:differentHeadHypothesis},mismatchedUnit.receipt,mismatchedUnit.intent,mismatchedUnit.records)).toMatchObject({status:'refused',reason_code:'hypothesis_successor_authority_mismatch'});
+  });
 });
