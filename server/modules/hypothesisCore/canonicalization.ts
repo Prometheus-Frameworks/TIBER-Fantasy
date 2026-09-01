@@ -62,6 +62,13 @@ const normalizeInstant = (value: string): string => {
   const fractional = value.match(/\.(\d+)(?=Z|[+-]\d{2}:\d{2}$)/)?.[1];
   if (fractional && fractional.length > 3) throw new CanonicalizationError('canonical_input_timestamp_precision', 'precision exceeds milliseconds');
   if (!/(?:Z|[+-]\d{2}:\d{2})$/.test(value)) throw new CanonicalizationError('canonical_input_timestamp_invalid', 'timestamp requires an explicit offset');
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|([+-])(\d{2}):(\d{2}))$/);
+  if (!parts) throw new CanonicalizationError('canonical_input_timestamp_invalid', 'invalid timestamp');
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , offsetHourText, offsetMinuteText] = parts;
+  const [year, month, day, hour, minute, second, offsetHour, offsetMinute] = [yearText, monthText, dayText, hourText, minuteText, secondText, offsetHourText ?? '0', offsetMinuteText ?? '0'].map(Number);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  if (daysInMonth === undefined || day < 1 || day > daysInMonth || hour > 23 || minute > 59 || second > 59 || offsetHour > 23 || offsetMinute > 59) throw new CanonicalizationError('canonical_input_timestamp_invalid', 'invalid timestamp');
   const ms = Date.parse(value);
   if (!Number.isFinite(ms)) throw new CanonicalizationError('canonical_input_timestamp_invalid', 'invalid timestamp');
   return new Date(ms).toISOString();

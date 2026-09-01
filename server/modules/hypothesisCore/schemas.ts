@@ -82,7 +82,13 @@ export const RelatedSubjectV0Schema = z.object({
 const PredicateOperandV0Schema = z.object({
   value_type: z.enum(['boolean', 'integer', 'decimal_string', 'string', 'enum']),
   value: z.union([z.boolean(), z.number().int().safe(), z.string()]), unit_ref: GovernedContractRefV0Schema.nullable(),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  const typeMatches = value.value_type === 'boolean' ? typeof value.value === 'boolean'
+    : value.value_type === 'integer' ? typeof value.value === 'number'
+    : typeof value.value === 'string';
+  if (!typeMatches) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'operand value does not match value_type' });
+  if (value.value_type === 'decimal_string' && (typeof value.value !== 'string' || !/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value.value))) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['value'], message: 'invalid canonical decimal string' });
+});
 export const PayoffPredicateV0Schema = z.object({
   predicate_id: opaque, status: z.enum(['operational', 'unresolved']), subject_ref: opaque,
   measure_ref: GovernedContractRefV0Schema,
@@ -93,7 +99,6 @@ export const PayoffPredicateV0Schema = z.object({
 }).strict().superRefine((value, ctx) => {
   if (value.status === 'operational' && value.unresolved_reason !== null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'operational predicate cannot carry unresolved_reason' });
   if (value.status === 'unresolved' && value.unresolved_reason === null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'unresolved predicate requires reason' });
-  if (value.test.operand.value_type === 'decimal_string' && (typeof value.test.operand.value !== 'string' || !/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value.test.operand.value))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid canonical decimal string' });
 });
 
 export const MissingWitnessV0Schema = z.object({
@@ -139,6 +144,7 @@ export const HypothesisVersionV0Schema = record('tiber.hypothesis-core/hypothesi
   if (value.payoff_condition.predicate_status === 'operational' && (value.payoff_condition.unresolved_terms.length || value.payoff_condition.predicates.some(p => p.status !== 'operational'))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'non_operational_payoff_predicate' });
   const expr = value.payoff_condition.expression;
   if ((expr.mode === 'all' || expr.mode === 'any') && (!expr.predicate_ids.length || expr.policy_ref !== null)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid payoff expression' });
+  if ((expr.mode === 'all' || expr.mode === 'any') && expr.predicate_ids.some(id => !ids.has(id))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'payoff expression references undeclared predicate' });
   if (expr.mode === 'policy_ref' && (expr.policy_ref === null || expr.predicate_ids.length)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'invalid policy expression' });
   if (value.version_ordinal === 1 && value.predecessor_version_ref !== null) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'initial version cannot have predecessor_version_ref' });
 });
