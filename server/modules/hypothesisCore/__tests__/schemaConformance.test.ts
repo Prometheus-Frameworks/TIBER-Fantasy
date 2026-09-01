@@ -1,4 +1,4 @@
-import { CanonicalSubjectReceiptV0Schema, HypothesisAuthorityReceiptV0Schema, PaperFixtureV0Schema, PaperFixtureV1Schema, PrivateRecordRefV0Schema, ReferenceV0Schema } from '../schemas';
+import { CanonicalSubjectReceiptV0Schema, HypothesisAuthorityReceiptV0Schema, PaperFixtureV0Schema, PaperFixtureV1Schema, PrivateRecordRefV0Schema, ReferenceV0Schema, WitnessResultV0Schema } from '../schemas';
 import { CURRENT_PAPER_VECTORS_V1, HISTORICAL_PAPER_VECTORS_V0 } from '../fixtures/paperVectors';
 
 const hex = 'a'.repeat(64);
@@ -19,6 +19,7 @@ describe('strict Hypothesis Core schemas', () => {
     expect(CanonicalSubjectReceiptV0Schema.safeParse(valid).success).toBe(true);
     expect(CanonicalSubjectReceiptV0Schema.safeParse({ ...valid, extra:true }).success).toBe(false);
     expect(CanonicalSubjectReceiptV0Schema.safeParse({ ...valid, resolution_status:'ambiguous' }).success).toBe(false);
+    expect(CanonicalSubjectReceiptV0Schema.safeParse({ ...valid, lookup_basis_ref:{...privateRef,workspace_id:'ws:other'} }).success).toBe(false);
   });
 
   it('admits only the R3 action domain', () => {
@@ -32,5 +33,14 @@ describe('strict Hypothesis Core schemas', () => {
     expect(PaperFixtureV0Schema.safeParse(JSON.parse(HISTORICAL_PAPER_VECTORS_V0.boston.preimage)).success).toBe(true);
     expect(PaperFixtureV1Schema.safeParse(JSON.parse(CURRENT_PAPER_VECTORS_V1.boston.preimage)).success).toBe(true);
     expect(PaperFixtureV1Schema.safeParse(JSON.parse(HISTORICAL_PAPER_VECTORS_V0.boston.preimage)).success).toBe(false);
+  });
+
+  it('keeps unavailable/unobserved witnesses indeterminate and gates observed absence', () => {
+    const base={witness_id:'w1',window_state:'open',observation_state:'unavailable',coverage_state:'unknown',evaluative_effect:'indeterminate',basis_refs:[],coverage_receipt_refs:[],contradiction_refs:[],reason_codes:['input_unavailable']};
+    expect(WitnessResultV0Schema.safeParse(base).success).toBe(true);
+    expect(WitnessResultV0Schema.safeParse({...base,evaluative_effect:'weakens'}).success).toBe(false);
+    expect(WitnessResultV0Schema.safeParse({...base,observation_state:'unobserved',reason_codes:[],evaluative_effect:'falsifies_component'}).success).toBe(false);
+    expect(WitnessResultV0Schema.safeParse({...base,observation_state:'observed_absent',reason_codes:[],basis_refs:[privateRef]}).success).toBe(false);
+    expect(WitnessResultV0Schema.safeParse({...base,observation_state:'observed_absent',reason_codes:[],window_state:'closed',coverage_state:'complete',basis_refs:[privateRef],coverage_receipt_refs:[privateRef],evaluative_effect:'weakens'}).success).toBe(true);
   });
 });

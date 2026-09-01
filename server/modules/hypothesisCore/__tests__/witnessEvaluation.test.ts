@@ -25,4 +25,9 @@ describe('witness and trigger evaluation', () => {
     const result = evaluateTrigger({ prior_evaluation_ref:null, old_input_fingerprints:oldF, new_input_fingerprints:{...oldF, football_evidence:'new'}, prior_dependency_projected_input_digest:'x', dependency_projected_input_digest:'y', changed_dependency_keys:['evidence:route'] });
     expect(result).toEqual({ status:'accepted', value:{ decision:'append_evaluation', changed_components:['football_evidence'] } });
   });
+
+  it('treats a dependency-digest-only change as no-op', () => {
+    const fingerprints={hypothesis_definition:'a',football_evidence:'b',operator_context:'c',evaluation_method:'d'};
+    expect(evaluateTrigger({prior_evaluation_ref:null,old_input_fingerprints:fingerprints,new_input_fingerprints:fingerprints,prior_dependency_projected_input_digest:'old',dependency_projected_input_digest:'new',changed_dependency_keys:['unexpected']})).toEqual({status:'no_op',reason_code:'trigger_projection_unchanged'});
+  });
 });

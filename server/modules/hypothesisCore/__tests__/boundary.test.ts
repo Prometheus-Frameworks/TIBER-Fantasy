@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-const moduleRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const moduleRoot = join(process.cwd(), 'server/modules/hypothesisCore');
 const productionFiles = ['schemas.ts','canonicalization.ts','conformance.ts'];
 const forbiddenImports = [/from ['\"](?:.*\/)?(?:storage|db|routes?|mcp|providers?|roster|occupancy)/i, /process\.env/, /\bfetch\s*\(/, /axios/, /drizzle/, /Date\.now\s*\(/, /Math\.random\s*\(/];
 

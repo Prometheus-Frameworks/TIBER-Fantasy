@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import {
   ACTION_CLASSES, AuthorizationIntentV0Schema, HypothesisAuthorityReceiptV0Schema,
-  HypothesisSupersessionEventV0Schema, HypothesisVersionV0Schema, PaperFixtureV1Schema, PaperRefusalV0Schema, ProductionRecordV0Schema,
+  HypothesisLifecycleEventV0Schema, HypothesisSupersessionEventV0Schema, HypothesisVersionV0Schema,
+  PaperFixtureV1Schema, PaperRefusalV0Schema, ProductionRecordV0Schema, RecordCorrectionEventV0Schema,
   type PrivateRecordRefV0,
 } from './schemas';
 import { canonicalizeForProfile, canonicalizeProductionRecord, digestCanonicalPreimage, type ArrayRule } from './canonicalization';
@@ -74,7 +75,8 @@ export function evaluateTrigger(priorEvaluation: TriggerEvaluationInput, project
   const input = { ...priorEvaluation, ...projectedInputs } as TriggerEvaluationInput;
   const components = ['hypothesis_definition','football_evidence','operator_context','evaluation_method'] as const;
   const changed = input.old_input_fingerprints === null ? [...components] : components.filter(k => input.old_input_fingerprints?.[k] !== input.new_input_fingerprints[k]);
-  if (!changed.length && input.prior_dependency_projected_input_digest === input.dependency_projected_input_digest) return { status: 'no_op', reason_code: 'trigger_projection_unchanged' };
+  if (!changed.length) return { status: 'no_op', reason_code: 'trigger_projection_unchanged' };
+  if (input.prior_dependency_projected_input_digest === input.dependency_projected_input_digest) return refused('trigger_projection_inconsistent');
   if (!input.changed_dependency_keys.length && changed.some(c => c !== 'evaluation_method' && c !== 'hypothesis_definition')) return refused('trigger_projection_inconsistent');
   return { status: 'accepted', value: { decision: 'append_evaluation', changed_components: changed } };
 }
@@ -84,12 +86,19 @@ export interface AcceptanceHeadV0 {
   lifecycle_state: 'absent' | 'active' | 'parked' | 'resolved' | 'superseded'; latest_evaluation_ref: PrivateRecordRefV0 | null;
   source_dependency_projection_digest: string | null; freshness_head_refs: readonly PrivateRecordRefV0[];
   consumed_authority_receipt_digests: readonly string[]; accepted_unit_digests?: readonly string[];
+  existing_records?: readonly unknown[]; corrected_target_digests?: readonly string[];
 }
 export interface AppendProposal { ordered_records: readonly unknown[]; consumes_authority_receipt_digest: string; atomic: true; replay: false; }
 
 export function proposeAuthorizedAppend(currentHead: AcceptanceHeadV0, receiptInput: unknown, intentInput: unknown, candidateRecords: readonly unknown[]): ConformanceResult<AppendProposal> {
   const receipt = HypothesisAuthorityReceiptV0Schema.safeParse(receiptInput);
   if (!receipt.success) return refused('history_authority_invalid');
+  if (validateProductionRecord(receipt.data).status !== 'accepted') return refused('history_authority_invalid');
+  const expectedCount = receipt.data.action_class === 'create_successor_version' || receipt.data.action_class === 'create_initial_hypothesis_successor' ? 2 : 1;
+  if (candidateRecords.length !== expectedCount) return refused(receipt.data.action_class === 'create_successor_version' ? 'successor_version_atomic_append_incomplete' : receipt.data.action_class === 'create_initial_hypothesis_successor' ? 'hypothesis_successor_atomic_append_incomplete' : 'history_atomic_append_incomplete');
+  const parsedCandidates = candidateRecords.map(candidate => ProductionRecordV0Schema.safeParse(candidate));
+  if (parsedCandidates.some(candidate => !candidate.success)) return refused('record_schema_invalid');
+  if (candidateRecords.some(candidate => validateProductionRecord(candidate).status !== 'accepted')) return refused('record_digest_mismatch');
   const intent = AuthorizationIntentV0Schema.safeParse(intentInput);
   if (!intent.success) return refused('history_authority_invalid');
   if (receipt.data.workspace_id !== currentHead.workspace_id || receipt.data.operator_id !== currentHead.operator_id || intent.data.workspace_id !== currentHead.workspace_id || intent.data.operator_id !== currentHead.operator_id) return refused('history_workspace_mismatch');
@@ -111,15 +120,15 @@ export function proposeAuthorizedAppend(currentHead: AcceptanceHeadV0, receiptIn
     }));
   } catch { return refused('history_authority_invalid'); }
   if (receipt.data.intent_digest !== calculatedIntentDigest) return refused('history_authority_invalid');
-  const unitDigest = `sha256:${createHash('sha256').update(JSON.stringify(candidateRecords)).digest('hex')}`;
+  const canonicalMemberIdentities = parsedCandidates.map(candidate => {
+    if (!candidate.success) throw new Error('unreachable invalid candidate');
+    return [candidate.data.schema_id, candidate.data.workspace_id, candidate.data.record_id, candidate.data.record_digest];
+  });
+  const unitDigest = `sha256:${createHash('sha256').update(JSON.stringify(canonicalMemberIdentities)).digest('hex')}`;
   if (currentHead.accepted_unit_digests?.includes(unitDigest)) return { status: 'no_op', reason_code: 'idempotent_replay' };
   if (currentHead.consumed_authority_receipt_digests.includes(receipt.data.record_digest)) return refused('authority_receipt_already_consumed');
-  if (currentHead.lifecycle_state === 'resolved' || currentHead.lifecycle_state === 'superseded') return refused('terminal_lifecycle_conflict');
+  if ((currentHead.lifecycle_state === 'resolved' || currentHead.lifecycle_state === 'superseded') && receipt.data.action_class !== 'correct_record' && receipt.data.action_class !== 'withdraw_record') return refused('terminal_lifecycle_conflict');
 
-  const expectedCount = receipt.data.action_class === 'create_successor_version' || receipt.data.action_class === 'create_initial_hypothesis_successor' ? 2 : 1;
-  if (candidateRecords.length !== expectedCount) return refused(receipt.data.action_class === 'create_successor_version' ? 'successor_version_atomic_append_incomplete' : receipt.data.action_class === 'create_initial_hypothesis_successor' ? 'hypothesis_successor_atomic_append_incomplete' : 'history_atomic_append_incomplete');
-  const parsedCandidates = candidateRecords.map(candidate => ProductionRecordV0Schema.safeParse(candidate));
-  if (parsedCandidates.some(candidate => !candidate.success)) return refused('record_schema_invalid');
   if (parsedCandidates.some(candidate => candidate.success && (candidate.data.workspace_id !== currentHead.workspace_id || candidate.data.operator_id !== currentHead.operator_id))) return refused('history_workspace_mismatch');
   const receiptRef = { ref_kind:'operator_private_record', schema_id:receipt.data.schema_id, record_id:receipt.data.record_id, workspace_id:receipt.data.workspace_id, record_digest:receipt.data.record_digest } as const;
   const sameRef = (a: PrivateRecordRefV0 | null, b: PrivateRecordRefV0 | null) => JSON.stringify(a) === JSON.stringify(b);
@@ -143,6 +152,26 @@ export function proposeAuthorizedAppend(currentHead: AcceptanceHeadV0, receiptIn
     const target = intent.data.target_payload_without_authority_ref as Record<string, unknown>;
     if (!version.success || !event.success || event.data.scope !== 'hypothesis' || version.data.version_ordinal !== 1 || version.data.predecessor_version_ref !== null || !sameRef(version.data.predecessor_hypothesis_ref, currentHead.current_version_ref) || !sameRef(event.data.predecessor_ref, currentHead.current_version_ref) || !sameRef(version.data.version_authority_receipt_ref, receiptRef) || !sameRef(event.data.authority_receipt_ref, receiptRef) || event.data.successor_ref.record_digest !== version.data.record_digest || stableJson(versionPayloadWithoutAuthority(version.data)) !== stableJson(target.successor_hypothesis_initial_version_payload_without_authority_ref) || stableJson(eventPayloadWithoutDerivedRefs(event.data)) !== stableJson(target.hypothesis_supersession_event_payload_without_authority_and_successor_ref)) return refused('hypothesis_successor_authority_mismatch');
   }
+  if (receipt.data.action_class === 'park') {
+    const event = HypothesisLifecycleEventV0Schema.safeParse(candidateRecords[0]);
+    if (!event.success || currentHead.lifecycle_state !== 'active' || currentHead.hypothesis_id === null || currentHead.current_version_ref === null || event.data.hypothesis_id !== currentHead.hypothesis_id || !sameRef(event.data.hypothesis_version_ref, currentHead.current_version_ref) || !sameRef(event.data.authority_receipt_ref, receiptRef) || stableJson(recordPayloadWithoutAuthority(event.data)) !== stableJson(intent.data.target_payload_without_authority_ref)) return refused('lifecycle_authority_mismatch');
+  }
+  if (receipt.data.action_class === 'correct_record' || receipt.data.action_class === 'withdraw_record') {
+    const event = RecordCorrectionEventV0Schema.safeParse(candidateRecords[0]);
+    if (!event.success || !sameRef(event.data.authority_receipt_ref, receiptRef) || event.data.disposition !== (receipt.data.action_class === 'correct_record' ? 'corrected' : 'withdrawn') || stableJson(recordPayloadWithoutAuthority(event.data)) !== stableJson(intent.data.target_payload_without_authority_ref)) return refused('history_authority_invalid');
+    const existing = (currentHead.existing_records ?? []).flatMap(candidate => {
+      const parsed = ProductionRecordV0Schema.safeParse(candidate);
+      return parsed.success && validateProductionRecord(parsed.data).status === 'accepted' ? [parsed.data] : [];
+    });
+    const target = existing.find(record => sameRef(recordRef(record), event.data.target_record_ref));
+    if (!target) return refused('correction_schema_or_identity_mismatch');
+    if (currentHead.corrected_target_digests?.includes(event.data.target_record_ref.record_digest)) return refused('correction_graph_conflict');
+    if (event.data.replacement_record_ref) {
+      const replacement = existing.find(record => sameRef(recordRef(record), event.data.replacement_record_ref));
+      if (!replacement || replacement.schema_id !== target.schema_id || Date.parse(replacement.clocks.recorded_at) > Date.parse(event.data.effective_at)) return refused('correction_schema_or_identity_mismatch');
+    }
+    if (Date.parse(event.data.clocks.recorded_at) > Date.parse(event.data.effective_at)) return refused('history_effective_at_retroactive');
+  }
   return { status: 'accepted', value: { ordered_records: [...candidateRecords], consumes_authority_receipt_digest: receipt.data.record_digest, atomic: true, replay: false } };
 }
 
@@ -152,6 +181,12 @@ function versionPayloadWithoutAuthority(record: Record<string, unknown>): Record
 }
 function eventPayloadWithoutDerivedRefs(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(record).filter(([key]) => !RECORD_ENVELOPE_KEYS.has(key) && key !== 'authority_receipt_ref' && key !== 'successor_ref'));
+}
+function recordPayloadWithoutAuthority(record: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(record).filter(([key]) => !RECORD_ENVELOPE_KEYS.has(key) && key !== 'authority_receipt_ref'));
+}
+function recordRef(record: Record<string, unknown>): PrivateRecordRefV0 {
+  return { ref_kind:'operator_private_record', schema_id:String(record.schema_id), record_id:String(record.record_id), workspace_id:String(record.workspace_id), record_digest:String(record.record_digest) } as PrivateRecordRefV0;
 }
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;

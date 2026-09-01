@@ -45,12 +45,27 @@ const envelopeShape = {
 export const CommonEnvelopeV0Schema = z.object(envelopeShape).strict();
 export type CommonEnvelopeV0 = z.infer<typeof CommonEnvelopeV0Schema>;
 
+function collectPrivateRefs(value: unknown, refs: PrivateRecordRefV0[] = []): PrivateRecordRefV0[] {
+  if (Array.isArray(value)) {
+    for (const member of value) collectPrivateRefs(member, refs);
+  } else if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    if (candidate.ref_kind === 'operator_private_record') {
+      const parsed = PrivateRecordRefV0Schema.safeParse(candidate);
+      if (parsed.success) refs.push(parsed.data);
+    } else {
+      for (const member of Object.values(candidate)) collectPrivateRefs(member, refs);
+    }
+  }
+  return refs;
+}
+
 const record = <T extends z.ZodRawShape>(schemaId: string, prefix: string, payload: T) =>
   z.object({ ...envelopeShape, ...payload }).strict().superRefine((value, ctx) => {
     const envelope = value as unknown as CommonEnvelopeV0;
     if (envelope.schema_id !== schemaId) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schema_id'], message: 'schema_id does not match record type' });
     if (!new RegExp(`^${prefix}[0-9a-f]{32}$`).test(envelope.record_id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['record_id'], message: 'record_id namespace invalid' });
-    for (const ref of [...envelope.record_authority.basis_refs, ...envelope.provenance_refs, ...envelope.predecessor_refs]) {
+    for (const ref of collectPrivateRefs(value)) {
       if (ref.workspace_id !== envelope.workspace_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'private reference crosses workspace' });
     }
   });
@@ -156,12 +171,22 @@ export const WitnessResultV0Schema = z.object({
   witness_id: opaque, window_state: z.enum(['open', 'closed', 'unknown']), observation_state: z.enum(['unobserved', 'observed_present', 'observed_absent', 'unavailable', 'contradicted']),
   coverage_state: z.enum(['complete', 'incomplete', 'unknown']), evaluative_effect: z.enum(['strengthens', 'weakens', 'falsifies_component', 'no_change', 'indeterminate']),
   basis_refs: z.array(PrivateRecordRefV0Schema), coverage_receipt_refs: z.array(PrivateRecordRefV0Schema), contradiction_refs: z.array(PrivateRecordRefV0Schema), reason_codes: z.array(opaque),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if (value.coverage_state === 'complete' && value.coverage_receipt_refs.length === 0) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'complete coverage requires a receipt' });
+  if ((value.observation_state === 'unobserved' || value.observation_state === 'unavailable' || value.observation_state === 'contradicted') && value.evaluative_effect !== 'indeterminate') ctx.addIssue({ code:z.ZodIssueCode.custom, message:'missing or contradicted evidence must remain indeterminate' });
+  if ((value.observation_state === 'observed_present' || value.observation_state === 'observed_absent' || value.observation_state === 'contradicted') && value.basis_refs.length === 0) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'observed or contradicted state requires basis' });
+  if (value.observation_state === 'observed_absent' && (value.window_state !== 'closed' || value.coverage_state !== 'complete' || value.coverage_receipt_refs.length === 0)) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'observed absence requires closed window and complete governed coverage' });
+  if (value.observation_state === 'contradicted' && value.contradiction_refs.length === 0) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'contradicted state requires contradiction refs' });
+  if (value.observation_state === 'unavailable' && value.reason_codes.length === 0) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'unavailable state requires a reason' });
+});
 export const PredicateResultV0Schema = z.object({
   predicate_id: opaque, state: z.enum(['satisfied', 'not_satisfied', 'unresolved', 'unavailable', 'contradicted']), window_state: z.enum(['open', 'closed', 'unknown']), coverage_state: z.enum(['complete', 'incomplete', 'unknown']),
   basis_refs: z.array(PrivateRecordRefV0Schema), coverage_receipt_refs: z.array(PrivateRecordRefV0Schema),
   source_authority: z.enum(['governed_football_artifact', 'operator_supplied', 'synthetic_test', 'none']), derivation_type: z.enum(['observed', 'deterministic_mechanical', 'agent_interpretation', 'unavailable']), reason_codes: z.array(opaque),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if ((value.state === 'satisfied' || value.state === 'not_satisfied') && (value.basis_refs.length === 0 || value.derivation_type === 'agent_interpretation' || value.derivation_type === 'unavailable')) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'determinate predicate result requires admitted deterministic basis' });
+  if (value.coverage_state === 'complete' && value.coverage_receipt_refs.length === 0) ctx.addIssue({ code:z.ZodIssueCode.custom, message:'complete coverage requires a receipt' });
+});
 
 export const ReevaluationTriggerReceiptV0Schema = record('tiber.hypothesis-core/reevaluation-trigger-receipt/v0', 'tbr_hyt_', {
   hypothesis_version_ref: PrivateRecordRefV0Schema, prior_evaluation_ref: PrivateRecordRefV0Schema.nullable(),
