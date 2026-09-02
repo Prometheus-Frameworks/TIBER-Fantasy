@@ -1,10 +1,10 @@
 {
-  "record_id": "pclr_20260813_camp323_josh_downs_role_r2",
+  "record_id": "pclr_20260902_camp323_josh_downs_role_r3",
   "ledger_entry_id": "pcl_msi9eu8k_aa85bc0b",
-  "revision": 2,
-  "supersedes_record_id": "pclr_msi9eu8k_ee2ae3c5",
-  "recorded_at": "2026-08-13T18:59:00.000Z",
-  "change_note": "#323 reconciliation revision of the #297 pilot entry: attach recovered sources, bind canonical identity, re-express the baseline with the #322 pre-baseline marker, and annotate the evidentiary provenance of the bunch/stack observation. The role thesis is unchanged. Prior record pclr_msi9eu8k_ee2ae3c5 is preserved (mirrored verbatim from production, where it was created via the authenticated API on 2026-08-07).",
+  "revision": 3,
+  "supersedes_record_id": "pclr_20260813_camp323_josh_downs_role_r2",
+  "recorded_at": "2026-09-02T11:19:14.838Z",
+  "change_note": "Append-only epistemic classification correction accepted after exact-head review: preserve revisions 1 and 2 unchanged, and move the already-recorded 'bunch/stack usage designed to preserve free releases' analyst projection from observations to inferences. No new football evidence is introduced; the role thesis, sealed pregame evidence boundary, source references, baseline binding, forecast pressure, and deferred canonical identity binding are unchanged.",
   "entry": {
     "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
     "player_ref": {
@@ -16,10 +16,10 @@
     "event_type": "role_expansion",
     "observations": [
       "outside reps increasing",
-      "multi-TE personnel expected to rise",
-      "bunch/stack usage designed to preserve free releases"
+      "multi-TE personnel expected to rise"
     ],
     "inferences": [
+      "bunch/stack usage designed to preserve free releases",
       "more routes in two-WR personnel",
       "modestly higher target depth",
       "increased spike-week potential"
@@ -55,7 +55,7 @@
       "rookies_profile_status": "not_applicable"
     },
     "limitations": [
-      "Provenance annotation (original observations preserved above, unchanged): the 'outside reps' and 'multi-TE' elements are supported by direct Steichen statements (08-04/08-06); the 'bunch/stack usage designed to preserve free releases' element traces to ESPN analyst Ben Solak's projection as relayed by Heavy (08-06), not to a documented practice observation. It remains recorded as originally entered, with its evidentiary weight now explicit.",
+      "Append-only classification correction: revisions 1 and 2 preserve the original placement of 'bunch/stack usage designed to preserve free releases' under observations. This revision records that statement under inferences because it traces to ESPN analyst Ben Solak's projection as relayed by Heavy (2026-08-06), not to documented practice evidence. No new football evidence is introduced.",
       "The pilot record was created without source references on 2026-08-07; sources were recovered and attached at the #323 reconciliation on 2026-08-13.",
       "Pre-baseline re-bind: no executed/frozen Forecast baseline exists as of 2026-08-13. The pilot's original bare baseline_run_id predates the #322 pre-baseline semantics; this revision re-expresses it with the explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure moves from the pilot's 'upward' to 'unresolved' per the same #322 semantics; the upward directional mechanism is preserved in the inferences. Append a revision re-binding to the exact frozen run identity once the baseline exists.",
       "The short-term groin availability event of 2026-08-08 through 2026-08-11 is deliberately kept in a separate lineage (pcl_20260813_camp323_josh_downs_availability) and does not modify this role thesis."
