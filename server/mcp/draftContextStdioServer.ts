@@ -14,6 +14,11 @@ import {
   type ReplacementRanks,
   type TrailingProductionArtifact,
 } from './draftContextTrailingVor';
+import {
+  isExpectedTrailingProductionArtifact,
+  selectAdpCandidates,
+  unavailableInsufficientPopulation,
+} from './draftContextStdioLogic';
 
 const SERVER_NAME = 'tiber-draft-context';
 const SERVER_VERSION = '0.2.0';
@@ -74,15 +79,8 @@ async function loadTrailingProduction(): Promise<{ path: string; artifact: Trail
   const path = TRAILING_PRODUCTION_CACHE_PATH;
   try {
     const text = await readFile(resolve(process.cwd(), path), 'utf8');
-    const artifact = JSON.parse(text) as TrailingProductionArtifact;
-    if (
-      artifact.schema_version !== 'draft_trailing_production_v0' ||
-      artifact.authority !== 'promoted_governed_historical_evidence' ||
-      artifact.season !== 2025 ||
-      artifact.scoring !== 'ppr' ||
-      !Array.isArray(artifact.players) ||
-      artifact.player_count !== artifact.players.length
-    ) {
+    const artifact: unknown = JSON.parse(text);
+    if (!isExpectedTrailingProductionArtifact(artifact)) {
       throw new Error('local trailing-production cache failed shape/authority validation');
     }
     return { path, artifact };
@@ -150,24 +148,19 @@ export function buildDraftContextMcpServer(): McpServer {
 
       const { path, snapshot } = loaded;
       const daysOld = ageDays(snapshot.source.fetched_at);
-      const wanted = candidateNames?.map((name) => ({ raw: name, normalized: name.trim().toLowerCase() }));
-      const players = snapshot.players
-        .filter((player) => !wanted || wanted.some(({ normalized }) => normalized === player.name.toLowerCase()))
-        .slice(0, limit)
-        .map((player) => ({
-          name: player.name,
-          position: player.position,
-          team: player.team,
-          adp: player.adp,
-          adp_formatted: player.adp_formatted ?? null,
-          bye: player.bye ?? null,
-          times_drafted: player.times_drafted ?? null,
-          high: player.high ?? null,
-          low: player.low ?? null,
-          stdev: player.stdev ?? null,
-        }));
-      const matched = new Set(players.map((player) => player.name.toLowerCase()));
-      const unmatchedCandidates = wanted?.filter(({ normalized }) => !matched.has(normalized)).map(({ raw }) => raw) ?? [];
+      const selection = selectAdpCandidates(snapshot.players, candidateNames, limit);
+      const players = selection.players.map((player) => ({
+        name: player.name,
+        position: player.position,
+        team: player.team,
+        adp: player.adp,
+        adp_formatted: player.adp_formatted ?? null,
+        bye: player.bye ?? null,
+        times_drafted: player.times_drafted ?? null,
+        high: player.high ?? null,
+        low: player.low ?? null,
+        stdev: player.stdev ?? null,
+      }));
 
       const payload = {
         status: 'available',
@@ -187,7 +180,7 @@ export function buildDraftContextMcpServer(): McpServer {
         player_count_in_artifact: snapshot.player_count,
         returned_player_count: players.length,
         players,
-        unmatched_candidates: unmatchedCandidates,
+        unmatched_candidates: selection.unmatchedCandidates,
         disclosures: [
           'This tool performs no network request; it reads an already-committed snapshot only.',
           'ADP is a source-specific market coordinate, not a TIBER ranking or projection.',
@@ -295,10 +288,7 @@ export function buildDraftContextMcpServer(): McpServer {
       } else {
         const calculation = calculateTrailingVor(trailingProduction.artifact, replacementRanks, candidateNames);
         if (calculation.status === 'insufficient_population') {
-          numericVor = {
-            status: 'unavailable_insufficient_population',
-            ...calculation,
-          };
+          numericVor = unavailableInsufficientPopulation(calculation);
         } else {
           overallStatus = 'replacement_geometry_and_trailing_vor_available';
           authority = 'deterministic_league_geometry_plus_promoted_historical_evidence';

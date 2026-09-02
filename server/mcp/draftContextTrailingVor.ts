@@ -108,9 +108,11 @@ export function calculateTrailingVor(
 
   const requested = candidateNames?.map((name) => ({ raw: name, normalized: normalizeName(name) })) ?? [];
   const index = new Map<string, TrailingProductionPlayer>();
-  for (const player of artifact.players) {
-    const key = normalizeName(player.player_name);
-    if (key && !index.has(key)) index.set(key, player);
+  for (const position of ['QB', 'RB', 'WR', 'TE'] as DraftPosition[]) {
+    for (const player of rankedByPosition[position]) {
+      const key = normalizeName(player.player_name);
+      if (key && !index.has(key)) index.set(key, player);
+    }
   }
 
   const candidateResults = requested.flatMap(({ raw, normalized }) => {

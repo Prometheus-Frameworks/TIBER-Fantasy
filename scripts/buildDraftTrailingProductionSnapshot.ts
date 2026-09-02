@@ -2,12 +2,13 @@ import { createHash } from 'crypto';
 import { mkdir, writeFile } from 'fs/promises';
 import { dirname, resolve } from 'path';
 import { TRAILING_PRODUCTION_CACHE_PATH, type DraftPosition, type TrailingProductionArtifact } from '../server/mcp/draftContextTrailingVor';
+import { TRAILING_PRODUCTION_SOURCE_REFERENCE } from '../server/mcp/draftContextStdioLogic';
 
 const SOURCE = {
-  repository: 'Prometheus-Frameworks/TIBER-Data',
-  commit_sha: 'cc2b7842b99e1184c04a605a1860c5ab25267ae8',
-  path: 'exports/promoted/nfl/player_season_coverage_v0.json',
-  blob_sha: 'f7b2918b978d842cd8753a7f3dedd3836934859b',
+  repository: TRAILING_PRODUCTION_SOURCE_REFERENCE.repository,
+  commit_sha: TRAILING_PRODUCTION_SOURCE_REFERENCE.commit_sha,
+  path: TRAILING_PRODUCTION_SOURCE_REFERENCE.path,
+  blob_sha: TRAILING_PRODUCTION_SOURCE_REFERENCE.blob_sha,
 } as const;
 
 const SOURCE_URL = `https://raw.githubusercontent.com/${SOURCE.repository}/${SOURCE.commit_sha}/${SOURCE.path}`;
@@ -64,7 +65,10 @@ async function main(): Promise<void> {
   }
 
   const source = JSON.parse(Buffer.from(bytes).toString('utf8')) as SourceArtifact;
-  if (source.artifact_id !== 'player_season_coverage_v0' || source.status !== 'promoted_governed_artifact') {
+  if (
+    source.artifact_id !== TRAILING_PRODUCTION_SOURCE_REFERENCE.artifact_id ||
+    source.status !== TRAILING_PRODUCTION_SOURCE_REFERENCE.source_status
+  ) {
     throw new Error(`Unexpected source authority: artifact_id=${String(source.artifact_id)} status=${String(source.status)}`);
   }
   if (!Array.isArray(source.records)) {
@@ -111,8 +115,8 @@ async function main(): Promise<void> {
     scoring: 'ppr',
     source: {
       ...SOURCE,
-      artifact_id: source.artifact_id,
-      source_status: source.status,
+      artifact_id: TRAILING_PRODUCTION_SOURCE_REFERENCE.artifact_id,
+      source_status: TRAILING_PRODUCTION_SOURCE_REFERENCE.source_status,
       promotion_review: typeof source.promotion_review === 'string' ? source.promotion_review : null,
       promoted_at: typeof source.promoted_at === 'string' ? source.promoted_at : null,
     },

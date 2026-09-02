@@ -68,6 +68,34 @@ describe('draft-context trailing VOR', () => {
     expect(result.unmatched_candidates).toEqual(['2026 Rookie']);
   });
 
+  test('reports zero-game candidates as unmatched instead of returning numeric VOR', () => {
+    const result = calculateTrailingVor(
+      {
+        ...artifact,
+        player_count: artifact.player_count + 1,
+        players: [
+          ...artifact.players,
+          {
+            player_id: 'rb-zero',
+            player_name: 'RB Zero',
+            position: 'RB',
+            primary_team: 'Z',
+            games_played: 0,
+            season_ppr: 0,
+            season_ppg: 0,
+          },
+        ],
+      },
+      { QB: 2, RB: 2, WR: 2, TE: 2 },
+      ['RB Zero'],
+    );
+
+    expect(result.status).toBe('available');
+    if (result.status !== 'available') throw new Error('expected available result');
+    expect(result.candidates).toEqual([]);
+    expect(result.unmatched_candidates).toEqual(['RB Zero']);
+  });
+
   test('fails closed when a requested replacement rank exceeds the historical population', () => {
     const result = calculateTrailingVor(artifact, { QB: 3, RB: 2, WR: 2, TE: 2 });
     expect(result).toEqual({
