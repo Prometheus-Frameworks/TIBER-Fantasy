@@ -1,0 +1,68 @@
+{
+  "record_id": "pclr_20260813_camp323_chris_rodriguez_jr_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_chris_rodriguez_jr",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:56:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:10219",
+      "display_name": "Chris Rodriguez Jr.",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "depth_chart_change",
+    "observations": [
+      "2026-08-11: the Jaguars' first unofficial 2026 depth chart lists RB1 as 'Bhayshul Tuten OR Chris Rodriguez Jr.' — an explicit co-starter designation. Full order behind them: LeQuint Allen Jr., Ameer Abdullah, DeeJay Dallas, J'Mari Taylor (jaguars.com).",
+      "Rodriguez missed the entire offseason program with a foot injury and opened camp in individual drills only; on his first padded-practice carry (Monday ~2026-08-03) he 'weaved through a rushing lane before unleashing his momentum upon a defensive back' (Yahoo, 08-04). SI's John Shipley: Rodriguez stood out in team drills on the first padded day 'because of the way he was able to churn out yards after contact'.",
+      "HC Liam Coen (team-official): Rodriguez 'did kind of what you think he's going to do'.",
+      "Room context: Travis Etienne departed to New Orleans in the offseason; the Tuten-vs-Rodriguez battle is for the lead role in his absence."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): Rodriguez's return applies real opportunity pressure to the Jacksonville backfield split, including a power/goal-line profile contrast with Tuten's speed.",
+      "The goal-line-back projection is outlet analysis, not observed deployment, and is preserved only as inference."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.jaguars.com/news/jaguars-2026-training-camp-first-unofficial-depth-chart-released",
+        "note": "Team site, 2026-08-11. First unofficial depth chart: 'Bhayshul Tuten OR Chris Rodriguez Jr.' at RB1.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/jaguars-rb-starting-impress-camp-120009707.html",
+        "note": "Yahoo, 2026-08-04. Rodriguez return from injury, first padded carries, Coen quote, Etienne-departure context.",
+        "verified": false
+      },
+      {
+        "ref": "https://blackandteal.com/it-took-chris-rodriguez-1-week-of-training-camp-to-make-jaguars-look-brilliant",
+        "note": "Black and Teal, early Aug 2026 (exact day not printed). Foot-injury detail; yards-after-contact observation quoting SI's John Shipley; goal-line workload framed as projection.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.rotoballer.com/player-news/bhayshul-tuten-chris-rodriguez-jr-listed-as-co-starters/1907132",
+        "note": "RotoBaller headline corroboration of the co-starter listing (page body blocked at fetch; headline only).",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "The depth chart is the team's unofficial first preseason chart; the co-starter 'OR' is a provisional designation, not a resolved split.",
+      "Tank Bigsby's status is unrecovered in-window: he is absent from the 08-11 chart and unmentioned in retrieved camp coverage.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "How does the Tuten/Rodriguez split materialize in preseason game deployment?",
+      "Who handles goal-line work when both are available?"
+    ],
+    "unrecognized_fields": []
+  }
+}

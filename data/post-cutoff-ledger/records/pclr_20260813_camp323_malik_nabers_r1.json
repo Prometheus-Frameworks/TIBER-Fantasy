@@ -1,0 +1,75 @@
+{
+  "record_id": "pclr_20260813_camp323_malik_nabers_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_malik_nabers",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:00:00.000Z",
+  "change_note": "#323 reconciliation: single append-only rehab/availability lineage; incremental daily rehab reports are consolidated into one dated arc rather than separate entries.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:11632",
+      "display_name": "Malik Nabers",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-12",
+    "event_type": "availability_change",
+    "observations": [
+      "Baseline (Giants.com, 2026-07-15): Nabers is rehabbing the season-ending right-knee ACL/meniscus tear suffered Week 4 of 2025 vs. the Chargers; the coach characterized progress as 'probably maybe 70 percent through... 80 percent through'.",
+      "Through the first ~10 camp practices (West Virginia stretch): individual drills and install periods in 9 of the first 10 practices, ramping workload by the end of the trip (Heavy 08-13, citing The Athletic's Dan Duggan).",
+      "2026-08-06: first 11-on-11 team-drill participation since the injury — in a light jog-through practice in shells, not a padded/full-speed session (Yahoo, 08-06).",
+      "2026-08-12: scheduled workload decrease as part of recovery management; Harbaugh (team-official): 'We're looking towards soon ramping him up into some group periods and perhaps some team periods. Maybe next week.' Earliest possible full-speed group/team entry: Monday 08-17 (Yahoo, 08-13).",
+      "Status as of 2026-08-13: still restricted to position drills, not advanced to full-speed group/team periods; will not play in Saturday's (08-15) preseason opener vs. Minnesota; Harbaugh: 'He's kind of exactly where he's been... He's doing great. He's working hard. Spirits are high.' (NJ.com via Yahoo, 08-13)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): availability trajectory is progressing on a managed ramp; a Week 1 (09-13 vs. Dallas) return is described by reporting as realistic but is a projection, not a completed milestone.",
+      "The 08-06 team-drill appearance was a controlled jog-through and is not evidence of full-speed team readiness."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.giants.com/news/malik-nabers-injury-status-cam-skattebo-thomas-fidone-sam-roberts-beaux-collins-training-camp",
+        "note": "Giants.com, 2026-07-15. Injury identity (right-knee ACL/meniscus, Week 4 2025) and progress baseline.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/giants-malik-nabers-goes-live-234827864.html",
+        "note": "Yahoo, 2026-08-06. First 11-on-11 since injury — light jog-through in shells.",
+        "verified": false
+      },
+      {
+        "ref": "https://heavy.com/sports/nfl/new-york-giants/john-harbaugh-unveils-plan-malik-nabers/",
+        "note": "Heavy, 2026-08-13. 9-of-10 practices in individual/install work; late-trip ramp (citing The Athletic).",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/malik-nabers-could-next-big-022015983.html",
+        "note": "Yahoo, 2026-08-13. 08-12 scheduled workload decrease; Harbaugh 'maybe next week' group/team ramp plan.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/close-malik-nabers-appears-returning-110043773.html",
+        "note": "NJ.com via Yahoo, 2026-08-13. Current restriction to position drills; out for 08-15 opener; Harbaugh status quotes.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Candidate-note correction: the operator note framed this as back-injury recovery; every recovered 2026 source identifies a right-knee ACL/meniscus rehab. The source-backed version is recorded.",
+      "Candidate-note correction: no recovered source places Nabers in one-on-one (WR-vs-DB) drills in this window; that claim is excluded as unsupported.",
+      "Week 1 availability is a projection; expected future participation is not represented as completed participation.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Nabers enter full-speed group/team periods the week of 08-17 as planned?",
+      "Is the Week 1 target confirmed by observed full-team participation?"
+    ],
+    "unrecognized_fields": []
+  }
+}
