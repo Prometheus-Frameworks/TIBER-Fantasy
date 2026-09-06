@@ -14,7 +14,17 @@ replit-tiber = "github_pat_11BUNNJMI06..."
 
 `.replit` **is tracked by git** and has been pushed to the public GitHub repo. The token is in commit history. It must be treated as fully compromised.
 
-### Immediate steps (do these now, in order):
+> Historical remediation guidance from the March 12, 2026 audit follows.
+> The commands below are retained as historical examples, not current execution
+> instructions or authority. In particular, direct/force pushes to main,
+> history rewriting, and credential changes require their own exact authorized
+> scope and applicable gates under
+> [TIBER-Ops #66](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/66).
+> Any default-branch transition must satisfy the
+> [shared merge checklist](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/runbooks/merge-checklist.md)
+> and stricter repository/task restrictions. This audit grants no exception.
+
+### Historical remediation recommendations — separately gated
 
 1. **Revoke the token at GitHub.com → Settings → Developer Settings → Personal access tokens → [the token] → Delete**
 2. **Edit `.replit` in the Replit Shell** — remove the `[userenv.shared]` block:

@@ -73,7 +73,14 @@ Detailed task specifications live in `.claude/tasks/`. Each task file contains:
 
 ## Git Conventions
 
-- Codex works via GitHub PRs on branches named `codex/<task-slug>`
-- Claude Code and Replit Agent commit directly to `main`
+- All agents use non-default branches and PRs for ordinary authorized changes.
+  Codex retains the codex/<task-slug> branch convention. Claude Code and Replit
+  Agent have no standing direct-to-main permission.
+- Follow the root [AGENTS.md](../AGENTS.md) transition boundary,
+  [TIBER-Ops #66](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/66),
+  and the [shared merge checklist](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/runbooks/merge-checklist.md)
+  before any merge/default-branch update. Preparation and bounded repairs
+  continue within existing authority; terminal transitions require the
+  applicable authority gate. Preserve stricter task/actor restrictions.
 - Commit messages should be clear and descriptive
 - Co-author tags are used when applicable (e.g., `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`)
