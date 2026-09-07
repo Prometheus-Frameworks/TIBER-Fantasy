@@ -1,3 +1,4 @@
+import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
 import { securityHeaders } from '../middleware/security';
@@ -20,6 +21,15 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/evidence', rateLimiters.publicDraftReview, (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    const input = req.query.player_ids;
+    if (typeof input !== 'string' || !/^(?:\d{1,24}|[A-Z]{2,3})(?:,(?:\d{1,24}|[A-Z]{2,3}))?$/.test(input)) {
+      return res.status(400).json({ status: 'invalid_input', error: 'player_ids must contain one or two exact Sleeper player IDs.' });
+    }
+    return res.json(historicalEvidenceFor(input.split(',')));
+  });
 
   router.get('/api/draft-review/resolve', rateLimiters.publicDraftReview, async (req, res) => {
     res.set('Cache-Control', 'no-store');

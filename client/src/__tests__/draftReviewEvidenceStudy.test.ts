@@ -1,0 +1,67 @@
+/** @jest-environment jsdom */
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
+import type { DraftReview } from '@/pages/TiberDraftReview';
+import type { StudyAttachment } from '@shared/draftReviewStudy';
+
+const originalFetch = global.fetch;
+afterEach(() => { cleanup(); global.fetch = originalFetch; });
+const roster = [
+  { player_id: '11', name: 'First WR', position: 'WR', team: 'A', roster_state: 'starter', status: 'Active', active: true },
+  { player_id: '22', name: 'Second WR', position: 'WR', team: 'B', roster_state: 'bench', status: 'Active', active: true },
+];
+const review = {
+  input: { canonicalUrl: 'https://sleeper.com/roster/123/1', leagueId: '123', rosterId: 1 }, generated_at: '2026-09-07T00:00:00Z',
+  observed: { current_roster: roster, league: { lineup_slots: { WR: 1, FLEX: 1, BN: 1 } }, draft: { full_board: [{ player_id: '33', name: 'Candidate RB', position: 'RB', team: 'C' }] } },
+} as DraftReview;
+function evidence(ids: string[], tag: string) {
+  return { schema_version: 'tiber_draft_review_historical_v1', status: 'available', reason: null, provenance: null,
+    players: ids.map(id => ({ player_id: id, status: 'unavailable', reason: tag, identity: null, observed: null, derived: {} })) };
+}
+function response(body: unknown) { return { ok: true, json: async () => body } as Response; }
+
+test('late comparison response cannot replace a newer pair; preference and note clear with pair', async () => {
+  const pending: Array<(value: Response) => void> = [];
+  global.fetch = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
+  let latest: StudyAttachment | undefined;
+  const onChange = (value: StudyAttachment) => { latest = value; };
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange }));
+  await waitFor(() => expect(pending).toHaveLength(1));
+  fireEvent.change(screen.getByLabelText('My preference'), { target: { value: '11' } });
+  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: 'My initial preference' } });
+  expect(latest!.operator_context.preferred_player_id).toBe('11');
+  fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '33' } });
+  expect(latest!.operator_context).toMatchObject({ preferred_player_id: null, note: '', applies_to_player_ids: ['11', '33'] });
+  expect(latest!.comparison).toMatchObject({ status: 'loading', evidence: null });
+  await waitFor(() => expect(pending).toHaveLength(2));
+  await act(async () => { pending[1](response(evidence(['11', '33'], 'New pair evidence'))); });
+  await act(async () => { pending[0](response(evidence(['11', '22'], 'Stale pair evidence'))); });
+  expect(screen.queryByText('Stale pair evidence')).toBeNull();
+  expect(latest!.comparison.evidence!.players.map(p => p.player_id)).toEqual(['11', '33']);
+});
+test('error stays explicit and remounting a new review clears local operator and hypothetical state', async () => {
+  global.fetch = jest.fn(async () => { throw new Error('private detail'); });
+  let latest: StudyAttachment | undefined;
+  const onChange = (value: StudyAttachment) => { latest = value; };
+  const mounted = render(React.createElement(DraftReviewEvidenceStudy, { key: 'first', review, onChange }));
+  await screen.findByText('Historical evidence could not be loaded.');
+  expect(screen.queryByText('private detail')).toBeNull();
+  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: '<script>deploy</script>' } });
+  fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
+  fireEvent.change(screen.getByLabelText('Incoming candidate'), { target: { value: '33' } });
+  expect(latest!.hypothetical_roster?.status).toBe('available');
+  mounted.rerender(React.createElement(DraftReviewEvidenceStudy, { key: 'second', review: { ...review, generated_at: '2026-09-08T00:00:00Z' }, onChange }));
+  expect(latest!.operator_context.note).toBe('');
+  expect(latest!.hypothetical_roster).toBeNull();
+  await screen.findByText('Historical evidence could not be loaded.');
+});
+test('same-player comparison is unavailable and never fetched as a comparison', async () => {
+  global.fetch = jest.fn(async () => response(evidence(['11', '22'], 'No history')));
+  let latest: StudyAttachment | undefined;
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: value => { latest = value; } }));
+  await waitFor(() => expect(latest?.comparison.status).toBe('available'));
+  fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '11' } });
+  expect(latest!.comparison).toMatchObject({ status: 'unavailable', evidence: null });
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});

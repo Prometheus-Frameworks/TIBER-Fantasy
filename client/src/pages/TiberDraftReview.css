@@ -89,3 +89,17 @@
   .drp-summary-grid { grid-template-columns: 1fr; }
   .drp-panel { padding: 18px; }
 }
+
+.drp-evidence { margin-top: 24px; }
+.drp-study-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.drp-evidence label { display: block; font-size: 13px; font-weight: 600; }
+.drp-evidence select, .drp-evidence textarea { display: block; width: 100%; min-width: 0; margin-top: 7px; padding: 11px; border: 1px solid #d7d5cf; border-radius: 8px; background: #fff; color: #222; font: inherit; font-size: 16px; }
+.drp-evidence textarea { min-height: 85px; resize: vertical; }
+.drp-evidence-table { max-width: 100%; overflow-x: auto; margin: 20px 0; }
+.drp-evidence table { width: 100%; border-collapse: collapse; min-width: 570px; font-size: 13px; }
+.drp-evidence th, .drp-evidence td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e2dc; vertical-align: top; }
+.drp-evidence th { font-weight: 600; }
+.drp-evidence td { width: 34%; }
+.drp-attribution { font-size: 12px; line-height: 1.6; }
+.drp-attribution a { text-decoration: underline; }
+@media (max-width: 600px) { .drp-study-controls { grid-template-columns: 1fr; } }
