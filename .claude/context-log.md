@@ -700,3 +700,9 @@ Every agent should append an entry here after completing work.
 - **Files modified:** Draft Review service/routes/page, focused historical artifact reader/builder, shared evidence/study/scenario contracts, study component and tests; module handoff documents exact source pins and bounds.
 - **Validation:** Focused API/geometry/source/UI tests, offline replay and server/client build. Independent review and any repairs are recorded on the implementation PR.
 - **Notes:** Data PR #264 admission accepted in comment 5574349251; Data PR #266 reviewed mechanical head `8b762650f4b933b6ce717c551993dcaaf92e1008` is pinned while unmerged. Four mappings retain medium/name_exact confidence. No source refresh, current projections, identity inference, DB, trade actions, merges or deployments authorized.
+
+### 2026-09-09 — Codex: Draft Review evidence-control contrast repair (#367)
+- **What changed:** Scoped the existing select/textarea rule beneath `.drp-page` so its dark text wins the shared `.tiber-main` control color; all existing dimensions, palette values and behavior are preserved.
+- **Files modified:** `client/src/pages/TiberDraftReview.css` and the two required agent work logs.
+- **Validation:** Existing study UI suite passed 3/3 (loading/error, stale responses, state resets and invalid pairs); deployment-equivalent server/client build passed; local public-profile curl checks served the SPA and preserved explicit unavailable identity evidence; diff check passed. No tests or dependencies added.
+- **Notes:** Repair authorized by Joseph after reading the visual report at #367 comment 5606375181. Independent review and rendered preview verification belong to the resulting exact-head PR record; neither is claimed complete here. Phone acceptance remains open. No merge, production deployment, source or provider changes.

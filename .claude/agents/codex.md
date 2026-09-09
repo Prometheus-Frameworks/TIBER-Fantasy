@@ -918,3 +918,8 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Consumed accepted four-edge identity admission and bounded 2025 historical-use grant through reviewed Data PR #266 head `8b762650f4b933b6ce717c551993dcaaf92e1008`.
 - Added deterministic, source-pinned descriptive bundle; public pair endpoint; local comparison/preference UI; separate copied operator judgment and hypothetical roster arithmetic. Source clocks remain unknown and missing evidence explicit.
 - Scoped tests/build and independent exact-head review/repair outcomes belong to the implementation PR. No merge or production deployment. See Draft Review MODULE.md for replay commands, source paths, consumer contract and limitations.
+
+### 2026-09-09 — Draft Review evidence-control contrast repair (#367)
+- Raised only the Draft Review evidence select/textarea selector specificity so its existing dark text stays readable on the existing white controls instead of inheriting the shared shell color.
+- Validation: existing UI tests 3/3, deployment-equivalent build, local public-profile SPA/evidence curl checks and diff hygiene passed. No data, behavior, dependency or global-theme edits.
+- Exact-head independent review and preview checks are recorded on #367 after publication; phone acceptance remains open. No merge or production deployment.
