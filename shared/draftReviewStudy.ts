@@ -16,3 +16,12 @@ export function draftReviewAgentPacket<T extends { input: { canonicalUrl: string
     ...(study?.scope === reviewScope(review) ? { study: { comparison: study.comparison, hypothetical_roster: study.hypothetical_roster }, operator_context: study.operator_context } : {}),
   };
 }
+
+/** Same packet fields; only the task instruction changes for the explicit comparison handoff. */
+export function draftReviewComparisonPacket<T extends { input: { canonicalUrl: string }; generated_at: string }>(review: T, study: StudyAttachment | null) {
+  const packet = draftReviewAgentPacket(review, study);
+  return {
+    ...packet,
+    instruction: `${packet.instruction} Compare study.comparison.selected_player_ids using the recorded opportunity and production evidence. Explain differences in coverage and denominators before comparing values. Do not turn historical averages into current projections or name a winner when evidence is insufficient. Ask the manager what decision and time horizon they want to explore; their preferences and hypotheses belong to that conversation. No private or saved agent context has been retrieved by this page.`,
+  };
+}

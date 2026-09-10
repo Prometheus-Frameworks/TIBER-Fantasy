@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import type { DraftReview } from '@/pages/TiberDraftReview';
 import type { StudyAttachment } from '@shared/draftReviewStudy';
@@ -21,16 +21,15 @@ function evidence(ids: string[], tag: string) {
 }
 function response(body: unknown) { return { ok: true, json: async () => body } as Response; }
 
-test('late comparison response cannot replace a newer pair; preference and note clear with pair', async () => {
+test('late comparison response cannot replace a newer pair; no personal judgment is invented', async () => {
   const pending: Array<(value: Response) => void> = [];
   global.fetch = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
   let latest: StudyAttachment | undefined;
   const onChange = (value: StudyAttachment) => { latest = value; };
   render(React.createElement(DraftReviewEvidenceStudy, { review, onChange }));
   await waitFor(() => expect(pending).toHaveLength(1));
-  fireEvent.change(screen.getByLabelText('My preference'), { target: { value: '11' } });
-  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: 'My initial preference' } });
-  expect(latest!.operator_context.preferred_player_id).toBe('11');
+  expect(screen.queryByLabelText('My preference')).toBeNull();
+  expect(screen.queryByLabelText('My reasoning')).toBeNull();
   fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '33' } });
   expect(latest!.operator_context).toMatchObject({ preferred_player_id: null, note: '', applies_to_player_ids: ['11', '33'] });
   expect(latest!.comparison).toMatchObject({ status: 'loading', evidence: null });
@@ -47,7 +46,7 @@ test('error stays explicit and remounting a new review clears local operator and
   const mounted = render(React.createElement(DraftReviewEvidenceStudy, { key: 'first', review, onChange }));
   await screen.findByText('Historical evidence could not be loaded.');
   expect(screen.queryByText('private detail')).toBeNull();
-  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: '<script>deploy</script>' } });
+  expect(screen.getByText('Optional roster geometry').closest('details')!.open).toBe(false);
   fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
   fireEvent.change(screen.getByLabelText('Incoming candidate'), { target: { value: '33' } });
   expect(latest!.hypothetical_roster?.status).toBe('available');
@@ -64,4 +63,34 @@ test('same-player comparison is unavailable and never fetched as a comparison', 
   fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '11' } });
   expect(latest!.comparison).toMatchObject({ status: 'unavailable', evidence: null });
   expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+
+test('compact receiving comparison keeps zero, missing values and unequal coverage distinct', async () => {
+  const body = evidence(['11', '22'], 'No admitted exact Sleeper-to-GSIS identity mapping.');
+  Object.assign(body.players[0], { status: 'available', reason: null, observed: { weeks: [1, 2], historical_teams: ['A'], usage_conflict_weeks: [], usage_missing_weeks: [] }, derived: {
+    targets: { mean: 0, total: 0, nonnull_weeks: 2, recorded_weeks: 2 },
+    receptions: { mean: null, total: null, nonnull_weeks: 0, recorded_weeks: 2 },
+    receiving_yards: { mean: 8, total: null, nonnull_weeks: 1, recorded_weeks: 2 },
+  } });
+  global.fetch = jest.fn(async () => response(body));
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: () => undefined }));
+  const table = await screen.findByRole('table', { name: '2025 · per recorded week' });
+  expect(within(table).getAllByRole('row')).toHaveLength(6);
+  expect(within(table).getByText('0')).toBeTruthy();
+  expect(within(table).getByText('1/2 recorded weeks')).toBeTruthy();
+  expect(within(table).getAllByText('Not recorded')).toHaveLength(3);
+  expect(table.querySelector('[rowspan="5"]')).toBeTruthy();
+  expect(screen.getAllByText('2025 stats are not connected: historical identity link unavailable.')).toHaveLength(1);
+  expect(screen.getByText('Totals, coverage and source details').closest('details')!.open).toBe(false);
+  expect(screen.getByText(/Total unavailable · 8 mean/)).toBeTruthy();
+  expect(within(table).queryByText('Passing yards')).toBeNull();
+});
+
+test('unsupported positions have one coverage explanation and no empty comparison table', async () => {
+  const unsupported = { ...review, observed: { ...review.observed, current_roster: roster.map(p => ({ ...p, position: 'K' })) } } as DraftReview;
+  global.fetch = jest.fn(async () => response(evidence(['11', '22'], 'No mapping')));
+  render(React.createElement(DraftReviewEvidenceStudy, { review: unsupported, onChange: () => undefined }));
+  await screen.findAllByText('Kicking and team-defense statistics are not included in this comparison.');
+  expect(screen.queryByRole('table')).toBeNull();
 });

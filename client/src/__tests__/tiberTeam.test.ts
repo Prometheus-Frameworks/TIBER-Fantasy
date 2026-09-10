@@ -100,11 +100,10 @@ test.each(['123', 'https://sleeper.com/leagues/123', 'https://sleeper.com/draft/
   expect(document.activeElement).toBe(screen.getByLabelText('Sleeper link or league ID'));
 });
 
-test('link is a locator; snapshot includes local judgment, which refresh warns about and clears', async () => {
+test('link is a locator; snapshot includes optional geometry, which refresh warns about and clears', async () => {
   open(); await loaded();
   await screen.findByText('No admitted history');
-  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: 'Synthetic local reasoning' } });
-  fireEvent.change(screen.getByLabelText('My preference'), { target: { value: '11' } });
+  fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
   fireEvent.click(screen.getByRole('button', { name: 'Copy roster link' }));
   await screen.findByText('Roster link copied');
   const link = new URL((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
@@ -114,17 +113,17 @@ test('link is a locator; snapshot includes local judgment, which refresh warns a
   await screen.findByText('Agent context copied');
   const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]);
   expect(packet.context.input.canonicalUrl).toBe(canonical());
-  expect(packet.operator_context).toMatchObject({ kind: 'manager_judgment', note: 'Synthetic local reasoning', preferred_player_id: '11' });
-  expect(JSON.stringify((global.fetch as jest.Mock).mock.calls)).not.toContain('Synthetic local reasoning');
+  expect(packet.operator_context).toMatchObject({ kind: 'manager_judgment', note: '', preferred_player_id: null });
+  expect(packet.study.hypothetical_roster).not.toBeNull();
   (window.confirm as jest.Mock).mockReturnValue(false);
   fireEvent.click(screen.getByRole('button', { name: 'Refresh roster' }));
-  expect((screen.getByLabelText('My reasoning') as HTMLTextAreaElement).value).toBe('Synthetic local reasoning');
+  expect((screen.getByLabelText('Outgoing player 1') as HTMLSelectElement).value).toBe('11');
   (window.confirm as jest.Mock).mockReturnValue(true);
   fireEvent.click(screen.getByRole('button', { name: 'Refresh roster' }));
   expect(screen.queryByRole('button', { name: 'Copy agent context' })).toBeNull();
   await loaded();
-  expect((screen.getByLabelText('My reasoning') as HTMLTextAreaElement).value).toBe('');
-  expect((screen.getByLabelText('My preference') as HTMLSelectElement).value).toBe('');
+  expect((screen.getByLabelText('Outgoing player 1') as HTMLSelectElement).value).toBe('');
+  expect(screen.queryByLabelText('My preference')).toBeNull();
 });
 
 test('query navigation invalidates an older pending roster and clearing the link clears the page', async () => {
@@ -153,20 +152,39 @@ test('rate limit retry, empty selector and clipboard denial are explicit', async
   global.fetch = jest.fn(async input => serve(String(input)));
   fireEvent.click(screen.getByRole('button', { name: 'Load roster' }));
   await loaded();
+  await screen.findByText('No admitted history');
   (navigator.clipboard.writeText as jest.Mock).mockRejectedValue(new Error('Denied'));
   fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
   await screen.findByText('Could not copy. Check clipboard access and try again.');
   expect(screen.queryByText('Agent context copied')).toBeNull();
 });
 
-test('browser back and forward reload the matching roster without carrying local notes', async () => {
+test('browser back and forward reload the matching roster without carrying local geometry', async () => {
   open(); await loaded();
-  fireEvent.change(screen.getByLabelText('My reasoning'), { target: { value: 'Unsaved synthetic note' } });
+  fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
   act(() => window.history.pushState({}, '', `/team?sleeper_url=${encodeURIComponent(canonical(2))}`));
   await loaded(2);
   act(() => window.history.back());
   await loaded(1);
-  expect((screen.getByLabelText('My reasoning') as HTMLTextAreaElement).value).toBe('');
+  expect((screen.getByLabelText('Outgoing player 1') as HTMLSelectElement).value).toBe('');
   act(() => window.history.forward());
   await loaded(2);
+});
+
+
+test('discussion exports selected evidence and rejects stale clipboard success after selection changes', async () => {
+  open(); await loaded(); await screen.findByText('No admitted history');
+  let finish!: () => void;
+  (navigator.clipboard.writeText as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this comparison' }));
+  const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
+  expect(packet.study.comparison.selected_player_ids).toEqual(['11', '22']);
+  expect(packet.instruction).toContain('Ask the manager what decision and time horizon');
+  expect(packet.operator_context).toMatchObject({ note: '', preferred_player_id: null });
+  fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '44' } });
+  await act(async () => finish());
+  expect(screen.queryByText('Comparison context copied')).toBeNull();
+  (navigator.clipboard.writeText as jest.Mock).mockRejectedValueOnce(new Error('Denied'));
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this comparison' }));
+  await screen.findByRole('alert');
 });

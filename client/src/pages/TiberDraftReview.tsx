@@ -1,7 +1,7 @@
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
-import { draftReviewAgentPacket, reviewScope, type StudyAttachment } from '@shared/draftReviewStudy';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { draftReviewAgentPacket, draftReviewComparisonPacket, reviewScope, type StudyAttachment } from '@shared/draftReviewStudy';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearch } from 'wouter/use-browser-location';
 import { ArrowRight, Check, Clipboard, Loader2 } from 'lucide-react';
 import './TiberDraftReview.css';
@@ -172,17 +172,26 @@ export default function TiberDraftReview() {
   const [review, setReview] = useState<DraftReview | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState<'link' | 'context' | null>(null);
+  const [copied, setCopied] = useState<'link' | 'context' | 'comparison' | null>(null);
+  const [discussionError, setDiscussionError] = useState('');
   const [study, setStudy] = useState<StudyAttachment | null>(null);
   const [copyError, setCopyError] = useState('');
   const requestSequence = useRef(0);
+  const copySequence = useRef(0);
   const handledSearch = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const updateStudy = useCallback((next: StudyAttachment) => {
+    ++copySequence.current;
+    setStudy(next);
+    setCopied(null);
+    setDiscussionError('');
+    setCopyError('');
+  }, []);
 
   function mayDiscardStudy() {
     const context = study?.operator_context;
     return !(context?.note || context?.preferred_player_id || study?.hypothetical_roster)
-      || window.confirm('Your preference, reasoning and hypothetical roster are only on this page. Copy agent context to keep them. Continue and clear this study?');
+      || window.confirm('Your hypothetical roster is only on this page. Copy agent context to keep it. Continue and clear this study?');
   }
 
   function navigateInput(value: string) {
@@ -203,6 +212,7 @@ export default function TiberDraftReview() {
     setReview(null);
     setStudy(null);
     setCopied(null);
+    setDiscussionError('');
     setCopyError('');
     try {
       const response = await fetch(`/api/draft-review?sleeper_url=${encodeURIComponent(value)}`);
@@ -235,6 +245,7 @@ export default function TiberDraftReview() {
     setReview(null);
     setStudy(null);
     setCopied(null);
+    setDiscussionError('');
     setCopyError('');
     setTeamSelection(null);
     try {
@@ -270,6 +281,7 @@ export default function TiberDraftReview() {
       setLoading(false);
       setError('');
       setCopied(null);
+      setDiscussionError('');
       setCopyError('');
       inputRef.current?.focus();
     }
@@ -287,20 +299,23 @@ export default function TiberDraftReview() {
   }, [review]);
   const readableScoring = useMemo(() => review ? scoringSummary(review) : null, [review]);
 
-  async function copyContext(kind: 'link' | 'context') {
+  async function copyContext(kind: 'link' | 'context' | 'comparison') {
     if (!review) return;
     const requestId = requestSequence.current;
+    const copyId = ++copySequence.current;
     try {
       const link = new URL('/team', window.location.origin);
       link.searchParams.set('sleeper_url', review.input.canonicalUrl);
-      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(draftReviewAgentPacket(review, study), null, 2));
-      if (requestId !== requestSequence.current) return;
+      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : draftReviewAgentPacket(review, study), null, 2));
+      if (requestId !== requestSequence.current || copyId !== copySequence.current) return;
       setCopyError('');
+      setDiscussionError('');
       setCopied(kind);
     } catch {
-      if (requestId === requestSequence.current) {
+      if (requestId === requestSequence.current && copyId === copySequence.current) {
         setCopied(null);
-        setCopyError('Could not copy. Check clipboard access and try again.');
+        if (kind === 'comparison') setDiscussionError('Could not copy. Check clipboard access and try again.');
+        else setCopyError('Could not copy. Check clipboard access and try again.');
       }
     }
   }
@@ -398,7 +413,7 @@ export default function TiberDraftReview() {
               <button type="button" onClick={() => void copyContext('link')}>Copy roster link</button>
               <button type="button" onClick={() => void copyContext('context')}><Clipboard size={16} /> Copy agent context</button>
             </div>
-            <p className="drp-muted">The link opens the latest public roster; it carries no notes or study. Agent context copies this snapshot and your current study, preference and reasoning. Nothing is saved here.</p>
+            <p className="drp-muted">The link opens the latest public roster; it carries no study. Agent context copies this snapshot, selected evidence and any optional roster scenario. Keep preferences and hypotheses in your agent conversation.</p>
             <p className="drp-muted">Refresh reads Sleeper again; player details may be cached for up to 24 hours. Refreshing or changing rosters clears the study.</p>
             <p role="status">{copied === 'link' ? 'Roster link copied' : copied === 'context' ? 'Agent context copied' : ''}</p>
             {copyError ? <p role="alert" className="drp-error">{copyError}</p> : null}
@@ -475,7 +490,7 @@ export default function TiberDraftReview() {
             </div>
           </section>
 
-          <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={setStudy} />
+          <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={updateStudy} onDiscuss={() => void copyContext('comparison')} discussionStatus={copied === 'comparison' ? 'Comparison context copied' : ''} discussionError={discussionError} />
 
           {review.observed.draft.status === 'available' ? (
             <details className="drp-panel">
