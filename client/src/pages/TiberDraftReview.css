@@ -25,7 +25,9 @@
 .drp-step { color: var(--drp-orange); font: 700 11px/1 var(--font-mono); }
 .drp-empty h2 { margin: 14px 0 8px; font-size: 17px; }
 .drp-empty p,.drp-muted,.drp-boundary { color: rgba(236,238,242,.55); line-height: 1.55; }
-.drp-results { display: grid; gap: 16px; margin-top: 26px; }
+/* Let the results track shrink to the viewport instead of the table's intrinsic width. */
+.drp-results { display: grid; grid-template-columns: minmax(0,1fr); gap: 16px; margin-top: 26px; }
+.drp-results > * { min-width: 0; }
 .drp-team-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 6px 2px; }
 .drp-team-heading h2 { margin-top: 8px; font: 600 38px/1.05 var(--font-serif); }
 .drp-team-heading p { margin-top: 7px; color: rgba(236,238,242,.55); }
@@ -89,3 +91,21 @@
   .drp-summary-grid { grid-template-columns: 1fr; }
   .drp-panel { padding: 18px; }
 }
+
+.drp-evidence { margin-top: 24px; overflow-wrap: anywhere; }
+.drp-study-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.drp-evidence label { display: block; font-size: 13px; font-weight: 600; }
+/* Keep dark text on these light controls above the shared .tiber-main control rule. */
+.drp-page .drp-evidence select, .drp-page .drp-evidence textarea { display: block; width: 100%; min-width: 0; margin-top: 7px; padding: 11px; border: 1px solid #d7d5cf; border-radius: 8px; background: #fff; color: #222; font: inherit; font-size: 16px; }
+.drp-evidence textarea { min-height: 85px; resize: vertical; }
+.drp-evidence-table { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; margin: 20px 0; }
+.drp-evidence-table:focus-visible { outline: 2px solid var(--drp-orange); outline-offset: 3px; }
+.drp-scroll-hint { display: none; }
+.drp-evidence table { width: 100%; border-collapse: collapse; min-width: 570px; font-size: 13px; }
+.drp-evidence th, .drp-evidence td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e2dc; vertical-align: top; }
+.drp-evidence th { font-weight: 600; }
+.drp-evidence td { width: 34%; }
+.drp-attribution { font-size: 12px; line-height: 1.6; }
+.drp-attribution a { text-decoration: underline; }
+@media (max-width: 600px) { .drp-study-controls { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .drp-scroll-hint { display: block; margin-top: 16px; color: var(--drp-orange); font-size: 13px; } }

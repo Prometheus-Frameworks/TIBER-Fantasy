@@ -1,3 +1,4 @@
+import { historicalEvidenceFor } from './historicalEvidence';
 import {
   deriveSleeperScoringFormat,
   sleeperClient,
@@ -689,6 +690,7 @@ export async function buildDraftReview(rawInput: string) {
         evaluation_horizons: ['next_3_weeks', 'next_6_weeks', 'rest_of_season'],
       },
     },
+    historical_evidence: historicalEvidenceFor(rosterPlayers.map(player => player.player_id)),
     forecast: {
       status: 'unavailable',
       reason: 'No current governed TIBER-Forecast redraft projection artifact is connected to this public pilot.',

@@ -913,3 +913,19 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - The client reads the server-enforced profile and renders a Draft Review-only shell; profile failure is UI fail-closed, public response bodies are not logged, and unknown configured profiles stop startup.
 - Validation: focused security/routing suites 11/11, deployment-equivalent build green, no touched-file typecheck diagnostics, diff clean. No deployment or merge authority was exercised.
 - Exact-head review repairs: API GETs—including mixed-case paths that Express treats as API routes—are network-only in the service worker and explicitly bypass browser HTTP caching; service-worker activation deletes the legacy dynamic API cache. This prevents a cached `full` capability or private GET response from surviving a profile change or being replayed during an outage. Static/document caching remains versioned and separate. The public-only shell clears the absent sidebar's desktop offset.
+
+### 2026-09-07 — Draft Review evidence suite (issue #360)
+- Consumed accepted four-edge identity admission and bounded 2025 historical-use grant through reviewed Data PR #266 head `8b762650f4b933b6ce717c551993dcaaf92e1008`.
+- Added deterministic, source-pinned descriptive bundle; public pair endpoint; local comparison/preference UI; separate copied operator judgment and hypothetical roster arithmetic. Source clocks remain unknown and missing evidence explicit.
+- Scoped tests/build and independent exact-head review/repair outcomes belong to the implementation PR. No merge or production deployment. See Draft Review MODULE.md for replay commands, source paths, consumer contract and limitations.
+
+### 2026-09-09 — Draft Review evidence-control contrast repair (#367)
+- Raised only the Draft Review evidence select/textarea selector specificity so its existing dark text stays readable on the existing white controls instead of inheriting the shared shell color.
+- Validation: existing UI tests 3/3, deployment-equivalent build, local public-profile SPA/evidence curl checks and diff hygiene passed. No data, behavior, dependency or global-theme edits.
+- Exact-head independent review and preview checks are recorded on #367 after publication; phone acceptance remains open. No merge or production deployment.
+
+### 2026-09-10 — Codex: Draft Review portrait overflow repair (#367)
+- **What changed:** Give the results grid an explicitly shrinkable column and its children zero automatic minimum width, keeping the historical table's intrinsic width inside its own horizontal scroller. Add a small-screen swipe hint, a named keyboard-focusable scroll region with visible focus, and wrap long evidence text. Preserve vertical scrolling, the prior control contrast repair, all data, exports and calculations.
+- **Files modified:** `client/src/pages/TiberDraftReview.css`, `client/src/components/draftReview/DraftReviewEvidenceStudy.tsx`, and the two required agent work logs.
+- **Validation:** Existing study UI tests passed 3/3; deployment-equivalent server/client build passed; built public-profile HTTP checks returned SPA 200, historical pair available/200/no-store, invalid input 400, and private Management 404; diff check passed. No new dependencies or data fixtures committed.
+- **Notes:** Joseph's actual iPhone screenshots show portrait clipping outside the table and successful landscape comparison; the supplied export confirms comparison, manager judgment and hypothetical state export. This is partial acceptance with a mobile layout defect, not a phone pass or release instruction. Source head/base were verified before repair. Browser access to the local test server was blocked and no supported phone viewport emulation is exposed; repaired portrait/touch acceptance remains open. Exact-head independent review and existing isolated PR preview update are recorded separately. No merge or production deployment authorized.

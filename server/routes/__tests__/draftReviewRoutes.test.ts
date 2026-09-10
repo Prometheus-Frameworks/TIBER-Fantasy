@@ -83,3 +83,21 @@ describe('Draft Review public route', () => {
     expect(JSON.stringify(result.body)).not.toContain('private-owner');
   });
 });
+
+describe('bounded historical comparison route', () => {
+  test('serves admitted data without Sleeper or private state and preserves public headers', async () => {
+    const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    const result = await request(app).get('/api/draft-review/evidence').query({ player_ids: '7526,9997' });
+    expect(result.status).toBe(200);
+    expect(result.body.players.map((p: { player_id: string }) => p.player_id)).toEqual(['7526', '9997']);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.headers['x-frame-options']).toBe('DENY');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test.each(['', '1,2,3', '../7526', 'name_exact', '1,,2'])('rejects invalid selection %s', async (player_ids) => {
+    const app = express(); app.use(createDraftReviewRouter());
+    const result = await request(app).get('/api/draft-review/evidence').query({ player_ids });
+    expect(result.status).toBe(400);
+  });
+});
