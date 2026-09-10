@@ -152,7 +152,7 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
     </details>
     {attribution ? <p className="drp-attribution"><a href={attribution.source_url} target="_blank" rel="noreferrer">{attribution.name}</a> · <a href={attribution.license_url} target="_blank" rel="noreferrer">{attribution.license}</a>. {attribution.notice}</p> : null}
     {onDiscuss ? <div className="drp-discuss">
-      <button type="button" className="drp-action" disabled={!selectionValid} onClick={onDiscuss}>Discuss this comparison</button>
+      <button type="button" className="drp-action" disabled={!selectionValid || comparison.status === 'loading'} onClick={onDiscuss}>Discuss this comparison</button>
       <p>Copies the roster and selected evidence for your agent. Add your question, preferences and hypotheses in that conversation. No agent connection or saved notes are created here.</p>
       <p role="status">{discussionStatus}</p>
       {discussionError ? <p role="alert" className="drp-error">{discussionError}</p> : null}

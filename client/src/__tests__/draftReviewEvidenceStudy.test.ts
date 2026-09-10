@@ -94,3 +94,21 @@ test('unsupported positions have one coverage explanation and no empty compariso
   await screen.findAllByText('Kicking and team-defense statistics are not included in this comparison.');
   expect(screen.queryByRole('table')).toBeNull();
 });
+
+
+test('discussion waits for the current request but permits an explicit unavailable result', async () => {
+  let settle!: (value: Response) => void;
+  global.fetch = jest.fn(() => new Promise<Response>(resolve => { settle = resolve; }));
+  const onDiscuss = jest.fn();
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: () => undefined, onDiscuss }));
+  const button = screen.getByRole('button', { name: 'Discuss this comparison' }) as HTMLButtonElement;
+  expect(button.disabled).toBe(true);
+  fireEvent.click(button);
+  expect(onDiscuss).not.toHaveBeenCalled();
+  await act(async () => settle(response({ ...evidence([], 'Unavailable'), status: 'unavailable', reason: 'No admitted history' })));
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  expect(onDiscuss).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '33' } });
+  expect(button.disabled).toBe(true);
+});

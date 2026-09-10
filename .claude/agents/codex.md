@@ -939,3 +939,6 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Approved follow-up: neutral, position-relevant 2025 weekly comparison; totals/source details and optional geometry collapsed; sticky metric labels and one missing-player coverage explanation. Written preferences/hypotheses move to the agent conversation. Explicit Discuss handoff preserves existing packet fields and rejects stale clipboard completion.
 - Validation: 44 tests in seven focused suites pass; deployment-equivalent build passes; 353 normalized typecheck diagnostics match the baseline with no new errors. Synthetic fixtures only.
 - Existing PR preview isolation rechecked read-only: three configured service variables, existing public profile. Exact-head independent review, deployment verification and actual phone acceptance remain separate gates, recorded on the PR. No identity admission/bundle changes, merge or production release. Three-player Data admission is a separate proposal only.
+
+### 2026-09-10 — #372 review repair
+- Exact-head review found comparison handoff enabled while evidence was loading. Disable the action until the selected pair settles, including explicit unavailable results. Add a pending/settled/new-pair interaction regression. No data, API, packet or runtime change. Revalidate targeted UI suites; CI and existing isolated preview track the repair head.
