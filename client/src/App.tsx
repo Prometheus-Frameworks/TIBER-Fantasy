@@ -62,8 +62,9 @@ function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
           {() => (
             <TiberLayout publicDraftReviewOnly>
               <Switch>
+                <Route path="/team" component={TiberDraftReview} />
                 <Route path="/draft-review" component={TiberDraftReview} />
-                <Route>{() => <Redirect to="/draft-review" />}</Route>
+                <Route>{() => <Redirect to={`/team${window.location.search}`} />}</Route>
               </Switch>
             </TiberLayout>
           )}
@@ -81,6 +82,7 @@ function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
             <Switch>
               <Route path="/management" component={TiberManagementDashboard} />
               <Route path="/team-management" component={TiberManagementDashboard} />
+              <Route path="/team" component={TiberDraftReview} />
               <Route path="/draft-review" component={TiberDraftReview} />
               {/*
                 Observatory surface (user-facing name). The implementation component is

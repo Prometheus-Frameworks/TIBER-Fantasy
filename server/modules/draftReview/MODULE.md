@@ -1,6 +1,18 @@
-# Draft Review pilot
+# TIBER Team / Draft Review compiler
 
 Read-only public context compiler for a Sleeper redraft roster.
+
+## Team web entry (issue #371)
+
+- `/team` and the preserved `/draft-review` alias render the same page. Both `sleeper_url` and legacy `sleeper_input` query parameters still resolve through the existing API. The public runtime's entry/logo goes to `/team`; full-profile Observatory and Management routes retain their existing behavior.
+- Explicit roster refresh repeats the public roster read, preserving the existing 24-hour player-directory cache. Change roster opens the same league's selector; Change league clears the entry. URL navigation invalidates pending reads, and a successful read canonicalizes the current history entry.
+- Current starter membership, bench, reserve and taxi are separate groups, including empty groups. Configured starting slots are not inferred player-to-slot assignments. Reserve settings display allowed/not allowed/unknown separately from unavailable current player eligibility. Missing NFL team remains unknown.
+- Copy roster link produces an origin-local `/team?sleeper_url=…` locator. Opening it fetches current data and starts a new study; it contains no snapshot, preference, note or hypothetical roster. Copy agent context contains the current snapshot and matching local study through the unchanged packet contract. Clipboard failures remain visible. No durable notes, browser storage, account ownership or transaction authorization.
+- Refresh/switch controls warn before discarding a preference, note or hypothetical roster. Pair changes, review loads, reloads and navigation clear local study state. A copied packet must be retained outside the page if the operator wants to keep it.
+- The comparison keeps the bounded horizontal scroller, focus access, readable light controls, historical attribution and missing-value semantics. Original draft detail is secondary; unavailable Forecast evidence remains explicit.
+- No API, runtime-profile name, dependency, database, artifact or provider change. The existing isolated Railway PR environment is the preview path, subject to verifying its base and inherited isolation before publication. Implementation approval does not authorize merge or production release.
+
+Replay Team interactions with `npm test -- --runTestsByPath client/src/__tests__/tiberTeam.test.ts --coverage=false`. Run the existing evidence-study, shared-study, Draft Review service/routes/history and public-profile suites as well. Build with `sh build.sh`. Repository typecheck is compared to unchanged main; a clean build is not a clean repository-wide typecheck. Automated DOM tests are separate from Joe's portrait-phone acceptance (390/430px target widths, comparison swipe, controls, roster refresh and handoff).
 
 ## Inputs
 
