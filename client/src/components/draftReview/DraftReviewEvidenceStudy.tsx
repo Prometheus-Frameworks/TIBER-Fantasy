@@ -84,7 +84,8 @@ export default function DraftReviewEvidenceStudy({ review, onChange }: { review:
           {player?.observed?.usage_missing_weeks.length ? <p>Usage missing in weeks {player.observed.usage_missing_weeks.join(', ')}.</p> : null}
         </div>;
       })}</div>
-      <div className="drp-evidence-table" tabIndex={0} aria-label="Historical comparison, scroll horizontally on narrow screens"><table>
+      <p className="drp-scroll-hint">Swipe the table sideways to compare both players →</p>
+      <div className="drp-evidence-table" role="region" tabIndex={0} aria-label="Historical comparison, scroll horizontally on narrow screens"><table>
         <thead><tr><th>Derived from recorded weeks</th>{pair.map(id => <th key={id}>{options.find(p => p.player_id === id)?.name}</th>)}</tr></thead>
         <tbody>{HISTORICAL_METRICS.map(([key, label]) => <tr key={key}><th scope="row">{label}</th>{pair.map(id => <td key={id}>{displayMetric(comparison.evidence!.players.find(p => p.player_id === id)?.derived[key], key.endsWith('_share'))}</td>)}</tr>)}</tbody>
       </table></div>
