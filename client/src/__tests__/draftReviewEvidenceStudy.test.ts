@@ -112,3 +112,63 @@ test('discussion waits for the current request but permits an explicit unavailab
   fireEvent.change(screen.getByLabelText('Comparison player 2'), { target: { value: '33' } });
   expect(button.disabled).toBe(true);
 });
+
+test('third player validates all IDs, exports one selection and ignores a removed third-player response', async () => {
+  const pending: Array<(value: Response) => void> = [];
+  global.fetch = jest.fn(() => new Promise<Response>(resolve => pending.push(resolve)));
+  let latest!: StudyAttachment;
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: value => { latest = value; }, onDiscuss: jest.fn() }));
+  await act(async () => pending[0](response(evidence(['11', '22'], 'Pair'))));
+  fireEvent.click(screen.getByRole('button', { name: 'Add third player' }));
+  const discuss = screen.getByRole('button', { name: 'Discuss this comparison' }) as HTMLButtonElement;
+  expect(discuss.disabled).toBe(true);
+  expect(latest.comparison.evidence).toBeNull();
+  fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '22' } });
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '33' } });
+  expect(global.fetch).toHaveBeenLastCalledWith('/api/draft-review/evidence?player_ids=11%2C22%2C33', expect.anything());
+  expect(latest.operator_context.applies_to_player_ids).toEqual(['11', '22', '33']);
+  expect(discuss.disabled).toBe(true);
+  await act(async () => pending[1](response(evidence(['11', '22', '33'], 'Three unavailable'))));
+  expect(latest.comparison.selected_player_ids).toEqual(['11', '22', '33']);
+  expect(latest.comparison.evidence!.players).toHaveLength(3);
+  expect(discuss.disabled).toBe(false);
+  // A new third-player request is invalidated by removing that selector.
+  fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '11' } });
+  expect(discuss.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '33' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Remove third player' }));
+  expect(screen.queryByLabelText('Comparison player 3')).toBeNull();
+  await act(async () => pending[3](response(evidence(['11', '22'], 'Restored pair'))));
+  await act(async () => pending[2](response(evidence(['11', '22', '33'], 'Stale triple'))));
+  expect(latest.comparison.selected_player_ids).toEqual(['11', '22']);
+  expect(latest.comparison.evidence!.players).toHaveLength(2);
+  expect(screen.queryByText('Stale triple')).toBeNull();
+});
+
+test('three columns retain independent coverage, real zeros and mixed-position metric union', async () => {
+  global.fetch = jest.fn(async (url) => {
+    const ids = decodeURIComponent(String(url).split('=')[1]).split(',');
+    const body = evidence(ids, 'No admitted exact Sleeper-to-GSIS identity mapping.');
+    for (const player of body.players.filter(p => p.player_id !== '22')) {
+      const count = player.player_id === '11' ? 2 : 3;
+      Object.assign(player, { status: 'available', reason: null,
+        observed: { weeks: Array.from({ length: count }, (_, i) => i + 1), historical_teams: ['A'], usage_conflict_weeks: [], usage_missing_weeks: [] },
+        derived: { targets: { mean: 0, total: 0, nonnull_weeks: count, recorded_weeks: count } } });
+    }
+    return response(body);
+  });
+  render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: () => undefined }));
+  await screen.findByRole('table', { name: '2025 · per recorded week' });
+  fireEvent.click(screen.getByRole('button', { name: 'Add third player' }));
+  fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '33' } });
+  const table = await screen.findByRole('table', { name: '2025 · per recorded week' });
+  expect(within(table).getAllByRole('columnheader').map(h => h.textContent)).toEqual(['Metric', 'First WR', 'Second WR', 'Candidate RB']);
+  const targetRow = within(table).getByRole('rowheader', { name: 'Targets' }).closest('tr')!;
+  expect(within(targetRow).getAllByText('0')).toHaveLength(2);
+  expect(within(targetRow).getByText('2/2 recorded weeks')).toBeTruthy();
+  expect(within(targetRow).getByText('3/3 recorded weeks')).toBeTruthy();
+  expect(within(table).getByText('Carries')).toBeTruthy();
+  expect(screen.getAllByText('2025 stats are not connected: historical identity link unavailable.')).toHaveLength(1);
+  expect(table.classList.contains('drp-three-comparison')).toBe(true);
+});

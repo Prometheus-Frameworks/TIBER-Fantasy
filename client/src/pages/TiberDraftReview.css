@@ -143,3 +143,14 @@
 .drp-attribution a { text-decoration: underline; }
 @media (max-width: 600px) { .drp-study-controls { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .drp-scroll-hint { display: block; margin-top: 16px; color: var(--drp-orange); font-size: 13px; } }
+
+/* Three-player columns retain readable widths inside the existing local scroller. */
+.drp-study-controls.drp-three-controls { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.drp-evidence table.drp-three-comparison { min-width: 720px; }
+.drp-evidence table.drp-three-comparison th:first-child { width: 150px; }
+.drp-evidence table.drp-compact-comparison.drp-three-comparison { min-width: 570px; }
+.drp-evidence table.drp-compact-comparison.drp-three-comparison th:first-child { width: 120px; }
+.drp-comparison-coverage > div { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .drp-study-controls.drp-three-controls, .drp-comparison-coverage { grid-template-columns: 1fr; }
+}

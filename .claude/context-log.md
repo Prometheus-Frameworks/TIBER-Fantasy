@@ -726,3 +726,8 @@ Every agent should append an entry here after completing work.
 
 ### 2026-09-10 — #372 review repair
 - Exact-head review found comparison handoff enabled while evidence was loading. Disable the action until the selected pair settles, including explicit unavailable results. Add a pending/settled/new-pair interaction regression. No data, API, packet or runtime change. Revalidate targeted UI suites; CI and existing isolated preview track the repair head.
+
+### 2026-09-10 — Codex: three-player Team comparison (#372)
+- Joe authorized optional third-player UI, endpoint validation, tests, independent review and existing isolated preview. Two-player default and packet field shapes remain compatible.
+- Added selection-wide duplicate checks, add/remove invalidation, readable locally scrolling three-player columns and phone-stacked controls. No artifact regeneration or Data admission.
+- Validation and exact-head review/preview receipts are recorded on #372; actual phone acceptance and merge/production release remain separate.

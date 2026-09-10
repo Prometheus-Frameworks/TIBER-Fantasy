@@ -96,3 +96,6 @@ TIBER Management Dashboard is now the first product-shell step toward “sync my
 
 ### Draft Review historical evidence study (2026-09-07)
 The public Draft Review optionally includes a pinned 2025 descriptive evidence bundle and a two-player comparison. Source admission, identity confidence, null clocks, attribution and missing-value semantics travel with the packet. Manager preferences remain local and export separately from evidence. Hypothetical one/two-for-one roster geometry is read-only and does not establish ownership or recommend/execute transactions. No current projections or regression probabilities are inferred. See `server/modules/draftReview/MODULE.md` for the accepted upstream exception, exact producer commit, offline replay and runtime failure behavior. No new database access or environment variables.
+
+### Team three-player comparison (#372)
+The public Team study supports an optional third player, a bounded one-to-three-ID evidence request, and one agent packet with all selected players. Mobile table scrolling retains sticky metric labels; data admission and bundle contents are unchanged.

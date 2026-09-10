@@ -30,7 +30,7 @@ function coverageReason(player: ComparisonPlayer) {
 }
 function ComparisonTable({ metrics, players, compact = false }: { metrics: readonly MetricRow[]; players: ComparisonPlayer[]; compact?: boolean }) {
   return <div className="drp-evidence-table" role="region" tabIndex={0} aria-label={compact ? 'Player comparison, scroll horizontally on narrow screens' : 'Detailed historical comparison, scroll horizontally on narrow screens'}>
-    <table className={compact ? 'drp-compact-comparison' : undefined}>
+    <table className={[compact ? 'drp-compact-comparison' : '', players.length === 3 ? 'drp-three-comparison' : ''].filter(Boolean).join(' ')}>
       <caption>{compact ? '2025 · per recorded week' : '2025 · totals and all recorded metrics'}</caption>
       <thead><tr><th scope="col">Metric</th>{players.map(player => <th scope="col" key={player.id}>{player.name}</th>)}</tr></thead>
       <tbody>{metrics.map(([key, label], index) => <tr key={key}>
@@ -58,21 +58,21 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
   const roster = review.observed.current_roster;
   // Current roster descriptions take precedence over older draft-board descriptions.
   const options = useMemo(() => Array.from(new Map([...(review.observed.draft.full_board ?? []), ...roster].map(player => [player.player_id, player])).values()), [roster, review.observed.draft.full_board]);
-  const [pair, setPair] = useState<string[]>(() => {
+  const [selection, setSelection] = useState<string[]>(() => {
     const candidates = [...roster.filter(p => p.position === 'WR'), ...roster.filter(p => p.position !== 'WR')];
     return [candidates[0]?.player_id ?? '', candidates[1]?.player_id ?? ''];
   });
   const [result, setResult] = useState<{ key: string; evidence: HistoricalEvidence | null; status: 'available' | 'unavailable'; reason: string | null } | null>(null);
   const [outgoing, setOutgoing] = useState<string[]>([]);
   const [incomingId, setIncomingId] = useState('');
-  const pairKey = JSON.stringify(pair);
-  const selectionValid = pair.every(Boolean) && pair[0] !== pair[1];
+  const selectionKey = JSON.stringify(selection);
+  const selectionValid = selection.length >= 2 && selection.length <= 3 && selection.every(Boolean) && new Set(selection).size === selection.length;
   // Key checking hides stale evidence immediately, even before the next effect runs.
   const comparison = useMemo<StudyAttachment['comparison']>(() => !selectionValid
-    ? { selected_player_ids: pair, evidence: null, status: 'unavailable', reason: 'Choose two different players.' }
-    : result?.key === pairKey
-      ? { selected_player_ids: pair, evidence: result.evidence, status: result.status, reason: result.reason }
-      : { selected_player_ids: pair, evidence: null, status: 'loading', reason: null }, [pair, pairKey, result, selectionValid]);
+    ? { selected_player_ids: selection, evidence: null, status: 'unavailable', reason: 'Choose two or three different players.' }
+    : result?.key === selectionKey
+      ? { selected_player_ids: selection, evidence: result.evidence, status: result.status, reason: result.reason }
+      : { selected_player_ids: selection, evidence: null, status: 'loading', reason: null }, [selection, selectionKey, result, selectionValid]);
 
   useEffect(() => {
     if (!selectionValid) return;
@@ -80,31 +80,31 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
     let active = true;
     void (async () => {
       try {
-        const response = await fetch(`/api/draft-review/evidence?player_ids=${encodeURIComponent(pair.join(','))}`, { signal: controller.signal });
+        const response = await fetch(`/api/draft-review/evidence?player_ids=${encodeURIComponent(selection.join(','))}`, { signal: controller.signal });
         const evidence = await response.json() as HistoricalEvidence;
         if (!response.ok || evidence.schema_version !== 'tiber_draft_review_historical_v1' || !['available', 'unavailable'].includes(evidence.status)) throw new Error('Historical evidence could not be loaded.');
-        if (active) setResult({ key: pairKey, evidence, status: evidence.status, reason: evidence.reason });
+        if (active) setResult({ key: selectionKey, evidence, status: evidence.status, reason: evidence.reason });
       } catch {
-        if (active) setResult({ key: pairKey, evidence: null, status: 'unavailable', reason: 'Historical evidence could not be loaded.' });
+        if (active) setResult({ key: selectionKey, evidence: null, status: 'unavailable', reason: 'Historical evidence could not be loaded.' });
       }
     })();
     return () => { active = false; controller.abort(); };
-  }, [pairKey, selectionValid]);
+  }, [selectionKey, selectionValid]);
 
   const scenario = useMemo(() => outgoing.length || incomingId
     ? deriveRosterScenario(roster, review.observed.league.lineup_slots, outgoing.filter(Boolean), options.find(p => p.player_id === incomingId) ?? null)
     : null, [outgoing, incomingId, options, roster, review.observed.league.lineup_slots]);
   useEffect(() => {
     // Preserve the packet contract without inventing a preference or importing private agent context.
-    onChange({ scope, comparison, operator_context: { kind: 'manager_judgment', preferred_player_id: null, note: '', applies_to_player_ids: pair }, hypothetical_roster: scenario });
-  }, [scope, comparison, pair, scenario, onChange]);
+    onChange({ scope, comparison, operator_context: { kind: 'manager_judgment', preferred_player_id: null, note: '', applies_to_player_ids: selection }, hypothetical_roster: scenario });
+  }, [scope, comparison, selection, scenario, onChange]);
 
   function choose(index: number, id: string) {
-    setPair(previous => previous.map((value, i) => i === index ? id : value));
+    setSelection(previous => previous.map((value, i) => i === index ? id : value));
     setResult(null);
   }
   const attribution = comparison.evidence?.provenance?.attribution ?? review.historical_evidence?.provenance?.attribution;
-  const players: ComparisonPlayer[] = pair.map(id => {
+  const players: ComparisonPlayer[] = selection.map(id => {
     const selected = options.find(player => player.player_id === id);
     return { id, name: selected?.name ?? 'Choose a player', position: selected?.position ?? null, history: comparison.evidence?.players.find(player => player.player_id === id) };
   });
@@ -115,11 +115,15 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
   <section className="drp-panel drp-evidence" aria-label="Historical evidence study">
     <div className="drp-panel-heading"><div><span className="drp-label">2025 historical evidence</span><h3>Compare players</h3></div></div>
     <p>Explore recorded opportunity and production. These are 2025 observations, not current-season projections.</p>
-    <div className="drp-study-controls">{pair.map((id, index) => <label key={index}>Player {index + 1}
+    <div className={`drp-study-controls${selection.length === 3 ? ' drp-three-controls' : ''}`}>{selection.map((id, index) => <label key={index}>Player {index + 1}
       <select aria-label={`Comparison player ${index + 1}`} value={id} onChange={e => choose(index, e.target.value)}>
         <option value="">Choose a player</option>{options.map(p => <option key={p.player_id} value={p.player_id}>{p.name} · {p.position ?? '?'} · {roster.some(r => r.player_id === p.player_id) ? 'current' : 'at draft'} {p.team ?? '?'}</option>)}
       </select>
     </label>)}</div>
+    <button type="button" className="drp-action" onClick={() => {
+      setSelection(previous => previous.length === 2 ? [...previous, ''] : previous.slice(0, 2));
+      setResult(null);
+    }}>{selection.length === 2 ? 'Add third player' : 'Remove third player'}</button>
     <div aria-live="polite" aria-busy={comparison.status === 'loading'}>
       {comparison.status === 'loading' ? <p>Loading historical evidence…</p> : null}
       {comparison.status === 'unavailable' ? <p>{comparison.reason ?? 'Historical evidence unavailable.'}</p> : null}
@@ -131,6 +135,7 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
         </div>;
       })}</div>
       {anyHistory && metrics.length > 0 ? <>
+        <p className="drp-scroll-hint">Swipe to compare players; metric labels stay visible →</p>
         <ComparisonTable metrics={metrics} players={players} compact />
         <p className="drp-muted">Values are means over recorded weeks, not certified games played. Shares are averages of weekly shares. — refers to the player coverage above.</p>
       </> : null}
