@@ -99,3 +99,8 @@ The public Draft Review optionally includes a pinned 2025 descriptive evidence b
 
 ### Team three-player comparison (#372)
 The public Team study supports an optional third player, a bounded one-to-three-ID evidence request, and one agent packet with all selected players. Mobile table scrolling retains sticky metric labels; data admission and bundle contents are unchanged.
+
+### 2026-09-11 — Codex: Three historical Team consumer identities (#372)
+- Pinned reviewed Data #268 commit 488220fa05c834aad3a4e2bea839a1843131053a and separate Team admission receipt. Added exactly Parker Washington, Drake London and Chris Rodriguez; all old 72 profiles unchanged, all three name_exact/medium with 16/12/12 recorded weeks.
+- Offline builder validates scope, exact identity delta and source/proposal/baseline pins with explicit fail-closed exceptions. Old preparation authority and later consumer authorization (#372 comment 5627769635) remain separate provenance; production authority is not inferred.
+- Regenerated 106062-byte artifact and runtime content pin. Validation: 11 Python tests normal/optimized, deterministic replay,54 Jest tests/seven suites; unchanged 72 profiles invariant checked. Build/review/isolated preview receipts follow on PR. No Data edits, #269 changes, merge or production release.

@@ -17,6 +17,11 @@ export type HistoricalEvidence = {
     producer_repo: string; producer_commit: string;
     sources: Array<{ path: string; sha256: string }>;
     operator_acceptance: string;
+    team_identity_admission?: {
+      path: string; sha256: string; operator_acceptance: string; player_ids: string[];
+      receipt_stage: string; consumer_authorization: string; consumer_authorization_scope: string;
+      baseline_producer_commit: string; baseline_identity_sha256: string; limitations: string[];
+    };
     source_acquired_at: null; source_updated_at: null; original_release_hash: null; package_version: null;
     transform: string;
     attribution: { name: string; source_url: string; license: string; license_url: string; notice: string };

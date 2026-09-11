@@ -13,6 +13,25 @@ describe('admitted historical evidence', () => {
     expect(packet.forecast).toEqual({ status: 'unavailable', fabricated_values: false });
     expect(packet.provenance?.attribution.license_url).toBe('https://creativecommons.org/licenses/by/4.0/');
   });
+  test('three additional identities retain historical denominators and separate authority', () => {
+    const packet = historicalEvidenceFor(['9487', '8112', '10219']);
+    expect(packet.players.map(p => p.observed?.weeks.length)).toEqual([16, 12, 12]);
+    expect(packet.players[0].observed?.weeks).not.toContain(19);
+    expect(packet.players[2].observed?.historical_teams).toEqual(['WAS']);
+    for (const player of packet.players) {
+      expect(player.status).toBe('available');
+      expect(player.identity).toMatchObject({ confidence: 'medium', match_method: 'name_exact' });
+      expect(player.derived.targets.recorded_weeks).toBe(player.observed?.weeks.length);
+    }
+    expect(packet.provenance?.producer_commit).toBe('488220fa05c834aad3a4e2bea839a1843131053a');
+    expect(packet.provenance?.operator_acceptance).toContain('5574349251');
+    expect(packet.provenance?.team_identity_admission).toMatchObject({
+      player_ids: ['9487', '8112', '10219'], receipt_stage: 'accepted_for_branch_preparation',
+      operator_acceptance: 'https://github.com/Prometheus-Frameworks/TIBER-Data/pull/268#issuecomment-5627117154',
+      consumer_authorization: 'https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/372#issuecomment-5627769635',
+    });
+    expect(historicalEvidenceFor(['8167', '11581', '6806', '7567']).players.every(p => p.status === 'unavailable')).toBe(true);
+  });
   test('unmapped identities fail explicitly and public responses cannot contaminate another request', () => {
     const first = historicalEvidenceFor(['7526']);
     first.players[0].observed!.historical_teams.push('FAKE');
@@ -26,7 +45,7 @@ describe('admitted historical evidence', () => {
   test('missing, malformed or modified source bytes cannot pass the content pin', () => {
     expect(() => decodeHistoricalBundle(Buffer.from('{}'))).toThrow('integrity');
     const bytes = readFileSync('server/modules/draftReview/artifacts/historical2025.json');
-    expect(decodeHistoricalBundle(bytes).players).toHaveLength(72);
+    expect(decodeHistoricalBundle(bytes).players).toHaveLength(75);
     expect(() => decodeHistoricalBundle(Buffer.concat([bytes, Buffer.from(' ')]))).toThrow('integrity');
   });
 });
