@@ -81,8 +81,9 @@ const SCORING_RULE_LABELS: Record<string, string> = {
   bonus_pass_cmp_25: '25 pass completions',
 };
 
-let playerCache: { fetchedAt: number; players: Record<string, SleeperPlayer> } | null = null;
-let playerCacheRequest: Promise<Record<string, SleeperPlayer>> | null = null;
+type PlayerDirectorySnapshot = { fetchedAt: number; players: Record<string, SleeperPlayer> };
+let playerCache: PlayerDirectorySnapshot | null = null;
+let playerCacheRequest: Promise<PlayerDirectorySnapshot> | null = null;
 
 export class DraftReviewInputError extends Error {
   constructor(message: string) {
@@ -243,17 +244,22 @@ export async function resolveDraftReviewInput(rawInput: string) {
   return resolveLeagueTeams(parsed.leagueId, parsed.inputType);
 }
 
-async function getPlayers() {
-  if (playerCache && Date.now() - playerCache.fetchedAt < PLAYER_CACHE_MS) return playerCache.players;
+/** Shared read-only snapshot: fetchedAt is our acquisition clock, not Sleeper's update time. */
+export async function getDraftReviewPlayerDirectory() {
+  if (playerCache && Date.now() - playerCache.fetchedAt < PLAYER_CACHE_MS) return playerCache;
   if (!playerCacheRequest) {
     playerCacheRequest = sleeperClient.getNflPlayers()
       .then((players) => {
         playerCache = { fetchedAt: Date.now(), players };
-        return players;
+        return playerCache;
       })
       .finally(() => { playerCacheRequest = null; });
   }
   return playerCacheRequest;
+}
+
+async function getPlayers() {
+  return (await getDraftReviewPlayerDirectory()).players;
 }
 
 export function __resetDraftReviewCacheForTests() {

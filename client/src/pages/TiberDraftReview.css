@@ -154,3 +154,18 @@
 @media (max-width: 600px) {
   .drp-study-controls.drp-three-controls, .drp-comparison-coverage { grid-template-columns: 1fr; }
 }
+
+/* TE exploration is isolated from the established roster/comparison layout. */
+.drp-te-explorer, .drp-te-content, .drp-te-candidate { min-width: 0; overflow-wrap: anywhere; }
+.drp-te-explorer summary { cursor: pointer; padding: 12px 0; }
+.drp-te-content > * + * { margin-top: 12px; }
+.drp-te-search { display: grid; gap: 8px; }
+.drp-te-search input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 10px; color: #18181b; background: white; border: 1px solid #d4d4d8; border-radius: 6px; }
+.drp-te-list { list-style: none; padding: 0; max-height: 280px; overflow-y: auto; overscroll-behavior-y: auto; }
+.drp-te-list button { width: 100%; min-height: 48px; padding: 12px; text-align: left; color: #18181b; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 6px; margin-bottom: 6px; overflow-wrap: anywhere; }
+.drp-te-list button span, .drp-te-metrics small { display: block; color: #52525b; font-size: 12px; }
+.drp-te-list button[aria-pressed="true"] { border-color: #e2640d; background: #fff7ed; }
+.drp-te-metrics { margin: 12px 0; }
+.drp-te-metrics > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #e4e4e7; }
+.drp-te-metrics dd { margin: 0; text-align: right; }
+.drp-te-explorer button:focus-visible, .drp-te-explorer summary:focus-visible, .drp-te-explorer input:focus-visible { outline: 2px solid #e2640d; outline-offset: 2px; }

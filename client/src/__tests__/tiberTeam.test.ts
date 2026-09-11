@@ -188,3 +188,18 @@ test('discussion exports selected evidence and rejects stale clipboard success a
   fireEvent.click(screen.getByRole('button', { name: 'Discuss this comparison' }));
   await screen.findByRole('alert');
 });
+
+test('roster refresh unmounts the TE explorer and ignores its late response', async () => {
+  let finish!: (value: Response) => void;
+  global.fetch = jest.fn((input) => String(input).includes('/unrostered-tes?')
+    ? new Promise<Response>(resolve => { finish = resolve; }) : Promise.resolve(serve(String(input))));
+  open(); await loaded();
+  const details = screen.getByText('Explore unrostered TEs').closest('details')!;
+  details.open = true; fireEvent(details, new Event('toggle'));
+  await screen.findByText('Checking all league rosters…');
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh roster' }));
+  await loaded();
+  await act(async () => finish(response({ error: 'old response' }, 502)));
+  expect(screen.queryByText(/TE availability could not be established/)).toBeNull();
+  expect(screen.getByText('Explore unrostered TEs').closest('details')!.open).toBe(false);
+});

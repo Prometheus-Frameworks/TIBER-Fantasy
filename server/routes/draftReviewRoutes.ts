@@ -1,4 +1,5 @@
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
+import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
 import { securityHeaders } from '../middleware/security';
@@ -21,6 +22,21 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/unrostered-tes', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    const input = req.query.sleeper_url;
+    if (typeof input !== 'string' || !input.trim() || input.length > 256) {
+      return res.status(400).json({ status: 'invalid_input', error: 'A bounded sleeper_url is required.' });
+    }
+    try {
+      return res.json(await buildUnrosteredTes(input));
+    } catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'TE availability could not be established from complete league and player data. Try again shortly.' });
+    }
+  });
 
   router.get('/api/draft-review/evidence', rateLimiters.publicDraftReview, (req, res) => {
     res.set('Cache-Control', 'no-store');

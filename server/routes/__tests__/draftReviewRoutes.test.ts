@@ -112,3 +112,47 @@ describe('bounded historical comparison route', () => {
    if (player_ids.endsWith('999999999999')) expect(result.body.players[2].status).toBe('unavailable');
    expect(fetchMock).not.toHaveBeenCalled();
  });
+
+describe('unrostered TE route', () => {
+  test('validates input and rejects duplicate query parameters without a source read', async () => {
+    const mock = jest.fn(); global.fetch = mock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    for (const suffix of ['', '?sleeper_url=123', '?sleeper_url=x&sleeper_url=y']) {
+      const result = await request(app).get(`/api/draft-review/unrostered-tes${suffix}`);
+      expect(result.status).toBe(400);
+      expect(result.headers['cache-control']).toBe('no-store');
+    }
+    expect(mock).not.toHaveBeenCalled();
+  });
+  test('returns minimal candidate observation or sanitized incomplete-source error', async () => {
+    let complete = true;
+    global.fetch = jest.fn(async input => {
+      const url = String(input);
+      return { ok: true, json: async () => url.endsWith('/players/nfl') ? { '55': { position: 'TE' } }
+        : url.endsWith('/rosters') ? [{ roster_id: 1, owner_id: 'not-exported', players: [] }]
+        : { league_id: '123', season: '2026', total_rosters: complete ? 1 : 2 } } as Response;
+    }) as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    const get = () => request(app).get('/api/draft-review/unrostered-tes').query({ sleeper_url: 'https://sleeper.com/roster/123/1' });
+    const result = await get();
+    expect(result.status).toBe(200);
+    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.headers['x-frame-options']).toBe('DENY');
+    expect(result.body.candidates[0].player_id).toBe('55');
+    expect(JSON.stringify(result.body)).not.toContain('not-exported');
+    complete = false;
+    const unavailable = await get();
+    expect(unavailable.status).toBe(502);
+    expect(unavailable.body.status).toBe('source_unavailable');
+    expect(unavailable.body).not.toHaveProperty('candidates');
+  });
+  test('rate-limit responses are no-store and do not fetch sources', async () => {
+    const mock = jest.fn(); global.fetch = mock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    let result;
+    for (let i = 0; i < 31; i++) result = await request(app).get('/api/draft-review/unrostered-tes');
+    expect(result!.status).toBe(429);
+    expect(result!.headers['cache-control']).toBe('no-store');
+    expect(mock).not.toHaveBeenCalled();
+  });
+});

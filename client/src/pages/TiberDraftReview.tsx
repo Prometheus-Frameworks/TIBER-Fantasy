@@ -1,4 +1,5 @@
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
+import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
 import { draftReviewAgentPacket, draftReviewComparisonPacket, reviewScope, type StudyAttachment } from '@shared/draftReviewStudy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -491,6 +492,8 @@ export default function TiberDraftReview() {
           </section>
 
           <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={updateStudy} onDiscuss={() => void copyContext('comparison')} discussionStatus={copied === 'comparison' ? 'Comparison context copied' : ''} discussionError={discussionError} />
+
+          <DraftReviewTeExplorer key={`te:${reviewScope(review)}`} review={review} />
 
           {review.observed.draft.status === 'available' ? (
             <details className="drp-panel">
