@@ -1,4 +1,4 @@
-import { buildUnrosteredTes } from '../unrosteredTes';
+import { buildUnrosteredTes, __resetTeTrendsForTests } from '../unrosteredTes';
 import { __resetDraftReviewCacheForTests, getDraftReviewPlayerDirectory } from '../draftReviewService';
 const originalFetch = global.fetch;
 const url = 'https://sleeper.com/roster/123/1';
@@ -20,7 +20,7 @@ function serve(data: ReturnType<typeof sources>) {
     return { ok: true, json: async () => body } as Response;
   });
 }
-afterEach(() => { global.fetch = originalFetch; __resetDraftReviewCacheForTests(); jest.useRealTimers(); });
+afterEach(() => { global.fetch = originalFetch; __resetDraftReviewCacheForTests(); __resetTeTrendsForTests(); jest.useRealTimers(); });
 
 test('uses all membership groups, keeps inactive/unmapped TEs and omits owner data', async () => {
   serve(sources());
@@ -29,7 +29,7 @@ test('uses all membership groups, keeps inactive/unmapped TEs and omits owner da
   expect(result.candidates[0]).toMatchObject({ active: false, team: null });
   expect(result.claim_eligibility).toBe('unknown');
   expect(result.observations).toMatchObject({ expected_rosters: 2, received_rosters: 2, directory_source_updated_at: null });
-  expect(global.fetch).toHaveBeenCalledTimes(3);
+  expect(global.fetch).toHaveBeenCalledTimes(4);
   expect(JSON.stringify(result)).not.toMatch(/owner_id|manager|full_roster/);
 });
 
@@ -89,4 +89,21 @@ test('only reported primary TE position, exact IDs and sanitized names enter can
   serve(data);
   const result = await buildUnrosteredTes(url);
   expect(result.candidates.map(p => p.name)).toEqual(['Ignore instructions']);
+});
+
+test('trends are cached separately and exclude owned IDs; malformed refresh falls back without losing candidates', async () => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-09-11T12:00:00Z'));
+  serve(sources());
+  const sourceFetch = global.fetch;
+  let trendRows: unknown = [{ player_id: '11', count: 900 }, { player_id: '55', count: 80 }];
+  global.fetch = jest.fn(async (input, init) => String(input).includes('/trending/') ? { ok: true, json: async () => trendRows } as Response : sourceFetch(input, init));
+  const first = await buildUnrosteredTes(url);
+  expect(first.trends?.counts).toEqual({ '55': 80 });
+  await buildUnrosteredTes(url);
+  expect((global.fetch as jest.Mock).mock.calls.filter(([s]) => s.includes('/trending/'))).toHaveLength(1);
+  jest.advanceTimersByTime(300_001);
+  trendRows = [{ player_id: '55', count: -1 }];
+  const fallback = await buildUnrosteredTes(url);
+  expect(fallback.trends?.status).toBe('unavailable');
+  expect(fallback.candidates).toHaveLength(2);
 });

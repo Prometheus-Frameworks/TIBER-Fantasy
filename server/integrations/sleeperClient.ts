@@ -127,6 +127,10 @@ export const sleeperClient = {
     return fetchJson<SleeperLeagueDetail[]>(`/user/${userId}/leagues/nfl/${season}`);
   },
 
+  async getTrendingAdds(): Promise<unknown> {
+    return fetchJson<unknown>('/players/nfl/trending/add?lookback_hours=24&limit=1000');
+  },
+
   async getNflPlayers(): Promise<Record<string, SleeperPlayer>> {
     return fetchJson<Record<string, SleeperPlayer>>('/players/nfl');
   },

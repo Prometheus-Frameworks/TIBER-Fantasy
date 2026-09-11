@@ -10,7 +10,7 @@ function availability(): UnrosteredTes {
   return { schema_version: 'tiber_team_unrostered_tes_v1', status: 'available', input: review.input, season: '2026',
     observations: { league_received_at: '2026-09-11T12:00:00Z', rosters_received_at: '2026-09-11T12:00:01Z', directory_fetched_at: '2026-09-11T00:00:00Z', directory_source_updated_at: null, directory_cache_max_age_hours: 24, expected_rosters: 2, received_rosters: 2, source_urls: ['https://api.sleeper.app/v1/league/123', 'https://api.sleeper.app/v1/league/123/rosters', 'https://api.sleeper.app/v1/players/nfl'] },
     derivation: 'directory_primary_position_TE_minus_all_league_membership', claim_eligibility: 'unknown',
-    candidates: ['11', '22'].map(player_id => ({ player_id, name: `Candidate ${player_id}`, position: 'TE', team: null, active: null, status: null })),
+    candidates: ['11', '22'].map(player_id => ({ player_id, name: `Candidate ${player_id}`, position: 'TE', team: 'CAR', active: true, status: 'Active' })),
   };
 }
 function response(body: unknown, ok = true) { return { ok, json: async () => body } as Response; }
@@ -109,4 +109,20 @@ test('closing clears pending availability and reopening starts a fresh check', a
   await waitFor(() => expect(pending).toHaveLength(2));
   await act(async () => pending[1](response(availability())));
   await screen.findByRole('button', { name: /Candidate 11/ });
+});
+
+test('defaults to current-team TEs, orders by adds and allows explicit broader directory', async () => {
+  const data = availability();
+  data.candidates.push({ player_id: '33', name: 'Archive TE', position: 'TE', team: null, active: true, status: 'Active' });
+  data.candidates.push({ player_id: '44', name: 'Inactive TE', position: 'TE', team: 'CAR', active: false, status: 'Inactive' });
+  data.trends = { status: 'available', received_at: '2026-09-11T12:00:05Z', lookback_hours: 24, limit: 1000, source_url: 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=1000', counts: { '22': 80 } };
+  global.fetch = jest.fn(async () => response(data));
+  mount();
+  await screen.findByRole('button', { name: /Candidate 22/ });
+  expect(screen.queryByRole('button', { name: /Archive TE/ })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Inactive TE/ })).toBeNull();
+  expect(screen.getAllByRole('button').filter(b => b.hasAttribute('aria-pressed'))[0].textContent).toContain('Candidate 22');
+  fireEvent.click(screen.getByRole('checkbox'));
+  expect(screen.getByRole('button', { name: /Archive TE/ })).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Inactive TE/ })).toBeTruthy();
 });

@@ -30,6 +30,27 @@ async function observed<T>(request: Promise<T>) {
   return { value, receivedAt: new Date().toISOString() };
 }
 
+const trendUrl = 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=1000' as const;
+let trendCache: { at: number; result: NonNullable<UnrosteredTes['trends']> } | null = null;
+let trendRequest: Promise<NonNullable<UnrosteredTes['trends']>> | null = null;
+export function __resetTeTrendsForTests() { trendCache = null; trendRequest = null; }
+async function getTrends(): Promise<NonNullable<UnrosteredTes['trends']>> {
+  if (trendCache && Date.now() - trendCache.at < 300_000) return trendCache.result;
+  if (trendRequest) return trendRequest;
+  trendRequest = (async () => {
+    const base = { lookback_hours: 24 as const, limit: 1000 as const, source_url: trendUrl };
+    try {
+      const raw = await sleeperClient.getTrendingAdds();
+      const rows = z.array(z.object({ player_id: z.string().regex(/^(?:\d{1,24}|[A-Z]{2,3})$/), count: z.number().int().nonnegative().safe() })).max(1000).parse(raw);
+      if (new Set(rows.map(r => r.player_id)).size !== rows.length) throw new Error('Duplicate trend identity');
+      const result = { ...base, status: 'available' as const, received_at: new Date().toISOString(), counts: Object.fromEntries(rows.filter(r => /^\d+$/.test(r.player_id)).map(r => [r.player_id, r.count])) };
+      trendCache = { at: Date.now(), result };
+      return result;
+    } catch { return { ...base, status: 'unavailable' as const, received_at: null, counts: {} }; }
+  })().finally(() => { trendRequest = null; });
+  return trendRequest;
+}
+
 export async function buildUnrosteredTes(rawInput: string): Promise<UnrosteredTes> {
   const input = parseSleeperRosterUrl(rawInput);
   const [leagueRead, rosterRead, directory] = await Promise.all([
@@ -69,7 +90,10 @@ export async function buildUnrosteredTes(rawInput: string): Promise<UnrosteredTe
     });
   }
   candidates.sort((a, b) => a.name.localeCompare(b.name, 'en') || a.player_id.localeCompare(b.player_id, 'en'));
+  const trends = await getTrends();
+  const candidateIds = new Set(candidates.map(p => p.player_id));
   const result = unrosteredTesSchema.parse({
+    trends: { ...trends, counts: Object.fromEntries(Object.entries(trends.counts).filter(([id]) => candidateIds.has(id))) },
     schema_version: 'tiber_team_unrostered_tes_v1', status: 'available', input, season: league.season,
     observations: {
       league_received_at: leagueRead.receivedAt, rosters_received_at: rosterRead.receivedAt,

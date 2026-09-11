@@ -17,6 +17,7 @@ export const unrosteredTesSchema = z.object({
   }),
   derivation: z.literal('directory_primary_position_TE_minus_all_league_membership'),
   claim_eligibility: z.literal('unknown'),
+  trends: z.object({ status: z.enum(['available', 'unavailable']), received_at: clock.nullable(), lookback_hours: z.literal(24), limit: z.literal(1000), source_url: z.literal('https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=1000'), counts: z.record(playerId, z.number().int().nonnegative().safe()) }).optional(),
   candidates: z.array(z.object({
     player_id: playerId, name: z.string().max(120), position: z.literal('TE'),
     team: z.string().max(120).nullable(), status: z.string().max(120).nullable(), active: z.boolean().nullable(),
@@ -53,14 +54,20 @@ export function draftReviewTeCandidatePacket<T extends RosterContext>(review: T,
   const base = draftReviewAgentPacket(review, null);
   return {
     ...base,
-    instruction: `${base.instruction} Discuss candidate_exploration.selected_candidate for this league. Unrostered is derived from the recorded league membership response, not proof of claim eligibility or availability now. Roster context and candidate availability have separate observation clocks and are not an atomic snapshot. Ask the manager about their decision and time horizon. Do not infer injury clearance, playing-time opportunity, a recommended add/drop, or a completed action. No saved operator context was retrieved.`,
+    instruction: `${base.instruction} Discuss candidate_exploration.selected_candidate for this league. Unrostered is derived from the recorded league membership response, not proof of claim eligibility or availability now. Roster context and candidate availability have separate observation clocks and are not an atomic snapshot. Sleeper add activity is platform-wide observed activity, not a projection, recommendation or league claim eligibility; absence from the bounded trend response is unknown, not zero. Ask the manager about their decision and time horizon. Do not infer injury clearance, playing-time opportunity, a recommended add/drop, or a completed action. No saved operator context was retrieved.`,
     candidate_exploration: {
       schema_version: 'tiber_team_te_candidate_handoff_v1',
       input: availability.input, season: availability.season,
       observations: availability.observations,
+      add_activity: availability.trends ? { ...availability.trends, counts: undefined, selected_player_count: availability.trends.counts[selectedId] ?? null } : null,
       derived: { method: availability.derivation, selected_player_unrostered_when_checked: true },
       selected_candidate: candidate, claim_eligibility: 'unknown', historical: history,
       forecast: { status: 'unavailable', fabricated_values: false },
     },
   };
+}
+
+const nflTeams = new Set('ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LAR LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS'.split(' '));
+export function isCurrentTeamTe(player: UnrosteredTes['candidates'][number]) {
+  return player.active === true && player.team !== null && nflTeams.has(player.team);
 }

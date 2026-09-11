@@ -169,3 +169,13 @@
 .drp-te-metrics > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid #e4e4e7; }
 .drp-te-metrics dd { margin: 0; text-align: right; }
 .drp-te-explorer button:focus-visible, .drp-te-explorer summary:focus-visible, .drp-te-explorer input:focus-visible { outline: 2px solid #e2640d; outline-offset: 2px; }
+
+.drp-te-content .drp-te-search input { background: #181b20; color: #f4f4f5; border-color: #454952; font-size: 16px; }
+.drp-te-list { max-height: 420px; }
+.drp-te-list button { background: #181b20; color: #f4f4f5; border-color: #353941; border-radius: 10px; padding: 14px; }
+.drp-te-list button strong { font-size: 16px; }
+.drp-te-list button span { color: #b8bdc7; font-size: 14px; margin-top: 4px; }
+.drp-te-list button .drp-te-trend { color: #f5aa70; }
+.drp-te-list button[aria-pressed="true"] { background: #302319; border-color: #e2640d; }
+.drp-te-filter { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
+.drp-te-filter input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #e2640d; }

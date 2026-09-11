@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import type { DraftReview } from '@/pages/TiberDraftReview';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
-import { draftReviewTeCandidatePacket, matchesTeScope, unrosteredTesSchema, type TeCandidateHistory, type UnrosteredTes } from '@shared/draftReviewWaivers';
+import { isCurrentTeamTe, draftReviewTeCandidatePacket, matchesTeScope, unrosteredTesSchema, type TeCandidateHistory, type UnrosteredTes } from '@shared/draftReviewWaivers';
 
 const metricSchema = z.object({ total: z.number().finite().nullable(), mean: z.number().finite().nullable(), nonnull_weeks: z.number().int().nonnegative(), recorded_weeks: z.number().int().nonnegative() });
 const historySchema = z.object({
@@ -23,6 +23,7 @@ function TeExplorerContent({ review }: { review: DraftReview }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [includeArchive, setIncludeArchive] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const [history, setHistory] = useState<TeCandidateHistory | null>(null);
   const [copied, setCopied] = useState(false);
@@ -85,9 +86,11 @@ function TeExplorerContent({ review }: { review: DraftReview }) {
   }
   const playerHistory = history?.evidence?.players.find(p => p.player_id === selectedId);
   const attribution = history?.evidence?.provenance?.attribution;
-  const filtered = result?.candidates.filter(p => p.name.toLocaleLowerCase('en').includes(query.toLocaleLowerCase('en'))) ?? [];
+  const pool = result?.candidates.filter(p => includeArchive || isCurrentTeamTe(p)) ?? [];
+  const counts = result?.trends?.status === 'available' ? result.trends.counts : {};
+  const filtered = pool.filter(p => p.name.toLocaleLowerCase('en').includes(query.toLocaleLowerCase('en'))).sort((a, b) => (counts[b.player_id] ?? -1) - (counts[a.player_id] ?? -1) || a.name.localeCompare(b.name, 'en') || a.player_id.localeCompare(b.player_id));
   return <div className="drp-te-content">
-    <p>Find unrostered tight ends, inspect recorded evidence and bring one candidate into your agent conversation.</p>
+    <p>Explore tight ends outside your league’s rosters. Select one to discuss alongside your team.</p>
     <p className="drp-boundary">Unrostered when checked does not mean claimable now. Waiver locks, claim timing and player eligibility are unknown. Confirm in Sleeper before acting.</p>
     <button type="button" className="drp-action" onClick={refreshCandidates} disabled={loading}>{error ? 'Retry TE check' : 'Refresh TE check'}</button>
     <div aria-live="polite" aria-busy={loading}>
@@ -95,18 +98,22 @@ function TeExplorerContent({ review }: { review: DraftReview }) {
       {error ? <p role="alert" className="drp-error">{error}</p> : null}
     </div>
     {result ? <>
-      <p className="drp-muted">Unrostered when checked: <time dateTime={result.observations.rosters_received_at}>{result.observations.rosters_received_at}</time> · {result.observations.received_rosters}/{result.observations.expected_rosters} rosters received.</p>
+      <p className="drp-muted">Unrostered when checked: <time dateTime={result.observations.rosters_received_at}>{new Date(result.observations.rosters_received_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time> · {result.observations.received_rosters}/{result.observations.expected_rosters} rosters received.</p>
       <details><summary>Player directory coverage and freshness</summary>
-        <p>Primary position TE in Sleeper’s directory. Includes entries with inactive or unknown status and unknown NFL teams; this list does not establish current playing eligibility. No historical-coverage filter.</p>
+        <p>Default: Sleeper primary-position TEs with active=true and a recognized NFL team. This is a directory filter, not injury clearance or confirmation of a playing role. Broader directory entries remain available below.</p>
+        <p>League rosters received: {result.observations.rosters_received_at}.</p>
         <p>Directory fetched: {result.observations.directory_fetched_at}. May be reused for up to 24 hours; Sleeper’s source update time is unknown. Refreshing this check does not force a directory refresh.</p>
         <p>League settings received: {result.observations.league_received_at}. Your displayed roster snapshot: {review.generated_at}. These reads are not an atomic snapshot.</p>
       </details>
+      <p className="drp-muted">{result.trends?.status === 'available' ? 'Sleeper adds · past 24 hours · most added first, then alphabetical' : 'Sleeper add activity unavailable · alphabetical order'}</p>
+      <details><summary>About add activity</summary><p>Platform-wide Sleeper adds, not adds in this league or a player recommendation. Up to 1,000 players across all positions; absent players have unknown counts. No projections are imported.</p><p>Received: {result.trends?.received_at ?? 'Unavailable'}. May be reused for five minutes. This clock is separate from roster and directory observations.</p></details>
+      <label className="drp-te-filter"><input type="checkbox" checked={includeArchive} onChange={e => { setIncludeArchive(e.target.checked); clearDiscussion(); setSelectedId(''); }} /> Include inactive and team-unknown directory entries</label>
       <label className="drp-te-search">Search TEs by name<input value={query} maxLength={120} onChange={e => setQuery(e.target.value)} type="search" /></label>
-      <p>{result.candidates.length === 0 ? 'No unrostered TEs found in this directory snapshot.' : `${filtered.length} of ${result.candidates.length} candidates · alphabetical, not ranked`}</p>
-      {result.candidates.length > 0 && filtered.length === 0 ? <p>No names match your search.</p> : null}
+      <p>{result.candidates.length === 0 ? 'No unrostered TEs found in this directory snapshot.' : `${filtered.length} of ${pool.length} ${includeArchive ? 'directory candidates' : 'current-team candidates'}`}</p>
+      {result.candidates.length > 0 && filtered.length === 0 ? <p>No candidates match these filters.</p> : null}
       <ul className="drp-te-list" aria-label="Unrostered TE candidates">{filtered.map(p => <li key={p.player_id}>
         <button type="button" aria-pressed={p.player_id === selectedId} onClick={() => { if (p.player_id === selectedId) return; clearDiscussion(); setSelectedId(p.player_id); }}>
-          <strong>{p.name}</strong><span>{p.team ?? 'NFL team unknown'} · {p.status ?? 'Status unknown'}</span>
+          <strong>{p.name}</strong><span>{p.team ?? 'NFL team unknown'} · {p.status ?? 'Status unknown'}</span><span className="drp-te-trend">{counts[p.player_id] !== undefined ? `${counts[p.player_id].toLocaleString()} Sleeper adds · 24h` : 'Add activity unknown'}</span>
         </button>
       </li>)}</ul>
     </> : null}

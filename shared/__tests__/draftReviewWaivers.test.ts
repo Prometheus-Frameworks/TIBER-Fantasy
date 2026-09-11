@@ -25,3 +25,12 @@ test('rejects stale candidate, evidence ID, league, season and incomplete observ
   expect(() => draftReviewTeCandidatePacket({ ...review, observed: { league: { season: '2025' } } }, availability, '11', history)).toThrow();
   expect(() => draftReviewTeCandidatePacket(review, { ...availability, observations: { ...availability.observations, received_rosters: 1 } }, '11', history)).toThrow();
 });
+
+test('handoff carries only selected platform add activity and its separate clock', () => {
+  const trends = { status: 'available' as const, received_at: '2026-09-11T12:00:05Z', lookback_hours: 24 as const, limit: 1000 as const, source_url: 'https://api.sleeper.app/v1/players/nfl/trending/add?lookback_hours=24&limit=1000' as const, counts: { '11': 80, '22': 90 } };
+  const packet = draftReviewTeCandidatePacket(review, { ...availability, trends }, '11', history);
+  const serialized = JSON.parse(JSON.stringify(packet.candidate_exploration.add_activity));
+  expect(serialized.selected_player_count).toBe(80);
+  expect(serialized.received_at).toBe(trends.received_at);
+  expect(serialized).not.toHaveProperty('counts');
+});
