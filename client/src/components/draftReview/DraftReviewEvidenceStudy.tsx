@@ -66,7 +66,7 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
   const [outgoing, setOutgoing] = useState<string[]>([]);
   const [incomingId, setIncomingId] = useState('');
   const selectionKey = JSON.stringify(selection);
-  const selectionValid = selection.length >= 2 && selection.length <= 3 && selection.every(Boolean) && new Set(selection).size === selection.length;
+  const selectionValid = selection.length >= 2 && selection.length <= 3 && selection.every(id => roster.some(player => player.player_id === id)) && new Set(selection).size === selection.length;
   // Key checking hides stale evidence immediately, even before the next effect runs.
   const comparison = useMemo<StudyAttachment['comparison']>(() => !selectionValid
     ? { selected_player_ids: selection, evidence: null, status: 'unavailable', reason: 'Choose two or three different players.' }
@@ -105,7 +105,7 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
   }
   const attribution = comparison.evidence?.provenance?.attribution ?? review.historical_evidence?.provenance?.attribution;
   const players: ComparisonPlayer[] = selection.map(id => {
-    const selected = options.find(player => player.player_id === id);
+    const selected = roster.find(player => player.player_id === id);
     return { id, name: selected?.name ?? 'Choose a player', position: selected?.position ?? null, history: comparison.evidence?.players.find(player => player.player_id === id) };
   });
   const metricKeys = new Set(players.flatMap(player => POSITION_METRICS[player.position ?? ''] ?? HISTORICAL_METRICS.map(([key]) => key)));
@@ -117,7 +117,7 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
     <p>Explore recorded opportunity and production. These are 2025 observations, not current-season projections.</p>
     <div className={`drp-study-controls${selection.length === 3 ? ' drp-three-controls' : ''}`}>{selection.map((id, index) => <label key={index}>Player {index + 1}
       <select aria-label={`Comparison player ${index + 1}`} value={id} onChange={e => choose(index, e.target.value)}>
-        <option value="">Choose a player</option>{options.map(p => <option key={p.player_id} value={p.player_id}>{p.name} · {p.position ?? '?'} · {roster.some(r => r.player_id === p.player_id) ? 'current' : 'at draft'} {p.team ?? '?'}</option>)}
+        <option value="">Choose a player</option>{roster.map(p => <option key={p.player_id} value={p.player_id}>{p.name} · {p.position ?? '?'} · current {p.team ?? '?'}</option>)}
       </select>
     </label>)}</div>
     <button type="button" className="drp-action" onClick={() => {

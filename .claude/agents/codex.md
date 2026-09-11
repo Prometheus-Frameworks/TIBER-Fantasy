@@ -947,3 +947,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Joe authorized optional third-player UI, endpoint validation, tests, independent review and existing isolated preview. Two-player default and packet field shapes remain compatible.
 - Added selection-wide duplicate checks, add/remove invalidation, readable locally scrolling three-player columns and phone-stacked controls. No artifact regeneration or Data admission.
 - Validation and exact-head review/preview receipts are recorded on #372; actual phone acceptance and merge/production release remain separate.
+
+### 2026-09-11 — Codex: Roster-only comparison selectors (#372)
+- Compare players now lists only current roster members in all two/three selectors; selection validation requires roster membership. Draft-board candidates remain confined to optional incoming roster geometry.
+- Validation: 18 focused Team/evidence UI tests passed, including all three selector option sets, stale responses, duplicate selection, mixed positions and incoming geometry. No API, identity or consumer bundle changes. Stop before merge/production release.

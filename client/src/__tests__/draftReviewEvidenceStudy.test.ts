@@ -9,11 +9,12 @@ const originalFetch = global.fetch;
 afterEach(() => { cleanup(); global.fetch = originalFetch; });
 const roster = [
   { player_id: '11', name: 'First WR', position: 'WR', team: 'A', roster_state: 'starter', status: 'Active', active: true },
+  { player_id: '33', name: 'Roster RB', position: 'RB', team: 'C', roster_state: 'bench', status: 'Active', active: true },
   { player_id: '22', name: 'Second WR', position: 'WR', team: 'B', roster_state: 'bench', status: 'Active', active: true },
 ];
 const review = {
   input: { canonicalUrl: 'https://sleeper.com/roster/123/1', leagueId: '123', rosterId: 1 }, generated_at: '2026-09-07T00:00:00Z',
-  observed: { current_roster: roster, league: { lineup_slots: { WR: 1, FLEX: 1, BN: 1 } }, draft: { full_board: [{ player_id: '33', name: 'Candidate RB', position: 'RB', team: 'C' }] } },
+  observed: { current_roster: roster, league: { lineup_slots: { WR: 1, FLEX: 1, BN: 1 } }, draft: { full_board: [{ player_id: '44', name: 'Candidate RB', position: 'RB', team: 'C' }] } },
 } as DraftReview;
 function evidence(ids: string[], tag: string) {
   return { schema_version: 'tiber_draft_review_historical_v1', status: 'available', reason: null, provenance: null,
@@ -48,7 +49,7 @@ test('error stays explicit and remounting a new review clears local operator and
   expect(screen.queryByText('private detail')).toBeNull();
   expect(screen.getByText('Optional roster geometry').closest('details')!.open).toBe(false);
   fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
-  fireEvent.change(screen.getByLabelText('Incoming candidate'), { target: { value: '33' } });
+  fireEvent.change(screen.getByLabelText('Incoming candidate'), { target: { value: '44' } });
   expect(latest!.hypothetical_roster?.status).toBe('available');
   mounted.rerender(React.createElement(DraftReviewEvidenceStudy, { key: 'second', review: { ...review, generated_at: '2026-09-08T00:00:00Z' }, onChange }));
   expect(latest!.operator_context.note).toBe('');
@@ -120,6 +121,11 @@ test('third player validates all IDs, exports one selection and ignores a remove
   render(React.createElement(DraftReviewEvidenceStudy, { review, onChange: value => { latest = value; }, onDiscuss: jest.fn() }));
   await act(async () => pending[0](response(evidence(['11', '22'], 'Pair'))));
   fireEvent.click(screen.getByRole('button', { name: 'Add third player' }));
+  for (const index of [1, 2, 3]) {
+    const select = screen.getByLabelText(`Comparison player ${index}`);
+    expect(within(select).getAllByRole('option').map(option => (option as HTMLOptionElement).value)).toEqual(['', '11', '33', '22']);
+    expect(within(select).queryByRole('option', { name: /Candidate RB/ })).toBeNull();
+  }
   const discuss = screen.getByRole('button', { name: 'Discuss this comparison' }) as HTMLButtonElement;
   expect(discuss.disabled).toBe(true);
   expect(latest.comparison.evidence).toBeNull();
@@ -163,7 +169,7 @@ test('three columns retain independent coverage, real zeros and mixed-position m
   fireEvent.click(screen.getByRole('button', { name: 'Add third player' }));
   fireEvent.change(screen.getByLabelText('Comparison player 3'), { target: { value: '33' } });
   const table = await screen.findByRole('table', { name: '2025 · per recorded week' });
-  expect(within(table).getAllByRole('columnheader').map(h => h.textContent)).toEqual(['Metric', 'First WR', 'Second WR', 'Candidate RB']);
+  expect(within(table).getAllByRole('columnheader').map(h => h.textContent)).toEqual(['Metric', 'First WR', 'Second WR', 'Roster RB']);
   const targetRow = within(table).getByRole('rowheader', { name: 'Targets' }).closest('tr')!;
   expect(within(targetRow).getAllByText('0')).toHaveLength(2);
   expect(within(targetRow).getByText('2/2 recorded weeks')).toBeTruthy();

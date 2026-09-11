@@ -68,3 +68,7 @@ Discuss this comparison copies the existing packet fields with a comparison task
 
 ### Three-player comparison (#372 follow-up)
 Optional Add third player / Remove third player controls preserve the two-player default. Every selected ID must be nonempty and distinct before a comparison request or Discuss action. Adding/removing/changing selections immediately invalidates evidence and pending handoffs. One packet contains all selected IDs and the roster once. The read-only endpoint accepts one to three exact IDs with unchanged response fields; four IDs and malformed input are rejected. Existing duplicate request de-duplication remains compatible, while the UI rejects duplicate comparisons. Compact and detailed three-player tables keep fixed readable minimum widths inside the local horizontal scroller; controls and coverage cards stack on phones. Historical identity coverage remains unchanged.
+
+### 2026-09-11 — Codex: Roster-only comparison selectors (#372)
+- Compare players now lists only current roster members in all two/three selectors; selection validation requires roster membership. Draft-board candidates remain confined to optional incoming roster geometry.
+- Validation: 18 focused Team/evidence UI tests passed, including all three selector option sets, stale responses, duplicate selection, mixed positions and incoming geometry. No API, identity or consumer bundle changes. Stop before merge/production release.
