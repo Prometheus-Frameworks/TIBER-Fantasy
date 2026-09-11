@@ -91,5 +91,16 @@ TIBER Management Dashboard is now the first product-shell step toward “sync my
 - One versioned receipt drives the classifier and backend diagnostics and is exposed to Management UI and snapshot export. Rejected raw observations remain inspectable but cannot affect FORGE coverage, direction, or confidence.
 - This boundary does not alter artifact bytes, scoring/direction thresholds, databases, auth, or deployment.
 
+### TIBER Team web entry (2026-09-10)
+`/team` reuses the Draft Review page and compiler; `/draft-review` and both existing query parameter names remain compatible. The public shell opens Team; Management and full-profile root routes are unchanged. Team adds roster refresh/switching, visible starter/bench/reserve/taxi groups and configured reserve rules, and separate locator-link versus snapshot-agent copying. The neutral comparison shows position-relevant 2025 weekly means, with totals/source details and optional roster geometry collapsed. Discuss this comparison copies the selected evidence; preferences and hypotheses belong in the agent conversation. No database, login, API contract, runtime profile, provider configuration or Forecast activation changes. See the Draft Review module record for behavior and validation.
+
 ### Draft Review historical evidence study (2026-09-07)
 The public Draft Review optionally includes a pinned 2025 descriptive evidence bundle and a two-player comparison. Source admission, identity confidence, null clocks, attribution and missing-value semantics travel with the packet. Manager preferences remain local and export separately from evidence. Hypothetical one/two-for-one roster geometry is read-only and does not establish ownership or recommend/execute transactions. No current projections or regression probabilities are inferred. See `server/modules/draftReview/MODULE.md` for the accepted upstream exception, exact producer commit, offline replay and runtime failure behavior. No new database access or environment variables.
+
+### Team three-player comparison (#372)
+The public Team study supports an optional third player, a bounded one-to-three-ID evidence request, and one agent packet with all selected players. Mobile table scrolling retains sticky metric labels; data admission and bundle contents are unchanged.
+
+### 2026-09-11 — Codex: Three historical Team consumer identities (#372)
+- Pinned reviewed Data #268 commit 488220fa05c834aad3a4e2bea839a1843131053a and separate Team admission receipt. Added exactly Parker Washington, Drake London and Chris Rodriguez; all old 72 profiles unchanged, all three name_exact/medium with 16/12/12 recorded weeks.
+- Offline builder validates scope, exact identity delta and source/proposal/baseline pins with explicit fail-closed exceptions. Old preparation authority and later consumer authorization (#372 comment 5627769635) remain separate provenance; production authority is not inferred.
+- Regenerated 106062-byte artifact and runtime content pin. Validation: 11 Python tests normal/optimized, deterministic replay,54 Jest tests/seven suites; unchanged 72 profiles invariant checked. Build/review/isolated preview receipts follow on PR. No Data edits, #269 changes, merge or production release.

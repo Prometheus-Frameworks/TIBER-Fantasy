@@ -712,3 +712,31 @@ Every agent should append an entry here after completing work.
 - **Files modified:** `client/src/pages/TiberDraftReview.css`, `client/src/components/draftReview/DraftReviewEvidenceStudy.tsx`, and the two required agent work logs.
 - **Validation:** Existing study UI tests passed 3/3; deployment-equivalent server/client build passed; built public-profile HTTP checks returned SPA 200, historical pair available/200/no-store, invalid input 400, and private Management 404; diff check passed. No new dependencies or data fixtures committed.
 - **Notes:** Joseph's actual iPhone screenshots show portrait clipping outside the table and successful landscape comparison; the supplied export confirms comparison, manager judgment and hypothetical state export. This is partial acceptance with a mobile layout defect, not a phone pass or release instruction. Source head/base were verified before repair. Browser access to the local test server was blocked and no supported phone viewport emulation is exposed; repaired portrait/touch acceptance remains open. Exact-head independent review and existing isolated PR preview update are recorded separately. No merge or production deployment authorized.
+
+### 2026-09-10 — Codex: TIBER Team first web slice (#371)
+- **What changed:** Added `/team` using the existing Draft Review page and preserved legacy routes/queries. Added roster refresh/switching, complete membership groups, configured reserve-rule disclosure and separate locator/snapshot copy actions. Local study loss is explicit; query changes cannot retain a stale roster.
+- **Files modified:** App routing, public TiberLayout, TiberDraftReview page/styles, packet product wording, focused Team interaction tests and operator/module docs.
+- **Validation:** Seven focused suites passed (40 tests), then the added browser-history test passed with the Team suite (9/9; 41 focused tests in aggregate). `sh build.sh` passed. Typecheck retained the base's 506 diagnostics (353 normalized unique), with no new diagnostics against `080abb53825f6fb4b1a31aa42aec0880806a1d06`.
+- **Notes:** Existing preview-base isolation verified read-only before PR publication: one app, three approved service variables, no predeploy command, CI gating, explicit PR base. New PR inheritance/deployment evidence and independent review belong in the PR receipt. Portrait browser instrumentation and Joe's actual phone acceptance remain separate gates. No merge/production authorization; no API/schema/runtime/provider/artifact changes.
+
+### 2026-09-10 — Team comparison refinement (#372)
+- Approved follow-up: neutral, position-relevant 2025 weekly comparison; totals/source details and optional geometry collapsed; sticky metric labels and one missing-player coverage explanation. Written preferences/hypotheses move to the agent conversation. Explicit Discuss handoff preserves existing packet fields and rejects stale clipboard completion.
+- Validation: 44 tests in seven focused suites pass; deployment-equivalent build passes; 353 normalized typecheck diagnostics match the baseline with no new errors. Synthetic fixtures only.
+- Existing PR preview isolation rechecked read-only: three configured service variables, existing public profile. Exact-head independent review, deployment verification and actual phone acceptance remain separate gates, recorded on the PR. No identity admission/bundle changes, merge or production release. Three-player Data admission is a separate proposal only.
+
+### 2026-09-10 — #372 review repair
+- Exact-head review found comparison handoff enabled while evidence was loading. Disable the action until the selected pair settles, including explicit unavailable results. Add a pending/settled/new-pair interaction regression. No data, API, packet or runtime change. Revalidate targeted UI suites; CI and existing isolated preview track the repair head.
+
+### 2026-09-10 — Codex: three-player Team comparison (#372)
+- Joe authorized optional third-player UI, endpoint validation, tests, independent review and existing isolated preview. Two-player default and packet field shapes remain compatible.
+- Added selection-wide duplicate checks, add/remove invalidation, readable locally scrolling three-player columns and phone-stacked controls. No artifact regeneration or Data admission.
+- Validation and exact-head review/preview receipts are recorded on #372; actual phone acceptance and merge/production release remain separate.
+
+### 2026-09-11 — Codex: Roster-only comparison selectors (#372)
+- Compare players now lists only current roster members in all two/three selectors; selection validation requires roster membership. Draft-board candidates remain confined to optional incoming roster geometry.
+- Validation: 18 focused Team/evidence UI tests passed, including all three selector option sets, stale responses, duplicate selection, mixed positions and incoming geometry. No API, identity or consumer bundle changes. Stop before merge/production release.
+
+### 2026-09-11 — Codex: Three historical Team consumer identities (#372)
+- Pinned reviewed Data #268 commit 488220fa05c834aad3a4e2bea839a1843131053a and separate Team admission receipt. Added exactly Parker Washington, Drake London and Chris Rodriguez; all old 72 profiles unchanged, all three name_exact/medium with 16/12/12 recorded weeks.
+- Offline builder validates scope, exact identity delta and source/proposal/baseline pins with explicit fail-closed exceptions. Old preparation authority and later consumer authorization (#372 comment 5627769635) remain separate provenance; production authority is not inferred.
+- Regenerated 106062-byte artifact and runtime content pin. Validation: 11 Python tests normal/optimized, deterministic replay,54 Jest tests/seven suites; unchanged 72 profiles invariant checked. Build/review/isolated preview receipts follow on PR. No Data edits, #269 changes, merge or production release.

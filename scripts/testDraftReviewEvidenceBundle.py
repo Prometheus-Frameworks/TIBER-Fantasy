@@ -1,6 +1,9 @@
 """Focused semantic tests for the offline consumer transform."""
 import unittest
-from buildDraftReviewEvidenceBundle import index, metric, profile
+from copy import deepcopy
+from unittest.mock import patch
+import hashlib
+from buildDraftReviewEvidenceBundle import index, metric, profile, validate_admissions, read_pinned, COUNTS, SHARES, TEAM_EDGES, TEAM_ACCEPTANCE
 
 class BundleTests(unittest.TestCase):
     def test_missing_values_do_not_become_zero_or_complete_totals(self):
@@ -23,5 +26,81 @@ class BundleTests(unittest.TestCase):
         self.assertEqual(result['observed']['usage_conflict_weeks'], [1])
         missing = profile(identity, index([row]), {})
         self.assertEqual(missing['observed']['usage_missing_weeks'], [1])
+
+class AdmissionTests(unittest.TestCase):
+    def setUp(self):
+        self.baseline = {'records': [dict(provider='sleeper', provider_player_id=str(100000 + i),
+                                         tiber_player_id=f'baseline-{i}') for i in range(72)]}
+        rows = [dict(provider='sleeper', provider_player_id=pid, tiber_player_id=gsis,
+                     confidence='medium', match_method='name_exact') for pid, gsis in TEAM_EDGES.items()]
+        scope = dict(season=2025, weeks=[1, 18], outcome_fields=COUNTS, usage_fields=SHARES,
+                     mode='retrospective_descriptive_only', exact_approved_identity_required=True,
+                     forecast_allowed=False, refresh_allowed=False)
+        self.admission = dict(status='accepted', merge_authorized=False,
+                              production_deployment_authorized=False, consumer_scope=scope)
+        self.team = dict(schema_version='team_identity_admission_v1', status='accepted_for_branch_preparation',
+                         scope='three_historical_identity_edges_only', operator_acceptance=TEAM_ACCEPTANCE,
+                         merge_authorized=False, production_deployment_authorized=False,
+                         production_release_authorized=False, consumer_bundle_regeneration_authorized=False,
+                         consumer_scope=deepcopy(scope), identity_records=rows)
+        self.current = {'records': deepcopy(self.baseline['records'] + rows)}
+
+    def validate(self):
+        return validate_admissions(self.admission, self.team, self.current, self.baseline)
+
+    def test_exact_additive_slice_and_prior_rows(self):
+        result = self.validate()
+        self.assertEqual(result[:72], self.baseline['records'])
+        self.assertEqual(len(result), 75)
+
+    def test_missing_or_changed_authority_rejected(self):
+        for key, value in [('operator_acceptance', 'unrelated'), ('status', 'proposed'),
+                           ('consumer_bundle_regeneration_authorized', True), ('merge_authorized', True)]:
+            with self.subTest(key=key):
+                prior = self.team[key]; self.team[key] = value
+                with self.assertRaises(ValueError): self.validate()
+                self.team[key] = prior
+        del self.team['operator_acceptance']
+        with self.assertRaises(KeyError): self.validate()
+
+    def test_broader_consumer_scope_rejected(self):
+        self.team['consumer_scope']['weeks'] = [1, 19]
+        with self.assertRaises(ValueError): self.validate()
+        self.admission['consumer_scope']['weeks'] = [1, 19]
+        with self.assertRaises(ValueError): self.validate()
+
+    def test_changed_or_removed_prior_identity_rejected(self):
+        self.current['records'][0]['tiber_player_id'] = 'changed'
+        with self.assertRaises(ValueError): self.validate()
+        self.current['records'].pop(0)
+        with self.assertRaises(ValueError): self.validate()
+
+    def test_wrong_edge_or_confidence_even_when_receipt_agrees_rejected(self):
+        for key, value in [('confidence', 'high'), ('match_method', 'gsis_direct'),
+                           ('tiber_player_id', 'different-gsis')]:
+            with self.subTest(key=key):
+                old = self.team['identity_records'][0][key]
+                self.team['identity_records'][0][key] = value
+                self.current['records'][72][key] = value
+                with self.assertRaises(ValueError): self.validate()
+                self.team['identity_records'][0][key] = old
+                self.current['records'][72][key] = old
+
+    def test_extra_missing_duplicate_and_wrong_provider_rejected(self):
+        original = deepcopy(self.current)
+        for operation in ('extra', 'missing', 'duplicate', 'provider'):
+            with self.subTest(operation=operation):
+                self.current = deepcopy(original)
+                if operation == 'extra': self.current['records'].append(dict(provider='sleeper', provider_player_id='444', tiber_player_id='extra'))
+                if operation == 'missing': self.current['records'].pop()
+                if operation == 'duplicate': self.current['records'][-1] = deepcopy(self.current['records'][0])
+                if operation == 'provider': self.current['records'][-1]['provider'] = 'other'
+                with self.assertRaises(ValueError): self.validate()
+
+    def test_source_byte_pin_rejects_tampering(self):
+        raw = b'{"records":[]}'
+        with patch('buildDraftReviewEvidenceBundle.subprocess.check_output', return_value=raw):
+            self.assertEqual(read_pinned('/unused', 'commit', 'file', hashlib.sha256(raw).hexdigest()), raw)
+            with self.assertRaises(ValueError): read_pinned('/unused', 'commit', 'file', '0' * 64)
 
 if __name__ == '__main__': unittest.main()

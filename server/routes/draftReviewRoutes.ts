@@ -25,8 +25,8 @@ export function createDraftReviewRouter() {
   router.get('/api/draft-review/evidence', rateLimiters.publicDraftReview, (req, res) => {
     res.set('Cache-Control', 'no-store');
     const input = req.query.player_ids;
-    if (typeof input !== 'string' || !/^(?:\d{1,24}|[A-Z]{2,3})(?:,(?:\d{1,24}|[A-Z]{2,3}))?$/.test(input)) {
-      return res.status(400).json({ status: 'invalid_input', error: 'player_ids must contain one or two exact Sleeper player IDs.' });
+    if (typeof input !== 'string' || !/^(?:\d{1,24}|[A-Z]{2,3})(?:,(?:\d{1,24}|[A-Z]{2,3})){0,2}$/.test(input)) {
+      return res.status(400).json({ status: 'invalid_input', error: 'player_ids must contain one to three exact Sleeper player IDs.' });
     }
     return res.json(historicalEvidenceFor(input.split(',')));
   });

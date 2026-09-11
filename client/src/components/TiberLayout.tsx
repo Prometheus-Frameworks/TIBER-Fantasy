@@ -38,7 +38,7 @@ const navSections: NavSectionConfig[] = [
 
 function getSection(location: string): string {
   if (location === "/" || location.startsWith("/observatory") || location.startsWith("/stress-lab")) return "Observatory";
-  if (location.startsWith("/draft-review")) return "Draft Review";
+  if (location === "/team" || location.startsWith("/draft-review")) return "Team";
   if (location.startsWith("/management") || location.startsWith("/team-management")) return "Management";
   if (location.startsWith("/tiers") || location.startsWith("/rankings")) return "Rankings";
   if (location.startsWith("/rookies")) return "Rookies";
@@ -193,11 +193,11 @@ export default function TiberLayout({
       <>
         <header className="tiber-topbar">
           <div className="tiber-topbar-brand">
-            <Link href="/draft-review" className="tiber-topbar-logo-link">
+            <Link href="/team" className="tiber-topbar-logo-link">
               <span className="tiber-topbar-logo">TIBER</span>
             </Link>
             <span className="tiber-topbar-sep" />
-            <span className="tiber-topbar-section">Draft Review</span>
+            <span className="tiber-topbar-section">Team</span>
           </div>
         </header>
         <main className="tiber-main tiber-main-public">{children}</main>

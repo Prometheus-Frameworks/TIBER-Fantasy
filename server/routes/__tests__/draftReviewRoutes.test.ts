@@ -95,9 +95,20 @@ describe('bounded historical comparison route', () => {
     expect(result.headers['x-frame-options']).toBe('DENY');
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  test.each(['', '1,2,3', '../7526', 'name_exact', '1,,2'])('rejects invalid selection %s', async (player_ids) => {
+  test.each(['', '1,2,3,4', '../7526', 'name_exact', '1,,2', '1,2,', '1,2, 3', '1,2,abc'])('rejects invalid selection %s', async (player_ids) => {
     const app = express(); app.use(createDraftReviewRouter());
     const result = await request(app).get('/api/draft-review/evidence').query({ player_ids });
     expect(result.status).toBe(400);
   });
 });
+
+ test.each(['7526', '7526,9997,999999999999', '7526,9997,GB'])('supports bounded one-to-three IDs without source calls: %s', async (player_ids) => {
+   const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+   const app = express(); app.use(createDraftReviewRouter());
+   const result = await request(app).get('/api/draft-review/evidence').query({ player_ids });
+   expect(result.status).toBe(200);
+   expect(result.headers['cache-control']).toBe('no-store');
+   expect(result.body.players.map((p: { player_id: string }) => p.player_id)).toEqual(player_ids.split(','));
+   if (player_ids.endsWith('999999999999')) expect(result.body.players[2].status).toBe('unavailable');
+   expect(fetchMock).not.toHaveBeenCalled();
+ });
