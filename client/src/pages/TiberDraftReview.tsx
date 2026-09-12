@@ -1,3 +1,4 @@
+import DraftReviewMatchup from '@/components/draftReview/DraftReviewMatchup';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
@@ -490,6 +491,8 @@ export default function TiberDraftReview() {
               </article>
             </div>
           </section>
+
+          <DraftReviewMatchup key={`matchup:${reviewScope(review)}`} review={review} />
 
           <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={updateStudy} onDiscuss={() => void copyContext('comparison')} discussionStatus={copied === 'comparison' ? 'Comparison context copied' : ''} discussionError={discussionError} />
 

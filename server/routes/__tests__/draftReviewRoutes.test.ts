@@ -156,3 +156,17 @@ describe('unrostered TE route', () => {
     expect(mock).not.toHaveBeenCalled();
   });
 });
+
+describe('Weekly matchup route', () => {
+  test('rejects invalid weeks before fetch and sanitizes source failures with no-store', async () => {
+    const fetchMock = jest.fn(async () => { throw new Error('private source detail'); });
+    global.fetch = fetchMock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    const query = { sleeper_url: 'https://sleeper.com/roster/123/1', season: '2026', week: '19' };
+    const invalid = await request(app).get('/api/draft-review/matchup').query(query);
+    expect(invalid.status).toBe(400); expect(fetchMock).not.toHaveBeenCalled();
+    const failed = await request(app).get('/api/draft-review/matchup').query({ ...query, week: '1' });
+    expect(failed.status).toBe(502); expect(failed.headers['cache-control']).toBe('no-store');
+    expect(JSON.stringify(failed.body)).not.toContain('private source detail');
+  });
+});
