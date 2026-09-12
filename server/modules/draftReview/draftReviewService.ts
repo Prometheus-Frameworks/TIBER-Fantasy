@@ -549,6 +549,7 @@ export async function buildDraftReview(rawInput: string) {
       position: sanitizeNullableDisplay(player?.position),
       team: sanitizeNullableDisplay(player?.team),
       status: sanitizeNullableDisplay(player?.status),
+      injury_status: sanitizeNullableDisplay(player?.injury_status),
       active: player?.active ?? null,
       roster_state: starterIds.has(playerId)
         ? 'starter'

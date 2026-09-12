@@ -198,3 +198,20 @@
 .drp-matchup-settled { display:flex; align-items:flex-start; gap:8px; margin:16px 0; }
 .drp-matchup details { margin-top:16px; overflow-wrap:anywhere; }
 @media(max-width:420px) { .drp-matchup-scoreboard > div { padding:12px 8px; } .drp-matchup-scoreboard strong { font-size:1.8rem; } }
+
+/* Team hub: one glance first, existing study stays mounted across room switches. */
+.drp-hero-loaded { padding:16px 20px; }
+.drp-hero-loaded h1 { font-size:28px; margin:8px 0; }
+.drp-hero [hidden],.drp-room[hidden] { display:none; }
+.drp-room { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; min-width:0; }
+.drp-room-nav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:6px; background:#111318; border:1px solid var(--drp-border); border-radius:12px; }
+.drp-room-nav button { min-height:46px; padding:8px 4px; border:1px solid transparent; border-radius:8px; color:#bfc5cf; background:transparent; font-weight:650; cursor:pointer; }
+.drp-room-nav button[aria-pressed="true"] { background:rgba(240,122,42,.14); color:#ffac70; border-color:rgba(240,122,42,.45); }
+.drp-room-nav button:focus-visible { outline:2px solid var(--drp-orange); outline-offset:2px; }
+.drp-chapter-glance p,.drp-pressure p { margin-top:10px; }
+.drp-pressure h3 { margin:12px 0; font-size:22px; }
+.drp-pressure-active { border-color:rgba(240,122,42,.5); }
+.drp-pressure details { margin-top:14px; }
+.drp-pressure ul { padding-left:22px; list-style:disc; }
+.drp-pressure li { margin:8px 0; }
+.drp-pressure .drp-action { margin-top:16px; }

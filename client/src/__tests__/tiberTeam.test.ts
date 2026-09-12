@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import TiberDraftReview, { type DraftReview } from '@/pages/TiberDraftReview';
 
 jest.mock('@/pages/TiberDraftReview.css', () => ({}));
@@ -39,6 +39,7 @@ const selection = { status: 'team_selection_required', league: { league_id: '123
 function response(body: unknown, status = 200) { return { ok: status < 400, status, json: async () => body } as Response; }
 function serve(input: string): Response {
   const url = new URL(input, window.location.origin);
+  if (url.pathname === '/api/draft-review/matchup') return response({ error: 'Matchup unavailable in fixture' }, 502);
   if (url.pathname === '/api/draft-review/evidence') return response({ schema_version: 'tiber_draft_review_historical_v1', status: 'unavailable', reason: 'No admitted history', players: [] });
   if (url.pathname === '/api/draft-review/resolve') {
     const value = url.searchParams.get('sleeper_input')!;
@@ -51,7 +52,7 @@ function open(path = '/team', key = 'sleeper_url', value = canonical()) {
   window.history.replaceState({}, '', `${path}${value ? `?${key}=${encodeURIComponent(value)}` : ''}`);
   return render(React.createElement(React.StrictMode, null, React.createElement(TiberDraftReview)));
 }
-async function loaded(id = 1) { await screen.findByRole('heading', { name: `Synthetic team ${id}` }); }
+async function loaded(id = 1) { await screen.findByRole('heading', { name: `Synthetic team ${id}` }); fireEvent.click(screen.getByRole('button', { name: 'Team board', exact: true })); }
 beforeEach(() => {
   window.history.replaceState({}, '', '/team');
   for (const method of ['pushState', 'replaceState'] as const) {
@@ -72,8 +73,8 @@ test.each(['/team', '/draft-review'])('%s keeps both legacy query names and trut
   expect(screen.getByRole('heading', { name: 'TIBER Team' })).toBeTruthy();
   for (const name of ['Starters · 1', 'Bench · 3', 'Reserve · 0', 'Taxi · 0']) expect(screen.getByRole('heading', { name })).toBeTruthy();
   expect(screen.getAllByText('None reported')).toHaveLength(2);
-  expect(screen.getByText('Allowed')).toBeTruthy();
-  expect(screen.getByText('Not allowed')).toBeTruthy();
+  expect(within(screen.getByRole('region', { name: 'Team board' })).getByText('Allowed')).toBeTruthy();
+  expect(within(screen.getByRole('region', { name: 'Team board' })).getByText('Not allowed')).toBeTruthy();
   expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(2);
   expect(screen.queryByText('FA')).toBeNull();
   expect(screen.getByText('Synthetic defense')).toBeTruthy();
@@ -104,11 +105,13 @@ test('link is a locator; snapshot includes optional geometry, which refresh warn
   open(); await loaded();
   await screen.findByText('No admitted history');
   fireEvent.change(screen.getByLabelText('Outgoing player 1'), { target: { value: '11' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
   fireEvent.click(screen.getByRole('button', { name: 'Copy roster link' }));
   await screen.findByText('Roster link copied');
   const link = new URL((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
   expect(link.pathname).toBe('/team');
   expect([...link.searchParams]).toEqual([['sleeper_url', canonical()]]);
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
   fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
   await screen.findByText('Agent context copied');
   const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]);
@@ -154,6 +157,7 @@ test('rate limit retry, empty selector and clipboard denial are explicit', async
   await loaded();
   await screen.findByText('No admitted history');
   (navigator.clipboard.writeText as jest.Mock).mockRejectedValue(new Error('Denied'));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
   fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
   await screen.findByText('Could not copy. Check clipboard access and try again.');
   expect(screen.queryByText('Agent context copied')).toBeNull();
@@ -202,4 +206,36 @@ test('roster refresh unmounts the TE explorer and ignores its late response', as
   await act(async () => finish(response({ error: 'old response' }, 502)));
   expect(screen.queryByText(/TE availability could not be established/)).toBeNull();
   expect(screen.getByText('Explore unrostered TEs').closest('details')!.open).toBe(false);
+});
+
+test('Chapter is the default room; Settings labels future rooms and locator versus snapshot without storage', async () => {
+  open('/draft-review', 'sleeper_input');
+  await screen.findByRole('heading', { name: 'Synthetic team 1' });
+  expect(screen.getByRole('button', { name: 'Chapter', exact: true }).getAttribute('aria-pressed')).toBe('true');
+  expect(screen.getByRole('region', { name: 'Chapter' })).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Current roster' })).toBeNull();
+  expect(screen.getByRole('heading', { name: '1 starting slot needs a look' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this pressure card' }));
+  await screen.findByText('Pressure card and roster snapshot copied.');
+  const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
+  expect(packet.context.input.canonicalUrl).toBe(canonical());
+  expect(packet.chapter.pressure_card.kind).toBe('unfilled_starting_slots');
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
+  expect(screen.getByRole('heading', { name: 'Not built yet' })).toBeTruthy();
+  expect(screen.getByText(/Roster link = locator/)).toBeTruthy();
+  expect(screen.getByText(/Selecting it does not verify ownership/)).toBeTruthy();
+});
+
+test('Chapter reports no supported pressure for a filled roster with a designated bench player', async () => {
+  global.fetch = jest.fn(async input => {
+    if (!String(input).startsWith('/api/draft-review?')) return serve(String(input));
+    const r = roster(); r.observed.league.lineup_slots = { WR: 1, BN: 3 };
+    r.observed.current_roster[0].injury_status = null;
+    r.observed.current_roster[1].injury_status = 'Out';
+    return response(r);
+  });
+  open(); await screen.findByRole('heading', { name: 'Synthetic team 1' });
+  expect(screen.getByRole('heading', { name: 'No active pressure identified' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Discuss this pressure card' })).toBeNull();
+  expect(screen.getByText('Changes since your last visit are not available yet.')).toBeTruthy();
 });

@@ -51,7 +51,7 @@ function MatchupContent({ review }: { review: DraftReview }) {
     </>}
   </div>;
 }
-export default function DraftReviewMatchup({ review }: { review: DraftReview }) {
-  const [open, setOpen] = useState(false);
+export default function DraftReviewMatchup({ review, initiallyOpen = false }: { review: DraftReview; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
   return <section className="drp-panel"><div className="drp-panel-heading"><div><span className="drp-label observed">Weekly preview</span><h3>Matchup room</h3></div><button type="button" className="drp-action" aria-expanded={open} onClick={() => setOpen(v => !v)}>{open ? 'Close matchup' : 'Open matchup'}</button></div><p>Both lineups, the score gap and context for your assistant coach.</p>{open && <MatchupContent review={review} />}</section>;
 }

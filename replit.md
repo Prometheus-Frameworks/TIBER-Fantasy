@@ -108,3 +108,7 @@ The public Team study supports an optional third player, a bounded one-to-three-
 
 ### Team weekly matchup preview (#376)
 The existing /team surface now includes an on-demand Matchup room: actual weekly scores, both ordered starting lineups, observed score gap, current-directory QB/receiver relationships and a dated assistant handoff with manager lineup-settled intent. The public matchup endpoint validates league/season/week/pairing. Forecasts, live game states, locks and players remaining are explicitly unavailable. No new environment variables or private runtime dependency. See draftReview/MODULE.md for source and preview boundaries.
+
+
+### Team hub rooms (PR #377 / #371)
+Chapter now opens first with a dated roster glance, one supported pressure card and the weekly matchup. Team board keeps roster/evidence/scenario/TE tools; Settings separates a locator link from a dated agent snapshot. The existing player directory supplies a separate injury_status observation; pressure rules do not infer IR eligibility or a recommendation. No persistence was added: prior-visit changes, durable decisions and theses are explicitly not built. Both legacy routes/query forms remain compatible.
