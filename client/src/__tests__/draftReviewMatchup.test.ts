@@ -18,6 +18,10 @@ test('loads on demand and copies explicit manager preference', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Discuss matchup' }));
   await screen.findByText(/Matchup context copied/);
   expect(JSON.parse(jest.mocked(navigator.clipboard.writeText).mock.calls[0][0]).operator_context.lineup_settled).toBe(true);
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ ...data(), week: 2 }) });
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
+  await screen.findByText('Mine');
+  expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
 });
 test('rejects cross-week payload and clears previous export on refresh failure', async () => {
   global.fetch = jest.fn().mockResolvedValueOnce({ ok: true, json: async () => data() }).mockResolvedValue({ ok: false });
