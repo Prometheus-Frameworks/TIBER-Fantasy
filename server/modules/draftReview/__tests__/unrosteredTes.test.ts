@@ -107,3 +107,41 @@ test('trends are cached separately and exclude owned IDs; malformed refresh fall
   expect(fallback.trends?.status).toBe('unavailable');
   expect(fallback.candidates).toHaveLength(2);
 });
+
+test.each(['outage', 'malformed'])('caches %s trend unavailability for five minutes, then shares recovery', async failure => {
+  jest.useFakeTimers().setSystemTime(new Date('2026-09-12T12:00:00Z'));
+  const data = sources(); serve(data);
+  const sourceFetch = global.fetch;
+  let healthy = false;
+  let trendCalls = 0;
+  global.fetch = jest.fn(async (input, init) => {
+    if (!String(input).includes('/trending/')) return sourceFetch(input, init);
+    ++trendCalls;
+    if (!healthy && failure === 'outage') throw new Error('Synthetic upstream outage');
+    return { ok: true, json: async () => [{ player_id: '55', count: healthy ? 80 : -1 }] } as Response;
+  });
+  const first = await buildUnrosteredTes(url);
+  expect(first.trends).toMatchObject({ status: 'unavailable', received_at: null, counts: {} });
+  expect(first.candidates.map(p => p.player_id)).toEqual(['55', '66']);
+  expect(trendCalls).toBe(1);
+
+  // Failed trend observations are reused; league membership must still be reread.
+  data.rosters[1].players = ['66'];
+  const second = await buildUnrosteredTes(url);
+  expect(second.trends).toEqual(first.trends);
+  expect(second.candidates.map(p => p.player_id)).toEqual(['55']);
+  expect(trendCalls).toBe(1);
+  jest.advanceTimersByTime(299_999);
+  expect((await buildUnrosteredTes(url)).trends).toEqual(first.trends);
+  expect(trendCalls).toBe(1);
+
+  // At the exact expiry boundary, concurrent callers share one successful retry.
+  healthy = true;
+  jest.advanceTimersByTime(1);
+  const recovered = await Promise.all([buildUnrosteredTes(url), buildUnrosteredTes(url)]);
+  expect(trendCalls).toBe(2);
+  for (const result of recovered) {
+    expect(result.trends).toMatchObject({ status: 'available', received_at: '2026-09-12T12:05:00.000Z', counts: { '55': 80 } });
+    expect(result.candidates.map(p => p.player_id)).toEqual(['55']);
+  }
+});

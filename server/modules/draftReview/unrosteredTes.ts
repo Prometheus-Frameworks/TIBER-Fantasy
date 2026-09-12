@@ -46,7 +46,11 @@ async function getTrends(): Promise<NonNullable<UnrosteredTes['trends']>> {
       const result = { ...base, status: 'available' as const, received_at: new Date().toISOString(), counts: Object.fromEntries(rows.filter(r => /^\d+$/.test(r.player_id)).map(r => [r.player_id, r.count])) };
       trendCache = { at: Date.now(), result };
       return result;
-    } catch { return { ...base, status: 'unavailable' as const, received_at: null, counts: {} }; }
+    } catch {
+      const result = { ...base, status: 'unavailable' as const, received_at: null, counts: {} };
+      trendCache = { at: Date.now(), result };
+      return result;
+    }
   })().finally(() => { trendRequest = null; });
   return trendRequest;
 }

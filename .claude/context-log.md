@@ -753,3 +753,9 @@ Joe reported that the default 792-entry historical TE directory was unsuitable f
 The existing endpoint adds optional `trends`: Sleeper public /players/nfl/trending/add?lookback_hours=24&limit=1000, validated exact IDs/nonnegative safe integer counts/unique rows, five-minute single-flight cache, independent receive clock. No environment variables required. Malformed/outage trends yield unavailable while valid league membership results remain usable. Global add counts sort the shortlist; absent bounded-sample counts remain unknown. The selected-only handoff retains its activity clock/source/window separately. No projection or transaction authority is introduced. Source documentation: https://docs.sleeper.com/#trending-players . Existing raw candidate pool and v1 response remain compatible; default presentation supersedes the prior all-directory UI.
 
 Validation: 64 tests across six affected service/shared/UI/Team/routes/containment suites pass. Full build passed; repository typecheck comparison recorded in PR receipt. No live roster fixtures or screenshots committed. Draft-only change; no merge/production or independent-review claim.
+
+
+### 2026-09-12 — Codex: PR #373 P2 unavailable-trend cache repair
+- Authorized bounded repair of review discussion_r3996652699. Cache unavailable trend results for the existing five-minute TTL; preserve null receive time, empty counts, fresh league reads and single-flight expiry recovery.
+- Changed only the trend catch path and added synthetic outage/malformed-response regressions. Both tests failed before the fix; 66 tests across six service/shared/UI/Team/routes/containment suites pass afterward. git diff --check passed. No dependencies or UI/contract changes.
+- Repair publication and exact-head review request are recorded on PR #373. Prior phone acceptance remains bound to b7b9bd122e1f2c4dce83b61e164ce1585445aa6a; no new phone test, merge or production release is claimed.
