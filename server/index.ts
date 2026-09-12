@@ -9,6 +9,8 @@ import {
   createRuntimeProfileRouter,
   installPublicApiBoundary,
   PUBLIC_DRAFT_REVIEW_PROFILE,
+  TEAM_AUTH_PROFILE,
+  installTeamAuthApiBoundary,
   resolveRuntimeProfile,
 } from "./runtimeProfile";
 
@@ -68,8 +70,10 @@ export function mountProductionFrontend(appToMount: express.Express, publicDir: 
 // 413) still carry the headers. No CSP here; the API keeps its own restrictive
 // CSP via securityHeaders() on /api.
 app.use(baselineSecurityHeaders());
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+if (runtimeProfile !== TEAM_AUTH_PROFILE) {
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: false }));
+}
 app.use(attachSignatureHeader);
 
 // A tiny non-stateful capability response lets the SPA render the same runtime
@@ -81,8 +85,13 @@ app.use(createRuntimeProfileRouter(runtimeProfile));
 // dynasty Management dependencies are unavailable.
 app.use(draftReviewRouter);
 
+// Auth parsing, session middleware and error handling live behind this gate.
+// Public compiler requests above never initialize or retrieve user sessions.
+const teamAuthBoundary = runtimeProfile === TEAM_AUTH_PROFILE ? installTeamAuthApiBoundary(app) : null;
+
 // Tiny API request logger
 app.use((req, res, next) => {
+  if (runtimeProfile === TEAM_AUTH_PROFILE) return next();
   const start = Date.now();
   const pathStr = req.path;
   let captured: unknown;
@@ -125,6 +134,18 @@ export async function initBackground(): Promise<void> {
   const t = () => `[+${((Date.now() - _initStart) / 1000).toFixed(1)}s]`;
   const _initStart = Date.now();
   log(`🚀 Tiber Fantasy – loading routes in background`);
+
+  if (teamAuthBoundary) {
+    await teamAuthBoundary.start(async () => {
+      const { loadTeamAuthRouter } = await import('./routes/teamAuthRoutes');
+      return loadTeamAuthRouter();
+    });
+    if (process.env.NODE_ENV !== 'development') {
+      mountProductionFrontend(app, path.resolve(process.cwd(), 'dist', 'public'));
+    }
+    log('Team auth profile initialized; legacy runtime not loaded');
+    return;
+  }
 
   if (runtimeProfile === PUBLIC_DRAFT_REVIEW_PROFILE) {
     // Containment profile: Draft Review, runtime profile, health, and static SPA
@@ -229,14 +250,15 @@ export async function initBackground(): Promise<void> {
 if (process.env.NODE_ENV === "development") {
   const PORT = Number(process.env.PORT ?? 5000);
   (async () => {
-    if (runtimeProfile === PUBLIC_DRAFT_REVIEW_PROFILE) {
+    if (runtimeProfile === PUBLIC_DRAFT_REVIEW_PROFILE || runtimeProfile === TEAM_AUTH_PROFILE) {
       const { createServer } = await import("node:http");
-      installPublicApiBoundary(app);
+      if (runtimeProfile === TEAM_AUTH_PROFILE) await initBackground();
+      else installPublicApiBoundary(app);
       const httpServer = createServer(app);
       const { setupVite } = await import("./vite");
       await setupVite(app, httpServer);
       httpServer.listen(PORT, "0.0.0.0", () => {
-        log(`[express] public Draft Review profile serving on port ${PORT}`);
+        log(`[express] isolated Team profile serving on port ${PORT}`);
       });
       return;
     }

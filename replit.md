@@ -60,6 +60,7 @@ TIBER Management Dashboard is now the first product-shell step toward “sync my
 - **LLM Gateway (`server/llm/`)**: A provider-agnostic `callLLM()` entry point with fallback across OpenRouter, OpenAI, Anthropic, and Google Gemini, supporting 9 task types. Includes an X Intelligence Scanner (`server/services/xIntelligenceScanner.ts`) for Grok-powered X/Twitter analysis.
 
 **Deployment Architecture:**
+- **Team Auth v0 foundation (#374)**: Explicit `team-auth` profile adds an isolated Google identity/session and confirmed Sleeper-link API; public Team/compiler stays session-independent. The default/full and public profiles do not mount auth. Four new table declarations live in `shared/teamAuth.ts`, outside the legacy Drizzle input; no migration, provider configuration or Account UI is activated. Dedicated auth database/role, staging provider, mobile UI and real PostgreSQL validation remain later gates. Required private environment names and exact boundaries are in `server/modules/teamAuth/MODULE.md`.
 - **Target**: Autoscale (Cloud Run) for stateless REST API, with persistent state in PostgreSQL.
 - **Build Process**: `sh build.sh` compiles frontend via `vite build` and bundles server via esbuild.
 - **Runtime**: `node dist/index.mjs` for faster startup.
