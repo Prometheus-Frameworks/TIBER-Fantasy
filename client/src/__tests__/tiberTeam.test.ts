@@ -239,3 +239,18 @@ test('Chapter reports no supported pressure for a filled roster with a designate
   expect(screen.queryByRole('button', { name: 'Discuss this pressure card' })).toBeNull();
   expect(screen.getByText('Changes since your last visit are not available yet.')).toBeTruthy();
 });
+
+
+test('WR pressure opens a conditional comparison and closing removes its local state', async () => {
+  const r=roster(); r.observed.league.lineup_slots={WR:1,BN:3};
+  r.observed.current_roster[0].injury_status='Questionable';
+  global.fetch=jest.fn(async input => String(input).startsWith('/api/draft-review?') ? response(r)
+    : String(input).startsWith('/api/draft-review/wr-replacement?') ? response({},502) : serve(String(input)));
+  open(); await screen.findByRole('heading',{name:'First WR: Questionable'});
+  expect(screen.queryByRole('region',{name:'WR replacement outlook'})).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Compare WR alternatives'}));
+  await screen.findByText('The WR pool could not be verified against this roster. Refresh your roster, then retry.');
+  expect(screen.getByRole('region',{name:'WR replacement outlook'})).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Close WR alternatives'}));
+  expect(screen.queryByRole('region',{name:'WR replacement outlook'})).toBeNull();
+});

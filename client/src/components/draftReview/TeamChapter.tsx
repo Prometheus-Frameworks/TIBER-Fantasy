@@ -1,3 +1,4 @@
+import WrReplacement from './WrReplacement';
 import { useEffect, useRef, useState } from 'react';
 import type { DraftReview } from '@/pages/TiberDraftReview';
 import { chapterPacket, chapterPressure } from '@shared/teamChapter';
@@ -5,6 +6,8 @@ import DraftReviewMatchup from './DraftReviewMatchup';
 export default function TeamChapter({ review }: { review: DraftReview }) {
   const pressure = chapterPressure(review);
   const [copied, setCopied] = useState('');
+  const [showWr, setShowWr] = useState(false);
+  const target = review.observed.current_roster.find(p => p.player_id === pressure.card?.trigger.player_id);
   const sequence = useRef(0);
   useEffect(() => () => { ++sequence.current; }, [review]);
   async function copy() {
@@ -31,6 +34,7 @@ export default function TeamChapter({ review }: { review: DraftReview }) {
         <details><summary>Options and what would change this question</summary><p>Unranked paths to consider:</p><ul>{pressure.card.options.map(o => <li key={o}>{o}</li>)}</ul><p>Recheck when:</p><ul>{pressure.card.watch_conditions.map(w => <li key={w}>{w}</li>)}</ul></details>
         <button type="button" className="drp-action" onClick={() => void copy()}>Discuss this pressure card</button><p role="status">{copied}</p>
       </>}
+      {pressure.card && target?.position === 'WR' && <><button type="button" className="drp-action" aria-expanded={showWr} onClick={()=>setShowWr(v=>!v)}>{showWr?'Close WR alternatives':'Compare WR alternatives'}</button>{showWr && <WrReplacement review={review} targetId={target.player_id} />}</>}
       <details><summary>Reserve rules and evidence limits</summary>
         {reserve ? <><p>{reserve.open_slots} open · {reserve.occupied_slots} occupied · {reserve.configured_slots} configured reserve slots.</p><dl className="drp-reserve-rules">{Object.entries(reserve.configured_eligibility).map(([rule, value]) => <div key={rule}><dt>{rule.replace(/_/g, ' ')}</dt><dd>{value === null ? 'Unknown' : value ? 'Allowed' : 'Not allowed'}</dd></div>)}</dl></> : <p>Reserve configuration unavailable.</p>}
         <p>These checks use roster membership, configured slot counts and the separate Sleeper injury designation. Bench and reserve designations do not trigger this starter check. Game timing, locks and current reserve eligibility are unavailable.</p>
