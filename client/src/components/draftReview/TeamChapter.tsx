@@ -1,9 +1,10 @@
 import WrReplacement from './WrReplacement';
 import { useEffect, useRef, useState } from 'react';
 import type { DraftReview } from '@/pages/TiberDraftReview';
-import { chapterPacket, chapterPressure } from '@shared/teamChapter';
+import { chapterPacket, chapterPressure, chapterPlanScope, currentChapterPlan, type ChapterPlan } from '@shared/teamChapter';
+import type { StudyAttachment } from '@shared/draftReviewStudy';
 import DraftReviewMatchup from './DraftReviewMatchup';
-export default function TeamChapter({ review }: { review: DraftReview }) {
+export default function TeamChapter({ review, study = null, plan = null, onPlanChange }: { review: DraftReview; study?: StudyAttachment | null; plan?: ChapterPlan | null; onPlanChange?: (plan: ChapterPlan | null) => void }) {
   const pressure = chapterPressure(review);
   const [copied, setCopied] = useState('');
   const [showWr, setShowWr] = useState(false);
@@ -12,8 +13,17 @@ export default function TeamChapter({ review }: { review: DraftReview }) {
   useEffect(() => () => { ++sequence.current; }, [review]);
   async function copy() {
     const current = ++sequence.current;
-    try { await navigator.clipboard.writeText(JSON.stringify(chapterPacket(review), null, 2)); if (current === sequence.current) setCopied('Pressure card and roster snapshot copied.'); }
+    try { await navigator.clipboard.writeText(JSON.stringify(chapterPacket(review, study, plan), null, 2)); if (current === sequence.current) setCopied('Pressure card and roster snapshot copied.'); }
     catch { if (current === sequence.current) setCopied('Could not copy. Check clipboard access and retry.'); }
+  }
+  useEffect(() => { ++sequence.current; setCopied(''); }, [plan, study]);
+  const managerPlan = currentChapterPlan(review, plan);
+  function editPlan(field: 'plan' | 'revisit_when', value: string) {
+    const scope = chapterPlanScope(review);
+    if (!scope) return;
+    ++sequence.current;
+    setCopied('');
+    onPlanChange?.({ scope, plan: managerPlan?.plan ?? '', revisit_when: managerPlan?.revisit_when ?? '', [field]: value.slice(0, 1000) });
   }
   const reserve = review.observed.league.reserve;
   return <>
@@ -30,6 +40,14 @@ export default function TeamChapter({ review }: { review: DraftReview }) {
         <p>{pressure.card.league_rule_context.reserve_state === "not_configured" ? "No reserve slots configured." : pressure.card.league_rule_context.reserve_state === "full" ? "Reserve is full. This does not establish player eligibility." : pressure.card.league_rule_context.reserve_state === "open" ? `${reserve?.open_slots} reserve slots open; per-player eligibility unavailable.` : "Reserve capacity unavailable."}</p>
         </details>
         <details><summary>Options and what would change this question</summary><p>Unranked paths to consider:</p><ul>{pressure.card.options.map(o => <li key={o}>{o}</li>)}</ul><p>Recheck when:</p><ul>{pressure.card.watch_conditions.map(w => <li key={w}>{w}</li>)}</ul></details>
+        {onPlanChange && <details className="drp-chapter-plan"><summary>Your plan / Revisit when{managerPlan ? ' · entered' : ''}</summary>
+          <p id="chapter-plan-help" className="drp-muted">Only on this page. Refreshing or changing rosters clears this text. Copy it to continue with your agent. Conditions are not monitored.</p>
+          <label htmlFor="chapter-plan">Your plan</label>
+          <textarea id="chapter-plan" rows={2} maxLength={1000} aria-describedby="chapter-plan-help" value={managerPlan?.plan ?? ''} placeholder="What are you choosing for now?" onChange={e => editPlan('plan', e.target.value)} />
+          <label htmlFor="chapter-revisit">Revisit when</label>
+          <textarea id="chapter-revisit" rows={2} maxLength={1000} aria-describedby="chapter-plan-help" value={managerPlan?.revisit_when ?? ''} placeholder="What would make you reconsider?" onChange={e => editPlan('revisit_when', e.target.value)} />
+          {managerPlan && <button type="button" className="drp-action" onClick={() => { ++sequence.current; setCopied(''); onPlanChange(null); }}>Clear plan</button>}
+        </details>}
         <button type="button" className="drp-action" onClick={() => void copy()}>Discuss this pressure card</button><p role="status">{copied}</p>
       </>}
       {pressure.card?.kind === 'starter_designation' && target?.position === 'WR' && <><button type="button" className="drp-action" aria-expanded={showWr} onClick={()=>setShowWr(v=>!v)}>{showWr?'Close WR alternatives':'Compare WR alternatives'}</button>{showWr && <WrReplacement review={review} targetId={target.player_id} />}</>}

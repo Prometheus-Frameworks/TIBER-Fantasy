@@ -286,3 +286,57 @@ test('no-match wording limits its claim and leaves missing designation coverage 
   expect(screen.queryByText('All clear')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Discuss this pressure card' })).toBeNull();
 });
+
+
+test('plan survives rooms, accompanies both handoffs and clears on refresh without changing evidence', async () => {
+  open(); await screen.findByRole('heading', { name: 'Synthetic team 1' });
+  const editor = screen.getByText('Your plan / Revisit when').closest('details')!;
+  editor.open = true; fireEvent(editor, new Event('toggle'));
+  fireEvent.change(screen.getByLabelText('Your plan'), { target: { value: 'Keep roster. Waivers off per manager.' } });
+  fireEvent.change(screen.getByLabelText('Revisit when'), { target: { value: 'An RB designation changes.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this pressure card' }));
+  await screen.findByText('Pressure card and roster snapshot copied.');
+  const first = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
+  expect(first.operator_context.chapter_plan).toMatchObject({ plan: 'Keep roster. Waivers off per manager.', revisit_when: 'An RB designation changes.', monitoring: false });
+  expect(first.chapter.pressure_card.kind).toBe('unfilled_starting_slots');
+  fireEvent.click(screen.getByRole('button', { name: 'Team board', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
+  await screen.findByText('Agent context copied');
+  const second = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]);
+  expect(second.operator_context.chapter_plan).toEqual(first.operator_context.chapter_plan);
+  fireEvent.click(screen.getByRole('button', { name: 'Chapter', exact: true }));
+  expect((screen.getByLabelText('Your plan') as HTMLTextAreaElement).value).toBe(first.operator_context.chapter_plan.plan);
+  (window.confirm as jest.Mock).mockReturnValue(false);
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh roster' }));
+  expect((screen.getByLabelText('Your plan') as HTMLTextAreaElement).value).toBe(first.operator_context.chapter_plan.plan);
+  (window.confirm as jest.Mock).mockReturnValue(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh roster' }));
+  await screen.findByRole('heading', { name: 'Synthetic team 1' });
+  const refreshed = screen.getByText('Your plan / Revisit when').closest('details')!;
+  refreshed.open = true; fireEvent(refreshed, new Event('toggle'));
+  expect((screen.getByLabelText('Your plan') as HTMLTextAreaElement).value).toBe('');
+});
+
+test('editing invalidates pending copy feedback and clear/navigation never carry a plan to another roster', async () => {
+  open(); await screen.findByRole('heading', { name: 'Synthetic team 1' });
+  const editor = screen.getByText('Your plan / Revisit when').closest('details')!;
+  editor.open = true; fireEvent(editor, new Event('toggle'));
+  fireEvent.change(screen.getByLabelText('Your plan'), { target: { value: '<script>not executable</script>' } });
+  let finish!: () => void;
+  (navigator.clipboard.writeText as jest.Mock).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve; }));
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this pressure card' }));
+  fireEvent.change(screen.getByLabelText('Revisit when'), { target: { value: 'New evidence' } });
+  await act(async () => finish());
+  expect(screen.queryByText('Pressure card and roster snapshot copied.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear plan' }));
+  expect((screen.getByLabelText('Your plan') as HTMLTextAreaElement).value).toBe('');
+  fireEvent.change(screen.getByLabelText('Your plan'), { target: { value: 'Only roster one' } });
+  act(() => window.history.pushState({}, '', `/team?sleeper_url=${encodeURIComponent(canonical(2))}`));
+  await screen.findByRole('heading', { name: 'Synthetic team 2' });
+  await screen.findByText('No admitted history');
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this pressure card' }));
+  await screen.findByText('Pressure card and roster snapshot copied.');
+  const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls.at(-1)[0]);
+  expect(packet.operator_context.chapter_plan).toBeNull();
+});

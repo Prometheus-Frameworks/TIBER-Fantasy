@@ -231,3 +231,8 @@
 .drp-wr-replacement .drp-action:disabled { opacity:.5; cursor:default; }
 .drp-wr-replacement details { overflow-wrap:anywhere; }
 @media(max-width:600px) { .drp-wr-pools { grid-template-columns:minmax(0,1fr); } .drp-wr-history { gap:8px; font-size:13px; } }
+
+/* Session-only Chapter plan: reuse the existing Team palette and action styling. */
+.drp-chapter-plan label { display: block; margin-top: 12px; }
+.drp-chapter-plan textarea { display: block; box-sizing: border-box; width: 100%; min-width: 0; margin: 6px 0 12px; padding: 10px; border: 1px solid #566475; border-radius: 6px; background: #171e23; color: #eceef2; font: inherit; font-size: 16px; resize: vertical; }
+.drp-chapter-plan textarea:focus-visible { outline: 2px solid var(--drp-orange); outline-offset: 2px; }
