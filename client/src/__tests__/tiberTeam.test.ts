@@ -226,7 +226,7 @@ test('Chapter is the default room; Settings labels future rooms and locator vers
   expect(screen.getByText(/Selecting it does not verify ownership/)).toBeTruthy();
 });
 
-test('Chapter reports no supported pressure for a filled roster with a designated bench player', async () => {
+test('Chapter labels a bench designation without offering a starter replacement', async () => {
   global.fetch = jest.fn(async input => {
     if (!String(input).startsWith('/api/draft-review?')) return serve(String(input));
     const r = roster(); r.observed.league.lineup_slots = { WR: 1, BN: 3 };
@@ -235,8 +235,10 @@ test('Chapter reports no supported pressure for a filled roster with a designate
     return response(r);
   });
   open(); await screen.findByRole('heading', { name: 'Synthetic team 1' });
-  expect(screen.getByRole('heading', { name: 'No active pressure identified' })).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Discuss this pressure card' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Second WR: Out' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Compare WR alternatives' })).toBeNull();
+  const limits = screen.getByText('Reserve rules and evidence limits').closest('details')!;
+  limits.open = true; fireEvent(limits, new Event('toggle'));
   expect(screen.getByText('Changes since your last visit are not available yet.')).toBeTruthy();
 });
 
@@ -253,4 +255,34 @@ test('WR pressure opens a conditional comparison and closing removes its local s
   expect(screen.getByRole('region',{name:'WR replacement outlook'})).toBeTruthy();
   fireEvent.click(screen.getByRole('button',{name:'Close WR alternatives'}));
   expect(screen.queryByRole('region',{name:'WR replacement outlook'})).toBeNull();
+});
+
+test('RB coverage card copies observed flags, counts and unknown eligibility through both copy paths', async () => {
+  const r = roster(); r.observed.league.lineup_slots = { RB: 2, FLEX: 1, BN: 1 };
+  r.observed.league.reserve = { configured_slots: 0, occupied_slots: 0, open_slots: 0, configured_eligibility: {}, current_player_eligibility: { status: 'unavailable', reason: 'Unavailable' } };
+  r.observed.current_roster.forEach((p, i) => { p.position = 'RB'; p.roster_state = i < 3 ? 'starter' : 'bench'; p.status = i < 3 ? 'Active' : 'Inactive'; p.active = true; });
+  global.fetch = jest.fn(async input => String(input).startsWith('/api/draft-review?') ? response(r) : serve(String(input)));
+  open(); await screen.findByRole('heading', { name: 'Limited RB cover' });
+  expect(screen.getByText(/3 starting-group RBs · 1 bench RB · 1 recorded flag/)).toBeTruthy();
+  expect(screen.queryByText('All clear')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Compare WR alternatives' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss this pressure card' }));
+  await screen.findByText('Pressure card and roster snapshot copied.');
+  const pressurePacket = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
+  expect(pressurePacket.chapter.pressure_card.trigger.roster_coverage).toMatchObject({ starter_count: 3, bench_count: 1, flagged_count: 1 });
+  expect(pressurePacket.chapter.pressure_card.league_rule_context.reserve_state).toBe('not_configured');
+  fireEvent.click(screen.getByRole('button', { name: 'Settings', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
+  await screen.findByText('Agent context copied');
+  const generalPacket = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]);
+  expect(generalPacket.chapter.pressure_card).toEqual(pressurePacket.chapter.pressure_card);
+  expect(generalPacket.context.observed.current_roster[3]).toMatchObject({ status: 'Inactive', active: true });
+});
+test('no-match wording limits its claim and leaves missing designation coverage explicit', async () => {
+  const r = roster(); r.observed.league.lineup_slots = { WR: 1, BN: 3 };
+  global.fetch = jest.fn(async input => String(input).startsWith('/api/draft-review?') ? response(r) : serve(String(input)));
+  open(); await screen.findByRole('heading', { name: 'No pressure detected in available observations' });
+  expect(screen.getByText(/Roster designation coverage is incomplete/)).toBeTruthy();
+  expect(screen.queryByText('All clear')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Discuss this pressure card' })).toBeNull();
 });

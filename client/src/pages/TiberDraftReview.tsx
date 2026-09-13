@@ -1,3 +1,4 @@
+import { chapterPacket, chapterPressure } from '@shared/teamChapter';
 import TeamChapter from '@/components/draftReview/TeamChapter';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
@@ -311,7 +312,7 @@ export default function TiberDraftReview() {
     try {
       const link = new URL('/team', window.location.origin);
       link.searchParams.set('sleeper_url', review.input.canonicalUrl);
-      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : draftReviewAgentPacket(review, study), null, 2));
+      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : chapterPressure(review).card ? chapterPacket(review, study) : draftReviewAgentPacket(review, study), null, 2));
       if (requestId !== requestSequence.current || copyId !== copySequence.current) return;
       setCopyError('');
       setDiscussionError('');
