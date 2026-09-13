@@ -117,3 +117,7 @@ Publication, merge and production release have not occurred.
 
 ### Team preparation-only historical evidence gate — 2026-09-13
 The nineteen-player expansion remains an offline preparation bundle. Runtime decoding and caching return those identities as unavailable until a separately reviewed promotion/consumer admission change; prior 75 profiles are unchanged. No environment switch or PR merge activates the cohort. See the Draft Review module P2 repair note.
+
+
+### Nineteen-player historical promotion (proposed revision, 2026-09-13)
+Team's historical evidence consumer pins a separate Data #272 promotion receipt and admits exactly the nineteen previously prepared identities. The earlier preparation receipt remains unchanged and separately attributed. Original historical profiles and source limitations are preserved; Antonio Williams is excluded. Integrity failure returns unavailable, and there are no forecasts or inferred current teams/health/ownership. Merge and any deployment require separate authorization; this proposed consumer revision has not been deployed. See server/modules/draftReview/MODULE.md and docs/reviews/team-historical-promotion-2026-09-13.md.

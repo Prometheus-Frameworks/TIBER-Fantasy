@@ -85,17 +85,19 @@ describe('Draft Review public route', () => {
 });
 
 describe('bounded historical comparison route', () => {
-  test('withholds preparation-only history while serving an existing admitted player', async () => {
+  test('serves the exact promoted cohort alongside prior history and excludes the rookie', async () => {
     const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
     const app = express(); app.use(createDraftReviewRouter());
     const result = await request(app).get('/api/draft-review/evidence').query({ player_ids: '5892,6819,8188' });
     expect(result.status).toBe(200);
-    expect(result.body.players.map((p: { status: string }) => p.status)).toEqual(['unavailable', 'unavailable', 'available']);
-    for (const player of result.body.players.slice(0, 2)) {
-      expect(player).toMatchObject({ identity: null, observed: null, derived: {} });
-      expect(player.reason).toContain('promotion');
-    }
-    expect(result.body.provenance.team_roster_identity_admission.player_ids).toHaveLength(19);
+    expect(result.body.players.map((p: { status: string }) => p.status)).toEqual(['available', 'available', 'available']);
+    expect(result.body.players[0].observed.historical_teams).toEqual(['DET']);
+    expect(result.body.players[1].observed.historical_teams).toEqual(['IND']);
+    const rookie = await request(app).get('/api/draft-review/evidence').query({ player_ids: '13301' });
+    expect(rookie.status).toBe(200);
+    expect(rookie.body.players[0]).toMatchObject({ status: 'unavailable', identity: null, observed: null, derived: {} });
+    expect(result.body.provenance.team_roster_identity_promotion.receipt.player_ids).toHaveLength(19);
+    expect(result.body.forecast.status).toBe('unavailable');
     expect(fetchMock).not.toHaveBeenCalled();
   });
   test('serves admitted data without Sleeper or private state and preserves public headers', async () => {

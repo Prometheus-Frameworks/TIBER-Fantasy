@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { decodeHistoricalBundle, historicalEvidenceFor } from '../historicalEvidence';
 
 describe('admitted historical evidence', () => {
-  test('offline preparation retains historical source records without granting runtime availability', () => {
+  test('promotion preserves historical source records and the separate preparation receipt', () => {
     const prepared = JSON.parse(readFileSync('server/modules/draftReview/artifacts/historical2025.json', 'utf8')) as ReturnType<typeof decodeHistoricalBundle>;
     const packet = { ...prepared, players: ['10444', '10218', '8188', '8127', '11571', '11575', '5892', '6819'].map(id => prepared.players.find(p => p.player_id === id)!) };
     expect(packet.players.map(p => p.observed?.weeks.length)).toEqual([12, 16, 12, 13, 16, 17, 17, 17]);
@@ -23,31 +23,43 @@ describe('admitted historical evidence', () => {
     expect(packet.provenance?.team_roster_identity_admission?.proposal_review.implementation_review).toBe('pending_separate_review');
     expect(packet.forecast).toEqual({ status: 'unavailable', fabricated_values: false });
   });
-  test('decoder and cached public selections withhold every preparation-only identity and preserve all 75 prior profiles', () => {
+  test('exact promotion serves nineteen identities and preserves all 75 prior profiles across cached selections', () => {
     const bytes = readFileSync('server/modules/draftReview/artifacts/historical2025.json');
     const prepared = JSON.parse(bytes.toString('utf8')) as ReturnType<typeof decodeHistoricalBundle>;
-    const pendingIds = prepared.provenance!.team_roster_identity_admission!.player_ids;
-    expect(pendingIds).toHaveLength(19);
+    const ids = prepared.provenance!.team_roster_identity_admission!.player_ids;
     const decoded = decodeHistoricalBundle(bytes);
-    const oldProfiles = prepared.players.filter(p => !pendingIds.includes(p.player_id));
-    expect(oldProfiles).toHaveLength(75);
-    expect(decoded.players.filter(p => p.status === 'available')).toEqual(oldProfiles);
-    for (const packet of [decoded, historicalEvidenceFor(pendingIds), historicalEvidenceFor(pendingIds)]) {
-      for (const id of pendingIds) {
-        expect(packet.players.find(p => p.player_id === id)).toEqual({
-          player_id: id, status: 'unavailable',
-          reason: 'Historical records are prepared but upstream promotion and consumer admission are not yet recorded.',
-          identity: null, observed: null, derived: {},
-        });
-      }
+    expect(ids).toHaveLength(19);
+    expect(decoded.players).toEqual(prepared.players);
+    expect(decoded.players.filter(p => !ids.includes(p.player_id))).toHaveLength(75);
+    for (const packet of [historicalEvidenceFor(ids), historicalEvidenceFor(ids)]) {
+      expect(packet.players).toEqual(ids.map(id => prepared.players.find(p => p.player_id === id)));
+      expect(packet.players.every(p => p.status === 'available')).toBe(true);
       expect(packet.provenance).toEqual(prepared.provenance);
       expect(packet.forecast.status).toBe('unavailable');
+      expect(packet.provenance?.team_roster_identity_promotion?.receipt).toMatchObject({
+        player_ids: ids, excluded_player_ids: ['13301'], historical_consumer_use_authorized: true,
+        merge_authorized: false, deployment_authorized: false, production_release_authorized: false,
+      });
     }
     const changed = historicalEvidenceFor(['5892']);
-    changed.players[0].status = 'available';
-    changed.provenance!.team_roster_identity_admission!.player_ids.length = 0;
+    changed.players[0].status = 'unavailable';
+    changed.provenance!.team_roster_identity_promotion!.receipt.player_ids.length = 0;
     expect(historicalEvidenceFor(['5892', '8188', '13301']).players.map(p => p.status))
-      .toEqual(['unavailable', 'available', 'unavailable']);
+      .toEqual(['available', 'available', 'unavailable']);
+    expect(historicalEvidenceFor(['5892']).provenance!.team_roster_identity_promotion!.receipt.player_ids).toHaveLength(19);
+  });
+  test('absent, altered, or wider promotion receipts cannot activate evidence', () => {
+    const raw = readFileSync('server/modules/draftReview/artifacts/historical2025.json', 'utf8');
+    for (const change of ['absent', 'cohort', 'scope', 'permission', 'confidence']) {
+      const candidate = JSON.parse(raw);
+      const receipt = candidate.provenance.team_roster_identity_promotion.receipt;
+      if (change === 'absent') delete candidate.provenance.team_roster_identity_promotion;
+      if (change === 'cohort') receipt.player_ids.push('13301');
+      if (change === 'scope') receipt.consumer_scope.forecast_allowed = true;
+      if (change === 'permission') receipt.historical_consumer_use_authorized = false;
+      if (change === 'confidence') receipt.identity_records[0].confidence = 'high';
+      expect(() => decodeHistoricalBundle(Buffer.from(JSON.stringify(candidate)))).toThrow('integrity');
+    }
   });
   test('retains accepted identity confidence and historical context for all five study cases', () => {
     const packet = historicalEvidenceFor(['9997', '7526', '12512', '12481', '7594']);
@@ -70,7 +82,7 @@ describe('admitted historical evidence', () => {
       expect(player.identity).toMatchObject({ confidence: 'medium', match_method: 'name_exact' });
       expect(player.derived.targets.recorded_weeks).toBe(player.observed?.weeks.length);
     }
-    expect(packet.provenance?.producer_commit).toBe('5c683e26a843b98358292f0d34a97a98762a96f0');
+    expect(packet.provenance?.producer_commit).toBe('f12234d909adc82e79ca463e76b994c8dd24bdb9');
     expect(packet.provenance?.operator_acceptance).toContain('5574349251');
     expect(packet.provenance?.team_identity_admission).toMatchObject({
       player_ids: ['9487', '8112', '10219'], receipt_stage: 'accepted_for_branch_preparation',

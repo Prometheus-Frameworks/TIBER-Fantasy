@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { HistoricalEvidence, HistoricalPlayer } from '../../../shared/draftReviewEvidence';
 
 const BUNDLE_PATH = resolve(process.cwd(), 'server/modules/draftReview/artifacts/historical2025.json');
-const BUNDLE_SHA256 = '24015b41becb5bcbb87bea7e4c5d8443c3e1254a4ceea9c624a023263b021ea1';
+const BUNDLE_SHA256 = '68b3a863560edb974e999ea22fa2c31cc5e353cdc762d0a84cb177fe1ef3cb26';
 const SCHEMA = 'tiber_draft_review_historical_v1' as const;
 // Cache only integrity-checked evidence after applying the promotion boundary.
 // No league, roster, selection or operator state.
@@ -25,19 +25,16 @@ export function decodeHistoricalBundle(raw: Buffer): HistoricalEvidence {
     throw new Error('Historical source integrity check failed');
   }
   const bundle = JSON.parse(raw.toString('utf8')) as HistoricalEvidence;
-  // This exact pinned cohort has preparation authority only. No promotion
-  // receipt is admitted here; a stage string, deployment mode, or PR merge
-  // cannot grant access. A later reviewed source/policy update must do that.
-  const pending = new Set(bundle.provenance?.team_roster_identity_admission?.player_ids ?? []);
-  return { ...bundle, status: 'available', reason: null,
-    limitations: [...bundle.limitations,
-      'The nineteen-player preparation cohort remains unavailable pending recorded upstream promotion and consumer admission.'],
-    players: bundle.players.map(player => pending.has(player.player_id) ? {
-      player_id: player.player_id, status: 'unavailable',
-      reason: 'Historical records are prepared but upstream promotion and consumer admission are not yet recorded.',
-      identity: null, observed: null, derived: {},
-    } : player),
-  };
+  // The whole-bundle content pin admits a reviewed policy + exact promotion
+  // receipt, not a free-form stage string, runtime mode or deployment status.
+  const promotion = bundle.provenance?.team_roster_identity_promotion;
+  if (promotion?.path !== 'exports/promoted/draft_review/team_roster_identity_promotion_v1.json'
+      || promotion.sha256 !== '215d2b47edb204a138d30725b4e2e3974993f105271667d665c651b825408c85'
+      || promotion.receipt.status !== 'accepted_for_historical_consumer_use'
+      || promotion.receipt.historical_consumer_use_authorized !== true) {
+    throw new Error('Historical promotion integrity check failed');
+  }
+  return { ...bundle, status: 'available', reason: null };
 }
 
 export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {

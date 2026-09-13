@@ -772,3 +772,10 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** historicalEvidence.ts, historicalEvidence.test.ts, draftReviewRoutes.test.ts, module/review documentation, replit.md and agent logs.
 - **Validation:** 62 tests across seven history/service/routes/UI/shared/containment suites passed, including all-cohort withholding, prior-profile equality, cache isolation and mixed HTTP comparison; full build passed.
 - **Notes:** Operator authorized repair publication and next review. Data #271's P2 changes inventory documentation only; existing source pin retained. Merge, promotion and deployment remain separate.
+
+
+### 2026-09-13 — Codex: Separate historical promotion and consumer activation
+- Added strict validation and provenance for Data #272's separate nineteen-player promotion receipt; pinned published producer f12234d909adc82e79ca463e76b994c8dd24bdb9 and regenerated the evidence bundle.
+- Replaced unconditional preparation-only withholding with exact pinned promotion admission. Preserved all 94 profile objects, earlier receipts, limitations and unavailable forecasts. Antonio Williams remains excluded.
+- Validation: 17 Python tests (normal/optimized), 63 Jest tests, full build; baseline 506 TypeScript diagnostics unchanged. Independent review recorded separately.
+- No merge/deployment authorized. Consumer PR opening is held until Railway automatic preview deployment can be suppressed. See docs/reviews/team-historical-promotion-2026-09-13.md.
