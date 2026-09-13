@@ -6,6 +6,9 @@ export interface GoogleIdentity { issuer: 'https://accounts.google.com'; subject
 export type GoogleVerifier = (credential: string, nonceHash: string, challengeCreatedAt: number) => Promise<GoogleIdentity>;
 
 export const authHash = (value: string) => createHash('sha256').update(value).digest('hex');
+class GoogleCertificateUnavailable extends TeamAuthError {
+  constructor() { super(503, 'AUTH_IDENTITY_UNAVAILABLE'); }
+}
 export function constantEqual(a: string, b: string): boolean {
   const left = Buffer.from(a); const right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);
@@ -22,6 +25,13 @@ export function boundedGoogleClient(): OAuth2Client {
     options.retryConfig = { retry: 0 };
     return options;
   } });
+  // Classify at the certificate boundary: transport libraries do not promise
+  // a common message prefix for aborts, DNS, TLS, HTTP or decoding failures.
+  const certificates = client.getFederatedSignonCertsAsync.bind(client);
+  client.getFederatedSignonCertsAsync = async () => {
+    try { return await certificates(); }
+    catch { throw new GoogleCertificateUnavailable(); }
+  };
   return client;
 }
 
@@ -50,9 +60,7 @@ export function createGoogleVerifier(
       }
       return { issuer: 'https://accounts.google.com', subject: claims.sub, expiresAt: claims.exp * 1000 };
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('Failed to retrieve verification certificates:')) {
-        throw new TeamAuthError(503, 'AUTH_IDENTITY_UNAVAILABLE');
-      }
+      if (error instanceof GoogleCertificateUnavailable) throw error;
       throw new TeamAuthError(401, 'AUTH_INVALID_CREDENTIAL');
     }
   };

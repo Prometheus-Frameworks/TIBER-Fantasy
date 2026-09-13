@@ -12,6 +12,8 @@ describe('team-auth runtime boundary', () => {
     const loading = boundary.start(() => new Promise(resolve => { loaded = resolve; }));
     const pending = await request(app).get('/api/auth/bootstrap');
     expect(pending.status).toBe(503); expect(pending.headers['cache-control']).toBe('private, no-store');
+    expect((await request(app).post('/api/team-private/leagues').send({ season: '2026' })).status).toBe(503);
+    expect((await request(app).post('/api/team-private/league-rosters').send({ season: '2026', leagueId: '123' })).status).toBe(503);
     const secret = 'synthetic-sensitive-value';
     for (const path of [`/api/${secret}`, `/api/management?user_id=${secret}`, '/api/v1/health', '/api/sleeper/sync']) {
       expect((await request(app).post(path).send({ credential: secret })).status).toBe(404);

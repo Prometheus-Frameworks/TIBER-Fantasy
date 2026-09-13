@@ -8,6 +8,7 @@ import { readTeamAuthConfig } from '../../modules/teamAuth/config';
 import { createSessionMiddleware } from '../../modules/teamAuth/session';
 import { TeamAuthService, assertPrincipalLifetime, type AuthPersistence } from '../../modules/teamAuth/teamAuthService';
 import type { GoogleIdentity } from '../../modules/teamAuth/googleIdentity';
+import * as leagueSource from '../../modules/draftReview/teamLeagues';
 
 const config = readTeamAuthConfig({ NODE_ENV: 'development', TEAM_AUTH_ORIGIN: 'http://localhost',
   TEAM_AUTH_DATABASE_URL: 'postgresql://synthetic:synthetic@localhost/auth_test',
@@ -54,7 +55,7 @@ function fixture() {
       const user = active(auth);
       if (links.has(auth.userId)) throw new TeamAuthError(409, 'SLEEPER_LINK_EXISTS');
       const id = randomUUID(); challenges.set(id, { id, binding, nonceHash: '', createdAt: now(), userId: auth.userId, observation, version: user.sleeperLinkVersion });
-      return { id, expectedLinkVersion: user.sleeperLinkVersion };
+      return { id, expectedLinkVersion: user.sleeperLinkVersion, expiresAt: new Date(now() + AUTH_POLICY.challengeMs).toISOString() };
     },
     async confirmLink(auth, binding, id, version) {
       const user = active(auth); const challenge = challenges.get(id);
@@ -212,5 +213,56 @@ describe('private HTTP and session boundaries', () => {
     jest.spyOn(f.store, 'get').mockImplementation((_sid, callback) => callback(new Error('sensitive postgres error')));
     const result = await a.agent.get('/api/auth/session'); expect(result.status).toBe(503);
     expect(result.text).not.toContain('sensitive'); expect(result.headers['cache-control']).toBe('private, no-store');
+  });
+});
+
+describe('session-owned league discovery', () => {
+  afterEach(() => jest.restoreAllMocks());
+  async function linkedAccount(f: ReturnType<typeof fixture>, subject = 'user-a') {
+    const user = await f.login(subject);
+    const preview = await f.send(user.agent, 'post', '/api/team-private/sleeper-link/resolve', user.csrf, { usernameOrUserId: 'synthetic' });
+    await f.send(user.agent, 'post', '/api/team-private/sleeper-link', user.csrf,
+      { challengeId: preview.body.challengeId, expectedLinkVersion: 0, confirm: true });
+    return user;
+  }
+  test('uses only the authenticated user link and requires it before source work', async () => {
+    const source = jest.spyOn(leagueSource, 'discoverTeamLeagues').mockResolvedValue({ status: 'available' } as any);
+    const f = fixture(); const a = await linkedAccount(f); const b = await f.login('b');
+    const denied = await f.send(b.agent, 'post', '/api/team-private/leagues', b.csrf, { season: '2026' });
+    expect(denied.status).toBe(409); expect(source).not.toHaveBeenCalled();
+    const result = await f.send(a.agent, 'post', '/api/team-private/leagues', a.csrf, { season: '2026' });
+    expect(result.status).toBe(200); expect(result.headers['cache-control']).toBe('private, no-store');
+    expect(source).toHaveBeenCalledWith('123456789', '2026');
+    const forged = await f.send(a.agent, 'post', '/api/team-private/leagues', a.csrf, { season: '2026', userId: b.userId });
+    expect(forged.status).toBe(400); expect(source).toHaveBeenCalledTimes(1);
+  });
+  test.each(['unlink', 'logout'])('rechecks authority after a slow source and rejects concurrent %s', async action => {
+    let release!: (value: any) => void; let entered!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    jest.spyOn(leagueSource, 'discoverTeamLeagues').mockImplementation(() => new Promise(resolve => { release = resolve; entered(); }));
+    const f = fixture(); const a = await linkedAccount(f);
+    const pending = f.send(a.agent, 'post', '/api/team-private/leagues', a.csrf, { season: '2026' }).then(result => result);
+    await started;
+    await f.send(a.agent, action === 'unlink' ? 'delete' : 'post', action === 'unlink' ? '/api/team-private/sleeper-link' : '/api/auth/logout', a.csrf,
+      action === 'unlink' ? { expectedLinkVersion: 1 } : {});
+    release({ status: 'available', secret: 'old linked context' });
+    const result = await pending;
+    expect(result.status).toBe(action === 'unlink' ? 409 : 401); expect(result.text).not.toContain('old linked context');
+  });
+  test('source outages preserve the session and return sanitized retryable information', async () => {
+    jest.spyOn(leagueSource, 'discoverTeamLeagues').mockRejectedValue(new Error('sensitive source bytes'));
+    const f = fixture(); const a = await linkedAccount(f);
+    const result = await f.send(a.agent, 'post', '/api/team-private/leagues', a.csrf, { season: '2026' });
+    expect(result.status).toBe(502); expect(result.body).toEqual({ error: 'TEAM_LEAGUES_UNAVAILABLE' });
+    expect(result.headers['set-cookie']).toBeUndefined(); expect((await a.agent.get('/api/auth/session')).status).toBe(200);
+  });
+  test('selected roster discovery derives the linked identity and refuses caller ownership or query parameters', async () => {
+    const source = jest.spyOn(leagueSource, 'findTeamLeagueRosters').mockResolvedValue({ status: 'available' } as any);
+    const f = fixture(); const a = await linkedAccount(f);
+    const result = await f.send(a.agent, 'post', '/api/team-private/league-rosters', a.csrf, { leagueId: '10', season: '2026' });
+    expect(result.status).toBe(200); expect(source).toHaveBeenCalledWith('123456789', '10', '2026');
+    expect((await f.send(a.agent, 'post', '/api/team-private/league-rosters', a.csrf, { leagueId: '10', season: '2026', userId: 'elsewhere' })).status).toBe(400);
+    expect((await f.send(a.agent, 'post', '/api/team-private/leagues?season=2026', a.csrf, {})).status).toBe(400);
+    expect(source).toHaveBeenCalledTimes(1);
   });
 });

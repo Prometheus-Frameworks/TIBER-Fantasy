@@ -82,6 +82,8 @@ describe("public Draft Review runtime profile", () => {
       request(testApp).get("/api/auth/bootstrap").set("Cookie", "__Host-tiber_session=synthetic"),
       request(testApp).post("/api/auth/google").send({ credential: "synthetic" }),
       request(testApp).get("/api/team-private/sleeper-link"),
+      request(testApp).post("/api/team-private/leagues").send({ season: '2026' }),
+      request(testApp).post("/api/team-private/league-rosters").send({ season: '2026', leagueId: '123' }),
     ];
 
     const responses = await Promise.all(requests);
@@ -92,4 +94,14 @@ describe("public Draft Review runtime profile", () => {
     }
     expect(privateHandler).not.toHaveBeenCalled();
   });
+});
+
+test('TE exploration is mounted inside public containment without private reads or writes', async () => {
+  const privateHandler = jest.fn((_req, res) => res.status(418).end());
+  const app = makePublicApp(privateHandler);
+  const result = await request(app).get('/api/draft-review/unrostered-tes');
+  expect(result.status).toBe(400);
+  expect(result.headers['cache-control']).toBe('no-store');
+  expect((await request(app).post('/api/draft-review/unrostered-tes').send({})).status).toBe(404);
+  expect(privateHandler).not.toHaveBeenCalled();
 });

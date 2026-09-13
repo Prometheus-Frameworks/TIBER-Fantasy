@@ -1,7 +1,7 @@
 # Team Auth v0 server foundation
 
 Tracking issue: [#374](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/374).
-This is the server foundation for Google sign-in, TIBER sessions and explicitly confirmed Sleeper links. It has no Account UI and does not activate real login. Public Team remains available independently.
+This includes the server foundation and Account UI for Google sign-in, TIBER sessions and explicitly confirmed Sleeper links, plus league navigation. Real login is not activated. Public Team and request-time public league discovery remain available independently.
 
 ## Reviewed scope
 
@@ -18,7 +18,7 @@ The [audit packet](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues
 
 `server/index.ts` mounts the public runtime-profile/compiler routes first, then synchronously installs the private API gate. Pending, failed or missing auth configuration produces `503 AUTH_UNAVAILABLE`; unknown API methods/paths produce generic 404. Only the narrow auth router is dynamically loaded. The full router, v1 router, legacy database, migrator, schedulers, cron and model/LLM initialization are excluded from this startup branch in both development and built startup. Health only proves the process is responding.
 
-Public `/team`, `/draft-review` and their compiler/evidence APIs do not run session middleware, query the auth store or set an auth cookie. Public responses and handoffs contain no private account/link context. The current client treats an unrecognized runtime profile as public; an Account UI is a separate slice.
+Public `/team`, `/draft-review` and their compiler/evidence APIs do not run session middleware, query the auth store or set an auth cookie. Public responses and handoffs contain no private account/link context. The client recognizes `team-auth` and enables Account within the same restricted Team shell. Unknown profiles still fall back to the public-only shell.
 
 ## Files and ownership
 
@@ -32,7 +32,7 @@ Public `/team`, `/draft-review` and their compiler/evidence APIs do not run sess
 | `server/routes/teamAuthRoutes.ts` | Route allowlist, origin/CSRF/body/rate gates, private response mapping |
 | `server/runtimeProfile.ts`, `server/index.ts` | Synchronous containment and isolated startup |
 
-The remaining allowed paths are this MODULE, three new auth test files, the existing public-profile test, `replit.md`, `.claude/context-log.md`, and `.claude/agents/codex.md`. No dependencies, package scripts, migration/config files, legacy schemas, frontend files or promoted artifacts change.
+The original foundation packet also included this MODULE, three auth test files, the public-profile test and agent/product logs. The follow-on scope below adds Account and league navigation code and tests under Joe’s takeover request. Dependencies, package scripts, migration/config files, legacy schemas and promoted artifacts remain unchanged.
 
 ## API contract
 
@@ -51,7 +51,7 @@ All private routes send `Cache-Control: private, no-store`. Query parameters are
 
 Google GIS should later use an explicit button and JS credential callback POST to the same fixed origin. No One Tap, redirect URL tokens, refresh/access token storage, passwords, email recovery, or automatic linking by email. Store only the canonical Google issuer and subject as the stable provider identity; email/name/picture claims are not persisted.
 
-Sleeper lookup proves only that a public account resolved. A link is `operator_assertion`, never verified account control. User ID strings remain strings; numeric input must exactly match the resolved ID. Username/display name are optional untrusted display fields, with source URL and received time retained. A username change does not change the stored ID. A user must unlink before choosing another account. Different TIBER users may independently assert the same Sleeper ID. No all-league retrieval, league sync, My Leagues, saved decisions, notes, notifications, MCP, models or fantasy actions are included.
+Sleeper lookup proves only that a public account resolved. A link is `operator_assertion`, never verified account control. User ID strings remain strings; numeric input must exactly match the resolved ID. Username/display name are optional untrusted display fields, with source URL and received time retained. A username change does not change the stored ID. A user must unlink before choosing another account. Different TIBER users may independently assert the same Sleeper ID. The follow-on adds request-time league retrieval and My Leagues; league sync, saved decisions, notes, notifications, MCP, models and fantasy actions remain outside this slice.
 
 ## Persistence and lifecycle
 
@@ -85,3 +85,29 @@ Then separately configure the exact Google web client and fixed staging origin, 
 Offline checks use existing installed dependencies and synthetic data only. The three auth suites cover the actual Google cryptographic verifier, strict nonce/time/audience/issuer checks, bounded transport, transaction authorization/expiry and sanitized failures; HTTP session rotation, two-user ownership, explicit link confirmation, replay, all-session revocation, persisted idle/absolute lifetime, malformed input and delayed save failures; and real bootstrap import exclusion/pending/failure/public compatibility. Memory-backed HTTP fixtures are test-only and do not establish PostgreSQL race/constraint behavior.
 
 Run the three new suites plus public-profile, Draft Review route, Team/evidence UI and production-root regressions with `npm test -- --runTestsByPath ... --coverage=false`. Run `sh build.sh`, `node node_modules/typescript/bin/tsc -p . --incremental false` against both exact base and candidate, and `git diff --check`. Record exact results, diff/tree identity and independent implementation review on the PR. Built and development local smoke checks must use no auth/provider/database configuration: public evidence remains 200, private auth remains 503/no-store, and legacy APIs remain 404. Neither those smoke checks nor health 200 claim real-auth readiness.
+
+## 2026-09-13 — #375 takeover: Account and league navigation
+
+Joe asked to take over #375 so he can toggle through leagues more seamlessly. This authorizes the bounded repair and interface/API work here, including updating the existing isolated PR preview. It does not activate private persistence or Google sign-in in that public preview. Main was integrated at `a6840e5041905899a75c1c6ea424f45062492024`; both append-only agent logs were retained when resolving merge conflicts. #377 remains a separate branch.
+
+- Fixed review `discussion_r3996655067`: all certificate retrieval failures are classified at the retrieval boundary with a stable error type. Timeout, abort, DNS, TLS, HTTP and decode failures return `503 AUTH_IDENTITY_UNAVAILABLE`; invalid signatures/claims remain `401`. The real installed Google verifier is tested with synthetic credentials and injected transport failures.
+- `TeamAccount.tsx` adds explicit Google button login, a Sleeper link preview/confirmation, unlink and all-session logout. Google's script loads only after explicit sign-in intent; nonce and credentials stay in memory, credentials use the fixed same-origin POST, and neither browser storage nor URL tokens are used. No One Tap or automatic provider sign-in.
+- Identity/session checks run on entry, focus and back-forward restoration. Logout/unlink/start of a recheck immediately removes private account/list state and invalidates pending responses. A metadata-only BroadcastChannel asks other tabs to recheck after account changes; focus remains the fallback. Failed private discovery stops for an explicit recheck, without retry loops. Store failure may follow a committed mutation, so the UI asks the user to recheck authoritative state.
+- Link previews now include the persisted challenge's exact `expiresAt` as an additive response field. The server remains authoritative about expiry; the UI also removes expired previews.
+- The `team-auth` client keeps the restricted public Team shell and enables Account. It never falls into legacy authenticated/default-user UI. Public profiles do not mount Account or call private endpoints.
+- `POST /api/team-private/leagues` accepts only `{season}`. `POST /api/team-private/league-rosters` accepts only `{season, leagueId}`. Both are read-only operations protected by existing origin/CSRF/session rules. The Sleeper ID is derived exclusively from the session owner's saved link. Authentication and link version are checked before and after upstream retrieval, so a concurrent logout/unlink cannot return the old linked context. Source failures are sanitized 502 responses; no mutation or claimed ownership is inferred.
+- The same public compiler powers explicit username lookup in the public preview; it does not read private state. `GET /api/draft-review/leagues?account=…&season=…` and `GET /api/draft-review/league-rosters?userId=…&leagueId=…&season=…` are strict, rate-limited, no-store public reads. Requests retain the existing ten-second per-source timeout. Listing admits at most 128 complete, unique league summaries for the chosen season; roster discovery fetches only the selected league and validates its complete roster count, identity and season. Account/list/roster observations have separate clocks.
+- The phone-sized picker keeps the list in React state while switching and supports search across league name, ID and format. It does not persist visited/active league state. A single observed owner/co-owner membership opens its exact roster; multiple memberships require an explicit choice; absent membership remains visible. Choosing a league reuses Team's existing study-discard check and fresh roster loader. Private link/list context is never added to public URLs, compiler responses or copied agent packets.
+
+Provider references checked 2026-09-13: [Sleeper public API](https://docs.sleeper.com/#get-all-leagues-for-user), [Google GIS button](https://developers.google.com/identity/gsi/web/guides/display-button), [Google JS configuration](https://developers.google.com/identity/gsi/web/reference/js-reference). No Sleeper writes exist in these APIs.
+
+### Remaining activation work
+
+The existing #375 preview has no auth database, Google client ID, session secret or origin variables. Its public runtime can exercise league switching immediately. Real login requires the previously documented isolated database/migration/role/TLS checks and Google origin/client setup, then real browser/device lifecycle acceptance. The Account UI is now implemented; it is tested with synthetic identities and does not establish live-auth readiness. No database/provider settings or production deployment were changed in this follow-on.
+
+### Follow-on validation receipt (2026-09-13)
+- 144 tests passed across 11 focused suites, run in isolated groups: source/auth services (59), UI/public/private routes and compatibility (81), isolated auth bootstrap (4). JSON result totals were checked; an earlier combined runner stopped before producing a complete summary and is not the basis for this count.
+- Full `sh build.sh` passed. `node node_modules/typescript/bin/tsc -p . --incremental false` reports the same 506 diagnostics and identical per-file/error-code counts as main `a6840e50`; no touched-file errors.
+- Sixteen actual built HTTP checks passed across public and unconfigured team-auth profiles: Team/alias/evidence, invalid league input, auth session, both private league endpoints and legacy denial. No provider/database configuration; no new auth cookies.
+- Browser binary acquisition timed out. DOM tests and successful HTTP/build checks do not claim rendered-browser or phone acceptance. Existing isolated Railway preview identity and publication/deployment results are recorded on PR #375.
+- The prior independent review covered foundation head `133aa003`, not this larger follow-on. Its certificate finding is repaired with regressions; fresh review and live-auth acceptance remain pending.

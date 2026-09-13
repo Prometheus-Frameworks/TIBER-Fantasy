@@ -56,9 +56,10 @@ describe('actual installed Google verifier with synthetic signed tokens', () => 
     expect(options.timeout).toBe(10000); expect(options.retry).toBe(false);
     expect(options.retryConfig?.retry).toBe(0); expect(options.signal).toBeInstanceOf(AbortSignal);
   });
-  test('certificate failures expose an unavailable code without raw diagnostics', async () => {
-    const client = { verifyIdToken: jest.fn().mockRejectedValue(new Error('Failed to retrieve verification certificates: sensitive transport data')) };
-    await expect(createGoogleVerifier(audience, client as any)(token(claims()), authHash(nonce), now))
+  test.each(['ETIMEDOUT', 'ABORT_ERR', 'ENOTFOUND', 'CERT_HAS_EXPIRED', 'HTTP_503', 'DECODE_ERROR'])('certificate %s stays unavailable through the actual verifier', async code => {
+    const client = boundedGoogleClient();
+    jest.spyOn(client.transporter, 'request').mockRejectedValue(Object.assign(new Error('sensitive transport details'), { code }));
+    await expect(createGoogleVerifier(audience, client)(token(claims()), authHash(nonce), now))
       .rejects.toMatchObject({ status: 503, message: 'AUTH_IDENTITY_UNAVAILABLE' });
   });
 });
@@ -126,7 +127,7 @@ describe('persistence authorization and transaction boundaries without a databas
 
 describe('explicit public Sleeper resolution', () => {
   const auth: AuthPrincipal = { userId: randomUUID(), sessionVersion: 0, authenticatedAt: now, lastSeenAt: now };
-  const repository = () => ({ inspect: jest.fn().mockResolvedValue({}), issueLink: jest.fn().mockResolvedValue({ id: randomUUID(), expectedLinkVersion: 0 }) });
+  const repository = () => ({ inspect: jest.fn().mockResolvedValue({}), issueLink: jest.fn().mockResolvedValue({ id: randomUUID(), expectedLinkVersion: 0, expiresAt: new Date(now + AUTH_POLICY.challengeMs).toISOString() }) });
   test.each([null, {}, { user_id: 123 }, { user_id: 'different' }, { user_id: '456' }])('rejects malformed/mismatched numeric identity %#', async result => {
     const repo = repository(); const get = jest.fn().mockResolvedValue(result);
     const service = new TeamAuthService(repo as unknown as AuthPersistence, jest.fn(), get, () => now);

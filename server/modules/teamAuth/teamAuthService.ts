@@ -11,7 +11,7 @@ export interface AuthPersistence {
   peekLogin(id: string, binding: string): Promise<LoginChallenge>;
   admitLogin(id: string, binding: string, identity: GoogleIdentity): Promise<AuthUser>;
   inspect(auth: AuthPrincipal): Promise<PrivateAccount>;
-  issueLink(auth: AuthPrincipal, binding: string, observation: SleeperLinkObservation): Promise<{ id: string; expectedLinkVersion: number }>;
+  issueLink(auth: AuthPrincipal, binding: string, observation: SleeperLinkObservation): Promise<{ id: string; expectedLinkVersion: number; expiresAt: string }>;
   confirmLink(auth: AuthPrincipal, binding: string, id: string, version: number): Promise<PrivateAccount>;
   unlink(auth: AuthPrincipal, version: number): Promise<PrivateAccount>;
   logout(auth: AuthPrincipal): Promise<void>;
@@ -121,7 +121,7 @@ export class PgAuthPersistence implements AuthPersistence {
     return this.transaction(async client => ({ user: await this.activeUser(client, auth), link: await this.linkFor(client, auth.userId) }));
   }
 
-  async issueLink(auth: AuthPrincipal, binding: string, observation: SleeperLinkObservation): Promise<{ id: string; expectedLinkVersion: number }> {
+  async issueLink(auth: AuthPrincipal, binding: string, observation: SleeperLinkObservation): Promise<{ id: string; expectedLinkVersion: number; expiresAt: string }> {
     return this.transaction(async client => {
       const user = await this.activeUser(client, auth);
       if (await this.linkFor(client, auth.userId)) throw new TeamAuthError(409, 'SLEEPER_LINK_EXISTS');
@@ -130,7 +130,7 @@ export class PgAuthPersistence implements AuthPersistence {
       const id = randomUUID(); const clock = this.now();
       await client.query("INSERT INTO tiber_auth_challenges (id, kind, binding_hash, user_id, payload, created_at, expires_at) VALUES ($1, 'sleeper_link', $2, $3, $4, $5, $6)",
         [id, binding, auth.userId, JSON.stringify({ observation, expectedLinkVersion: user.sleeperLinkVersion }), new Date(clock), new Date(clock + AUTH_POLICY.challengeMs)]);
-      return { id, expectedLinkVersion: user.sleeperLinkVersion };
+      return { id, expectedLinkVersion: user.sleeperLinkVersion, expiresAt: new Date(clock + AUTH_POLICY.challengeMs).toISOString() };
     });
   }
 
@@ -215,7 +215,7 @@ export class TeamAuthService {
     } catch { throw new TeamAuthError(502, 'SLEEPER_IDENTITY_UNAVAILABLE'); }
     // A session may expire or be revoked during source retrieval.
     const challenge = await this.persistence.issueLink(auth, binding, observation);
-    return { challengeId: challenge.id, expectedLinkVersion: challenge.expectedLinkVersion, observation,
+    return { challengeId: challenge.id, expectedLinkVersion: challenge.expectedLinkVersion, expiresAt: challenge.expiresAt, observation,
       linkMethod: 'operator_assertion' as const, accountControlVerified: false as const };
   }
 }

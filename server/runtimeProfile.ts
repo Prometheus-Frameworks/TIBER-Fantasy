@@ -52,6 +52,7 @@ const authRoutes = new Set([
   'GET /api/auth/bootstrap', 'POST /api/auth/google', 'GET /api/auth/session', 'POST /api/auth/logout',
   'GET /api/team-private/sleeper-link', 'POST /api/team-private/sleeper-link/resolve',
   'POST /api/team-private/sleeper-link', 'DELETE /api/team-private/sleeper-link',
+  'POST /api/team-private/leagues', 'POST /api/team-private/league-rosters',
 ]);
 
 /** Installed synchronously, before any asynchronous auth loading. This gate

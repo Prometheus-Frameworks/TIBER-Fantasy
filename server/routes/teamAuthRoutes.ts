@@ -7,11 +7,14 @@ import { authHash, constantEqual, createGoogleVerifier } from '../modules/teamAu
 import { TeamAuthService } from '../modules/teamAuth/teamAuthService';
 import { createPgAuthSession, destroySession, discardResponseSession, persistSession, regenerateSession } from '../modules/teamAuth/session';
 import { sleeperClient } from '../integrations/sleeperClient';
+import { discoverTeamLeagues, findTeamLeagueRosters } from '../modules/draftReview/teamLeagues';
+import { privateLeaguesInput, privateLeagueRosterInput } from '@shared/teamLeagues';
 
 export const TEAM_AUTH_ROUTES = Object.freeze([
   'GET /api/auth/bootstrap', 'POST /api/auth/google', 'GET /api/auth/session', 'POST /api/auth/logout',
   'GET /api/team-private/sleeper-link', 'POST /api/team-private/sleeper-link/resolve',
   'POST /api/team-private/sleeper-link', 'DELETE /api/team-private/sleeper-link',
+  'POST /api/team-private/leagues', 'POST /api/team-private/league-rosters',
 ]);
 
 function boundedLimiter(now: () => number) {
@@ -139,6 +142,28 @@ export function createTeamAuthRouter(deps: {
   router.delete('/api/team-private/sleeper-link', run(async (req, res) => {
     const input = sleeperUnlinkSchema.parse(req.body);
     await finish(req, res, accountBody(await service.persistence.unlink(principal(req), input.expectedLinkVersion)));
+  }));
+
+  // These POSTs are read-only. Strict bodies preserve the no-query-string
+  // private boundary; the caller never supplies a TIBER or Sleeper user ID.
+  router.post(['/api/team-private/leagues', '/api/team-private/league-rosters'], run(async (req, res) => {
+    const listing = req.path === '/api/team-private/leagues';
+    const input = (listing ? privateLeaguesInput : privateLeagueRosterInput).parse(req.body);
+    const leagueId = listing ? null : privateLeagueRosterInput.parse(req.body).leagueId;
+    const auth = principal(req);
+    const before = await service.persistence.inspect(auth);
+    if (!before.link) throw new TeamAuthError(409, 'AUTH_SLEEPER_LINK_REQUIRED');
+    let result;
+    try {
+      result = listing ? await discoverTeamLeagues(before.link.sleeperUserId, input.season)
+        : await findTeamLeagueRosters(before.link.sleeperUserId, leagueId!, input.season);
+    } catch { throw new TeamAuthError(502, 'TEAM_LEAGUES_UNAVAILABLE'); }
+    // Slow upstream work must not return an old account after unlink/logout.
+    const after = await service.persistence.inspect(auth);
+    if (after.user.sleeperLinkVersion !== before.user.sleeperLinkVersion || after.link?.sleeperUserId !== before.link.sleeperUserId) {
+      throw new TeamAuthError(409, 'AUTH_LINK_CHANGED');
+    }
+    await finish(req, res, result);
   }));
 
   const sanitize: ErrorRequestHandler = (error, req, res, _next) => {

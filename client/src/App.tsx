@@ -52,18 +52,18 @@ import RookieBoard from "@/pages/RookieBoard";
 import TiberClawPage from "@/pages/TiberClawPage";
 import NotFound from "@/pages/not-found";
 
-type RuntimeProfile = "full" | "public-draft-review";
+type RuntimeProfile = "full" | "public-draft-review" | "team-auth";
 
 function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
-  if (runtimeProfile === "public-draft-review") {
+  if (runtimeProfile === "public-draft-review" || runtimeProfile === "team-auth") {
     return (
       <Switch>
         <Route>
           {() => (
             <TiberLayout publicDraftReviewOnly>
               <Switch>
-                <Route path="/team" component={TiberDraftReview} />
-                <Route path="/draft-review" component={TiberDraftReview} />
+                <Route path="/team">{() => <TiberDraftReview authEnabled={runtimeProfile === 'team-auth'} />}</Route>
+                <Route path="/draft-review">{() => <TiberDraftReview authEnabled={runtimeProfile === 'team-auth'} />}</Route>
                 <Route>{() => <Redirect to={`/team${window.location.search}`} />}</Route>
               </Switch>
             </TiberLayout>
@@ -82,8 +82,8 @@ function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
             <Switch>
               <Route path="/management" component={TiberManagementDashboard} />
               <Route path="/team-management" component={TiberManagementDashboard} />
-              <Route path="/team" component={TiberDraftReview} />
-              <Route path="/draft-review" component={TiberDraftReview} />
+              <Route path="/team">{() => <TiberDraftReview />}</Route>
+              <Route path="/draft-review">{() => <TiberDraftReview />}</Route>
               {/*
                 Observatory surface (user-facing name). The implementation component is
                 still named `StressLab` (legacy/internal name retained — see the naming
@@ -173,7 +173,7 @@ function AppContent() {
       .then(async (response) => {
         if (!response.ok) throw new Error(`runtime profile returned ${response.status}`);
         const body = await response.json() as { profile?: unknown };
-        if (body.profile !== "full" && body.profile !== "public-draft-review") {
+        if (body.profile !== "full" && body.profile !== "public-draft-review" && body.profile !== "team-auth") {
           throw new Error("runtime profile response was invalid");
         }
         if (active) setRuntimeProfile(body.profile);
