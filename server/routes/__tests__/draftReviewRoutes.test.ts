@@ -85,6 +85,19 @@ describe('Draft Review public route', () => {
 });
 
 describe('bounded historical comparison route', () => {
+  test('withholds preparation-only history while serving an existing admitted player', async () => {
+    const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    const result = await request(app).get('/api/draft-review/evidence').query({ player_ids: '5892,6819,8188' });
+    expect(result.status).toBe(200);
+    expect(result.body.players.map((p: { status: string }) => p.status)).toEqual(['unavailable', 'unavailable', 'available']);
+    for (const player of result.body.players.slice(0, 2)) {
+      expect(player).toMatchObject({ identity: null, observed: null, derived: {} });
+      expect(player.reason).toContain('promotion');
+    }
+    expect(result.body.provenance.team_roster_identity_admission.player_ids).toHaveLength(19);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   test('serves admitted data without Sleeper or private state and preserves public headers', async () => {
     const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
     const app = express(); app.use(createDraftReviewRouter());

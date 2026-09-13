@@ -3,11 +3,49 @@ import argparse
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import subprocess
 
 BASELINE_COMMIT = '8b762650f4b933b6ce717c551993dcaaf92e1008'
-DATA_COMMIT = '488220fa05c834aad3a4e2bea839a1843131053a'
+DATA_COMMIT = '5c683e26a843b98358292f0d34a97a98762a96f0'
+ROSTER_BASE_COMMIT = 'e65791d3169c0234b80bdb4bfb00c3ed848d64dd'
+ROSTER_BASE_IDENTITY_SHA = '02e360f58837f620e26b071992f90c444486388e692e39c5dcffc23f63e8a0c9'
+ROSTER_RECEIPT_PATH = 'exports/promoted/draft_review/team_roster_identity_admission_v1.json'
+ROSTER_ACCEPTANCE = {'source': 'operator_conversation',
+ 'date': '2026-09-13',
+ 'operator_message': 'Okay sounds good',
+ 'public_receipt_url': None,
+ 'context': 'Acceptance followed independent proposal review and an explanation that transferred '
+            'players retain their historical weekly teams.',
+ 'scope': 'nineteen reviewed historical identity edges; Data branch materialization and matching '
+          'Fantasy consumer integration preparation; no merge or production release'}
+ROSTER_REVIEW = {'source': 'independent_agent_review_in_operator_conversation',
+ 'review_date': '2026-09-13',
+ 'proposal_sha256': 'a00fbfe876db14372a170c3a579971537c5074b1632f2688e3b2e09c6a775e8b',
+ 'review_sha256': '471237237f5be9fce7185f12464084bfd8dc9f25e3d85e91f648b30d7b50b996',
+ 'result': 'no_material_findings_on_nineteen_edge_proposal',
+ 'public_receipt_url': None,
+ 'implementation_review': 'pending_separate_review'}
+ROSTER_EDGES = {'10444': ('00-0038979', 'name_exact', 'medium'),
+ '10218': ('00-0038618', 'name_exact', 'medium'),
+ '8127': ('00-0038046', 'name_exact', 'medium'),
+ '11571': ('00-0039798', 'name_exact', 'medium'),
+ '11575': ('00-0039875', 'name_exact', 'medium'),
+ '5022': ('00-0034351', 'gsis_direct', 'high'),
+ '5892': ('00-0035685', 'gsis_direct', 'high'),
+ '5927': ('00-0035659', 'gsis_direct', 'high'),
+ '6768': ('00-0036212', 'espn_bridge', 'high'),
+ '6819': ('00-0036252', 'espn_bridge', 'high'),
+ '7525': ('00-0036912', 'name_exact', 'medium'),
+ '8142': ('00-0037664', 'name_exact', 'medium'),
+ '8146': ('00-0037740', 'name_exact', 'medium'),
+ '8161': ('00-0038128', 'name_exact', 'medium'),
+ '9508': ('00-0039032', 'name_exact', 'medium'),
+ '10213': ('00-0038563', 'name_exact', 'medium'),
+ '11834': ('00-0039424', 'name_exact', 'medium'),
+ '12048': ('00-0039299', 'name_exact', 'medium'),
+ '12507': ('00-0040666', 'name_exact', 'medium')}
 IDENTITY_PATH = 'exports/promoted/identity_crosswalk/tiber_identity_crosswalk_v2.json'
 BASELINE_IDENTITY_SHA = 'c0e5c32a20b0397ff22e994a0fd48ec16907b5909f0880e0ebd3c7c89f0f9809'
 TEAM_RECEIPT_PATH = 'exports/promoted/draft_review/team_identity_admission_v1.json'
@@ -16,7 +54,8 @@ TEAM_ACCEPTANCE = 'https://github.com/Prometheus-Frameworks/TIBER-Data/pull/268#
 TEAM_EDGES = {'9487': '00-0038606', '8112': '00-0037238', '10219': '00-0038611'}
 PINS = {
  'exports/promoted/draft_review/evidence_admission_v1.json': '603e52409c5d07820bc58c5c0b7d6df91e4eb7cdc31326633d1c24e35c34811c',
- IDENTITY_PATH: '02e360f58837f620e26b071992f90c444486388e692e39c5dcffc23f63e8a0c9',
+ IDENTITY_PATH: '72521b56b1edd92fbb1feac974ab2608a599004f378974192e885278a4007011',
+ ROSTER_RECEIPT_PATH: 'cc61d1e236138e1c1e6685fb444c3db81da1188d7cfcc895b278164916e9be4f',
  'data/processed/evidence/player_weekly_usage_2025.source_backed.json': '30a8e17370270e2fa5d055c7a771f19af2fe7bd89282cd2373f7704a492412cb',
  'data/processed/evidence/player_weekly_ppr_outcomes_2025.source_backed.json': 'f241112115c9a625abead3410db89db6b4a8b603ce1dd663a45ff0697563e3a2',
  TEAM_RECEIPT_PATH: '4ed7a6e7d0310c0f3b3e3c70a53f7d7ec0fb0c22dbd931702ea5efc4399f84ef',
@@ -77,7 +116,8 @@ def require(condition, message):
         raise ValueError(message)
 
 def read_pinned(repo, commit, path, expected):
-    raw = subprocess.check_output(['git', '-C', str(repo), 'show', f'{commit}:{path}'])
+    raw = subprocess.check_output(['git', '-C', str(repo), 'show', f'{commit}:{path}'],
+                                  env={**os.environ, 'GIT_NO_LAZY_FETCH': '1'})
     require(hashlib.sha256(raw).hexdigest() == expected, f'Pinned source mismatch: {path}')
     return raw
 
@@ -122,6 +162,32 @@ def validate_admissions(admission, team, identities, baseline):
                 'Team identity differs from exact admitted edge')
     return list(current.values())
 
+def validate_roster_admissions(admission, roster, identities, prior):
+    require(roster['schema_version'] == 'team_roster_identity_admission_v1'
+            and roster['status'] == 'accepted_for_branch_and_consumer_preparation'
+            and roster['scope'] == 'nineteen_historical_identity_edges_only'
+            and roster['operator_acceptance'] == ROSTER_ACCEPTANCE
+            and roster['proposal_review'] == ROSTER_REVIEW
+            and roster['baseline_commit'] == ROSTER_BASE_COMMIT,
+            'Unexpected roster admission authority')
+    require(roster['consumer_bundle_regeneration_authorized'] is True
+            and all(roster[k] is False for k in ['merge_authorized', 'production_deployment_authorized', 'production_release_authorized']),
+            'Unexpected roster admission permissions')
+    require(roster['consumer_scope'] == admission['consumer_scope']
+            and roster['excluded_player_ids'] == ['13301'], 'Roster historical scope changed')
+    old, current, additions = [identity_map(x) for x in [prior['records'], identities['records'], roster['identity_records']]]
+    require(len(old) == 75 and len(current) == 94 and len(additions) == 19,
+            'Unexpected roster identity slice size')
+    require(set(additions) == set(ROSTER_EDGES) and set(current) - set(old) == set(ROSTER_EDGES),
+            'Unexpected roster identity delta')
+    require(all(current.get(k) == v for k, v in old.items()), 'Prior identity changed or removed')
+    for pid, expected in ROSTER_EDGES.items():
+        row = additions[pid]
+        require(current[pid] == row and tuple(row[k] for k in ['tiber_player_id', 'match_method', 'confidence']) == expected,
+                'Roster identity differs from exact admitted edge')
+    return list(current.values())
+
+
 def build(repo):
     loaded = {path: json.loads(read_pinned(repo, DATA_COMMIT, path, expected))
               for path, expected in PINS.items()}
@@ -130,7 +196,13 @@ def build(repo):
     usage = loaded['data/processed/evidence/player_weekly_usage_2025.source_backed.json']
     outcomes = loaded['data/processed/evidence/player_weekly_ppr_outcomes_2025.source_backed.json']
     baseline = json.loads(read_pinned(repo, BASELINE_COMMIT, IDENTITY_PATH, BASELINE_IDENTITY_SHA))
-    selected = validate_admissions(admission, team, identities, baseline)
+    prior = json.loads(read_pinned(repo, ROSTER_BASE_COMMIT, IDENTITY_PATH, ROSTER_BASE_IDENTITY_SHA))
+    validate_admissions(admission, team, prior, baseline)
+    roster = loaded[ROSTER_RECEIPT_PATH]
+    selected = validate_roster_admissions(admission, roster, identities, prior)
+    for source in roster['sources']:
+        require(source['commit'] == ROSTER_BASE_COMMIT, 'Unexpected roster admission source commit')
+        read_pinned(repo, ROSTER_BASE_COMMIT, source['path'], source['sha256'])
     # The Team receipt binds the old crosswalk as its audit baseline. Never mistake that
     # source pin for the newly materialized crosswalk pin above.
     for source in team['sources']:
@@ -156,6 +228,14 @@ def build(repo):
                 'baseline_producer_commit': BASELINE_COMMIT,
                 'baseline_identity_sha256': BASELINE_IDENTITY_SHA,
                 'limitations': team['limitations'],
+            },
+            'team_roster_identity_admission': {
+                'path': ROSTER_RECEIPT_PATH, 'sha256': PINS[ROSTER_RECEIPT_PATH],
+                'receipt_stage': roster['status'], 'player_ids': list(ROSTER_EDGES),
+                'operator_acceptance': roster['operator_acceptance'], 'proposal_review': roster['proposal_review'],
+                'baseline_producer_commit': ROSTER_BASE_COMMIT,
+                'baseline_identity_sha256': ROSTER_BASE_IDENTITY_SHA,
+                'limitations': roster['limitations'],
             },
             'source_acquired_at': None, 'source_updated_at': None, 'original_release_hash': None, 'package_version': None,
             'transform': 'TIBER filters 2025 weeks 1–18 and aggregates recorded observations; this is a downstream descriptive bundle.',

@@ -974,3 +974,16 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Authorized bounded repair of review discussion_r3996652699. Cache unavailable trend results for the existing five-minute TTL; preserve null receive time, empty counts, fresh league reads and single-flight expiry recovery.
 - Changed only the trend catch path and added synthetic outage/malformed-response regressions. Both tests failed before the fix; 66 tests across six service/shared/UI/Team/routes/containment suites pass afterward. git diff --check passed. No dependencies or UI/contract changes.
 - Repair publication and exact-head review request are recorded on PR #373. Prior phone acceptance remains bound to b7b9bd122e1f2c4dce83b61e164ce1585445aa6a; no new phone test, merge or production release is claimed.
+
+### 2026-09-13 — Codex: Nineteen historical Team profiles prepared locally
+- **What changed:** Exact nineteen-edge Data consumer integration, separate conversation/admission provenance, retained confidence and historical teams, original 75 profiles unchanged; Antonio excluded from 2025 evidence.
+- **Files modified:** scripts/buildDraftReviewEvidenceBundle.py and semantic tests; draftReview historical bundle, runtime pin and tests; shared/draftReviewEvidence.ts; module and review/handoff docs.
+- **Validation:** 15 Python tests normal/optimized, deterministic replay, 60 Jest tests/seven suites, full build, built /evidence HTTP smoke; typecheck unchanged at 506 baseline diagnostics.
+- **Notes:** The operator subsequently authorized both branch publications and draft PRs. Data draft PR #271 publishes 5c683e26a843b98358292f0d34a97a98762a96f0 with a file tree identical to local 790c04f. The authenticated GitHub connection assigns new commit metadata because command-line Git lacks write credentials. Consumer pin/hash updated with all profile data unchanged. Independent implementation review and separate merge/production decisions remain outstanding. No #375/#377 changes, source refresh, DB, acquisition or fantasy transaction.
+
+
+### 2026-09-13 — Codex: PR #378 promotion-boundary P2 repair
+- **What changed:** Accepted P2; all nineteen preparation-only identities are unavailable at runtime. Decoder and cache apply the same boundary; prior 75 profiles and pinned offline bundle are unchanged. No activation switch or manufactured promotion receipt.
+- **Files modified:** historicalEvidence.ts, historicalEvidence.test.ts, draftReviewRoutes.test.ts, module/review documentation, replit.md and agent logs.
+- **Validation:** 62 tests across seven history/service/routes/UI/shared/containment suites passed, including all-cohort withholding, prior-profile equality, cache isolation and mixed HTTP comparison; full build passed.
+- **Notes:** Operator authorized repair publication and next review. Data #271's P2 changes inventory documentation only; existing source pin retained. Merge, promotion and deployment remain separate.
