@@ -155,4 +155,42 @@ class RosterAdmissionTests(unittest.TestCase):
             self.receipt['identity_records'][0][field]=value
             with self.assertRaises(ValueError): self.validate()
 
+class PromotionTests(unittest.TestCase):
+    def setUp(self):
+        import json
+        from pathlib import Path
+        bundle = json.loads((Path(__file__).resolve().parents[1] / 'server/modules/draftReview/artifacts/historical2025.json').read_text())
+        self.promotion = bundle['provenance']['team_roster_identity_promotion']['receipt']
+        # Preparation evidence is preserved verbatim by the new receipt.
+        self.roster = {k: deepcopy(self.promotion[k]) for k in [
+            'identity_records', 'consumer_scope', 'historical_validation', 'limitations', 'exclusion_context']}
+        from buildDraftReviewEvidenceBundle import IDENTITY_PATH, ROSTER_BASE_IDENTITY_SHA, ROSTER_RECEIPT_PATH
+        self.roster['sources'] = [{**s, 'sha256': ROSTER_BASE_IDENTITY_SHA if s['path'] == IDENTITY_PATH else s['sha256']}
+                                  for s in self.promotion['sources'] if s['path'] != ROSTER_RECEIPT_PATH]
+
+    def test_promotion_matches_original_scope(self):
+        from buildDraftReviewEvidenceBundle import validate_roster_promotion
+        validate_roster_promotion(self.promotion, self.roster)
+
+    def test_promotion_mutations_fail_closed(self):
+        from buildDraftReviewEvidenceBundle import validate_roster_promotion
+        for change in ['missing', 'cohort', 'exclusion', 'scope', 'confidence', 'team', 'acceptance', 'source', 'duplicate', 'grant', 'release', 'numeric_false', 'baseline']:
+            with self.subTest(change=change):
+                r = deepcopy(self.promotion)
+                if change == 'missing': r = None
+                if change == 'cohort': r['player_ids'].append('13301')
+                if change == 'exclusion': r['excluded_player_ids'] = []
+                if change == 'scope': r['consumer_scope']['forecast_allowed'] = True
+                if change == 'confidence': r['identity_records'][0]['confidence'] = 'high'
+                if change == 'team': r['historical_validation'][0]['historical_teams'] = ['NO']
+                if change == 'acceptance': r['operator_acceptance']['operator_message'] = 'Okay sounds good'
+                if change == 'source': r['sources'][0]['sha256'] = '0' * 64
+                if change == 'duplicate': r['sources'].append(deepcopy(r['sources'][0]))
+                if change == 'grant': r['historical_consumer_use_authorized'] = False
+                if change == 'release': r['deployment_authorized'] = True
+                if change == 'numeric_false': r['merge_authorized'] = 0
+                if change == 'baseline': r['baseline_commit'] = '0' * 40
+                with self.assertRaises((ValueError, TypeError, KeyError)):
+                    validate_roster_promotion(r, self.roster)
+
 if __name__ == '__main__': unittest.main()

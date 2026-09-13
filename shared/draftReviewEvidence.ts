@@ -17,6 +17,23 @@ export type HistoricalEvidence = {
     producer_repo: string; producer_commit: string;
     sources: Array<{ path: string; sha256: string }>;
     operator_acceptance: string;
+    team_roster_identity_promotion?: {
+      path: string; sha256: string;
+      receipt: {
+        schema_version: 'team_roster_identity_promotion_v1';
+        status: 'accepted_for_historical_consumer_use'; scope: string; decision_date: string;
+        baseline_commit: string; preparation_receipt: { path: string; sha256: string };
+        operator_acceptance: { source: 'operator_conversation'; date: string; operator_message: string; public_receipt_url: null };
+        historical_consumer_use_authorized: true; consumer_activation_changes_authorized: true;
+        merge_authorized: false; deployment_authorized: false; production_release_authorized: false;
+        player_ids: string[]; excluded_player_ids: string[]; exclusion_context: string;
+        identity_records: Array<Record<string, unknown>>; historical_validation: Array<Record<string, unknown>>;
+        consumer_scope: Record<string, unknown>; sources: Array<{ commit: string; path: string; sha256: string }>;
+        limitations: string[]; release_boundary: string;
+        source_acquired_at: null; source_updated_at: null; original_release_hash: null; package_version: null;
+        attribution: { name: string; source_url: string; license: string; license_url: string; notice: string };
+      };
+    };
     team_identity_admission?: {
       path: string; sha256: string; operator_acceptance: string; player_ids: string[];
       receipt_stage: string; consumer_authorization: string; consumer_authorization_scope: string;

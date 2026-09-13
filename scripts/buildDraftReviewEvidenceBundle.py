@@ -8,7 +8,10 @@ from pathlib import Path
 import subprocess
 
 BASELINE_COMMIT = '8b762650f4b933b6ce717c551993dcaaf92e1008'
-DATA_COMMIT = '5c683e26a843b98358292f0d34a97a98762a96f0'
+DATA_COMMIT = 'f12234d909adc82e79ca463e76b994c8dd24bdb9'
+PROMOTION_BASE_COMMIT = 'c0a7d1e98161c23f64f67c075f81eb71d6ba693a'
+PROMOTION_PATH = 'exports/promoted/draft_review/team_roster_identity_promotion_v1.json'
+PROMOTION_SHA256 = '215d2b47edb204a138d30725b4e2e3974993f105271667d665c651b825408c85'
 ROSTER_BASE_COMMIT = 'e65791d3169c0234b80bdb4bfb00c3ed848d64dd'
 ROSTER_BASE_IDENTITY_SHA = '02e360f58837f620e26b071992f90c444486388e692e39c5dcffc23f63e8a0c9'
 ROSTER_RECEIPT_PATH = 'exports/promoted/draft_review/team_roster_identity_admission_v1.json'
@@ -53,6 +56,7 @@ CONSUMER_AUTHORIZATION = 'https://github.com/Prometheus-Frameworks/TIBER-Fantasy
 TEAM_ACCEPTANCE = 'https://github.com/Prometheus-Frameworks/TIBER-Data/pull/268#issuecomment-5627117154'
 TEAM_EDGES = {'9487': '00-0038606', '8112': '00-0037238', '10219': '00-0038611'}
 PINS = {
+ PROMOTION_PATH: PROMOTION_SHA256,
  'exports/promoted/draft_review/evidence_admission_v1.json': '603e52409c5d07820bc58c5c0b7d6df91e4eb7cdc31326633d1c24e35c34811c',
  IDENTITY_PATH: '72521b56b1edd92fbb1feac974ab2608a599004f378974192e885278a4007011',
  ROSTER_RECEIPT_PATH: 'cc61d1e236138e1c1e6685fb444c3db81da1188d7cfcc895b278164916e9be4f',
@@ -188,6 +192,37 @@ def validate_roster_admissions(admission, roster, identities, prior):
     return list(current.values())
 
 
+def validate_roster_promotion(promotion, roster):
+    # Exact byte admission is checked by read_pinned. Independently bind its
+    # authority to the unchanged preparation cohort and descriptive scope.
+    require(promotion['schema_version'] == 'team_roster_identity_promotion_v1'
+            and promotion['status'] == 'accepted_for_historical_consumer_use'
+            and promotion['scope'] == 'nineteen_historical_identity_edges_only'
+            and promotion['baseline_commit'] == PROMOTION_BASE_COMMIT,
+            'Unexpected historical promotion authority')
+    require(promotion['historical_consumer_use_authorized'] is True
+            and promotion['consumer_activation_changes_authorized'] is True
+            and all(promotion[k] is False for k in ['merge_authorized', 'deployment_authorized', 'production_release_authorized']),
+            'Unexpected historical promotion permissions')
+    require(promotion['preparation_receipt'] == {'path': ROSTER_RECEIPT_PATH, 'sha256': PINS[ROSTER_RECEIPT_PATH]}
+            and promotion['player_ids'] == list(ROSTER_EDGES)
+            and promotion['excluded_player_ids'] == ['13301'], 'Promotion cohort or preparation pin differs')
+    for key in ['identity_records', 'consumer_scope', 'historical_validation', 'limitations', 'exclusion_context']:
+        require(json.dumps(promotion[key], sort_keys=True, allow_nan=False) == json.dumps(roster[key], sort_keys=True, allow_nan=False),
+                f'Promotion changed prepared evidence: {key}')
+    acceptance = promotion['operator_acceptance']
+    require(acceptance == {'source': 'operator_conversation', 'date': '2026-09-13',
+        'operator_message': 'Proceed with the nineteen-player historical promotion receipt and matching Team consumer activation changes, tests, paired PRs and independent review. Preserve all source limitations and exclude Antonio Williams. Stop before merging or deploying the activation changes.',
+        'public_receipt_url': None}, 'Unexpected promotion acceptance')
+    expected_sources = {s['path']: s['sha256'] for s in roster['sources']}
+    expected_sources[IDENTITY_PATH] = PINS[IDENTITY_PATH]
+    expected_sources[ROSTER_RECEIPT_PATH] = PINS[ROSTER_RECEIPT_PATH]
+    require(len(promotion['sources']) == len(expected_sources)
+            and {s['path']: s['sha256'] for s in promotion['sources']} == expected_sources
+            and all(s['commit'] == PROMOTION_BASE_COMMIT for s in promotion['sources']),
+            'Promotion source pins differ')
+
+
 def build(repo):
     loaded = {path: json.loads(read_pinned(repo, DATA_COMMIT, path, expected))
               for path, expected in PINS.items()}
@@ -200,6 +235,10 @@ def build(repo):
     validate_admissions(admission, team, prior, baseline)
     roster = loaded[ROSTER_RECEIPT_PATH]
     selected = validate_roster_admissions(admission, roster, identities, prior)
+    promotion = loaded[PROMOTION_PATH]
+    validate_roster_promotion(promotion, roster)
+    for source in promotion['sources']:
+        read_pinned(repo, PROMOTION_BASE_COMMIT, source['path'], source['sha256'])
     for source in roster['sources']:
         require(source['commit'] == ROSTER_BASE_COMMIT, 'Unexpected roster admission source commit')
         read_pinned(repo, ROSTER_BASE_COMMIT, source['path'], source['sha256'])
@@ -228,6 +267,9 @@ def build(repo):
                 'baseline_producer_commit': BASELINE_COMMIT,
                 'baseline_identity_sha256': BASELINE_IDENTITY_SHA,
                 'limitations': team['limitations'],
+            },
+            'team_roster_identity_promotion': {
+                'path': PROMOTION_PATH, 'sha256': PROMOTION_SHA256, 'receipt': promotion,
             },
             'team_roster_identity_admission': {
                 'path': ROSTER_RECEIPT_PATH, 'sha256': PINS[ROSTER_RECEIPT_PATH],
