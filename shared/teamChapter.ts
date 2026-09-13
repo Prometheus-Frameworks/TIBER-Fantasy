@@ -65,7 +65,8 @@ export function chapterPressure(raw: unknown) {
   }
   const marked = players.filter(p => designation(p) !== null).sort((a, b) => severity(designation(a)!) - severity(designation(b)!) || a.player_id.localeCompare(b.player_id));
   const selectedStarter = marked.find(p => p.roster_state === 'starter');
-  if (!selectedStarter && rb_coverage.status === 'available' && rb_coverage.without_recorded_flag_count! <= required + 1) {
+  const limitedRb = rb_coverage.status === 'available' && rb_coverage.without_recorded_flag_count! <= required + 1;
+  if (!selectedStarter && limitedRb) {
     return result({ ...base, kind: 'rb_coverage', trigger: { player_id: null, designation: null, unfilled_slots: null, roster_coverage: rb_coverage }, title: 'Limited RB cover',
       reason: `${rb_coverage.starter_count} starting-group RBs · ${rb_coverage.bench_count} bench RB${rb_coverage.bench_count === 1 ? "" : "s"} · ${flagged.length} recorded flag${flagged.length === 1 ? "" : "s"} across those RBs. ${required} RB slots are required; game availability is unresolved.`,
       options: ['Review RB and flex coverage in the current lineup.', 'Check player availability, kickoff and lineup locks in Sleeper.', 'Clarify keeper protections and whether player additions or trades are permitted.'],
@@ -74,7 +75,7 @@ export function chapterPressure(raw: unknown) {
   const selected = selectedStarter ?? marked[0];
   if (!selected) return result(null);
   const flag = designation(selected)!;
-  return result({ ...base, kind: selected.roster_state === 'starter' ? 'starter_designation' : 'rostered_designation', trigger: { player_id: selected.player_id, designation: flag, unfilled_slots: null, observed_player: selected }, title: `${selected.name}: ${flag}`, reason: `Sleeper reports ${flag} for a player in the ${selected.roster_state === 'starter' ? 'starting group' : selected.roster_state}. Game availability and reserve eligibility remain unresolved.`, league_rule_context: { ...base.league_rule_context, designation_rule: reserve?.configured_eligibility[flag.toLowerCase()] ?? null }, options: ['Check the player and lineup in Sleeper.', 'Compare roster coverage before deciding.', 'Wait for an updated designation while checking kickoff and lock timing in Sleeper.'], watch_conditions: ['A refreshed player designation changes.', 'The player changes roster group.', 'Reserve occupancy or the relevant league rule changes.'] });
+  return result({ ...base, kind: selected.roster_state === 'starter' ? 'starter_designation' : 'rostered_designation', trigger: { player_id: selected.player_id, designation: flag, unfilled_slots: null, observed_player: selected, ...(limitedRb ? { roster_coverage: rb_coverage } : {}) }, title: `${selected.name}: ${flag}`, reason: `Sleeper reports ${flag} for a player in the ${selected.roster_state === 'starter' ? 'starting group' : selected.roster_state}. Game availability and reserve eligibility remain unresolved.`, league_rule_context: { ...base.league_rule_context, designation_rule: reserve?.configured_eligibility[flag.toLowerCase()] ?? null }, options: ['Check the player and lineup in Sleeper.', 'Compare roster coverage before deciding.', 'Wait for an updated designation while checking kickoff and lock timing in Sleeper.'], watch_conditions: ['A refreshed player designation changes.', 'The player changes roster group.', 'Reserve occupancy or the relevant league rule changes.'] });
 }
 export function chapterPacket<T extends { input: { canonicalUrl: string }; generated_at: string }>(review: T, study: StudyAttachment | null = null) {
   const result = chapterPressure(review);

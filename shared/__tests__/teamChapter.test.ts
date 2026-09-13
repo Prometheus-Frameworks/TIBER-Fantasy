@@ -98,3 +98,10 @@ test('card attachment retains a matching study and explicit local judgment', () 
   const study: any = { scope, comparison: { selected_player_ids: ['11', '22'], evidence: null }, hypothetical_roster: null, operator_context: { kind: 'manager_judgment', note: 'Keep my stashes', preferred_player_id: '11' } };
   expect(chapterPacket(s, study)).toMatchObject({ study: { comparison: study.comparison }, operator_context: study.operator_context });
 });
+
+test('a starter designation retains a simultaneous limited-RB question as context', () => {
+  const s = rbSnapshot(); s.observed.current_roster[0].injury_status = 'Questionable';
+  const result = chapterPressure(s);
+  expect(result.card).toMatchObject({ kind: 'starter_designation', trigger: { player_id: '11', designation: 'Questionable', roster_coverage: { starter_count: 3, bench_count: 1, flagged_count: 2, required_slots: 2 } } });
+  expect(chapterPacket(s).chapter.pressure_card.trigger.roster_coverage).toEqual(result.rb_coverage);
+});
