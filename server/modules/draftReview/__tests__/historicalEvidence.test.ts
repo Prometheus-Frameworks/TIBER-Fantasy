@@ -2,6 +2,26 @@ import { readFileSync } from 'node:fs';
 import { decodeHistoricalBundle, historicalEvidenceFor } from '../historicalEvidence';
 
 describe('admitted historical evidence', () => {
+  test('nineteen-edge batch supplies cut discussion evidence without a rookie or current-team inference', () => {
+    const packet = historicalEvidenceFor(['10444', '10218', '8188', '8127', '11571', '11575', '5892', '6819', '13301']);
+    expect(packet.players.map(p => p.observed?.weeks.length)).toEqual([12, 16, 12, 13, 16, 17, 17, 17, undefined]);
+    for (const player of packet.players.slice(0, 6)) {
+      expect(player.identity).toMatchObject({ match_method: 'name_exact', confidence: 'medium' });
+      expect(player.derived.targets.recorded_weeks).toBe(player.observed?.weeks.length);
+      expect(player.derived.target_share.total).toBeNull();
+    }
+    expect(packet.players[6].observed?.historical_teams).toEqual(['DET']);
+    expect(packet.players[6].identity).toMatchObject({ match_method: 'gsis_direct', confidence: 'high' });
+    expect(packet.players[7].observed?.historical_teams).toEqual(['IND']);
+    expect(packet.players[7].identity).toMatchObject({ match_method: 'espn_bridge', confidence: 'high' });
+    expect(packet.players[8]).toMatchObject({ status: 'unavailable', identity: null, observed: null, derived: {} });
+    expect(packet.provenance?.team_roster_identity_admission?.player_ids).toHaveLength(19);
+    expect(packet.provenance?.team_roster_identity_admission?.operator_acceptance).toMatchObject({
+      source: 'operator_conversation', public_receipt_url: null,
+    });
+    expect(packet.provenance?.team_roster_identity_admission?.proposal_review.implementation_review).toBe('pending_separate_review');
+    expect(packet.forecast).toEqual({ status: 'unavailable', fabricated_values: false });
+  });
   test('retains accepted identity confidence and historical context for all five study cases', () => {
     const packet = historicalEvidenceFor(['9997', '7526', '12512', '12481', '7594']);
     expect(packet.status).toBe('available');
@@ -23,7 +43,7 @@ describe('admitted historical evidence', () => {
       expect(player.identity).toMatchObject({ confidence: 'medium', match_method: 'name_exact' });
       expect(player.derived.targets.recorded_weeks).toBe(player.observed?.weeks.length);
     }
-    expect(packet.provenance?.producer_commit).toBe('488220fa05c834aad3a4e2bea839a1843131053a');
+    expect(packet.provenance?.producer_commit).toBe('5c683e26a843b98358292f0d34a97a98762a96f0');
     expect(packet.provenance?.operator_acceptance).toContain('5574349251');
     expect(packet.provenance?.team_identity_admission).toMatchObject({
       player_ids: ['9487', '8112', '10219'], receipt_stage: 'accepted_for_branch_preparation',
@@ -45,7 +65,7 @@ describe('admitted historical evidence', () => {
   test('missing, malformed or modified source bytes cannot pass the content pin', () => {
     expect(() => decodeHistoricalBundle(Buffer.from('{}'))).toThrow('integrity');
     const bytes = readFileSync('server/modules/draftReview/artifacts/historical2025.json');
-    expect(decodeHistoricalBundle(bytes).players).toHaveLength(75);
+    expect(decodeHistoricalBundle(bytes).players).toHaveLength(94);
     expect(() => decodeHistoricalBundle(Buffer.concat([bytes, Buffer.from(' ')]))).toThrow('integrity');
   });
 });

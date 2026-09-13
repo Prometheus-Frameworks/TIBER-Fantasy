@@ -22,6 +22,18 @@ export type HistoricalEvidence = {
       receipt_stage: string; consumer_authorization: string; consumer_authorization_scope: string;
       baseline_producer_commit: string; baseline_identity_sha256: string; limitations: string[];
     };
+    team_roster_identity_admission?: {
+      path: string; sha256: string; receipt_stage: string; player_ids: string[];
+      operator_acceptance: {
+        source: 'operator_conversation'; date: string; operator_message: string;
+        public_receipt_url: null; context: string; scope: string;
+      };
+      proposal_review: {
+        source: string; review_date: string; proposal_sha256: string; review_sha256: string;
+        result: string; public_receipt_url: null; implementation_review: string;
+      };
+      baseline_producer_commit: string; baseline_identity_sha256: string; limitations: string[];
+    };
     source_acquired_at: null; source_updated_at: null; original_release_hash: null; package_version: null;
     transform: string;
     attribution: { name: string; source_url: string; license: string; license_url: string; notice: string };

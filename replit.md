@@ -104,3 +104,12 @@ The public Team study supports an optional third player, a bounded one-to-three-
 - Pinned reviewed Data #268 commit 488220fa05c834aad3a4e2bea839a1843131053a and separate Team admission receipt. Added exactly Parker Washington, Drake London and Chris Rodriguez; all old 72 profiles unchanged, all three name_exact/medium with 16/12/12 recorded weeks.
 - Offline builder validates scope, exact identity delta and source/proposal/baseline pins with explicit fail-closed exceptions. Old preparation authority and later consumer authorization (#372 comment 5627769635) remain separate provenance; production authority is not inferred.
 - Regenerated 106062-byte artifact and runtime content pin. Validation: 11 Python tests normal/optimized, deterministic replay,54 Jest tests/seven suites; unchanged 72 profiles invariant checked. Build/review/isolated preview receipts follow on PR. No Data edits, #269 changes, merge or production release.
+
+### Team historical evidence expansion — 2026-09-13, local preparation
+Nineteen reviewed Data identities extend Team's pinned 2025 bundle from 75 to 94
+profiles, retaining every old profile, historical source teams and identity
+confidence. The new additive admission provenance distinguishes conversation
+acceptance, proposal review and pending implementation review. Antonio Williams
+remains outside the 2025 cohort. Full details and validation are in the Draft
+Review module and docs/reviews/team-historical-admission-2026-09-13.md.
+Publication, merge and production release have not occurred.

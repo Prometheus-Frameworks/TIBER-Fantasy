@@ -4,6 +4,7 @@ from copy import deepcopy
 from unittest.mock import patch
 import hashlib
 from buildDraftReviewEvidenceBundle import index, metric, profile, validate_admissions, read_pinned, COUNTS, SHARES, TEAM_EDGES, TEAM_ACCEPTANCE
+from buildDraftReviewEvidenceBundle import validate_roster_admissions, ROSTER_EDGES, ROSTER_ACCEPTANCE, ROSTER_REVIEW, ROSTER_BASE_COMMIT
 
 class BundleTests(unittest.TestCase):
     def test_missing_values_do_not_become_zero_or_complete_totals(self):
@@ -102,5 +103,56 @@ class AdmissionTests(unittest.TestCase):
         with patch('buildDraftReviewEvidenceBundle.subprocess.check_output', return_value=raw):
             self.assertEqual(read_pinned('/unused', 'commit', 'file', hashlib.sha256(raw).hexdigest()), raw)
             with self.assertRaises(ValueError): read_pinned('/unused', 'commit', 'file', '0' * 64)
+
+class RosterAdmissionTests(unittest.TestCase):
+    def setUp(self):
+        self.prior = {'records': [dict(provider='sleeper', provider_player_id=str(200000+i),
+                                       tiber_player_id=f'baseline-{i}') for i in range(75)]}
+        rows = [dict(provider='sleeper', provider_player_id=p, tiber_player_id=g,
+                     match_method=m, confidence=c) for p, (g, m, c) in ROSTER_EDGES.items()]
+        self.admission = {'consumer_scope': {'season': 2025, 'weeks': [1,18], 'forecast_allowed': False}}
+        self.receipt = dict(schema_version='team_roster_identity_admission_v1',
+            status='accepted_for_branch_and_consumer_preparation', scope='nineteen_historical_identity_edges_only',
+            operator_acceptance=deepcopy(ROSTER_ACCEPTANCE), proposal_review=deepcopy(ROSTER_REVIEW),
+            baseline_commit=ROSTER_BASE_COMMIT, consumer_bundle_regeneration_authorized=True,
+            merge_authorized=False, production_deployment_authorized=False, production_release_authorized=False,
+            consumer_scope=deepcopy(self.admission['consumer_scope']), excluded_player_ids=['13301'], identity_records=rows)
+        self.current = {'records': deepcopy(self.prior['records']+rows)}
+
+    def validate(self):
+        return validate_roster_admissions(self.admission, self.receipt, self.current, self.prior)
+
+    def test_exact_delta_and_preserved_prior(self):
+        result = self.validate()
+        self.assertEqual(result[:75], self.prior['records'])
+        self.assertEqual(len(result), 94)
+
+    def test_authority_scope_and_exclusion_mutations_fail(self):
+        original = deepcopy(self.receipt)
+        for field, value in [('status','proposed'), ('scope','all_candidates'), ('operator_acceptance',{}),
+                ('proposal_review',{}), ('baseline_commit','wrong'), ('consumer_bundle_regeneration_authorized',False),
+                ('merge_authorized',True), ('merge_authorized',0), ('production_release_authorized',True),
+                ('consumer_scope',{}), ('excluded_player_ids',[])]:
+            with self.subTest(field=field,value=value):
+                self.receipt=deepcopy(original); self.receipt[field]=value
+                with self.assertRaises(ValueError): self.validate()
+
+    def test_extra_missing_duplicate_prior_change_fail(self):
+        original = deepcopy(self.current)
+        for operation in ['extra','missing','duplicate','prior']:
+            with self.subTest(operation=operation):
+                self.current=deepcopy(original)
+                if operation=='extra': self.current['records'].append(dict(provider='sleeper',provider_player_id='13301',tiber_player_id='rookie'))
+                if operation=='missing': self.current['records'].pop()
+                if operation=='duplicate': self.current['records'][-1]=deepcopy(self.current['records'][-2])
+                if operation=='prior': self.current['records'][0]['tiber_player_id']='changed'
+                with self.assertRaises(ValueError): self.validate()
+
+    def test_receipt_cannot_upgrade_name_confidence_or_rewrite_edge(self):
+        for field,value in [('confidence','high'),('match_method','gsis_direct'),('tiber_player_id','changed')]:
+            self.setUp()
+            self.current['records'][75][field]=value
+            self.receipt['identity_records'][0][field]=value
+            with self.assertRaises(ValueError): self.validate()
 
 if __name__ == '__main__': unittest.main()

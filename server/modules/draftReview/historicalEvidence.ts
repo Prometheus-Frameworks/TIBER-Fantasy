@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { HistoricalEvidence, HistoricalPlayer } from '../../../shared/draftReviewEvidence';
 
 const BUNDLE_PATH = resolve(process.cwd(), 'server/modules/draftReview/artifacts/historical2025.json');
-const BUNDLE_SHA256 = 'cb80a6875d9b55d8b3af2a4c38936f059a2d413e6de198b85551cd36b9a39e25';
+const BUNDLE_SHA256 = '24015b41becb5bcbb87bea7e4c5d8443c3e1254a4ceea9c624a023263b021ea1';
 const SCHEMA = 'tiber_draft_review_historical_v1' as const;
 // Cache only immutable public source bytes. No league, roster, selection or operator state.
 let verifiedBytes: string | undefined;

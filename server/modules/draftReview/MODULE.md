@@ -46,11 +46,13 @@ Replay Team interactions with `npm test -- --runTestsByPath client/src/__tests__
 
 ## Accepted historical evidence slice (issue #360)
 
+Current branch preparation adds nineteen further profiles as documented below; the original #372 stage and its receipts remain archived unchanged.
+
 Prior operator acceptance: TIBER-Data PR #264 comment 5574349251. The previous 72 identities retain that receipt and unchanged profiles. This consumer now pins Data PR #268's reviewed preparation commit `488220fa05c834aad3a4e2bea839a1843131053a`, adding exactly Parker Washington (9487), Drake London (8112), and Chris Rodriguez (10219). Separate Team admission receipt `exports/promoted/draft_review/team_identity_admission_v1.json` records the earlier branch-preparation authority (#268 comment 5627117154). Its `consumer_bundle_regeneration_authorized:false` remains a truthful historical stage; later explicit consumer integration/regeneration/isolated-preview authority is #372 comment 5627769635. Both travel separately in provenance. Neither grants merge or production release permission.
 
 - `historicalEvidence.ts` adds optional `historical_evidence` to the existing v0_1 context without changing its observed/derived/forecast fields. The immutable public bundle is selected per roster, limited to 32 requested players; larger selections explicitly report unavailable.
 - `GET /api/draft-review/evidence?player_ids=<one-to-three-exact-ids>` provides the same public evidence for up to three players, including players outside the selected roster. Numeric Sleeper IDs and uppercase defense IDs are bounded; unmapped IDs return explicit player-level unavailability. No database, user identity, write route, upstream request, or new environment variable.
-- The runtime verifies the complete 106,062-byte bundle SHA-256 before caching immutable bytes. Each request parses fresh data. Missing/changed artifacts fail closed without substituting fixture or live data. The runtime expects the tracked artifact at `server/modules/draftReview/artifacts/historical2025.json` beneath the existing repository working directory.
+- The runtime verifies the complete 134,266-byte bundle SHA-256 before caching immutable bytes. Each request parses fresh data. Missing/changed artifacts fail closed without substituting fixture or live data. The runtime expects the tracked artifact at `server/modules/draftReview/artifacts/historical2025.json` beneath the existing repository working directory.
 - `scripts/buildDraftReviewEvidenceBundle.py --data-repo <local-data-checkout> --check` replays the consumer transform from fixed Git objects and SHA-256 pins, entirely offline. Omit `--check` to regenerate the same committed consumer bundle. This does not refresh sources, promote new IDs or write to Data.
 - Producer inputs: Data's admitted `exports/promoted/identity_crosswalk/tiber_identity_crosswalk_v2.json`, `exports/promoted/draft_review/evidence_admission_v1.json`, the separate Team admission receipt, and the two accepted `data/processed/evidence/player_weekly_{usage,ppr_outcomes}_2025.source_backed.json` files. Exact paths, hashes, producer commit and acceptance link ship in the packet. The six-row promoted weekly fixtures are not consumed.
 - Only 2025 weeks 1–18, ten approved raw outcome fields and two share fields are aggregated. Missing values stay missing. Totals require all recorded values; means disclose nonnull-week denominators. A mean weekly share is not a season share. Shares are not clamped to 0–1. Conflicting weekly team/opponent/position blocks joined usage, while independent outcome derivations remain available.
@@ -104,3 +106,45 @@ Joe reported that the default 792-entry historical TE directory was unsuitable f
 The existing endpoint adds optional `trends`: Sleeper public /players/nfl/trending/add?lookback_hours=24&limit=1000, validated exact IDs/nonnegative safe integer counts/unique rows, five-minute single-flight cache, independent receive clock. No environment variables required. Malformed/outage trends yield unavailable while valid league membership results remain usable. Global add counts sort the shortlist; absent bounded-sample counts remain unknown. The selected-only handoff retains its activity clock/source/window separately. No projection or transaction authority is introduced. Source documentation: https://docs.sleeper.com/#trending-players . Existing raw candidate pool and v1 response remain compatible; default presentation supersedes the prior all-directory UI.
 
 Validation: 64 tests across six affected service/shared/UI/Team/routes/containment suites pass. Full build passed; repository typecheck comparison recorded in PR receipt. No live roster fixtures or screenshots committed. Draft-only change; no merge/production or independent-review claim.
+
+## Nineteen additional historical profiles — 2026-09-13 preparation
+
+This branch pins published Data preparation commit
+`5c683e26a843b98358292f0d34a97a98762a96f0` (draft Data PR #271) and the separate
+`exports/promoted/draft_review/team_roster_identity_admission_v1.json` receipt.
+It adds exactly nineteen reviewed identities, taking the immutable bundle from
+75 to 94 profiles. Every old profile and the old three-edge provenance object
+remains identical. The new optional `team_roster_identity_admission` provenance
+carries exact IDs, hashes, source baseline, limitations, conversation acceptance
+and the earlier proposal-review reference separately. No GitHub operator receipt
+URL is invented; no independent implementation review is claimed.
+
+Fourteen additions retain name_exact/medium confidence; three gsis_direct and two
+espn_bridge additions remain high confidence. Historical teams remain weekly
+source teams: Montgomery DET and Pittman IND. Current Sleeper metadata does not
+rewrite them. Antonio Williams / 13301 remains outside the admitted 2025 cohort.
+No missing history, missing weeks, unsupported metrics or Forecast is populated
+with substitute values. Candidate generation clocks never become provider
+freshness clocks. Existing attribution and null provenance clocks are retained.
+
+The offline builder now checks the original 72→75 stage and the new 75→94 stage,
+requires each exact receipt, rejects changed prior rows or expanded windows,
+and validates all pinned source objects. Lazy Git fetching is disabled explicitly;
+missing objects fail closed. The runtime content pin is
+`24015b41becb5bcbb87bea7e4c5d8443c3e1254a4ceea9c624a023263b021ea1`.
+Bundle size is 134266 bytes; the 250000-byte runtime cap is unchanged.
+
+Validation: 15 Python tests in normal and optimized modes, deterministic replay,
+exact old-profile/provenance comparison, 60 Jest tests across seven relevant
+history/service/routes/UI/shared/containment suites, full sh build.sh, and a built
+public-profile /evidence HTTP smoke all pass. Typecheck has the same 506 baseline
+diagnostics with identical file/error-code counts and no touched-file errors.
+No new dependencies, environment variables, routes, DB or UI behavior.
+
+The operator explicitly authorized publication of both prepared branches and draft
+PRs after the initial automatic approval rejection. Command-line Git lacked write
+credentials, so Data was published through the authenticated GitHub connection;
+its tree exactly matches local preparation commit 790c04f. The consumer source pin
+and content hash were updated accordingly, with all profile data unchanged.
+Independent implementation review remains pending, followed by separate
+merge/deployment decisions. The unrelated #375 and #377 branches are unchanged.
