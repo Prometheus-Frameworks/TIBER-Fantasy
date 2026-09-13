@@ -48,6 +48,7 @@ describe("public Draft Review runtime profile", () => {
   test("defaults to full but rejects an unknown configured profile", () => {
     expect(resolveRuntimeProfile(undefined)).toBe("full");
     expect(resolveRuntimeProfile("public-draft-review")).toBe("public-draft-review");
+    expect(resolveRuntimeProfile("team-auth")).toBe("team-auth");
     expect(() => resolveRuntimeProfile("public-ish")).toThrow("Unsupported TIBER_RUNTIME_PROFILE");
   });
 
@@ -78,6 +79,11 @@ describe("public Draft Review runtime profile", () => {
       request(testApp).get("/api/integrations/sleeper?default_user=synthetic-a"),
       request(testApp).post("/api/sleeper/sync").send({ user_id: "synthetic-a" }),
       request(testApp).delete("/api/dashboard/synthetic-private-resource"),
+      request(testApp).get("/api/auth/bootstrap").set("Cookie", "__Host-tiber_session=synthetic"),
+      request(testApp).post("/api/auth/google").send({ credential: "synthetic" }),
+      request(testApp).get("/api/team-private/sleeper-link"),
+      request(testApp).post("/api/team-private/leagues").send({ season: '2026' }),
+      request(testApp).post("/api/team-private/league-rosters").send({ season: '2026', leagueId: '123' }),
     ];
 
     const responses = await Promise.all(requests);

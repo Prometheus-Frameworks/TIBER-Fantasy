@@ -1,5 +1,7 @@
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
+import { discoverTeamLeagues, findTeamLeagueRosters } from '../modules/draftReview/teamLeagues';
+import { publicLeaguesInput, publicLeagueRosterInput } from '@shared/teamLeagues';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
 import { securityHeaders } from '../middleware/security';
@@ -22,6 +24,22 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get(['/api/draft-review/leagues', '/api/draft-review/league-rosters'], (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    const listing = req.path === '/api/draft-review/leagues';
+    const input = (listing ? publicLeaguesInput : publicLeagueRosterInput).safeParse(req.query);
+    if (!input.success) return res.status(400).json({ status: 'invalid_input', error: 'Enter a valid Sleeper account and season, or league selection.' });
+    try {
+      const value = listing
+        ? await discoverTeamLeagues((input.data as { account: string }).account, input.data.season)
+        : await findTeamLeagueRosters((input.data as { userId: string }).userId, (input.data as { leagueId: string }).leagueId, input.data.season);
+      return res.json(value);
+    } catch {
+      return res.status(502).json({ status: 'source_unavailable', error: 'Sleeper league information is unavailable. Try again shortly.' });
+    }
+  });
 
   router.get('/api/draft-review/unrostered-tes', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

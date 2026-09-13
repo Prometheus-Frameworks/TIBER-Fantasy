@@ -1,5 +1,6 @@
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
+import TeamLeagueSwitcher from '@/components/draftReview/TeamLeagueSwitcher';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
 import { draftReviewAgentPacket, draftReviewComparisonPacket, reviewScope, type StudyAttachment } from '@shared/draftReviewStudy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -164,7 +165,7 @@ function positionSort(a: ReviewPlayer, b: ReviewPlayer) {
   return (aIndex < 0 ? 99 : aIndex) - (bIndex < 0 ? 99 : bIndex) || a.name.localeCompare(b.name);
 }
 
-export default function TiberDraftReview() {
+export default function TiberDraftReview({ authEnabled = false }: { authEnabled?: boolean } = {}) {
   const search = useSearch();
   const query = new URLSearchParams(search);
   const initialInput = query.get('sleeper_input') ?? query.get('sleeper_url') ?? '';
@@ -196,12 +197,13 @@ export default function TiberDraftReview() {
   }
 
   function navigateInput(value: string) {
-    if (!mayDiscardStudy()) return;
+    if (!mayDiscardStudy()) return false;
     const next = new URL(window.location.href);
     next.search = '';
     if (value.trim()) next.searchParams.set('sleeper_input', value.trim());
     if (next.search === window.location.search) void resolveInput(value);
     else window.history.pushState({}, '', next);
+    return true;
   }
 
   async function loadReview(url: string) {
@@ -330,6 +332,8 @@ export default function TiberDraftReview() {
           Read your roster, compare players and bring the context to your agent.
           Start with a public Sleeper league, draft or roster link—or a league ID.
         </p>
+
+        <TeamLeagueSwitcher authEnabled={authEnabled} currentLeagueId={review?.input.leagueId} navigationKey={search} onSelect={navigateInput} />
 
         <form className="drp-input-row" onSubmit={(event) => { event.preventDefault(); navigateInput(sleeperInput); }}>
           <label className="sr-only" htmlFor="sleeper-roster-url">Sleeper link or league ID</label>
