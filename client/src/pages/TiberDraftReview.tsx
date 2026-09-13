@@ -428,6 +428,7 @@ export default function TiberDraftReview() {
               <button type="button" onClick={() => navigateInput(review.input.leagueId)}>Change roster</button>
               <button type="button" onClick={() => navigateInput('')}>Change league</button>
             </div>
+            <p className="drp-muted">Sleeper changes may take a few minutes to appear. Check before sharing.</p>
           </section>
 
           <nav className="drp-room-nav" aria-label="Team rooms">

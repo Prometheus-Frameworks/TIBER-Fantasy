@@ -54,7 +54,7 @@ export default function TeamChapter({ review, study = null, plan = null, onPlanC
       {pressure.rb_coverage?.status === "unavailable" && <p className="drp-muted">RB coverage arithmetic is unavailable because roster positions are incomplete.</p>}
       <details><summary>Reserve rules and evidence limits</summary>
         <p>{review.derived.starter_count} starters · {review.derived.bench_count} bench · {review.derived.reserve_count} reserve</p>
-        <p>Roster refreshed {new Date(review.generated_at).toLocaleString()}. Player directory details may be cached for 24 hours.</p>
+        <p>Snapshot compiled {new Date(review.generated_at).toLocaleString()}. Player directory details may be cached for up to 24 hours.</p>
         <p>Changes since your last visit are not available yet.</p>
         {reserve ? <><p>{reserve.open_slots} open · {reserve.occupied_slots} occupied · {reserve.configured_slots} configured reserve slots.</p><dl className="drp-reserve-rules">{Object.entries(reserve.configured_eligibility).map(([rule, value]) => <div key={rule}><dt>{rule.replace(/_/g, ' ')}</dt><dd>{value === null ? 'Unknown' : value ? 'Allowed' : 'Not allowed'}</dd></div>)}</dl></> : <p>Reserve configuration unavailable.</p>}
         <p>These checks use roster membership, required RB slots, directory status and the separate injury designation. Inactive is a directory flag, not an injury diagnosis; the active boolean does not clear it. Game timing, locks, acquisition rules and current reserve eligibility are unavailable.</p>
