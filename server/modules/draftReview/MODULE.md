@@ -148,3 +148,31 @@ its tree exactly matches local preparation commit 790c04f. The consumer source p
 and content hash were updated accordingly, with all profile data unchanged.
 Independent implementation review remains pending, followed by separate
 merge/deployment decisions. The unrelated #375 and #377 branches are unchanged.
+
+
+## 2026-09-13 — Accepted P2: preparation is not runtime admission
+
+Operator accepted discussion_r3999768958 and authorized the bounded repair and
+next review. The integrity-checked decoder now withholds all nineteen identities
+from the preparation-only receipt in every runtime profile, including preview.
+It returns unavailable with an explicit promotion/admission reason and null
+identity/observations plus empty derived metrics. The runtime caches only this
+filtered evidence; direct decoding and cached selections cannot expose the
+prepared profiles as available. All 75 prior profile objects and attribution
+remain unchanged. The 94-record offline bundle and its source/hash pins remain
+unchanged and inspectable for review. Its availability fields describe prepared
+source records, not permission to serve the new cohort.
+
+No runtime switch, receipt-stage string or PR merge activates these profiles. A
+later separately authorized change must pin accepted promotion evidence and
+review the consumer admission policy. This repair does not invent that receipt
+or grant promotion. Data #271's accompanying repair changes only its inventory
+and handoff, so the existing immutable source pin remains valid.
+
+Regression coverage checks all nineteen withheld identities, exact preservation
+of the prior 75, decoder and cache behavior, response mutation isolation, and a
+mixed public HTTP comparison. Fresh independent review remains pending; merge
+and promotion/release decisions remain separate. This section supersedes the
+earlier preparation-stage runtime availability and pending-publication wording.
+
+P2 repair validation: all 62 tests in seven focused suites and the full build passed.

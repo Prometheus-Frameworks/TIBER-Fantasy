@@ -6,7 +6,8 @@ import type { HistoricalEvidence, HistoricalPlayer } from '../../../shared/draft
 const BUNDLE_PATH = resolve(process.cwd(), 'server/modules/draftReview/artifacts/historical2025.json');
 const BUNDLE_SHA256 = '24015b41becb5bcbb87bea7e4c5d8443c3e1254a4ceea9c624a023263b021ea1';
 const SCHEMA = 'tiber_draft_review_historical_v1' as const;
-// Cache only immutable public source bytes. No league, roster, selection or operator state.
+// Cache only integrity-checked evidence after applying the promotion boundary.
+// No league, roster, selection or operator state.
 let verifiedBytes: string | undefined;
 
 export function unavailableHistoricalEvidence(reason: string): HistoricalEvidence {
@@ -23,7 +24,20 @@ export function decodeHistoricalBundle(raw: Buffer): HistoricalEvidence {
   if (raw.length > 250_000 || createHash('sha256').update(raw).digest('hex') !== BUNDLE_SHA256) {
     throw new Error('Historical source integrity check failed');
   }
-  return { ...JSON.parse(raw.toString('utf8')), status: 'available', reason: null };
+  const bundle = JSON.parse(raw.toString('utf8')) as HistoricalEvidence;
+  // This exact pinned cohort has preparation authority only. No promotion
+  // receipt is admitted here; a stage string, deployment mode, or PR merge
+  // cannot grant access. A later reviewed source/policy update must do that.
+  const pending = new Set(bundle.provenance?.team_roster_identity_admission?.player_ids ?? []);
+  return { ...bundle, status: 'available', reason: null,
+    limitations: [...bundle.limitations,
+      'The nineteen-player preparation cohort remains unavailable pending recorded upstream promotion and consumer admission.'],
+    players: bundle.players.map(player => pending.has(player.player_id) ? {
+      player_id: player.player_id, status: 'unavailable',
+      reason: 'Historical records are prepared but upstream promotion and consumer admission are not yet recorded.',
+      identity: null, observed: null, derived: {},
+    } : player),
+  };
 }
 
 export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {
@@ -33,8 +47,7 @@ export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {
   try {
     if (verifiedBytes === undefined) {
       const raw = readFileSync(BUNDLE_PATH);
-      decodeHistoricalBundle(raw);
-      verifiedBytes = raw.toString('utf8');
+      verifiedBytes = JSON.stringify(decodeHistoricalBundle(raw));
     }
     // Fresh parse prevents one response or caller from changing another user's evidence.
     const bundle = JSON.parse(verifiedBytes) as HistoricalEvidence;

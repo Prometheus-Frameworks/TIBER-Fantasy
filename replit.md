@@ -113,3 +113,7 @@ acceptance, proposal review and pending implementation review. Antonio Williams
 remains outside the 2025 cohort. Full details and validation are in the Draft
 Review module and docs/reviews/team-historical-admission-2026-09-13.md.
 Publication, merge and production release have not occurred.
+
+
+### Team preparation-only historical evidence gate — 2026-09-13
+The nineteen-player expansion remains an offline preparation bundle. Runtime decoding and caching return those identities as unavailable until a separately reviewed promotion/consumer admission change; prior 75 profiles are unchanged. No environment switch or PR merge activates the cohort. See the Draft Review module P2 repair note.
