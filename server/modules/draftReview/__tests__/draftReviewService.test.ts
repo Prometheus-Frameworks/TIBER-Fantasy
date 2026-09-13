@@ -119,7 +119,7 @@ describe('Draft Review Sleeper context compiler', () => {
         qb2: { full_name: 'Quarterback Two', position: 'QB', team: 'BBB' },
         rb1: { full_name: 'Running Back', position: 'RB', team: 'CCC' },
         wr1: { full_name: 'Wide Receiver', position: 'WR', team: 'DDD' },
-        te1: { full_name: 'Tight End', position: 'TE', team: 'EEE' },
+        te1: { full_name: 'Tight End', position: 'TE', team: 'EEE', status: 'Active', injury_status: 'Doubtful' },
       });
       if (url.endsWith('/draft/9001')) return response({
         draft_id: '9001',
@@ -141,6 +141,7 @@ describe('Draft Review Sleeper context compiler', () => {
 
     expect(result.observed.league.league_mode).toBe('redraft');
     expect(result.observed.team.display_name).toBe('Manager');
+    expect(result.observed.current_roster.find(p => p.player_id === 'te1')).toMatchObject({ status: 'Active', injury_status: 'Doubtful' });
     expect(result.derived.position_counts).toEqual({ QB: 2, RB: 1, WR: 1, TE: 1 });
     expect(result.schema_version).toBe('tiber_draft_review_v0_1');
     expect(result.derived.roster_flags).toContain('2 quarterbacks rostered for 1 QB-eligible weekly slot.');

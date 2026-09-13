@@ -1,3 +1,5 @@
+import { chapterPacket, chapterPressure, currentChapterPlan, type ChapterPlan } from '@shared/teamChapter';
+import TeamChapter from '@/components/draftReview/TeamChapter';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
@@ -13,6 +15,7 @@ type ReviewPlayer = {
   position: string | null;
   team: string | null;
   status: string | null;
+  injury_status?: string | null;
   active: boolean | null;
   roster_state: 'starter' | 'bench' | 'reserve' | 'taxi';
 };
@@ -175,8 +178,10 @@ export default function TiberDraftReview() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<'link' | 'context' | 'comparison' | null>(null);
   const [discussionError, setDiscussionError] = useState('');
+  const [chapterPlan, setChapterPlan] = useState<ChapterPlan | null>(null);
   const [study, setStudy] = useState<StudyAttachment | null>(null);
   const [copyError, setCopyError] = useState('');
+  const [room, setRoom] = useState<'chapter' | 'board' | 'settings'>('chapter');
   const requestSequence = useRef(0);
   const copySequence = useRef(0);
   const handledSearch = useRef<string | null>(null);
@@ -189,10 +194,17 @@ export default function TiberDraftReview() {
     setCopyError('');
   }, []);
 
+  const updateChapterPlan = useCallback((next: ChapterPlan | null) => {
+    ++copySequence.current;
+    setChapterPlan(next);
+    setCopied(null);
+    setCopyError('');
+  }, []);
+
   function mayDiscardStudy() {
     const context = study?.operator_context;
-    return !(context?.note || context?.preferred_player_id || study?.hypothetical_roster)
-      || window.confirm('Your hypothetical roster is only on this page. Copy agent context to keep it. Continue and clear this study?');
+    return !(context?.note || context?.preferred_player_id || study?.hypothetical_roster || (review && currentChapterPlan(review, chapterPlan)))
+      || window.confirm('Your plan and study are only on this page. Copy agent context to keep them. Continue and clear them?');
   }
 
   function navigateInput(value: string) {
@@ -212,6 +224,7 @@ export default function TiberDraftReview() {
     setError('');
     setReview(null);
     setStudy(null);
+    setChapterPlan(null);
     setCopied(null);
     setDiscussionError('');
     setCopyError('');
@@ -220,6 +233,7 @@ export default function TiberDraftReview() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || `TIBER could not read this roster (HTTP ${response.status}).`);
       if (requestSequence.current !== requestId) return;
+      setRoom('chapter');
       setReview(payload as DraftReview);
       setTeamSelection(null);
       setSleeperInput((payload as DraftReview).input.canonicalUrl);
@@ -245,6 +259,7 @@ export default function TiberDraftReview() {
     setError('');
     setReview(null);
     setStudy(null);
+    setChapterPlan(null);
     setCopied(null);
     setDiscussionError('');
     setCopyError('');
@@ -278,6 +293,7 @@ export default function TiberDraftReview() {
       ++requestSequence.current;
       setReview(null);
       setStudy(null);
+      setChapterPlan(null);
       setTeamSelection(null);
       setLoading(false);
       setError('');
@@ -307,7 +323,7 @@ export default function TiberDraftReview() {
     try {
       const link = new URL('/team', window.location.origin);
       link.searchParams.set('sleeper_url', review.input.canonicalUrl);
-      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : draftReviewAgentPacket(review, study), null, 2));
+      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : chapterPressure(review).card ? chapterPacket(review, study, chapterPlan) : draftReviewAgentPacket(review, study), null, 2));
       if (requestId !== requestSequence.current || copyId !== copySequence.current) return;
       setCopyError('');
       setDiscussionError('');
@@ -323,15 +339,15 @@ export default function TiberDraftReview() {
 
   return (
     <div className="drp-page">
-      <section className="drp-hero">
+      <section className={`drp-hero ${review ? 'drp-hero-loaded' : ''}`}>
         <div className="drp-kicker">Your Sleeper companion</div>
         <h1>TIBER Team</h1>
-        <p>
+        <p hidden={!!review}>
           Read your roster, compare players and bring the context to your agent.
           Start with a public Sleeper league, draft or roster link—or a league ID.
         </p>
 
-        <form className="drp-input-row" onSubmit={(event) => { event.preventDefault(); navigateInput(sleeperInput); }}>
+        <form hidden={!!review} className="drp-input-row" onSubmit={(event) => { event.preventDefault(); navigateInput(sleeperInput); }}>
           <label className="sr-only" htmlFor="sleeper-roster-url">Sleeper link or league ID</label>
           <input
             id="sleeper-roster-url"
@@ -411,15 +427,34 @@ export default function TiberDraftReview() {
               <button type="button" onClick={() => { if (mayDiscardStudy()) void loadReview(review.input.canonicalUrl); }}>Refresh roster</button>
               <button type="button" onClick={() => navigateInput(review.input.leagueId)}>Change roster</button>
               <button type="button" onClick={() => navigateInput('')}>Change league</button>
-              <button type="button" onClick={() => void copyContext('link')}>Copy roster link</button>
-              <button type="button" onClick={() => void copyContext('context')}><Clipboard size={16} /> Copy agent context</button>
             </div>
-            <p className="drp-muted">The link opens the latest public roster; it carries no study. Agent context copies this snapshot, selected evidence and any optional roster scenario. Keep preferences and hypotheses in your agent conversation.</p>
-            <p className="drp-muted">Refresh reads Sleeper again; player details may be cached for up to 24 hours. Refreshing or changing rosters clears the study.</p>
-            <p role="status">{copied === 'link' ? 'Roster link copied' : copied === 'context' ? 'Agent context copied' : ''}</p>
-            {copyError ? <p role="alert" className="drp-error">{copyError}</p> : null}
+            <p className="drp-muted">Sleeper changes may take a few minutes to appear. Check before sharing.</p>
           </section>
 
+          <nav className="drp-room-nav" aria-label="Team rooms">
+            {([['chapter', 'Chapter'], ['board', 'Team board'], ['settings', 'Settings']] as const).map(([id, label]) => <button type="button" key={id} aria-pressed={room === id} aria-controls={`team-room-${id}`} onClick={() => { ++copySequence.current; setCopied(null); setCopyError(''); setDiscussionError(''); setRoom(id); }}>{label}</button>)}
+          </nav>
+          <div id="team-room-chapter" className="drp-room" hidden={room !== 'chapter'} role="region" aria-label="Chapter">
+            <TeamChapter key={`chapter:${reviewScope(review)}`} review={review} study={study} plan={chapterPlan} onPlanChange={updateChapterPlan} />
+          </div>
+          <div id="team-room-settings" className="drp-room" hidden={room !== 'settings'} role="region" aria-label="Settings">
+            <section className="drp-panel">
+              <h3>Sources and handoffs</h3>
+              <p>Selected public roster: {review.input.canonicalUrl}. Selecting it does not verify ownership.</p>
+              <div className="drp-actions">
+                <button type="button" onClick={() => void copyContext('link')}>Copy roster link</button>
+                <button type="button" onClick={() => void copyContext('context')}><Clipboard size={16} /> Copy agent context</button>
+              </div>
+              <p>Roster link = locator. Opens the latest public roster, without your study.</p>
+              <p>Agent context = snapshot. Copies this dated roster, selected evidence, your pressure-card plan and any optional scenario.</p>
+              <p role="status">{copied === 'link' ? 'Roster link copied' : copied === 'context' ? 'Agent context copied' : ''}</p>
+              {copyError ? <p role="alert" className="drp-error">{copyError}</p> : null}
+              <p className="drp-muted">Refresh reads Sleeper again; player details may be cached for up to 24 hours. Refreshing or changing rosters clears your plan and study. Room switches preserve both on this page.</p>
+              <p className="drp-boundary">Forecast: {review.forecast.reason}</p>
+            </section>
+            <section className="drp-panel"><h3>Not built yet</h3><p>Saved chapters and change history, player theses, a dedicated league room, notifications and durable decision tracking are not built into this hub. No saved operator state is retrieved.</p></section>
+          </div>
+          <div id="team-room-board" className="drp-room" hidden={room !== 'board'} role="region" aria-label="Team board">
           <section className="drp-summary-grid" aria-label="League summary">
             <article>
               <span>Format</span>
@@ -528,6 +563,8 @@ export default function TiberDraftReview() {
               <p className="drp-boundary">The current roster remains observed. TIBER has not inferred missing draft selections from roster membership.</p>
             </section>
           )}
+
+          </div>
 
           <footer className="drp-footer">
             <span>TIBER prepares the decision. The human manager makes it.</span>

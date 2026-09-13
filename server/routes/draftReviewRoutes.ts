@@ -1,3 +1,5 @@
+import { buildWrReplacement } from '../modules/draftReview/wrReplacement';
+import { buildWeeklyMatchup } from '../modules/draftReview/weeklyMatchup';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import express from 'express';
@@ -22,6 +24,26 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/wr-replacement', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, rateLimiters.publicDraftReview, async (req, res) => {
+    const { sleeper_url, target_player_id } = req.query;
+    if (typeof sleeper_url !== 'string' || !sleeper_url.trim() || sleeper_url.length > 256 || typeof target_player_id !== 'string' || !/^\d{1,24}$/.test(target_player_id)) return res.status(400).json({ status: 'invalid_input', error: 'A bounded roster URL and exact target player ID are required.' });
+    try { return res.json(await buildWrReplacement(sleeper_url, target_player_id)); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'A complete WR replacement pool could not be established. Refresh your roster and retry.' });
+    }
+  });
+
+  router.get('/api/draft-review/matchup', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, rateLimiters.publicDraftReview, async (req, res) => {
+    const { sleeper_url, season, week } = req.query;
+    if (typeof sleeper_url !== 'string' || sleeper_url.length > 256 || typeof season !== 'string' || !/^\d{4}$/.test(season) || typeof week !== 'string' || !/^(?:[1-9]|1[0-8])$/.test(week)) return res.status(400).json({ status: 'invalid_input', error: 'A roster URL, season and week from 1 to 18 are required.' });
+    try { return res.json(await buildWeeklyMatchup(sleeper_url, season, Number(week))); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'A complete head-to-head matchup could not be established. Try another week or refresh shortly.' });
+    }
+  });
 
   router.get('/api/draft-review/unrostered-tes', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

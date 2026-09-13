@@ -549,6 +549,7 @@ export async function buildDraftReview(rawInput: string) {
       position: sanitizeNullableDisplay(player?.position),
       team: sanitizeNullableDisplay(player?.team),
       status: sanitizeNullableDisplay(player?.status),
+      injury_status: sanitizeNullableDisplay(player?.injury_status),
       active: player?.active ?? null,
       roster_state: starterIds.has(playerId)
         ? 'starter'
@@ -718,7 +719,8 @@ export async function buildDraftReview(rawInput: string) {
           : []),
       ],
       disclosures: [
-        'Roster membership and league settings are current public Sleeper observations at request time.',
+        'Roster membership and league settings reflect public Sleeper responses read for this request. Recent changes may take a few minutes to appear; refreshing does not guarantee immediate sync.',
+        'generated_at is the snapshot compilation time, not the time Sleeper last updated its data.',
         'Sleeper\'s NFL player directory may be reused for up to 24 hours in accordance with its bulk-endpoint guidance.',
         'Position counts and roster flags are deterministic derivations, not player evaluations.',
         'Reserve rules are observed, but current player eligibility is not inferred.',
