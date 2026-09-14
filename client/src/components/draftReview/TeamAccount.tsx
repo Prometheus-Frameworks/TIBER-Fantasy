@@ -19,6 +19,7 @@ export default function TeamAccount({ onChange, recheckKey }: {
   const channel = useRef<BroadcastChannel>();
   const button = useRef<HTMLDivElement>(null);
   const currentStatus = useRef(status); currentStatus.current = status;
+  const signInActive = useRef(false); signInActive.current = busy || challenge !== null;
   const onChangeRef = useRef(onChange); onChangeRef.current = onChange;
 
   const begin = useCallback(() => {
@@ -55,7 +56,13 @@ export default function TeamAccount({ onChange, recheckKey }: {
       failure(id, 'Account access changed. Recheck your account to continue.');
       setExpanded(true);
     }
-    const refresh = () => { if (document.visibilityState !== 'hidden' && currentStatus.current === 'authenticated') void check(); };
+    const refresh = () => {
+      // Discover a login from another tab even when its broadcast was missed.
+      // Focus returning from our own Google popup must preserve its challenge.
+      const canRefresh = currentStatus.current === 'authenticated' ||
+        (currentStatus.current === 'signed_out' && !signInActive.current);
+      if (document.visibilityState !== 'hidden' && canRefresh) void check();
+    };
     const hide = () => { if (currentStatus.current === 'authenticated') { begin(); setStatus('checking'); } };
     const show = (event: PageTransitionEvent) => { if (event.persisted || currentStatus.current === 'checking') void check(); };
     const visibility = () => { if (document.visibilityState !== 'hidden' && currentStatus.current === 'checking') void check(); else refresh(); };

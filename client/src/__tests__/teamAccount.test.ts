@@ -24,6 +24,23 @@ function serve(path: string) {
 }
 beforeEach(() => { signedIn = true; linked = true; global.fetch = jest.fn(async input => serve(String(input))); });
 afterEach(() => { cleanup(); global.fetch = original; jest.restoreAllMocks(); });
+test.each(['focus', 'visibilitychange'])('signed-out tabs discover another tab login on %s without BroadcastChannel', async event => {
+  signedIn = false;
+  expect(typeof BroadcastChannel).toBe('undefined');
+  const change = jest.fn(); render(React.createElement(TeamAccount, { onChange: change, recheckKey: 0 }));
+  fireEvent.click(screen.getByRole('button', { name: 'Account' }));
+  await screen.findByRole('button', { name: 'Continue to Google sign-in' });
+  signedIn = true; // The shared session changed elsewhere; no notification was delivered.
+  const visibility = jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+  const calls = (global.fetch as jest.Mock).mock.calls.length;
+  fireEvent(event === 'focus' ? window : document, new Event(event));
+  expect(global.fetch).toHaveBeenCalledTimes(calls);
+  visibility.mockReturnValue('visible');
+  fireEvent(event === 'focus' ? window : document, new Event(event));
+  await screen.findByRole('button', { name: 'Account · signed in' });
+  expect(change.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ user: { id }, sleeperLink: expect.objectContaining({ sleeperUserId: '123' }) }));
+  expect((global.fetch as jest.Mock).mock.calls.some(([url]) => url === '/api/auth/google')).toBe(false);
+});
 test('loads the authenticated account and clears it immediately on logout, even if logout fails', async () => {
   const change = jest.fn(); render(React.createElement(TeamAccount, { onChange: change, recheckKey: 0 }));
   await screen.findByRole('button', { name: 'Account · signed in' });
@@ -75,6 +92,12 @@ test('Google loads only after explicit sign-in and sends the credential only to 
   await screen.findByRole('button', { name: 'Continue to Google sign-in' }); expect(load).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Continue to Google sign-in' }));
   await waitFor(() => expect(google.initialize).toHaveBeenCalledWith(expect.objectContaining({ nonce: challenge.nonce, client_id: challenge.googleClientId, auto_select: false })));
+  // Returning focus from the provider popup must not cancel the active challenge.
+  const calls = (global.fetch as jest.Mock).mock.calls.length;
+  fireEvent(window, new Event('focus'));
+  fireEvent(document, new Event('visibilitychange'));
+  expect(global.fetch).toHaveBeenCalledTimes(calls);
+  expect(screen.getByLabelText('Google sign-in')).toBeTruthy();
   (global.fetch as jest.Mock).mockImplementationOnce(async () => { signedIn = true; return response({ status: 'authenticated' }); });
   await act(async () => callback({ credential: 'synthetic-token' }));
   await screen.findByRole('button', { name: 'Account · signed in' });
