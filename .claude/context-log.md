@@ -779,3 +779,9 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Replaced unconditional preparation-only withholding with exact pinned promotion admission. Preserved all 94 profile objects, earlier receipts, limitations and unavailable forecasts. Antonio Williams remains excluded.
 - Validation: 17 Python tests (normal/optimized), 63 Jest tests, full build; baseline 506 TypeScript diagnostics unchanged. Independent review recorded separately.
 - No merge/deployment authorized. Consumer PR opening is held until Railway automatic preview deployment can be suppressed. See docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### 2026-09-14 — Codex: weekly box-score consumer preparation
+- Added bounded offline candidate decoder, route-independent descriptive buckets, explicit generic scoring and separate schedule provenance.
+- Added inactive read-only weekly endpoint; no DB, source calls, admission pin, feature flag or UI activation.
+- Validation: 49 targeted tests, server build, real 332-row candidate preview; typecheck retains baseline 506 diagnostics with no new per-file/code counts. Independent review P2 provenance repair completed.
+- Scope: local preparation only; no remote publication, merge or deployment. Details in docs/audits/weekly-consumer-preparation-2026-09-14.md.

@@ -994,3 +994,8 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Replaced unconditional preparation-only withholding with exact pinned promotion admission. Preserved all 94 profile objects, earlier receipts, limitations and unavailable forecasts. Antonio Williams remains excluded.
 - Validation: 17 Python tests (normal/optimized), 63 Jest tests, full build; baseline 506 TypeScript diagnostics unchanged. Independent review recorded separately.
 - No merge/deployment authorized. Consumer PR opening is held until Railway automatic preview deployment can be suppressed. See docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### 2026-09-14 — Weekly box-score consumer preparation
+- Authorized paired next slice with Data intake/publication. Added externalModels/weeklyBoxscore adapter/policy/tests and explicit-scope inactive weekly route.
+- Preserved candidate-only state, raw identity/team, nulls, separate schedule provenance and unavailable charting. No identity expansion, current-season admission, scheduler or UI activation.
+- 49 focused tests, real-source preview and build pass; typecheck matches baseline 506 diagnostics. Independent review repaired provenance P2. Local commits only; see paired audit handoff.

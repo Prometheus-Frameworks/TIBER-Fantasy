@@ -121,3 +121,6 @@ The nineteen-player expansion remains an offline preparation bundle. Runtime dec
 
 ### Nineteen-player historical promotion (proposed revision, 2026-09-13)
 Team's historical evidence consumer pins a separate Data #272 promotion receipt and admits exactly the nineteen previously prepared identities. The earlier preparation receipt remains unchanged and separately attributed. Original historical profiles and source limitations are preserved; Antonio Williams is excluded. Integrity failure returns unavailable, and there are no forecasts or inferred current teams/health/ownership. Merge and any deployment require separate authorization; this proposed consumer revision has not been deployed. See server/modules/draftReview/MODULE.md and docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### Weekly evidence preparation (2026-09-14)
+The read-only `/api/draft-review/weekly` preparation endpoint remains unavailable. Its offline candidate adapter and exploratory scoring/bucket policy are documented in `server/modules/externalModels/weeklyBoxscore/MODULE.md`. No weekly data admission, scheduler or UI activation is included; historical Team evidence remains unchanged.
