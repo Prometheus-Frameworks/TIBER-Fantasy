@@ -104,10 +104,28 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
   const c=e.candidate;
   if ((e.schedule_receipt===null)!==(e.coverage.schedule_coverage==='unavailable')) throw new Error('Schedule provenance missing');
   if(c.scope.season!==season||c.scope.week!==week) throw new Error('Weekly scope mismatch');
+  const coverage=e.coverage;
+  const uniqueGames=(ids:string[])=>ids.every(id=>id.trim().length>0)&&new Set(ids).size===ids.length;
+  if(!uniqueGames(coverage.observed_game_ids)) throw new Error('Schedule coverage conflict');
+  if(coverage.schedule_coverage==='unavailable'){
+    if([coverage.scheduled_game_ids,coverage.missing_game_ids,coverage.unexpected_game_ids].some(ids=>ids!==null))
+      throw new Error('Schedule coverage conflict');
+  } else {
+    const scheduled=coverage.scheduled_game_ids, missing=coverage.missing_game_ids, unexpected=coverage.unexpected_game_ids;
+    if(scheduled===null||missing===null||unexpected===null||scheduled.length===0||
+       ![scheduled,missing,unexpected].every(uniqueGames)) throw new Error('Schedule coverage conflict');
+    const observed=new Set(coverage.observed_game_ids), expected=new Set(scheduled);
+    const missingExpected=scheduled.filter(id=>!observed.has(id));
+    const unexpectedExpected=coverage.observed_game_ids.filter(id=>!expected.has(id));
+    const sameSet=(a:string[],b:string[])=>a.length===b.length&&a.every(id=>b.includes(id));
+    const matched=missingExpected.length===0&&unexpectedExpected.length===0;
+    if(!sameSet(missing,missingExpected)||!sameSet(unexpected,unexpectedExpected)||
+       (coverage.schedule_coverage==='matched')!==matched) throw new Error('Schedule coverage conflict');
+  }
   const keys=new Set<string>();
   for(const row of c.players){
     const i=row.identity, o=row.observed;
-    const key=JSON.stringify([i.game_id,i.team,i.player_id]);
+    const key=JSON.stringify([i.game_id,i.player_id]);
     if(i.season!==season||i.week!==week||!e.coverage.observed_game_ids.includes(i.game_id)||keys.has(key)) throw new Error('Weekly identity conflict');
     keys.add(key);
     if(row.derived.carries_plus_targets!==(o.carries===null||o.targets===null?null:o.carries+o.targets)) throw new Error('Opportunity mismatch');

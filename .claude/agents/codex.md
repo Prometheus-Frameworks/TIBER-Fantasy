@@ -999,3 +999,9 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Authorized paired next slice with Data intake/publication. Added externalModels/weeklyBoxscore adapter/policy/tests and explicit-scope inactive weekly route.
 - Preserved candidate-only state, raw identity/team, nulls, separate schedule provenance and unavailable charting. No identity expansion, current-season admission, scheduler or UI activation.
 - 49 focused tests, real-source preview and build pass; typecheck matches baseline 506 diagnostics. Independent review repaired provenance P2. Local commits only; see paired audit handoff.
+
+### 2026-09-14 — Codex: weekly consumer review repairs
+- Repair #386 schedule game-set validation and duplicate player/game keys independently of team.
+- Files: weeklyBoxscore.ts, focused tests, docs/audits/weekly-consumer-review-repair-2026-09-14.md.
+- Validation: 64 targeted tests pass; 14 malformed-input regressions fail before repair.
+- Fresh exact-head review requested after publication; no merge, admission, activation or deployment.

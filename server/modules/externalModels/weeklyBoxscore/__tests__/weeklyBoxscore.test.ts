@@ -20,6 +20,14 @@ function sample(position='WR', targets:number|null=4, denominator=20, carries:nu
  sources:{player:source,team:source}},players:[row],limitations:['Synthetic test only'],unavailable:['routes']}};
 }
 function inspect(e:ReturnType<typeof sample>){const raw=Buffer.from(JSON.stringify(e));return inspectWeeklyCandidate(raw,createHash('sha256').update(raw).digest('hex'),2026,1);}
+function syntheticSchedule(){return {schema_version:'weekly_schedule_source_candidate_v0',status:'unadmitted_schedule_snapshot',
+ source_family:'nflverse/nflverse-data/schedules',source_url:'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv',
+ source_support_commit:'d'.repeat(40),asset_id:1,sha256:'e'.repeat(64),byte_count:1,
+ release_asset_updated_at:'2026-09-14T00:00:00Z',retrieval_started_at:'2026-09-14T00:00:00Z',retrieval_completed_at:'2026-09-14T00:00:00Z',
+ release_digest_matched:true,attribution:{name:'nflverse contributors',license:'CC BY 4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',
+ license_source_url:'https://example.test/license',license_sha256:'f'.repeat(64)},limitations:['Test schedule only']};}
+function scheduledSample(){const e:any=sample();e.schedule_receipt=syntheticSchedule();
+ e.coverage={...e.coverage,schedule_coverage:'matched',scheduled_game_ids:['SYNTHETIC'],missing_game_ids:[],unexpected_game_ids:[]};return e;}
 describe('offline weekly preview and inactive runtime',()=>{
  test.each([['WR',4,20,0,15,'strong_usage_high_scoring'],['WR',2,20,0,20,'low_usage_high_scoring'],
  ['WR',4,20,0,7.9,'strong_usage_low_scoring'],['WR',2,20,0,0,'low_usage_low_scoring'],
@@ -33,13 +41,37 @@ describe('offline weekly preview and inactive runtime',()=>{
  const e:any=sample();e.coverage.schedule_coverage='matched';e.coverage.scheduled_game_ids=['SYNTHETIC'];
  e.coverage.missing_game_ids=[];e.coverage.unexpected_game_ids=[];
  expect(()=>inspect(e)).toThrow('Schedule provenance missing');
- e.schedule_receipt={schema_version:'weekly_schedule_source_candidate_v0',status:'unadmitted_schedule_snapshot',
- source_family:'nflverse/nflverse-data/schedules',source_url:'https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv',
- source_support_commit:'d'.repeat(40),asset_id:1,sha256:'e'.repeat(64),byte_count:1,
- release_asset_updated_at:'2026-09-14T00:00:00Z',retrieval_started_at:'2026-09-14T00:00:00Z',retrieval_completed_at:'2026-09-14T00:00:00Z',
- release_digest_matched:true,attribution:{name:'nflverse contributors',license:'CC BY 4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',
- license_source_url:'https://example.test/license',license_sha256:'f'.repeat(64)},limitations:['Test schedule only']};
+ e.schedule_receipt=syntheticSchedule();
  const p=inspect(e);expect(p.schedule_receipt).toEqual(e.schedule_receipt);expect(p.source_receipt_sha256).toBe(e.source_receipt_sha256);
+ });
+ test.each([
+ ['null scheduled',{scheduled_game_ids:null}],['null missing',{missing_game_ids:null}],
+ ['null unexpected',{unexpected_game_ids:null}],['empty schedule',{scheduled_game_ids:[]}],
+ ['duplicate observed',{observed_game_ids:['SYNTHETIC','SYNTHETIC']}],
+ ['duplicate scheduled',{scheduled_game_ids:['SYNTHETIC','SYNTHETIC']}],
+ ['false match',{scheduled_game_ids:['SYNTHETIC','MISSING'],missing_game_ids:['MISSING']}],
+ ['omitted missing',{schedule_coverage:'partial_or_conflicting',scheduled_game_ids:['SYNTHETIC','MISSING']}],
+ ['invented unexpected',{unexpected_game_ids:['OTHER']}],
+ ['false partial',{schedule_coverage:'partial_or_conflicting'}],
+ ['duplicate missing',{schedule_coverage:'partial_or_conflicting',scheduled_game_ids:['SYNTHETIC','MISSING'],missing_game_ids:['MISSING','MISSING']}],
+ ['empty id',{scheduled_game_ids:['']}],
+ ])('rejects unsupported coverage: %s',(_label,change)=>{
+  const e=scheduledSample();Object.assign(e.coverage,change);expect(()=>inspect(e)).toThrow('Schedule coverage conflict');
+ });
+ test('accepts supported partial coverage and preserves unknown finality',()=>{
+  const e=scheduledSample();Object.assign(e.coverage,{schedule_coverage:'partial_or_conflicting',
+   scheduled_game_ids:['MISSING'],missing_game_ids:['MISSING'],unexpected_game_ids:['SYNTHETIC']});
+  const p=inspect(e);expect(p.coverage).toEqual(e.coverage);expect(p.coverage.full_week_final).toBe(false);
+ });
+ test('unavailable schedule cannot carry asserted game lists',()=>{
+  const e:any=sample();e.coverage.missing_game_ids=[];expect(()=>inspect(e)).toThrow('Schedule coverage conflict');
+ });
+ test('rejects same player/game under conflicting teams; permits different games',()=>{
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.team='BBB';other.identity.opponent_team='AAA';e.candidate.players.push(other);
+  expect(()=>inspect(e)).toThrow('Weekly identity conflict');
+  other.identity.game_id='OTHER';e.coverage.observed_game_ids.push('OTHER');
+  expect(inspect(e).players).toHaveLength(2);
  });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
  o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
