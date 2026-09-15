@@ -127,11 +127,16 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
        (coverage.schedule_coverage==='matched')!==matched) throw new Error('Schedule coverage conflict');
   }
   const keys=new Set<string>();
+  const matchups=new Map<string,string>();
   for(const row of c.players){
     const i=row.identity, o=row.observed;
     const key=JSON.stringify([i.game_id,i.player_id]);
     if(i.season!==season||i.week!==week||!e.coverage.observed_game_ids.includes(i.game_id)||keys.has(key)) throw new Error('Weekly identity conflict');
     keys.add(key);
+    const pair=JSON.stringify([i.team,i.opponent_team].sort());
+    if(i.team===i.opponent_team||(matchups.has(i.game_id)&&matchups.get(i.game_id)!==pair))
+      throw new Error('Weekly matchup conflict');
+    matchups.set(i.game_id,pair);
     if(row.derived.carries_plus_targets!==(o.carries===null||o.targets===null?null:o.carries+o.targets)) throw new Error('Opportunity mismatch');
     for(const [field,share] of [['targets',row.derived.target_share_credited_team_targets],['carries',row.derived.carry_share_all_team_carries]] as const){
       if(share.numerator!==o[field] || (share.status==='available' && (share.reason!==null || share.numerator===null || share.denominator===null ||share.denominator<=0 || share.value!==share.numerator/share.denominator)) || (share.status==='unavailable'&&share.value!==null)) throw new Error('Share mismatch');

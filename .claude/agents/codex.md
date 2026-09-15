@@ -1010,3 +1010,8 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Require row-supported observed-game coverage before schedule reconciliation and display filtering.
 - Changed weekly decoder/tests and R2 audit; 69 focused tests pass, existing 332-player preview remains unchanged.
 - No source admission, UI, merge or deployment. Fresh review requested after publication.
+
+
+## 2026-09-15 — Weekly review R3
+
+Verified and repaired #386 P2 4010982454: reject self-opponents and inconsistent unordered game matchup pairs before position filtering. Reciprocal and separate-game pairs accepted. 72 targeted tests passed; unchanged real candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r3-2026-09-15.md. Fresh independent review pending. No admission, activation, merge or deployment.

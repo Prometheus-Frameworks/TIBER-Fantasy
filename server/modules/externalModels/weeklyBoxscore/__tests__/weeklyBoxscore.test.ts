@@ -89,6 +89,23 @@ describe('offline weekly preview and inactive runtime',()=>{
   e.coverage.observed_game_ids.push('DEFENSE');e.coverage.scheduled_game_ids.push('DEFENSE');
   expect(inspect(e).players).toHaveLength(1);
  });
+ test('rejects self-opponents',()=>{
+  const e=sample();e.candidate.players[0].identity.opponent_team='AAA';
+  expect(()=>inspect(e)).toThrow('Weekly matchup conflict');
+ });
+ test('rejects conflicting matchups across distinct players, including hidden positions',()=>{
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.player_id='00-9990002';other.identity.position='DB';other.identity.opponent_team='CCC';
+  e.candidate.players.push(other);expect(()=>inspect(e)).toThrow('Weekly matchup conflict');
+ });
+ test('accepts reciprocal matchups and independent pairs in other games',()=>{
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.player_id='00-9990002';other.identity.team='BBB';other.identity.opponent_team='AAA';
+  e.candidate.players.push(other);expect(inspect(e).players).toHaveLength(2);
+  const next=JSON.parse(JSON.stringify(other));next.identity.game_id='OTHER';next.identity.opponent_team='CCC';
+  e.candidate.players.push(next);e.coverage.observed_game_ids.push('OTHER');
+  expect(inspect(e).players).toHaveLength(3);
+ });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
  o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
  const p=inspect(e).players[0];expect(p.derived.generic_full_ppr).toBe(26);expect(p.derived.td_points).toBe(14);
