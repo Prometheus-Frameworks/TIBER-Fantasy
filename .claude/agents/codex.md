@@ -1023,3 +1023,7 @@ Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game
 ## 2026-09-15 — Weekly review R5
 
 Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R6
+
+Repaired passing-counter and falsely-unavailable-share P2s; disputed TD<=individual-touches with NFL lateral rules and regression coverage. 92 focused tests pass; real candidate unchanged at332 players/15of16 games/unknown finality. See docs/audits/weekly-consumer-review-r6-2026-09-15.md. Independent review pending. Authorized repair/push/re-review only; stop before merge. Runtime unavailable.

@@ -144,6 +144,12 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
     matchups.set(i.game_id,pair);
     if(o.receptions!==null&&o.targets!==null&&o.receptions>o.targets) throw new Error('Receptions exceed targets');
     if(o.completions!==null&&o.attempts!==null&&o.completions>o.attempts) throw new Error('Completions exceed attempts');
+    if(o.completions!==null&&o.passing_interceptions!==null&&o.attempts!==null&&
+       o.completions+o.passing_interceptions>o.attempts) throw new Error('Passing outcomes exceed attempts');
+    if(o.passing_tds!==null&&o.completions!==null&&o.passing_tds>o.completions)
+      throw new Error('Passing touchdowns exceed completions');
+    // Laterals can credit rushing/receiving TDs without a carry/reception.
+    // Do not impose TD <= individual touches (NFL statisticians guide, pp12/17).
     if(row.derived.carries_plus_targets!==(o.carries===null||o.targets===null?null:o.carries+o.targets)) throw new Error('Opportunity mismatch');
     for(const [field,share] of [['targets',row.derived.target_share_credited_team_targets],['carries',row.derived.carry_share_all_team_carries]] as const){
       const denominatorKey=JSON.stringify([i.game_id,i.team,field]);
@@ -152,6 +158,8 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
         if(teamDenominators.has(denominatorKey)&&teamDenominators.get(denominatorKey)!==share.denominator) throw new Error('Team denominator conflict');
         teamDenominators.set(denominatorKey,share.denominator);
       }
+      const calculable=share.numerator!==null&&share.denominator!==null&&share.denominator>0;
+      if((share.status==='available')!==calculable) throw new Error('Share mismatch');
       if(share.numerator!==o[field] || (share.status==='available' && (share.reason!==null || share.numerator===null || share.denominator===null ||share.denominator<=0 || share.value!==share.numerator/share.denominator)) || (share.status==='unavailable'&&share.value!==null)) throw new Error('Share mismatch');
     }
   }

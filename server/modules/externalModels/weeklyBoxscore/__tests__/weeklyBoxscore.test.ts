@@ -150,12 +150,49 @@ describe('offline weekly preview and inactive runtime',()=>{
   o.attempts=2;expect(inspect(e).players).toHaveLength(1);
   o.attempts=null as any;expect(inspect(e).players[0].observed.attempts).toBeNull();
  });
+ test.each([
+  {completions:5,attempts:5,passing_interceptions:5},
+  {completions:1,attempts:5,passing_tds:2},
+ ])('rejects impossible passing totals %j',change=>{
+  const e=sample('QB');Object.assign(e.candidate.players[0].observed,change);
+  expect(()=>inspect(e)).toThrow(/Passing/);
+ });
+ test.each([
+  {completions:5,attempts:6,passing_interceptions:1,passing_tds:5},
+  {completions:null,attempts:6,passing_interceptions:1,passing_tds:2},
+  {completions:5,attempts:null,passing_interceptions:1,passing_tds:2},
+  {completions:5,attempts:6,passing_interceptions:null,passing_tds:2},
+  {completions:5,attempts:6,passing_interceptions:1,passing_tds:null},
+ ])('preserves passing equality and nullable counters %j',change=>{
+  const e=sample('QB');Object.assign(e.candidate.players[0].observed,change);
+  expect(inspect(e).players[0].observed).toMatchObject(change);
+ });
+ test.each(['target_share_credited_team_targets','carry_share_all_team_carries'] as const)('rejects falsely unavailable %s',field=>{
+  const e=sample('RB',4,20,4);const share=e.candidate.players[0].derived[field];
+  Object.assign(share,{status:'unavailable',value:null,reason:'unknown'});
+  expect(()=>inspect(e)).toThrow('Share mismatch');
+  share.numerator=0;
+  if(field==='target_share_credited_team_targets')e.candidate.players[0].observed.targets=0;
+  else e.candidate.players[0].observed.carries=0;
+  e.candidate.players[0].derived.carries_plus_targets=4;
+  expect(()=>inspect(e)).toThrow('Share mismatch');
+  Object.assign(share,{status:'available',value:0,reason:null});
+  expect(inspect(e).players[0].derived[field].value).toBe(0);
+ });
+ test.each(['receiving','rushing'] as const)('preserves a lateral %s TD without a credited touch',kind=>{
+  // NFL Guide for Statisticians (2025), Rushing p12 and Laterals p17.
+  const e=sample('RB',0,20,0,0);const o=e.candidate.players[0].observed;
+  o[`${kind}_tds`]=1;o[`${kind}_yards`]=5;
+  const row=inspect(e).players[0];
+  expect(row.observed.receptions).toBe(0);expect(row.observed.carries).toBe(0);
+  expect(row.derived.generic_full_ppr).toBe(6.5);expect(row.derived.td_points).toBe(6);
+ });
  test('rejects reused source rows across distinct identities',()=>{
   const e=sample();const b=JSON.parse(JSON.stringify(e.candidate.players[0]));b.identity.player_id='00-9990002';
   e.candidate.players.push(b);expect(()=>inspect(e)).toThrow('Source row conflict');
  });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
- o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
+ o.completions=20;o.attempts=30;o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
  const p=inspect(e).players[0];expect(p.derived.generic_full_ppr).toBe(26);expect(p.derived.td_points).toBe(14);
  expect(p.classification.bucket).toBe('qb_separate');});
  test('missing usage stays unknown',()=>expect(inspect(sample('WR',null)).players[0].classification.bucket).toBe('insufficient_evidence'));
