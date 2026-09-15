@@ -783,3 +783,10 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** shared/teamManager.ts; draftReview manager compiler/tests; additive public route and Sleeper transport methods; TeamManager UI/tests and Team page/CSS; module/product/review docs.
 - **Validation:** 69 tests/six suites, full build, unchanged 506 TypeScript baseline diagnostics, built HTTP/live selected-league smoke, diff check. Live leg 1 keeps results pending. Synthetic fixtures only.
 - **Notes:** Stacked on #375 `1597b2d0`, separate from #377/main. Automatic PR environments observed disabled in Railway UI; no deployment. Independent review and actual portrait-phone acceptance remain outstanding. Review packet: docs/reviews/team-manager-weekly-results-v0.md.
+
+
+### 2026-09-15 — PR #387 Codex P2 repairs
+Verified review findings discussion_r4011273194 and discussion_r4011273201 against published head `4083867395d1ecbea4071c5edb0e459b2ec9e639`. Joe authorized the smallest repair and fresh review. Manager requests now reserve a shared page-memory budget of 30 starts per 61 seconds across refreshes, preserve two-worker concurrency, abort queued work on scope changes, and pause/retry once on HTTP 429 with a distinct rate-limit message if still throttled. Large batches explicitly disclose waiting. Missing/invalid NFL state preserves scores but marks W/L/T unavailable with an honest reason and no valid-state observation timestamp. Valid current-week state remains pending.
+
+76 targeted tests across seven suites pass, including 31 leagues, immediate repeated 16-league refresh, cancellation, 429 retry bounds, and malformed/outage state. Full build passes. Independent re-review and isolated portrait-phone preview acceptance remain pending. No dependency/base changes, merge, deploy, auth/database activation or fantasy transactions.
+Typecheck repair comparison: all 506 baseline diagnostics retain identical per-file/error-code counts; no new diagnostics.

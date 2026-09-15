@@ -31,13 +31,13 @@ test('zero override wins precedence and negative scores remain valid; correction
   expect((await buildManagerResult(input, sources)).rosters[0].outcome).toBe('loss');
 });
 test.each([{ season: '2026', season_type: 'regular', leg: 1 }, { season: '2025', season_type: 'regular', leg: 2 },
-  { season: '2026', season_type: 'pre', leg: 2 }, null])('does not infer finality from a lead or wall clock %#', async state => {
+  { season: '2026', season_type: 'pre', leg: 2 }])('does not infer finality from a lead or wall clock %#', async state => {
   const sources = source(); sources.getManagerNflState.mockResolvedValue(state);
   expect((await buildManagerResult(input, sources)).rosters[0].outcome).toBe('pending');
 });
 test('state outage preserves observed scores while withholding result; missing scores are not zero', async () => {
   const sources = source(); sources.getManagerNflState.mockRejectedValue(new Error('outage'));
-  expect((await buildManagerResult(input, sources)).rosters[0]).toMatchObject({ points: 100.25, outcome: 'pending' });
+  expect((await buildManagerResult(input, sources)).rosters[0]).toMatchObject({ points: 100.25, outcome: 'unavailable' });
   sources.getManagerNflState.mockResolvedValue({ season: '2026', season_type: 'regular', leg: 2 });
   sources.getManagerMatchups.mockResolvedValue([{ ...rows[0], points: null }, rows[1]]);
   expect((await buildManagerResult(input, sources)).rosters[0]).toMatchObject({ points: null, outcome: 'pending' });
@@ -79,4 +79,13 @@ test('HTTP strict input, sanitized failures and no-store', async () => {
     expect(res.status).toBe(502); expect(res.headers['cache-control']).toBe('no-store');
     expect(res.headers['set-cookie']).toBeUndefined(); expect(JSON.stringify(res.body)).not.toContain('secret');
   } finally { global.fetch = original; }
+});
+
+test.each([null, {}, { season: '2026', season_type: 'regular', leg: '2' }])('invalid state preserves scores with unavailable outcome and truthful reason %#', async state => {
+  const sources = source(); sources.getManagerNflState.mockResolvedValue(state);
+  const result = await buildManagerResult(input, sources);
+  expect(result.rosters[0]).toMatchObject({ points: 100.25, opponentPoints: 90, outcome: 'unavailable' });
+  expect(result.reason).toContain('NFL week state is unavailable or invalid');
+  expect(result.reason).not.toContain('has not established');
+  expect(result.observations.nflStateReceivedAt).toBeNull();
 });

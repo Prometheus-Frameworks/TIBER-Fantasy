@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { publicLeaguesInput, type TeamLeagues } from '@shared/teamLeagues';
 import { summarizeManagerWeek, type ManagerOutcome, type ManagerResult } from '@shared/teamManager';
-import { teamAccountRequest } from '@/lib/teamAccountApi';
+import { requestManagerResult } from '@/lib/teamManagerRequests';
+import { teamAccountRequest, TeamAccountRequestError } from '@/lib/teamAccountApi';
 
 type Entry = { result?: ManagerResult; error?: string };
 export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) => void }) {
@@ -42,14 +43,15 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
       while (index < selected.length && id === sequence.current) {
         const leagueId = selected[index++];
         try {
-          const result: ManagerResult = await teamAccountRequest(`/api/draft-review/manager-week?${new URLSearchParams({
+          const result: ManagerResult = await requestManagerResult(`/api/draft-review/manager-week?${new URLSearchParams({
             userId: leagues.account.userId, leagueId, season: leagues.season, week,
           })}`, { signal });
           if (id !== sequence.current) return;
           if (result.schemaVersion !== 'tiber_manager_week_v1' || result.leagueId !== leagueId || result.season !== leagues.season || result.week !== Number(week)) throw new Error();
           setEntries(old => ({ ...old, [leagueId]: { result } }));
-        } catch {
-          if (id === sequence.current) setEntries(old => ({ ...old, [leagueId]: { error: 'Could not refresh this league. Try Refresh results again.' } }));
+        } catch (caught) {
+          if (id === sequence.current) setEntries(old => ({ ...old, [leagueId]: { error: caught instanceof TeamAccountRequestError && caught.status === 429
+            ? 'Request limit reached. Wait a minute before refreshing again.' : 'Could not refresh this league. Try Refresh results again.' } }));
         }
       }
     };
@@ -122,7 +124,7 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
         })}</div>
       </>}
     </>}
-    {busy && <p role="status">Reading Sleeper…</p>}
+    {busy && <p role="status">Reading Sleeper… Large selections or repeated refreshes may take a few minutes while requests wait for capacity.</p>}
     <p className="drp-boundary">Public lookup; no account is linked. Selections stay in this page until reload. Standings, saved profiles and season totals are not included yet.</p>
   </section>;
 }

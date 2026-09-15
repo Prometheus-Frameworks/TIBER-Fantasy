@@ -112,3 +112,6 @@ The collapsible phone picker retains the public list in page memory while naviga
 
 ## Manager weekly results v0 (2026-09-15)
 The additive public `/api/draft-review/manager-week` and Team Manager view reuse public league discovery from #375. Explicit account/season/league selections and one week produce source-attributed score cards and provisional head-to-head-only counts. Selection stays in page memory. Current membership is not historical ownership or authenticated control. Strict scope/coverage checks, commissioner override precedence, prior same-season regular-leg gating and pending/unavailable states are documented in `docs/reviews/team-manager-weekly-results-v0.md`. No private account reuse, standings, saved profiles, season totals, schedule/finality claim, median record, auth activation, DB, new env vars or fantasy writes.
+
+
+Manager weekly-results review repair (2026-09-15, PR #387): the client retains a 30-start/61-second request budget across explicit refreshes, with abortable capacity waits and one bounded 429 retry; server limits are unchanged. Missing/invalid NFL state retains scores as unavailable W/L/T with an explicit state failure, while valid non-prior state remains pending. See `docs/reviews/team-manager-weekly-results-v0.md`.

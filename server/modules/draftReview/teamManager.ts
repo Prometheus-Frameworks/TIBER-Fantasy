@@ -66,7 +66,7 @@ export async function buildManagerResult(raw: unknown, sources: Sources = sleepe
     return { ...base, reason: 'Weekly matchup coverage does not match the league roster list.' };
   }
   const state = stateSettled.status === 'fulfilled' ? stateSchema.safeParse(stateSettled.value.value) : null;
-  if (stateSettled.status === 'fulfilled') {
+  if (stateSettled.status === 'fulfilled' && state?.success) {
     base.observations.nflStateReceivedAt = stateSettled.value.receivedAt;
     base.observations.sourceUrls.push('https://api.sleeper.app/v1/state/nfl');
   }
@@ -80,9 +80,11 @@ export async function buildManagerResult(raw: unknown, sources: Sources = sleepe
     const a = effectiveScore(own); const b = effectiveScore(opponent);
     return { ...roster, opponentRosterId: opponent.roster_id, points: a.value, opponentPoints: b.value,
       scoreBasis: a.basis, opponentScoreBasis: b.basis,
-      outcome: a.value == null || b.value == null || !priorWeek ? 'pending'
+      outcome: !state?.success ? 'unavailable' : a.value == null || b.value == null || !priorWeek ? 'pending'
         : a.value > b.value ? 'win' : a.value < b.value ? 'loss' : 'tie' };
   });
-  return { ...base, status: 'available', reason: unsupported ? 'A bye or unsupported pairing is excluded from the record.'
+  return { ...base, status: 'available', reason: !state?.success
+    ? 'NFL week state is unavailable or invalid. Scores are shown, but W/L/T cannot be established. Try refreshing again.'
+    : unsupported ? 'A bye or unsupported pairing is excluded from the record.'
     : !priorWeek ? 'Pending: Sleeper has not established a later regular-season week for this season.' : null };
 }
