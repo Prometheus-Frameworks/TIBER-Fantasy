@@ -1,0 +1,74 @@
+{
+  "record_id": "pclr_20260813_camp323_roman_wilson_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_roman_wilson",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:52:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:11630",
+      "display_name": "Roman Wilson",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-08",
+    "event_type": "role_expansion",
+    "observations": [
+      "Unofficial beat charting through the first seven camp practices (Steelers Depot, published 2026-08-08): 9 receptions on 19 targets (47.4%), 2 TDs, 1 drop; play described as picking up in recent days, with two Rodgers TDs on Tuesday.",
+      "2026-08-08 night practice (Latrobe Memorial Stadium): Wilson ran with the first-team offense and was targeted by Aaron Rodgers in team periods (one curl broken up with forceful contact by S Rayshawn Jenkins; at least two catches).",
+      "Deployment pattern per Athlon/Yahoo 2026-08-01 (event 07-31, sourced to Steelers Now): Wilson 'has primarily handled the slot and de facto WR3 role with the first-team offense', with some second-team outside work on 07-31.",
+      "Context: WR-room injuries opened additional first-unit access in-window — Michael Pittman Jr. right-leg injury 08-08, and both Pittman and DK Metcalf missed the 08-10 and 08-11 practices (Steelers Depot 08-10 injury report; WPXI 08-11)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward pressure on first-team slot routes and targets, amplified while Metcalf/Pittman are unavailable.",
+      "The sub-50% charted catch rate tempers any efficiency read: this is access evidence, not efficiency evidence."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-stats-first-seven-practices/",
+        "note": "Steelers Depot, 2026-08-08. Unofficial charting: 9/19, 2 TD, 1 drop through seven practices.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-diary-day-nine/",
+        "note": "Steelers Depot, 2026-08-08. Day-nine first-team deployment with Rodgers targets.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/germie-bernard-earns-first-team-210000074.html",
+        "note": "Athlon via Yahoo, 2026-08-01 (event 07-31). Wilson primarily first-team slot / de facto WR3; some second-team outside work that day.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/hes-getting-a-chance-now-big-ben-impressed-with-roman-wilsons-training-camp-performance/",
+        "note": "Steelers Depot, 2026-08-04. Roethlisberger third-party commentary (not team-official): 'He's getting a chance now.'",
+        "verified": false
+      },
+      {
+        "ref": "https://www.wpxi.com/sports/nfl/pittsburgh-steelers/steelers-top-two-wrs-both-miss-practice-with-injury/INGAPITKQNHSVD45LSEQZ342QI/",
+        "note": "WPXI, 2026-08-11. Metcalf and Pittman missed Mon+Tue practices; both projected out for the preseason opener.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Camp charting is unofficial beat-reporter counting, not team-issued data.",
+      "First-unit access is partly injury-driven (Metcalf/Pittman absences); the durable share once both return is unobserved.",
+      "Per #323 guardrails, no entry content is derived from isolated interceptions, penalties, generic praise, or quiet practices; the Roethlisberger comment is preserved as third-party commentary only.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does the first-team slot role hold when Metcalf and Pittman return?",
+      "Does the catch rate normalize as deployment stabilizes?"
+    ],
+    "unrecognized_fields": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "record_id": "pclr_20260813_camp323_seth_mcgowan_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_seth_mcgowan",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:56:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:13424",
+      "display_name": "Seth McGowan",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-10",
+    "event_type": "role_expansion",
+    "observations": [
+      "2026-08-10: the Colts' first unofficial preseason depth chart (released ahead of Thursday's opener at New England) lists the RB order as Jonathan Taylor, DJ Giddens (RB2), Seth McGowan (RB3), Ulysses Bentley IV, Anderson Castle, Roydell Williams — no 'OR' designations (colts.com, 08-10).",
+      "2026-08-05: with DJ Giddens missing practice (hamstring), McGowan took first-team offensive reps alongside Jonathan Taylor and broke off several big runs (SI/On SI Colts, 08-05). 107.5 The Fan (08-10): with Giddens sidelined 'around a week or so', McGowan 'has flashed in an expanded role'.",
+      "2026-08-10 quotes: Jonathan Taylor: 'Everybody thinks he's just like a big power back, but Seth has some moves... he reminds me of like a David Montgomery... great feet, great vision.' Daniel Jones: 'a strong, physical runner... he's done a good job, has run hard.' OC Jim Bob Cooter: 'He's had a nice start... doing a really nice job of when he gets carries, sort of reading those runs' — with 'a couple young-guy hiccups' also noted (Yahoo, 08-10).",
+      "Draft context (2026-04-25): Colts selected McGowan in Round 7, No. 237 overall out of Kentucky (colts.com); GM Chris Ballard, asked about McGowan's 2021 criminal case: 'Look, I'm a second chance guy' (Heavy, 04-25)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward contingent-opportunity pressure in the backup competition — camp momentum and teammate/coach corroboration point up while the formal chart still orders Giddens ahead. The contradiction is the signal and is preserved unresolved (TRUST ?).",
+      "McGowan is NOT recorded as RB2: the current chart explicitly lists Giddens second, and experience-with-team is the analyst-suggested tiebreaker."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.colts.com/news/colts-release-unofficial-depth-chart-for-preseason-week-1-game-vs-new-england-patriots",
+        "note": "Team site, 2026-08-10. First unofficial chart: Taylor, Giddens, McGowan.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.si.com/nfl/colts/onsi/colts-seth-mcgowan-making-early-impression-in-rb2-competition",
+        "note": "SI/On SI, 2026-08-05. First-team reps alongside Taylor during Giddens' hamstring absence.",
+        "verified": false
+      },
+      {
+        "ref": "https://1075thefan.com/731174/takeaways-from-colts-first-depth-chart-of-2026/",
+        "note": "107.5 The Fan, 2026-08-10. Expanded role during Giddens absence; author's Giddens-vs-McGowan ordering view is projection.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/seth-mcgowan-drawing-praise-colts-100500088.html",
+        "note": "Yahoo, 2026-08-10. Direct Taylor/Jones/Cooter quotes.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.colts.com/news/seth-mcgowan-kentucky-running-back-seventh-round-2026-nfl-draft",
+        "note": "Team site, 2026-04-25. Draft slot: Round 7, No. 237.",
+        "verified": false
+      },
+      {
+        "ref": "https://heavy.com/sports/nfl/indianapolis-colts/gets-honest-seth-mcgowan-criminal-history/",
+        "note": "Heavy, 2026-04-25. Ballard 'second chance' quote.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "missing"
+    },
+    "limitations": [
+      "Correction of the operator's candidate note: recovered evidence attributes McGowan's first-team reps to DJ Giddens' hamstring absence with Jonathan Taylor present — no source places Taylor as the absent player. The corrected version is recorded.",
+      "Teammate/coach praise is characterization, not quantified usage; it is quoted verbatim and not converted into workload claims.",
+      "Draft capital (R7 #237) is a fact about selection, not evidence of player quality, and is recorded as context only.",
+      "The depth chart is unofficial and provisional.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Giddens' return compress McGowan's role, or has the competition genuinely opened?",
+      "Does tonight's preseason opener at New England show a Giddens/McGowan rotation consistent with the chart or with camp usage?"
+    ],
+    "unrecognized_fields": []
+  }
+}

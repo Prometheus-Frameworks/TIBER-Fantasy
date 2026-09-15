@@ -1,0 +1,49 @@
+{
+  "record_id": "pclr_20260813_camp323_luther_burden_iii_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_luther_burden_iii",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:00:00.000Z",
+  "change_note": "#323 reconciliation: injury/availability lineage, initial event state as of 2026-08-09 reporting. Role thesis is deliberately kept out of this availability lineage.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:12519",
+      "display_name": "Luther Burden III",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-08",
+    "event_type": "injury_update",
+    "observations": [
+      "2026-08-08: Burden limped off the practice field after a one-on-one drill against CB Tyrique Stevenson (Chicago Sun-Times, URL-dated 08-09).",
+      "2026-08-09: Burden sat out practice with a groin injury; 'It's unclear how long he will miss.' (Chicago Sun-Times, URL-dated 08-09)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): downward short-term availability pressure of unknown duration at this point in the arc."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://chicago.suntimes.com/bears/2026/08/09/bears-training-camp-luther-burden-groin-injury-nfl-sits-out-wide-receiver-zavion-thomas",
+        "note": "Chicago Sun-Times, URL-dated 2026-08-09 (page rendered a later updated date; URL date reported). Injury mechanism and initial unclear timetable.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Publication-date discrepancy flagged: the Sun-Times page rendered with a later updated date than its URL date; the URL date is used.",
+      "Background claim of a rookie-minicamp hamstring issue surfaced in search only and is excluded as unverified.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "How long will Burden be out?"
+    ],
+    "unrecognized_fields": []
+  }
+}
