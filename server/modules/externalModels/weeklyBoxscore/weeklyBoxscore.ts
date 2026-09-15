@@ -3,7 +3,8 @@ import { z } from 'zod';
 
 const count = z.number().int().min(0).max(1_000_000).nullable();
 const yards = z.number().int().min(-1_000_000).max(1_000_000).nullable();
-const receiptClock = z.string().datetime({offset:true});
+const receiptClock = z.string().datetime({offset:true})
+  .refine(value=>Number.isFinite(Date.parse(value)),'Receipt clock must identify a valid instant');
 const fields = z.object({
   completions: count, attempts: count, passing_yards: yards, passing_tds: count,
   passing_interceptions: count, sacks_suffered: count, carries: count, rushing_yards: yards,

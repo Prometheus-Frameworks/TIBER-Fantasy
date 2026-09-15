@@ -821,3 +821,7 @@ Repaired #386 P2 4019849956: require offset-bearing receipt clocks, preserve sou
 ## 2026-09-15 — Weekly review R8
 
 Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval completion. Three consumer mutations failed before repair; 103 focused tests pass. Applied the same provenance invariant upstream in Data #273. Candidate preview remains 332 players / 15 of 16 games / unknown finality. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+## 2026-09-15 — Weekly review R9
+
+Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
