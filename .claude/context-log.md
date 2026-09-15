@@ -777,3 +777,9 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** `client/src/components/draftReview/TeamAccount.tsx`, `client/src/__tests__/teamAccount.test.ts`, and both required agent logs.
 - **Validation:** Both new focus/visibility regression cases failed before the repair; all seven focused account tests pass after it, including Google popup-focus preservation and existing logout/unavailable/linking checks. Full `sh build.sh` passed; `git diff --check` passed. Typecheck comparison and publication/review receipts are recorded on PR #375.
 - **Notes:** Synthetic sessions and mocked Google only. No provider/database configuration, activation, merge, or production release; portrait-phone acceptance remains pending. Repair starts from exact head `1213827d9fbbc88499f4e98813272dedb700dce1` without integrating main or resolving other review threads.
+
+### 2026-09-15 — Codex: Manager weekly results v0
+- **What changed:** Separate Manager view on the exact #375 base; explicit public account and league selection, week selector, provisional score-derived head-to-head record, per-league errors/missing states and existing Team navigation. No persistence/auth activation/standings/season total.
+- **Files modified:** shared/teamManager.ts; draftReview manager compiler/tests; additive public route and Sleeper transport methods; TeamManager UI/tests and Team page/CSS; module/product/review docs.
+- **Validation:** 69 tests/six suites, full build, unchanged 506 TypeScript baseline diagnostics, built HTTP/live selected-league smoke, diff check. Live leg 1 keeps results pending. Synthetic fixtures only.
+- **Notes:** Stacked on #375 `1597b2d0`, separate from #377/main. Automatic PR environments observed disabled in Railway UI; no deployment. Independent review and actual portrait-phone acceptance remain outstanding. Review packet: docs/reviews/team-manager-weekly-results-v0.md.

@@ -103,6 +103,12 @@ async function fetchJson<T>(path: string): Promise<T> {
 }
 
 export const sleeperClient = {
+  async getManagerMatchups(leagueId: string, week: number): Promise<unknown> {
+    return fetchJson<unknown>(`/league/${leagueId}/matchups/${week}`);
+  },
+  async getManagerNflState(): Promise<unknown> {
+    return fetchJson<unknown>('/state/nfl');
+  },
   async getLeague(leagueId: string): Promise<SleeperLeagueDetail> {
     return fetchJson<SleeperLeagueDetail>(`/league/${leagueId}`);
   },

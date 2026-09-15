@@ -992,3 +992,8 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** `client/src/components/draftReview/TeamAccount.tsx`, `client/src/__tests__/teamAccount.test.ts`, and both required agent logs.
 - **Validation:** Both new focus/visibility regression cases failed before the repair; all seven focused account tests pass after it, including Google popup-focus preservation and existing logout/unavailable/linking checks. Full `sh build.sh` passed; `git diff --check` passed. Typecheck comparison and publication/review receipts are recorded on PR #375.
 - **Notes:** Synthetic sessions and mocked Google only. No provider/database configuration, activation, merge, or production release; portrait-phone acceptance remains pending. Repair starts from exact head `1213827d9fbbc88499f4e98813272dedb700dce1` without integrating main or resolving other review threads.
+
+### 2026-09-15 — Manager weekly results v0
+Joe approved selected leagues, weekly results, combined head-to-head record and Team links. Implemented on isolated `codex/team-manager-weekly-results` from #375 `1597b2d0`, reusing public discovery without touching auth/private state or #377. W/L/T stays provisional and requires a later same-season regular leg; scores, overrides, missing data, scope and multiple memberships are explicit. No saved profile, standings, season totals or deployment.
+
+69 tests/six suites and full build pass; 506 baseline TypeScript diagnostics unchanged; actual built public HTTP and live discovery/one-league smoke pass. Independent review and portrait-phone acceptance remain pending. Railway automatic PR environments observed disabled; no settings changed. See docs/reviews/team-manager-weekly-results-v0.md.

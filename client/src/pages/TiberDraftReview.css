@@ -203,3 +203,28 @@
 .drp-te-list button[aria-pressed="true"] { background: #302319; border-color: #e2640d; }
 .drp-te-filter { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
 .drp-te-filter input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #e2640d; }
+
+/* Manager shares Team's existing scoped dark palette. */
+.tm-nav { display: flex; gap: 8px; margin-bottom: 20px; }
+.tm-nav [aria-pressed="true"] { border-color: var(--drp-orange); color: var(--drp-orange); }
+.tm-manager { display: grid; gap: 18px; min-width: 0; }
+.tm-manager h2 { font: 600 34px/1.15 var(--font-serif); }
+.tm-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.tm-manager label { display: grid; gap: 6px; min-width: 0; }
+.tm-manager input:not([type="checkbox"]), .tm-manager select { background: #fff; color: #171717; border: 1px solid var(--drp-border); border-radius: 8px; min-height: 44px; padding: 8px 12px; width: 100%; min-width: 0; }
+.tm-controls > label:first-child { flex: 1 1 200px; }
+.tm-controls > label:nth-child(2) { width: 90px; }
+.tm-manager button, .tm-selection summary { min-height: 44px; }
+.tm-selection summary { cursor: pointer; padding: 12px 0; }
+.tm-league-list { max-height: 320px; overflow: auto; margin-top: 10px; }
+.tm-league-list label { display: flex; align-items: center; gap: 12px; min-height: 52px; border-bottom: 1px solid var(--drp-border); padding: 8px 0; }
+.tm-league-list small { display: block; opacity: .6; }
+.tm-summary { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--drp-border); border-radius: 12px; }
+.tm-summary strong { font: 650 22px/1.4 var(--font-mono); }
+.tm-summary span, .tm-clock { font-size: 12px; opacity: .7; }
+.tm-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 12px; }
+.tm-card { min-width: 0; overflow-wrap: anywhere; display: grid; align-content: start; gap: 12px; padding: 18px; border: 1px solid var(--drp-border); border-radius: 12px; }
+.tm-score { font: 650 24px/1.4 var(--font-mono); }
+.tm-score span { opacity: .4; }
+.tm-outcome { color: var(--drp-orange); }
+@media (max-width: 480px) { .tm-manager { padding: 16px; } .tm-controls > label:first-child { flex-basis: 100%; } }

@@ -1,3 +1,4 @@
+import TeamManager from '@/components/draftReview/TeamManager';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
 import TeamLeagueSwitcher from '@/components/draftReview/TeamLeagueSwitcher';
@@ -170,6 +171,8 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
   const query = new URLSearchParams(search);
   const initialInput = query.get('sleeper_input') ?? query.get('sleeper_url') ?? '';
   const [sleeperInput, setSleeperInput] = useState(initialInput);
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [managerVisited, setManagerVisited] = useState(false);
   const [teamSelection, setTeamSelection] = useState<TeamSelection | null>(null);
   const [review, setReview] = useState<DraftReview | null>(null);
   const [error, setError] = useState('');
@@ -325,6 +328,12 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
 
   return (
     <div className="drp-page">
+      <nav className="tm-nav" aria-label="Team views">
+        <button type="button" className="drp-action" aria-pressed={!managerOpen} onClick={() => setManagerOpen(false)}>Team</button>
+        <button type="button" className="drp-action" aria-pressed={managerOpen} onClick={() => { setManagerVisited(true); setManagerOpen(true); }}>Manager</button>
+      </nav>
+      <div hidden={!managerOpen}>{managerVisited && <TeamManager onOpenTeam={url => { if (navigateInput(url)) setManagerOpen(false); }} />}</div>
+      <div hidden={managerOpen}>
       <section className="drp-hero">
         <div className="drp-kicker">Your Sleeper companion</div>
         <h1>TIBER Team</h1>
@@ -539,6 +548,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
           </footer>
         </div>
       ) : null}
+      </div>
     </div>
   );
 }
