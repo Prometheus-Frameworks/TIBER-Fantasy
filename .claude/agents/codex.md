@@ -992,3 +992,21 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** `client/src/components/draftReview/TeamAccount.tsx`, `client/src/__tests__/teamAccount.test.ts`, and both required agent logs.
 - **Validation:** Both new focus/visibility regression cases failed before the repair; all seven focused account tests pass after it, including Google popup-focus preservation and existing logout/unavailable/linking checks. Full `sh build.sh` passed; `git diff --check` passed. Typecheck comparison and publication/review receipts are recorded on PR #375.
 - **Notes:** Synthetic sessions and mocked Google only. No provider/database configuration, activation, merge, or production release; portrait-phone acceptance remains pending. Repair starts from exact head `1213827d9fbbc88499f4e98813272dedb700dce1` without integrating main or resolving other review threads.
+
+### 2026-09-15 — Manager weekly results v0
+Joe approved selected leagues, weekly results, combined head-to-head record and Team links. Implemented on isolated `codex/team-manager-weekly-results` from #375 `1597b2d0`, reusing public discovery without touching auth/private state or #377. W/L/T stays provisional and requires a later same-season regular leg; scores, overrides, missing data, scope and multiple memberships are explicit. No saved profile, standings, season totals or deployment.
+
+69 tests/six suites and full build pass; 506 baseline TypeScript diagnostics unchanged; actual built public HTTP and live discovery/one-league smoke pass. Independent review and portrait-phone acceptance remain pending. Railway automatic PR environments observed disabled; no settings changed. See docs/reviews/team-manager-weekly-results-v0.md.
+
+
+### 2026-09-15 — PR #387 Codex P2 repairs
+Verified review findings discussion_r4011273194 and discussion_r4011273201 against published head `4083867395d1ecbea4071c5edb0e459b2ec9e639`. Joe authorized the smallest repair and fresh review. Manager requests now reserve a shared page-memory budget of 30 starts per 61 seconds across refreshes, preserve two-worker concurrency, abort queued work on scope changes, and pause/retry once on HTTP 429 with a distinct rate-limit message if still throttled. Large batches explicitly disclose waiting. Missing/invalid NFL state preserves scores but marks W/L/T unavailable with an honest reason and no valid-state observation timestamp. Valid current-week state remains pending.
+
+76 targeted tests across seven suites pass, including 31 leagues, immediate repeated 16-league refresh, cancellation, 429 retry bounds, and malformed/outage state. Full build passes. Independent re-review and isolated portrait-phone preview acceptance remain pending. No dependency/base changes, merge, deploy, auth/database activation or fantasy transactions.
+Typecheck repair comparison: all 506 baseline diagnostics retain identical per-file/error-code counts; no new diagnostics.
+
+
+### 2026-09-15 — PR #387 unknown season-type P2 repair
+Joe authorized the smallest repair and fresh review for discussion_r4011414253 at `aeedd34c703f1dff69530d28e8712cbea5c4965e`. Restrict NFL state season_type to the documented `pre`, `regular`, `post` values (https://docs.sleeper.com/#get-nfl-state, checked September 15). Unknown/empty values now follow existing unavailable-state handling, preserving scores without a validated NFL-state timestamp. Recognized pre/post remain pending; regular-season derivation is unchanged.
+
+The two new invalid-value regressions failed before the one-line production repair; all 34 Manager compiler/HTTP and UI tests pass after it, including recognized pre/post observation checks. `git diff --check` passes. Earlier full-build/506-baseline-typecheck receipts apply to the preceding head; they were not rerun for this enum-only repair. Fresh independent review and isolated portrait-phone acceptance remain pending. No merge, deployment, base/dependency changes, auth/database activation or transactions.
