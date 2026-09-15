@@ -30,10 +30,28 @@ When instructions conflict, follow this order:
 5. Relevant module `MODULE.md` for touched area
 6. `CODEBASE_MAP.md` for file ownership lookup
 
-## 5) Agent roles
-- **Codex**: PR-based, scoped changes with explicit validation.
-- **Claude/Replit agents**: May commit directly (per existing conventions in `.claude/AGENTS.md`).
-- All agents: Prefer minimal, reversible changes and strong handoff notes.
+## 5) Agent roles and transition boundary
+
+- All agents may perform authorized implementation, testing, bounded repair,
+  review, and draft-PR preparation on non-default branches within the current
+  task/delegation. Do not return to Joseph for each included intermediate step.
+- Codex retains its scoped PR workflow. Claude Code and Replit Agent have no
+  standing permission to commit or push directly to main. Use a branch and PR
+  for ordinary authorized changes.
+- Technical readiness, a clean review, tool access, an agent role, or a prior
+  workflow convention does not authorize a merge or default-branch update.
+- Before any merge or default-branch transition, follow
+  [TIBER-Ops #66](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/66)
+  and the [shared merge checklist](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/runbooks/merge-checklist.md).
+  Verify exact authority and state, inherited downstream effects, and the
+  receiving agent's truthful canonical materialization and readback before
+  execution. Unknown effects and missing/stale/mismatched authority fail closed.
+- Preserve SECURITY_POLICY.md, stricter actor/task prohibitions, and independent
+  review requirements. Agents do not merge their own work. This section grants
+  no exception to a no-merge, no-deploy, or PR-only boundary.
+- A later agent/session may continue authorized preparation but cannot reuse
+  an agent-written record as standalone R3 human-origin proof.
+- Prefer minimal, reversible changes and strong handoff notes.
 
 ## 6) Common failure modes
 - Route collisions/regressions from editing the large monolithic `server/routes.ts` without prior search.

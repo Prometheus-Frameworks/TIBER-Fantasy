@@ -2,7 +2,7 @@
 
 Agent: Replit Agent (Claude Opus 4.6)
 Platform: Replit Agent Panel (in-browser)
-Workflow: Direct commits to `main`, interactive development with user, end-to-end feature building
+Workflow: Bounded implementation on non-default branches with PR preparation; merge/default-branch transitions follow root AGENTS.md and TIBER-Ops #66/shared merge checklist, with no standing direct-to-main permission.
 
 ---
 
