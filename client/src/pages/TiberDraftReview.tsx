@@ -1,5 +1,6 @@
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
+import DraftReviewWeekly from '@/components/draftReview/DraftReviewWeekly';
 import type { HistoricalEvidence } from '@shared/draftReviewEvidence';
 import { draftReviewAgentPacket, draftReviewComparisonPacket, reviewScope, type StudyAttachment } from '@shared/draftReviewStudy';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -419,6 +420,8 @@ export default function TiberDraftReview() {
             <p role="status">{copied === 'link' ? 'Roster link copied' : copied === 'context' ? 'Agent context copied' : ''}</p>
             {copyError ? <p role="alert" className="drp-error">{copyError}</p> : null}
           </section>
+
+          <DraftReviewWeekly key={`weekly:${reviewScope(review)}`} review={review} />
 
           <section className="drp-summary-grid" aria-label="League summary">
             <article>

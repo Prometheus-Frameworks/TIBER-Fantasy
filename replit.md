@@ -124,3 +124,6 @@ Team's historical evidence consumer pins a separate Data #272 promotion receipt 
 
 ### Weekly evidence preparation (2026-09-14)
 The read-only `/api/draft-review/weekly` preparation endpoint remains unavailable. Its offline candidate adapter and exploratory scoring/bucket policy are documented in `server/modules/externalModels/weeklyBoxscore/MODULE.md`. No weekly data admission, scheduler or UI activation is included; historical Team evidence remains unchanged.
+# Prepared Team weekly entry (2026-09-15, #391)
+
+This follow-on branch adds an expandable weekly evidence request on Team with explicit season/week, unavailable/error/loading states and a copied player investigation request. It does not serve populated weekly evidence or assert weekly GSIS-to-Sleeper identity matches. See `docs/product/TEAM_WEEKLY_EVIDENCE_V0.md` for dependencies, validation and release boundaries.

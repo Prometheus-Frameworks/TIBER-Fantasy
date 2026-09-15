@@ -809,3 +809,7 @@ Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game
 ## 2026-09-15 — Weekly review R5
 
 Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+# 2026-09-15 — Codex: Team weekly entry (#391)
+
+Prepared DraftReviewWeekly and roster entry on a separate follow-on branch from #386. Lazy scoped inactive endpoint, explicit missing evidence and selected-player investigation request. 43 focused tests and full build pass; phone visual acceptance pending (Chromium absent). Source admission, GSIS/Sleeper mapping and populated board remain separate. PR creation held pending verified automatic-preview suppression; see docs/product/TEAM_WEEKLY_EVIDENCE_V0.md.

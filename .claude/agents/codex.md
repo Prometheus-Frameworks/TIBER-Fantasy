@@ -1023,3 +1023,7 @@ Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game
 ## 2026-09-15 — Weekly review R5
 
 Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+# 2026-09-15 — Team weekly entry (#391)
+
+Separate follow-on branch prepares the weekly view, unavailable/error/loading handling and selected current-roster investigation request. Changed DraftReviewWeekly, Team page/styles, focused tests and design handoff. 43 tests and full build pass. No data admission, identity join, merge or deployment; browser/independent acceptance pending. See docs/product/TEAM_WEEKLY_EVIDENCE_V0.md.

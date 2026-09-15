@@ -179,3 +179,7 @@
 .drp-te-list button[aria-pressed="true"] { background: #302319; border-color: #e2640d; }
 .drp-te-filter { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
 .drp-te-filter input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #e2640d; }
+.drp-weekly { margin: 1rem 0; overflow-wrap: anywhere; }
+.drp-weekly select { max-width: 100%; min-height: 44px; color: #172033; background: #fff; border-radius: 6px; padding: 8px; }
+.drp-weekly button { min-height: 44px; }
+.drp-weekly label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
