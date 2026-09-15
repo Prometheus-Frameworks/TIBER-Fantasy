@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 const count = z.number().int().min(0).max(1_000_000).nullable();
 const yards = z.number().int().min(-1_000_000).max(1_000_000).nullable();
+const receiptClock = z.string().datetime({offset:true});
 const fields = z.object({
   completions: count, attempts: count, passing_yards: yards, passing_tds: count,
   passing_interceptions: count, sacks_suffered: count, carries: count, rushing_yards: yards,
@@ -30,7 +31,7 @@ const envelopeSchema = z.object({schema_version: z.literal('weekly_boxscore_publ
     source_url:z.literal('https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv'),
     source_support_commit:z.string().regex(/^[0-9a-f]{40}$/),asset_id:z.number().int().positive(),
     sha256:z.string().regex(/^[0-9a-f]{64}$/),byte_count:z.number().int().positive(),
-    release_asset_updated_at:z.string(),retrieval_started_at:z.string(),retrieval_completed_at:z.string(),
+    release_asset_updated_at:receiptClock,retrieval_started_at:receiptClock,retrieval_completed_at:receiptClock,
     release_digest_matched:z.literal(true),attribution:z.object({name:z.literal('nflverse contributors'),
       license:z.literal('CC BY 4.0'),license_url:z.literal('https://creativecommons.org/licenses/by/4.0/'),
       license_source_url:z.string().url(),license_sha256:z.string().regex(/^[0-9a-f]{64}$/)}),
@@ -41,15 +42,15 @@ const envelopeSchema = z.object({schema_version: z.literal('weekly_boxscore_publ
     full_week_final: z.literal(false), reason: z.string()}),
   candidate: z.object({schema_version: z.literal('weekly_boxscore_candidate_v0'),
     status: z.literal('candidate_needs_review'), consumer_admitted: z.literal(false), scope: scopeSchema,
-    source_support_commit: z.string().regex(/^[0-9a-f]{40}$/), snapshot_compiled_at: z.string(),
+    source_support_commit: z.string().regex(/^[0-9a-f]{40}$/), snapshot_compiled_at: receiptClock,
     source_receipt: z.object({schema_version: z.literal('weekly_boxscore_source_receipt_candidate_v0'),
       status: z.literal('unadmitted_candidate_source_snapshot'),
       attribution: z.object({name:z.literal('nflverse contributors'),license:z.literal('CC BY 4.0'),
         license_url:z.literal('https://creativecommons.org/licenses/by/4.0/'),notice:z.string()}),
       sources: z.object({player:z.object({source_url:z.string().url(),sha256:z.string().regex(/^[0-9a-f]{64}$/),
-        release_asset_updated_at:z.string(),retrieval_completed_at:z.string()}),
+        release_asset_updated_at:receiptClock,retrieval_started_at:receiptClock,retrieval_completed_at:receiptClock}),
         team:z.object({source_url:z.string().url(),sha256:z.string().regex(/^[0-9a-f]{64}$/),
-          release_asset_updated_at:z.string(),retrieval_completed_at:z.string()})})}),
+          release_asset_updated_at:receiptClock,retrieval_started_at:receiptClock,retrieval_completed_at:receiptClock})})}),
     players: z.array(rowSchema).max(3000), limitations: z.array(z.string()), unavailable: z.array(z.string()) }) });
 
 type Row = z.infer<typeof rowSchema>;
@@ -102,6 +103,13 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
     throw new Error('Weekly candidate integrity failure');
   const e=envelopeSchema.parse(JSON.parse(raw.toString('utf8')));
   const c=e.candidate;
+  const compiledAt=Date.parse(c.snapshot_compiled_at);
+  for(const source of [c.source_receipt.sources.player,c.source_receipt.sources.team]){
+    const startedAt=Date.parse(source.retrieval_started_at), completedAt=Date.parse(source.retrieval_completed_at);
+    if(startedAt>completedAt||completedAt>compiledAt) throw new Error('Source receipt clock conflict');
+  }
+  if(e.schedule_receipt&&Date.parse(e.schedule_receipt.retrieval_started_at)>Date.parse(e.schedule_receipt.retrieval_completed_at))
+    throw new Error('Schedule receipt clock conflict');
   if ((e.schedule_receipt===null)!==(e.coverage.schedule_coverage==='unavailable')) throw new Error('Schedule provenance missing');
   if(c.scope.season!==season||c.scope.week!==week) throw new Error('Weekly scope mismatch');
   const coverage=e.coverage;

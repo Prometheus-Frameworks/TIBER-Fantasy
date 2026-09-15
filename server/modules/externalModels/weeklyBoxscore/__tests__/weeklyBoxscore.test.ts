@@ -9,7 +9,8 @@ function sample(position='WR', targets:number|null=4, denominator=20, carries:nu
  player_id:'00-9990001',player_name:'Synthetic',position},source:'nflverse_stats_player',source_csv_row:2,observed,
  derived:{carries_plus_targets:carries===null||targets===null?null:carries+targets,
  target_share_credited_team_targets:share(targets,denominator),carry_share_all_team_carries:share(carries,20)}};
- const source={source_url:'https://example.test/fixture',sha256:'a'.repeat(64),release_asset_updated_at:'2026-09-14T00:00:00Z',retrieval_completed_at:'2026-09-14T00:00:00Z'};
+ const source={source_url:'https://example.test/fixture',sha256:'a'.repeat(64),release_asset_updated_at:'2026-09-14T00:00:00Z',
+ retrieval_started_at:'2026-09-14T00:00:00Z',retrieval_completed_at:'2026-09-14T00:00:00Z'};
  return {schema_version:'weekly_boxscore_publication_candidate_v0',status:'candidate_needs_review',consumer_admitted:false,
  source_receipt_sha256:'a'.repeat(64),builder_sha256:'b'.repeat(64),fact_builder_sha256:'c'.repeat(64),schedule_receipt:null,coverage:{observed_game_ids:['SYNTHETIC'],scheduled_game_ids:null,missing_game_ids:null,
  unexpected_game_ids:null,schedule_coverage:'unavailable',game_finality:'unknown',full_week_final:false,reason:'Synthetic fixture'},
@@ -43,6 +44,27 @@ describe('offline weekly preview and inactive runtime',()=>{
  expect(()=>inspect(e)).toThrow('Schedule provenance missing');
  e.schedule_receipt=syntheticSchedule();
  const p=inspect(e);expect(p.schedule_receipt).toEqual(e.schedule_receipt);expect(p.source_receipt_sha256).toBe(e.source_receipt_sha256);
+ });
+ test.each([
+  ['invalid schedule start',e=>{e.schedule_receipt.retrieval_started_at='invalid';}],
+  ['naive schedule completion',e=>{e.schedule_receipt.retrieval_completed_at='2026-09-14T00:00:00';}],
+  ['reversed schedule retrieval',e=>{e.schedule_receipt.retrieval_started_at='2026-09-14T01:00:00Z';}],
+  ['invalid candidate compilation',e=>{e.candidate.snapshot_compiled_at='invalid';}],
+  ['invalid player retrieval',e=>{e.candidate.source_receipt.sources.player.retrieval_started_at='invalid';}],
+  ['reversed team retrieval',e=>{e.candidate.source_receipt.sources.team.retrieval_started_at='2026-09-14T01:00:00Z';}],
+  ['player completes after compilation',e=>{e.candidate.source_receipt.sources.player.retrieval_completed_at='2026-09-14T01:00:00Z';}],
+ ] as [string,(e:any)=>void][])('rejects malformed receipt clocks: %s',(_label,mutate)=>{
+  const e=scheduledSample();mutate(e);expect(()=>inspect(e)).toThrow();
+ });
+ test('receipt clock ordering compares instants and permits equality',()=>{
+  const e=scheduledSample();e.candidate.snapshot_compiled_at='2026-09-13T21:00:00-03:00';
+  for(const source of Object.values(e.candidate.source_receipt.sources) as any[]){
+    source.retrieval_started_at='2026-09-14T02:00:00+02:00';
+    source.retrieval_completed_at='2026-09-14T00:00:00Z';
+  }
+  e.schedule_receipt.retrieval_started_at='2026-09-14T02:00:00+02:00';
+  e.schedule_receipt.retrieval_completed_at='2026-09-14T00:00:00Z';
+  expect(inspect(e).players).toHaveLength(1);
  });
  test.each([
  ['null scheduled',{scheduled_game_ids:null}],['null missing',{missing_game_ids:null}],

@@ -813,3 +813,7 @@ Bounded repair of summed opportunities, completions/attempts and reused source-r
 ## 2026-09-15 — Weekly review R6
 
 Repaired passing-counter and falsely-unavailable-share P2s; disputed TD<=individual-touches with NFL lateral rules and regression coverage. 92 focused tests pass; real candidate unchanged at332 players/15of16 games/unknown finality. See docs/audits/weekly-consumer-review-r6-2026-09-15.md. Independent review pending. Authorized repair/push/re-review only; stop before merge. Runtime unavailable.
+
+## 2026-09-15 — Weekly review R7
+
+Repaired #386 P2 4019849956: require offset-bearing receipt clocks, preserve source retrieval starts, and validate retrieval ordering through candidate compilation. Seven malformed cases failed before repair; 100 focused tests pass. Real candidate remains 332 players / 15 of 16 games / unknown finality. Data #273 is independently clean at b26a0f8. Fresh exact-head Fantasy review pending; stop before merge, admission, activation, or deployment.
