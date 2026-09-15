@@ -1019,3 +1019,7 @@ Verified and repaired #386 P2 4010982454: reject self-opponents and inconsistent
 ## 2026-09-15 — Weekly review R4
 
 Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game denominators and nullable-aware receptions <= targets. 76 tests pass; real candidate still 332 players / 15 of 16 games / unknown finality. Audit: docs/audits/weekly-consumer-review-r4-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R5
+
+Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.

@@ -67,7 +67,7 @@ describe('offline weekly preview and inactive runtime',()=>{
   const e:any=sample();e.coverage.missing_game_ids=[];expect(()=>inspect(e)).toThrow('Schedule coverage conflict');
  });
  test('rejects same player/game under conflicting teams; permits different games',()=>{
-  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.team='BBB';other.identity.opponent_team='AAA';e.candidate.players.push(other);
   expect(()=>inspect(e)).toThrow('Weekly identity conflict');
   other.identity.game_id='OTHER';e.coverage.observed_game_ids.push('OTHER');
@@ -84,7 +84,7 @@ describe('offline weekly preview and inactive runtime',()=>{
   const e=scheduledSample();e.candidate.players=[];expect(()=>inspect(e)).toThrow('Observed game coverage conflict');
  });
  test('uses all source positions for coverage before filtering displayed players',()=>{
-  const e=scheduledSample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=scheduledSample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.game_id='DEFENSE';other.identity.position='DB';e.candidate.players.push(other);
   e.coverage.observed_game_ids.push('DEFENSE');e.coverage.scheduled_game_ids.push('DEFENSE');
   expect(inspect(e).players).toHaveLength(1);
@@ -94,26 +94,26 @@ describe('offline weekly preview and inactive runtime',()=>{
   expect(()=>inspect(e)).toThrow('Weekly matchup conflict');
  });
  test('rejects conflicting matchups across distinct players, including hidden positions',()=>{
-  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.player_id='00-9990002';other.identity.position='DB';other.identity.opponent_team='CCC';
   e.candidate.players.push(other);expect(()=>inspect(e)).toThrow('Weekly matchup conflict');
  });
  test('accepts reciprocal matchups and independent pairs in other games',()=>{
-  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.player_id='00-9990002';other.identity.team='BBB';other.identity.opponent_team='AAA';
   e.candidate.players.push(other);expect(inspect(e).players).toHaveLength(2);
-  const next=JSON.parse(JSON.stringify(other));next.identity.game_id='OTHER';next.identity.opponent_team='CCC';
+  const next=JSON.parse(JSON.stringify(other));next.source_csv_row=4;next.identity.game_id='OTHER';next.identity.opponent_team='CCC';
   e.candidate.players.push(next);e.coverage.observed_game_ids.push('OTHER');
   expect(inspect(e).players).toHaveLength(3);
  });
  test.each(['target_share_credited_team_targets','carry_share_all_team_carries'] as const)('rejects conflicting team denominators: %s',field=>{
-  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.player_id='00-9990002';other.identity.position='DB';
   other.derived[field].denominator=40;other.derived[field].value=other.derived[field].numerator/40;
   e.candidate.players.push(other);expect(()=>inspect(e)).toThrow('Team denominator conflict');
  });
  test('permits independent denominators for opponents and different games',()=>{
-  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));other.source_csv_row=3;
   other.identity.player_id='00-9990002';other.identity.team='BBB';other.identity.opponent_team='AAA';
   other.derived.target_share_credited_team_targets.denominator=40;other.derived.target_share_credited_team_targets.value=.1;
   e.candidate.players.push(other);expect(inspect(e).players).toHaveLength(2);
@@ -127,6 +127,32 @@ describe('offline weekly preview and inactive runtime',()=>{
   e.candidate.players[0].observed.receptions=null as any;expect(inspect(e).players[0].derived.generic_full_ppr).toBeNull();
   const unknown=sample('WR',null);unknown.candidate.players[0].observed.receptions=5;
   expect(inspect(unknown).players[0].classification.bucket).toBe('insufficient_evidence');
+ });
+ test.each(['targets','carries'] as const)('rejects summed %s above team total',field=>{
+  const e=sample('RB',4,5,4);const a=e.candidate.players[0];
+  const shareField=field==='targets'?'target_share_credited_team_targets':'carry_share_all_team_carries';
+  a.derived[shareField].denominator=5;a.derived[shareField].value=.8;
+  const b=JSON.parse(JSON.stringify(a));b.identity.player_id='00-9990002';b.source_csv_row=3;
+  e.candidate.players.push(b);expect(()=>inspect(e)).toThrow('Team opportunities exceed denominator');
+ });
+ test('sum checks include known numerators with unknown denominators, independent of order',()=>{
+  const e=sample('WR',4,5);const b=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  b.source_csv_row=3;b.identity.player_id='00-9990002';b.identity.position='DB';
+  Object.assign(b.derived.target_share_credited_team_targets,{denominator:null,value:null,status:'unavailable',reason:'unknown'});
+  e.candidate.players.push(b);expect(()=>inspect(e)).toThrow('Team opportunities exceed denominator');
+  e.candidate.players.reverse();expect(()=>inspect(e)).toThrow('Team opportunities exceed denominator');
+  const a=e.candidate.players[1];a.derived.target_share_credited_team_targets.denominator=8;a.derived.target_share_credited_team_targets.value=.5;
+  expect(inspect(e).players).toHaveLength(1);
+ });
+ test('rejects completions above attempts, but retains unknowns',()=>{
+  const e=sample('QB');const o=e.candidate.players[0].observed;o.completions=2;o.attempts=1;
+  expect(()=>inspect(e)).toThrow('Completions exceed attempts');
+  o.attempts=2;expect(inspect(e).players).toHaveLength(1);
+  o.attempts=null as any;expect(inspect(e).players[0].observed.attempts).toBeNull();
+ });
+ test('rejects reused source rows across distinct identities',()=>{
+  const e=sample();const b=JSON.parse(JSON.stringify(e.candidate.players[0]));b.identity.player_id='00-9990002';
+  e.candidate.players.push(b);expect(()=>inspect(e)).toThrow('Source row conflict');
  });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
  o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
