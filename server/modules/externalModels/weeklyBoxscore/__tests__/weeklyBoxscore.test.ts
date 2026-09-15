@@ -49,10 +49,13 @@ describe('offline weekly preview and inactive runtime',()=>{
   ['invalid schedule start',e=>{e.schedule_receipt.retrieval_started_at='invalid';}],
   ['naive schedule completion',e=>{e.schedule_receipt.retrieval_completed_at='2026-09-14T00:00:00';}],
   ['reversed schedule retrieval',e=>{e.schedule_receipt.retrieval_started_at='2026-09-14T01:00:00Z';}],
+  ['schedule updated after retrieval',e=>{e.schedule_receipt.release_asset_updated_at='2026-09-14T01:00:00Z';}],
   ['invalid candidate compilation',e=>{e.candidate.snapshot_compiled_at='invalid';}],
   ['invalid player retrieval',e=>{e.candidate.source_receipt.sources.player.retrieval_started_at='invalid';}],
   ['reversed team retrieval',e=>{e.candidate.source_receipt.sources.team.retrieval_started_at='2026-09-14T01:00:00Z';}],
   ['player completes after compilation',e=>{e.candidate.source_receipt.sources.player.retrieval_completed_at='2026-09-14T01:00:00Z';}],
+  ['player updated after retrieval',e=>{e.candidate.source_receipt.sources.player.release_asset_updated_at='2026-09-14T01:00:00Z';}],
+  ['team updated after retrieval',e=>{e.candidate.source_receipt.sources.team.release_asset_updated_at='2026-09-14T01:00:00Z';}],
  ] as [string,(e:any)=>void][])('rejects malformed receipt clocks: %s',(_label,mutate)=>{
   const e=scheduledSample();mutate(e);expect(()=>inspect(e)).toThrow();
  });

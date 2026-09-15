@@ -105,11 +105,15 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
   const c=e.candidate;
   const compiledAt=Date.parse(c.snapshot_compiled_at);
   for(const source of [c.source_receipt.sources.player,c.source_receipt.sources.team]){
-    const startedAt=Date.parse(source.retrieval_started_at), completedAt=Date.parse(source.retrieval_completed_at);
-    if(startedAt>completedAt||completedAt>compiledAt) throw new Error('Source receipt clock conflict');
+    const updatedAt=Date.parse(source.release_asset_updated_at), startedAt=Date.parse(source.retrieval_started_at),
+      completedAt=Date.parse(source.retrieval_completed_at);
+    if(updatedAt>completedAt||startedAt>completedAt||completedAt>compiledAt) throw new Error('Source receipt clock conflict');
   }
-  if(e.schedule_receipt&&Date.parse(e.schedule_receipt.retrieval_started_at)>Date.parse(e.schedule_receipt.retrieval_completed_at))
-    throw new Error('Schedule receipt clock conflict');
+  if(e.schedule_receipt){
+    const updatedAt=Date.parse(e.schedule_receipt.release_asset_updated_at),
+      startedAt=Date.parse(e.schedule_receipt.retrieval_started_at), completedAt=Date.parse(e.schedule_receipt.retrieval_completed_at);
+    if(updatedAt>completedAt||startedAt>completedAt) throw new Error('Schedule receipt clock conflict');
+  }
   if ((e.schedule_receipt===null)!==(e.coverage.schedule_coverage==='unavailable')) throw new Error('Schedule provenance missing');
   if(c.scope.season!==season||c.scope.week!==week) throw new Error('Weekly scope mismatch');
   const coverage=e.coverage;
