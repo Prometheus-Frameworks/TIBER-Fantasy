@@ -63,5 +63,5 @@ test('one league failure does not erase another league result or become a loss',
   fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
   await screen.findByText('Win · provisional'); await screen.findByRole('alert');
   expect(screen.getByText('Week 1: 1 W · 0 L · 0 T')).toBeTruthy();
-  expect(screen.getByText('0 pending · 1 unavailable · 2 selected leagues')).toBeTruthy();
+  expect(screen.getByText('0 pending · 0 not loaded · 1 unavailable · 2 selected leagues')).toBeTruthy();
 });

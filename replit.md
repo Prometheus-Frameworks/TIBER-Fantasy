@@ -111,3 +111,6 @@ The `team-auth` shell now includes explicit Google sign-in and Sleeper link prev
 
 ### Team Manager weekly results v0
 A separate Manager view adds explicit public account lookup, league selection and weekly score-derived head-to-head records beside Team. This slice depends on the public discovery work in #375. Results remain provisional; current-week scores stay pending until Sleeper reports a later regular-season leg. Selection lives only in page memory. Standings, saved profiles and season totals remain future work. See `docs/reviews/team-manager-weekly-results-v0.md` for scope and validation; no private auth activation or deployment is implied.
+
+
+Manager Players v0 (2026-09-15): selected-league current roster exposure with loaded-league denominators, explicit owner/co-owner roster choice, current starter/bench/reserve/taxi details and Team links. Public `/api/draft-review/manager-players` returns source-ID roster observations with optional injury metadata and a disclosed five-minute directory cache. Independent of matchup week, private identity, model outputs and saved state. See `docs/reviews/manager-player-exposure-v0.md`.

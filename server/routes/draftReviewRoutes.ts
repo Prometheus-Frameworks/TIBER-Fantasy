@@ -1,3 +1,5 @@
+import { exposureInput } from '@shared/teamExposure';
+import { buildExposure } from '../modules/draftReview/teamExposure';
 import { managerResultInput } from '@shared/teamManager';
 import { buildManagerResult } from '../modules/draftReview/teamManager';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
@@ -26,6 +28,14 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/manager-players', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    if (!exposureInput.safeParse(req.query).success) return res.status(400).json({ status: 'invalid_input', error: 'Choose a valid account, league and season.' });
+    try { return res.json(await buildExposure(req.query)); }
+    catch { return res.status(502).json({ status: 'source_unavailable', error: 'Player exposure could not be refreshed from Sleeper.' }); }
+  });
 
   router.get('/api/draft-review/manager-week', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

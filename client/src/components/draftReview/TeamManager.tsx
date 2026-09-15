@@ -1,3 +1,4 @@
+import TeamExposure from './TeamExposure';
 import { useEffect, useRef, useState } from 'react';
 import { publicLeaguesInput, type TeamLeagues } from '@shared/teamLeagues';
 import { summarizeManagerWeek, type ManagerOutcome, type ManagerResult } from '@shared/teamManager';
@@ -6,6 +7,7 @@ import { teamAccountRequest, TeamAccountRequestError } from '@/lib/teamAccountAp
 
 type Entry = { result?: ManagerResult; error?: string };
 export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) => void }) {
+  const [view, setView] = useState<'results' | 'players'>('results');
   const [account, setAccount] = useState('');
   const [season, setSeason] = useState(String(new Date().getUTCFullYear()));
   const [week, setWeek] = useState('1');
@@ -64,6 +66,7 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
   };
   const outcomes: ManagerOutcome[] = selected.map(id => chosen(id)?.outcome ?? (entries[id]?.error || entries[id]?.result ? 'unavailable' : 'pending'));
   const summary = summarizeManagerWeek(outcomes);
+  const notLoaded = selected.filter(id => !entries[id]).length;
   const filtered = leagues?.leagues.filter(league => `${league.name} ${league.mode}`.toLowerCase().includes(filter.toLowerCase())) ?? [];
   const labels = { win: 'Win · provisional', loss: 'Loss · provisional', tie: 'Tie · provisional', pending: 'Pending', unavailable: 'Unavailable' };
   return <section className="drp-panel tm-manager" aria-label="Manager weekly results">
@@ -90,6 +93,12 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
         {!leagues.leagues.length && <p>No NFL leagues were reported for this account and season.</p>}
         {!!leagues.leagues.length && !filtered.length && <p>No leagues match this filter.</p>}
       </details>
+      <nav aria-label="Manager views" className="tm-controls">
+        <button type="button" className="drp-action" aria-pressed={view === 'results'} onClick={() => setView('results')}>Results</button>
+        <button type="button" className="drp-action" aria-pressed={view === 'players'} onClick={() => setView('players')}>Players</button>
+      </nav>
+      <div hidden={view !== 'players'}><TeamExposure key={`${leagues.account.userId}:${leagues.season}:${selected.join(',')}`} leagues={leagues} selected={selected} onOpenTeam={onOpenTeam} /></div>
+      <div hidden={view !== 'results'}>
       <div className="tm-controls">
         <label>Week<select value={week} onChange={event => { clearResults(); setWeek(event.target.value); }}>
           {Array.from({ length: 18 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}
@@ -98,7 +107,7 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
       </div>
       {!!selected.length && <>
         <div className="tm-summary" aria-live="polite"><strong>Week {week}: {summary.win} W · {summary.loss} L · {summary.tie} T</strong>
-          <span>{summary.pending} pending · {summary.unavailable} unavailable · {selected.length} selected leagues</span></div>
+          <span>{summary.pending - notLoaded} pending · {notLoaded} not loaded · {summary.unavailable} unavailable · {selected.length} selected leagues</span></div>
         <p className="drp-muted">Provisional head-to-head record only. Median games are excluded. Scores may change after corrections; refresh to check again.</p>
         <div className="tm-cards">{selected.map(id => {
           const entry = entries[id]; const result = entry?.result; const roster = chosen(id);
@@ -123,6 +132,7 @@ export default function TeamManager({ onOpenTeam }: { onOpenTeam: (url: string) 
           </article>;
         })}</div>
       </>}
+      </div>
     </>}
     {busy && <p role="status">Reading Sleeper… Large selections or repeated refreshes may take a few minutes while requests wait for capacity.</p>}
     <p className="drp-boundary">Public lookup; no account is linked. Selections stay in this page until reload. Standings, saved profiles and season totals are not included yet.</p>
