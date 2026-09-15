@@ -73,6 +73,22 @@ describe('offline weekly preview and inactive runtime',()=>{
   other.identity.game_id='OTHER';e.coverage.observed_game_ids.push('OTHER');
   expect(inspect(e).players).toHaveLength(2);
  });
+ test.each(['matched','partial_or_conflicting','unavailable'])('rejects unsupported observed games for %s',status=>{
+  const e=scheduledSample();e.coverage.observed_game_ids.push('PHANTOM');
+  if(status==='matched')e.coverage.scheduled_game_ids.push('PHANTOM');
+  if(status==='partial_or_conflicting'){e.coverage.schedule_coverage=status;e.coverage.unexpected_game_ids=['PHANTOM'];}
+  if(status==='unavailable'){e.schedule_receipt=null;Object.assign(e.coverage,{schedule_coverage:status,scheduled_game_ids:null,missing_game_ids:null,unexpected_game_ids:null});}
+  expect(()=>inspect(e)).toThrow('Observed game coverage conflict');
+ });
+ test('rejects an empty row set behind claimed matched coverage',()=>{
+  const e=scheduledSample();e.candidate.players=[];expect(()=>inspect(e)).toThrow('Observed game coverage conflict');
+ });
+ test('uses all source positions for coverage before filtering displayed players',()=>{
+  const e=scheduledSample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.game_id='DEFENSE';other.identity.position='DB';e.candidate.players.push(other);
+  e.coverage.observed_game_ids.push('DEFENSE');e.coverage.scheduled_game_ids.push('DEFENSE');
+  expect(inspect(e).players).toHaveLength(1);
+ });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
  o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
  const p=inspect(e).players[0];expect(p.derived.generic_full_ppr).toBe(26);expect(p.derived.td_points).toBe(14);

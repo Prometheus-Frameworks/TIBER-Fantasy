@@ -791,3 +791,8 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Files: weeklyBoxscore.ts, focused tests, docs/audits/weekly-consumer-review-repair-2026-09-14.md.
 - Validation: 64 targeted tests pass; 14 malformed-input regressions fail before repair.
 - Fresh exact-head review requested after publication; no merge, admission, activation or deployment.
+
+### 2026-09-15 — Codex: weekly review R2
+- Require row-supported observed-game coverage before schedule reconciliation and display filtering.
+- Changed weekly decoder/tests and R2 audit; 69 focused tests pass, existing 332-player preview remains unchanged.
+- No source admission, UI, merge or deployment. Fresh review requested after publication.

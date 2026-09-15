@@ -107,6 +107,10 @@ export function inspectWeeklyCandidate(raw:Buffer, expectedSha256:string, season
   const coverage=e.coverage;
   const uniqueGames=(ids:string[])=>ids.every(id=>id.trim().length>0)&&new Set(ids).size===ids.length;
   if(!uniqueGames(coverage.observed_game_ids)) throw new Error('Schedule coverage conflict');
+  // Coverage must have row-level support, including positions excluded from display.
+  const rowGames=new Set(c.players.map(row=>row.identity.game_id));
+  if(rowGames.size!==coverage.observed_game_ids.length||coverage.observed_game_ids.some(id=>!rowGames.has(id)))
+    throw new Error('Observed game coverage conflict');
   if(coverage.schedule_coverage==='unavailable'){
     if([coverage.scheduled_game_ids,coverage.missing_game_ids,coverage.unexpected_game_ids].some(ids=>ids!==null))
       throw new Error('Schedule coverage conflict');
