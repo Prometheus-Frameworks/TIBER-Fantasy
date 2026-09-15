@@ -1015,3 +1015,7 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 ## 2026-09-15 — Weekly review R3
 
 Verified and repaired #386 P2 4010982454: reject self-opponents and inconsistent unordered game matchup pairs before position filtering. Reciprocal and separate-game pairs accepted. 72 targeted tests passed; unchanged real candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r3-2026-09-15.md. Fresh independent review pending. No admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R4
+
+Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game denominators and nullable-aware receptions <= targets. 76 tests pass; real candidate still 332 players / 15 of 16 games / unknown finality. Audit: docs/audits/weekly-consumer-review-r4-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.

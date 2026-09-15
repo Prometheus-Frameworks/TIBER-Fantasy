@@ -106,6 +106,28 @@ describe('offline weekly preview and inactive runtime',()=>{
   e.candidate.players.push(next);e.coverage.observed_game_ids.push('OTHER');
   expect(inspect(e).players).toHaveLength(3);
  });
+ test.each(['target_share_credited_team_targets','carry_share_all_team_carries'] as const)('rejects conflicting team denominators: %s',field=>{
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.player_id='00-9990002';other.identity.position='DB';
+  other.derived[field].denominator=40;other.derived[field].value=other.derived[field].numerator/40;
+  e.candidate.players.push(other);expect(()=>inspect(e)).toThrow('Team denominator conflict');
+ });
+ test('permits independent denominators for opponents and different games',()=>{
+  const e=sample();const other=JSON.parse(JSON.stringify(e.candidate.players[0]));
+  other.identity.player_id='00-9990002';other.identity.team='BBB';other.identity.opponent_team='AAA';
+  other.derived.target_share_credited_team_targets.denominator=40;other.derived.target_share_credited_team_targets.value=.1;
+  e.candidate.players.push(other);expect(inspect(e).players).toHaveLength(2);
+  other.identity.game_id='OTHER';other.identity.team='AAA';other.identity.opponent_team='BBB';e.coverage.observed_game_ids.push('OTHER');
+  expect(inspect(e).players).toHaveLength(2);
+ });
+ test('rejects receptions exceeding known targets; preserves nullable inputs',()=>{
+  const e=sample();e.candidate.players[0].observed.receptions=5;
+  expect(()=>inspect(e)).toThrow('Receptions exceed targets');
+  e.candidate.players[0].observed.receptions=4;expect(inspect(e).players).toHaveLength(1);
+  e.candidate.players[0].observed.receptions=null as any;expect(inspect(e).players[0].derived.generic_full_ppr).toBeNull();
+  const unknown=sample('WR',null);unknown.candidate.players[0].observed.receptions=5;
+  expect(inspect(unknown).players[0].classification.bucket).toBe('insufficient_evidence');
+ });
  test('QB passing policy is separate and explicit',()=>{const e=sample('QB',0,20,0,0);const o=e.candidate.players[0].observed;
  o.passing_yards=300;o.passing_tds=2;o.passing_interceptions=1;o.rushing_yards=20;o.rushing_tds=1;
  const p=inspect(e).players[0];expect(p.derived.generic_full_ppr).toBe(26);expect(p.derived.td_points).toBe(14);
@@ -113,7 +135,7 @@ describe('offline weekly preview and inactive runtime',()=>{
  test('missing usage stays unknown',()=>expect(inspect(sample('WR',null)).players[0].classification.bucket).toBe('insufficient_evidence'));
  test('missing score input stays unknown',()=>{const e=sample();e.candidate.players[0].observed.fumbles_lost_total=null as any;
  expect(inspect(e).players[0].derived.generic_full_ppr).toBeNull();});
- test('TD contribution and lost fumbles explicit',()=>{const e=sample();const o=e.candidate.players[0].observed;
+ test('TD contribution and lost fumbles explicit',()=>{const e=sample('WR',5);const o=e.candidate.players[0].observed;
  o.receiving_yards=100;o.receptions=5;o.receiving_tds=2;o.fumbles_lost_total=1;
  const p=inspect(e).players[0];expect(p.derived.generic_full_ppr).toBe(25);expect(p.derived.td_points).toBe(12);});
  test('invalid share, duplicate and scope fail',()=>{
