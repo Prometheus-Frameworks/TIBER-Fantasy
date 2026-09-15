@@ -994,3 +994,44 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - Replaced unconditional preparation-only withholding with exact pinned promotion admission. Preserved all 94 profile objects, earlier receipts, limitations and unavailable forecasts. Antonio Williams remains excluded.
 - Validation: 17 Python tests (normal/optimized), 63 Jest tests, full build; baseline 506 TypeScript diagnostics unchanged. Independent review recorded separately.
 - No merge/deployment authorized. Consumer PR opening is held until Railway automatic preview deployment can be suppressed. See docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### 2026-09-14 — Weekly box-score consumer preparation
+- Authorized paired next slice with Data intake/publication. Added externalModels/weeklyBoxscore adapter/policy/tests and explicit-scope inactive weekly route.
+- Preserved candidate-only state, raw identity/team, nulls, separate schedule provenance and unavailable charting. No identity expansion, current-season admission, scheduler or UI activation.
+- 49 focused tests, real-source preview and build pass; typecheck matches baseline 506 diagnostics. Independent review repaired provenance P2. Local commits only; see paired audit handoff.
+
+### 2026-09-14 — Codex: weekly consumer review repairs
+- Repair #386 schedule game-set validation and duplicate player/game keys independently of team.
+- Files: weeklyBoxscore.ts, focused tests, docs/audits/weekly-consumer-review-repair-2026-09-14.md.
+- Validation: 64 targeted tests pass; 14 malformed-input regressions fail before repair.
+- Fresh exact-head review requested after publication; no merge, admission, activation or deployment.
+
+### 2026-09-15 — Codex: weekly review R2
+- Require row-supported observed-game coverage before schedule reconciliation and display filtering.
+- Changed weekly decoder/tests and R2 audit; 69 focused tests pass, existing 332-player preview remains unchanged.
+- No source admission, UI, merge or deployment. Fresh review requested after publication.
+
+
+## 2026-09-15 — Weekly review R3
+
+Verified and repaired #386 P2 4010982454: reject self-opponents and inconsistent unordered game matchup pairs before position filtering. Reciprocal and separate-game pairs accepted. 72 targeted tests passed; unchanged real candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r3-2026-09-15.md. Fresh independent review pending. No admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R4
+
+Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game denominators and nullable-aware receptions <= targets. 76 tests pass; real candidate still 332 players / 15 of 16 games / unknown finality. Audit: docs/audits/weekly-consumer-review-r4-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R5
+
+Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R6
+
+Repaired passing-counter and falsely-unavailable-share P2s; disputed TD<=individual-touches with NFL lateral rules and regression coverage. 92 focused tests pass; real candidate unchanged at332 players/15of16 games/unknown finality. See docs/audits/weekly-consumer-review-r6-2026-09-15.md. Independent review pending. Authorized repair/push/re-review only; stop before merge. Runtime unavailable.
+
+## 2026-09-15 — Weekly review R7
+
+Repaired #386 P2 4019849956: require offset-bearing receipt clocks, preserve source retrieval starts, and validate retrieval ordering through candidate compilation. Seven malformed cases failed before repair; 100 focused tests pass. Real candidate remains 332 players / 15 of 16 games / unknown finality. Data #273 is independently clean at b26a0f8. Fresh exact-head Fantasy review pending; stop before merge, admission, activation, or deployment.
+
+## 2026-09-15 — Weekly review R8
+
+Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval completion. Three consumer mutations failed before repair; 103 focused tests pass. Applied the same provenance invariant upstream in Data #273. Candidate preview remains 332 players / 15 of 16 games / unknown finality. Fresh reviews pending; stop before merge, admission, activation, or deployment.

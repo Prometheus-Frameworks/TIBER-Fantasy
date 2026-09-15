@@ -171,3 +171,19 @@ describe('unrostered TE route', () => {
     expect(mock).not.toHaveBeenCalled();
   });
 });
+
+describe('weekly evidence preparation route', () => {
+  test('is unavailable with no upstream fetch and no cached response', async () => {
+    const fetchMock=jest.fn();global.fetch=fetchMock as typeof fetch;
+    const app=express();app.use(createDraftReviewRouter());
+    const result=await request(app).get('/api/draft-review/weekly?season=2026&week=1');
+    expect(result.status).toBe(200);expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toMatchObject({status:'unavailable',consumer_admitted:false,players:[]});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test.each(['','?season=2026&week=0','?season=2026&week=19','?season=2026&week=01','?season=2026&week=1&week=2'])('rejects ambiguous scope %s',async query=>{
+    const app=express();app.use(createDraftReviewRouter());
+    const result=await request(app).get('/api/draft-review/weekly'+query);
+    expect(result.status).toBe(400);expect(result.headers['cache-control']).toBe('no-store');
+  });
+});

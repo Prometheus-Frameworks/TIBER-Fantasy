@@ -1,0 +1,41 @@
+{
+  "schema_version": "weekly_consumer_preparation_audit_v0",
+  "date": "2026-09-14",
+  "status": "reviewed_preparation_only",
+  "producer_repo": "Prometheus-Frameworks/TIBER-Data",
+  "producer_local_commit": "1cfef89f0007e8a144a758ef167be56bd6cbe7a7",
+  "producer_artifact": "exports/candidates/weekly_boxscore/revisions/2026_REG_w01/3395a281e21b4db9947e6598a89cdeff5884d53358c66059b7b11267f6a6782a.json",
+  "producer_artifact_sha256": "3395a281e21b4db9947e6598a89cdeff5884d53358c66059b7b11267f6a6782a",
+  "preview_sha256": "d0c85997c0b0c863fb12203e1f5f3070d59d8bb8085a062d12b18b5d9b42336d",
+  "preview_rows": 332,
+  "preview_status": "preview_not_admitted",
+  "validation": {
+    "focused_tests": 49,
+    "suites": 3,
+    "server_build": "passed; existing duplicate applyAdjusters warning",
+    "base_typecheck_diagnostics": 506,
+    "prepared_typecheck_diagnostics": 506,
+    "added_per_file_error_code_counts": {},
+    "built_public_profile_http": {
+      "status": 200,
+      "cache_control": "no-store",
+      "evidence_status": "unavailable",
+      "players": []
+    }
+  },
+  "independent_review": {
+    "status": "completed; both P2 repairs verified",
+    "findings": [
+      "Schedule provenance omission repaired",
+      "Data offline audited-license pin repaired"
+    ],
+    "remaining_material_findings": []
+  },
+  "limitations": [
+    "Local reviewed preparation; no branch publication, PR, merge or deployment.",
+    "No current-season artifact is admitted or loaded at runtime.",
+    "No UI, scheduler or canonical identity expansion.",
+    "Target involvement is not route participation or full-time role.",
+    "Unverified finality and missing games remain explicit."
+  ]
+}
