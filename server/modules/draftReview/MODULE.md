@@ -115,3 +115,8 @@ The additive public `/api/draft-review/manager-week` and Team Manager view reuse
 
 
 Manager weekly-results review repair (2026-09-15, PR #387): the client retains a 30-start/61-second request budget across explicit refreshes, with abortable capacity waits and one bounded 429 retry; server limits are unchanged. Missing/invalid NFL state retains scores as unavailable W/L/T with an explicit state failure, while valid non-prior state remains pending. See `docs/reviews/team-manager-weekly-results-v0.md`.
+
+
+### 2026-09-15 — Codex: Manager player exposure v0
+Joe authorized the Players view and preview: selected-league player percentages, expandable league/placement/Open Team context, source injury labels with separate check clocks. Separate branch stacks on #387 `354cfe2b`; no merge/dependency reconciliation. Additive public no-store endpoint validates roster membership and content, retains unavailable directory rows as source IDs, and uses a five-minute single-flight directory cache. Distinct loaded league denominator and explicit multiple-roster choices; two-worker request pacing and cancellation. Also correct portrait select contrast and not-loaded weekly label from Joe's screenshots.
+42 tests/five suites and full build pass. No DB/auth activation, production changes, new dependencies or transactions. Independent review and phone acceptance pending. See docs/reviews/manager-player-exposure-v0.md for semantics and validation.
