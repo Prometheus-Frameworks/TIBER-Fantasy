@@ -1004,3 +1004,9 @@ Verified review findings discussion_r4011273194 and discussion_r4011273201 again
 
 76 targeted tests across seven suites pass, including 31 leagues, immediate repeated 16-league refresh, cancellation, 429 retry bounds, and malformed/outage state. Full build passes. Independent re-review and isolated portrait-phone preview acceptance remain pending. No dependency/base changes, merge, deploy, auth/database activation or fantasy transactions.
 Typecheck repair comparison: all 506 baseline diagnostics retain identical per-file/error-code counts; no new diagnostics.
+
+
+### 2026-09-15 — PR #387 unknown season-type P2 repair
+Joe authorized the smallest repair and fresh review for discussion_r4011414253 at `aeedd34c703f1dff69530d28e8712cbea5c4965e`. Restrict NFL state season_type to the documented `pre`, `regular`, `post` values (https://docs.sleeper.com/#get-nfl-state, checked September 15). Unknown/empty values now follow existing unavailable-state handling, preserving scores without a validated NFL-state timestamp. Recognized pre/post remain pending; regular-season derivation is unchanged.
+
+The two new invalid-value regressions failed before the one-line production repair; all 34 Manager compiler/HTTP and UI tests pass after it, including recognized pre/post observation checks. `git diff --check` passes. Earlier full-build/506-baseline-typecheck receipts apply to the preceding head; they were not rerun for this enum-only repair. Fresh independent review and isolated portrait-phone acceptance remain pending. No merge, deployment, base/dependency changes, auth/database activation or transactions.

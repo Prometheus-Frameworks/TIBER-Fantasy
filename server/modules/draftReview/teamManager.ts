@@ -14,7 +14,7 @@ const rosterSchema = z.object({ roster_id: rosterId, league_id: sleeperId.option
   owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish() });
 const matchupSchema = z.object({ roster_id: rosterId, matchup_id: z.number().int().min(1).max(64).nullish(),
   points: score.nullish(), custom_points: score.nullish() });
-const stateSchema = z.object({ season: leagueSeason, season_type: z.string(), leg: z.number().int().min(0).max(19) });
+const stateSchema = z.object({ season: leagueSeason, season_type: z.enum(['pre', 'regular', 'post']), leg: z.number().int().min(0).max(19) });
 const observation = async <T>(promise: Promise<T>, now: () => number) => ({ value: await promise, receivedAt: new Date(now()).toISOString() });
 const effectiveScore = (row: z.infer<typeof matchupSchema>) => row.custom_points != null
   ? { value: row.custom_points, basis: 'commissioner_override' as const }

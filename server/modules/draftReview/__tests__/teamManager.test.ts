@@ -81,11 +81,19 @@ test('HTTP strict input, sanitized failures and no-store', async () => {
   } finally { global.fetch = original; }
 });
 
-test.each([null, {}, { season: '2026', season_type: 'regular', leg: '2' }])('invalid state preserves scores with unavailable outcome and truthful reason %#', async state => {
+test.each([null, {}, { season: '2026', season_type: 'regular', leg: '2' },
+  { season: '2026', season_type: 'garbage', leg: 2 }, { season: '2026', season_type: '', leg: 2 }])('invalid state preserves scores with unavailable outcome and truthful reason %#', async state => {
   const sources = source(); sources.getManagerNflState.mockResolvedValue(state);
   const result = await buildManagerResult(input, sources);
   expect(result.rosters[0]).toMatchObject({ points: 100.25, opponentPoints: 90, outcome: 'unavailable' });
   expect(result.reason).toContain('NFL week state is unavailable or invalid');
   expect(result.reason).not.toContain('has not established');
   expect(result.observations.nflStateReceivedAt).toBeNull();
+});
+
+test.each(['pre', 'post'])('recognized %s state stays pending with validated observation', async season_type => {
+  const sources = source(); sources.getManagerNflState.mockResolvedValue({ season: '2026', season_type, leg: 2 });
+  const result = await buildManagerResult(input, sources);
+  expect(result.rosters[0]).toMatchObject({ points: 100.25, outcome: 'pending' });
+  expect(result.observations.nflStateReceivedAt).not.toBeNull();
 });
