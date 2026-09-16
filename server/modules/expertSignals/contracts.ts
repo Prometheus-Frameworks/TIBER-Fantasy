@@ -8,7 +8,10 @@ export const EXPERT_MOCK_DRAFT_SCHEMA_VERSION = 'ffcc.expert-mock-draft.v0.1.0' 
  * contracts in this repository, including Z and explicit UTC offsets.
  */
 export const RFC3339_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
-export const Rfc3339InstantV0Schema = z.string().regex(RFC3339_INSTANT_PATTERN);
+export const Rfc3339InstantV0Schema = z
+  .string()
+  .regex(RFC3339_INSTANT_PATTERN)
+  .refine((value) => Number.isFinite(Date.parse(value)), { message: 'invalid RFC3339 instant' });
 
 const opaque = z.string().trim().min(1).max(1024);
 const nullableOpaque = opaque.nullable();
