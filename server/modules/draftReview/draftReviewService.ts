@@ -1,3 +1,4 @@
+import { deriveWaiverSettings } from '../../../shared/teamWaiverContext';
 import { historicalEvidenceFor } from './historicalEvidence';
 import {
   deriveSleeperScoringFormat,
@@ -637,6 +638,7 @@ export async function buildDraftReview(rawInput: string) {
     generated_at: new Date().toISOString(),
     status: 'available',
     input,
+    waiver_context: deriveWaiverSettings(league.settings, roster.settings),
     observed: {
       league: {
         league_id: input.leagueId,

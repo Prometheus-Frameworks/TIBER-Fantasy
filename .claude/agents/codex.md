@@ -1039,3 +1039,6 @@ Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval 
 ## 2026-09-15 — Weekly review R9
 
 Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+### 2026-09-16 — Team waiver context
+Implemented the operator-requested smallest #371 waiver-handoff slice on codex/team-waiver-context. Budget/priority travels with the roster, and up to five explicitly selected unrostered skill players travel with independent clocks. No claims or projection authority. See docs/audits/team-waiver-context-2026-09-16.md for validation and remaining acceptance.
