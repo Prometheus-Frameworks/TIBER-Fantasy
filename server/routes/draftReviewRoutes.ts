@@ -1,3 +1,4 @@
+import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import express from 'express';
@@ -22,6 +23,17 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/weekly', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, (req, res) => {
+    const { season, week } = req.query;
+    if (typeof season !== 'string' || !/^(19|20|21|22)\d{2}$/.test(season)
+        || Number(season) > 2200 || typeof week !== 'string' || !/^(?:[1-9]|1[0-8])$/.test(week)) {
+      return res.status(400).json({ status: 'invalid_input', error: 'Explicit REG season and week 1–18 required.' });
+    }
+    return res.json(weeklyEvidenceFor(Number(season), Number(week)));
+  });
 
   router.get('/api/draft-review/unrostered-tes', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

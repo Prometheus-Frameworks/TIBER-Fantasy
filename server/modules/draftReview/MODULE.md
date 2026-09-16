@@ -189,3 +189,7 @@ The prepared code changes runtime policy only in this proposed revision. Current
 Validation: 17 Python tests pass normally and under `-O`; 63 tests pass across seven Jest suites; full build passes. Typecheck retains exactly the baseline 506 diagnostics with no added per-file/error-code counts. Deterministic replay and full equality of all 94 prior historical profile objects are verified. Independent review is recorded separately.
 
 Publication boundary: Fantasy draft PRs previously triggered automatic Railway previews. The consumer PR must not be opened until deployment suppression is verified or the operator separately authorizes that infrastructure change. Draft status alone is insufficient. Do not merge or deploy these activation changes.
+
+## 2026-09-14 — Weekly consumer preparation
+
+An additive `/api/draft-review/weekly` endpoint accepts explicit season/week and returns unavailable until separately admitted. Offline preview/policy lives in `externalModels/weeklyBoxscore`; no weekly artifact is embedded or served, and no environment toggle grants admission. Historical evidence and existing Team packets remain unchanged. See that module and the weekly-consumer preparation audit for validation and release boundaries.
