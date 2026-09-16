@@ -17,12 +17,12 @@ const leagueSchema = z.object({
   league_id: z.string(), season: z.string().regex(/^\d{4}$/),
   total_rosters: z.number().int().min(1).max(64),
 });
-const directoryEntry = z.object({
+export const directoryEntry = z.object({
   player_id: z.string().nullish(), position: z.string().nullish(),
   full_name: z.string().nullish(), first_name: z.string().nullish(), last_name: z.string().nullish(),
   team: z.string().nullish(), status: z.string().nullish(), active: z.boolean().nullish(),
 });
-function display(value: string | null | undefined) {
+export function display(value: string | null | undefined) {
   return value?.replace(/[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, '').trim().slice(0, 120) || null;
 }
 async function observed<T>(request: Promise<T>) {
@@ -55,7 +55,7 @@ async function getTrends(): Promise<NonNullable<UnrosteredTes['trends']>> {
   return trendRequest;
 }
 
-export async function buildUnrosteredTes(rawInput: string): Promise<UnrosteredTes> {
+export async function readLeagueAvailability(rawInput: string) {
   const input = parseSleeperRosterUrl(rawInput);
   const [leagueRead, rosterRead, directory] = await Promise.all([
     observed(sleeperClient.getLeague(input.leagueId)),
@@ -78,6 +78,11 @@ export async function buildUnrosteredTes(rawInput: string): Promise<UnrosteredTe
   }
   const entries = Object.entries(directory.players);
   if (!entries.length || entries.length > 50_000) throw new Error('Player directory size is unsupported.');
+  return { input, league, rosters, rostered, entries, leagueRead, rosterRead, directory };
+}
+
+export async function buildUnrosteredTes(rawInput: string): Promise<UnrosteredTes> {
+  const { input, league, rosters, rostered, entries, leagueRead, rosterRead, directory } = await readLeagueAvailability(rawInput);
   const candidates: UnrosteredTes['candidates'] = [];
   for (const [key, raw] of entries) {
     const player = directoryEntry.parse(raw);
