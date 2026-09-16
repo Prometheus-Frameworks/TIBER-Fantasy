@@ -1,0 +1,74 @@
+{
+  "record_id": "pclr_20260813_camp323_jaydon_blue_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_jaydon_blue",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:56:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:12457",
+      "display_name": "Jaydon Blue",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "depth_chart_change",
+    "observations": [
+      "2026-08-11: the Cowboys' first unofficial 2026 depth chart lists the RB order as Javonte Williams (RB1), Jaydon Blue (RB2), Phil Mafah, Malik Davis — no 'OR' designations at RB (A to Z Sports, 08-11).",
+      "Camp momentum (2026-08-05): Blue building momentum in the RB2 competition vs. Mafah and Davis, with explosive plays including an untouched screen-pass score in practice; Blue: 'I'm having a great camp so far... The game has slowed down a lot to me' (Sporting Tribune 08-05; dallascowboys.com 08-05).",
+      "Counter-signal: at Tuesday's joint practice vs. the Rams (best-recoverable date 2026-08-11, inferred from 'Tuesday' + 08-12 publication, not stated verbatim), Blue 'coughed up a fumble early in team drills' and 'saw his workload dwindle for the rest of the day' (Landry Hat; NBC DFW 08-12). Former Cowboy Isaiah Stanback: fumbles 'held him back' at Texas and it 'showed his ugly head again'. College context per Landry Hat: 7 fumbles over his final two Texas seasons, 5 in 2024."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward role pressure from the provisional RB2 listing and camp momentum, opposed by ball-security risk that has already produced an observed same-day workload reduction — trust in the RB2 hold remains genuinely uncertain (TRUST ?).",
+      "In 2025 it was Davis, not Blue, who emerged as the backup when injuries hit; the 2026 chart ordering reverses that and is provisional."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://atozsports.com/nfl/dallas-cowboys-news/takeaways-first-unofficial-depth-chart-2026-preseason/",
+        "note": "A to Z Sports, 2026-08-11. First unofficial chart: Williams RB1, Blue RB2, Mafah, Davis.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.thesportingtribune.com/2026/08/05/jaishawn-barham-jaydon-blue-build-momentum-as-cowboys-camp-intensifies-",
+        "note": "Sporting Tribune, 2026-08-05. Camp momentum, explosive plays.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.dallascowboys.com/news/cowboys-jaydon-blue-understands-his-year-2-assignment-i-took-the-lessons-to-heart",
+        "note": "Team site, 2026-08-05. Blue year-2 quotes.",
+        "verified": false
+      },
+      {
+        "ref": "https://thelandryhat.com/cowboys-jaydon-blue-biggest-issue-at-texas-resurfacing-at-the-worst-possible-time",
+        "note": "Landry Hat. Joint-practice fumble; Texas fumble history; analyst view that Blue has not separated from Mafah.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.nbcdfw.com/news/sports/blue-star/former-cowboy-talks-offensive-struggles-defensive-standouts-at-joint-practice-with-la-rams/4061588/",
+        "note": "NBC DFW, 2026-08-12. Joint-practice report; Stanback ball-security comments.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "The momentum signal and the ball-security counter-signal are both preserved; neither is resolved into a single directional arrow.",
+      "The fumble's calendar date is inferred (Tuesday joint practice, published 08-12), not stated verbatim in a source.",
+      "The RB2 listing is the team's unofficial first preseason chart and is provisional.",
+      "No Miles Sanders presence on the 2026 Cowboys is recoverable; RB1 is Javonte Williams.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Blue hold RB2 through the preseason games, or does the fumble pattern move the staff toward Mafah/Davis?",
+      "Does preseason game usage corroborate the chart ordering?"
+    ],
+    "unrecognized_fields": []
+  }
+}
