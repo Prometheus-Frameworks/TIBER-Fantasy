@@ -26,6 +26,7 @@ describe('ESE-0 strict expert signal contracts', () => {
     expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, signalType: 'HOT_TAKE' }).success).toBe(false);
     expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, knownAt: undefined }).success).toBe(false);
     expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, knownAt: 'yesterday' }).success).toBe(false);
+    expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, knownAt: '2026-13-40T25:61:61Z' }).success).toBe(false);
     expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, sourcePolicyRef: '' }).success).toBe(false);
     expect(ExpertSignalEventV0Schema.safeParse({ ...SYNTHETIC_WEEKLY_RANKING_EVENT, probability: 0.72 }).success).toBe(false);
   });
