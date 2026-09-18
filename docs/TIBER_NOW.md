@@ -74,7 +74,7 @@ For a small contribution, documentation corrections, reproducible bug reports an
 
 ## Keeping this page current
 
-The intended cadence is a daily evidence check, with updates submitted through review. This initial snapshot does not claim that an unattended publishing system is installed.
+A daily evidence check is scheduled to prepare documentation updates for review. Publication still requires maintainer merge; this is not an unattended publishing system.
 
 1. Check upstream default branches, relevant PR states and maintainer decisions. Distinguish issue-body plans from later implementation and acceptance evidence.
 2. Update only supported claims. Link each changed milestone to its source; record exact validation scope and deployment evidence separately.
