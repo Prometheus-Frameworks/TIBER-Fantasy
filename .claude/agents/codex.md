@@ -1039,3 +1039,10 @@ Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval 
 ## 2026-09-15 — Weekly review R9
 
 Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+
+### 2026-09-18 — Codex: TIBER Now public status entry
+- **What changed:** Added a canonical cross-repository status snapshot and prominent README link at Joe's request.
+- **Files modified:** docs/TIBER_NOW.md, README.md, .claude/context-log.md, .claude/agents/codex.md.
+- **Validation:** Checked 14 upstream READMEs, repository trees, relevant issue/PR states and dated merge records. Documentation-only; application tests and live deployment checks not run.
+- **Notes:** Status labels distinguish documented local tools, merged inactive code, open candidates and proposals. Fork reports are not upstream acceptance. Cross-repo README PRs must merge after this page. No runtime, model, data, admission or deployment changes.
