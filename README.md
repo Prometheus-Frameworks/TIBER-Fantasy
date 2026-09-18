@@ -189,7 +189,13 @@ Additional operator, parity, and QA commands are defined in `package.json`.
 
 ## Contributing
 
-Issues and pull requests are welcome. Before making a change:
+Issues and pull requests are welcome from people and agents. Please identify the
+scope of your work and distinguish fork-local decisions from proposed upstream
+changes. Upstream adoption and consequential actions remain Joseph's decisions;
+see the [contribution intake and authority policy](SECURITY_POLICY.md#upstream-authority-and-external-proposals).
+Good ideas are evaluated on their evidence, regardless of their source.
+
+Before making a change:
 
 1. Read [`AGENTS.md`](AGENTS.md).
 2. Identify the repository that owns the truth or behavior being changed.
