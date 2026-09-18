@@ -1039,3 +1039,10 @@ Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval 
 ## 2026-09-15 — Weekly review R9
 
 Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+
+### 2026-09-18 — Codex: External contribution provenance and authority
+- **What changed:** Documented upstream human authority, outside proposal attribution, generated-prompt intake, scoped action and handoff requirements in SECURITY_POLICY.md; linked root/nested agent and contributor entry points.
+- **Files modified:** SECURITY_POLICY.md, AGENTS.md, .claude/AGENTS.md, README.md, .claude/context-log.md, .claude/agents/codex.md.
+- **Validation:** Documentation-only inspection, scope/whitespace checks and illustrative intake cases; no runtime tests or independent review claimed. Publication verification is recorded on the draft PR.
+- **Notes:** Codex prepared this record from Joseph's live authorization for a documentation PR. Account authorship is not independent human-origin proof; cryptographic verification unavailable. Scope stops at draft PR preparation/publication; no merge, deployment, permissions, enforcement, outreach, or adoption of external implementation proposals. Complements pending #358 and Ops #66/#77; this draft does not claim those PRs are merged.
