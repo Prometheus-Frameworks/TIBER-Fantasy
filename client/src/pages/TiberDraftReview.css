@@ -179,3 +179,9 @@
 .drp-te-list button[aria-pressed="true"] { background: #302319; border-color: #e2640d; }
 .drp-te-filter { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 14px; }
 .drp-te-filter input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #e2640d; }
+
+/* Waiver comparison shares the existing bounded historical table. */
+.drp-te-candidate .drp-te-search select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; font-size: 16px; color: #18181b; background: #fff; border: 1px solid #d4d4d8; border-radius: 6px; }
+.drp-te-content ul[aria-label="Selected waiver candidates"] { list-style: none; padding: 0; }
+.drp-te-content ul[aria-label="Selected waiver candidates"] li { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.drp-te-content ul[aria-label="Selected waiver candidates"] button { min-height: 44px; white-space: normal; overflow-wrap: anywhere; }

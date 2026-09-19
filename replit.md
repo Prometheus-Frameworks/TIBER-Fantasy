@@ -127,3 +127,6 @@ The read-only `/api/draft-review/weekly` preparation endpoint remains unavailabl
 
 ### Team waiver context (2026-09-16)
 Team roster handoffs include observed Sleeper waiver settings and labeled budget derivation. A read-only candidate check reuses complete league membership and the cached NFL directory; managers may attach up to five QB/RB/WR/TE candidates to Copy agent context. Unknown claim eligibility/timing and separate observation clocks remain explicit. See server/modules/draftReview/MODULE.md.
+
+### Team waiver comparison (2026-09-19, draft #404 implementation)
+Checked waiver shortlist candidates can be compared as a pair using admitted historical evidence and shared comparison tables. A dedicated discussion action copies only that pair plus roster context and observation clocks; missing history and unavailable Forecast remain explicit. See `docs/audits/team-waiver-comparison-2026-09-19.md`. Deployment and phone acceptance are pending.

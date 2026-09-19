@@ -830,3 +830,9 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Operator-authorized #371 follow-up: additive observed waiver settings, calculated FAAB/priority, and explicit-check selected candidate shortlist in copied agent context.
 - Files: shared/teamWaiverContext.ts, draftReview service/routes, reused membership validator, Team panel and scoped packet builder, regression tests and module notes.
 - Validation and operational limits: docs/audits/team-waiver-context-2026-09-16.md. No merge, production deployment, private claims, source admission, ranking or roster mutation.
+
+### 2026-09-19 — Codex: Pairwise waiver comparison (#404)
+- **What changed:** Compare two explicitly shortlisted waiver candidates with admitted 2025 historical evidence and a pair-only agent discussion packet. Missing history remains discussable. Selection, evidence and clipboard completion are invalidated on relevant refresh/scope/pair changes.
+- **Files modified:** DraftReviewWaivers, new DraftReviewWaiverComparison, shared/teamWaiverComparison, existing comparison table export, CSS and focused tests.
+- **Validation:** 75 tests in nine focused suites pass; production build passes; typecheck retains 507 baseline diagnostics with no added per-file/error-code counts.
+- **Notes:** Stacked draft on #396, which remains unchanged. Railway Settings > Environments showed “Enable PR Environments” before publication (automatic PR deployments disabled). No merge or deployment authorized. Independent review and portrait-phone acceptance pending. See docs/audits/team-waiver-comparison-2026-09-19.md.
