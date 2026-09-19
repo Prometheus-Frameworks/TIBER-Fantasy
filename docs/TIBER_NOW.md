@@ -1,9 +1,13 @@
 # TIBER Now — Project Status
 
-**Last repository check: September 18, 2026 (UTC).**  
+**Last repository check: September 19, 2026 (UTC).**  
 **Scope:** public upstream source and GitHub work records. Deployment, live accounts and current data freshness were not tested in this check.
 
+**Publication checkpoint — September 19:** this page is a review candidate in [draft PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401), not yet published on the default branch at this check. Merge the canonical page before the companion cross-repository README links.
+
 TIBER builds open football research and decision-support tools: data contracts, interpretable models, and ways for people and their agents to inspect the evidence. This page is the shared starting point across the repositories.
+
+[Proposed coordination direction — Ops #84](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/84): alongside software, TIBER can help people frame football questions, define bounded experiments, and make the missing evidence and acceptance criteria clear. It need not own every dataset or implement every idea. This complements Team and the domain producers; it is documentation direction, not a newly delivered runtime capability or adopted authority model.
 
 ## Start here
 
@@ -28,24 +32,29 @@ TIBER prepares the decision; the human manager makes it. Observed football data,
 
 ## Current work and next checkpoints
 
-All records below were checked on **September 18, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates.
+All records below were checked on **September 19, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates. Comment-based receipts are attributed reports, not independent reproduction of their work.
 
 | Workstream | Current status | Evidence and next checkpoint |
 | --- | --- | --- |
 | Weekly box-score producer and Team adapter | **Code merged; runtime blocked** | [Data PR #273](https://github.com/Prometheus-Frameworks/TIBER-Data/pull/273) and [Fantasy PR #386](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/386) merged September 16. Offline preparation exists; the weekly endpoint deliberately remains unavailable. Separate source admission and consumer activation are still needed. |
-| Team waiver context | **In progress — draft PR** | [Fantasy PR #396](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396) is open, draft and unmerged. It adds league waiver settings and selected candidates to agent context. Current review and phone acceptance must be resolved before a release claim. |
-| 2026 in-season Forecast | **Conceptual / proposed program; live delivery unverified** | [Forecast #187](https://github.com/Prometheus-Frameworks/TIBER-Forecast/issues/187) defines the Year 1 baseline and gated feature path. Historical backtest availability does not establish a live 2026 producer. Verify exact input, evaluation and consumer receipts for each implementation milestone. |
+| Team waiver context | **In progress — reviewed draft; preview/phone acceptance pending** | [Fantasy PR #396](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396) remains open, draft and unmerged at `0b0b0308e7abc3a73dbd6f831bcd6e6cca67d693`. The [connector review](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396#issuecomment-5722359599) reports no major issues; [Core Build](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/actions/runs/35093186628) succeeded on that head. This is a review comment, not a submitted approval. The [acceptance handoff](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396#issuecomment-5737865099) identifies no verified exact-head phone-test URL. Separate preview authorization and portrait-phone acceptance remain outstanding; neither tests nor deployment were rerun here. |
+| 2026 in-season Forecast | **In progress — local work reported; upstream/live delivery unverified** | [Forecast #187](https://github.com/Prometheus-Frameworks/TIBER-Forecast/issues/187) defines the Year 1 baseline. Its [recovery checkpoint](https://github.com/Prometheus-Frameworks/TIBER-Forecast/issues/187#issuecomment-5697061673) and [routing board](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/82) distinguish local specification/implementation work from the remote main branch. Current local patch, arithmetic/evaluation receipts and live candidate were not inspected here. Recover exact artifacts before claiming completion or repeating work; historical backtests and merged intake do not establish a live 2026 forecast. |
 | Weekly Pulse | **Conceptual / proposed** | [Fantasy #381](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/381): a post-slate observation shortlist. Next checkpoint is source readiness and a bounded selection policy. |
 | Team Charts | **Conceptual / proposed** | [Fantasy #399](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/399): single-week scatter plots with presets and supported custom axes. Current-week source admission remains a prerequisite to populated charts. |
 | Team iOS | **Conceptual / proposed readiness track** | [Fantasy #400](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/400): choose a release baseline and resolve account/device/distribution gates. No TestFlight or App Store availability is certified here. |
+| Contributor ideas and expert-signal contracts | **Design revisions requested; code candidate still in review** | Recorded design reviews for [asset thesis #397](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/397#issuecomment-5735746262), [shared uncertainty #389](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/389#issuecomment-5735739770), [league formats #364](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/364#issuecomment-5735739629), and [transaction comparisons #402](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/402#issuecomment-5735728706) all return `revision_required`, with live-retrieval/fork-verification limits. These are design findings, not rejection or certification of uninspected fork code. Expert-signal [PR #395](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/395) is an open draft with a review request but no returned review in the retrieved discussion/review endpoints. No upstream adoption is established. |
+| Transaction-comparison incorporation | **Parked** | The [September 18 disposition on #355](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/355#issuecomment-5735597009) retains the narrow external idea without amending the existing accepted design. Price units, comparability, independence, clocks and source/privacy rules remain unresolved. Review findings do not assign implementation or repair to either party. |
+| Late-veteran WR research | **Prospective follow-up plan; not a new validated signal** | [Signal-Validation-Model #16 follow-up](https://github.com/Prometheus-Frameworks/Signal-Validation-Model/issues/16#issuecomment-5735513430) records a dated Week 2 opportunity watch and post-week assessment plan. The August study, cutoff and inconclusive research disposition remain unchanged. Underlying football observations were not refreshed by this documentation check; one subsequent game cannot validate the historical screen. |
 
-### Recent verified change
+### Recent verified changes
 
-On **September 16, 2026**, the paired weekly producer and consumer preparation PRs merged. This is an implementation milestone, not current-week data activation. See the two PRs above for their validation receipts and scope.
+- **September 19 check:** clarified waiver review/build versus missing preview/phone acceptance, recorded returned contributor design reviews and the parked transaction proposal, and linked the separate prospective WR follow-up. These are record/readiness changes, not new releases.
+- **September 19 check — no material capability change:** the 14 upstream README summaries retain their prior readiness categories. Weekly Pulse, Charts and iOS remain proposals; the current weekly consumer module still documents an unavailable endpoint. Local-only work and hosted state remain outside this check.
+- **September 16 merge milestone, rechecked September 19:** Data #273 and Fantasy #386 merged. This is implementation preparation, not current-week data activation.
 
 ## Repository map
 
-Each entry links to its checked upstream README and local usage instructions. Repository descriptions were checked on **September 18, 2026**; their commands and applications were not rerun during this documentation check.
+Each entry links to its checked upstream README and local usage instructions. The September 18 snapshot was rechecked on **September 19, 2026** against all 14 default branches (all `main`), their READMEs, open PRs and recently updated issue records. Their commands and applications were not rerun. Exact repository pins are recorded below; issue/comment state is separately mutable.
 
 | Repository | Status / usable scope | What to expect |
 | --- | --- | --- |
@@ -64,6 +73,30 @@ Each entry links to its checked upstream README and local usage instructions. Re
 | [TIBER-Harness](https://github.com/Prometheus-Frameworks/TIBER-Harness#readme) | Packaged for testing | Offline MockProvider evaluation and opt-in local Ollama path. No production integration or real artifact promotion. |
 | [TIBER-Ops](https://github.com/Prometheus-Frameworks/TIBER-Ops#readme) | Available to use — documentation | Operating map, architecture direction, lane coordination and review runbooks. Documentation does not activate parked work. |
 
+<details>
+<summary>September 19, 2026 source pins</summary>
+
+All source reads succeeded. These pins identify inspected code/documentation, not deployments or mutable issue revisions.
+
+| Repository | Inspected default-branch commit / README |
+| --- | --- |
+| TIBER-Data | [`6732954b17687d07226e7d5491291e2c2053217b`](https://github.com/Prometheus-Frameworks/TIBER-Data/blob/6732954b17687d07226e7d5491291e2c2053217b/README.md) |
+| TIBER-Fantasy | [`5ad78c4e89f3ce4bfcbcc4af5912b8aca1063644`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/5ad78c4e89f3ce4bfcbcc4af5912b8aca1063644/README.md) |
+| TIBER-Rookies | [`a6f8555e79f3fc562a6c5f533acee583eeb12a3a`](https://github.com/Prometheus-Frameworks/TIBER-Rookies/blob/a6f8555e79f3fc562a6c5f533acee583eeb12a3a/README.md) |
+| TIBER-Forecast | [`e295e3de745b676df571348cb8541fb5e35e3a02`](https://github.com/Prometheus-Frameworks/TIBER-Forecast/blob/e295e3de745b676df571348cb8541fb5e35e3a02/README.md) |
+| TIBER-FORGE | [`31ef98393b6c86576442d79cd8996cac530b2fad`](https://github.com/Prometheus-Frameworks/TIBER-FORGE/blob/31ef98393b6c86576442d79cd8996cac530b2fad/README.md) |
+| Role-and-opportunity-model | [`6435d8d3c2c4e53dc45ab57a05a2716e2b47598d`](https://github.com/Prometheus-Frameworks/Role-and-opportunity-model/blob/6435d8d3c2c4e53dc45ab57a05a2716e2b47598d/README.md) |
+| TIBER-Teamstate | [`61485d1309484bad300378ef5d9aaa67365d3d62`](https://github.com/Prometheus-Frameworks/TIBER-Teamstate/blob/61485d1309484bad300378ef5d9aaa67365d3d62/README.md) |
+| Age-curve-intelligence-model | [`998b28644be7d36efb235ce1df62113dd8f0350c`](https://github.com/Prometheus-Frameworks/Age-curve-intelligence-model/blob/998b28644be7d36efb235ce1df62113dd8f0350c/README.md) |
+| ARC | [`b36fda874e699886a6184cb0340717a94724d6d7`](https://github.com/Prometheus-Frameworks/ARC/blob/b36fda874e699886a6184cb0340717a94724d6d7/README.md) |
+| Signal-Validation-Model | [`0ba3d4bc3d9696aca8059052a9ff948046f0e2e1`](https://github.com/Prometheus-Frameworks/Signal-Validation-Model/blob/0ba3d4bc3d9696aca8059052a9ff948046f0e2e1/README.md) |
+| TIBER-Strategy | [`03c840765af7f64a797a4bc8b0cba6bb8dce0d6f`](https://github.com/Prometheus-Frameworks/TIBER-Strategy/blob/03c840765af7f64a797a4bc8b0cba6bb8dce0d6f/README.md) |
+| TIBER-Research | [`0952e3325fb610f9cdb22c5242397d223c7a6c26`](https://github.com/Prometheus-Frameworks/TIBER-Research/blob/0952e3325fb610f9cdb22c5242397d223c7a6c26/README.md) |
+| TIBER-Harness | [`9280f5ace3a339221e5171ea9693225f9bec940d`](https://github.com/Prometheus-Frameworks/TIBER-Harness/blob/9280f5ace3a339221e5171ea9693225f9bec940d/README.md) |
+| TIBER-Ops | [`14a9ea573200d64c5c8a335ef57f5da1a64e6dd7`](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/14a9ea573200d64c5c8a335ef57f5da1a64e6dd7/README.md) |
+
+</details>
+
 ## Joining in
 
 People and agent-assisted contributors are welcome. Start with the relevant repository’s README and operating instructions, then open a focused issue explaining what you want to build, what evidence it needs, and whether the work is a proposal, local experiment, fork implementation or upstream PR.
@@ -71,6 +104,14 @@ People and agent-assisted contributors are welcome. Start with the relevant repo
 Link the exact code/artifact and validation results when reporting progress. A working fork can be useful without being an official upstream capability. Fork reports and issue comments do not establish upstream acceptance, release readiness or maintainer authorization.
 
 For a small contribution, documentation corrections, reproducible bug reports and clearly scoped PRs are good entry points. For larger integrations, discuss the contract and owner first. Preserve missing-data states and leave final fantasy decisions with the user.
+
+### Build from a research question
+
+The [proposed experiment handoff in Ops #84](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/84) describes a useful starting point: state the question, owning repository, available tools/evidence, exact missing inputs, one bounded contribution, expected output and acceptance or falsification checks. Reproductions, counterevidence and methodology corrections are useful contributions too. [Research #3](https://github.com/Prometheus-Frameworks/TIBER-Research/issues/3) is an experiment-definition example, not evidence of a completed run or a current football conclusion.
+
+Missing proprietary evidence stays missing. Access does not establish permission to redistribute inputs or publish derived results; preserve licensing, attribution, private/shared boundaries and verification limits. A handoff is not source admission or permission to execute, merge or deploy.
+
+**Make TIBER useful to you.** The [selective-adoption proposal](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/84#issuecomment-5737830315) recognizes personal workflows, independent forks and bounded experiments as valid outcomes without requiring upstream adoption. Useful external work, reviewed work, selected upstream adoption and maintained/released functionality are distinct. Review alone creates no implementation or maintenance commitment. This remains proposed contributor guidance pending maintainer disposition.
 
 ## Keeping this page current
 
