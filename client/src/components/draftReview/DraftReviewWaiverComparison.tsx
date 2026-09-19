@@ -64,7 +64,7 @@ function PairEvidence({ review, result, firstId, secondId }: Props & { secondId:
       </details>
     </> : null}
     <p className="drp-boundary">2025 weeks 1–18 observations, not current-season projections. Means use recorded nonmissing weeks, not certified games played. Average weekly shares are not season shares. Missing evidence is unknown, not zero.</p>
-    {history?.provenance ? <p className="drp-attribution">Source: {history.provenance.attribution.name} · {history.provenance.attribution.license}. {history.provenance.attribution.notice}</p> : null}
+    {history?.provenance ? <p className="drp-attribution">Source: <a href={history.provenance.attribution.source_url} target="_blank" rel="noreferrer">{history.provenance.attribution.name}</a> · <a href={history.provenance.attribution.license_url} target="_blank" rel="noreferrer">{history.provenance.attribution.license}</a>. {history.provenance.attribution.notice}</p> : null}
     <p>Forecast unavailable. Current-season usage is not included. This comparison does not choose a winner.</p>
     <button type="button" className="drp-action" disabled={loading} onClick={() => void discuss()}>Discuss this waiver comparison</button>
     <p>Copies this pair, available evidence and your roster context. Add your question in your agent conversation.</p>

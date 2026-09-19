@@ -1048,3 +1048,8 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - **Files modified:** DraftReviewWaivers, new DraftReviewWaiverComparison, shared/teamWaiverComparison, existing comparison table export, CSS and focused tests.
 - **Validation:** 75 tests in nine focused suites pass; production build passes; typecheck retains 507 baseline diagnostics with no added per-file/error-code counts.
 - **Notes:** Stacked draft on #396, which remains unchanged. Railway Settings > Environments showed “Enable PR Environments” before publication (automatic PR deployments disabled). No merge or deployment authorized. Independent review and portrait-phone acceptance pending. See docs/audits/team-waiver-comparison-2026-09-19.md.
+
+### 2026-09-19 — Codex: #405 attribution review repair
+- Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
+- Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
+- Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
