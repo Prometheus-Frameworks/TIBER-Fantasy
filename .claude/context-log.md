@@ -825,3 +825,8 @@ Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval 
 ## 2026-09-15 — Weekly review R9
 
 Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+### 2026-09-16 — Codex: Team waiver context
+- Operator-authorized #371 follow-up: additive observed waiver settings, calculated FAAB/priority, and explicit-check selected candidate shortlist in copied agent context.
+- Files: shared/teamWaiverContext.ts, draftReview service/routes, reused membership validator, Team panel and scoped packet builder, regression tests and module notes.
+- Validation and operational limits: docs/audits/team-waiver-context-2026-09-16.md. No merge, production deployment, private claims, source admission, ranking or roster mutation.

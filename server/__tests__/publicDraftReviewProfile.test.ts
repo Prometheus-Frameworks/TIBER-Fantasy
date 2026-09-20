@@ -99,3 +99,13 @@ test('TE exploration is mounted inside public containment without private reads 
   expect((await request(app).post('/api/draft-review/unrostered-tes').send({})).status).toBe(404);
   expect(privateHandler).not.toHaveBeenCalled();
 });
+
+test('waiver candidates remain read-only inside public containment', async () => {
+  const privateHandler = jest.fn((_req, res) => res.status(418).end());
+  const app = makePublicApp(privateHandler);
+  const result = await request(app).get('/api/draft-review/waiver-candidates');
+  expect(result.status).toBe(400);
+  expect(result.headers['cache-control']).toBe('no-store');
+  expect((await request(app).post('/api/draft-review/waiver-candidates').send({})).status).toBe(404);
+  expect(privateHandler).not.toHaveBeenCalled();
+});

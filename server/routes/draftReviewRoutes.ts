@@ -1,3 +1,4 @@
+import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
 import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
@@ -33,6 +34,18 @@ export function createDraftReviewRouter() {
       return res.status(400).json({ status: 'invalid_input', error: 'Explicit REG season and week 1–18 required.' });
     }
     return res.json(weeklyEvidenceFor(Number(season), Number(week)));
+  });
+
+  router.get('/api/draft-review/waiver-candidates', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    const input = req.query.sleeper_url;
+    if (typeof input !== 'string' || !input.trim() || input.length > 256) return res.status(400).json({ status: 'invalid_input', error: 'A bounded sleeper_url is required.' });
+    try { return res.json(await buildWaiverCandidates(input)); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'Candidate membership could not be established from complete league and player data.' });
+    }
   });
 
   router.get('/api/draft-review/unrostered-tes', (_req, res, next) => {
