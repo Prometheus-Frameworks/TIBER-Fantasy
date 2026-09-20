@@ -28,7 +28,7 @@ function coverageReason(player: ComparisonPlayer) {
   if (player.history?.reason === 'No admitted exact Sleeper-to-GSIS identity mapping.') return '2025 stats are not connected: historical identity link unavailable.';
   return player.history?.reason ?? 'Historical evidence unavailable.';
 }
-function ComparisonTable({ metrics, players, compact = false }: { metrics: readonly MetricRow[]; players: ComparisonPlayer[]; compact?: boolean }) {
+export function ComparisonTable({ metrics, players, compact = false }: { metrics: readonly MetricRow[]; players: ComparisonPlayer[]; compact?: boolean }) {
   return <div className="drp-evidence-table" role="region" tabIndex={0} aria-label={compact ? 'Player comparison, scroll horizontally on narrow screens' : 'Detailed historical comparison, scroll horizontally on narrow screens'}>
     <table className={[compact ? 'drp-compact-comparison' : '', players.length === 3 ? 'drp-three-comparison' : ''].filter(Boolean).join(' ')}>
       <caption>{compact ? '2025 · per recorded week' : '2025 · totals and all recorded metrics'}</caption>

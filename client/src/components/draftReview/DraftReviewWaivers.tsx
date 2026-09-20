@@ -1,11 +1,13 @@
+import DraftReviewWaiverComparison from './DraftReviewWaiverComparison';
 import { useEffect, useRef, useState } from 'react';
 import type { DraftReview } from '@/pages/TiberDraftReview';
 import { reviewScope } from '@shared/draftReviewStudy';
 import { selectWaiverCandidates, waiverCandidatesSchema, type WaiverAttachment, type WaiverCandidates } from '@shared/teamWaiverContext';
 
-export default function DraftReviewWaivers({ review, onChange }: { review: DraftReview; onChange: (value: WaiverAttachment | null) => void }) {
+function WaiversContent({ review, onChange }: { review: DraftReview; onChange: (value: WaiverAttachment | null) => void }) {
   const [result, setResult] = useState<WaiverCandidates | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [compareId, setCompareId] = useState('');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,7 +17,7 @@ export default function DraftReviewWaivers({ review, onChange }: { review: Draft
   async function check() {
     const request = ++sequence.current;
     controller.current?.abort(); controller.current = new AbortController();
-    setResult(null); setSelected([]); onChange(null); setLoading(true); setError('');
+    setResult(null); setSelected([]); setCompareId(''); onChange(null); setLoading(true); setError('');
     try {
       const response = await fetch(`/api/draft-review/waiver-candidates?sleeper_url=${encodeURIComponent(review.input.canonicalUrl)}`, { cache: 'no-store', signal: controller.current.signal });
       if (!response.ok) throw new Error('Unavailable');
@@ -30,6 +32,7 @@ export default function DraftReviewWaivers({ review, onChange }: { review: Draft
     if (!result) return;
     const next = selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id];
     if (next.length > 5) return;
+    if (id === compareId && !next.includes(id)) setCompareId('');
     setSelected(next); onChange(selectWaiverCandidates(reviewScope(review), result, next));
   }
   const settings = result?.waiver_settings ?? review.waiver_context;
@@ -49,11 +52,16 @@ export default function DraftReviewWaivers({ review, onChange }: { review: Draft
         <p className="drp-boundary">Claim eligibility, waiver locks and processing time are unknown. Confirm in Sleeper. This check and your displayed roster have separate timestamps.</p>
         <p className="drp-muted">Active directory entries with recognized NFL teams; this does not establish health or playing time. Directory fetched {result.observations.directory_fetched_at}, reused for up to 24 hours.</p>
         <p>{selected.length}/5 selected · Alphabetical order, not a ranking.</p>
-        {selected.length ? <ul aria-label="Selected waiver candidates">{selected.map(id => <li key={id}><button type="button" onClick={() => toggle(id)}>Remove {result.candidates.find(p => p.player_id === id)?.name}</button></li>)}</ul> : null}
+        {selected.length ? <ul aria-label="Selected waiver candidates">{selected.map(id => <li key={id}><button type="button" onClick={() => toggle(id)}>Remove {result.candidates.find(p => p.player_id === id)?.name}</button><button type="button" className="drp-action" onClick={() => setCompareId(id)}>Compare {result.candidates.find(p => p.player_id === id)?.name} with another waiver player</button></li>)}</ul> : null}
         <label className="drp-te-search">Search waiver candidates<input type="search" maxLength={120} value={query} onChange={e => setQuery(e.target.value)} /></label>
         <p>{pool.length} matches{pool.length > 50 ? ' · Showing first 50; search to narrow' : ''}</p>
         <ul className="drp-te-list" aria-label="Unrostered skill players">{pool.slice(0, 50).map(p => <li key={p.player_id}><button type="button" aria-pressed={selected.includes(p.player_id)} disabled={selected.length === 5 && !selected.includes(p.player_id)} onClick={() => toggle(p.player_id)}><strong>{p.name}</strong><span>{p.position} · {p.team} · {p.status ?? 'Status unknown'}</span></button></li>)}</ul>
+        {compareId && selected.includes(compareId) ? <DraftReviewWaiverComparison key={`${compareId}:${selected.join(',')}`} review={review} result={result} firstId={compareId} shortlist={selected} onClose={() => setCompareId('')} /> : null}
       </> : null}
     </details>
   </section>;
+}
+
+export default function DraftReviewWaivers(props: { review: DraftReview; onChange: (value: WaiverAttachment | null) => void }) {
+  return <WaiversContent key={reviewScope(props.review)} {...props} />;
 }

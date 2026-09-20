@@ -1042,3 +1042,14 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 
 ### 2026-09-16 — Team waiver context
 Implemented the operator-requested smallest #371 waiver-handoff slice on codex/team-waiver-context. Budget/priority travels with the roster, and up to five explicitly selected unrostered skill players travel with independent clocks. No claims or projection authority. See docs/audits/team-waiver-context-2026-09-16.md for validation and remaining acceptance.
+
+### 2026-09-19 — Codex: Pairwise waiver comparison (#404)
+- **What changed:** Compare two explicitly shortlisted waiver candidates with admitted 2025 historical evidence and a pair-only agent discussion packet. Missing history remains discussable. Selection, evidence and clipboard completion are invalidated on relevant refresh/scope/pair changes.
+- **Files modified:** DraftReviewWaivers, new DraftReviewWaiverComparison, shared/teamWaiverComparison, existing comparison table export, CSS and focused tests.
+- **Validation:** 75 tests in nine focused suites pass; production build passes; typecheck retains 507 baseline diagnostics with no added per-file/error-code counts.
+- **Notes:** Stacked draft on #396, which remains unchanged. Railway Settings > Environments showed “Enable PR Environments” before publication (automatic PR deployments disabled). No merge or deployment authorized. Independent review and portrait-phone acceptance pending. See docs/audits/team-waiver-comparison-2026-09-19.md.
+
+### 2026-09-19 — Codex: #405 attribution review repair
+- Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
+- Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
+- Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
