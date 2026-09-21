@@ -1,5 +1,11 @@
 # Tiber Fantasy — Context Log
 
+### 2026-09-21 — Codex: #406 P2 repair
+- **Authority:** Joe authorized both P2 repairs and a new independent review.
+- **Changes:** Recursive lossless JSON snapshot validation; pre-import isolation preload for actual and synthetic stdio children, with import-time negative controls.
+- **Validation:** 47 contract tests, five protocol tests and targeted strict TypeScript check pass. See docs/mcp/team-read-only-v0.md.
+- **Boundary:** Source access remains disabled; keep draft/unmerged. No deployment, Fable dispatch or review-thread resolution.
+
 Running changelog of significant changes across all agents. Most recent entries at top.
 Every agent should append an entry here after completing work.
 
@@ -841,3 +847,26 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+
+### 2026-09-21 — Codex: #383 Team MCP contracts and isolated tests
+- **Authority:** Joe authorized tool contracts and isolated tests before Fable.
+- **What changed:** Three injected read-only tool definitions, strict inputs, versioned bounded results, sanitized errors and per-instance roster concurrency guard. No runnable MCP server or production reader wiring.
+- **Files modified:** server/modules/draftReview/mcp/teamToolDefinitions.ts, teamToolResults.ts, __tests__/teamToolDefinitions.test.ts, MODULE.md and docs/mcp/team-contracts-checkpoint-2026-09-21.md.
+- **Validation:** 33 targeted Jest tests pass; targeted strict TypeScript check passes. Synthetic readers only; fetch spy records no calls. Package/lock unchanged.
+- **Notes:** Local branch based on 71ca2a09482ed29c3ae878a050fc6f030d1bbd6c. Next: stdio registration and protocol validation. No live source, Fable, PR, merge or deployment.
+
+
+### 2026-09-21 — Codex: #383 source-disabled stdio entry
+- **Authority:** Joe authorized the stdio entry after the isolated contract slice.
+- **Changes:** Added injectable MCP builder and guarded executable; complete strict schemas preserve unknown-key rejection. Default source readers remain disabled. Added Node/tsx ESM protocol suite and test-only synthetic child.
+- **Validation:** 33 Jest contract tests + 4 protocol tests pass; targeted strict TypeScript check passes. Cold import and child-process stdout checks pass; synthetic child blocks network/listeners. No live provider, DB or artifact reads.
+- **Resume:** See docs/mcp/team-read-only-v0.md. Review transport, verify source-use scope, then consider live reader binding/client acceptance. No Fable, PR, push, merge or deployment.
+
+
+### 2026-09-21 — Codex: #406 second P2 repair
+- **Authority:** Joe authorized implementation, validation and updating the existing draft PR; keep source-disabled, unmerged and undeployed.
+- **Changes:** Verify native constructor/prototype identity, reject proxies before reflection, and enforce an envelope-inclusive UTF-8 budget during every snapshot occurrence. Preserve cross-realm/null-prototype containers and bounded shared references.
+- **Files:** teamToolResults.ts, teamToolDefinitions.test.ts, teamStdio.protocol.ts and docs/mcp/team-read-only-v0.md.
+- **Validation:** Both reported regressions reproduced at bc5552c; repaired 55 contract tests and six protocol/process tests pass; targeted strict TypeScript and diff whitespace checks pass. DAG regression is isolated under a 128 MiB heap cap and process deadline.
+- **Resume:** New exact-head independent review remains pending; leave review threads unresolved. No source acquisition, admission, auth activation, merge or deployment.

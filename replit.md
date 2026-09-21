@@ -130,3 +130,11 @@ Team roster handoffs include observed Sleeper waiver settings and labeled budget
 
 ### Team waiver comparison (2026-09-19, draft #404 implementation)
 Checked waiver shortlist candidates can be compared as a pair using admitted historical evidence and shared comparison tables. A dedicated discussion action copies only that pair plus roster context and observation clocks; missing history and unavailable Forecast remain explicit. See `docs/audits/team-waiver-comparison-2026-09-19.md`. Deployment and phone acceptance are pending.
+
+
+### Team MCP contract checkpoint (2026-09-21, #383)
+Three read-only tool contracts and isolated synthetic tests exist under `server/modules/draftReview/mcp/`. No executable connector or production source wiring is added. See `docs/mcp/team-contracts-checkpoint-2026-09-21.md` for validation and the stdio follow-up.
+
+
+### Team MCP local stdio checkpoint (2026-09-21, #383)
+The guarded `server/mcp/teamStdioServer.ts` executable exposes three read-only tools with source access disabled. SDK and synthetic child-process protocol tests pass. Live reader wiring and actual host acceptance remain pending. See `docs/mcp/team-read-only-v0.md`.
