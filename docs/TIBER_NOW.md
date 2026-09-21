@@ -1,9 +1,9 @@
 # TIBER Now — Project Status
 
-**Last repository check: September 20, 2026 (UTC).**  
+**Last repository check: September 21, 2026 (UTC).**  
 **Scope:** public upstream source and GitHub work records. Deployment, live accounts and current data freshness were not tested in this check.
 
-**Publication checkpoint — September 20:** this page remains a review candidate in [draft PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401), not yet published on the default branch at this check. The [September 19 exact-head review](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401#discussion_r4054582512) identified one waiver-status wording error; this refresh corrects it, so the resulting head still needs separate maintainer review. Merge the canonical page before the companion cross-repository README links.
+**Publication checkpoint — September 21:** this page remains a review candidate in [draft PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401), not yet published on the default branch. Before this refresh, the branch was at `c8ed7b4da3c19bf28c5c9211d0009bd7d77b152a` and was not mergeable against Fantasy `main` after the waiver-feature merges; branch synchronization and maintainer review remain separate steps. Merge the canonical page before the companion cross-repository README links.
 
 TIBER builds open football research and decision-support tools: data contracts, interpretable models, and ways for people and their agents to inspect the evidence. This page is the shared starting point across the repositories.
 
@@ -32,12 +32,13 @@ TIBER prepares the decision; the human manager makes it. Observed football data,
 
 ## Current work and next checkpoints
 
-All records below were checked on **September 20, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates. Comment-based receipts are attributed reports, not independent reproduction of their work.
+All records below were checked on **September 21, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates. Comment-based receipts are attributed reports, not independent reproduction of their work.
 
 | Workstream | Current status | Evidence and next checkpoint |
 | --- | --- | --- |
 | Weekly box-score producer and Team adapter | **Code merged; runtime blocked** | [Data PR #273](https://github.com/Prometheus-Frameworks/TIBER-Data/pull/273) and [Fantasy PR #386](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/386) merged September 16. Offline preparation exists; the weekly endpoint deliberately remains unavailable. Separate source admission and consumer activation are still needed. |
-| Team waiver context and pair comparison | **In progress — reviewed candidates; acceptance incomplete** | [Fantasy PR #396](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396) remains open, draft and unmerged at `0b0b0308e7abc3a73dbd6f831bcd6e6cca67d693`; its [review](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396#issuecomment-5722359599) and [Core Build](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/actions/runs/35093186628) are positive evidence, not merge or live-release approval. [Issue #404](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/404) reports Joe tested an isolated #396 preview on a phone and selected a candidate, but explicitly does not establish complete phone acceptance or current player status; the retrieved #396 discussion still has no exact-head deployment receipt, so the hosted revision was not independently verified here. [PR #405](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/405) is an open, non-draft, unmerged comparison candidate stacked on #396 at `6e2bb29e92a63ea71a796cb9a3d19c9914139a00`. It reports 75 focused tests plus a production build, and the [latest review](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/405#issuecomment-5745773072) found no major issues after an [attribution-link repair](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/405#discussion_r4054949631). No #405 preview or deployment is authorized; portrait-phone acceptance remains pending. |
+| Team waiver context and pair comparison | **Code merged; live release not verified** | [Fantasy PR #396](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/396) merged September 20 as [`a10b6c0`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/commit/a10b6c0236bdc56b633b441f2d17140fe99e7955); stacked [PR #405](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/405) followed as [`71ca2a0`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/commit/71ca2a09482ed29c3ae878a050fc6f030d1bbd6c) after exact-head review found no major issues. These merges establish default-branch source for observed waiver settings, shortlist handoff and two-candidate historical comparison; they do not establish production deployment, current data, transaction authority or a live forecast. [Issue #404](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/404) remains open and its public receipt still describes phone acceptance as pending. |
+| Team MCP connector | **In progress — source-disabled local transport; review changes required** | [Issue #383](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/383) defines a read-only Team MCP goal. Draft [PR #406](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/406) contains three local stdio tools at `bc5552c66d9c5968c2e5d2d2d9b6ebac2c333157`, with live readers deliberately disabled. Its PR body reports 47 contract tests, five protocol tests and targeted strict TypeScript checking; those are attributed candidate results, not a named-client or live-source acceptance. The [current-head review](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/406#pullrequestreview-5266233030) found two P2 defects: a [custom-prototype plain-object bypass](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/406#discussion_r4061823622) and [unbounded shared-reference expansion before the response-size check](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/406#discussion_r4061823626). Repair and fresh review are required. No production reader, source admission, hosted connector or deployment is established. |
 | 2026 in-season Forecast | **In progress — local work reported; upstream/live delivery unverified** | [Forecast #187](https://github.com/Prometheus-Frameworks/TIBER-Forecast/issues/187) defines the Year 1 baseline. Its [recovery checkpoint](https://github.com/Prometheus-Frameworks/TIBER-Forecast/issues/187#issuecomment-5697061673) and [routing board](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/82) distinguish local specification/implementation work from the remote main branch. Current local patch, arithmetic/evaluation receipts and live candidate were not inspected here. Recover exact artifacts before claiming completion or repeating work; historical backtests and merged intake do not establish a live 2026 forecast. |
 | Weekly Pulse | **Conceptual / proposed** | [Fantasy #381](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/381): a post-slate observation shortlist. Next checkpoint is source readiness and a bounded selection policy. |
 | Team Charts | **Conceptual / proposed** | [Fantasy #399](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/399): single-week scatter plots with presets and supported custom axes. Current-week source admission remains a prerequisite to populated charts. |
@@ -50,15 +51,16 @@ All records below were checked on **September 20, 2026**. These are workstreams 
 
 ### Recent verified changes
 
-- **September 20 check:** corrected the #396 authorization-versus-verification wording flagged on #401; recorded the #404 partial phone interaction, the reviewed but unaccepted #405 comparison candidate, and actionable review findings on #377, #388 and #403. These are candidate/review-state changes, not releases.
-- **September 20 check — no default-branch capability change:** all 14 repositories still use `main`, every README read succeeded, and every recorded default-branch commit pin is unchanged. The new branch candidates do not change the repository-map readiness categories.
+- **September 21 check:** Fantasy #396 and #405 merged to `main`, establishing default-branch waiver-context and pair-comparison source without establishing deployment or live data. Draft #406 adds a source-disabled local Team MCP candidate; its latest exact-head review requires two P2 repairs.
+- **September 21 check — repository map otherwise stable:** all 14 default branches remain `main`; every README read succeeded; the other 13 recorded default-branch pins and readiness categories are unchanged. All 13 companion README-link PRs remain open drafts.
+- **September 20 check:** corrected the #396 authorization-versus-verification wording flagged on #401; recorded the #404 partial phone interaction, the reviewed but then-unmerged #405 comparison candidate, and actionable review findings on #377, #388 and #403. The September 21 merge receipts supersede the earlier candidate state for #396 and #405.
 - **September 19 check:** clarified waiver review/build versus missing preview/phone acceptance, recorded returned contributor design reviews and the parked transaction proposal, and linked the separate prospective WR follow-up. These are record/readiness changes, not new releases.
 - **September 19 check — no material capability change:** the 14 upstream README summaries retain their prior readiness categories. Weekly Pulse, Charts and iOS remain proposals; the current weekly consumer module still documents an unavailable endpoint. Local-only work and hosted state remain outside this check.
-- **September 16 merge milestone, rechecked September 20:** Data #273 and Fantasy #386 merged. This is implementation preparation, not current-week data activation.
+- **September 16 merge milestone, rechecked September 21:** Data #273 and Fantasy #386 merged. This is implementation preparation, not current-week data activation.
 
 ## Repository map
 
-Each entry links to its checked upstream README and local usage instructions. The September 18 snapshot was rechecked on **September 20, 2026** against all 14 default branches (all `main`), their READMEs, open PRs and recently updated issue records. Their commands and applications were not rerun. Exact repository pins are recorded below; issue/comment state is separately mutable.
+Each entry links to its checked upstream README and local usage instructions. The September 18 snapshot was rechecked on **September 21, 2026** against all 14 default branches (all `main`), their READMEs, open PRs and recently updated issue records. Their commands and applications were not rerun. Exact repository pins are recorded below; issue/comment state is separately mutable.
 
 | Repository | Status / usable scope | What to expect |
 | --- | --- | --- |
@@ -78,14 +80,14 @@ Each entry links to its checked upstream README and local usage instructions. Th
 | [TIBER-Ops](https://github.com/Prometheus-Frameworks/TIBER-Ops#readme) | Available to use — documentation | Operating map, architecture direction, lane coordination and review runbooks. Documentation does not activate parked work. |
 
 <details>
-<summary>September 20, 2026 source pins</summary>
+<summary>September 21, 2026 source pins</summary>
 
 All source reads succeeded. These pins identify inspected code/documentation, not deployments or mutable issue revisions.
 
 | Repository | Inspected default-branch commit / README |
 | --- | --- |
 | TIBER-Data | [`6732954b17687d07226e7d5491291e2c2053217b`](https://github.com/Prometheus-Frameworks/TIBER-Data/blob/6732954b17687d07226e7d5491291e2c2053217b/README.md) |
-| TIBER-Fantasy | [`5ad78c4e89f3ce4bfcbcc4af5912b8aca1063644`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/5ad78c4e89f3ce4bfcbcc4af5912b8aca1063644/README.md) |
+| TIBER-Fantasy | [`71ca2a09482ed29c3ae878a050fc6f030d1bbd6c`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/71ca2a09482ed29c3ae878a050fc6f030d1bbd6c/README.md) |
 | TIBER-Rookies | [`a6f8555e79f3fc562a6c5f533acee583eeb12a3a`](https://github.com/Prometheus-Frameworks/TIBER-Rookies/blob/a6f8555e79f3fc562a6c5f533acee583eeb12a3a/README.md) |
 | TIBER-Forecast | [`e295e3de745b676df571348cb8541fb5e35e3a02`](https://github.com/Prometheus-Frameworks/TIBER-Forecast/blob/e295e3de745b676df571348cb8541fb5e35e3a02/README.md) |
 | TIBER-FORGE | [`31ef98393b6c86576442d79cd8996cac530b2fad`](https://github.com/Prometheus-Frameworks/TIBER-FORGE/blob/31ef98393b6c86576442d79cd8996cac530b2fad/README.md) |
