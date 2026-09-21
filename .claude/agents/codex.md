@@ -1,5 +1,10 @@
 # Codex — Work Log
 
+### 2026-09-21 — PR #406 P2 repair
+- Repaired lossy JSON success and test-guard import ordering at Joe's request.
+- 47 contract tests and five protocol tests pass; targeted strict TypeScript check passes. Source-disabled composition unchanged. New exact-head review requested after publication; not merge/deployment authority.
+- Details and original-review boundary: docs/mcp/team-read-only-v0.md.
+
 Agent: OpenAI Codex
 Platform: GitHub (PR-based workflow)
 Branch Pattern: `codex/<task-slug>`

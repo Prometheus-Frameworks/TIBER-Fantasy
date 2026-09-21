@@ -63,7 +63,7 @@ test('actual stdio entry initializes without credentials and refuses unbound sou
   const client = new Client({ name: 'stdio-offline-test', version: '1' });
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: ['--import', 'tsx', 'server/mcp/teamStdioServer.ts'],
+    args: ['--import', 'tsx', '--import', './server/mcp/__tests__/teamIsolationGuards.ts', 'server/mcp/teamStdioServer.ts'],
     cwd: process.cwd(), env: {}, stderr: 'pipe',
   });
   let stderr = '';
@@ -82,14 +82,12 @@ test('actual stdio entry initializes without credentials and refuses unbound sou
     assert.deepEqual(errors, []);
   } finally { await client.close(); }
   assert.match(stderr, /source access disabled/);
+  assert.doesNotMatch(stderr, /TEAM_ISOLATION_VIOLATION/);
 });
 
 test('cold import does not start transport, mutate console or open sockets', () => {
   const output = execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', `
-    import net from 'node:net';
-    const fail = () => { throw new Error('Unexpected network/listener'); };
-    net.Socket.prototype.connect = fail; net.Server.prototype.listen = fail;
-    globalThis.fetch = fail;
+    await import('./server/mcp/__tests__/teamIsolationGuards.ts');
     const log = console.log;
     const mod = await import('./server/mcp/teamStdioServer.ts');
     if (console.log !== log || typeof mod.buildTeamMcpServer !== 'function') throw new Error('Import side effect');
@@ -119,4 +117,19 @@ test('synthetic roster and two-player evidence cross actual stdio with clean std
     assert.equal(evidence.status, 'unavailable'); assert.deepEqual(errors, []);
   } finally { await client.close(); }
   assert.match(stderr, /synthetic diagnostic redirected to stderr/);
+  assert.doesNotMatch(stderr, /TEAM_ISOLATION_VIOLATION/);
+});
+
+test('preload catches import-time source attempts even when caught by the module', () => {
+  for (const source of [
+    "try { await fetch('https://example.invalid'); } catch {}",
+    "import { createServer } from 'node:net'; try { createServer().listen(0); } catch {}",
+    "import { request } from 'node:https'; try { request('https://example.invalid'); } catch {}",
+  ]) {
+    assert.throws(() => execFileSync(process.execPath, [
+      '--import', 'tsx', '--import', './server/mcp/__tests__/teamIsolationGuards.ts',
+      '--input-type=module', '-e', `await import(${JSON.stringify('data:text/javascript,' + encodeURIComponent(source))});`,
+    ], { cwd: process.cwd(), env: {}, encoding: 'utf8', timeout: 10000, stdio: 'pipe' }),
+    (error: any) => error.status === 97 && String(error.stderr).includes('TEAM_ISOLATION_VIOLATION'));
+  }
 });

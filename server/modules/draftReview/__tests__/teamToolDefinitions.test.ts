@@ -140,6 +140,47 @@ describe('Team MCP contracts (offline)', () => {
     }
   });
 
+  test.each([
+    { nested: { value: NaN } }, { value: Infinity }, { value: -Infinity },
+    { value: undefined }, { values: [undefined] }, { values: new Array(1) },
+    { value: -0 }, { value: new Date() }, { value: new Map() },
+    { value: Symbol('secret') }, { value: () => 'secret' },
+  ].map(value => ({ value })))('rejects lossy nested data $value', ({ value }) => {
+    const result = teamToolSuccess(value);
+    expect(result.isError).toBe(true);
+    expect(decode(result).status).toBe('internal_error');
+    expect(result.text).not.toContain('secret');
+  });
+
+  test('does not invoke accessors or toJSON and rejects hidden/extra fields', () => {
+    const getter = jest.fn(() => null);
+    const hook = jest.fn(() => null);
+    const array = Object.assign([1], { extra: true });
+    for (const value of [
+      Object.defineProperty({}, 'secret', { get: getter, enumerable: true }),
+      { toJSON: hook }, Object.defineProperty({}, 'hidden', { value: 1 }),
+      { [Symbol('hidden')]: 1 }, array,
+    ]) expect(decode(teamToolSuccess(value)).status).toBe('internal_error');
+    expect(getter).not.toHaveBeenCalled(); expect(hook).not.toHaveBeenCalled();
+  });
+
+  test('preserves genuine null, omission, shared references and plain JSON values', () => {
+    const shared = { observation: null, zero: 0, flag: false };
+    const value = { a: shared, b: shared, values: [null, 0, '', false] };
+    expect(decode(teamToolSuccess(value)).data).toEqual(value);
+    expect(decode(teamToolSuccess(value)).data.a).not.toHaveProperty('missing');
+  });
+
+  test('malformed reader evidence refuses instead of reporting transformed success', async () => {
+    const { tools, readRoster, readEvidence } = setup();
+    readRoster.mockResolvedValueOnce({ observed: { points: NaN } });
+    readEvidence.mockReturnValueOnce({ observed: { points: undefined } });
+    for (const result of [await tools[1].handler(input), await tools[2].handler({ player_ids: ['101'] })]) {
+      expect(result.isError).toBe(true); expect(decode(result).status).toBe('internal_error');
+    }
+    expect((await tools[1].handler(input)).isError).toBe(false);
+  });
+
   test('contract import does not load production services', () => {
     jest.isolateModules(() => {
       jest.doMock('../draftReviewService', () => { throw new Error('Production service import forbidden'); });

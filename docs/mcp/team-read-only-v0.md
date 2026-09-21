@@ -30,6 +30,14 @@ Dependency metadata (`disabled`, `synthetic`, or unspecified injected readers) d
 
 ## Validation
 
+### P2 review repair (September 21, PR #406)
+
+The initial review at `d4e58986ee2613525c9dfd8bac927626a3abb58e` found two gaps. Results now recursively snapshot plain JSON data before encoding, rejecting non-finite numbers, negative zero, nested undefined, sparse/extended arrays, cycles, symbols, accessors, hidden properties and non-plain objects rather than silently coercing them. Genuine null, omitted keys and repeated non-cyclic references retain their meaning. Serialization hooks are not invoked; nesting beyond 100 levels fails closed. Cross-realm plain objects/arrays (including structuredClone output) are supported.
+
+The synthetic child now installs guards before dynamically importing the tested graph. The actual executable test preloads the same guards before its entry module, covering the dynamic parser/service import inside main as well. Guards terminate the test child on attempted fetch, HTTP requests, socket connections or listeners, even if application code would catch an exception. A negative-control test verifies import-time fetch, HTTPS request and listener attempts are caught. These are test-only controls, not a production network sandbox.
+
+Repair validation: 47 contract tests and five protocol tests pass, plus targeted strict TypeScript checking (include `server/mcp/__tests__/teamIsolationGuards.ts` in the command below). The original counts below describe the pre-review checkpoint. The first repair run caught a cross-realm prototype compatibility issue in synthetic cloned inputs; the final rerun includes that correction. No source activation or deployment.
+
 All 33 isolated contract tests and four protocol tests pass. The latter cover SDK initialize/discovery, strict unknown-key rejection on all tools, duplicate IDs, invalid locators, concurrency refusal, provenance and unavailable states, the actual source-disabled executable, cold-import isolation, and a synthetic roster → two-player evidence exchange over child-process stdio. The synthetic child blocks fetch, HTTP requests, socket connections and listeners; its console diagnostic is verified on stderr with no client protocol errors.
 
 ```sh

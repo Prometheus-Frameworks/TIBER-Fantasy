@@ -13,6 +13,48 @@ const ERROR_MESSAGES = {
 export type TeamToolError = keyof typeof ERROR_MESSAGES;
 export interface TeamToolResult { text: string; isError: boolean }
 
+/** Snapshot plain JSON data without invoking getters or serialization hooks. */
+function jsonSnapshot(value: unknown, ancestors = new Set<object>(), depth = 0): unknown {
+  if (depth > 100) throw new Error('Result nesting exceeds supported depth');
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || Object.is(value, -0)) throw new Error('Lossy number');
+    return value;
+  }
+  if (typeof value !== 'object') throw new Error('Non-JSON value');
+  if (ancestors.has(value)) throw new Error('Cyclic result');
+  const array = Array.isArray(value);
+  const prototype = Object.getPrototypeOf(value);
+  // structuredClone/VM readers can produce plain values in another realm.
+  const constructor = prototype && Object.getOwnPropertyDescriptor(prototype, 'constructor');
+  const nativeConstructor = constructor && 'value' in constructor && typeof constructor.value === 'function'
+    && Function.prototype.toString.call(constructor.value) === Function.prototype.toString.call(array ? Array : Object);
+  if (array ? !Array.isArray(prototype) || !nativeConstructor
+    : prototype !== null && (Object.getPrototypeOf(prototype) !== null || !nativeConstructor)) {
+    throw new Error('Non-plain result');
+  }
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  if (Object.getOwnPropertySymbols(value).length) throw new Error('Symbol keys');
+  ancestors.add(value);
+  try {
+    if (array) {
+      const length = (value as unknown[]).length;
+      if (Object.keys(descriptors).length !== length + 1) throw new Error('Sparse or extended array');
+      return Array.from({ length }, (_, i) => {
+        const descriptor = descriptors[String(i)];
+        if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) throw new Error('Invalid array entry');
+        return jsonSnapshot(descriptor.value, ancestors, depth + 1);
+      });
+    }
+    const copy = Object.create(null) as Record<string, unknown>;
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (!descriptor.enumerable || !('value' in descriptor)) throw new Error('Hidden or accessor property');
+      copy[key] = jsonSnapshot(descriptor.value, ancestors, depth + 1);
+    }
+    return copy;
+  } finally { ancestors.delete(value); }
+}
+
 export function teamToolError(code: TeamToolError): TeamToolResult {
   return {
     text: JSON.stringify({
@@ -25,10 +67,9 @@ export function teamToolError(code: TeamToolError): TeamToolResult {
 
 export function teamToolSuccess(data: unknown): TeamToolResult {
   try {
-    // Reject undefined rather than producing a success envelope with no data.
-    if (data === undefined) return teamToolError('internal_error');
+    const snapshot = jsonSnapshot(data);
     const text = JSON.stringify({
-      schema_version: TEAM_MCP_SCHEMA, status: 'ok', data,
+      schema_version: TEAM_MCP_SCHEMA, status: 'ok', data: snapshot,
       limitations: [
         'Successful retrieval does not establish complete or current evidence.',
         'Preserve nested source clocks, provenance, limitations and unavailable states.',

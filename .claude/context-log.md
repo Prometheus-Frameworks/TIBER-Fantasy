@@ -1,5 +1,11 @@
 # Tiber Fantasy — Context Log
 
+### 2026-09-21 — Codex: #406 P2 repair
+- **Authority:** Joe authorized both P2 repairs and a new independent review.
+- **Changes:** Recursive lossless JSON snapshot validation; pre-import isolation preload for actual and synthetic stdio children, with import-time negative controls.
+- **Validation:** 47 contract tests, five protocol tests and targeted strict TypeScript check pass. See docs/mcp/team-read-only-v0.md.
+- **Boundary:** Source access remains disabled; keep draft/unmerged. No deployment, Fable dispatch or review-thread resolution.
+
 Running changelog of significant changes across all agents. Most recent entries at top.
 Every agent should append an entry here after completing work.
 
