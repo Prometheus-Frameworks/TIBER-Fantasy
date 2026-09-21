@@ -7,6 +7,15 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### Unreleased — 2026-09-21: Source-backed TIBER Now refresh
+- **Branch:** `codex/tiber-now-status`
+- **Summary:** Rechecked the canonical status page against 14 upstream default branches, current issues, PR/review states, maintainer decisions, and 13 companion draft PRs. Recorded the merged waiver source without asserting a live release, and added the source-disabled Team MCP draft plus its two unresolved P2 review findings.
+- **Key Files:**
+  - `docs/TIBER_NOW.md` — September 21 evidence, readiness distinctions, source pins, and change record
+  - `.claude/context-log.md` and `.claude/agents/codex.md` — required handoff logs
+- **Validation:** All 14 default-branch heads and READMEs and all 13 companion PR states were rechecked; relevant Fantasy issues, PRs, reviews, and evidence links were inspected; Markdown assertions passed. No app tests or hosted/device/runtime validation were run for this documentation-only change.
+- **Handoff:** PR #401 remains open, draft, unmerged, and requires branch synchronization before merge consideration. No review was requested; no deployment, data/model/provider activation, main-branch edit, or contributor communication occurred.
+
 ### Unreleased — 2026-08-09: Rankings season-honesty review corrections
 - **Branch:** `codex/pr311-correction-round`
 - **Summary:** Closed the remaining Fantasy #307 Phase A review findings across postseason defaults/archive labels and stale-calendar API/UI behavior, including a real mounted fresh-to-stale container regression.
