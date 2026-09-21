@@ -2,6 +2,7 @@ import { createTeamToolDefinitions, TEAM_TOOL_NAMES } from '../mcp/teamToolDefin
 import type { TeamToolDependencies } from '../mcp/teamToolDefinitions';
 import { MAX_TEAM_RESULT_BYTES, teamToolSuccess } from '../mcp/teamToolResults';
 import { parseSleeperRosterUrl } from '../draftReviewService';
+import { runInNewContext } from 'node:vm';
 
 // Synthetic service responses only. The actual pure parser is reused to avoid
 // testing a second implementation of URL semantics. No source reader is invoked.
@@ -169,6 +170,46 @@ describe('Team MCP contracts (offline)', () => {
     const value = { a: shared, b: shared, values: [null, 0, '', false] };
     expect(decode(teamToolSuccess(value)).data).toEqual(value);
     expect(decode(teamToolSuccess(value)).data.a).not.toHaveProperty('missing');
+  });
+
+  test('rejects constructor-spoofed prototypes without invoking inherited accessors', () => {
+    const getter = jest.fn(() => undefined);
+    for (const inherited of [{ value: undefined }, { get: getter }]) {
+      const prototype = Object.create(null, {
+        constructor: { value: Object }, inherited: { ...inherited, enumerable: true },
+      });
+      const value = Object.assign(Object.create(prototype), { observed: null });
+      expect(decode(teamToolSuccess(value)).status).toBe('internal_error');
+    }
+    const arrayPrototype = Object.assign([], { constructor: Array });
+    expect(decode(teamToolSuccess(Object.setPrototypeOf([1], arrayPrototype))).status).toBe('internal_error');
+    expect(getter).not.toHaveBeenCalled();
+  });
+
+  test('preserves cross-realm and null-prototype JSON containers', () => {
+    const value = runInNewContext('({ a: [null, 1, "é"], b: Object.assign(Object.create(null), { flag: false }) })');
+    const result = teamToolSuccess(value);
+    expect(result.isError).toBe(false);
+    expect(decode(result).data).toEqual({ a: [null, 1, 'é'], b: { flag: false } });
+  });
+
+  test.each(['é', '😀', '\n', '"', '\ud800'])('counts escaped and multibyte strings and keys at the exact cap: %p', unit => {
+    const value = { [unit]: [unit.repeat(100), ''] };
+    const overhead = Buffer.byteLength(teamToolSuccess(value).text);
+    value[unit][1] = 'a'.repeat(MAX_TEAM_RESULT_BYTES - overhead);
+    const atLimit = teamToolSuccess(value);
+    expect(atLimit.isError).toBe(false);
+    expect(Buffer.byteLength(atLimit.text)).toBe(MAX_TEAM_RESULT_BYTES);
+    value[unit][1] += 'a';
+    expect(decode(teamToolSuccess(value)).status).toBe('response_too_large');
+  });
+
+  test('rejects proxy-based prototype spoofing without executing traps', () => {
+    const trap = jest.fn(() => Object.prototype);
+    for (const value of [new Proxy({}, { getPrototypeOf: trap }), Object.create(new Proxy({}, { getPrototypeOf: trap }))]) {
+      expect(decode(teamToolSuccess(value)).status).toBe('internal_error');
+    }
+    expect(trap).not.toHaveBeenCalled();
   });
 
   test('malformed reader evidence refuses instead of reporting transformed success', async () => {

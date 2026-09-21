@@ -14,6 +14,24 @@ const capabilityName = 'tiber_team_describe_capabilities';
 const rosterArgs = { sleeper_url: 'https://sleeper.com/roster/123/1' };
 function data(result: any) { return JSON.parse(result.content[0].text); }
 
+test('shared-reference expansion refuses within a bounded child process and recovers', () => {
+  // A synchronous regression cannot be stopped by a test-runner timer in the
+  // same process. Keep both a process deadline and a heap cap on this exploit.
+  const output = execFileSync(process.execPath, [
+    '--max-old-space-size=128', '--import', 'tsx', '--input-type=module', '-e', `
+    const { teamToolSuccess } = await import('./server/modules/draftReview/mcp/teamToolResults.ts');
+    const statuses = [];
+    for (const array of [false, true]) {
+      let value = {};
+      for (let i = 0; i < 100; i++) value = array ? [value, value] : { a: value, b: value };
+      statuses.push(JSON.parse(teamToolSuccess(value).text).status);
+    }
+    statuses.push(JSON.parse(teamToolSuccess({ observed: null }).text).status);
+    process.stdout.write(JSON.stringify(statuses));
+  `], { cwd: process.cwd(), env: {}, encoding: 'utf8', timeout: 10000, stdio: 'pipe' });
+  assert.deepEqual(JSON.parse(output), ['response_too_large', 'response_too_large', 'ok']);
+});
+
 test('SDK protocol preserves strict contracts, evidence, failures and concurrency', { timeout: 10000 }, async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error('Network forbidden'); };

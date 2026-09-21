@@ -30,6 +30,18 @@ Dependency metadata (`disabled`, `synthetic`, or unspecified injected readers) d
 
 ## Validation
 
+### Second P2 review repair (September 21, PR #406)
+
+Starting head: `bc5552c66d9c5968c2e5d2d2d9b6ebac2c333157`. Re-review comments 4061823622 and 4061823626 identified constructor-spoofed custom prototypes and exponential shared-reference expansion before the size check.
+
+The plain-container check now requires the native constructor's own `prototype` descriptor to point back to the exact inspected prototype. Borrowing `Object` or `Array` no longer admits a custom prototype. Proxies are rejected before reflection to prevent trap-based spoofing. Cross-realm ordinary containers and null-prototype objects remain supported; inherited accessors are not invoked.
+
+Snapshot traversal reserves the fixed success envelope and charges UTF-8 JSON bytes for every expanded occurrence, key, separator and delimiter before copying. Oversized output returns `response_too_large` during traversal; malformed data remains `internal_error`. Arrays append validated values without unchecked preallocation. The final byte guard remains as defense in depth. This bounds encoder expansion, not memory already consumed by an injected reader or its input object.
+
+Both regressions were reproduced before repair: the spoof returned `ok`, and a depth-100 DAG exhausted a dedicated test child's 128 MiB heap. The regression test now exercises object and array DAGs under that heap cap and a 10-second process deadline, expects `response_too_large`, then verifies a normal result still succeeds. This is a regression deadline, not a production latency guarantee.
+
+Validation: **55 Jest contract tests and six Node/tsx tests pass**, including exact byte-cap and one-byte-over cases with multibyte characters, escaped keys/values and a lone surrogate. The targeted strict TypeScript command below passes with `server/mcp/__tests__/teamIsolationGuards.ts` included; `git diff --check` passes. Dependencies and source-disabled executable bindings are unchanged. Independent review of the new published head remains pending; no finding is self-resolved and no merge, source activation or deployment is authorized.
+
 ### P2 review repair (September 21, PR #406)
 
 The initial review at `d4e58986ee2613525c9dfd8bac927626a3abb58e` found two gaps. Results now recursively snapshot plain JSON data before encoding, rejecting non-finite numbers, negative zero, nested undefined, sparse/extended arrays, cycles, symbols, accessors, hidden properties and non-plain objects rather than silently coercing them. Genuine null, omitted keys and repeated non-cyclic references retain their meaning. Serialization hooks are not invoked; nesting beyond 100 levels fails closed. Cross-realm plain objects/arrays (including structuredClone output) are supported.

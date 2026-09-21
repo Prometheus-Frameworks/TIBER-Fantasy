@@ -862,3 +862,11 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - **Changes:** Added injectable MCP builder and guarded executable; complete strict schemas preserve unknown-key rejection. Default source readers remain disabled. Added Node/tsx ESM protocol suite and test-only synthetic child.
 - **Validation:** 33 Jest contract tests + 4 protocol tests pass; targeted strict TypeScript check passes. Cold import and child-process stdout checks pass; synthetic child blocks network/listeners. No live provider, DB or artifact reads.
 - **Resume:** See docs/mcp/team-read-only-v0.md. Review transport, verify source-use scope, then consider live reader binding/client acceptance. No Fable, PR, push, merge or deployment.
+
+
+### 2026-09-21 — Codex: #406 second P2 repair
+- **Authority:** Joe authorized implementation, validation and updating the existing draft PR; keep source-disabled, unmerged and undeployed.
+- **Changes:** Verify native constructor/prototype identity, reject proxies before reflection, and enforce an envelope-inclusive UTF-8 budget during every snapshot occurrence. Preserve cross-realm/null-prototype containers and bounded shared references.
+- **Files:** teamToolResults.ts, teamToolDefinitions.test.ts, teamStdio.protocol.ts and docs/mcp/team-read-only-v0.md.
+- **Validation:** Both reported regressions reproduced at bc5552c; repaired 55 contract tests and six protocol/process tests pass; targeted strict TypeScript and diff whitespace checks pass. DAG regression is isolated under a 128 MiB heap cap and process deadline.
+- **Resume:** New exact-head independent review remains pending; leave review threads unresolved. No source acquisition, admission, auth activation, merge or deployment.
