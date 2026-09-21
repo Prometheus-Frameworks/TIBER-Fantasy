@@ -1,5 +1,11 @@
 # TIBER Team / Draft Review compiler
 
+## MCP contract-only checkpoint (2026-09-21, #383)
+
+Subsequent stdio step: `server/mcp/teamStdioServer.ts` now registers these contracts and provides a source-disabled executable. Four SDK/child-process protocol tests and the original 33 contract tests pass. See [stdio checkpoint](../../../docs/mcp/team-read-only-v0.md). Production reader wiring and real-client live acceptance remain pending; the contract-only paragraph below records the earlier slice.
+
+`mcp/teamToolDefinitions.ts` defines capabilities, public roster and admitted-evidence reads using required injected dependencies. `mcp/teamToolResults.ts` bounds and sanitizes transport-neutral JSON results. There is no production reader wiring, SDK registration or executable connector in this slice. The 33 isolated tests and targeted TypeScript check pass; see [checkpoint](../../../docs/mcp/team-contracts-checkpoint-2026-09-21.md) for exact commands, limits and the stdio resume point. Existing HTTP and historical source behavior is unchanged.
+
 Read-only public context compiler for a Sleeper redraft roster.
 
 ## Team web entry (issue #371)

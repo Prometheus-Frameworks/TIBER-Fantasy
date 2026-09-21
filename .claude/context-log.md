@@ -841,3 +841,18 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+
+### 2026-09-21 — Codex: #383 Team MCP contracts and isolated tests
+- **Authority:** Joe authorized tool contracts and isolated tests before Fable.
+- **What changed:** Three injected read-only tool definitions, strict inputs, versioned bounded results, sanitized errors and per-instance roster concurrency guard. No runnable MCP server or production reader wiring.
+- **Files modified:** server/modules/draftReview/mcp/teamToolDefinitions.ts, teamToolResults.ts, __tests__/teamToolDefinitions.test.ts, MODULE.md and docs/mcp/team-contracts-checkpoint-2026-09-21.md.
+- **Validation:** 33 targeted Jest tests pass; targeted strict TypeScript check passes. Synthetic readers only; fetch spy records no calls. Package/lock unchanged.
+- **Notes:** Local branch based on 71ca2a09482ed29c3ae878a050fc6f030d1bbd6c. Next: stdio registration and protocol validation. No live source, Fable, PR, merge or deployment.
+
+
+### 2026-09-21 — Codex: #383 source-disabled stdio entry
+- **Authority:** Joe authorized the stdio entry after the isolated contract slice.
+- **Changes:** Added injectable MCP builder and guarded executable; complete strict schemas preserve unknown-key rejection. Default source readers remain disabled. Added Node/tsx ESM protocol suite and test-only synthetic child.
+- **Validation:** 33 Jest contract tests + 4 protocol tests pass; targeted strict TypeScript check passes. Cold import and child-process stdout checks pass; synthetic child blocks network/listeners. No live provider, DB or artifact reads.
+- **Resume:** See docs/mcp/team-read-only-v0.md. Review transport, verify source-use scope, then consider live reader binding/client acceptance. No Fable, PR, push, merge or deployment.
