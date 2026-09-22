@@ -228,3 +228,15 @@
 .tm-score span { opacity: .4; }
 .tm-outcome { color: var(--drp-orange); }
 @media (max-width: 480px) { .tm-manager { padding: 16px; } .tm-controls > label:first-child { flex-basis: 100%; } }
+
+/* Manager native controls retain readable contrast on portrait Safari. */
+.tm-manager select { color-scheme: dark; background: #17191d !important; color: #f3f4f6 !important; -webkit-text-fill-color: #f3f4f6; }
+.tm-exposure { display: grid; gap: 16px; min-width: 0; }
+.tm-exposure h3 { font-size: 22px; }
+.tm-player summary { cursor: pointer; display: grid; gap: 8px; min-height: 44px; }
+.tm-player summary small { display: block; color: #aeb1b8; margin-top: 4px; }
+.tm-exposure-count { font: 600 16px/1.4 var(--font-mono); color: #f48a42; }
+.tm-injury { color: #ffb679; }
+.tm-holding { border-top: 1px solid var(--drp-border); padding-top: 14px; margin-top: 14px; }
+.tm-holding button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.tm-player strong, .tm-holding strong { overflow-wrap: anywhere; }

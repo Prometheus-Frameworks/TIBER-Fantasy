@@ -796,3 +796,16 @@ Typecheck repair comparison: all 506 baseline diagnostics retain identical per-f
 Joe authorized the smallest repair and fresh review for discussion_r4011414253 at `aeedd34c703f1dff69530d28e8712cbea5c4965e`. Restrict NFL state season_type to the documented `pre`, `regular`, `post` values (https://docs.sleeper.com/#get-nfl-state, checked September 15). Unknown/empty values now follow existing unavailable-state handling, preserving scores without a validated NFL-state timestamp. Recognized pre/post remain pending; regular-season derivation is unchanged.
 
 The two new invalid-value regressions failed before the one-line production repair; all 34 Manager compiler/HTTP and UI tests pass after it, including recognized pre/post observation checks. `git diff --check` passes. Earlier full-build/506-baseline-typecheck receipts apply to the preceding head; they were not rerun for this enum-only repair. Fresh independent review and isolated portrait-phone acceptance remain pending. No merge, deployment, base/dependency changes, auth/database activation or transactions.
+
+
+### 2026-09-15 — Codex: Manager player exposure v0
+Joe authorized the Players view and preview: selected-league player percentages, expandable league/placement/Open Team context, source injury labels with separate check clocks. Separate branch stacks on #387 `354cfe2b`; no merge/dependency reconciliation. Additive public no-store endpoint validates roster membership and content, retains unavailable directory rows as source IDs, and uses a five-minute single-flight directory cache. Distinct loaded league denominator and explicit multiple-roster choices; two-worker request pacing and cancellation. Also correct portrait select contrast and not-loaded weekly label from Joe's screenshots.
+42 tests/five suites and full build pass. No DB/auth activation, production changes, new dependencies or transactions. Independent review and phone acceptance pending. See docs/reviews/manager-player-exposure-v0.md for semantics and validation.
+
+Validation receipt: typecheck retains exactly 506 baseline diagnostics by file/code, with no added diagnostics. Built public HTTP smoke: /team 200, exposure for one live selected league 200/no-store with 16 roster entities and a dated directory observation, private auth 404. No personal source fixtures committed.
+
+### 2026-09-22 — Codex: PR #388 empty starter placeholder repair
+- **What changed:** Admit `""` only in exposure starters and filter it alongside `"0"`; preserve strict roster membership and denominator semantics.
+- **Files modified:** `server/modules/draftReview/teamExposure.ts`, its tests, `docs/reviews/manager-player-exposure-v0.md`, and required agent logs.
+- **Validation:** Regression fails before repair; 59 focused exposure/Manager tests pass after repair; server build passes (existing duplicate-member warning); diff whitespace check passes.
+- **Notes:** User-authorized bounded repair; #387 base unchanged at `354cfe2b7264ff49167daa3cd50229aba1e273d7`. Repaired-head independent review and phone acceptance remain separate. No merge or production change.
