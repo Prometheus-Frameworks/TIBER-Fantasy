@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-22 — Codex: Conditional publication and main synchronization
+- **What changed:** Made publication conditional on the page existing on `main`, addressing P2 4071297759. Merged main at `71ca2a09482ed29c3ae878a050fc6f030d1bbd6c` into the PR branch, retaining both branches' appended log entries.
+- **Files modified:** `docs/TIBER_NOW.md` and the two required agent logs; main's existing code is preserved without edits.
+- **Validation:** Conflict-marker and whitespace checks; compared the result with main to confirm only the existing four documentation files differ; verified both parents' log entries are retained and the page changes only its publication paragraph.
+- **Handoff:** Fresh review must cover the synchronized head. Consult PR #401 for current disposition. Canonical-page-first ordering remains required for companion README links. This operation updates the PR branch only; it does not merge the PR or deploy.
+
 ### 2026-09-22 — Codex: TIBER Now publication wording repair
 - **What changed:** Addressed P2 review comment 4070789464 by replacing the temporary publication checkpoint with branch-aware canonical-page wording and labeling the September 21 handoffs as historical.
 - **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
@@ -861,3 +867,19 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - **Validation:** Verified #401 open/draft/unmerged at head `2144ecf05e2c35c7de99251f6afe5a05dbe280a8`; read every one of the 14 default-branch READMEs; confirmed all 14 default branches remain `main` and all recorded commit pins are unchanged; inspected the open PR list, recent issue records, exact PR state/heads and review discussions for #396, #405, #377, #388, #403 and #395. No application tests, local Forecast artifact inspection, live data refresh, preview deployment or device acceptance were performed by this documentation run.
 - **Concurrency:** Pre-write page/log blob SHAs were `5e2d89b5728565e09b7a26b716006040d517d098`, `9d4d61de3744a5fb30a641d6b6e5934b4a998b3b`, and `735784d42620d213c4b30a4547d056fe116cd99e`; recheck branch/file identity before each non-force update and stop on drift.
 - **Handoff:** Candidate only; #401 remains draft and unmerged. The new head needs separate maintainer review/merge. Canonical page must merge before companion README links. No review dispatch, main edit, runtime/provider/model/data activation, contributor message, merge or deployment is authorized by this update.
+
+### 2026-09-16 — Codex: Team waiver context
+- Operator-authorized #371 follow-up: additive observed waiver settings, calculated FAAB/priority, and explicit-check selected candidate shortlist in copied agent context.
+- Files: shared/teamWaiverContext.ts, draftReview service/routes, reused membership validator, Team panel and scoped packet builder, regression tests and module notes.
+- Validation and operational limits: docs/audits/team-waiver-context-2026-09-16.md. No merge, production deployment, private claims, source admission, ranking or roster mutation.
+
+### 2026-09-19 — Codex: Pairwise waiver comparison (#404)
+- **What changed:** Compare two explicitly shortlisted waiver candidates with admitted 2025 historical evidence and a pair-only agent discussion packet. Missing history remains discussable. Selection, evidence and clipboard completion are invalidated on relevant refresh/scope/pair changes.
+- **Files modified:** DraftReviewWaivers, new DraftReviewWaiverComparison, shared/teamWaiverComparison, existing comparison table export, CSS and focused tests.
+- **Validation:** 75 tests in nine focused suites pass; production build passes; typecheck retains 507 baseline diagnostics with no added per-file/error-code counts.
+- **Notes:** Stacked draft on #396, which remains unchanged. Railway Settings > Environments showed “Enable PR Environments” before publication (automatic PR deployments disabled). No merge or deployment authorized. Independent review and portrait-phone acceptance pending. See docs/audits/team-waiver-comparison-2026-09-19.md.
+
+### 2026-09-19 — Codex: #405 attribution review repair
+- Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
+- Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
+- Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
