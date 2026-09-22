@@ -5,13 +5,19 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-22 — Codex: TIBER Now publication wording repair
+- **What changed:** Addressed P2 review comment 4070789464 by replacing the temporary publication checkpoint with branch-aware canonical-page wording and labeling the September 21 handoffs as historical.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Inspected the three-file text diff; preserved all September 21 evidence dates, repository pins, readiness rows and links outside the publication paragraph. Documentation-only change; application tests are not applicable.
+- **Handoff:** Review the repair at its exact PR head before a maintainer merge decision. The canonical default-branch page must exist before companion links merge. Consult PR #401 for current review and merge state; this log is a dated work receipt. No merge, deployment or source activation was performed by this repair.
+
 ### 2026-09-21 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Reverified all 14 linked upstream repositories and the 13 companion draft PRs; recorded Fantasy PRs #396 and #405 as merged source while keeping live-release and phone-acceptance claims separate; added draft PR #406 as a source-disabled local Team MCP candidate with two current P2 review findings; advanced only the Fantasy source pin.
 - **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only.
 - **Validation:** Checked all 14 default-branch heads and READMEs, all 13 companion PR states, relevant Fantasy issues/PRs/reviews, exact evidence links, and Markdown status assertions. No application tests, hosted/device checks, runtime changes, deployment, data admission, or model/provider activation were performed.
 - **Concurrency:** Immediately before writing, PR #401 was open, draft, unmerged, and not mergeable at head `c8ed7b4da3c19bf28c5c9211d0009bd7d77b152a`; each file update used its exact current blob SHA through the non-force contents API.
-- **Handoff:** Documentation candidate only. Keep #401 draft and unmerged; branch synchronization and maintainer review are separate next steps. No review request or contributor message was sent.
+- **Historical handoff (September 21):** At that check, #401 was a draft, unmerged candidate requiring branch synchronization and maintainer review. That run sent no review request and performed no merge, deployment or activation. This records the state at that check; consult PR #401 for current publication and review state.
 
 ### 2026-08-09 — Codex: Rankings season-honesty review corrections
 - **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.

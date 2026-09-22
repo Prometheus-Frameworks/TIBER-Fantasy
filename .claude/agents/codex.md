@@ -7,6 +7,12 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### 2026-09-22 — Codex: TIBER Now publication wording repair
+- **What changed:** Addressed P2 review comment 4070789464 by replacing the temporary publication checkpoint with branch-aware canonical-page wording and labeling the September 21 handoffs as historical.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Inspected the three-file text diff; preserved all September 21 evidence dates, repository pins, readiness rows and links outside the publication paragraph. Documentation-only change; application tests are not applicable.
+- **Handoff:** Review the repair at its exact PR head before a maintainer merge decision. The canonical default-branch page must exist before companion links merge. Consult PR #401 for current review and merge state; this log is a dated work receipt. No merge, deployment or source activation was performed by this repair.
+
 ### Unreleased — 2026-09-21: Source-backed TIBER Now refresh
 - **Branch:** `codex/tiber-now-status`
 - **Summary:** Rechecked the canonical status page against 14 upstream default branches, current issues, PR/review states, maintainer decisions, and 13 companion draft PRs. Recorded the merged waiver source without asserting a live release, and added the source-disabled Team MCP draft plus its two unresolved P2 review findings.
@@ -14,7 +20,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
   - `docs/TIBER_NOW.md` — September 21 evidence, readiness distinctions, source pins, and change record
   - `.claude/context-log.md` and `.claude/agents/codex.md` — required handoff logs
 - **Validation:** All 14 default-branch heads and READMEs and all 13 companion PR states were rechecked; relevant Fantasy issues, PRs, reviews, and evidence links were inspected; Markdown assertions passed. No app tests or hosted/device/runtime validation were run for this documentation-only change.
-- **Handoff:** PR #401 remains open, draft, unmerged, and requires branch synchronization before merge consideration. No review was requested; no deployment, data/model/provider activation, main-branch edit, or contributor communication occurred.
+- **Historical handoff (September 21):** At that check, #401 was a draft, unmerged candidate requiring branch synchronization and maintainer review. That run sent no review request and performed no merge, deployment or activation. This records the state at that check; consult PR #401 for current publication and review state.
 
 ### Unreleased — 2026-08-09: Rankings season-honesty review corrections
 - **Branch:** `codex/pr311-correction-round`

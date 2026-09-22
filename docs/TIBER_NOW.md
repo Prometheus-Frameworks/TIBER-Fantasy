@@ -3,7 +3,7 @@
 **Last repository check: September 21, 2026 (UTC).**  
 **Scope:** public upstream source and GitHub work records. Deployment, live accounts and current data freshness were not tested in this check.
 
-**Publication checkpoint — September 21:** this page remains a review candidate in [draft PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401), not yet published on the default branch. Before this refresh, the branch was at `c8ed7b4da3c19bf28c5c9211d0009bd7d77b152a` and was not mergeable against Fantasy `main` after the waiver-feature merges; branch synchronization and maintainer review remain separate steps. Merge the canonical page before the companion cross-repository README links.
+**Publication:** the [default-branch copy](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/main/docs/TIBER_NOW.md) is the canonical published page; copies on review branches are proposed revisions. [PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401) records the initial publication review and merge state. Publish the canonical page before merging companion cross-repository README links. Publication does not change the dated evidence scope or establish live capability.
 
 TIBER builds open football research and decision-support tools: data contracts, interpretable models, and ways for people and their agents to inspect the evidence. This page is the shared starting point across the repositories.
 
