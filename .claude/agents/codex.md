@@ -1053,3 +1053,9 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Team historical Data workspace v0
+- Added lazy Team Data table with search/filter/metric controls, totals/means sort and four-player historical comparison.
+- Added bounded admitted-cohort endpoint and selected investigation packet; preserved source receipts, missingness and independent clocks. Existing waiver and evidence selection contracts remain unchanged.
+- Validation: 137 focused tests, production build, no added baseline-relative TS diagnostic lines; local HTTP 200 offline-directory fallback. Browser/phone acceptance pending (Chromium absent).
+- Local branch `codex/team-data-suite-v0`; no remote publication because current automatic deployment suppression was not verified. No merge, deployment or transactions. Audit: docs/audits/team-historical-data-v0-2026-09-22.md.

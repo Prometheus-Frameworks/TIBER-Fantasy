@@ -187,3 +187,15 @@ describe('weekly evidence preparation route', () => {
     expect(result.status).toBe(400);expect(result.headers['cache-control']).toBe('no-store');
   });
 });
+
+test('historical data route preserves evidence with ID labels when the directory is unavailable', async () => {
+  global.fetch = jest.fn(async () => { throw new Error('private directory diagnostic'); }) as typeof fetch;
+  const app = express(); app.use(createDraftReviewRouter());
+  const result = await request(app).get('/api/draft-review/data');
+  expect(result.status).toBe(200);
+  expect(result.headers['cache-control']).toBe('no-store');
+  expect(result.body.evidence.players).toHaveLength(94);
+  expect(result.body.directory.fetched_at).toBeNull();
+  expect(result.body.labels[0].name).toMatch(/^Sleeper player /);
+  expect(JSON.stringify(result.body)).not.toContain('private directory diagnostic');
+});

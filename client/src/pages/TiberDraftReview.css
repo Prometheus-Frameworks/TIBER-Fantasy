@@ -185,3 +185,19 @@
 .drp-te-content ul[aria-label="Selected waiver candidates"] { list-style: none; padding: 0; }
 .drp-te-content ul[aria-label="Selected waiver candidates"] li { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .drp-te-content ul[aria-label="Selected waiver candidates"] button { min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+
+/* Historical data keeps wide evidence inside its own keyboard-scrollable region. */
+.drp-data-workspace { min-width: 0; margin-top: 20px; }
+.drp-data-controls { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.drp-data-controls label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.drp-data-controls input, .drp-data-controls select { max-width: 100%; min-height: 40px; border: 1px solid #ddd; border-radius: 6px; padding: 8px; background: #fff; color: #222; }
+.drp-data-metrics { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.drp-data-metrics label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.drp-data-workspace fieldset { border: 1px solid #ddd; padding: 14px; border-radius: 8px; }
+.drp-data-workspace small { display: block; font-weight: 400; color: #555; margin-top: 5px; }
+.drp-data-workspace .drp-evidence-table { max-width: 100%; overflow-x: auto; }
+.drp-data-workspace table { min-width: 720px; }
+.drp-data-workspace th, .drp-data-workspace td { min-width: 130px; }
+.drp-data-workspace button { min-height: 40px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+.drp-data-comparison { margin-top: 24px; }
+@media (max-width: 600px) { .drp-data-controls label { width: 100%; } .drp-data-workspace table { min-width: 820px; } }

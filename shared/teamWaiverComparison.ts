@@ -5,7 +5,7 @@ import { selectWaiverCandidates, waiverCandidatesSchema, type WaiverCandidates }
 
 const metric = z.object({ total: z.number().finite().nullable(), mean: z.number().finite().nullable(), nonnull_weeks: z.number().int().nonnegative(), recorded_weeks: z.number().int().nonnegative() })
   .refine(v => v.nonnull_weeks <= v.recorded_weeks && (v.nonnull_weeks === 0 ? v.mean === null : v.mean !== null));
-const historySchema = z.object({
+export const historySchema = z.object({
   schema_version: z.literal('tiber_draft_review_historical_v1'), status: z.enum(['available', 'unavailable']), reason: z.string().nullable(),
   window: z.object({ season: z.literal(2025), week_start: z.literal(1), week_end: z.literal(18), period_basis: z.string() }),
   players: z.array(z.object({

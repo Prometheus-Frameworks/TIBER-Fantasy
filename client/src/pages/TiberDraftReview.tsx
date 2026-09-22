@@ -1,3 +1,4 @@
+import { DraftReviewData } from '@/components/draftReview/DraftReviewData';
 import DraftReviewWaivers from '@/components/draftReview/DraftReviewWaivers';
 import type { WaiverSettings, WaiverAttachment } from '@shared/teamWaiverContext';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
@@ -501,6 +502,8 @@ export default function TiberDraftReview() {
               </article>
             </div>
           </section>
+
+          <DraftReviewData key={`data:${reviewScope(review)}`} review={review} />
 
           <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={updateStudy} onDiscuss={() => void copyContext('comparison')} discussionStatus={copied === 'comparison' ? 'Comparison context copied' : ''} discussionError={discussionError} />
 

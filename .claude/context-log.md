@@ -841,3 +841,6 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Codex: Team historical Data workspace v0
+Implemented an on-demand admitted-2025 table and four-player comparison with selected historical investigation handoff. Reuses pinned adapter and existing name directory; preserves provenance, uncertainty and independent clocks. No private manager preference is hardcoded. Focused 137-test pass, build pass, no new baseline-relative TS diagnostics; actual browser/phone acceptance blocked by missing Chromium. Local branch only; no merge/deploy/trade or remote publication. See docs/audits/team-historical-data-v0-2026-09-22.md.
