@@ -6,7 +6,7 @@ const playerId = z.string().regex(/^[A-Za-z0-9_-]{1,32}$/);
 const ids = z.array(playerId).max(256);
 const leagueSchema = z.object({ league_id: sleeperId, season: leagueSeason, sport: z.literal('nfl'), total_rosters: z.number().int().min(1).max(64) });
 const memberSchema = z.object({ roster_id: z.number().int().min(1).max(64), league_id: sleeperId.optional(), owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish() }).passthrough();
-const contentsSchema = z.object({ players: ids, starters: ids.nullish(), reserve: ids.nullish(), taxi: ids.nullish() });
+const contentsSchema = z.object({ players: ids, starters: z.array(playerId.or(z.literal(''))).max(256).nullish(), reserve: ids.nullish(), taxi: ids.nullish() });
 const text = z.string().max(256).nullish();
 const playerSchema = z.object({ player_id: playerId.optional(), full_name: text, first_name: text, last_name: text, position: text, team: text, injury_status: text });
 const clean = (s: string | null | undefined) => s?.replace(/[\u0000-\u001f\u007f]/g, '').trim() || null;
@@ -42,7 +42,7 @@ export async function buildExposure(raw: unknown, sources: Sources = sleeperClie
       const parsed = contentsSchema.safeParse(member);
       if (!parsed.success) return { ...base, available: false, players: [] };
       const r = parsed.data;
-      const starters = (r.starters ?? []).filter(id => id !== '0');
+      const starters = (r.starters ?? []).filter(id => id !== '' && id !== '0');
       const reserve = r.reserve ?? []; const taxi = r.taxi ?? [];
       const union = Array.from(new Set([...r.players, ...reserve, ...taxi]));
       if (r.players.includes('0') || reserve.includes('0') || taxi.includes('0') || [r.players, starters, reserve, taxi].some(xs => new Set(xs).size !== xs.length) || starters.some(id => !r.players.includes(id) || reserve.includes(id) || taxi.includes(id)) || reserve.some(id => taxi.includes(id))) return { ...base, available: false, players: [] };

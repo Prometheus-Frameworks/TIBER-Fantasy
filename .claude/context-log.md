@@ -803,3 +803,9 @@ Joe authorized the Players view and preview: selected-league player percentages,
 42 tests/five suites and full build pass. No DB/auth activation, production changes, new dependencies or transactions. Independent review and phone acceptance pending. See docs/reviews/manager-player-exposure-v0.md for semantics and validation.
 
 Validation receipt: typecheck retains exactly 506 baseline diagnostics by file/code, with no added diagnostics. Built public HTTP smoke: /team 200, exposure for one live selected league 200/no-store with 16 roster entities and a dated directory observation, private auth 404. No personal source fixtures committed.
+
+### 2026-09-22 — Codex: PR #388 empty starter placeholder repair
+- **What changed:** Admit `""` only in exposure starters and filter it alongside `"0"`; preserve strict roster membership and denominator semantics.
+- **Files modified:** `server/modules/draftReview/teamExposure.ts`, its tests, `docs/reviews/manager-player-exposure-v0.md`, and required agent logs.
+- **Validation:** Regression fails before repair; 59 focused exposure/Manager tests pass after repair; server build passes (existing duplicate-member warning); diff whitespace check passes.
+- **Notes:** User-authorized bounded repair; #387 base unchanged at `354cfe2b7264ff49167daa3cd50229aba1e273d7`. Repaired-head independent review and phone acceptance remain separate. No merge or production change.

@@ -4,6 +4,34 @@ const input = { userId: '7', leagueId: '10', season: '2026' };
 const source = () => ({ getLeague: jest.fn().mockResolvedValue({ league_id: '10', season: '2026', sport: 'nfl', total_rosters: 2 }),
   getLeagueRosters: jest.fn().mockResolvedValue([{ roster_id: 1, owner_id: '7', players: ['1','2','3'], starters: ['1','0'], reserve: ['3'], taxi: ['4'] }, { roster_id: 2, owner_id: '8' }]) });
 const directory = async () => ({ receivedAt: '2026-09-15T10:00:00Z', players: { '1': { player_id: '1', full_name: 'Synthetic Player', position: 'WR', team: 'BAL', injury_status: 'Questionable' } } });
+test('empty starter placeholders preserve placement and the distinct-league denominator', async () => {
+  const s = source();
+  s.getLeagueRosters.mockResolvedValue([{ roster_id: 1, owner_id: '7', players: ['1','2','3'], starters: ['','1','0','','0'], reserve: ['3'], taxi: ['4'] }, { roster_id: 2, owner_id: '8' }]);
+  const populated = await buildExposure(input, s, directory);
+  expect(populated.rosters[0].available).toBe(true);
+  expect(populated.rosters[0].players.map(p => [p.sleeperId, p.location])).toEqual([['1','starter'],['2','bench'],['3','reserve'],['4','taxi']]);
+  s.getLeague.mockResolvedValue({ league_id: '20', season: '2026', sport: 'nfl', total_rosters: 2 });
+  s.getLeagueRosters.mockResolvedValue([{ roster_id: 1, owner_id: '7', players: [], starters: ['','0',''] }, { roster_id: 2, owner_id: '8' }]);
+  const empty = await buildExposure({ ...input, leagueId: '20' }, s, directory);
+  expect(empty.rosters[0]).toMatchObject({ available: true, players: [] });
+  const summary = summarizeExposure(['10','10','20','30'], { '10': populated, '20': empty }, {});
+  expect(summary.loaded).toBe(2);
+  expect(summary.rows).toHaveLength(4);
+  expect(summary.rows.every(row => row.percent === 50 && row.holdings.length === 1)).toBe(true);
+});
+test.each([
+  { players: [''] }, { players: ['1'], reserve: [''] }, { players: ['1'], taxi: [''] },
+  { players: ['0'] }, { players: ['1'], reserve: ['0'] }, { players: ['1'], taxi: ['0'] },
+  { players: ['1'], starters: [' '] }, { players: ['1'], starters: [null] },
+  { players: ['1'], starters: ['','1','1'] }, { players: ['1'], starters: ['','9'] },
+  { players: ['1'], starters: Array(257).fill('') },
+])('starter placeholder exception does not admit malformed contents %#', async invalid => {
+  const s = source();
+  s.getLeagueRosters.mockResolvedValue([{ roster_id: 1, owner_id: '7', ...invalid }, { roster_id: 2, owner_id: '8' }]);
+  const result = await buildExposure(input, s, directory);
+  expect(result.rosters[0]).toMatchObject({ available: false, players: [] });
+  expect(summarizeExposure(['10'], { '10': result }, {}).loaded).toBe(0);
+});
 test('source IDs, owner membership, union of reserve/taxi and current placement', async () => {
   const result = await buildExposure(input, source(), directory);
   expect(result.rosters[0].players.map(p => [p.sleeperId, p.location])).toEqual([['1','starter'],['2','bench'],['3','reserve'],['4','taxi']]);
