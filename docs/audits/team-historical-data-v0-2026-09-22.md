@@ -24,3 +24,9 @@ The copy action includes the base Team roster context and a selected-only data-s
 No merge, deployment, trade, claim or external manager message. Independent review and actual phone acceptance remain pending. Remote publication is not performed because current automatic preview/deployment suppression was not verified. The implementation is available as a local reviewable branch.
 
 The explorer covers the admitted cohort only, not the entire NFL pool. Players outside that cohort cannot acquire history through this view. 2026 Weekly Pulse and observed charts remain separate work; current-season forecasts and regression probabilities remain unavailable. It does not establish that any target improves on the incumbent or justify a first-round-pick premium.
+
+## PR #408 review repair
+
+The independent review of published head `98324db350091890273b4da61b33e34e330e5cc5` reported two P2 findings. This bounded repair validates the directory snapshot (object, bounded finite acquisition timestamp and record-shaped players container) within the existing fallback boundary. Missing, null or malformed containers preserve historical evidence with ID labels and an unavailable directory clock. Individual player validation remains separate. Both name and ID sort tie-breakers now explicitly use English collation.
+
+Regression coverage includes malformed snapshots, valid name/clock preservation, a successful upstream null response through the HTTP route, and equal/unavailable metrics under a simulated Swedish ambient locale. All 57 tests in five focused suites pass. Baseline-relative TypeScript comparison adds no diagnostics. Browser/portrait-phone acceptance remains pending. The source bundle and historical admission contract are unchanged.

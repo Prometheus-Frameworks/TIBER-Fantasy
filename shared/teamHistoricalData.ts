@@ -22,7 +22,7 @@ export function sortHistoricalRows(rows: DataRow[], metric: string, mode: 'mean'
     const bv = b.history.status === 'available' ? b.history.derived[metric]?.[mode] ?? null : null;
     if (av === null && bv !== null) return 1;
     if (bv === null && av !== null) return -1;
-    return (av !== null && bv !== null ? (av - bv) * (descending ? -1 : 1) : 0) || a.name.localeCompare(b.name) || a.history.player_id.localeCompare(b.history.player_id);
+    return (av !== null && bv !== null ? (av - bv) * (descending ? -1 : 1) : 0) || a.name.localeCompare(b.name, 'en') || a.history.player_id.localeCompare(b.history.player_id, 'en');
   });
 }
 export function historicalDataPacket<T extends { input: { canonicalUrl: string }; generated_at: string }>(review: T, raw: HistoricalCatalog, ids: string[], metrics: string[]) {

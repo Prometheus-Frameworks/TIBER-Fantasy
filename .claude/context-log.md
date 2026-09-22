@@ -844,3 +844,6 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 
 ### 2026-09-22 — Codex: Team historical Data workspace v0
 Implemented an on-demand admitted-2025 table and four-player comparison with selected historical investigation handoff. Reuses pinned adapter and existing name directory; preserves provenance, uncertainty and independent clocks. No private manager preference is hardcoded. Focused 137-test pass, build pass, no new baseline-relative TS diagnostics; actual browser/phone acceptance blocked by missing Chromium. Local branch only; no merge/deploy/trade or remote publication. See docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — Codex: PR #408 P2 repairs
+Validated historical catalog directory containers inside the fallback boundary and pinned both sorting tie-breakers to English. Added malformed-snapshot, HTTP-null-payload, valid-directory and ambient-locale regression tests. Five focused suites / 57 tests pass; no new baseline-relative TS diagnostics. Re-review required on the published repair head. No merge, deployment or source activation; phone acceptance remains pending.

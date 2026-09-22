@@ -1059,3 +1059,8 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Added bounded admitted-cohort endpoint and selected investigation packet; preserved source receipts, missingness and independent clocks. Existing waiver and evidence selection contracts remain unchanged.
 - Validation: 137 focused tests, production build, no added baseline-relative TS diagnostic lines; local HTTP 200 offline-directory fallback. Browser/phone acceptance pending (Chromium absent).
 - Local branch `codex/team-data-suite-v0`; no remote publication because current automatic deployment suppression was not verified. No merge, deployment or transactions. Audit: docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — PR #408 P2 repairs
+- Addressed malformed directory fallback and ambient-locale sorting findings from reviewed head 98324db350091890273b4da61b33e34e330e5cc5.
+- Added container validation within the fallback boundary; malformed labels cannot take down admitted historical evidence. Pinned both sorting tie-breakers to English.
+- Validation: 57 tests across five focused suites pass; no new baseline-relative TS diagnostic lines. Phone acceptance remains separate and pending. User authorized repair and fresh independent review; no merge/deploy/source activation.

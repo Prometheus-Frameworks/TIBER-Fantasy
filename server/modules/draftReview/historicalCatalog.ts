@@ -1,13 +1,19 @@
+import { z } from 'zod';
 import { historicalCatalogSchema } from '../../../shared/teamHistoricalData';
 import { historicalCatalogEvidence } from './historicalEvidence';
 import { getDraftReviewPlayerDirectory } from './draftReviewService';
 import { directoryEntry, display } from './unrosteredTes';
 
+const directorySnapshot = z.object({
+  fetchedAt: z.number().finite().min(0).max(8.64e15),
+  players: z.record(z.unknown()),
+});
+
 export async function buildHistoricalCatalog() {
   const evidence = historicalCatalogEvidence();
-  let directory: Awaited<ReturnType<typeof getDraftReviewPlayerDirectory>> | null = null;
+  let directory: z.infer<typeof directorySnapshot> | null = null;
   if (evidence.status === 'available') {
-    try { directory = await getDraftReviewPlayerDirectory(); } catch { /* ID labels preserve history when the directory is down. */ }
+    try { directory = directorySnapshot.parse(await getDraftReviewPlayerDirectory()); } catch { /* ID labels preserve history when the directory is down. */ }
   }
   return historicalCatalogSchema.parse({
     schema_version: 'tiber_team_historical_catalog_v1', evidence,
