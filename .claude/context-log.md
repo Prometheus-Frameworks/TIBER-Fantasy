@@ -5,6 +5,14 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-23 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Teamstate #95 as isolated provisional adapter source without claiming a real-packet pilot; added reviewed draft Fantasy #408, the repaired/re-reviewed #388 state, open non-draft #406, and documentation-only Forecast #189.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** Confirmed all 14 default branches remain `main` and all 14 README reads succeeded; Teamstate alone advanced its source pin to `9513fdae81d3a70189b8ebf03f38d40e1921204e`. Checked exact PR heads, merge/draft states and review discussions for Teamstate #95, Fantasy #388/#401/#406/#408 and Forecast #189. All 13 companion README-link PRs remain open, non-draft and unmerged. No application tests, football-data reads, local Forecast artifact execution, hosted/device checks, deployment, data admission, model/provider activation or runtime changes were performed by this documentation run.
+- **Concurrency:** Immediately before writing, #401 was open, non-draft and unmerged at `c8055d7c9e885b88f12c05d70012fc286d3a524f`; the starting page/log blob SHAs were `0d10415ef664c9904fcebf38df1c6f1eac729a2c`, `f75c9c2a575aa19898ab2b39f2c75f9ce63fea7c`, and `577939ac3858d943263c6e378cd4976cca5e5ae9`. Each write must recheck the exact current blob SHA and stop on drift.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; the updated head needs separate maintainer review/merge. Canonical-page-first ordering remains required before companion README links. No review request, main edit, contributor message, merge, deployment or activation was performed.
+
 ### 2026-09-22 — Codex: Conditional publication and main synchronization
 - **What changed:** Made publication conditional on the page existing on `main`, addressing P2 4071297759. Merged main at `71ca2a09482ed29c3ae878a050fc6f030d1bbd6c` into the PR branch, retaining both branches' appended log entries.
 - **Files modified:** `docs/TIBER_NOW.md` and the two required agent logs; main's existing code is preserved without edits.
