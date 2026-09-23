@@ -1064,3 +1064,6 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Addressed malformed directory fallback and ambient-locale sorting findings from reviewed head 98324db350091890273b4da61b33e34e330e5cc5.
 - Added container validation within the fallback boundary; malformed labels cannot take down admitted historical evidence. Pinned both sorting tie-breakers to English.
 - Validation: 57 tests across five focused suites pass; no new baseline-relative TS diagnostic lines. Phone acceptance remains separate and pending. User authorized repair and fresh independent review; no merge/deploy/source activation.
+# 2026-09-23 — Team Data Suite directory cache repair (#408)
+
+Rejected malformed Sleeper directory containers at the shared cache boundary and covered fallback followed by normal Team recovery. Three focused suites passed (52 tests); server build passed; typecheck retained broad baseline errors (507, none in touched files). Draft PR review requested at the published exact head. No merge, deployment, or source admission.

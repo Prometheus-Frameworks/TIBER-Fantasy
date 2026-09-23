@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-23 — Codex: Prevent malformed directory cache poisoning (#408)
+- **What changed:** The shared Sleeper player directory rejects non-record containers before caching them. A catalog fallback can no longer leave a malformed snapshot for normal Team reads.
+- **Files modified:** `server/modules/draftReview/draftReviewService.ts`, `server/modules/draftReview/__tests__/historicalCatalog.test.ts`.
+- **Validation:** Three focused suites passed (52 tests); server build passed with the existing duplicate-member warning. Typecheck remains nonclean (507 diagnostics, none in the touched files); `git diff --check` passed.
+- **Notes:** Draft PR #408 remains unmerged and undeployed; exact-head independent review and portrait-phone acceptance are separate gates.
+
 ### 2026-08-09 — Codex: Rankings season-honesty review corrections
 - **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.
 - **Files modified:** `client/src/pages/TiberTiers.tsx`, `client/src/pages/tiberTiersV2Mapper.ts`, `server/routes/rankingsV2Routes.ts`, and focused rendered/container/route tests.

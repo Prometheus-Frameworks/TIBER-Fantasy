@@ -2,7 +2,7 @@ import * as directoryService from '../draftReviewService';
 import { afterEach, expect, jest, test } from '@jest/globals';
 import { buildHistoricalCatalog } from '../historicalCatalog';
 import { historicalCatalogEvidence } from '../historicalEvidence';
-import { __resetDraftReviewCacheForTests } from '../draftReviewService';
+import { __resetDraftReviewCacheForTests, buildDraftReview } from '../draftReviewService';
 import { historicalCatalogSchema, historicalDataPacket, sortHistoricalRows } from '../../../../shared/teamHistoricalData';
 const originalFetch = global.fetch;
 afterEach(() => { jest.restoreAllMocks(); global.fetch = originalFetch; __resetDraftReviewCacheForTests(); });
@@ -53,6 +53,30 @@ test('valid directory names and acquisition clock survive container validation',
   expect(catalog.labels[0].name).toBe('Example Player');
   expect(catalog.directory.fetched_at).toBe('1970-01-01T00:00:00.001Z');
   expect(catalog.directory.reason).toBeNull();
+});
+test.each([null, [], 'invalid'])('malformed upstream directory %p cannot poison the shared Team cache', async malformed => {
+  let directoryReads = 0;
+  global.fetch = jest.fn(async (input) => {
+    const url = String(input);
+    const body = url.endsWith('/players/nfl')
+      ? ++directoryReads === 1 ? malformed : { qb1: { full_name: 'Recovered QB', position: 'QB' } }
+      : url.endsWith('/league/123')
+        ? { league_id: '123', name: 'League', season: '2026', total_rosters: 1, roster_positions: ['QB'] }
+        : url.endsWith('/league/123/users')
+          ? [{ user_id: 'u1', display_name: 'Manager' }]
+          : url.endsWith('/league/123/rosters')
+            ? [{ roster_id: 1, owner_id: 'u1', players: ['qb1'], starters: ['qb1'] }]
+            : null;
+    if (body === null && !url.endsWith('/players/nfl')) throw new Error(`Unexpected URL: ${url}`);
+    return { ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) } as Response;
+  }) as typeof fetch;
+
+  const catalog = await buildHistoricalCatalog();
+  expect(catalog.evidence.players).toHaveLength(94);
+  expect(catalog.directory.fetched_at).toBeNull();
+  const review = await buildDraftReview('https://sleeper.com/roster/123/1');
+  expect(review.observed.current_roster[0]).toMatchObject({ player_id: 'qb1', name: 'Recovered QB' });
+  expect(directoryReads).toBe(2);
 });
 test.each([0, null])('tie sorting pins English for names and IDs regardless of ambient locale: %p', mean => {
   const nativeCompare = String.prototype.localeCompare;
