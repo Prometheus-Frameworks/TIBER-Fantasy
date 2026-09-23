@@ -1104,3 +1104,5 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+### 2026-09-23 — Ops #86 Team reference
+- Added a dated, reference-only pointer to the exact admitted 2025 Team history bundle and Data receipts, with a TIBER Now link. Candidate stacks on unmerged Fantasy #401. Checked digests and documentation diff; no runtime actions or new use grant.

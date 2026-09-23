@@ -13,6 +13,7 @@ TIBER builds open football research and decision-support tools: data contracts, 
 
 - **Explore the product or run it yourself:** [TIBER-Fantasy setup and surfaces](../README.md). Team is the public Sleeper roster/comparison and agent-handoff entry point.
 - **Build with football data:** [TIBER-Data contracts and artifact index](https://github.com/Prometheus-Frameworks/TIBER-Data#readme). Verify the exact artifact, supported season/week and provenance before consuming it.
+- **Inspect a bounded consumer example:** [Team's 2025 historical evidence read-eligibility reference](../server/modules/draftReview/MODULE.md#read-eligibility-reference-2025-historical-team-evidence) points to the exact bundle, producer receipts, permitted Team use, and human/API inspection paths. It is an as-checked reference, not a general data index or a new permission.
 - **Try a model or research tool:** use the repository map below. “Packaged for testing” means committed code and documented local entry points, not a certified deployment or validated predictive advantage.
 - **Understand project direction:** [TIBER Product Boundary v1](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/architecture/tiber-product-boundary-v1.md) and [operating map](https://github.com/Prometheus-Frameworks/TIBER-Ops/blob/main/docs/operating-map.md).
 

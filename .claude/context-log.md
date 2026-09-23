@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-23 — Codex: Team historical read-eligibility reference (#86)
+- **What changed:** Added one exact-reference entry in Team's consumer module and a single TIBER Now navigation link, stacked after the canonical-page candidate.
+- **Files modified:** `server/modules/draftReview/MODULE.md`, `docs/TIBER_NOW.md`, and required agent logs.
+- **Validation:** Checked exact bundle and promotion-receipt SHA-256, source and release links, relative navigation, and documentation diff. No football or runtime execution.
+- **Notes:** Dated read-only reference only; no admission, rights change, new connector, provider access, merge or deployment.
+
 ### 2026-09-23 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Teamstate #95 as isolated provisional adapter source without claiming a real-packet pilot; added reviewed draft Fantasy #408, the repaired/re-reviewed #388 state, open non-draft #406, and documentation-only Forecast #189.
