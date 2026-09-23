@@ -5,6 +5,12 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-23 — Codex: Prevent malformed directory cache poisoning (#408)
+- **What changed:** The shared Sleeper player directory rejects non-record containers before caching them. A catalog fallback can no longer leave a malformed snapshot for normal Team reads.
+- **Files modified:** `server/modules/draftReview/draftReviewService.ts`, `server/modules/draftReview/__tests__/historicalCatalog.test.ts`.
+- **Validation:** Three focused suites passed (52 tests); server build passed with the existing duplicate-member warning. Typecheck remains nonclean (507 diagnostics, none in the touched files); `git diff --check` passed.
+- **Notes:** Draft PR #408 remains unmerged and undeployed; exact-head independent review and portrait-phone acceptance are separate gates.
+
 ### 2026-08-09 — Codex: Rankings season-honesty review corrections
 - **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.
 - **Files modified:** `client/src/pages/TiberTiers.tsx`, `client/src/pages/tiberTiersV2Mapper.ts`, `server/routes/rankingsV2Routes.ts`, and focused rendered/container/route tests.
@@ -841,3 +847,9 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Codex: Team historical Data workspace v0
+Implemented an on-demand admitted-2025 table and four-player comparison with selected historical investigation handoff. Reuses pinned adapter and existing name directory; preserves provenance, uncertainty and independent clocks. No private manager preference is hardcoded. Focused 137-test pass, build pass, no new baseline-relative TS diagnostics; actual browser/phone acceptance blocked by missing Chromium. Local branch only; no merge/deploy/trade or remote publication. See docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — Codex: PR #408 P2 repairs
+Validated historical catalog directory containers inside the fallback boundary and pinned both sorting tie-breakers to English. Added malformed-snapshot, HTTP-null-payload, valid-directory and ambient-locale regression tests. Five focused suites / 57 tests pass; no new baseline-relative TS diagnostics. Re-review required on the published repair head. No merge, deployment or source activation; phone acceptance remains pending.

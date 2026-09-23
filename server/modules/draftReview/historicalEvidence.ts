@@ -42,18 +42,26 @@ export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {
     return unavailableHistoricalEvidence('Evidence selection exceeds the supported identity or 32-player limit.');
   }
   try {
-    if (verifiedBytes === undefined) {
-      const raw = readFileSync(BUNDLE_PATH);
-      verifiedBytes = JSON.stringify(decodeHistoricalBundle(raw));
-    }
-    // Fresh parse prevents one response or caller from changing another user's evidence.
-    const bundle = JSON.parse(verifiedBytes) as HistoricalEvidence;
+    const bundle = historicalCatalogEvidence();
+    if (bundle.status !== 'available') return bundle;
     const players = new Map(bundle.players.map(player => [player.player_id, player]));
     return { ...bundle, status: 'available', reason: null, players: Array.from(new Set(playerIds)).map(player_id =>
       players.get(player_id) ?? {
         player_id, status: 'unavailable', reason: 'No admitted exact Sleeper-to-GSIS identity mapping.',
         identity: null, observed: null, derived: {},
       } as HistoricalPlayer) };
+  } catch {
+    return unavailableHistoricalEvidence('The admitted historical artifact is missing or failed integrity validation.');
+  }
+}
+
+/** The existing admitted cohort only; no provider refresh or identity admission. */
+export function historicalCatalogEvidence(): HistoricalEvidence {
+  try {
+    if (verifiedBytes === undefined) {
+      verifiedBytes = JSON.stringify(decodeHistoricalBundle(readFileSync(BUNDLE_PATH)));
+    }
+    return JSON.parse(verifiedBytes) as HistoricalEvidence;
   } catch {
     return unavailableHistoricalEvidence('The admitted historical artifact is missing or failed integrity validation.');
   }

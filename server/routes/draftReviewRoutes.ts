@@ -1,3 +1,4 @@
+import { buildHistoricalCatalog } from '../modules/draftReview/historicalCatalog';
 import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
 import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
@@ -24,6 +25,13 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/data', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (_req, res) => {
+    try { return res.json(await buildHistoricalCatalog()); }
+    catch { return res.status(502).json({ error: 'Historical catalog could not be loaded.' }); }
+  });
 
   router.get('/api/draft-review/weekly', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

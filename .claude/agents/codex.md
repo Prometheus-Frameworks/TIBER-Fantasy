@@ -1053,3 +1053,17 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Team historical Data workspace v0
+- Added lazy Team Data table with search/filter/metric controls, totals/means sort and four-player historical comparison.
+- Added bounded admitted-cohort endpoint and selected investigation packet; preserved source receipts, missingness and independent clocks. Existing waiver and evidence selection contracts remain unchanged.
+- Validation: 137 focused tests, production build, no added baseline-relative TS diagnostic lines; local HTTP 200 offline-directory fallback. Browser/phone acceptance pending (Chromium absent).
+- Local branch `codex/team-data-suite-v0`; no remote publication because current automatic deployment suppression was not verified. No merge, deployment or transactions. Audit: docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — PR #408 P2 repairs
+- Addressed malformed directory fallback and ambient-locale sorting findings from reviewed head 98324db350091890273b4da61b33e34e330e5cc5.
+- Added container validation within the fallback boundary; malformed labels cannot take down admitted historical evidence. Pinned both sorting tie-breakers to English.
+- Validation: 57 tests across five focused suites pass; no new baseline-relative TS diagnostic lines. Phone acceptance remains separate and pending. User authorized repair and fresh independent review; no merge/deploy/source activation.
+# 2026-09-23 — Team Data Suite directory cache repair (#408)
+
+Rejected malformed Sleeper directory containers at the shared cache boundary and covered fallback followed by normal Team recovery. Three focused suites passed (52 tests); server build passed; typecheck retained broad baseline errors (507, none in touched files). Draft PR review requested at the published exact head. No merge, deployment, or source admission.

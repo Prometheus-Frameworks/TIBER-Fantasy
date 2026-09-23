@@ -251,6 +251,9 @@ export async function getDraftReviewPlayerDirectory() {
   if (!playerCacheRequest) {
     playerCacheRequest = sleeperClient.getNflPlayers()
       .then((players) => {
+        if (!players || typeof players !== 'object' || Array.isArray(players)) {
+          throw new Error('Sleeper returned an invalid player-directory container.');
+        }
         playerCache = { fetchedAt: Date.now(), players };
         return playerCache;
       })

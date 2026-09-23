@@ -130,3 +130,6 @@ Team roster handoffs include observed Sleeper waiver settings and labeled budget
 
 ### Team waiver comparison (2026-09-19, draft #404 implementation)
 Checked waiver shortlist candidates can be compared as a pair using admitted historical evidence and shared comparison tables. A dedicated discussion action copies only that pair plus roster context and observation clocks; missing history and unavailable Forecast remain explicit. See `docs/audits/team-waiver-comparison-2026-09-19.md`. Deployment and phone acceptance are pending.
+
+### Team historical Data workspace — 2026-09-22
+Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.
