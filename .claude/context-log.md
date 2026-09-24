@@ -5,6 +5,14 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-09-24 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Fantasy #408 as source without claiming deployment or phone acceptance; added merged Role-and-opportunity #26 with its contract-only boundary; recorded merged Data #275 together with three P2 findings returned after merge; updated Forecast #189's repaired exact-head review state; and noted stacked Fantasy #409's unresolved P2.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** Confirmed all 14 default branches remain `main` and all 14 pinned README reads succeeded. Data, Fantasy and Role-and-opportunity advanced; the other 11 source pins are unchanged. Checked exact PR heads, merge/draft states and review discussions for Data #275, Role-and-opportunity #26, Fantasy #401/#408/#409 and Forecast #189, plus the unchanged active Fantasy candidates. All 13 companion README-link PRs remain open, non-draft and unmerged. No application tests, football-data reads, model runs, hosted/device checks, deployment, source admission, provider activation or runtime changes were performed.
+- **Concurrency:** Before the first write, #401 was open, non-draft and unmerged at `f095f1b9eeb23c3e209ff5dfc8849aa051a38e7d`; the starting page/agent-log/context-log blob SHAs were `213113a5eaa7ac52703faaeb88d10f9815975bbe`, `d03f8afa6a69bcff4e3bc350da5deb1638c3e422`, and `e30c55fe235adbd48ae6bd8af212d3f14c5f0460`. Each exact file was rechecked before its non-force update.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; the refreshed head needs separate maintainer review/merge and synchronization with the advanced Fantasy base. Canonical-page-first ordering remains required before companion README links. No review request, main edit, contributor message, merge, deployment or activation was performed.
+
 ### 2026-09-23 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Teamstate #95 as isolated provisional adapter source without claiming a real-packet pilot; added reviewed draft Fantasy #408, the repaired/re-reviewed #388 state, open non-draft #406, and documentation-only Forecast #189.
