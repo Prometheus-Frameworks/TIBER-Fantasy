@@ -1120,3 +1120,24 @@ Implemented the operator-requested smallest #371 waiver-handoff slice on codex/t
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Team historical Data workspace v0
+- Added lazy Team Data table with search/filter/metric controls, totals/means sort and four-player historical comparison.
+- Added bounded admitted-cohort endpoint and selected investigation packet; preserved source receipts, missingness and independent clocks. Existing waiver and evidence selection contracts remain unchanged.
+- Validation: 137 focused tests, production build, no added baseline-relative TS diagnostic lines; local HTTP 200 offline-directory fallback. Browser/phone acceptance pending (Chromium absent).
+- Local branch `codex/team-data-suite-v0`; no remote publication because current automatic deployment suppression was not verified. No merge, deployment or transactions. Audit: docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — PR #408 P2 repairs
+- Addressed malformed directory fallback and ambient-locale sorting findings from reviewed head 98324db350091890273b4da61b33e34e330e5cc5.
+- Added container validation within the fallback boundary; malformed labels cannot take down admitted historical evidence. Pinned both sorting tie-breakers to English.
+- Validation: 57 tests across five focused suites pass; no new baseline-relative TS diagnostic lines. Phone acceptance remains separate and pending. User authorized repair and fresh independent review; no merge/deploy/source activation.
+# 2026-09-23 — Team Data Suite directory cache repair (#408)
+
+Rejected malformed Sleeper directory containers at the shared cache boundary and covered fallback followed by normal Team recovery. Three focused suites passed (52 tests); server build passed; typecheck retained broad baseline errors (507, none in touched files). Draft PR review requested at the published exact head. No merge, deployment, or source admission.
+
+### 2026-09-25 — Codex: bounded #401 synchronization and evidence wording
+- **Authority and scope:** Joe authorized the smallest safe next step: synchronize #401 and request fresh independent exact-head review. No merge or companion-PR changes.
+- **What changed:** Preserved the September 25 refresh at `8456a97688ed5eb61de81a4a0dff4f61f4f34844` and integrated Fantasy main `482736f33a34267ae6dc4e038c04872e8162abee`. Resolved the context-log conflict by retaining both histories; retained all #408 source and repair entries. Qualified Teamstate pilot statements as limits of the inspected GitHub evidence rather than proof that no run occurred elsewhere.
+- **Files modified relative to main:** `docs/TIBER_NOW.md`, `README.md`, `.claude/context-log.md`, `.claude/agents/codex.md`. All application, artifact, dependency and workflow blobs are inherited unchanged from main.
+- **Validation:** Rechecked the dated Data #275, Fantasy #408/#409 and Forecast #189 merge/review records, then verified the concurrent refresh's ROP #27/#28 merge/review records. Both parent log histories are preserved without deleted or replaced lines. Documentation diff and conflict-marker checks passed; relative navigation targets exist. Application tests were not run for this documentation-only change; GitHub build and independent review must be assessed on the published head.
+- **Handoff:** Keep #401 unmerged until the replacement head is independently reviewed and receives separate operator disposition. #409 remains unchanged at `ac90421d75249152eab1bc13490112f024268546`; synchronize/review it only after #401 is clean. Canonical page publication precedes companion links. No provider/database work, data admission, consumer activation or deployment was performed by this task.

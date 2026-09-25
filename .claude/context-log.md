@@ -49,6 +49,12 @@ Every agent should append an entry here after completing work.
 - **Concurrency:** Immediately before writing, PR #401 was open, draft, unmerged, and not mergeable at head `c8ed7b4da3c19bf28c5c9211d0009bd7d77b152a`; each file update used its exact current blob SHA through the non-force contents API.
 - **Historical handoff (September 21):** At that check, #401 was a draft, unmerged candidate requiring branch synchronization and maintainer review. That run sent no review request and performed no merge, deployment or activation. This records the state at that check; consult PR #401 for current publication and review state.
 
+### 2026-09-23 — Codex: Prevent malformed directory cache poisoning (#408)
+- **What changed:** The shared Sleeper player directory rejects non-record containers before caching them. A catalog fallback can no longer leave a malformed snapshot for normal Team reads.
+- **Files modified:** `server/modules/draftReview/draftReviewService.ts`, `server/modules/draftReview/__tests__/historicalCatalog.test.ts`.
+- **Validation:** Three focused suites passed (52 tests); server build passed with the existing duplicate-member warning. Typecheck remains nonclean (507 diagnostics, none in the touched files); `git diff --check` passed.
+- **Notes:** Draft PR #408 remains unmerged and undeployed; exact-head independent review and portrait-phone acceptance are separate gates.
+
 ### 2026-08-09 — Codex: Rankings season-honesty review corrections
 - **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.
 - **Files modified:** `client/src/pages/TiberTiers.tsx`, `client/src/pages/tiberTiersV2Mapper.ts`, `server/routes/rankingsV2Routes.ts`, and focused rendered/container/route tests.
@@ -907,3 +913,16 @@ Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejec
 - Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
 - Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
 - Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Codex: Team historical Data workspace v0
+Implemented an on-demand admitted-2025 table and four-player comparison with selected historical investigation handoff. Reuses pinned adapter and existing name directory; preserves provenance, uncertainty and independent clocks. No private manager preference is hardcoded. Focused 137-test pass, build pass, no new baseline-relative TS diagnostics; actual browser/phone acceptance blocked by missing Chromium. Local branch only; no merge/deploy/trade or remote publication. See docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — Codex: PR #408 P2 repairs
+Validated historical catalog directory containers inside the fallback boundary and pinned both sorting tie-breakers to English. Added malformed-snapshot, HTTP-null-payload, valid-directory and ambient-locale regression tests. Five focused suites / 57 tests pass; no new baseline-relative TS diagnostics. Re-review required on the published repair head. No merge, deployment or source activation; phone acceptance remains pending.
+
+### 2026-09-25 — Codex: bounded #401 synchronization and evidence wording
+- **Authority and scope:** Joe authorized the smallest safe next step: synchronize #401 and request fresh independent exact-head review. No merge or companion-PR changes.
+- **What changed:** Preserved the September 25 refresh at `8456a97688ed5eb61de81a4a0dff4f61f4f34844` and integrated Fantasy main `482736f33a34267ae6dc4e038c04872e8162abee`. Resolved the context-log conflict by retaining both histories; retained all #408 source and repair entries. Qualified Teamstate pilot statements as limits of the inspected GitHub evidence rather than proof that no run occurred elsewhere.
+- **Files modified relative to main:** `docs/TIBER_NOW.md`, `README.md`, `.claude/context-log.md`, `.claude/agents/codex.md`. All application, artifact, dependency and workflow blobs are inherited unchanged from main.
+- **Validation:** Rechecked the dated Data #275, Fantasy #408/#409 and Forecast #189 merge/review records, then verified the concurrent refresh's ROP #27/#28 merge/review records. Both parent log histories are preserved without deleted or replaced lines. Documentation diff and conflict-marker checks passed; relative navigation targets exist. Application tests were not run for this documentation-only change; GitHub build and independent review must be assessed on the published head.
+- **Handoff:** Keep #401 unmerged until the replacement head is independently reviewed and receives separate operator disposition. #409 remains unchanged at `ac90421d75249152eab1bc13490112f024268546`; synchronize/review it only after #401 is clean. Canonical page publication precedes companion links. No provider/database work, data admission, consumer activation or deployment was performed by this task.
