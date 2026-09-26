@@ -1,0 +1,62 @@
+{
+  "record_id": "pclr_20260813_camp323_michael_pittman_jr_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_michael_pittman_jr",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:52:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:6819",
+      "display_name": "Michael Pittman Jr.",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-08",
+    "event_type": "injury_update",
+    "observations": [
+      "2026-08-08 night practice: Pittman had his right leg (hamstring region) examined by trainers midway through practice and did not return (Steelers Depot day-nine diary, 08-08). WPXI (08-11) reports the injury occurred in a Saturday 7-on-7 period and that he walked off under his own power.",
+      "Pittman missed the 2026-08-10 and 2026-08-11 practices; HC Mike McCarthy (team-official, 08-10): Pittman 'got banged up in Saturday night lights'.",
+      "Mitigating detail: Pittman (with Metcalf) came onto the field just before the team moved indoors on 08-10 (Steelers Depot day-10 diary)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): short-term downward availability pressure if the absence extends into game action; no structural role change is evidenced.",
+      "WPXI's expectation that Pittman misses the 08-13 preseason opener is a projection of future participation, not a completed absence, and is preserved only as such."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-diary-day-nine/",
+        "note": "Steelers Depot, 2026-08-08. Direct observation: right leg examined by trainers; did not return.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/pittsburgh-steelers-2026-training-camp-injury-report-august-10/",
+        "note": "Steelers Depot, 2026-08-10. Missed practice; McCarthy quote on the injury.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.wpxi.com/sports/nfl/pittsburgh-steelers/steelers-top-two-wrs-both-miss-practice-with-injury/INGAPITKQNHSVD45LSEQZ342QI/",
+        "note": "WPXI, 2026-08-11. Missed Mon+Tue; injury mechanism (Saturday 7-on-7); walked off under own power; opener availability doubtful (projection).",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "No team-published timetable exists; severity is uncharacterized beyond practice absences.",
+      "Source discrepancy preserved: SI (08-11) characterized the issue as upper-body, while Steelers Depot (08-08, 08-10) and WPXI (08-11) consistently report a right-leg/hamstring-area injury; the leg version is better sourced (two outlets, one with direct trainer-examination observation).",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "What is the actual recovery timetable?",
+      "Does Pittman play in the 08-13 preseason opener vs. Green Bay (unknown at reconciliation time)?"
+    ],
+    "unrecognized_fields": []
+  }
+}
