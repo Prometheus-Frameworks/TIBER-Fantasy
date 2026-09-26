@@ -2,10 +2,12 @@ import { buildHistoricalCatalog } from '../modules/draftReview/historicalCatalog
 import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
 import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
+import { privateWatsonEvidence } from '../modules/draftReview/playerStateCardEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
 import { securityHeaders } from '../middleware/security';
+import { requireAdminAuth } from '../middleware/adminAuth';
 import {
   buildDraftReview,
   DraftReviewInputError,
@@ -25,6 +27,14 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  // Header-only admin key: never attach this source-native preview to public Team or roster routes.
+  router.get('/api/draft-review/private-watson-card', (_req, res, next) => {
+    res.set('Cache-Control', 'private, no-store'); next();
+  }, requireAdminAuth, (_req, res) => {
+    const result = privateWatsonEvidence();
+    return res.status(result.status === 'unavailable' ? 503 : 200).json(result);
+  });
 
   router.get('/api/draft-review/data', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();
