@@ -43,7 +43,7 @@ export function ComparisonTable({ metrics, players, compact = false }: { metrics
           return <td key={player.id}>{compact
             ? metric && metric.nonnull_weeks > 0 && metric.mean !== null
               ? <><strong className="drp-metric-value">{new Intl.NumberFormat('en-US', { maximumFractionDigits: share ? 1 : 2 }).format(metric.mean * (share ? 100 : 1))}{share ? '%' : ''}</strong><small>{metric.nonnull_weeks}/{metric.recorded_weeks} recorded weeks</small></>
-              : <span>Not recorded</span>
+              : <span className="drp-not-recorded">Not recorded</span>
             : displayMetric(metric, share)}</td>;
         })}
       </tr>)}</tbody>
@@ -125,8 +125,8 @@ export default function DraftReviewEvidenceStudy({ review, onChange, onDiscuss, 
       setResult(null);
     }}>{selection.length === 2 ? 'Add third player' : 'Remove third player'}</button>
     <div aria-live="polite" aria-busy={comparison.status === 'loading'}>
-      {comparison.status === 'loading' ? <p>Loading historical evidence…</p> : null}
-      {comparison.status === 'unavailable' ? <p>{comparison.reason ?? 'Historical evidence unavailable.'}</p> : null}
+      {comparison.status === 'loading' ? <><p>Loading historical evidence…</p><div className="drp-skeleton drp-skeleton-table" aria-hidden="true" /></> : null}
+      {comparison.status === 'unavailable' ? <p className="drp-unavailable-note">{comparison.reason ?? 'Historical evidence unavailable.'}</p> : null}
     </div>
     {comparison.evidence?.status === 'available' ? <>
       <div className="drp-comparison-coverage">{players.map(player => {

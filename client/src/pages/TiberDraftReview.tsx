@@ -387,6 +387,19 @@ export default function TiberDraftReview() {
         </section>
       ) : null}
 
+      {loading && !review && !teamSelection ? (
+        <div className="drp-panel drp-skeleton-panel" aria-hidden="true">
+          <span className="drp-skeleton" style={{ width: '38%', height: 20 }} />
+          {Array.from({ length: 8 }, (_, index) => (
+            <div className="drp-skeleton-row" key={index}>
+              <span className="drp-skeleton" style={{ width: 24 }} />
+              <span className="drp-skeleton" style={{ width: `${48 + ((index * 17) % 40)}%` }} />
+              <span className="drp-skeleton" style={{ width: 30 }} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {!review && !loading && !teamSelection ? (
         <section className="drp-empty">
           <div>
@@ -453,13 +466,13 @@ export default function TiberDraftReview() {
               {rosterGroups.map((group) => (
                 <div className="drp-roster-group" key={group.state}>
                   <h4>{STATE_LABELS[group.state]} · {group.players.length}</h4>
-                  {!group.players.length ? <p className="drp-muted">None reported</p> : null}
+                  {!group.players.length ? <p className="drp-muted drp-none">None reported</p> : null}
                   <div className="drp-player-list">
                     {group.players.map((player) => (
                       <div className="drp-player" key={player.player_id}>
                         <span className="drp-position">{player.position ?? '—'}</span>
                         <strong>{player.name}</strong>
-                        <span>{player.team ?? 'Unknown'}</span>
+                        <span className={player.team ? undefined : 'drp-team-unknown'}>{player.team ?? 'Unknown'}</span>
                       </div>
                     ))}
                   </div>

@@ -201,3 +201,69 @@
 .drp-data-workspace button { min-height: 40px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
 .drp-data-comparison { margin-top: 24px; }
 @media (max-width: 600px) { .drp-data-controls label { width: 100%; } .drp-data-workspace table { min-width: 820px; } }
+
+/*
+ * Prototype-aligned presentation (visual only). Text, order, controls and evidence
+ * semantics are unchanged: unavailable stays dashed and explicit, zero stays a value,
+ * and "Not recorded" stays distinct from both.
+ */
+.drp-page { --drp-row: #16181e; --drp-line: rgba(236,238,242,.085); --drp-line-2: rgba(236,238,242,.16); --drp-dim: rgba(236,238,242,.5); }
+
+/* Roster: one grouped list per state, divided rows, sentence-case group headings. */
+.drp-roster-group h4 { margin: 18px 0 6px; color: rgba(236,238,242,.78); font: 600 15px/1.2 var(--font-sans); text-transform: none; letter-spacing: 0; }
+.drp-player-list { gap: 0; border-radius: 10px; overflow: hidden; background: var(--drp-row); }
+.drp-player { grid-template-columns: 40px minmax(0,1fr) auto; min-height: 50px; padding: 6px 14px 6px 12px; border-radius: 0; background: transparent; border-top: 1px solid var(--drp-line); }
+.drp-player:first-child { border-top: 0; }
+.drp-player strong { font-size: 16px; font-weight: 600; line-height: 1.25; }
+.drp-player > span:last-child { padding-left: 10px; font: 500 13px/1.3 var(--font-sans); color: rgba(236,238,242,.6); }
+.drp-player > span.drp-team-unknown { color: var(--drp-dim); font-style: italic; }
+.drp-position { color: rgba(236,238,242,.6); font: 600 12px/1 var(--font-mono); }
+.drp-none { padding: 12px 14px; border: 1px dashed var(--drp-line-2); border-radius: 10px; }
+
+/* Roster flags read as an attention callout where they already sit. */
+.drp-flags { margin: 16px 0 0; padding: 12px 14px; list-style: none; border: 1px solid var(--drp-line); border-left: 3px solid var(--drp-orange); border-radius: 4px 10px 10px 4px; background: var(--drp-row); color: #eceef2; font-size: 14px; }
+
+/* Unavailable evidence is dashed, never a filled card that could read as a value. */
+.drp-forecast, .drp-draft-unavailable { border-style: dashed; border-color: var(--drp-line-2); background: transparent; }
+.drp-unavailable-note { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--drp-line-2); border-radius: 10px; color: rgba(236,238,242,.72); font-size: 14px; line-height: 1.45; }
+
+/* Comparison controls and table. */
+.drp-page .drp-evidence select { min-height: 50px; border: 0; border-radius: 10px; background-color: #eceee9; color: #161a18; font-weight: 600; }
+.drp-comparison-coverage { gap: 6px 14px; margin: 14px 0; }
+.drp-comparison-coverage strong { font-size: 14px; }
+.drp-comparison-coverage p { margin-top: 1px; color: rgba(236,238,242,.62); }
+.drp-scroll-hint { color: rgba(236,238,242,.62); }
+@media (max-width: 640px) { .drp-scroll-hint { color: rgba(236,238,242,.62); font-size: 12.5px; } }
+.drp-page .drp-evidence .drp-compact-comparison thead th { color: #eceef2; font: 600 14px/1.2 var(--font-sans); text-transform: none; letter-spacing: 0; }
+.drp-page .drp-evidence .drp-compact-comparison thead th:first-child { color: rgba(236,238,242,.5); font-size: 12px; }
+.drp-evidence .drp-compact-comparison th, .drp-evidence .drp-compact-comparison td { border-bottom-color: var(--drp-line); }
+.drp-evidence .drp-compact-comparison tbody th { color: rgba(236,238,242,.8); font-size: 13px; font-weight: 500; line-height: 1.3; }
+.drp-metric-value { font: 600 21px/1.15 var(--font-sans); font-variant-numeric: tabular-nums; }
+.drp-compact-comparison small { margin-top: 2px; color: var(--drp-dim); font-variant-numeric: tabular-nums; }
+.drp-not-recorded { display: inline-block; padding: 3px 7px; border: 1px dashed var(--drp-line-2); border-radius: 6px; color: rgba(236,238,242,.65); font-size: 12px; line-height: 1.3; }
+.drp-evidence td.drp-no-history { border-left: 1px dashed var(--drp-line-2); color: var(--drp-dim); text-align: center; vertical-align: middle; }
+
+/* Decorative loading placeholders; the existing status text remains the announcement. */
+.drp-skeleton { display: block; height: 14px; border-radius: 5px; background: rgba(236,238,242,.1); animation: drp-pulse 1.6s ease-in-out infinite; }
+.drp-skeleton-panel { display: grid; gap: 0; margin-top: 18px; }
+.drp-skeleton-panel > .drp-skeleton:first-child { margin-bottom: 14px; }
+.drp-skeleton-row { display: grid; grid-template-columns: 40px minmax(0,1fr) auto; align-items: center; min-height: 50px; border-top: 1px solid var(--drp-line); }
+.drp-skeleton-row .drp-skeleton:first-child { height: 11px; }
+.drp-skeleton-row .drp-skeleton:last-child { height: 11px; }
+.drp-skeleton-table { height: 180px; margin-top: 10px; border-radius: 10px; }
+@keyframes drp-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .drp-skeleton, .drp-spin { animation: none; } }
+
+/* Phones: a more compact first screen without hiding any control or copy. */
+@media (max-width: 480px) {
+  .drp-page { padding-top: 12px; }
+  .drp-hero { padding: 20px 16px; }
+  .drp-hero h1 { margin: 10px 0 8px; font-size: 30px; }
+  .drp-hero > p { font-size: 15px; line-height: 1.5; }
+  .drp-input-row { margin-top: 18px; }
+  .drp-team-heading h2 { font-size: 28px; }
+  .drp-results { gap: 14px; }
+  .drp-player-list { margin: 0 -4px; }
+}
+.drp-hero .drp-error + .drp-action { margin-top: 10px; }
+.drp-evidence [aria-live] > p:not(.drp-unavailable-note) { margin-top: 12px; }
