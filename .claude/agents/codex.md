@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 35313)
-Total output lines: 1158
-
 # Codex — Work Log
 
 Agent: OpenAI Codex
@@ -552,7 +549,209 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - Updated Command Center, Player Research, Team Research, and Dashboard discovery flows to preserve explicit season params but otherwise defer to backend/export-driven season selection.
 - Hardened season-selector rendering for empty/no-season states without silently rewriting query-param input.
 - Added focused tests for: explicit season precedence, defaulting to latest breakout export season, and no-season available/unavailable behavior.
-- Validation:…5313 tokens truncated…tionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts client/src/__tests__/dataLabDiscoveryWidget.test.ts client/src/__tests__/playerResearchWorkspaceView.test.ts client/src/__tests__/teamResearchWorkspaceView.test.ts` ✅
+
+### 2026-03-24 — Command Center lane-level season honesty UX
+- Added lane-level season honesty states for promoted Data Lab modules so Command Center module cards can now report `ready`, `other_seasons`, `empty`, or `unavailable` with explicit per-lane `availableSeasons` metadata.
+- Updated Command Center section-level fallback messaging so empty states now distinguish: no rows for selected season vs healthy rows existing for other seasons.
+- Extended promoted-status service/contracts with `available_other_seasons` and `availableSeasons`, then surfaced those signals in the promoted status panel to reduce false “broken” interpretation during season mismatch.
+- Added focused test coverage for:
+  - one lane ready in selected season while another lane is only healthy in a different season,
+  - distinction between healthy-but-different-season and missing artifact / unavailable failures.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/dataLabCommandCenter/__tests__/dataLabCommandCenterService.test.ts server/modules/externalModels/__tests__/promotedModelStatusService.test.ts client/src/__tests__/dataLabCommandCenterView.test.ts server/routes/__tests__/dataLabCommandCenterRoutes.test.ts server/routes/__tests__/dataLabPromotedStatusRoutes.test.ts` ✅
+### 2026-03-26 — Codex: Promoted rookie artifact integration + product route hardening
+- **Branch:** current working branch
+- **Summary:** Implemented a dedicated promoted rookie artifact consumer boundary (`server/modules/externalModels/rookies/`) and rewired `/api/rookies/:season` + `/rookies` to render model-backed rookie content from a producer artifact instead of the legacy in-repo DB table query. Added consumer-side contract checks, deterministic field mapping, graceful missing/invalid artifact behavior, and UI-visible promoted model metadata + summary snippets.
+- **Key Files:**
+  - `server/modules/externalModels/rookies/rookieArtifactClient.ts`
+  - `server/modules/externalModels/rookies/rookieArtifactAdapter.ts`
+  - `server/modules/externalModels/rookies/rookieArtifactService.ts`
+  - `server/routes/rookiesPromotedRoutes.ts`
+  - `client/src/pages/RookieBoard.tsx`
+  - `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts`; `npm run build`.
+
+### 2026-03-26 — Codex: Rookie promoted alpha/tier mapping integrity hotfix
+- **Summary:** Fixed promoted rookie composite-field drop-off by expanding adapter mapping aliases to support nested/camelCase producer contracts (`scores.*`, `score.*`, `composite.*`) and alternate row containers (`board.players`, `rookies`), restoring API-level availability of Rookie Alpha, tier, rank, and component scores.
+- **Key Files:**
+  - `server/modules/externalModels/rookies/rookieArtifactAdapter.ts`
+  - `server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts`
+  - `server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts`
+- **Validation:** `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/rookies/__tests__/rookieArtifactAdapter.test.ts server/modules/externalModels/rookies/__tests__/rookieArtifactService.test.ts server/routes/__tests__/rookiesPromotedRoutes.test.ts` ✅
+
+### 2026-03-31 — Product shell IA realignment phase-1 pass
+- Added `docs/architecture/TIBER_PRODUCT_SHELL_REALIGNMENT_PLAN.md` with architecture-aligned diagnosis, complete mounted-route classification table, vocabulary cleanup recommendations, and a minimal implementation scope.
+- Refactored `client/src/components/TiberLayout.tsx` navigation into clearer product-layer sections and demoted legacy/internal surfaces out of primary emphasis while preserving access.
+- Refactored `client/src/pages/Dashboard.tsx` into a real front door: lane cards (Rankings, Rookie Board, Research, Agent/API), research signal feed, and a retained but demoted data-backed live snapshot table.
+- Added a brief README shell-positioning note.
+- Validation:
+  - `npm run build` ✅ (existing duplicate-class-member warning remains in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: Team State artifact consumer boundary + route
+- Added `server/modules/externalModels/teamState/` with a read-only artifact client/service/types stack for `tiber_team_state_v0_1`.
+- Added `GET /api/data-lab/team-state` via `server/routes/dataLabTeamStateRoutes.ts`, supporting `season` (required) and `throughWeek` (optional) with stable `ok`/`error` envelopes and explicit team-state error codes.
+- Wired route registration in `server/routes.ts` and documented the new adapter in `server/modules/externalModels/MODULE.md` and `teamState/README.md`.
+- Added focused route coverage in `server/routes/__tests__/dataLabTeamStateRoutes.test.ts` for ready, not-found, and invalid-request paths.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: PR116 trust-gap follow-up (Team State contract validation)
+- Hardened `server/modules/externalModels/teamState/teamStateClient.ts` to validate parsed JSON against required `tiber_team_state_v0_1` artifact shape before returning success.
+- Added nested required-key checks for top-level payload, `source`, `teams[]`, `sample`, `features`, and `stability`; parseable-but-contract-invalid artifacts now throw `TeamStateIntegrationError('invalid_payload', ...)`.
+- Updated Team State route tests to use a real contract-shaped success payload and added a stable invalid-payload route assertion.
+- Added dedicated adapter coverage in `server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts` for valid artifact acceptance and parseable-contract-invalid rejection.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/teamState/__tests__/teamStateClient.test.ts server/routes/__tests__/dataLabTeamStateRoutes.test.ts` ✅
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts`)
+
+### 2026-04-02 — Codex: Rankings v2 definition audit/spec
+- Added `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md` as a spec-first architecture/product definition for Rankings v2.
+- Audited ranking-related surfaces across:
+  - `client/src/pages/TiberTiers.tsx`
+  - frontend route wiring/navigation (`client/src/App.tsx`, `Dashboard.tsx`, `ForgeHub.tsx`)
+  - backend ranking endpoints (`/api/forge/tiers`, `/api/rankings*`, `/api/power/*`, `/api/rankings/otc-final`, `/api/admin/*-rankings-sandbox`, deprecated `/api/tiber/rankings`)
+  - Team State read-only consumer boundary for v2 input-policy framing.
+- Produced explicit status taxonomy and keep/replace/hide/fold recommendations, plus phased “first honest rebuild” path and deferrals.
+- Validation:
+  - repo audit commands (`rg`, `sed`) only; no code-path or model rebuild performed.
+
+### 2026-04-02 — Rankings v2 canonical contract scaffold + surface taxonomy pass
+- Added `server/contracts/rankingsV2.ts` as the canonical Rankings v2 public contract scaffold with stable top-level response fields, item-level explanation spine, and trust envelope.
+- Added concise in-code status labeling comments for key ranking lanes:
+  - Canonical current `/tiers` + `/api/forge/tiers`
+  - Legacy `/api/rankings*` and `/api/rankings/otc-final`
+  - Experimental/internal `/api/power/*`
+  - Internal-only admin ranking sandboxes
+  - Legacy/deprecated `/api/tiber`
+- Fixed dead ForgeHub ranking shortcuts by replacing unmounted `/rankings/wr|rb|te|qb` links with canonical `/tiers` links.
+- Added an implementation-anchor note in `docs/architecture/TIBER_RANKINGS_V2_DEFINITION.md` pointing to the new contract file.
+- Validation:
+  - `npm run build` ✅ (pre-existing warning in `server/olc/adjusters.ts` remains)
+
+### 2026-04-12 — Codex: Live scoring-service integration (player + rankings)
+- Added `server/modules/externalModels/scoring/` with typed contracts, request mappers, and a thin resilient client/service for:
+  - `POST /api/tiber/weekly/player-card`
+  - `POST /api/tiber/weekly/rankings`
+  - `POST /api/tiber/ros/player-card`
+  - `POST /api/tiber/weekly/compare`
+- Wired player detail route (`/api/player-identity/player/:id`) to optionally hydrate scoring via `includeScoringWeekly=true` and `includeScoringRos=true`, with safe non-fatal result envelopes.
+- Wired Rankings v2 weekly route (`/api/rankings/v2/weekly`) to consume scoring rankings first and gracefully fall back to FORGE cache when scoring is missing/unavailable.
+- Added player-page UI surface `ScoringSnapshotCard` and integrated it into `PlayerPage` to render expected points, VORP, floor/median/ceiling, confidence/volatility/fragility tags, weekly outlook, role summary, value summary, and role notes.
+- Updated `TiberTiers` table to render scoring-driven rankings columns (rank, player/team/pos, expected, VORP, floor, ceiling, confidence band, weekly outlook).
+- Added focused tests for scoring client handling, player-route integration path, rankings-route integration path, and scoring-unavailable UI state.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 follow-up wire-contract fixes
+- Addressed PR feedback on scoring-service wire compatibility:
+  - request bodies now match live upstream contract (`players`, `league_context`, ROS `remaining_weeks`, compare `player_a`/`player_b`)
+  - response parsing now unwraps service envelope (`ok` + `data`) and reads route payload layers (`data.card`, `data.view`)
+- Hardened client conversions:
+  - null/empty numeric fields remain `null` instead of coercing to `0`
+  - invalid timeout config now falls back to default timeout
+- Updated rankings integration to provide `players` array input to scoring rankings (from existing cache seed set) while retaining graceful FORGE fallback.
+- Updated focused tests to validate against envelope + contract-correct request shapes.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-04-12 — Codex: PR123 semantic mapper-depth follow-up
+- Implemented real scoring-input mapping from TIBER data (`weekly_stats`, `player_usage`) so scoring requests now include meaningful opportunity/stat signals:
+  - `games_sampled`, `routes_pg`, `targets_pg`, `carries_pg`, `fantasy_points_ppr_pg`, `snap_share`, `target_share`, `volatility_index`.
+- Added async mapper functions:
+  - `buildScoringPlayerInputFromData(...)` for player-page weekly/ROS scoring calls.
+  - `buildRankingsScoringInputs(...)` for rankings scoring payload construction.
+  - `hasMeaningfulScoringInputs(...)` for gating scoring preference.
+- Updated Rankings v2 route to **not** prefer scoring when mapped inputs are too thin; falls back to FORGE in that case.
+- Updated compare normalization to preserve structured view model (`verdict`, `playerA`, `playerB`, nested `deltas`) instead of flattening.
+- Extended tests to assert scoring calls now carry real mapped fields and to prove rankings skips scoring preference when inputs are not meaningful.
+- Validation:
+  - `NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false server/modules/externalModels/scoring/__tests__/scoringServiceClient.test.ts server/routes/__tests__/playerIdentityRoutes.test.ts server/routes/__tests__/rankingsV2Routes.test.ts client/src/__tests__/scoringSnapshotCard.test.ts` ✅
+  - `npm run build` ✅ (pre-existing duplicate class member warning in `server/olc/adjusters.ts`)
+
+### 2026-05-10 — Codex: Stress Lab followup routing precision
+- Split broad transaction/teamstate followup detection into explicit transaction cues and Teamstate environment cues.
+- Added regression coverage proving rookie/prospect notes keep rookie followups while excluding unrelated transaction and QB/environment guidance, and Jets teamstate notes retain those followups.
+- Validation:
+  - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ (fails on pre-existing unrelated TypeScript errors in broader repo)
+  - `git diff --check` ✅
+
+### 2026-05-10 — Stress Lab capability matrix docs
+- Added `docs/stress-lab-capability-matrix.md` as a read-only inventory of Stress Lab capabilities, routing coverage, limitations, failure modes, future artifact targets, ownership boundaries, known gaps, and design philosophy.
+- Added a lightweight README link from the Stress Lab feature blurb.
+- Validation: `git diff --check`.
+
+### 2026-05-10 — TIBER Observatory UI reset
+- Replaced the default homepage route with the existing note-inspection workflow, now branded as TIBER Observatory.
+- Added real-system status cards and repo-boundary awareness copy emphasizing read-only routing, uncertainty, and upstream ownership.
+- Reduced primary navigation to Observatory, live Rankings, Rookie Board, and reference docs while preserving hidden compatibility routes.
+- Validation: `npm run test -- client/src/__tests__/stressLab.test.ts` ✅; `npm run build` ✅ with existing duplicate class-member warning; `npm run typecheck` ⚠️ pre-existing unrelated errors; Vite route smoke checks ✅.
+
+### 2026-05-10 — Observatory on/off split heuristic extraction
+- Added deterministic on/off EPA split heuristics for 49ers/Vikings examples, including conservative team/player aliases, metric scaffolds, signal tags, followups, and uncertainty guardrails.
+- Updated handoff labeling to TIBER-Fantasy / Observatory and added artifact scaffolds for on/off, team efficiency, offensive environment, and player fantasy signals.
+- Validation:
+  - `npm run test -- client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo
+  - `git diff --check` ✅
+
+### 2026-05-10 — Observatory RB role/market heuristic extraction
+- Added deterministic v0 Stress Lab/Observatory heuristic coverage for the RJ Harvey dynasty RB operator note: RJ Harvey/Denver detection, fantasy RB role/receiving/third-down/committee/market/FORGE/coaching-trust tags and metric scaffolds, conservative handoff artifact requirements, followups, and uncertainty guardrails.
+- Kept Sean Payton as a cue only via tags/metrics because the current entity contract supports only player/team/division/season.
+- Validation:
+  - `npm test -- --runTestsByPath client/src/__tests__/stressLab.test.ts` ✅
+  - `npm run typecheck` ⚠️ pre-existing unrelated TypeScript errors remain in broader repo
+
+### 2026-05-24 — TIBER-Data player ownership consumer for Player Research
+- Added `server/modules/externalModels/playerOwnership/` with client/adapter/service boundaries for read-only `player_ownership_v0` latest-state artifacts and optional event JSONL lookup.
+- Mounted `GET /api/data-lab/player-ownership` and wired ownership truth into Player Research response/UI so roster-truth context appears before fantasy model interpretation.
+- Covered known player, unknown player, malformed/missing artifact, duplicate/ambiguous name, missing events directory, and route validation behavior.
+- Validation:
+  - Focused Jest suites for ownership service/route, Player Research service/route, and Player Research UI/summary block: passed
+  - Live `tsx` smoke against sibling TIBER-Data artifact for Tee Higgins: passed
+  - `npm run typecheck`: still fails on pre-existing repo-wide errors outside the touched ownership/Player Research files
+  - `npm run build`: blocked by Windows/esbuild entry-path/access resolution before application code bundling
+
+### 2026-05-29 — Active docs AGI/lore language cleanup
+- Rewrote `TIBER-ARCHITECTURE-PERMANENT.md` as the active grounded product architecture record: decision support, interaction-depth modes, upstream consumer boundaries, uncertainty rules, and archived/non-operational treatment for old philosophical framing.
+- Added product-doctrine notes to active onboarding/phase docs and removed/renamed legacy phrasing in nearby operating docs (`autopilot`, `consciousness` prompt/module descriptions, River-layer map wording).
+- Quarantined `docs/letter-to-ai-agents.md` as historical/non-operational and kept the human-in-the-loop doctrine explicit.
+- Validation:
+  - Targeted legacy-term `rg` searches before/after ✅
+  - `git diff --check` ✅
+  - Markdown-only diff check ✅
+
+### 2026-05-30 — TIBER Management Dashboard shell
+- Added `/management` and `/team-management` as the first roster-management dashboard shell.
+- Promoted a primary nav `Management` entry and wired dashboard sections for sync, active context, roster snapshot, diagnosis, model signals, action queue, and deep links.
+- Preserved upstream boundaries: no new model contracts, no scoring/ranking/trade/projection changes, and Teamstate movement remains read-only context only.
+- Validation: `npx vite build` ✅; `npm run build` ✅ with existing duplicate class-member warning; targeted league route tests with `--coverage=false` ✅; `npm run typecheck` ⚠️ existing repo-wide errors; screenshot blocked by missing `DATABASE_URL`.
+
+### 2026-05-31 — Management Teamstate readiness truth patch
+- Replaced hardcoded Teamstate Movement `ready` state with a focused live read of `/api/data-lab/team-environment-movement`.
+- Added conservative readiness helpers and focused tests: ready requires `ok`, `artifactAvailable`, and usable movement context; missing, malformed/error, and present-but-empty states remain unavailable and inspectable.
+- Rendered provenance status, upstream warnings, and returned error copy in the read-only model card without using Teamstate in diagnosis or advice.
+- Validation: focused Teamstate helper/API and league route Jest suites ✅; `npx vite build` ✅; `npm run build` ✅ with existing warning; `git diff --check` ✅; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files.
+
+### 2026-06-02 — Management Rookie Alpha promoted-artifact fallback
+- **Summary:** Wired Management roster rows and Team Direction evidence coverage to the existing read-only TIBER-Rookies promoted adapter when FORGE remains unavailable. Added additive UI context and operator docs for the `exports/promoted/rookie-alpha` lane.
+- **Key Files:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `server/modules/externalModels/rookies/`, `client/src/pages/TiberManagementDashboard.tsx`, `docs/runbooks/ROOKIE_PROMOTED_HANDOFF.md`
+- **Validation:** Targeted Jest suites, build, typecheck review, diff check.
+
+
+### 2026-06-02 — Management Rookie Alpha FORGE-gate review fix
+- **Summary:** Split Management evidence coverage from FORGE scoring coverage, required the FORGE coverage threshold before Team Direction classification, changed generic missing-player UI copy to `Unmatched`, and added the sparse-FORGE regression case.
+- **Key Files:** `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `server/routes/__tests__/managementRoutes.test.ts`
+- **Validation:** Focused Management/Rookie Jest suite, builds, typecheck review, diff check.
+
+### 2026-06-03 — Management roster coverage diagnostics wording
+- **Summary:** Made Management roster coverage auditable by adding explicit visibility states/counts for FORGE scored, Rookie Alpha fallback, known but unscored, unresolved, and evidence coverage. Updated cards/rows to avoid ambiguous `matched` wording and show actual unavailable reasons.
+- **Key Files:** `server/services/leagueDashboardService.ts`, `server/services/teamDirectionClassifier.ts`, `client/src/pages/TiberManagementDashboard.tsx`, `client/src/index.css`, `server/services/__tests__/leagueDashboardService.test.ts`, `server/routes/__tests__/managementRoutes.test.ts`
 - **Validation:** Focused Management Jest suites ✅; `npm run build` ✅ with existing warning; `npm run typecheck` ⚠️ existing repo-wide failures outside touched files.
 
 ### 2026-06-05 — League context raw-row normalization
@@ -957,3 +1156,10 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Changed only `docs/TIBER_NOW.md` and the two required handoff logs. No README links or companion branches changed.
 - Validation: all default branches are `main`; all 13 companion README-link PRs remain open, non-draft and unmerged. #401 remains open, non-draft and unmerged. Documentation checks only; no tests, builds, provider console, device/browser, live-data, model, deployment, source-admission or activation checks were run by this update.
 - Handoff: the updated #401 head needs separate maintainer disposition. Do not mark ready, request review, merge or publish companion README links before the canonical page.
+
+### 2026-09-28 — Codex: PR #401 log recovery and final documentation review
+- **Authority:** Joe requested cleanup and final review; merge remains a separate operator decision.
+- **What changed:** Restored both handoff logs' truncated historical sections from exact clean commit `5edd5f331246846782d57fe169de6ecee3f11a78`, removing captured tool-output warnings and retaining the complete September 28 refresh entries. Corrected the current #410 status and September 28 change note to cite the later operator-reported provider deletion in closing comment `5840059580`; the prior refresh's body-only interpretation is superseded.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Exact string comparisons confirmed the entire September 26 Codex log is preserved, and removing only the September 28 inserted entry from the recovered context log reproduces its September 26 bytes. Reviewed publication wording, readiness distinctions, September 28 page delta, #411's exact-head receipt and #410's closing disposition. Before repair the whole PR differed from main only in the status page, README link and two logs; main was an ancestor. Remote byte readback and final diff/CI disposition are checked after publication.
+- **Limits:** This is the repairing agent's documentation review, not a fresh independent review or runtime acceptance. No application tests, deployment, provider-console inspection or activation performed. No merge or readiness-state change.
