@@ -1,0 +1,25 @@
+.wpc { box-sizing: border-box; width: 100%; max-width: 760px; margin: 0 auto; padding: clamp(16px, 4vw, 32px); background: #fff; color: #20242b; font-family: 'Instrument Sans', system-ui, sans-serif; line-height: 1.5; }
+.wpc *, .wpc *::before, .wpc *::after { box-sizing: border-box; }
+.wpc-header, .wpc-section, .wpc-provenance { border: 1px solid #dddfe4; border-radius: 14px; padding: clamp(14px, 3vw, 22px); margin: 0 0 14px; }
+.wpc-header { background: #faf9f7; }
+.wpc-kicker { color: #78400f; font-weight: 700; letter-spacing: .02em; font-size: .9rem; }
+.wpc h1 { font-size: clamp(1.65rem, 6vw, 2.3rem); line-height: 1.15; margin: .35rem 0; }
+.wpc h2 { font-size: 1.15rem; line-height: 1.25; margin: 0 0 12px; }
+.wpc-status { display: inline-block; background: #fff1dc; border: 1px solid #a65c16; color: #582c08; border-radius: 20px; padding: 5px 10px; font-weight: 700; }
+.wpc-boundary, .wpc-caption { font-size: .91rem; color: #464c55; }
+.wpc-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); gap: 10px; margin: 0; }
+.wpc-metrics > div { min-width: 0; background: #f4f4f4; border-radius: 9px; padding: 10px; }
+.wpc dt { color: #40464e; font-size: .87rem; }
+.wpc dd { margin: 3px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wpc dd small { font-weight: 600; }
+.wpc-share { background: #f6f0e8; border-left: 3px solid #e2640d; padding: 10px 12px; font-variant-numeric: tabular-nums; }
+.wpc summary { cursor: pointer; padding: 9px 0; min-height: 44px; font-weight: 700; }
+.wpc summary:focus-visible, .wpc a:focus-visible, .wpc-scroll:focus-visible { outline: 3px solid #b15100; outline-offset: 3px; }
+.wpc-scroll { width: 100%; overflow-x: auto; }
+.wpc table { width: 100%; border-collapse: collapse; min-width: 350px; font-variant-numeric: tabular-nums; }
+.wpc caption { text-align: left; padding: 8px 0; color: #414650; }
+.wpc th, .wpc td { border-bottom: 1px solid #dddfe4; padding: 8px 5px; text-align: right; white-space: nowrap; }
+.wpc th:first-child { text-align: left; white-space: normal; }
+.wpc code { overflow-wrap: anywhere; white-space: normal; font-size: .82em; }
+.wpc a { color: #8e3800; text-decoration: underline; }
+@media (max-width: 390px) { .wpc { padding: 12px; } .wpc-header, .wpc-section, .wpc-provenance { padding: 14px; } .wpc-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

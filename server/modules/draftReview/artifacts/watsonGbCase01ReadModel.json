@@ -1,0 +1,380 @@
+{
+  "schemaVersion": "watson_gb_source_native_private_card_read_model_v0",
+  "eligibility": "private_operator_preview_only_no_public_team_activation",
+  "binding": {
+    "compositionPacketSha256": "1dbf07a8da739c5d8bc05a9c55cd3dab434b0b1b212f99d67d070d5485932fb3",
+    "compositionMachineSha256": "a27e4f0daa7b2820be275dd138098755bd95989f078e31111405882293c80049",
+    "compositionReceiptSha256": "61624a0ef315fc77bde99b98863da0fcce7e3940502b1328c3324d9e9d15deba",
+    "compositionReviewSha256": "a247b57f635f760f2d292ce6ceb5c072d47840067b1d0fbd3170a89bbfcbcf3a",
+    "compositionReviewDisposition": "CLEAN WITH NON-BLOCKING NOTES",
+    "compositionRule": "rop_teamstate_w1_w2_observational_composition_v1",
+    "compositionArtifactId": "rop-teamstate:2026-reg-w01-w02:observational-composition:frozen-cohort",
+    "compositionGeneratedAt": "2026-09-26T12:04:12.291+00:00",
+    "compositionContentDigestSha256": "1c9a360d9ec4ba9a659bf1b6d2e4dcec07a84da4bacd46bba39dd06a62a1ebe7",
+    "ropComparisonPacketSha256": "838c38cd1ebf788f55d48de7cf6413bb306bf03ec4a77b639cdc0bda535f8037",
+    "teamstateComparisonPacketSha256": "d8797252bfc83019ffc2ae47307671471fc97025936dbfb8d948df59ca3ee047"
+  },
+  "identity": {
+    "sourceNamespace": "GSIS",
+    "sourceNativePlayerId": "00-0038124",
+    "name": "Christian Watson",
+    "position": "WR",
+    "observedEventTeam": "GB",
+    "sleeperPlayerId": null,
+    "sleeperJoinStatus": "unresolved"
+  },
+  "scope": {
+    "season": 2026,
+    "seasonType": "REG",
+    "weeks": [
+      1,
+      2
+    ],
+    "join": {
+      "week1": {
+        "season": 2026,
+        "seasonType": "REG",
+        "week": 1,
+        "sourceNativePlayerId": "00-0038124",
+        "team": "GB",
+        "gameId": "2026_01_GB_MIN",
+        "opponent": "MIN",
+        "ropStateArtifact": {
+          "artifactId": "rop:2026-reg-w01:weekly-role-state:00-0038124",
+          "artifactType": "weekly_role_state_v1",
+          "digestProfile": "tiber-jcs-root-sha256-v1",
+          "generatedAt": "2026-09-25T00:34:32.085Z",
+          "revision": "provisional-v1",
+          "sha256": "317390ca6abd9a187b3bf3616e2bdff0ceef63b98e8bda4d841c779e72bab6a3"
+        },
+        "teamstateSourceCsvRow": 13,
+        "status": "exact_team_game_window_match"
+      },
+      "week2": {
+        "season": 2026,
+        "seasonType": "REG",
+        "week": 2,
+        "sourceNativePlayerId": "00-0038124",
+        "team": "GB",
+        "gameId": "2026_02_GB_NYJ",
+        "opponent": "NYJ",
+        "ropStateArtifact": {
+          "artifactId": "rop:2026-reg-w02:weekly-role-state:00-0038124",
+          "artifactType": "weekly_role_state_v1",
+          "digestProfile": "tiber-jcs-root-sha256-v1",
+          "generatedAt": "2026-09-25T17:03:31.968Z",
+          "revision": "provisional-v1",
+          "sha256": "035971c9ac9eb623833cf4aff02e493d9f37a5e165445cbd93b27ba14fcc0e85"
+        },
+        "teamstateSourceCsvRow": 45,
+        "status": "exact_team_game_window_match"
+      }
+    },
+    "teamWeek1": {
+      "season": 2026,
+      "season_type": "REG",
+      "week": 1,
+      "game_id": "2026_01_GB_MIN",
+      "opponent_team": "MIN",
+      "source_csv_row": 13
+    },
+    "teamWeek2": {
+      "season": 2026,
+      "season_type": "REG",
+      "week": 2,
+      "game_id": "2026_02_GB_NYJ",
+      "opponent_team": "NYJ",
+      "source_csv_row": 45
+    },
+    "comparability": "comparable_same_team_windows"
+  },
+  "roleOpportunity": {
+    "recordedWork": {
+      "targets": {
+        "comparability": "comparable",
+        "delta": 3,
+        "week1": {
+          "reason": null,
+          "status": "observed",
+          "value": 8
+        },
+        "week2": {
+          "reason": null,
+          "status": "observed",
+          "value": 11
+        }
+      },
+      "receptions": {
+        "comparability": "comparable",
+        "delta": -2,
+        "week1": {
+          "reason": null,
+          "status": "observed",
+          "value": 6
+        },
+        "week2": {
+          "reason": null,
+          "status": "observed",
+          "value": 4
+        }
+      },
+      "carries": {
+        "comparability": "comparable",
+        "delta": 0,
+        "week1": {
+          "reason": null,
+          "status": "observed",
+          "value": 0
+        },
+        "week2": {
+          "reason": null,
+          "status": "observed",
+          "value": 0
+        }
+      }
+    },
+    "targetShareCreditedTeamTargets": {
+      "comparability": "comparable",
+      "denominatorDelta": -11,
+      "numeratorDelta": 3,
+      "percentagePointDelta": 17.93103448275862,
+      "week1": {
+        "definition": "player_targets/credited_team_targets",
+        "denominator": 40,
+        "numerator": 8,
+        "reason": null,
+        "status": "available",
+        "value": 0.2
+      },
+      "week2": {
+        "definition": "player_targets/credited_team_targets",
+        "denominator": 29,
+        "numerator": 11,
+        "reason": null,
+        "status": "available",
+        "value": 0.3793103448275862
+      }
+    },
+    "carryShareAllTeamCarries": {
+      "comparability": "comparable",
+      "denominatorDelta": -3,
+      "numeratorDelta": 0,
+      "percentagePointDelta": 0,
+      "week1": {
+        "definition": "player_carries/all_team_carries",
+        "denominator": 21,
+        "numerator": 0,
+        "reason": null,
+        "status": "available",
+        "value": 0
+      },
+      "week2": {
+        "definition": "player_carries/all_team_carries",
+        "denominator": 18,
+        "numerator": 0,
+        "reason": null,
+        "status": "available",
+        "value": 0
+      }
+    },
+    "claimStates": [
+      {
+        "comparability": "comparable",
+        "id": "observed_receiving_involvement",
+        "statusChange": null,
+        "week1": {
+          "ruleVersion": "1",
+          "status": "supported"
+        },
+        "week2": {
+          "ruleVersion": "1",
+          "status": "supported"
+        }
+      },
+      {
+        "comparability": "comparable",
+        "id": "recorded_receiving_opportunity",
+        "statusChange": null,
+        "week1": {
+          "ruleVersion": "1",
+          "status": "supported"
+        },
+        "week2": {
+          "ruleVersion": "1",
+          "status": "supported"
+        }
+      },
+      {
+        "comparability": "comparable",
+        "id": "recorded_rushing_work",
+        "statusChange": null,
+        "week1": {
+          "ruleVersion": "1",
+          "status": "not_supported"
+        },
+        "week2": {
+          "ruleVersion": "1",
+          "status": "not_supported"
+        }
+      }
+    ],
+    "limitations": [
+      "two_week_descriptive_comparison_only",
+      "no_persistence_or_stability_claim",
+      "advanced_deployment_not_supplied",
+      "scoring_area_reserved_data_derivation"
+    ]
+  },
+  "teamActivity": {
+    "fields": {
+      "attempts": {
+        "week1": 42,
+        "week2": 29,
+        "delta": -13,
+        "comparability": "comparable"
+      },
+      "completions": {
+        "week1": 21,
+        "week2": 16,
+        "delta": -5,
+        "comparability": "comparable"
+      },
+      "passing_yards": {
+        "week1": 387,
+        "week2": 145,
+        "delta": -242,
+        "comparability": "comparable"
+      },
+      "passing_tds": {
+        "week1": 2,
+        "week2": 2,
+        "delta": 0,
+        "comparability": "comparable"
+      },
+      "passing_interceptions": {
+        "week1": 1,
+        "week2": 0,
+        "delta": -1,
+        "comparability": "comparable"
+      },
+      "sacks_suffered": {
+        "week1": 4,
+        "week2": 3,
+        "delta": -1,
+        "comparability": "comparable"
+      },
+      "carries": {
+        "week1": 21,
+        "week2": 18,
+        "delta": -3,
+        "comparability": "comparable"
+      },
+      "rushing_yards": {
+        "week1": 66,
+        "week2": 63,
+        "delta": -3,
+        "comparability": "comparable"
+      },
+      "rushing_tds": {
+        "week1": 0,
+        "week2": 0,
+        "delta": 0,
+        "comparability": "comparable"
+      },
+      "fumbles_lost_total": {
+        "week1": 1,
+        "week2": 1,
+        "delta": 0,
+        "comparability": "comparable"
+      }
+    },
+    "comparability": "comparable"
+  },
+  "jointObservations": [
+    {
+      "metricPair": "player targets and team pass attempts",
+      "playerDelta": 3,
+      "teamDelta": -13,
+      "text": "Targets increased while team pass attempts decreased."
+    },
+    {
+      "metricPair": "credited team targets",
+      "numeratorDelta": 3,
+      "denominatorDelta": -11,
+      "text": "Credited team targets: numerator increased and denominator decreased."
+    }
+  ],
+  "evidenceHealth": {
+    "status": "provisional",
+    "rop": {
+      "advancedDeploymentEvidence": "not_supplied",
+      "causalOrPredictiveInterpretation": false,
+      "consumerActivation": "none",
+      "correction": {
+        "week1": "open",
+        "week2": "open"
+      },
+      "evidenceCutoff": {
+        "week1": null,
+        "week2": null
+      },
+      "finality": {
+        "week1": "unknown",
+        "week2": "unknown"
+      },
+      "mandatoryCompanionSupportDependency": true,
+      "rbRoomQualification": "conservative; room-share/leadership measures remain unavailable where qualification fails",
+      "receivingAirYardConflicts": {
+        "excludedFromRoleComparison": true,
+        "week1": 22,
+        "week2": 22
+      },
+      "sourceNativeIdentityOnly": true,
+      "unresolvedPopulationEvidence": {
+        "week1": "one unattributed SEA source observation retained in companion",
+        "week2": "one unresolved BUF source observation retained in companion"
+      }
+    },
+    "teamstate": [
+      "Week 1 and Week 2 game finality unknown; corrections open/provisional; evidence cutoffs null or unestablished.",
+      "Source-native identities; same-source player/team reconciliation is internal consistency rather than independent external corroboration.",
+      "Complete retained source and schedule population does not establish a participation census.",
+      "22 receiving_air_yards conflicts in each weekly source path remain excluded from the ten accepted activity fields.",
+      "Week 1 contains an unattributed SEA source observation; Week 2 contains an unresolved BUF source observation; neither establishes an identified player.",
+      "Source rights and attribution remain attached to the exact weekly references.",
+      "Richer team-environment observations are unavailable in these references.",
+      "Two weekly observations do not establish persistence or a causal mechanism.",
+      "A correction to either weekly reference requires a new comparison revision; this packet is immutable."
+    ],
+    "composition": [
+      "This is a same-window descriptive join; co-occurrence cannot establish causality.",
+      "ROP credited-team-target denominators are distinct from Teamstate pass attempts; neither substitutes for the other.",
+      "ROP all-team carry denominators and Teamstate carries retain their separate reviewed definitions. Numerical agreement is shared Data lineage, not independent corroboration.",
+      "Finality unknown; corrections open/provisional; evidence cutoffs null or unestablished.",
+      "Source-native identity only; companion and retained support are required for ROP interpretation.",
+      "The exact comparison packets are immutable; correction to either input requires a new composition revision."
+    ],
+    "missingPlayerEvidence": [
+      "routes",
+      "snaps",
+      "alignment",
+      "first reads",
+      "qualified scoring-area evidence",
+      "advanced deployment evidence"
+    ],
+    "missingTeamEvidence": [
+      "richer team-environment evidence"
+    ],
+    "sameSourceReconciliationIsIndependentCorroboration": false,
+    "coverageIsParticipationCensus": false
+  },
+  "attribution": {
+    "name": "nflverse contributors",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "licenseSha256": "2a82ac9bbc3e3ee066908381e8d373896db5a6025d083fbd59692fe9ccfb9111",
+    "sourceUrl": "https://github.com/nflverse/nflverse-data",
+    "derivedNotice": "TIBER filters and compares the cited nflverse weekly player, team and schedule observations; no endorsement implied.",
+    "licenseDoesNotGrantTiberConsumerAdmission": true
+  }
+}
