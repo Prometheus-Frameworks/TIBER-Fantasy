@@ -133,3 +133,6 @@ Checked waiver shortlist candidates can be compared as a pair using admitted his
 
 ### Team historical Data workspace — 2026-09-22
 Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.
+
+### Weekly evidence offline MCP candidate — 2026-09-30
+An isolated stdio adapter provides capability discovery, a fixed catalog and exact Watson/GB W1→W2 projection retrieval, reusing draft #411's pinned decoder/model. Source attribution, independent clocks, unavailable Forecast/W3/Sleeper states and remote-disabled status are preserved. No application bootstrap, provider, database or write tool is imported. Setup: `docs/mcp/weekly-evidence-offline-v0.md`. Personal ChatGPT OAuth/hosting is a separate design proposal; this connector is not deployed or activated.

@@ -1,5 +1,9 @@
 # Codex — Work Log
 
+### 2026-09-30 — #383 bounded offline weekly-evidence MCP
+
+Implemented three strict read-only stdio tools on `codex/383-weekly-evidence-offline`, stacked on exact #411 head 67398ca. Reused the unchanged decoder and complete pinned Watson/GB W1→W2 projection; preserved provenance, unavailable lanes and remote-disabled status. Added explicit offline launcher, bounded reads/protocol/results and sanitized failures. Validation: 13 native integrity/protocol tests and 16 inherited reader/card tests pass; targeted strict compilation and build pass; full typecheck retains the same 507 normalized diagnostic lines. Prepared personal ChatGPT OAuth/hosting proposal only. Independent review, hosted/auth implementation and actual client acceptance pending. No merge, deploy, provider/producer execution or consumer activation. Receipt: docs/mcp/weekly-evidence-offline-validation-2026-09-30.md.
+
 Agent: OpenAI Codex
 Platform: GitHub (PR-based workflow)
 Branch Pattern: `codex/<task-slug>`
