@@ -133,3 +133,14 @@ Checked waiver shortlist candidates can be compared as a pair using admitted his
 
 ### Team historical Data workspace — 2026-09-22
 Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.
+
+## Team trade study paper core (2026-09-30)
+
+`server/modules/tradeStudy/` is an isolated synthetic testbed for explicit league
+position/count inspection and both sides of multi-player package geometry.
+It is not imported by Team, Management, API or MCP. Production admission is
+unavailable; no live league access, durable records, negotiation, valuations,
+Strategy threshold activation or transactions are added. Cut alternatives are
+never selected; missing positions and bounded enumeration remain explicit.
+See `docs/audits/team-trade-paper-core-2026-09-30.md` for validation and the
+remaining live roster/rules/identity and publication gates.

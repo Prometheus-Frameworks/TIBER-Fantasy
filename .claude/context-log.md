@@ -853,3 +853,9 @@ Implemented an on-demand admitted-2025 table and four-player comparison with sel
 
 ### 2026-09-22 — Codex: PR #408 P2 repairs
 Validated historical catalog directory containers inside the fallback boundary and pinned both sorting tie-breakers to English. Added malformed-snapshot, HTTP-null-payload, valid-directory and ambient-locale regression tests. Five focused suites / 57 tests pass; no new baseline-relative TS diagnostics. Re-review required on the published repair head. No merge, deployment or source activation; phone acceptance remains pending.
+
+### 2026-09-30 — Codex: Team trade paper core (#355 follow-up)
+- **What changed:** Added isolated synthetic league position/count inspection and two-sided multi-player package geometry, with explicit unknowns and unselected forced-cut alternatives. Production entry points refuse all inputs.
+- **Files modified:** New server/modules/tradeStudy source, two test suites, MODULE; docs/audits/team-trade-paper-core-2026-09-30.md; replit notes and agent logs.
+- **Validation:** 48 tests pass; targeted strict TypeScript compilation passes. No application build, live league or UI acceptance is claimed for this unconnected module.
+- **Notes:** Operator resumed build after Strategy #11 merged. Narrow paper transport does not freeze #355 records or implement negotiation. Production auto-deploy is disabled; project PR preview enablement remains inaccessible in connector, so hold PR creation pending verification. No merge, deployment, consumer activation, durable records or provider access.
