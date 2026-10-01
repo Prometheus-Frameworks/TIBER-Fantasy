@@ -2,6 +2,7 @@ import { buildHistoricalCatalog } from '../modules/draftReview/historicalCatalog
 import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
 import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
+import { teamFreshness } from '../modules/draftReview/teamFreshness';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
@@ -25,6 +26,10 @@ function sendSanitizedError(res: express.Response, error: unknown) {
 export function createDraftReviewRouter() {
   const router = express.Router();
   router.use('/api/draft-review', securityHeaders());
+
+  router.get('/api/draft-review/freshness', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, (_req, res) => res.json(teamFreshness()));
 
   router.get('/api/draft-review/data', (_req, res, next) => {
     res.set('Cache-Control', 'no-store'); next();

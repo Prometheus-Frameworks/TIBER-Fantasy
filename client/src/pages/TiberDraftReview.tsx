@@ -1,4 +1,5 @@
 import { DraftReviewData } from '@/components/draftReview/DraftReviewData';
+import TeamFreshnessPanel from '@/components/draftReview/TeamFreshnessPanel';
 import DraftReviewWaivers from '@/components/draftReview/DraftReviewWaivers';
 import type { WaiverSettings, WaiverAttachment } from '@shared/teamWaiverContext';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
@@ -366,6 +367,8 @@ export default function TiberDraftReview() {
         {error ? <button className="drp-action" type="button" onClick={() => void resolveInput()}>Try again</button> : null}
         {loading ? <p role="status">Reading public Sleeper context…</p> : null}
       </section>
+
+      <TeamFreshnessPanel rosterCompiledAt={review?.generated_at} />
 
       {teamSelection ? (
         <section className="drp-team-select" aria-live="polite" aria-busy={loading}>

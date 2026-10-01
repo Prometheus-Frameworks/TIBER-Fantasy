@@ -133,3 +133,6 @@ Checked waiver shortlist candidates can be compared as a pair using admitted his
 
 ### Team historical Data workspace — 2026-09-22
 Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.
+
+### Prepared Team freshness (October 1, 2026; not deployed)
+An isolated branch adds a collapsed build/evidence freshness panel with explicit unknown clocks, admitted historical coverage and unavailable weekly evidence. No acquisition or consumer activation. Access/deployment and MCP decision packets are in docs/audits/team-access-freshness-2026-10-01.md and docs/mcp/weekly-evidence-remote-beta-preparation-2026-10-01.md.

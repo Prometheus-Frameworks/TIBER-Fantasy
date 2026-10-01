@@ -215,3 +215,7 @@ The checked shortlist offers “Compare [player] with another waiver player.” 
 - `DraftReviewData` loads on demand in Team; search by name/ID, historical-position filter, selectable raw metrics, totals/means sorting and up to four explicitly selected comparisons. Missing values sort last in both directions. Share totals stay unavailable.
 - `shared/teamHistoricalData.ts` validates the catalog and builds a selected-only historical investigation attachment while retaining the base roster snapshot. No preference, player ranking, ownership, current role, claim eligibility or transaction is inferred.
 - 2026 Weekly Pulse, forecasts and historical weekly-series charts are outside this slice. Actual phone acceptance remains a separate gate.
+
+## Team freshness metadata (October 1, 2026)
+
+GET `/api/draft-review/freshness` is no-store presentation metadata: allowlisted Railway-reported server SHA or Unknown, integrity-checked admitted historical window or Unavailable, unknown build/deployment/source/refresh clocks and unavailable weekly lane. It does not refresh, admit or acquire evidence. The collapsed Team panel keeps roster compilation separate, withholds malformed/failed/timed-out metadata, and clears prior results on recheck. See the October 1 access audit.

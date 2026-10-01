@@ -201,3 +201,9 @@
 .drp-data-workspace button { min-height: 40px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
 .drp-data-comparison { margin-top: 24px; }
 @media (max-width: 600px) { .drp-data-controls label { width: 100%; } .drp-data-workspace table { min-width: 820px; } }
+.drp-freshness { margin: 1rem 0; padding: 1rem; border: 1px solid #d4d4d4; border-radius: 12px; background: #fafafa; color: #262626; }
+.drp-freshness summary { cursor: pointer; min-height: 44px; display: list-item; font-weight: 600; }
+.drp-freshness dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: .5rem 1rem; }
+.drp-freshness dt { font-weight: 600; }
+.drp-freshness dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .drp-freshness dl { grid-template-columns: minmax(0, 1fr); } .drp-freshness dd { margin-bottom: .75rem; } }
