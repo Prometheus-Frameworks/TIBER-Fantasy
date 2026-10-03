@@ -80,6 +80,7 @@ export interface SleeperPlayer {
   team?: string | null;
   active?: boolean | null;
   status?: string | null;
+  injury_status?: string | null;
   fantasy_data_id?: string | number | null;
   gsis_id?: string | null;
   birth_date?: string | null;
@@ -104,6 +105,12 @@ async function fetchJson<T>(path: string): Promise<T> {
 }
 
 export const sleeperClient = {
+  async getManagerMatchups(leagueId: string, week: number): Promise<unknown> {
+    return fetchJson<unknown>(`/league/${leagueId}/matchups/${week}`);
+  },
+  async getManagerNflState(): Promise<unknown> {
+    return fetchJson<unknown>('/state/nfl');
+  },
   async getLeague(leagueId: string): Promise<SleeperLeagueDetail> {
     return fetchJson<SleeperLeagueDetail>(`/league/${leagueId}`);
   },
@@ -118,6 +125,10 @@ export const sleeperClient = {
 
   async getLeagueRosters(leagueId: string): Promise<SleeperRoster[]> {
     return fetchJson<SleeperRoster[]>(`/league/${leagueId}/rosters`);
+  },
+
+  async getLeagueMatchups(leagueId: string, week: number): Promise<unknown> {
+    return fetchJson<unknown>(`/league/${leagueId}/matchups/${week}`);
   },
 
   async getTradedPicks(leagueId: string): Promise<SleeperTradedPick[]> {

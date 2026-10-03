@@ -1,8 +1,16 @@
 import { buildHistoricalCatalog } from '../modules/draftReview/historicalCatalog';
 import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
 import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
+import { exposureInput } from '@shared/teamExposure';
+import { buildExposure } from '../modules/draftReview/teamExposure';
+import { managerResultInput } from '@shared/teamManager';
+import { buildManagerResult } from '../modules/draftReview/teamManager';
+import { buildWrReplacement } from '../modules/draftReview/wrReplacement';
+import { buildWeeklyMatchup } from '../modules/draftReview/weeklyMatchup';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
+import { discoverTeamLeagues, findTeamLeagueRosters } from '../modules/draftReview/teamLeagues';
+import { publicLeaguesInput, publicLeagueRosterInput } from '@shared/teamLeagues';
 import express from 'express';
 import { rateLimiters } from '../middleware/rateLimit';
 import { securityHeaders } from '../middleware/security';
@@ -53,6 +61,60 @@ export function createDraftReviewRouter() {
     catch (error) {
       if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
       return res.status(502).json({ status: 'source_unavailable', error: 'Candidate membership could not be established from complete league and player data.' });
+    }
+  });
+
+  router.get('/api/draft-review/manager-players', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    if (!exposureInput.safeParse(req.query).success) return res.status(400).json({ status: 'invalid_input', error: 'Choose a valid account, league and season.' });
+    try { return res.json(await buildExposure(req.query)); }
+    catch { return res.status(502).json({ status: 'source_unavailable', error: 'Player exposure could not be refreshed from Sleeper.' }); }
+  });
+
+  router.get('/api/draft-review/manager-week', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    if (!managerResultInput.safeParse(req.query).success) {
+      return res.status(400).json({ status: 'invalid_input', error: 'Choose a valid account, league, season and week.' });
+    }
+    try { return res.json(await buildManagerResult(req.query)); }
+    catch { return res.status(502).json({ status: 'source_unavailable', error: 'Weekly results could not be refreshed from Sleeper.' }); }
+  });
+
+  router.get(['/api/draft-review/leagues', '/api/draft-review/league-rosters'], (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    const listing = req.path === '/api/draft-review/leagues';
+    const input = (listing ? publicLeaguesInput : publicLeagueRosterInput).safeParse(req.query);
+    if (!input.success) return res.status(400).json({ status: 'invalid_input', error: 'Enter a valid Sleeper account and season, or league selection.' });
+    try {
+      const value = listing
+        ? await discoverTeamLeagues((input.data as { account: string }).account, input.data.season)
+        : await findTeamLeagueRosters((input.data as { userId: string }).userId, (input.data as { leagueId: string }).leagueId, input.data.season);
+      return res.json(value);
+    } catch {
+      return res.status(502).json({ status: 'source_unavailable', error: 'Sleeper league information is unavailable. Try again shortly.' });
+    }
+  });
+
+  router.get('/api/draft-review/wr-replacement', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, rateLimiters.publicDraftReview, async (req, res) => {
+    const { sleeper_url, target_player_id } = req.query;
+    if (typeof sleeper_url !== 'string' || !sleeper_url.trim() || sleeper_url.length > 256 || typeof target_player_id !== 'string' || !/^\d{1,24}$/.test(target_player_id)) return res.status(400).json({ status: 'invalid_input', error: 'A bounded roster URL and exact target player ID are required.' });
+    try { return res.json(await buildWrReplacement(sleeper_url, target_player_id)); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'A complete WR replacement pool could not be established. Refresh your roster and retry.' });
+    }
+  });
+
+  router.get('/api/draft-review/matchup', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); }, rateLimiters.publicDraftReview, async (req, res) => {
+    const { sleeper_url, season, week } = req.query;
+    if (typeof sleeper_url !== 'string' || sleeper_url.length > 256 || typeof season !== 'string' || !/^\d{4}$/.test(season) || typeof week !== 'string' || !/^(?:[1-9]|1[0-8])$/.test(week)) return res.status(400).json({ status: 'invalid_input', error: 'A roster URL, season and week from 1 to 18 are required.' });
+    try { return res.json(await buildWeeklyMatchup(sleeper_url, season, Number(week))); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'A complete head-to-head matchup could not be established. Try another week or refresh shortly.' });
     }
   });
 
