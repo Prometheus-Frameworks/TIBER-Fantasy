@@ -1,6 +1,6 @@
 # TIBER Now — Project Status
 
-**Last repository check: October 2, 2026 (UTC).**
+**Last repository check: October 3, 2026 (UTC).**
 
 **Scope:** public upstream source and GitHub work records. Deployment, live accounts and current data freshness were not tested in this check.
 
@@ -35,7 +35,7 @@ TIBER prepares the decision; the human manager makes it. Observed football data,
 
 ## Current work and next checkpoints
 
-All records below were checked on **October 2, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates. Comment-based receipts are attributed reports, not independent reproduction of their work.
+All records below were checked on **October 3, 2026**. These are workstreams to understand, not new implementation authority or promised delivery dates. Comment-based receipts are attributed reports, not independent reproduction of their work.
 
 | Workstream | Current status | Evidence and next checkpoint |
 | --- | --- | --- |
@@ -70,6 +70,7 @@ All records below were checked on **October 2, 2026**. These are workstreams to 
 
 ### Recent verified changes
 
+- **October 3 repository and publication check — checked; no material change:** all 14 default branches remain `main`; every README read succeeded and every default-branch source pin is unchanged. No new maintainer decision or tracked candidate/review disposition was returned. All 13 companion README-link PRs remain open, non-draft and unmerged. Before this refresh, #401 was open, non-draft, unmerged and mergeable at `1ac8ebf`; prior reviews do not cover this update. No application tests, upstream candidate tests, artifact replay, hosted-service, provider-console, device, live-data or model checks were performed.
 - **October 2 check — Team freshness and MCP preparation:** an off-main Fantasy branch at `57a9e8b` now contains reviewed Team freshness UI/metadata plus decision packets for Team access and a remote #383 beta. No PR was opened; the observed preview is not a permanent canonical designation, and the MCP remains unimplemented remotely and unactivated.
 - **October 2 check — Kicker/DST study preparation:** draft Research #26 advanced through two repair rounds to `4e17219`, adding design/readiness documentation only. The final head has not received independent review, and no empirical run, source admission, ranking or deployment was activated.
 - **October 2 repository and publication check:** all 14 default branches remain `main`; every README read succeeded and no default-branch source pin changed. All 13 companion README-link PRs remain open, non-draft and unmerged. Before this refresh, #401 was open, non-draft, unmerged and mergeable at `a9e2c90`; earlier reviews do not cover this update. No application tests, upstream candidate tests, artifact replay, hosted-service, provider-console, device, live-data or model checks were performed.
@@ -103,7 +104,7 @@ All records below were checked on **October 2, 2026**. These are workstreams to 
 
 ## Repository map
 
-Each entry links to its checked upstream README and local usage instructions. The September 18 snapshot was rechecked on **October 2, 2026** against all 14 default branches (all `main`), their READMEs, open PRs and recently updated issue records. Their commands and applications were not rerun. Exact repository pins are recorded below; issue/comment state is separately mutable.
+Each entry links to its checked upstream README and local usage instructions. The September 18 snapshot was rechecked on **October 3, 2026** against all 14 default branches (all `main`), their READMEs, open PRs and recently updated issue records. Their commands and applications were not rerun. Exact repository pins are recorded below; issue/comment state is separately mutable.
 
 | Repository | Status / usable scope | What to expect |
 | --- | --- | --- |
@@ -123,7 +124,7 @@ Each entry links to its checked upstream README and local usage instructions. Th
 | [TIBER-Ops](https://github.com/Prometheus-Frameworks/TIBER-Ops#readme) | Available to use — documentation | Operating map, architecture direction, lane coordination and review runbooks; Operating Charter v0 is merged documentation but remains a proposed, inactive framework. Its amendment draft and the route-denominator/license-audit issues are proposals only. Documentation does not activate parked work. |
 
 <details>
-<summary>October 2, 2026 source pins</summary>
+<summary>October 3, 2026 source pins</summary>
 
 All source reads succeeded. These pins identify inspected code/documentation, not deployments or mutable issue revisions.
 
