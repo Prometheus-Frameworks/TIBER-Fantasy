@@ -7,6 +7,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### 2026-10-04 — Codex: source-backed TIBER Now refresh after canonical publication
+- **Authority:** Daily documentation preparation authorized; maintainer review and merge remain separate.
+- **Summary:** Prepared the first post-publication daily update on one dedicated branch. The page now records #401's canonical publication, Data #278's reviewed fresh replay without converting it into source admission, ROP #30's repaired fixture-only review state, and Research #27's conceptual-only architecture audit.
+- **Key files:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
+- **Validation:** Rechecked all 14 linked default branches and source reads; only Fantasy's pin advanced to `e5b33807b4b6f982a62c3c97fe7a02529d641886`. Checked the relevant issue, PR and review records and Markdown structure. No application tests, artifact replay, live-data/model/provider checks, deployment or activation.
+- **Handoff:** Draft documentation update only; separate maintainer review/merge is required. No contributor messages, review request, main write, ready-state change, merge or runtime change.
+
 ### 2026-09-25 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded Role-and-opportunity #27's merged offline retained Week 1 allocation bridge and #28's merged deterministic injected role-state builder, including the initial P1/two-P2 review findings and the no-major-issues repaired-head re-review. Preserved the boundary between merged source, retained candidate evidence, ROP-purpose acceptance, source admission, consumer activation and live delivery.
