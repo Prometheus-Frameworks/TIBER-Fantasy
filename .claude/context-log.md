@@ -5,6 +5,14 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-10-04 — Codex: source-backed TIBER Now refresh after canonical publication
+- **Authority:** Daily documentation preparation authorized in the current task; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches and current work records. Recorded the October 4 merge of Fantasy #401 as canonical-page publication without implying runtime delivery; updated the Week 3 board for stacked draft Data #278's reviewed fresh-replay witness and ROP #30's repaired documentation review while preserving unknown original generation time, withheld source-purpose acceptance and unexecuted real-input paths; added Research #27 as conceptual architecture research only.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion repositories remain unchanged.
+- **Validation:** All 14 repositories still use `main`; all source reads succeeded. Fantasy alone advanced its default-branch pin from `4204ddfc0fb0dd38da708e9aea3c4d01b77997ab` to `e5b33807b4b6f982a62c3c97fe7a02529d641886`; the other 13 pins are unchanged. Checked PR/issue/review records for Fantasy #401, Data #277/#278, ROP #30, Teamstate #96 and Research #24/#27. Markdown table shape, link preservation and conflict/truncation markers were checked. No application tests, candidate replay, football-data/model run, hosted/device/provider check, deployment or activation was performed.
+- **Concurrency:** Began from current `main` head `e5b33807b4b6f982a62c3c97fe7a02529d641886` after #401 merged. Prepared one dedicated daily-update branch from that exact head; each file write requires the fetched blob SHA and no concurrent branch drift.
+- **Handoff:** Documentation candidate only. Keep the daily-update PR draft for separate maintainer disposition. No main write, ready-state change, review request, contributor message, merge, deployment, source admission, runtime/data/model/provider activation or automation change.
+
 ### 2026-09-29 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation authorized in the current task; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 upstream default branches and READMEs, open PR inventories, tracked issue/comment records and candidate reviews, plus 13 companion link PRs. Recorded Ops #87 as merged design-only/inactive Operating Charter documentation; Research #24 as Week 3 intake with supplemental Raymond entry; Ops #88 as unresolved FORGE/deployment decisions; Fantasy #413 as a prepared cold-start documentation handoff and #412 as an unreviewed dependency candidate. Distinguished Ops #86's attributed comparison/composition packet receipts from independently replayed evidence. Clarified the superseded historical #410 body-only interpretation while preserving evidence links.
