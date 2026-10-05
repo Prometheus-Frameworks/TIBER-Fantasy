@@ -9,7 +9,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ### 2026-10-05 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation authorized; maintainer review and merge remain separate.
-- **Summary:** Reused draft PR #415 and refreshed the canonical-page candidate with October 5 evidence. Recorded the Rookies #300 repair plus new blocking review findings, Forecast's point-in-time evidence blocker, OL Context readiness, licensing/NFLMeta documentation audits, the unresolved ROP provenance citation and Fantasy's FORGE documentation contradiction.
+- **Summary:** Reused draft PR #415 and refreshed the canonical-page candidate with October 5 evidence. Recorded the Rookies #300 repair plus new blocking review findings, Forecast's point-in-time evidence blocker, OL Context readiness, licensing/NFLMeta documentation audits, the unresolved ROP provenance citation, Fantasy's FORGE documentation contradiction and #412's refreshed, still-unreviewed dependency head.
 - **Key files:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
 - **Validation:** Rechecked all 14 default branches and 13 companion link PRs. Source pins are unchanged; all companions remain open/unmerged. Evidence links, dates, Markdown table shape and conflict markers were checked. No application tests, artifact replay, live-data/model/provider/deployment checks or activation.
 - **Handoff:** Draft documentation update only; separate maintainer review/merge is required. No contributor message, review request, main write, ready-state change, merge or runtime effect.
