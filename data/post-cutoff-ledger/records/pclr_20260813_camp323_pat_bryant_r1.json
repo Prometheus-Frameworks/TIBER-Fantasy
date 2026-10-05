@@ -1,0 +1,62 @@
+{
+  "record_id": "pclr_20260813_camp323_pat_bryant_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_pat_bryant",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:01:00.000Z",
+  "change_note": "#323 reconciliation: secondary candidate admitted at low confidence; access signal is real but heavily coach-speak-weighted and partly injury-contingent.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:12492",
+      "display_name": "Pat Bryant",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-10",
+    "event_type": "role_expansion",
+    "observations": [
+      "2026-08-10: asked how Denver will keep Bryant off the field, HC Sean Payton (team-official) answered 'We're not.' Earlier (08-03): 'It'll be easy to create his role.' (Heavy, 08-11.)",
+      "2026-08-08: Bryant on the absences of Courtland Sutton (rest) and Jaylen Waddle (leg strain): 'I had to step up, go outside and play extra reps.' (Denver Gazette, 08-08 — surfaced via search; body not independently fetched.)",
+      "2026-08-10: camp reporting places Bryant poised for WR3 or expanded snaps, while noting Troy Franklin is currently ahead of him on the depth chart (A to Z Sports, 08-10)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward role-access pressure grounded in a direct team-official commitment plus injury-driven extra reps; the WR2-challenge framing around Sutton is media projection and is not adopted.",
+      "Coach statements are role intent, not usage; no target or snap share is claimed."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "low",
+    "status": "corroboration_pending",
+    "source_refs": [
+      {
+        "ref": "https://heavy.com/sports/nfl/denver-broncos/head-coach-sean-payton-pat-bryant/",
+        "note": "Heavy, 2026-08-11. Payton 'We're not' (08-10, to Kay Adams) and 08-03 role quote. Fetched and content-verified.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.denvergazette.com/2026/08/08/why-broncos-wr-pat-bryant-is-ascending-in-second-nfl-season-i-had-to-step-up/",
+        "note": "Denver Gazette, 2026-08-08. Bryant extra-reps quote. Surfaced via search; body not independently fetched.",
+        "verified": false
+      },
+      {
+        "ref": "https://atozsports.com/nfl/denver-broncos-news/something-big-is-brewing-in-denver-broncos-training-camp-and-it-could-completely-change-the-outlook-of-one-key-position-group/",
+        "note": "A to Z Sports, 2026-08-10. Camp impressions; Franklin currently ahead on the depth chart (counter-signal). Fetched and content-verified.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "The signal is coach-speak-weighted (#297 rule: coach speak defaults to low confidence / corroboration pending) and the extra outside reps were partly contingent on Sutton rest and the Waddle strain.",
+      "Counter-signal preserved: Troy Franklin is currently listed ahead of Bryant.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does preseason deployment corroborate the coach-stated role commitment?",
+      "Bryant vs. Franklin ordering once Waddle returns?"
+    ],
+    "unrecognized_fields": []
+  }
+}
