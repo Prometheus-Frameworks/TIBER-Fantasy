@@ -13,6 +13,7 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 - **Key files:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
 - **Validation:** Rechecked all 14 default branches and 13 companion link PRs. Source pins are unchanged; all companions remain open/unmerged. Evidence links, dates, Markdown table shape and conflict markers were checked. No application tests, artifact replay, live-data/model/provider/deployment checks or activation.
 - **Handoff:** Draft documentation update only; separate maintainer review/merge is required. No contributor message, review request, main write, ready-state change, merge or runtime effect.
+
 ### 2026-10-04 — Codex: source-backed TIBER Now refresh after canonical publication
 - **Authority:** Daily documentation preparation authorized; maintainer review and merge remain separate.
 - **Summary:** Prepared the first post-publication daily update on one dedicated branch. The page now records #401's canonical publication, Data #278's reviewed fresh replay without converting it into source admission, ROP #30's repaired fixture-only review state, and Research #27's conceptual-only architecture audit.
