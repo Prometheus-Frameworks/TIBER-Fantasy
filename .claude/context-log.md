@@ -5,6 +5,13 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-10-05 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches and the 13 companion canonical-link PRs. Updated TIBER Now for Rookies #300's repaired head and new exact-head P1/two-P2 review findings; Research #27 / Forecast #190's completed architecture qualification and blocked strict point-in-time experiment; Research #28's design-only OL Context readiness packet; Ops #93/#94 licensing and NFLMeta documentation audits; ROP #31's unresolved provenance citation; and Ops #88's cross-document FORGE ownership contradiction.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion repositories remain unchanged.
+- **Validation:** All 14 repositories still use `main`; exact default-branch source pins and README paths are unchanged from October 4. All 13 companion PRs remain open, non-draft, unmerged and mergeable. Checked the relevant issue, PR and exact-head review records; preserved evidence links and status boundaries. No application tests, artifact replay, football-data/model run, hosted/device/provider check, deployment or activation was performed.
+- **Concurrency:** Reused open draft PR #415 and fetched the branch head plus current blob SHAs before each write. The page write began from head `203c757fbca46d1a17b769ff935da8932454cc95`; no unrelated files were changed.
+- **Handoff:** Documentation candidate only. Keep #415 draft for separate maintainer disposition. No main write, ready-state change, review request, contributor message, merge, deployment, source admission, provider connection/purchase, runtime/data/model activation or automation change.
 ### 2026-10-04 — Codex: source-backed TIBER Now refresh after canonical publication
 - **Authority:** Daily documentation preparation authorized in the current task; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches and current work records. Recorded the October 4 merge of Fantasy #401 as canonical-page publication without implying runtime delivery; updated the Week 3 board for stacked draft Data #278's reviewed fresh-replay witness and ROP #30's repaired documentation review while preserving unknown original generation time, withheld source-purpose acceptance and unexecuted real-input paths; added Research #27 as conceptual architecture research only.
