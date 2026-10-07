@@ -1029,3 +1029,11 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches unchanged.
 - **Validation:** Rechecked #401 at starting head `e87241a0a02ad6e47868708d882e0a54802709ab`; independently verified Research #26 review comment `5937221220` and terminal handoff `5937251969`. Exactly two page statements replaced; both logs preserved byte-for-byte with this entry appended. No application tests, artifact replay, provider-console checks, device acceptance or runtime execution performed for the documentation repair.
 - **Handoff:** Replacement head requires independent exact-head review and a final unchanged-head/checks/mergeability recheck before the authorized merge. Preserve main's newer CLAUDE.md-only #414 commit. This repair itself performs no merge, deployment or activation; final disposition belongs in PR #401's review/merge records.
+
+
+### 2026-10-07 — Codex: PR #415 FORGE execution-status correction
+- **Authority:** Joe authorized the two smallest safe next steps reported by the review watch: repository archival and the narrow #415 FORGE wording repair with independent review. Merge remains withheld.
+- **What changed:** Corrected only the FORGE workstream row to distinguish the October 6 decision from the later partial-execution checkpoint: standalone automatic deployments disabled and deployment removed are attributed reports; repository archival remains pending. Embedded freeze and unresolved D3 boundaries are preserved.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Verified both Ops #88 checkpoints against the current #415 head `ebc1733adcb6c37633f0abb28b2828dbc5856f23`. Exactly one page row changed; existing page content and both log histories are preserved. Documentation/table/link checks performed; application tests are unnecessary for this wording-only correction. No independent provider recheck or archival completion is claimed.
+- **Handoff:** Request independent review of the resulting exact head. Keep #415 unmerged. GitHub plugin lacks an archival operation; browser fallback needs user approval under the browser tool instructions.
