@@ -7,6 +7,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### 2026-10-07 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches, current tracked PR/review states and new upstream issues. Updated `docs/TIBER_NOW.md` for ROP #32 at reviewed exact head `a3aa191`, Research #29's conceptual Universe C track, and Fantasy #416/#417's authorized-but-not-yet-implemented GPT Sites handoffs.
+- **Evidence boundary:** Exact default-branch pins are unchanged from October 6. No upstream tests, artifacts, providers, hosted Sites, devices, live data, models or league transactions were run by this documentation refresh.
+- **Verification:** Status-page commit `43d582aaaebbbdedb99b90e5fdb7b977cf5f04df`; context-log commit `f4694192f32fb7b1892a8d745d22d7036806b0d2`. PR #415 remains open and unmerged on `codex/tiber-now-daily-update`.
+- **Handoff:** Only the canonical status page and two required handoff logs changed. The PR was already non-draft; no readiness change, review request, merge, deployment, activation or contributor message was performed.
+
 ### 2026-10-06 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches, current PR/review/issue state and maintainer decisions. Updated `docs/TIBER_NOW.md` for the repaired Week 3 candidates, the separate reviewed Week 4 preparation stack, Rookies #300's clean current repair review, merged Ops #89 / Research #26 / Data #279 boundaries, the bounded Data #280 source-probe record, all 13 merged companion README links, and the recorded-but-unexecuted FORGE D1/D2 decision.
