@@ -1048,3 +1048,14 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
 - **Validation:** Checked Markdown headings/table row shape, exact source links, date labels, source-pin stability and three-file scope. No application test, artifact replay, producer/model run, hosted Site/provider/device check, source admission, deployment, transaction or contributor message was performed.
 - **Handoff:** Keep PR #415 open and unmerged for maintainer review. Review readiness is unchanged and no agent review was requested.
+
+## 2026-10-10 — TIBER Now daily evidence refresh
+
+- **Authorization:** Daily preparation for the existing TIBER Now update lane. Maintainer review/merge remains separate.
+- **Concurrent-edit check:** Re-read PR #415 and all three changed files before editing. The PR was open, non-draft and unmerged at `db328dff3ce53977f06da5d62993d1b502fac902`; the fetched blobs matched the prepared inputs, so existing page and log history was preserved.
+- **Source check:** Confirmed all 14 linked repositories still use `main`; every default-branch README read succeeded and all exact source pins remain unchanged from October 9. Inspected current Week 3/4 PR bodies, validation/review records, Research #25/#30/#32 and Ops #83/#95.
+- **What changed:** Advanced the page check date to October 10; recorded ROP #30's validated and independently reviewed test-only repair plus the independently qualified purpose-only receipt while preserving its three false admission/activation flags and no-run boundary; corrected ROP #32 so the prior review is not attributed to its latest comparator repair; added the Research #32/Ops #83 obligation-closeout documentation milestone; updated Unit State's blocked readiness disposition; added the Dallas DST descriptive reconstruction; and corrected the repository-map FORGE D1/D2 wording.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only.
+- **Validation:** Checked Markdown headings, three-column table row shape, evidence links, date labels, exact source pins, stale-status phrases and three-file scope. Upstream receipts were inspected but their tests and private bytes were not reproduced. No application test, artifact replay, producer/model run, hosted Site/provider/device check, source admission, deployment, transaction, PR readiness change, review request or contributor message was performed.
+- **Handoff:** Keep PR #415 open and unmerged for separate maintainer review. Canonical-page publication remains the prerequisite for any future companion-link update.
+
