@@ -1271,3 +1271,12 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Validation:** Checked Markdown headings, three-column table row shape, evidence links, date labels, exact source pins, stale-status phrases and three-file scope. Upstream receipts were inspected but their tests and private bytes were not reproduced. No application test, artifact replay, producer/model run, hosted Site/provider/device check, source admission, deployment, transaction, PR readiness change, review request or contributor message was performed.
 - **Handoff:** Keep PR #415 open and unmerged for separate maintainer review. Canonical-page publication remains the prerequisite for any future companion-link update.
 
+
+### 2026-10-10 — Codex: PR #415 remaining FORGE summary correction
+- **Authority and scope:** Joe authorized the narrow FORGE summary repair, required handoff logs, focused documentation checks and independent exact-head review; PR #415 remains unmerged.
+- **Starting state:** Fresh PR read returned `f064b2dbe8564fcfaaacf87659edb325ee639cc0`, beyond the supplied October 9 head. The October 10 refresh already corrected the Ops repository-map entry, so it is preserved without a duplicate edit.
+- **What changed:** Corrected only the October 6 historical summary to retain the original decision-time pending state and cite the later partial-execution checkpoint: automatic deployments disabled and standalone deployment removed are attributed reports; archival remains pending, D2 freeze selected without implementation changes and D3 unresolved.
+- **Evidence:** Ops #88 decision comment `6015986056`, partial-execution comment `6016233110` and October 7 archival-access recheck `6048908730`; prior P2 `4207004775` identifies the contradictory summaries.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
+- **Validation:** Exactly one page line replaced; other page bytes and both complete log histories preserved. Markdown table shape, evidence links, whitespace/conflict markers and corrected-summary consistency checked. Application tests are unnecessary for this documentation-only correction; no runtime/provider/settings/archival/other-workstream changes or independent provider recheck.
+- **Handoff:** Independent review of the resulting exact head is required. Review outcome is recorded in PR #415 without changing the reviewed head; no prior review covers this repair. Keep the PR open and unmerged.
