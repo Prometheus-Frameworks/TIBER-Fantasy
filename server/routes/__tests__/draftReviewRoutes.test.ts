@@ -12,6 +12,20 @@ afterEach(() => {
 });
 
 describe('Draft Review public route', () => {
+  test('reconciled router retains league navigation and main public endpoints together', async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as typeof fetch;
+    const app = express();
+    app.use(createDraftReviewRouter());
+    for (const endpoint of ['leagues', 'league-rosters', 'waiver-candidates', 'weekly', 'evidence', 'resolve']) {
+      const response = await request(app).get(`/api/draft-review/${endpoint}`);
+      expect(response.status).toBe(400);
+      expect(response.body.status).toBe('invalid_input');
+      expect(response.headers['cache-control']).toBe('no-store');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test('returns no-store and does not expose upstream error detail', async () => {
     global.fetch = jest.fn(async () => {
       throw new Error('private upstream diagnostic');
@@ -85,6 +99,21 @@ describe('Draft Review public route', () => {
 });
 
 describe('bounded historical comparison route', () => {
+  test('serves the exact promoted cohort alongside prior history and excludes the rookie', async () => {
+    const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
+    const app = express(); app.use(createDraftReviewRouter());
+    const result = await request(app).get('/api/draft-review/evidence').query({ player_ids: '5892,6819,8188' });
+    expect(result.status).toBe(200);
+    expect(result.body.players.map((p: { status: string }) => p.status)).toEqual(['available', 'available', 'available']);
+    expect(result.body.players[0].observed.historical_teams).toEqual(['DET']);
+    expect(result.body.players[1].observed.historical_teams).toEqual(['IND']);
+    const rookie = await request(app).get('/api/draft-review/evidence').query({ player_ids: '13301' });
+    expect(rookie.status).toBe(200);
+    expect(rookie.body.players[0]).toMatchObject({ status: 'unavailable', identity: null, observed: null, derived: {} });
+    expect(result.body.provenance.team_roster_identity_promotion.receipt.player_ids).toHaveLength(19);
+    expect(result.body.forecast.status).toBe('unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   test('serves admitted data without Sleeper or private state and preserves public headers', async () => {
     const fetchMock = jest.fn(); global.fetch = fetchMock as typeof fetch;
     const app = express(); app.use(createDraftReviewRouter());
@@ -155,4 +184,43 @@ describe('unrostered TE route', () => {
     expect(result!.headers['cache-control']).toBe('no-store');
     expect(mock).not.toHaveBeenCalled();
   });
+});
+
+describe('weekly evidence preparation route', () => {
+  test('is unavailable with no upstream fetch and no cached response', async () => {
+    const fetchMock=jest.fn();global.fetch=fetchMock as typeof fetch;
+    const app=express();app.use(createDraftReviewRouter());
+    const result=await request(app).get('/api/draft-review/weekly?season=2026&week=1');
+    expect(result.status).toBe(200);expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.body).toMatchObject({status:'unavailable',consumer_admitted:false,players:[]});
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  test.each(['','?season=2026&week=0','?season=2026&week=19','?season=2026&week=01','?season=2026&week=1&week=2'])('rejects ambiguous scope %s',async query=>{
+    const app=express();app.use(createDraftReviewRouter());
+    const result=await request(app).get('/api/draft-review/weekly'+query);
+    expect(result.status).toBe(400);expect(result.headers['cache-control']).toBe('no-store');
+  });
+});
+
+test('historical data route preserves evidence with ID labels when the directory is unavailable', async () => {
+  global.fetch = jest.fn(async () => { throw new Error('private directory diagnostic'); }) as typeof fetch;
+  const app = express(); app.use(createDraftReviewRouter());
+  const result = await request(app).get('/api/draft-review/data');
+  expect(result.status).toBe(200);
+  expect(result.headers['cache-control']).toBe('no-store');
+  expect(result.body.evidence.players).toHaveLength(94);
+  expect(result.body.directory.fetched_at).toBeNull();
+  expect(result.body.labels[0].name).toMatch(/^Sleeper player /);
+  expect(JSON.stringify(result.body)).not.toContain('private directory diagnostic');
+});
+
+test('successful null directory payload falls back to ID labels without failing the historical route', async () => {
+  global.fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => null, text: async () => 'null' } as Response)) as typeof fetch;
+  const app = express(); app.use(createDraftReviewRouter());
+  const result = await request(app).get('/api/draft-review/data');
+  expect(result.status).toBe(200);
+  expect(result.body.evidence.status).toBe('available');
+  expect(result.body.evidence.players).toHaveLength(94);
+  expect(result.body.directory.fetched_at).toBeNull();
+  expect(result.body.labels.every((p: { name: string; player_id: string }) => p.name === `Sleeper player ${p.player_id}`)).toBe(true);
 });

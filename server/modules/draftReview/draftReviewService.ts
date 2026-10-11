@@ -1,3 +1,4 @@
+import { deriveWaiverSettings } from '../../../shared/teamWaiverContext';
 import { historicalEvidenceFor } from './historicalEvidence';
 import {
   deriveSleeperScoringFormat,
@@ -250,6 +251,9 @@ export async function getDraftReviewPlayerDirectory() {
   if (!playerCacheRequest) {
     playerCacheRequest = sleeperClient.getNflPlayers()
       .then((players) => {
+        if (!players || typeof players !== 'object' || Array.isArray(players)) {
+          throw new Error('Sleeper returned an invalid player-directory container.');
+        }
         playerCache = { fetchedAt: Date.now(), players };
         return playerCache;
       })
@@ -637,6 +641,7 @@ export async function buildDraftReview(rawInput: string) {
     generated_at: new Date().toISOString(),
     status: 'available',
     input,
+    waiver_context: deriveWaiverSettings(league.settings, roster.settings),
     observed: {
       league: {
         league_id: input.leagueId,

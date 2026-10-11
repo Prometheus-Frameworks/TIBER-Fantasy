@@ -108,3 +108,32 @@ The public Team study supports an optional third player, a bounded one-to-three-
 
 ### Team Account and league navigation (#375)
 The `team-auth` shell now includes explicit Google sign-in and Sleeper link preview/confirmation, unlink and all-session logout. My Leagues derives its account only from the validated server session/link. Public Team also supports request-time Sleeper username/season league lookup, retaining the list in tab memory for quick switching. Both paths fetch membership only for the selected league and load the exact observed roster. Old studies are cleared through the existing navigation guard; no private account data enters public agent packets. Real login remains unavailable until the isolated auth database and Google configuration are activated and accepted. See `server/modules/teamAuth/MODULE.md`.
+
+### Team historical evidence expansion — 2026-09-13, local preparation
+Nineteen reviewed Data identities extend Team's pinned 2025 bundle from 75 to 94
+profiles, retaining every old profile, historical source teams and identity
+confidence. The new additive admission provenance distinguishes conversation
+acceptance, proposal review and pending implementation review. Antonio Williams
+remains outside the 2025 cohort. Full details and validation are in the Draft
+Review module and docs/reviews/team-historical-admission-2026-09-13.md.
+Publication, merge and production release have not occurred.
+
+
+### Team preparation-only historical evidence gate — 2026-09-13
+The nineteen-player expansion remains an offline preparation bundle. Runtime decoding and caching return those identities as unavailable until a separately reviewed promotion/consumer admission change; prior 75 profiles are unchanged. No environment switch or PR merge activates the cohort. See the Draft Review module P2 repair note.
+
+
+### Nineteen-player historical promotion (proposed revision, 2026-09-13)
+Team's historical evidence consumer pins a separate Data #272 promotion receipt and admits exactly the nineteen previously prepared identities. The earlier preparation receipt remains unchanged and separately attributed. Original historical profiles and source limitations are preserved; Antonio Williams is excluded. Integrity failure returns unavailable, and there are no forecasts or inferred current teams/health/ownership. Merge and any deployment require separate authorization; this proposed consumer revision has not been deployed. See server/modules/draftReview/MODULE.md and docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### Weekly evidence preparation (2026-09-14)
+The read-only `/api/draft-review/weekly` preparation endpoint remains unavailable. Its offline candidate adapter and exploratory scoring/bucket policy are documented in `server/modules/externalModels/weeklyBoxscore/MODULE.md`. No weekly data admission, scheduler or UI activation is included; historical Team evidence remains unchanged.
+
+### Team waiver context (2026-09-16)
+Team roster handoffs include observed Sleeper waiver settings and labeled budget derivation. A read-only candidate check reuses complete league membership and the cached NFL directory; managers may attach up to five QB/RB/WR/TE candidates to Copy agent context. Unknown claim eligibility/timing and separate observation clocks remain explicit. See server/modules/draftReview/MODULE.md.
+
+### Team waiver comparison (2026-09-19, draft #404 implementation)
+Checked waiver shortlist candidates can be compared as a pair using admitted historical evidence and shared comparison tables. A dedicated discussion action copies only that pair plus roster context and observation clocks; missing history and unavailable Forecast remain explicit. See `docs/audits/team-waiver-comparison-2026-09-19.md`. Deployment and phone acceptance are pending.
+
+### Team historical Data workspace — 2026-09-22
+Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.

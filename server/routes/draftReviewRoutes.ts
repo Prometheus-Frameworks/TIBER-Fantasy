@@ -1,3 +1,6 @@
+import { buildHistoricalCatalog } from '../modules/draftReview/historicalCatalog';
+import { buildWaiverCandidates } from '../modules/draftReview/waiverCandidates';
+import { weeklyEvidenceFor } from '../modules/externalModels/weeklyBoxscore/weeklyBoxscore';
 import { historicalEvidenceFor } from '../modules/draftReview/historicalEvidence';
 import { buildUnrosteredTes } from '../modules/draftReview/unrosteredTes';
 import { discoverTeamLeagues, findTeamLeagueRosters } from '../modules/draftReview/teamLeagues';
@@ -38,6 +41,36 @@ export function createDraftReviewRouter() {
       return res.json(value);
     } catch {
       return res.status(502).json({ status: 'source_unavailable', error: 'Sleeper league information is unavailable. Try again shortly.' });
+    }
+  });
+
+  router.get('/api/draft-review/data', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (_req, res) => {
+    try { return res.json(await buildHistoricalCatalog()); }
+    catch { return res.status(502).json({ error: 'Historical catalog could not be loaded.' }); }
+  });
+
+  router.get('/api/draft-review/weekly', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, (req, res) => {
+    const { season, week } = req.query;
+    if (typeof season !== 'string' || !/^(19|20|21|22)\d{2}$/.test(season)
+        || Number(season) > 2200 || typeof week !== 'string' || !/^(?:[1-9]|1[0-8])$/.test(week)) {
+      return res.status(400).json({ status: 'invalid_input', error: 'Explicit REG season and week 1–18 required.' });
+    }
+    return res.json(weeklyEvidenceFor(Number(season), Number(week)));
+  });
+
+  router.get('/api/draft-review/waiver-candidates', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store'); next();
+  }, rateLimiters.publicDraftReview, async (req, res) => {
+    const input = req.query.sleeper_url;
+    if (typeof input !== 'string' || !input.trim() || input.length > 256) return res.status(400).json({ status: 'invalid_input', error: 'A bounded sleeper_url is required.' });
+    try { return res.json(await buildWaiverCandidates(input)); }
+    catch (error) {
+      if (error instanceof DraftReviewInputError) return sendSanitizedError(res, error);
+      return res.status(502).json({ status: 'source_unavailable', error: 'Candidate membership could not be established from complete league and player data.' });
     }
   });
 

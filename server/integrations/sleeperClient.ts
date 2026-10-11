@@ -29,6 +29,7 @@ export interface SleeperUser {
 }
 
 export interface SleeperRoster {
+  settings?: Record<string, unknown>;
   roster_id: number;
   owner_id: string;
   co_owners?: string[] | null;

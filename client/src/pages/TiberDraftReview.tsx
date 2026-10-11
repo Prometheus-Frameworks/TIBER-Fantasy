@@ -1,3 +1,6 @@
+import { DraftReviewData } from '@/components/draftReview/DraftReviewData';
+import DraftReviewWaivers from '@/components/draftReview/DraftReviewWaivers';
+import type { WaiverSettings, WaiverAttachment } from '@shared/teamWaiverContext';
 import DraftReviewEvidenceStudy from '@/components/draftReview/DraftReviewEvidenceStudy';
 import DraftReviewTeExplorer from '@/components/draftReview/DraftReviewTeExplorer';
 import TeamLeagueSwitcher from '@/components/draftReview/TeamLeagueSwitcher';
@@ -30,6 +33,7 @@ type DraftPick = {
 };
 
 export type DraftReview = {
+  waiver_context?: WaiverSettings;
   historical_evidence?: HistoricalEvidence;
   schema_version: string;
   generated_at: string;
@@ -178,6 +182,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
   const [discussionError, setDiscussionError] = useState('');
   const [study, setStudy] = useState<StudyAttachment | null>(null);
   const [copyError, setCopyError] = useState('');
+  const [waivers, setWaivers] = useState<WaiverAttachment | null>(null);
   const requestSequence = useRef(0);
   const copySequence = useRef(0);
   const handledSearch = useRef<string | null>(null);
@@ -188,6 +193,10 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
     setCopied(null);
     setDiscussionError('');
     setCopyError('');
+  }, []);
+
+  const updateWaivers = useCallback((next: WaiverAttachment | null) => {
+    ++copySequence.current; setWaivers(next); setCopied(null); setCopyError(''); setDiscussionError('');
   }, []);
 
   function mayDiscardStudy() {
@@ -214,6 +223,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
     setError('');
     setReview(null);
     setStudy(null);
+    setWaivers(null);
     setCopied(null);
     setDiscussionError('');
     setCopyError('');
@@ -247,6 +257,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
     setError('');
     setReview(null);
     setStudy(null);
+    setWaivers(null);
     setCopied(null);
     setDiscussionError('');
     setCopyError('');
@@ -280,6 +291,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
       ++requestSequence.current;
       setReview(null);
       setStudy(null);
+    setWaivers(null);
       setTeamSelection(null);
       setLoading(false);
       setError('');
@@ -309,7 +321,7 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
     try {
       const link = new URL('/team', window.location.origin);
       link.searchParams.set('sleeper_url', review.input.canonicalUrl);
-      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study) : draftReviewAgentPacket(review, study), null, 2));
+      await navigator.clipboard.writeText(kind === 'link' ? link.href : JSON.stringify(kind === 'comparison' ? draftReviewComparisonPacket(review, study, waivers) : draftReviewAgentPacket(review, study, waivers), null, 2));
       if (requestId !== requestSequence.current || copyId !== copySequence.current) return;
       setCopyError('');
       setDiscussionError('');
@@ -495,8 +507,11 @@ export default function TiberDraftReview({ authEnabled = false }: { authEnabled?
             </div>
           </section>
 
+          <DraftReviewData key={`data:${reviewScope(review)}`} review={review} />
+
           <DraftReviewEvidenceStudy key={reviewScope(review)} review={review} onChange={updateStudy} onDiscuss={() => void copyContext('comparison')} discussionStatus={copied === 'comparison' ? 'Comparison context copied' : ''} discussionError={discussionError} />
 
+          <DraftReviewWaivers key={`waivers:${reviewScope(review)}`} review={review} onChange={updateWaivers} />
           <DraftReviewTeExplorer key={`te:${reviewScope(review)}`} review={review} />
 
           {review.observed.draft.status === 'available' ? (

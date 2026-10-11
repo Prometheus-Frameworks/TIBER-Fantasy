@@ -1,5 +1,7 @@
 # TIBER-Fantasy
 
+> **[TIBER Now — what works, what we’re building, and what’s still conceptual](docs/TIBER_NOW.md)**
+
 **Open R&D for fantasy-football decision systems.**
 
 TIBER-Fantasy is TIBER's downstream product and orchestration shell. It

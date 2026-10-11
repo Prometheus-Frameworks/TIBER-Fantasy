@@ -46,11 +46,13 @@ Replay Team interactions with `npm test -- --runTestsByPath client/src/__tests__
 
 ## Accepted historical evidence slice (issue #360)
 
+Current branch preparation adds nineteen further profiles as documented below; the original #372 stage and its receipts remain archived unchanged.
+
 Prior operator acceptance: TIBER-Data PR #264 comment 5574349251. The previous 72 identities retain that receipt and unchanged profiles. This consumer now pins Data PR #268's reviewed preparation commit `488220fa05c834aad3a4e2bea839a1843131053a`, adding exactly Parker Washington (9487), Drake London (8112), and Chris Rodriguez (10219). Separate Team admission receipt `exports/promoted/draft_review/team_identity_admission_v1.json` records the earlier branch-preparation authority (#268 comment 5627117154). Its `consumer_bundle_regeneration_authorized:false` remains a truthful historical stage; later explicit consumer integration/regeneration/isolated-preview authority is #372 comment 5627769635. Both travel separately in provenance. Neither grants merge or production release permission.
 
 - `historicalEvidence.ts` adds optional `historical_evidence` to the existing v0_1 context without changing its observed/derived/forecast fields. The immutable public bundle is selected per roster, limited to 32 requested players; larger selections explicitly report unavailable.
 - `GET /api/draft-review/evidence?player_ids=<one-to-three-exact-ids>` provides the same public evidence for up to three players, including players outside the selected roster. Numeric Sleeper IDs and uppercase defense IDs are bounded; unmapped IDs return explicit player-level unavailability. No database, user identity, write route, upstream request, or new environment variable.
-- The runtime verifies the complete 106,062-byte bundle SHA-256 before caching immutable bytes. Each request parses fresh data. Missing/changed artifacts fail closed without substituting fixture or live data. The runtime expects the tracked artifact at `server/modules/draftReview/artifacts/historical2025.json` beneath the existing repository working directory.
+- The runtime verifies the complete 134,266-byte bundle SHA-256 before caching immutable bytes. Each request parses fresh data. Missing/changed artifacts fail closed without substituting fixture or live data. The runtime expects the tracked artifact at `server/modules/draftReview/artifacts/historical2025.json` beneath the existing repository working directory.
 - `scripts/buildDraftReviewEvidenceBundle.py --data-repo <local-data-checkout> --check` replays the consumer transform from fixed Git objects and SHA-256 pins, entirely offline. Omit `--check` to regenerate the same committed consumer bundle. This does not refresh sources, promote new IDs or write to Data.
 - Producer inputs: Data's admitted `exports/promoted/identity_crosswalk/tiber_identity_crosswalk_v2.json`, `exports/promoted/draft_review/evidence_admission_v1.json`, the separate Team admission receipt, and the two accepted `data/processed/evidence/player_weekly_{usage,ppr_outcomes}_2025.source_backed.json` files. Exact paths, hashes, producer commit and acceptance link ship in the packet. The six-row promoted weekly fixtures are not consumed.
 - Only 2025 weeks 1–18, ten approved raw outcome fields and two share fields are aggregated. Missing values stay missing. Totals require all recorded values; means disclose nonnull-week denominators. A mean weekly share is not a season share. Shares are not clamped to 0–1. Conflicting weekly team/opponent/position blocks joined usage, while independent outcome derivations remain available.
@@ -109,3 +111,112 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 `teamLeagues.ts` provides request-time public account/season league discovery and on-selection roster membership. Strict input and source schemas preserve numeric IDs as strings, unknown scoring as null and zero reception scoring as zero. Lists above 128, duplicate IDs, mismatched seasons, incomplete selected-league rosters and conflicting memberships fail unavailable without returning partial selectable data. No player-directory or all-league roster fan-out. Separate response clocks identify account, league-list and selected league/roster retrieval.
 
 The collapsible phone picker retains the public list in page memory while navigating existing Team URLs; it does not add browser persistence or authenticated ownership. Name/format search, empty/error states, explicit season selection and multiple-roster choice are included. URL navigation and rapid switching invalidate late membership responses. Existing study confirmation and handoff isolation remain in place. A `team-auth` profile also exposes the owner-scoped linked-account path documented in `../teamAuth/MODULE.md`; no private link or My Leagues state is attached to public packets.
+
+## Nineteen additional historical profiles — 2026-09-13 preparation
+
+This branch pins published Data preparation commit
+`5c683e26a843b98358292f0d34a97a98762a96f0` (draft Data PR #271) and the separate
+`exports/promoted/draft_review/team_roster_identity_admission_v1.json` receipt.
+It adds exactly nineteen reviewed identities, taking the immutable bundle from
+75 to 94 profiles. Every old profile and the old three-edge provenance object
+remains identical. The new optional `team_roster_identity_admission` provenance
+carries exact IDs, hashes, source baseline, limitations, conversation acceptance
+and the earlier proposal-review reference separately. No GitHub operator receipt
+URL is invented; no independent implementation review is claimed.
+
+Fourteen additions retain name_exact/medium confidence; three gsis_direct and two
+espn_bridge additions remain high confidence. Historical teams remain weekly
+source teams: Montgomery DET and Pittman IND. Current Sleeper metadata does not
+rewrite them. Antonio Williams / 13301 remains outside the admitted 2025 cohort.
+No missing history, missing weeks, unsupported metrics or Forecast is populated
+with substitute values. Candidate generation clocks never become provider
+freshness clocks. Existing attribution and null provenance clocks are retained.
+
+The offline builder now checks the original 72→75 stage and the new 75→94 stage,
+requires each exact receipt, rejects changed prior rows or expanded windows,
+and validates all pinned source objects. Lazy Git fetching is disabled explicitly;
+missing objects fail closed. The runtime content pin is
+`24015b41becb5bcbb87bea7e4c5d8443c3e1254a4ceea9c624a023263b021ea1`.
+Bundle size is 134266 bytes; the 250000-byte runtime cap is unchanged.
+
+Validation: 15 Python tests in normal and optimized modes, deterministic replay,
+exact old-profile/provenance comparison, 60 Jest tests across seven relevant
+history/service/routes/UI/shared/containment suites, full sh build.sh, and a built
+public-profile /evidence HTTP smoke all pass. Typecheck has the same 506 baseline
+diagnostics with identical file/error-code counts and no touched-file errors.
+No new dependencies, environment variables, routes, DB or UI behavior.
+
+The operator explicitly authorized publication of both prepared branches and draft
+PRs after the initial automatic approval rejection. Command-line Git lacked write
+credentials, so Data was published through the authenticated GitHub connection;
+its tree exactly matches local preparation commit 790c04f. The consumer source pin
+and content hash were updated accordingly, with all profile data unchanged.
+Independent implementation review remains pending, followed by separate
+merge/deployment decisions. The unrelated #375 and #377 branches are unchanged.
+
+
+## 2026-09-13 — Accepted P2: preparation is not runtime admission
+
+Operator accepted discussion_r3999768958 and authorized the bounded repair and
+next review. The integrity-checked decoder now withholds all nineteen identities
+from the preparation-only receipt in every runtime profile, including preview.
+It returns unavailable with an explicit promotion/admission reason and null
+identity/observations plus empty derived metrics. The runtime caches only this
+filtered evidence; direct decoding and cached selections cannot expose the
+prepared profiles as available. All 75 prior profile objects and attribution
+remain unchanged. The 94-record offline bundle and its source/hash pins remain
+unchanged and inspectable for review. Its availability fields describe prepared
+source records, not permission to serve the new cohort.
+
+No runtime switch, receipt-stage string or PR merge activates these profiles. A
+later separately authorized change must pin accepted promotion evidence and
+review the consumer admission policy. This repair does not invent that receipt
+or grant promotion. Data #271's accompanying repair changes only its inventory
+and handoff, so the existing immutable source pin remains valid.
+
+Regression coverage checks all nineteen withheld identities, exact preservation
+of the prior 75, decoder and cache behavior, response mutation isolation, and a
+mixed public HTTP comparison. Fresh independent review remains pending; merge
+and promotion/release decisions remain separate. This section supersedes the
+earlier preparation-stage runtime availability and pending-publication wording.
+
+P2 repair validation: all 62 tests in seven focused suites and the full build passed.
+
+
+## 2026-09-13 — Separate nineteen-player historical promotion
+
+The current operator grant approves the nineteen-player historical promotion receipt and matching consumer activation implementation, tests, paired PRs and independent review. It explicitly withholds merge and any deployment. Data PR #272 publishes `team_roster_identity_promotion_v1.json` at producer commit `f12234d909adc82e79ca463e76b994c8dd24bdb9`, receipt SHA-256 `215d2b47edb204a138d30725b4e2e3974993f105271667d665c651b825408c85`.
+
+The consumer now validates and embeds that separate receipt, with no edits to the earlier preparation receipts. Its exact whole-bundle pin admits the nineteen historical profiles; runtime flags, stage strings, current roster notes, missing flags or PR merges cannot grant admission. Missing or modified artifact bytes fail closed. All 94 profile objects—including the original 75—and original source limitations, attribution, unknown clocks, historical teams, confidence and unavailable forecasts remain identical. Antonio Williams / 13301 remains unavailable. Historical figures are descriptive 2025 observations, never current-season projections or regression predictions.
+
+The prepared code changes runtime policy only in this proposed revision. Current production still withholds the nineteen until a separately authorized release. This section supersedes the previous unconditional preparation-only gate for the proposed revision; it does not retroactively expand earlier authorizations. No new source acquisition, terms assessment, lineup or ownership inference, transaction, merge or deployment occurred.
+
+Validation: 17 Python tests pass normally and under `-O`; 63 tests pass across seven Jest suites; full build passes. Typecheck retains exactly the baseline 506 diagnostics with no added per-file/error-code counts. Deterministic replay and full equality of all 94 prior historical profile objects are verified. Independent review is recorded separately.
+
+Publication boundary: Fantasy draft PRs previously triggered automatic Railway previews. The consumer PR must not be opened until deployment suppression is verified or the operator separately authorizes that infrastructure change. Draft status alone is insufficient. Do not merge or deploy these activation changes.
+
+## 2026-09-14 — Weekly consumer preparation
+
+An additive `/api/draft-review/weekly` endpoint accepts explicit season/week and returns unavailable until separately admitted. Offline preview/policy lives in `externalModels/weeklyBoxscore`; no weekly artifact is embedded or served, and no environment toggle grants admission. Historical evidence and existing Team packets remain unchanged. See that module and the weekly-consumer preparation audit for validation and release boundaries.
+
+## 2026-09-16 — Waiver context and selected shortlist (#371 follow-up)
+
+Operator requested the smallest useful waiver-handoff improvement after league-by-league use: waiver settings, budget/priority and timestamped candidate membership. Additive `waiver_context` on the roster response retains raw numeric Sleeper settings separately from the interpreted system (0 rolling / 1 reverse standings / 2 FAAB; other codes unknown) and calculated FAAB remaining. Missing/invalid values never default to zero or $100. Remaining = current configured league budget minus reported roster usage; signed usage is retained because adjustments can produce credits. Unsafe or negative results are unknown. This is not a pending-bid-adjusted balance or a reconstructed original budget; no adjustment ledger is reconciled.
+
+`GET /api/draft-review/waiver-candidates?sleeper_url=…` uses the existing strict complete-membership validator and 24-hour directory cache. All primary, starter, reserve and taxi memberships are excluded across every league roster. Scope/count/identity conflicts fail closed. The bounded pool includes only active directory QB/RB/WR/TE entries with recognized NFL teams; that filter does not establish health, playing time or fantasy eligibility. Alphabetical order is not a recommendation. No new provider, env var, DB, authentication or transaction path is introduced.
+
+The new Team panel checks on explicit action, searches locally, displays up to 50 matches, and allows at most five exact selections. Copy agent context and Discuss comparison carry only that shortlist, fresh settings and separate league/roster/directory clocks. The original roster snapshot remains separately timestamped. Refresh clears prior results/selections immediately, errors stay visible, and navigation/unmount invalidate pending responses. Roster refresh clears the attachment even when fixture timestamps coincide. No selection or check is silently treated as manager intent to add a player. Pending claims/results, claim locks/eligibility, processing times and minimum bid remain unavailable. The draft board never establishes present ownership.
+
+Existing TE exploration and history remain unchanged. New packets add `waiver_exploration` (explicit unavailable when no matching check exists); no existing field is removed. Source references: https://docs.sleeper.com/ , https://support.sleeper.com/en/articles/9656662-what-types-of-waivers-do-you-support , https://support.sleeper.com/en/articles/1876040-how-does-faab-bidding-work . The roster API code mapping is an adapter interpretation, not a claim the help articles document numeric enum values.
+
+## 2026-09-19 — Pairwise waiver comparison (#404)
+
+The checked shortlist offers “Compare [player] with another waiver player.” Keep the first candidate while searching/selecting a second, then choose that second candidate from the other shortlist entries. The existing admitted historical endpoint and comparison table supply 2025 weeks 1–18 evidence, denominators and explicit missing coverage. Current directory metadata remains separate from historical teams. No new endpoint, provider, environment variable or evidence admission.
+
+“Discuss this waiver comparison” copies normal roster context, exactly two selected waiver candidates, independent check clocks, validated historical evidence/provenance and explicit Forecast unavailability. It does not copy the full candidate pool or unrelated shortlist entries. An additive `waiver_comparison` v1 field leaves existing packet contracts intact. Pair/shortlist changes remount evidence and invalidate clipboard completions; refresh and review scope changes clear comparison state. This is read-only decision support without rankings, claims or inferred manager intent. Forecast projection and postgame scoring are separate work.
+
+### Team historical Data workspace (v0)
+- `GET /api/draft-review/data` returns only the integrity-pinned 2025 admitted cohort (currently 94 profiles), with existing cached Sleeper name labels and a separate directory acquisition clock. Directory failure preserves historical evidence with ID labels. No new source or identity admission.
+- `DraftReviewData` loads on demand in Team; search by name/ID, historical-position filter, selectable raw metrics, totals/means sorting and up to four explicitly selected comparisons. Missing values sort last in both directions. Share totals stay unavailable.
+- `shared/teamHistoricalData.ts` validates the catalog and builds a selected-only historical investigation attachment while retaining the base roster snapshot. No preference, player ranking, ownership, current role, claim eligibility or transaction is inferred.
+- 2026 Weekly Pulse, forecasts and historical weekly-series charts are outside this slice. Actual phone acceptance remains a separate gate.

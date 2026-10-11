@@ -5,6 +5,103 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-10-07 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches and current upstream work records. Updated `docs/TIBER_NOW.md` for ROP #32's reviewed exact head, Research #29's conceptual Universe C hypothesis, and Fantasy #416/#417's authorized-but-unimplemented GPT Sites handoffs.
+- **Evidence boundary:** All default-branch pins are unchanged from October 6. Kept conceptual research, implementation authorization, review candidates, source/purpose acceptance, real-input execution and live deployment distinct.
+- **Verification:** Confirmed PR #415 remains open, unmerged and on `codex/tiber-now-daily-update`; checked the exact current states of the tracked Week 3/Week 4/Rookies/dependency PRs. Status-page commit: `43d582aaaebbbdedb99b90e5fdb7b977cf5f04df`.
+- **Handoff:** [PR #415](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/415) remains the sole reviewable daily update. It was already non-draft; this run did not alter review readiness, request review, merge, deploy, activate runtime/data/models/providers, mutate leagues or message contributors.
+
+### 2026-10-06 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches, current PR/review/issue state and maintainer decisions. Updated `docs/TIBER_NOW.md` for the repaired Week 3 candidates, the separate reviewed Week 4 preparation stack, Rookies #300's clean current repair review, merged Ops #89 / Research #26 / Data #279 boundaries, the bounded Data #280 source-probe record, all 13 merged companion README links, and the recorded-but-unexecuted FORGE D1/D2 decision.
+- **Evidence boundary:** Kept merged/local source, synthetic test receipts, review candidates, conceptual records, source admission, real-input execution and live deployment distinct. No upstream tests, retained artifacts, providers, hosted services, devices, live data or models were run by this documentation refresh.
+- **Verification:** Confirmed every linked repository still uses `main`; fetched the current 14 default-branch heads and README paths; checked exact current metadata for the tracked PRs and comments. Status-page commit: `025ffca621095502c9b86f937a5bfed30653e4c9`.
+- **Handoff:** [PR #415](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/415) remains open and unmerged on `codex/tiber-now-daily-update`. It was already non-draft when this run began; this run did not alter review readiness, merge state, deployment or runtime state.
+
+### 2026-10-05 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches and the 13 companion canonical-link PRs. Updated TIBER Now for Rookies #300's repaired head and new exact-head P1/two-P2 review findings; Research #27 / Forecast #190's completed architecture qualification and blocked strict point-in-time experiment; Research #28's design-only OL Context readiness packet; Ops #93/#94 licensing and NFLMeta documentation audits; ROP #31's unresolved provenance citation; Ops #88's cross-document FORGE ownership contradiction; and Fantasy #412's refreshed, still-unreviewed dependency head.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion repositories remain unchanged.
+- **Validation:** All 14 repositories still use `main`; exact default-branch source pins and README paths are unchanged from October 4. All 13 companion PRs remain open, non-draft, unmerged and mergeable. Checked the relevant issue, PR and exact-head review records; preserved evidence links and status boundaries. No application tests, artifact replay, football-data/model run, hosted/device/provider check, deployment or activation was performed.
+- **Concurrency:** Reused open draft PR #415 and fetched the branch head plus current blob SHAs before each write. The page write began from head `203c757fbca46d1a17b769ff935da8932454cc95`; no unrelated files were changed.
+- **Handoff:** Documentation candidate only. Keep #415 draft for separate maintainer disposition. No main write, ready-state change, review request, contributor message, merge, deployment, source admission, provider connection/purchase, runtime/data/model activation or automation change.
+
+### 2026-10-04 — Codex: source-backed TIBER Now refresh after canonical publication
+- **Authority:** Daily documentation preparation authorized in the current task; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches and current work records. Recorded the October 4 merge of Fantasy #401 as canonical-page publication without implying runtime delivery; updated the Week 3 board for stacked draft Data #278's reviewed fresh-replay witness and ROP #30's repaired documentation review while preserving unknown original generation time, withheld source-purpose acceptance and unexecuted real-input paths; added Research #27 as conceptual architecture research only.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion repositories remain unchanged.
+- **Validation:** All 14 repositories still use `main`; all source reads succeeded. Fantasy alone advanced its default-branch pin from `4204ddfc0fb0dd38da708e9aea3c4d01b77997ab` to `e5b33807b4b6f982a62c3c97fe7a02529d641886`; the other 13 pins are unchanged. Checked PR/issue/review records for Fantasy #401, Data #277/#278, ROP #30, Teamstate #96 and Research #24/#27. Markdown table shape, link preservation and conflict/truncation markers were checked. No application tests, candidate replay, football-data/model run, hosted/device/provider check, deployment or activation was performed.
+- **Concurrency:** Began from current `main` head `e5b33807b4b6f982a62c3c97fe7a02529d641886` after #401 merged. Prepared one dedicated daily-update branch from that exact head; each file write requires the fetched blob SHA and no concurrent branch drift.
+- **Handoff:** Documentation candidate only. Keep the daily-update PR draft for separate maintainer disposition. No main write, ready-state change, review request, contributor message, merge, deployment, source admission, runtime/data/model/provider activation or automation change.
+
+### 2026-09-29 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation authorized in the current task; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 upstream default branches and READMEs, open PR inventories, tracked issue/comment records and candidate reviews, plus 13 companion link PRs. Recorded Ops #87 as merged design-only/inactive Operating Charter documentation; Research #24 as Week 3 intake with supplemental Raymond entry; Ops #88 as unresolved FORGE/deployment decisions; Fantasy #413 as a prepared cold-start documentation handoff and #412 as an unreviewed dependency candidate. Distinguished Ops #86's attributed comparison/composition packet receipts from independently replayed evidence. Clarified the superseded historical #410 body-only interpretation while preserving evidence links.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
+- **Validation:** All 14 repositories still use main; all README reads and tracked source checks succeeded. Only Ops advanced its default-branch pin, from `14a9ea573200d64c5c8a335ef57f5da1a64e6dd7` to `4b9a967e89df68890111d1ee145088b527ff1d4c`; the other 13 pins and tracked implementation-candidate heads were unchanged. All 13 companion PRs remain open, non-draft and unmerged. Checked Markdown table widths, fences, conflict/truncation markers and preservation of prior evidence links (apart from the refreshed Ops README pin). Full original log strings are preserved, not reconstructed from displayed excerpts. Remote byte readback and the final three-file diff are checked after the sequential writes.
+- **Concurrency:** Started and rechecked PR #401 at `c2759f9eac2fd2503edadd3c6ada4523f9671666`, open/non-draft/unmerged/mergeable against `482736f33a34267ae6dc4e038c04872e8162abee`. Page update committed as `7b061fcb1d116bae550bf7e1accf9c9843379e58`. Each following write requires the expected branch head and unchanged target-file bytes/blob.
+- **Review and limits:** Prior independent review comment `5882865358` covers c2759f9, not this later daily update. This run performed documentation checks only, with no application tests/builds, packet replay, hosted/device/provider-console/live-data/model checks, or new independent review.
+- **Handoff:** [PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401) remains open for separate maintainer disposition. Canonical publication precedes companion links. No main write, ready-state change, agent-review request, contributor message, merge, deployment, source admission, runtime/data/model/provider activation or automation change.
+
+### 2026-09-28 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked 14 upstream default branches and READMEs, repository pins, the 13 companion link PRs, Fantasy #401/#410/#411, Ops #86, and the merged Role-and-opportunity #29 record. Updated the evidence date and source-pin snapshot; recorded #411 as a private draft/local-preview candidate after a clean exact-head review without implying a live card; corrected #410's closed issue state while retaining the unverified provider-side follow-up boundary.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches unchanged.
+- **Validation:** All 14 default branches report `main`; all 14 README reads succeeded. No source pin changed since September 26. All 13 companion PRs remain open, non-draft and unmerged. #401 was open, non-draft, unmerged and mergeable at the pre-write head. The #411 review receipt is attributed; this run did not rerun its tests/build or perform provider-console, browser/device, live-data, model, deployment or activation checks.
+- **Concurrency:** Started from #401 head `5edd5f331246846782d57fe169de6ecee3f11a78`. Pre-write page/context-log/Codex-log blobs were `1b66e264929e94a5b095b7c4a2b03a204d9b0d9c`, `f2e7e5fdc5d8e2de21e4f93f7eb12cc38c166bc6`, and `311a248790097c2c2f43f8247974d7b667c222f6`. An isolated worktree preserved the stale local branch and its commit; changes were based on the fetched PR head.
+- **Handoff:** Candidate documentation only. Keep #401 open and unmerged for separate maintainer disposition; this new head has not been reviewed. The canonical page must publish before companion links. No review request, README edit, main edit, merge, contributor message, provider action, source admission, runtime/model/data activation or deployment was performed.
+
+### 2026-09-25 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded Role-and-opportunity #27's merged offline retained Week 1 allocation bridge and #28's merged deterministic injected role-state builder, including the initial P1/two-P2 review findings and the no-major-issues repaired-head re-review. Preserved the boundary between merged source, retained candidate evidence, ROP-purpose acceptance, source admission, consumer activation and live delivery.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** Confirmed all 14 default branches remain `main` and all 14 README reads succeeded. Role-and-opportunity alone advanced its source pin to `131ff54ff7b44851fdb3584ba903fd34741cd086`; the other 13 pins are unchanged. Checked exact merge heads and review records for Role-and-opportunity #27/#28, current states for #401 and the tracked Fantasy/Forecast candidates, and all 13 companion README-link PRs. No application tests, football-data reads, model runs, hosted/device checks, deployment, source admission, provider activation or runtime changes were performed.
+- **Concurrency:** Before the first write, #401 was open, non-draft and unmerged at `13c024fe6fc9c9acdcba7920de059dd95cc8f91b`; the starting page/agent-log/context-log blob SHAs were `675ddd54b2181bd5a4893b7a744693befbea3384`, `3b287f6546cdfa562edae925e83a6234dc1d3ce4`, and `e6006b91ed614ac49d908a0c91d43dd5774e7016`. The remote branch still matched that head immediately before editing.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; the refreshed head needs separate maintainer review/merge and synchronization with the advanced Fantasy base. Canonical-page-first ordering remains required before companion README links. No review request, main edit, contributor message, merge, deployment or activation was performed.
+
+### 2026-09-24 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Fantasy #408 as source without claiming deployment or phone acceptance; added merged Role-and-opportunity #26 with its contract-only boundary; recorded merged Data #275 together with three P2 findings returned after merge; updated Forecast #189's repaired exact-head review state; and noted stacked Fantasy #409's unresolved P2.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** Confirmed all 14 default branches remain `main` and all 14 pinned README reads succeeded. Data, Fantasy and Role-and-opportunity advanced; the other 11 source pins are unchanged. Checked exact PR heads, merge/draft states and review discussions for Data #275, Role-and-opportunity #26, Fantasy #401/#408/#409 and Forecast #189, plus the unchanged active Fantasy candidates. All 13 companion README-link PRs remain open, non-draft and unmerged. No application tests, football-data reads, model runs, hosted/device checks, deployment, source admission, provider activation or runtime changes were performed.
+- **Concurrency:** Before the first write, #401 was open, non-draft and unmerged at `f095f1b9eeb23c3e209ff5dfc8849aa051a38e7d`; the starting page/agent-log/context-log blob SHAs were `213113a5eaa7ac52703faaeb88d10f9815975bbe`, `d03f8afa6a69bcff4e3bc350da5deb1638c3e422`, and `e30c55fe235adbd48ae6bd8af212d3f14c5f0460`. Each exact file was rechecked before its non-force update.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; the refreshed head needs separate maintainer review/merge and synchronization with the advanced Fantasy base. Canonical-page-first ordering remains required before companion README links. No review request, main edit, contributor message, merge, deployment or activation was performed.
+
+### 2026-09-23 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories, relevant work/review records and 13 companion link PRs. Recorded merged Teamstate #95 as isolated provisional adapter source without claiming a real-packet pilot; added reviewed draft Fantasy #408, the repaired/re-reviewed #388 state, open non-draft #406, and documentation-only Forecast #189.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** Confirmed all 14 default branches remain `main` and all 14 README reads succeeded; Teamstate alone advanced its source pin to `9513fdae81d3a70189b8ebf03f38d40e1921204e`. Checked exact PR heads, merge/draft states and review discussions for Teamstate #95, Fantasy #388/#401/#406/#408 and Forecast #189. All 13 companion README-link PRs remain open, non-draft and unmerged. No application tests, football-data reads, local Forecast artifact execution, hosted/device checks, deployment, data admission, model/provider activation or runtime changes were performed by this documentation run.
+- **Concurrency:** Immediately before writing, #401 was open, non-draft and unmerged at `c8055d7c9e885b88f12c05d70012fc286d3a524f`; the starting page/log blob SHAs were `0d10415ef664c9904fcebf38df1c6f1eac729a2c`, `f75c9c2a575aa19898ab2b39f2c75f9ce63fea7c`, and `577939ac3858d943263c6e378cd4976cca5e5ae9`. Each write must recheck the exact current blob SHA and stop on drift.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; the updated head needs separate maintainer review/merge. Canonical-page-first ordering remains required before companion README links. No review request, main edit, contributor message, merge, deployment or activation was performed.
+
+### 2026-09-22 — Codex: Conditional publication and main synchronization
+- **What changed:** Made publication conditional on the page existing on `main`, addressing P2 4071297759. Merged main at `71ca2a09482ed29c3ae878a050fc6f030d1bbd6c` into the PR branch, retaining both branches' appended log entries.
+- **Files modified:** `docs/TIBER_NOW.md` and the two required agent logs; main's existing code is preserved without edits.
+- **Validation:** Conflict-marker and whitespace checks; compared the result with main to confirm only the existing four documentation files differ; verified both parents' log entries are retained and the page changes only its publication paragraph.
+- **Handoff:** Fresh review must cover the synchronized head. Consult PR #401 for current disposition. Canonical-page-first ordering remains required for companion README links. This operation updates the PR branch only; it does not merge the PR or deploy.
+
+### 2026-09-22 — Codex: TIBER Now publication wording repair
+- **What changed:** Addressed P2 review comment 4070789464 by replacing the temporary publication checkpoint with branch-aware canonical-page wording and labeling the September 21 handoffs as historical.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Inspected the three-file text diff; preserved all September 21 evidence dates, repository pins, readiness rows and links outside the publication paragraph. Documentation-only change; application tests are not applicable.
+- **Handoff:** Review the repair at its exact PR head before a maintainer merge decision. The canonical default-branch page must exist before companion links merge. Consult PR #401 for current review and merge state; this log is a dated work receipt. No merge, deployment or source activation was performed by this repair.
+
+### 2026-09-21 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Reverified all 14 linked upstream repositories and the 13 companion draft PRs; recorded Fantasy PRs #396 and #405 as merged source while keeping live-release and phone-acceptance claims separate; added draft PR #406 as a source-disabled local Team MCP candidate with two current P2 review findings; advanced only the Fantasy source pin.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only.
+- **Validation:** Checked all 14 default-branch heads and READMEs, all 13 companion PR states, relevant Fantasy issues/PRs/reviews, exact evidence links, and Markdown status assertions. No application tests, hosted/device checks, runtime changes, deployment, data admission, or model/provider activation were performed.
+- **Concurrency:** Immediately before writing, PR #401 was open, draft, unmerged, and not mergeable at head `c8ed7b4da3c19bf28c5c9211d0009bd7d77b152a`; each file update used its exact current blob SHA through the non-force contents API.
+- **Historical handoff (September 21):** At that check, #401 was a draft, unmerged candidate requiring branch synchronization and maintainer review. That run sent no review request and performed no merge, deployment or activation. This records the state at that check; consult PR #401 for current publication and review state.
+
+### 2026-09-23 — Codex: Prevent malformed directory cache poisoning (#408)
+- **What changed:** The shared Sleeper player directory rejects non-record containers before caching them. A catalog fallback can no longer leave a malformed snapshot for normal Team reads.
+- **Files modified:** `server/modules/draftReview/draftReviewService.ts`, `server/modules/draftReview/__tests__/historicalCatalog.test.ts`.
+- **Validation:** Three focused suites passed (52 tests); server build passed with the existing duplicate-member warning. Typecheck remains nonclean (507 diagnostics, none in the touched files); `git diff --check` passed.
+- **Notes:** Draft PR #408 remains unmerged and undeployed; exact-head independent review and portrait-phone acceptance are separate gates.
+
 ### 2026-08-09 — Codex: Rankings season-honesty review corrections
 - **What changed:** Corrected `/tiers` archive labels to use the forward ranking season, added a calendar-specific unavailable state, cleared retained season selection on a mounted stale-calendar transition, keyed that transition separately in React Query, defaulted parameterless postseason rankings to the configured forward season, and restricted stale-calendar explicit queries to configured historical seasons before any cache/scoring read.
 - **Files modified:** `client/src/pages/TiberTiers.tsx`, `client/src/pages/tiberTiersV2Mapper.ts`, `server/routes/rankingsV2Routes.ts`, and focused rendered/container/route tests.
@@ -777,3 +874,223 @@ Validation: 64 tests across six affected service/shared/UI/Team/routes/containme
 - **Files modified:** `client/src/components/draftReview/TeamAccount.tsx`, `client/src/__tests__/teamAccount.test.ts`, and both required agent logs.
 - **Validation:** Both new focus/visibility regression cases failed before the repair; all seven focused account tests pass after it, including Google popup-focus preservation and existing logout/unavailable/linking checks. Full `sh build.sh` passed; `git diff --check` passed. Typecheck comparison and publication/review receipts are recorded on PR #375.
 - **Notes:** Synthetic sessions and mocked Google only. No provider/database configuration, activation, merge, or production release; portrait-phone acceptance remains pending. Repair starts from exact head `1213827d9fbbc88499f4e98813272dedb700dce1` without integrating main or resolving other review threads.
+
+### 2026-09-13 — Codex: Nineteen historical Team profiles prepared locally
+- **What changed:** Exact nineteen-edge Data consumer integration, separate conversation/admission provenance, retained confidence and historical teams, original 75 profiles unchanged; Antonio excluded from 2025 evidence.
+- **Files modified:** scripts/buildDraftReviewEvidenceBundle.py and semantic tests; draftReview historical bundle, runtime pin and tests; shared/draftReviewEvidence.ts; module and review/handoff docs.
+- **Validation:** 15 Python tests normal/optimized, deterministic replay, 60 Jest tests/seven suites, full build, built /evidence HTTP smoke; typecheck unchanged at 506 baseline diagnostics.
+- **Notes:** The operator subsequently authorized both branch publications and draft PRs. Data draft PR #271 publishes 5c683e26a843b98358292f0d34a97a98762a96f0 with a file tree identical to local 790c04f. The authenticated GitHub connection assigns new commit metadata because command-line Git lacks write credentials. Consumer pin/hash updated with all profile data unchanged. Independent implementation review and separate merge/production decisions remain outstanding. No #375/#377 changes, source refresh, DB, acquisition or fantasy transaction.
+
+
+### 2026-09-13 — Codex: PR #378 promotion-boundary P2 repair
+- **What changed:** Accepted P2; all nineteen preparation-only identities are unavailable at runtime. Decoder and cache apply the same boundary; prior 75 profiles and pinned offline bundle are unchanged. No activation switch or manufactured promotion receipt.
+- **Files modified:** historicalEvidence.ts, historicalEvidence.test.ts, draftReviewRoutes.test.ts, module/review documentation, replit.md and agent logs.
+- **Validation:** 62 tests across seven history/service/routes/UI/shared/containment suites passed, including all-cohort withholding, prior-profile equality, cache isolation and mixed HTTP comparison; full build passed.
+- **Notes:** Operator authorized repair publication and next review. Data #271's P2 changes inventory documentation only; existing source pin retained. Merge, promotion and deployment remain separate.
+
+
+### 2026-09-13 — Codex: Separate historical promotion and consumer activation
+- Added strict validation and provenance for Data #272's separate nineteen-player promotion receipt; pinned published producer f12234d909adc82e79ca463e76b994c8dd24bdb9 and regenerated the evidence bundle.
+- Replaced unconditional preparation-only withholding with exact pinned promotion admission. Preserved all 94 profile objects, earlier receipts, limitations and unavailable forecasts. Antonio Williams remains excluded.
+- Validation: 17 Python tests (normal/optimized), 63 Jest tests, full build; baseline 506 TypeScript diagnostics unchanged. Independent review recorded separately.
+- No merge/deployment authorized. Consumer PR opening is held until Railway automatic preview deployment can be suppressed. See docs/reviews/team-historical-promotion-2026-09-13.md.
+
+### 2026-09-14 — Codex: weekly box-score consumer preparation
+- Added bounded offline candidate decoder, route-independent descriptive buckets, explicit generic scoring and separate schedule provenance.
+- Added inactive read-only weekly endpoint; no DB, source calls, admission pin, feature flag or UI activation.
+- Validation: 49 targeted tests, server build, real 332-row candidate preview; typecheck retains baseline 506 diagnostics with no new per-file/code counts. Independent review P2 provenance repair completed.
+- Scope: local preparation only; no remote publication, merge or deployment. Details in docs/audits/weekly-consumer-preparation-2026-09-14.md.
+
+### 2026-09-14 — Codex: weekly consumer review repairs
+- Repair #386 schedule game-set validation and duplicate player/game keys independently of team.
+- Files: weeklyBoxscore.ts, focused tests, docs/audits/weekly-consumer-review-repair-2026-09-14.md.
+- Validation: 64 targeted tests pass; 14 malformed-input regressions fail before repair.
+- Fresh exact-head review requested after publication; no merge, admission, activation or deployment.
+
+### 2026-09-15 — Codex: weekly review R2
+- Require row-supported observed-game coverage before schedule reconciliation and display filtering.
+- Changed weekly decoder/tests and R2 audit; 69 focused tests pass, existing 332-player preview remains unchanged.
+- No source admission, UI, merge or deployment. Fresh review requested after publication.
+
+
+## 2026-09-15 — Weekly review R3
+
+Verified and repaired #386 P2 4010982454: reject self-opponents and inconsistent unordered game matchup pairs before position filtering. Reciprocal and separate-game pairs accepted. 72 targeted tests passed; unchanged real candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r3-2026-09-15.md. Fresh independent review pending. No admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R4
+
+Verified and repaired #386 P2s 4011177267/4011177273: consistent known team/game denominators and nullable-aware receptions <= targets. 76 tests pass; real candidate still 332 players / 15 of 16 games / unknown finality. Audit: docs/audits/weekly-consumer-review-r4-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R5
+
+Bounded repair of summed opportunities, completions/attempts and reused source-row indices. 81 tests pass; unchanged candidate previews 332 players / 15 of 16 games / unknown finality. See docs/audits/weekly-consumer-review-r5-2026-09-15.md. Independent review pending; no admission, activation, merge or deployment.
+
+## 2026-09-15 — Weekly review R6
+
+Repaired passing-counter and falsely-unavailable-share P2s; disputed TD<=individual-touches with NFL lateral rules and regression coverage. 92 focused tests pass; real candidate unchanged at332 players/15of16 games/unknown finality. See docs/audits/weekly-consumer-review-r6-2026-09-15.md. Independent review pending. Authorized repair/push/re-review only; stop before merge. Runtime unavailable.
+
+## 2026-09-15 — Weekly review R7
+
+Repaired #386 P2 4019849956: require offset-bearing receipt clocks, preserve source retrieval starts, and validate retrieval ordering through candidate compilation. Seven malformed cases failed before repair; 100 focused tests pass. Real candidate remains 332 players / 15 of 16 games / unknown finality. Data #273 is independently clean at b26a0f8. Fresh exact-head Fantasy review pending; stop before merge, admission, activation, or deployment.
+
+## 2026-09-15 — Weekly review R8
+
+Repaired #386 P2 4020244693: asset update timestamps may not postdate retrieval completion. Three consumer mutations failed before repair; 103 focused tests pass. Applied the same provenance invariant upstream in Data #273. Candidate preview remains 332 players / 15 of 16 games / unknown finality. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+## 2026-09-15 — Weekly review R9
+
+Repaired #386 P2 4020574271: receipt clocks must parse to finite instants, rejecting impossible offsets such as +24:00 before ordering checks. Three mutations failed before repair; 106 focused tests pass. Candidate preview is unchanged. Paired Data schedule-clock repair is separate. Fresh reviews pending; stop before merge, admission, activation, or deployment.
+
+
+### 2026-09-18 — Codex: TIBER Now public status entry
+- **What changed:** Added a canonical cross-repository status snapshot and prominent README link at Joe's request.
+- **Files modified:** docs/TIBER_NOW.md, README.md, .claude/context-log.md, .claude/agents/codex.md.
+- **Validation:** Checked 14 upstream READMEs, repository trees, relevant issue/PR states and dated merge records. Documentation-only; application tests and live deployment checks not run.
+- **Notes:** Status labels distinguish documented local tools, merged inactive code, open candidates and proposals. Fork reports are not upstream acceptance. Cross-repo README PRs must merge after this page. No runtime, model, data, admission or deployment changes.
+
+### 2026-09-19 — Codex: source-backed TIBER Now refresh
+- **What changed:** Refreshed docs/TIBER_NOW.md on the existing #401 draft branch. Distinguished #396 exact-head review/build from missing preview and phone acceptance; corrected Forecast's blanket conceptual label to reported local work with unverified current artifacts; recorded four revision-required contribution design reviews, #395 review still outstanding, parked transaction-comparison incorporation, and the separate SVM #16 prospective follow-up. Added concise proposed coordination/experiment/selective-adoption direction from Ops #84 without treating it as adopted policy.
+- **Files modified:** docs/TIBER_NOW.md, .claude/context-log.md, .claude/agents/codex.md only. Existing README and companion branches unchanged.
+- **Validation:** Read all 14 upstream default-branch identities and READMEs; inspected open PR lists, recent issue records, relevant discussions/review endpoints, Data #273 and Fantasy #386 merge receipts, the weekly consumer module, and #396 Core Build 35093186628. Source pins are in the page. Preserved every prior page link and readiness definition; reviewed the Markdown diff. No application tests, local Forecast artifact inspection, live data refresh, deployment or device acceptance performed. Review findings are attributed receipts, not a new independent review.
+- **Concurrency:** Pre-write recheck matched #401 open/draft at 2947d336671e7b8dc0558d8aab9044978adb1a54 and all three original file contents. Publish one child commit with non-force fast-forward; do not overwrite competing work.
+- **Handoff:** Candidate only; new-head maintainer review/merge remains separate. Canonical page must merge before cross-repository README links. No review dispatch, main edit, runtime/provider/model/data activation, contributor message, merge or deployment authorized by this update. No material change to the repository-map capability categories was verified.
+
+
+### 2026-09-20 — Codex: source-backed TIBER Now refresh
+- **What changed:** Refreshed `docs/TIBER_NOW.md` on the existing #401 draft branch. Corrected the #396 preview-authorization wording found by review; recorded #404's partial phone interaction and the reviewed #405 stacked waiver-comparison candidate; added actionable review findings for #377, #388 and #403. No repository-map readiness category changed.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches unchanged.
+- **Validation:** Verified #401 open/draft/unmerged at head `2144ecf05e2c35c7de99251f6afe5a05dbe280a8`; read every one of the 14 default-branch READMEs; confirmed all 14 default branches remain `main` and all recorded commit pins are unchanged; inspected the open PR list, recent issue records, exact PR state/heads and review discussions for #396, #405, #377, #388, #403 and #395. No application tests, local Forecast artifact inspection, live data refresh, preview deployment or device acceptance were performed by this documentation run.
+- **Concurrency:** Pre-write page/log blob SHAs were `5e2d89b5728565e09b7a26b716006040d517d098`, `9d4d61de3744a5fb30a641d6b6e5934b4a998b3b`, and `735784d42620d213c4b30a4547d056fe116cd99e`; recheck branch/file identity before each non-force update and stop on drift.
+- **Handoff:** Candidate only; #401 remains draft and unmerged. The new head needs separate maintainer review/merge. Canonical page must merge before companion README links. No review dispatch, main edit, runtime/provider/model/data activation, contributor message, merge or deployment is authorized by this update.
+
+### 2026-09-16 — Codex: Team waiver context
+- Operator-authorized #371 follow-up: additive observed waiver settings, calculated FAAB/priority, and explicit-check selected candidate shortlist in copied agent context.
+- Files: shared/teamWaiverContext.ts, draftReview service/routes, reused membership validator, Team panel and scoped packet builder, regression tests and module notes.
+- Validation and operational limits: docs/audits/team-waiver-context-2026-09-16.md. No merge, production deployment, private claims, source admission, ranking or roster mutation.
+
+### 2026-09-19 — Codex: Pairwise waiver comparison (#404)
+- **What changed:** Compare two explicitly shortlisted waiver candidates with admitted 2025 historical evidence and a pair-only agent discussion packet. Missing history remains discussable. Selection, evidence and clipboard completion are invalidated on relevant refresh/scope/pair changes.
+- **Files modified:** DraftReviewWaivers, new DraftReviewWaiverComparison, shared/teamWaiverComparison, existing comparison table export, CSS and focused tests.
+- **Validation:** 75 tests in nine focused suites pass; production build passes; typecheck retains 507 baseline diagnostics with no added per-file/error-code counts.
+- **Notes:** Stacked draft on #396, which remains unchanged. Railway Settings > Environments showed “Enable PR Environments” before publication (automatic PR deployments disabled). No merge or deployment authorized. Independent review and portrait-phone acceptance pending. See docs/audits/team-waiver-comparison-2026-09-19.md.
+
+### 2026-09-19 — Codex: #405 attribution review repair
+- Fixed P2 review 4054949631: waiver comparison now links provider and license using the admitted attribution URLs, matching the existing evidence study.
+- Validation: all six waiver-context interaction tests pass. This is a link-only presentation repair; previous 75-test/build results apply to the initial implementation.
+- Fresh review requested after publication. PR marked ready by Joe; no merge or deployment. Phone acceptance remains pending.
+
+### 2026-09-22 — Codex: Team historical Data workspace v0
+Implemented an on-demand admitted-2025 table and four-player comparison with selected historical investigation handoff. Reuses pinned adapter and existing name directory; preserves provenance, uncertainty and independent clocks. No private manager preference is hardcoded. Focused 137-test pass, build pass, no new baseline-relative TS diagnostics; actual browser/phone acceptance blocked by missing Chromium. Local branch only; no merge/deploy/trade or remote publication. See docs/audits/team-historical-data-v0-2026-09-22.md.
+
+### 2026-09-22 — Codex: PR #408 P2 repairs
+Validated historical catalog directory containers inside the fallback boundary and pinned both sorting tie-breakers to English. Added malformed-snapshot, HTTP-null-payload, valid-directory and ambient-locale regression tests. Five focused suites / 57 tests pass; no new baseline-relative TS diagnostics. Re-review required on the published repair head. No merge, deployment or source activation; phone acceptance remains pending.
+
+### 2026-09-25 — Codex: bounded #401 synchronization and evidence wording
+- **Authority and scope:** Joe authorized the smallest safe next step: synchronize #401 and request fresh independent exact-head review. No merge or companion-PR changes.
+- **What changed:** Preserved the September 25 refresh at `8456a97688ed5eb61de81a4a0dff4f61f4f34844` and integrated Fantasy main `482736f33a34267ae6dc4e038c04872e8162abee`. Resolved the context-log conflict by retaining both histories; retained all #408 source and repair entries. Qualified Teamstate pilot statements as limits of the inspected GitHub evidence rather than proof that no run occurred elsewhere.
+- **Files modified relative to main:** `docs/TIBER_NOW.md`, `README.md`, `.claude/context-log.md`, `.claude/agents/codex.md`. All application, artifact, dependency and workflow blobs are inherited unchanged from main.
+- **Validation:** Rechecked the dated Data #275, Fantasy #408/#409 and Forecast #189 merge/review records, then verified the concurrent refresh's ROP #27/#28 merge/review records. Both parent log histories are preserved without deleted or replaced lines. Documentation diff and conflict-marker checks passed; relative navigation targets exist. Application tests were not run for this documentation-only change; GitHub build and independent review must be assessed on the published head.
+- **Handoff:** Keep #401 unmerged until the replacement head is independently reviewed and receives separate operator disposition. #409 remains unchanged at `ac90421d75249152eab1bc13490112f024268546`; synchronize/review it only after #401 is clean. Canonical page publication precedes companion links. No provider/database work, data admission, consumer activation or deployment was performed by this task.
+
+
+### 2026-09-26 — Codex: source-backed TIBER Now refresh
+- **What changed:** Refreshed `docs/TIBER_NOW.md` on the existing #401 branch. Recorded Role-and-opportunity #29 as merged default-branch source for the reviewed closed Week 1/Week 2 retained-allocation binding, while preserving the boundaries around ROP purpose, source admission, real-player execution, cross-week comparison, consumers, prediction and deployment. Classified Ops #86's shared-evidence/chart-recipe direction as conceptual and Fantasy #410 as an attributed operator-only provider-revocation advisory.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches unchanged.
+- **Validation:** Confirmed all 14 repositories still use `main`; read all 14 default-branch READMEs successfully; compared their latest commits to the September 25 pins; inspected #29's merge metadata, exact-head review comment and attributed validation receipts; rechecked #401 and all 13 companion README-link PR states; reviewed recently updated public PR/issue records including Ops #86 and Fantasy #410. Only Role-and-opportunity's pin advanced, to `eab07cbfc17a841804991194ac162609224bf744`. No application tests, retained-packet replay, hosted service, provider console, live-data, model, browser or device check was performed by this documentation run.
+- **Concurrency:** Pre-write recheck matched #401 open, non-draft and unmerged at `98d4fa98bac06867ed68f005b61cc2c00b1de12b`; page/log blob SHAs matched the fetched inputs. The page update produced `78843c5bb76bc90a77c48657d7efbcd9ff3bcaec`; each remaining file is rechecked before its non-force update.
+- **Handoff:** Candidate documentation only. #401 remains open and unmerged; maintainer review/merge remains separate. Canonical page publication still precedes companion links. No main edit, review request, contributor message, secret access/reproduction, provider remediation, source admission, runtime/model/data activation, deployment or merge was performed.
+
+### 2026-09-28 — Codex: PR #401 log recovery and final documentation review
+- **Authority:** Joe requested cleanup and final review; merge remains a separate operator decision.
+- **What changed:** Restored both handoff logs' truncated historical sections from exact clean commit `5edd5f331246846782d57fe169de6ecee3f11a78`, removing captured tool-output warnings and retaining the complete September 28 refresh entries. Corrected the current #410 status and September 28 change note to cite the later operator-reported provider deletion in closing comment `5840059580`; the prior refresh's body-only interpretation is superseded.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Exact string comparisons confirmed the entire September 26 Codex log is preserved, and removing only the September 28 inserted entry from the recovered context log reproduces its September 26 bytes. Reviewed publication wording, readiness distinctions, September 28 page delta, #411's exact-head receipt and #410's closing disposition. Before repair the whole PR differed from main only in the status page, README link and two logs; main was an ancestor. Remote byte readback and final diff/CI disposition are checked after publication.
+- **Limits:** This is the repairing agent's documentation review, not a fresh independent review or runtime acceptance. No application tests, deployment, provider-console inspection or activation performed. No merge or readiness-state change.
+
+
+### 2026-09-30 — Codex: source-backed TIBER Now refresh
+- **Authority and scope:** Daily documentation preparation only, on the existing `codex/tiber-now-status` branch for #401. Maintainer review and merge remain separate.
+- **What changed:** Updated the September 30 evidence date after checking all 14 upstream default branches and pinned READMEs, tracked issues/review records and all 13 companion README-link PRs. Recorded Data #277's unmerged Week 3 candidate and unresolved support-commit ancestry/replay P1; Fantasy #414's merged cold-start documentation with two later pre-merge P2 findings; Strategy #11's merged but untested research notes; Ops #88's attributed September 29 deployment observations; and #383's revised weekly-evidence MCP beta scope, distinct from #406's source-disabled roster transport.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only.
+- **Validation:** All 14 default branches remain `main`; all source reads succeeded. Fantasy advanced to `4204ddfc0fb0dd38da708e9aea3c4d01b77997ab` and Strategy to `29f6abab70c3ea115f51d034f762ba7fb9da2b03`; the other 12 pins are unchanged. All 13 companion PRs remain open, non-draft and unmerged. Reviewed the targeted Markdown changes, table structure and evidence-link preservation. Reported upstream test/replay receipts were not reproduced; no application tests, runtime/provider-console/device checks, live-data acquisition or model execution were performed.
+- **Concurrency:** Starting #401 head was `1f58ee20bd7ac7f181574ece87cdb13cf5f9ba67`, open, non-draft and unmerged. Each file and branch head is rechecked immediately before its sequential SHA-guarded update; existing log content is preserved in full.
+- **Handoff:** Candidate documentation requires separate review at the new head and maintainer merge. No earlier clean review covers these changes. Retain canonical-page-first ordering before companion README links. No main/README edits, PR readiness change, review request, contributor message, merge, deployment, admission or runtime/model/provider activation.
+
+### 2026-10-01 — Codex: source-backed TIBER Now refresh
+- **Authority and scope:** Daily documentation preparation only on the existing `codex/tiber-now-status` branch for #401. Maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 default branches and READMEs, current PR/review/issue records and the 13 companion README-link PRs. Updated the Week 3 row for Data #277's ancestry reconciliation, ROP #30's unresolved test-count P2 and Teamstate #96's reviewed shape-only preparation; added the off-main Rookies #299/#300 Devy design/validator candidates with their current unresolved findings; recorded Ops #89/#90/#91 as inactive documentation proposals; and updated #383 for the reviewed offline weekly-evidence branch without claiming a PR, hosting or client acceptance.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** All 14 repositories still use `main`; all 14 README reads succeeded and every source pin is unchanged from September 30. All 13 companion PRs remain open, non-draft and unmerged. Checked current heads, draft/merge state and review threads for Data #277, ROP #30, Teamstate #96, Rookies #299/#300, Ops #89 and Fantasy #401; reviewed Ops #90/#91 and the #383 completion receipt. Markdown diff, table shape, whitespace and conflict-marker checks passed. Upstream tests/replays were not rerun; no application build/test, hosted service, provider console, device, live-data or model check was performed.
+- **Concurrency:** Started from #401 head `d8f01754df0382c3591d37f0fa54ecb55ff0cab2`, open, non-draft, unmerged and mergeable. Starting blob SHAs were `b56407441a898b8f94297f81d579a03eb013d970` for the page, `35de2b37ba993846d574b417aab8684c3626a446` for the context log and `57f8cb77e5afdd4ce91e0a2d84876cc9bfd7a0e5` for this agent log. The remote branch and target files are rechecked before sequential SHA-guarded non-force updates.
+- **Handoff:** [PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401) remains open for separate review and maintainer disposition. Canonical-page publication still precedes companion links. No main/README edit, readiness change, agent-review request, contributor message, merge, deployment, source admission or runtime/model/provider activation was performed.
+
+### 2026-10-02 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 upstream default branches/READMEs, recent PRs and issues, candidate review records, #401, and all 13 companion link PRs. Added the off-main Team freshness candidate and remote-MCP preparation packet without implying a PR, canonical deployment or activation. Added Research #26 as a documentation-only kicker/DST preparation candidate after two repair rounds, while recording that its final head lacks independent review. Refreshed the verification date; no default-branch source pin changed.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** All 14 repositories still use `main`; all 14 README reads succeeded and every source pin is unchanged from October 1. All 13 companion PRs remain open, non-draft and unmerged. Checked exact state/review records for Research #26, Rookies #299/#300, Fantasy #383/#401 and Ops #88. Upstream test claims remain attributed and were not rerun; no application build/test, artifact replay, hosted-service mutation, provider-console write, device acceptance, live-data read or model execution was performed.
+- **Concurrency:** Started from #401 head `a9e2c90bea375ffe41ed0949524c8af2f17e4a29`, open, non-draft, unmerged and mergeable. Starting blob SHAs were `bdb4df89d5a3a20c9bfa5615a5ead8c66be6cbae` for the page, `750441a8d66f3e102ff8b7b08937c80884da0595` for this context log and `1bd318c552d34c8ac9a245cf67115c57e32cfbca` for the agent log. Each target was re-fetched before its sequential SHA-guarded non-force update.
+- **Handoff:** [PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401) remains open for separate maintainer review/merge. Canonical publication still precedes companion links. No main edit, readiness change, review request, contributor message, merge, deployment, admission or runtime/model/provider activation was performed.
+
+### 2026-10-03 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked the 14 linked upstream repositories, default branches and READMEs, tracked PR/review/issue dispositions, #401 and all 13 companion README-link PRs. No material upstream milestone or maintainer decision changed, so the status page records a truthful checked/no-material-change result and refreshes only the verified check and source-pin dates.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches remain unchanged.
+- **Validation:** All 14 repositories still use `main`; all 14 README reads succeeded and every source pin remains unchanged from October 2. The tracked candidate heads and dispositions for Ops #89, Data #277, ROP #30, Teamstate #96, Rookies #299/#300, Research #26, Fantasy #411/#412 and #401 are unchanged. All 13 companion PRs remain open, non-draft and unmerged. Upstream tests and receipts were not rerun; no application build/test, artifact replay, hosted-service mutation, provider-console write, device acceptance, live-data read or model execution was performed.
+- **Concurrency:** Started from #401 head `1ac8ebf352ab70c17102cb6e2574ea0de3da2eb3`, open, non-draft, unmerged and mergeable. Starting blob SHAs were `e1b84580cb14037388932fa03c402a9fdf7ca66d` for the page, `8e1051130b0fc9b00c5b7da3e4e693ef2b3968e0` for the context log and `d1d2e083bd215baafecc6297822360195a33768a` for the agent log. The branch and all three target blobs were re-fetched immediately before this atomic non-force update.
+- **Handoff:** [PR #401](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/401) remains open for separate maintainer review/merge. Canonical publication still precedes companion links. No main edit, readiness change, review request, contributor message, merge, deployment, admission or runtime/model/provider activation was performed.
+
+
+### 2026-10-04 — Codex: PR #401 Research #26 review-status correction
+- **Authority:** Joe authorized the remaining correction, independent replacement-head review and conditional merge of #401 after the prior exact-head review found one P2. Companion merges, deployments, source/provider changes and runtime activation remain outside scope.
+- **What changed:** Corrected the Research #26 workstream and recent-change statements in `docs/TIBER_NOW.md` to cite its October 1 no-major-issues review and terminal handoff at exact head `4e172195e85f983d01f9be2d0fa64246b8d3aac9`. Preserved its draft/unmerged/unactivated state and empirical-work limits. Historical log entries remain intact; this receipt supersedes their missing-review interpretation.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only. README and companion branches unchanged.
+- **Validation:** Rechecked #401 at starting head `e87241a0a02ad6e47868708d882e0a54802709ab`; independently verified Research #26 review comment `5937221220` and terminal handoff `5937251969`. Exactly two page statements replaced; both logs preserved byte-for-byte with this entry appended. No application tests, artifact replay, provider-console checks, device acceptance or runtime execution performed for the documentation repair.
+- **Handoff:** Replacement head requires independent exact-head review and a final unchanged-head/checks/mergeability recheck before the authorized merge. Preserve main's newer CLAUDE.md-only #414 commit. This repair itself performs no merge, deployment or activation; final disposition belongs in PR #401's review/merge records.
+
+
+### 2026-10-07 — Codex: PR #415 FORGE execution-status correction
+- **Authority:** Joe authorized the two smallest safe next steps reported by the review watch: repository archival and the narrow #415 FORGE wording repair with independent review. Merge remains withheld.
+- **What changed:** Corrected only the FORGE workstream row to distinguish the October 6 decision from the later partial-execution checkpoint: standalone automatic deployments disabled and deployment removed are attributed reports; repository archival remains pending. Embedded freeze and unresolved D3 boundaries are preserved.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Verified both Ops #88 checkpoints against the current #415 head `ebc1733adcb6c37633f0abb28b2828dbc5856f23`. Exactly one page row changed; existing page content and both log histories are preserved. Documentation/table/link checks performed; application tests are unnecessary for this wording-only correction. No independent provider recheck or archival completion is claimed.
+- **Handoff:** Request independent review of the resulting exact head. Keep #415 unmerged. GitHub plugin lacks an archival operation; browser fallback needs user approval under the browser tool instructions.
+
+
+## 2026-10-09 — TIBER Now daily evidence refresh
+
+- **Authorization:** Daily preparation for the existing TIBER Now update lane. Maintainer review/merge remains separate.
+- **Concurrent-edit check:** Re-read PR #415 branch `codex/tiber-now-daily-update` and its three changed files before editing. The branch was 19 commits ahead and 0 behind `main`; changed-file scope remained `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md`. Existing history was preserved.
+- **Source check:** Confirmed all 14 linked repositories still use `main` and retain the October 7 exact source pins. Inspected current PR/issue/review records for Week 3/4, Rookies, Research, private GPT Sites, dependency maintenance and Ops coordination.
+- **What changed:** Advanced the page check date to October 9; recorded the retained successful Week 4 execution with authentication/continuity limits; added the partial Q1 checkpoint and conceptual Unit State readiness track; updated #299/#300 stacked status; and replaced the stale no-implementation GPT Sites statement with attributed owner-private implementation receipts and explicit unverified acceptance/integration gates.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md`.
+- **Validation:** Checked Markdown headings/table row shape, exact source links, date labels, source-pin stability and three-file scope. No application test, artifact replay, producer/model run, hosted Site/provider/device check, source admission, deployment, transaction or contributor message was performed.
+- **Handoff:** Keep PR #415 open and unmerged for maintainer review. Review readiness is unchanged and no agent review was requested.
+
+## 2026-10-10 — TIBER Now daily evidence refresh
+
+- **Authorization:** Daily preparation for the existing TIBER Now update lane. Maintainer review/merge remains separate.
+- **Concurrent-edit check:** Re-read PR #415 and all three changed files before editing. The PR was open, non-draft and unmerged at `db328dff3ce53977f06da5d62993d1b502fac902`; the fetched blobs matched the prepared inputs, so existing page and log history was preserved.
+- **Source check:** Confirmed all 14 linked repositories still use `main`; every default-branch README read succeeded and all exact source pins remain unchanged from October 9. Inspected current Week 3/4 PR bodies, validation/review records, Research #25/#30/#32 and Ops #83/#95.
+- **What changed:** Advanced the page check date to October 10; recorded ROP #30's validated and independently reviewed test-only repair plus the independently qualified purpose-only receipt while preserving its three false admission/activation flags and no-run boundary; corrected ROP #32 so the prior review is not attributed to its latest comparator repair; added the Research #32/Ops #83 obligation-closeout documentation milestone; updated Unit State's blocked readiness disposition; added the Dallas DST descriptive reconstruction; and corrected the repository-map FORGE D1/D2 wording.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, and `.claude/agents/codex.md` only.
+- **Validation:** Checked Markdown headings, three-column table row shape, evidence links, date labels, exact source pins, stale-status phrases and three-file scope. Upstream receipts were inspected but their tests and private bytes were not reproduced. No application test, artifact replay, producer/model run, hosted Site/provider/device check, source admission, deployment, transaction, PR readiness change, review request or contributor message was performed.
+- **Handoff:** Keep PR #415 open and unmerged for separate maintainer review. Canonical-page publication remains the prerequisite for any future companion-link update.
+
+
+### 2026-10-10 — Codex: PR #415 remaining FORGE summary correction
+- **Authority and scope:** Joe authorized the narrow FORGE summary repair, required handoff logs, focused documentation checks and independent exact-head review; PR #415 remains unmerged.
+- **Starting state:** Fresh PR read returned `f064b2dbe8564fcfaaacf87659edb325ee639cc0`, beyond the supplied October 9 head. The October 10 refresh already corrected the Ops repository-map entry, so it is preserved without a duplicate edit.
+- **What changed:** Corrected only the October 6 historical summary to retain the original decision-time pending state and cite the later partial-execution checkpoint: automatic deployments disabled and standalone deployment removed are attributed reports; archival remains pending, D2 freeze selected without implementation changes and D3 unresolved.
+- **Evidence:** Ops #88 decision comment `6015986056`, partial-execution comment `6016233110` and October 7 archival-access recheck `6048908730`; prior P2 `4207004775` identifies the contradictory summaries.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/context-log.md`, `.claude/agents/codex.md` only.
+- **Validation:** Exactly one page line replaced; other page bytes and both complete log histories preserved. Markdown table shape, evidence links, whitespace/conflict markers and corrected-summary consistency checked. Application tests are unnecessary for this documentation-only correction; no runtime/provider/settings/archival/other-workstream changes or independent provider recheck.
+- **Handoff:** Independent review of the resulting exact head is required. Review outcome is recorded in PR #415 without changing the reviewed head; no prior review covers this repair. Keep the PR open and unmerged.
+
+
+### 2026-10-11 — Codex: PR #375 current-main reconciliation
+- **Authority:** Joe explicitly authorized all five conflict resolutions, focused validation, publication to the existing isolated preview and fresh exact-head review. PR merge, auth/provider/database activation and fantasy transactions remain withheld.
+- **Parents:** Existing PR head `1597b2d00ef93408eb7f65208092ae2886cd5ea5` and main `0d2d803bbe5f4eaa75f145bd7b771f3f4a86bb4d`. Both branches were rechecked before publication.
+- **Resolution:** Retained both complete agent-log histories and both module/product documentation sections. Combined the existing league-navigation route handler with main's historical catalog, weekly-unavailable and waiver-candidate handlers without changing their behavior. Reviewed the automatic Team page/CSS and public-profile test merges; added one synthetic route coexistence regression.
+- **Validation:** 259 tests in 21 focused suites passed (82 auth/source, 79 UI/routes/profile, 98 historical/waiver/shared); full `sh build.sh` passed; 16 built HTTP status/cookie/cache checks passed across public and unconfigured team-auth profiles. Both exact main and candidate typechecks exit 2 with 507 diagnostics and identical per-file/error-code counts. Repository typecheck remains baseline-failing. An initial smoke assertion incorrectly expected no-store on generic public 404s; corrected to the existing boundary contract after inspection, with no implementation change.
+- **Boundary:** No dependencies, schemas, migrations, credentials, provider/database settings or admitted artifact bytes changed beyond integrating existing main. Publication refreshes only the already authorized isolated PR preview. Fresh review/deployment receipts belong on #375; previous head review is not transferred. Phone acceptance remains pending; keep unmerged and auth disabled.

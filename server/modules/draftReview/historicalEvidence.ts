@@ -4,9 +4,10 @@ import { resolve } from 'node:path';
 import type { HistoricalEvidence, HistoricalPlayer } from '../../../shared/draftReviewEvidence';
 
 const BUNDLE_PATH = resolve(process.cwd(), 'server/modules/draftReview/artifacts/historical2025.json');
-const BUNDLE_SHA256 = 'cb80a6875d9b55d8b3af2a4c38936f059a2d413e6de198b85551cd36b9a39e25';
+const BUNDLE_SHA256 = '68b3a863560edb974e999ea22fa2c31cc5e353cdc762d0a84cb177fe1ef3cb26';
 const SCHEMA = 'tiber_draft_review_historical_v1' as const;
-// Cache only immutable public source bytes. No league, roster, selection or operator state.
+// Cache only integrity-checked evidence after applying the promotion boundary.
+// No league, roster, selection or operator state.
 let verifiedBytes: string | undefined;
 
 export function unavailableHistoricalEvidence(reason: string): HistoricalEvidence {
@@ -23,7 +24,17 @@ export function decodeHistoricalBundle(raw: Buffer): HistoricalEvidence {
   if (raw.length > 250_000 || createHash('sha256').update(raw).digest('hex') !== BUNDLE_SHA256) {
     throw new Error('Historical source integrity check failed');
   }
-  return { ...JSON.parse(raw.toString('utf8')), status: 'available', reason: null };
+  const bundle = JSON.parse(raw.toString('utf8')) as HistoricalEvidence;
+  // The whole-bundle content pin admits a reviewed policy + exact promotion
+  // receipt, not a free-form stage string, runtime mode or deployment status.
+  const promotion = bundle.provenance?.team_roster_identity_promotion;
+  if (promotion?.path !== 'exports/promoted/draft_review/team_roster_identity_promotion_v1.json'
+      || promotion.sha256 !== '215d2b47edb204a138d30725b4e2e3974993f105271667d665c651b825408c85'
+      || promotion.receipt.status !== 'accepted_for_historical_consumer_use'
+      || promotion.receipt.historical_consumer_use_authorized !== true) {
+    throw new Error('Historical promotion integrity check failed');
+  }
+  return { ...bundle, status: 'available', reason: null };
 }
 
 export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {
@@ -31,19 +42,26 @@ export function historicalEvidenceFor(playerIds: string[]): HistoricalEvidence {
     return unavailableHistoricalEvidence('Evidence selection exceeds the supported identity or 32-player limit.');
   }
   try {
-    if (verifiedBytes === undefined) {
-      const raw = readFileSync(BUNDLE_PATH);
-      decodeHistoricalBundle(raw);
-      verifiedBytes = raw.toString('utf8');
-    }
-    // Fresh parse prevents one response or caller from changing another user's evidence.
-    const bundle = JSON.parse(verifiedBytes) as HistoricalEvidence;
+    const bundle = historicalCatalogEvidence();
+    if (bundle.status !== 'available') return bundle;
     const players = new Map(bundle.players.map(player => [player.player_id, player]));
     return { ...bundle, status: 'available', reason: null, players: Array.from(new Set(playerIds)).map(player_id =>
       players.get(player_id) ?? {
         player_id, status: 'unavailable', reason: 'No admitted exact Sleeper-to-GSIS identity mapping.',
         identity: null, observed: null, derived: {},
       } as HistoricalPlayer) };
+  } catch {
+    return unavailableHistoricalEvidence('The admitted historical artifact is missing or failed integrity validation.');
+  }
+}
+
+/** The existing admitted cohort only; no provider refresh or identity admission. */
+export function historicalCatalogEvidence(): HistoricalEvidence {
+  try {
+    if (verifiedBytes === undefined) {
+      verifiedBytes = JSON.stringify(decodeHistoricalBundle(readFileSync(BUNDLE_PATH)));
+    }
+    return JSON.parse(verifiedBytes) as HistoricalEvidence;
   } catch {
     return unavailableHistoricalEvidence('The admitted historical artifact is missing or failed integrity validation.');
   }

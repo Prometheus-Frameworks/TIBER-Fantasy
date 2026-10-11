@@ -203,3 +203,30 @@ test('roster refresh unmounts the TE explorer and ignores its late response', as
   expect(screen.queryByText(/TE availability could not be established/)).toBeNull();
   expect(screen.getByText('Explore unrostered TEs').closest('details')!.open).toBe(false);
 });
+
+test('main copy includes only selected waiver candidates and roster refresh clears them', async () => {
+  const { deriveWaiverSettings } = await import('@shared/teamWaiverContext');
+  global.fetch = jest.fn(async input => {
+    if (!String(input).includes('/waiver-candidates?')) return serve(String(input));
+    return response({ schema_version: 'tiber_team_waiver_candidates_v1', status: 'available', input: roster().input, season: '2026',
+      observations: { league_received_at: roster().generated_at, rosters_received_at: roster().generated_at, directory_fetched_at: roster().generated_at, directory_source_updated_at: null, directory_cache_max_age_hours: 24, expected_rosters: 2, received_rosters: 2, source_urls: ['https://example.com/league', 'https://example.com/rosters', 'https://example.com/players'] },
+      waiver_settings: deriveWaiverSettings({ waiver_type: 2, waiver_budget: 100 }, { waiver_budget_used: 9, waiver_position: 3 }),
+      derivation: 'active_current_nfl_team_skill_players_minus_all_league_membership', claim_eligibility: 'unknown',
+      candidates: ['55', '66'].map(player_id => ({ player_id, name: `Waiver ${player_id}`, position: 'WR', team: 'NO', active: true, status: 'Active' })) });
+  });
+  open(); await loaded();
+  fireEvent.click(screen.getByText('Add waiver candidates to agent context'));
+  fireEvent.click(screen.getByRole('button', { name: 'Check unrostered players' }));
+  fireEvent.click(await screen.findByRole('button', { name: /Waiver 55/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
+  await screen.findByText('Agent context copied');
+  const packet = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls.at(-1)[0]);
+  expect(packet.waiver_exploration.selected_candidates.map((p: any) => p.player_id)).toEqual(['55']);
+  expect(packet.waiver_exploration.waiver_settings.derived.faab_remaining).toBe(91);
+  expect(JSON.stringify(packet)).not.toContain('Waiver 66');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Refresh roster/ })); });
+  await loaded();
+  fireEvent.click(screen.getByRole('button', { name: 'Copy agent context' }));
+  await screen.findByText('Agent context copied');
+  expect(JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls.at(-1)[0]).waiver_exploration.status).toBe('unavailable');
+});
