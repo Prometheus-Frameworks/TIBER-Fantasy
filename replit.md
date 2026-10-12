@@ -137,3 +137,6 @@ Checked waiver shortlist candidates can be compared as a pair using admitted his
 
 ### Team historical Data workspace — 2026-09-22
 Team now includes an on-demand 2025 Data workspace with admitted-cohort search, historical-position filtering, selectable raw metrics, deterministic sorting and up to four-player comparisons. `/api/draft-review/data` reuses the pinned historical adapter and existing cached Sleeper name directory; historical evidence and directory/roster clocks remain separate. The investigation handoff preserves provenance and does not infer manager preference or authorize transactions. See `docs/audits/team-historical-data-v0-2026-09-22.md` for validation and release limits.
+
+## October 11 — #383 local league MCP candidate
+A dedicated source-disabled-by-default stdio league reader is prepared separately from the weekly Watson evidence adapter. See `docs/mcp/league-reader-local-v0.md`. Remote hosting/auth and consumer activation remain pending; no saved classifications or producer expansion.

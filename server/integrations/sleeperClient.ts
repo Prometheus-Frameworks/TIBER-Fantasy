@@ -128,6 +128,14 @@ export const sleeperClient = {
     return fetchJson<SleeperLeagueDetail[]>(`/user/${userId}/leagues/nfl/${season}`);
   },
 
+  async getManagerMatchups(leagueId: string, week: number): Promise<unknown> {
+    return fetchJson<unknown>(`/league/${leagueId}/matchups/${week}`);
+  },
+
+  async getManagerNflState(): Promise<unknown> {
+    return fetchJson<unknown>('/state/nfl');
+  },
+
   async getTrendingAdds(): Promise<unknown> {
     return fetchJson<unknown>('/players/nfl/trending/add?lookback_hours=24&limit=1000');
   },

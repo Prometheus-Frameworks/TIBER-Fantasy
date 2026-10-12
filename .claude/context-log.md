@@ -1094,3 +1094,22 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Resolution:** Retained both complete agent-log histories and both module/product documentation sections. Combined the existing league-navigation route handler with main's historical catalog, weekly-unavailable and waiver-candidate handlers without changing their behavior. Reviewed the automatic Team page/CSS and public-profile test merges; added one synthetic route coexistence regression.
 - **Validation:** 259 tests in 21 focused suites passed (82 auth/source, 79 UI/routes/profile, 98 historical/waiver/shared); full `sh build.sh` passed; 16 built HTTP status/cookie/cache checks passed across public and unconfigured team-auth profiles. Both exact main and candidate typechecks exit 2 with 507 diagnostics and identical per-file/error-code counts. Repository typecheck remains baseline-failing. An initial smoke assertion incorrectly expected no-store on generic public 404s; corrected to the existing boundary contract after inspection, with no implementation change.
 - **Boundary:** No dependencies, schemas, migrations, credentials, provider/database settings or admitted artifact bytes changed beyond integrating existing main. Publication refreshes only the already authorized isolated PR preview. Fresh review/deployment receipts belong on #375; previous head review is not transferred. Phone acceptance remains pending; keep unmerged and auth disabled.
+
+### 2026-10-11 — Codex: #383 read-only league MCP candidate
+- Joe authorized bounded league-access implementation and independent review in the live roster/MCP conversation.
+- Base: reviewed #375 `2c4878b9`; extracted #387 manager service/contract unchanged from `354cfe2b`. Existing #406 and offline weekly-evidence branches preserved.
+- Added five strict source-disabled-by-default stdio tools, roster-only context with complete scope/membership validation, sanitized results, clocks/nulls and provisional matchups. No DB/private startup, historical evidence export, saved labels or roster actions.
+- Validation: 10 native service/protocol/process tests and 26 existing Team tests pass; focused strict TypeScript clean; isolated bundle audit and server build pass (inherited duplicate applyAdjusters warning); diff check passes. Full repository typecheck and named-host/live-provider acceptance were not rerun.
+- Independent exact-head review pending. Remote source resource/auth/hosting, source-use qualification, deployment and activation remain separate gates. No merge/PR preview/deployment performed.
+
+### 2026-10-11 — Codex: #383 independent review repairs
+- Initial independent review of 4faf4d23 found two P2s: foreign lineup/reserve/taxi IDs in selected context, and fail-fast source siblings escaping the MCP busy slot.
+- Repaired membership consistency before directory reads; added settling helper to roster, membership and extracted Manager initial source reads. Unknowns and score semantics preserved.
+- 12 native tests plus 26 existing Team tests pass; focused TypeScript clean. Final independent repair review pending.
+- Automatic approval review blocked GitHub publication as outside local implementation/review authority. No alternate publication, PR, auth, hosting, activation or merge.
+
+### 2026-10-11 — Codex: #418 historical-season outcome P2 repair
+- Joe authorized the P2 repair on published head cb2c8239d740c892c806bdd0875853f430f4f9fa.
+- Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
+- Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
+- Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
