@@ -1325,3 +1325,10 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
 - Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
 - Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
+
+### 2026-10-12 — #416 Trade Compare Sites pilot
+- **Authority:** Joe's October 12 bounded task authorizes branch/PR, a private saved Site version and a pilot report. No merge/public deployment/backend migration.
+- **Scope:** New standalone Sites folder and pilot receipt; root server/client/build/schema untouched. Reuses existing public non-user-scoped `/api/draft-review/evidence`, with fixed HTTPS GET, no credential forwarding and bounded fail-closed parsing. No new Railway endpoints or bulk directory at runtime.
+- **Product:** Reusable pure card over UI-local #294 projection; exact historical IDs, denominators, identity confidence and receipts preserved. Operator thesis/package and unmodeled Shipley illustration stay separate. Weekly/model/roster evidence remains unavailable; no FORGE changes.
+- **Validation:** 33/33 scoped tests, standalone strict tsc and Workers build pass; public pair/three HTTPS reads and local pair relay pass. Two later Node reads timed out; no browser, phone, assistive-tech or hosted dispatch check.
+- **Delivery:** Site saved version 1, source 6dd2a8941e9ea6265e731ff183c6ec78d1f67198, owner-only, undeployed. GitHub PR and #416 report carry the final head/version pointers. D3 remains open; future private runtime acceptance needs separate scope.
