@@ -12,6 +12,20 @@ afterEach(() => {
 });
 
 describe('Draft Review public route', () => {
+  test('reconciled router retains league navigation and main public endpoints together', async () => {
+    const fetchMock = jest.fn();
+    global.fetch = fetchMock as typeof fetch;
+    const app = express();
+    app.use(createDraftReviewRouter());
+    for (const endpoint of ['leagues', 'league-rosters', 'waiver-candidates', 'weekly', 'evidence', 'resolve']) {
+      const response = await request(app).get(`/api/draft-review/${endpoint}`);
+      expect(response.status).toBe(400);
+      expect(response.body.status).toBe('invalid_input');
+      expect(response.headers['cache-control']).toBe('no-store');
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test('returns no-store and does not expose upstream error detail', async () => {
     global.fetch = jest.fn(async () => {
       throw new Error('private upstream diagnostic');

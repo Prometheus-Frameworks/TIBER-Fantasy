@@ -107,6 +107,11 @@ The existing endpoint adds optional `trends`: Sleeper public /players/nfl/trendi
 
 Validation: 64 tests across six affected service/shared/UI/Team/routes/containment suites pass. Full build passed; repository typecheck comparison recorded in PR receipt. No live roster fixtures or screenshots committed. Draft-only change; no merge/production or independent-review claim.
 
+### League navigation (#375, 2026-09-13)
+`teamLeagues.ts` provides request-time public account/season league discovery and on-selection roster membership. Strict input and source schemas preserve numeric IDs as strings, unknown scoring as null and zero reception scoring as zero. Lists above 128, duplicate IDs, mismatched seasons, incomplete selected-league rosters and conflicting memberships fail unavailable without returning partial selectable data. No player-directory or all-league roster fan-out. Separate response clocks identify account, league-list and selected league/roster retrieval.
+
+The collapsible phone picker retains the public list in page memory while navigating existing Team URLs; it does not add browser persistence or authenticated ownership. Name/format search, empty/error states, explicit season selection and multiple-roster choice are included. URL navigation and rapid switching invalidate late membership responses. Existing study confirmation and handoff isolation remain in place. A `team-auth` profile also exposes the owner-scoped linked-account path documented in `../teamAuth/MODULE.md`; no private link or My Leagues state is attached to public packets.
+
 ## Nineteen additional historical profiles — 2026-09-13 preparation
 
 This branch pins published Data preparation commit
