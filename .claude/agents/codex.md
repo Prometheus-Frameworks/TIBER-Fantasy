@@ -1319,3 +1319,9 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Repaired membership consistency before directory reads; added settling helper to roster, membership and extracted Manager initial source reads. Unknowns and score semantics preserved.
 - 12 native tests plus 26 existing Team tests pass; focused TypeScript clean. Final independent repair review pending.
 - Automatic approval review blocked GitHub publication as outside local implementation/review authority. No alternate publication, PR, auth, hosting, activation or merge.
+
+### 2026-10-11 — Codex: #418 historical-season outcome P2 repair
+- Joe authorized the P2 repair on published head cb2c8239d740c892c806bdd0875853f430f4f9fa.
+- Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
+- Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
+- Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.

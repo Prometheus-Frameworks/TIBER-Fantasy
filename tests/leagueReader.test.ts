@@ -9,6 +9,21 @@ const league={league_id:'10',season:'2026',name:'Synthetic',sport:'nfl',status:'
 const rosters=[{roster_id:1,owner_id:'123',players:['100'],starters:['100','0'],reserve:null,taxi:null},{roster_id:2,owner_id:'456',players:['200'],starters:['200']}];
 export function sources():any{return {getUser:async()=>({user_id:'123',display_name:'<untrusted>'}),getUserLeagues:async()=>[league],getLeague:async()=>structuredClone(league),getLeagueRosters:async()=>structuredClone(rosters),getDirectory:async()=>({fetchedAt:Date.parse('2026-10-01'),players:{'100':{player_id:'100',full_name:'Synthetic QB',position:'QB'}}}),getManagerMatchups:async()=>[{roster_id:1,matchup_id:1,points:0,custom_points:null},{roster_id:2,matchup_id:1,points:-1,custom_points:null}],getManagerNflState:async()=>({season:'2026',season_type:'regular',leg:5})};}
 export function readers(){const s=sources();return {leagues:(i:any)=>discoverTeamLeagues(i.account,i.season,s),memberships:(i:any)=>findTeamLeagueRosters(i.userId,i.leagueId,i.season,s),roster:(i:any)=>getRosterContext(i,s),matchups:(i:any)=>buildManagerResult(i,s)};}
+test('historical season and non-regular phase retain scores but cannot establish outcomes',async()=>{
+ for(const scenario of [
+  {season:'2025',state:{season:'2026',season_type:'regular',leg:5}},
+  {season:'2026',state:{season:'2026',season_type:'pre',leg:5}},
+  {season:'2026',state:{season:'2026',season_type:'post',leg:5}},
+ ]){
+  const s=sources();s.getLeague=async()=>({...league,season:scenario.season,status:'complete'});
+  s.getManagerNflState=async()=>scenario.state;
+  const r=await buildManagerResult({...input,season:scenario.season,week:'4'},s);
+  assert.equal(r.status,'available');assert.equal(r.rosters[0].outcome,'unavailable');
+  assert.equal(r.rosters[0].points,0);assert.equal(r.rosters[0].opponentPoints,-1);
+  assert.equal(r.finality,'not_verified');assert.match(r.reason!,/season or phase/);
+  assert.ok(r.observations.nflStateReceivedAt);
+ }
+});
 test('disabled source refuses retrieval',async()=>{assert.equal((await createLeagueTools()('tiber_list_leagues',{account:'synthetic',season:'2026'})).reason,'source_disabled');});
 test('complete discovery and roster flow preserves zero, null and exact identity',async()=>{const call=createLeagueTools(readers());const l:any=await call('tiber_list_leagues',{account:'synthetic',season:'2026'});assert.equal(l.leagues[0].receptionPoints,0);assert.equal(l.account.userId,'123');const m:any=await call('tiber_list_league_rosters',input);assert.equal(m.rosters[0].rosterId,1);const r:any=await call('tiber_get_roster_context',{...input,rosterId:1});assert.deepEqual(r.roster.starters,['100','0']);assert.equal(r.roster.reserve,null);assert.equal(r.roster.directory[0].active,null);assert.equal(r.accountControlVerified,false);assert.equal(JSON.stringify(r).includes('owner_id'),false);});
 test('strict and oversized inputs refuse before reads',async()=>{for(const raw of [{...input,week:5},{...input,week:'19'},{...input,week:'5',url:'evil'},{...input,week:'5',note:'x'.repeat(3000)}])assert.equal((await createLeagueTools(readers())('tiber_get_weekly_matchups',raw)).reason,'invalid_input');});

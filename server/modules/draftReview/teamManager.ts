@@ -71,7 +71,8 @@ export async function buildManagerResult(raw: unknown, sources: Sources = sleepe
     base.observations.nflStateReceivedAt = stateSettled.value.receivedAt;
     base.observations.sourceUrls.push('https://api.sleeper.app/v1/state/nfl');
   }
-  const priorWeek = state?.success && state.data.season === season && state.data.season_type === 'regular' && week < state.data.leg;
+  const matchingState = state?.success && state.data.season === season && state.data.season_type === 'regular';
+  const priorWeek = matchingState && state.data.leg > week;
   let unsupported = false;
   base.rosters = base.rosters.map(roster => {
     const own = rows.find(row => row.roster_id === roster.rosterId)!;
@@ -81,11 +82,12 @@ export async function buildManagerResult(raw: unknown, sources: Sources = sleepe
     const a = effectiveScore(own); const b = effectiveScore(opponent);
     return { ...roster, opponentRosterId: opponent.roster_id, points: a.value, opponentPoints: b.value,
       scoreBasis: a.basis, opponentScoreBasis: b.basis,
-      outcome: !state?.success ? 'unavailable' : a.value == null || b.value == null || !priorWeek ? 'pending'
+      outcome: !matchingState ? 'unavailable' : a.value == null || b.value == null || !priorWeek ? 'pending'
         : a.value > b.value ? 'win' : a.value < b.value ? 'loss' : 'tie' };
   });
   return { ...base, status: 'available', reason: !state?.success
     ? 'NFL week state is unavailable or invalid. Scores are shown, but W/L/T cannot be established. Try refreshing again.'
+    : !matchingState ? 'NFL week state describes a different season or phase. Scores are shown, but W/L/T cannot be established.'
     : unsupported ? 'A bye or unsupported pairing is excluded from the record.'
     : !priorWeek ? 'Pending: Sleeper has not established a later regular-season week for this season.' : null };
 }
