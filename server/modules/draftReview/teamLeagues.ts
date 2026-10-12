@@ -1,3 +1,4 @@
+import { settleSourceReads } from './settledSources';
 import { z } from 'zod';
 import { leagueSeason, sleeperAccountInput, sleeperId, type TeamLeagues, type TeamLeagueRosters, type TeamLeagueSummary } from '@shared/teamLeagues';
 import { sleeperClient } from '../../integrations/sleeperClient';
@@ -61,10 +62,10 @@ export async function discoverTeamLeagues(account: string, season: string, sourc
 export async function findTeamLeagueRosters(userId: string, leagueId: string, season: string, sources: Sources = sleeperClient, now = Date.now): Promise<TeamLeagueRosters> {
   sleeperId.parse(userId); sleeperId.parse(leagueId); leagueSeason.parse(season);
   try {
-    const [leagueObservation, rosterObservation] = await Promise.all([
+    const [leagueObservation, rosterObservation] = await settleSourceReads([
       sources.getLeague(leagueId).then(value => ({ value, receivedAt: new Date(now()).toISOString() })),
       sources.getLeagueRosters(leagueId).then(value => ({ value, receivedAt: new Date(now()).toISOString() })),
-    ]);
+    ] as const);
     const league = leagueSchema.parse(leagueObservation.value);
     const rows = z.array(rosterSchema).max(64).parse(rosterObservation.value);
     if (league.league_id !== leagueId || league.season !== season || !league.total_rosters || rows.length !== league.total_rosters) throw new TeamLeaguesSourceError();

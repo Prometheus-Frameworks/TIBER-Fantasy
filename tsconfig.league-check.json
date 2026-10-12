@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "server/mcp/leagueReaderServer.ts",
+    "server/mcp/leagueReaderStdio.ts",
+    "server/modules/leagueMcp/**/*.ts",
+    "server/modules/draftReview/teamManager.ts",
+    "shared/teamManager.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ],
+  "compilerOptions": {
+    "incremental": false
+  }
+}
