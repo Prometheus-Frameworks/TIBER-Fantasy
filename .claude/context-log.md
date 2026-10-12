@@ -1113,3 +1113,14 @@ Validated historical catalog directory containers inside the fallback boundary a
 - Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
 - Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
 - Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
+
+## 2026-10-12 — TIBER Now daily evidence refresh
+
+- **Authorization:** Daily documentation preparation for the established TIBER Now lane; maintainer review and merge remain separate.
+- **Concurrent-edit check:** Re-read current `main` at `c4adf6effdeff0c6a68f92aece759b03fe575b29`, the canonical page and both required logs before editing. PR #415 is merged; no open daily-update PR exists, so the existing `codex/tiber-now-daily-update` branch is reused from current `main`.
+- **Source check:** Confirmed all 14 linked repositories still use `main`; all 14 README reads succeeded. Fantasy, Rookies and Research advanced through merged PRs #375/#418, #302 and #35; the other 11 exact pins are unchanged.
+- **What changed:** Updated the canonical page for the merged public Team league switcher and local source-disabled MCP reader; the reviewed 2024 class/MHJ reconstruction and manual MHJ study; ROP #30's reviewed schedule-order repair, preserved failed retained-input run and blocked paired qualification; and the design-only Power Rankings #419 proposal.
+- **Evidence boundary:** Kept merged source, operator-reported preview acceptance, local packages, historical/manual research, failed execution, blocked qualification and conceptual design distinct. No upstream tests, private archive bytes, hosted services, provider/auth/database settings, devices, live data, models or league transactions were exercised by this documentation refresh.
+- **Files modified:** `docs/TIBER_NOW.md`, `.claude/agents/codex.md` and `.claude/context-log.md` only.
+- **Handoff:** Prepare one draft PR on the reused daily-update branch. Do not request review, change readiness, merge, deploy, activate providers/models/data, change runtime or message contributors.
+
