@@ -1336,3 +1336,12 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Files modified:** `docs/TIBER_NOW.md`, `.claude/agents/codex.md` and `.claude/context-log.md` only.
 - **Handoff:** Prepare one draft PR on the reused daily-update branch. Do not request review, change readiness, merge, deploy, activate providers/models/data, change runtime or message contributors.
 
+## 2026-10-12 — PR #420 evidence review and documentation correction
+
+- **Authority and scope:** Joe requested independent source-backed review, correction of genuine documentation errors and an independent exact-head review for the October 12 TIBER Now update. Merge/publication still requires Joe's final approval. Changes remain limited to the canonical page and these two required logs.
+- **Starting candidate:** PR #420 head `b4e9cf326f94701aad164569db5c5010347185a1`, base `c4adf6effdeff0c6a68f92aece759b03fe575b29`; open draft, mergeable, with no reviews or threads at initial inspection. All 14 checked default-branch heads match the page pins; all 13 companion READMEs retain the canonical link.
+- **Evidence verification:** Read all 168 external linked targets plus the relative Fantasy README; separately resolved all eight inline-review anchors. Verified merged #375/#418, Rookies #302 and Research #35 against current PR states, exact-head review results and retained public acceptance/limitation records. No runtime tests, private archive authentication, producer execution, device test or live service check was performed.
+- **Corrections:** Reconciled the stale ROP repository summary with the prior authorized failed run and blocked new-head pair qualification; placed the earlier October 10 purpose-only checkpoint before that later attempt; clarified reported Week 4 Teamstate context reuse; corrected current non-draft states for Data #281, Teamstate #97 and Fantasy #411 without inferring release acceptance. Added explicit Week 3 dependency heads, a direct clean #418 review link and #419's no-double-counting Forecast boundary.
+- **Validation:** `git diff --check` and Markdown table/link checks passed for the repaired documentation. Source pins remain evidence snapshots, not deployment pins. No runtime, model, package, source-admission or provider/auth/database files change.
+- **Next gate:** Request independent review bound to the newly published exact head. This entry does not pre-certify that review or authorize merge, deployment, activation or implementation of Power Rankings.
+
