@@ -140,3 +140,6 @@ Team now includes an on-demand 2025 Data workspace with admitted-cohort search, 
 
 ## October 11 — #383 local league MCP candidate
 A dedicated source-disabled-by-default stdio league reader is prepared separately from the weekly Watson evidence adapter. See `docs/mcp/league-reader-local-v0.md`. Remote hosting/auth and consumer activation remain pending; no saved classifications or producer expansion.
+
+### Trade Compare Sites pilot — 2026-10-12, #416
+`pilots/trade-compare-sites/` is a separate save-only, owner-private React/Vinext pilot; it is not mounted on TIBER Team. A fixed HTTPS relay reads only the existing public exact-ID historical evidence route. The reusable card preserves provenance, confidence, recorded-week denominators and unavailable states, while trade sides and operator thesis remain page-local. Weekly ROP/TTS, fantasy points, xFP, forecasts, schedule and roster geometry remain unavailable. Railway's Express/Postgres/team-auth and frozen FORGE code/cache are unchanged. See `docs/pilots/trade-compare-sites-2026-10-12.md`; hosted/phone acceptance and Ops #88 D3 remain unresolved.

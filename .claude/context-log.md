@@ -1113,3 +1113,16 @@ Validated historical catalog directory containers inside the fallback boundary a
 - Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
 - Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
 - Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
+
+### 2026-10-12 — Codex: #416 save-only Sites Trade Compare pilot
+- **What changed:** Added standalone `pilots/trade-compare-sites/`: two/three-player comparison, shared pure evidence card, operator-local give/receive/thesis, read-only context copy and a fixed HTTPS historical relay. Added `docs/pilots/trade-compare-sites-2026-10-12.md` and this handoff.
+- **Reuse/boundary:** #294/#411 card semantics and #404 historical contract; #383 eligibility and #355 fit/willingness distinctions. No private Watson activation, source admission, ROP/TTS recomputation, score/verdict, user-scoped data, league writes, Railway endpoint/settings/DB changes, team-auth or frozen FORGE changes.
+- **Validation:** 33 focused tests, strict standalone TypeScript and Workers build pass. Live source pair/three reads and one local relay pass; two later Node smoke reads timed out to unavailable. Browser/device and hosted dispatch are unverified.
+- **Site:** Owner-only custom audience; saved version 1 at source 6dd2a8941e9ea6265e731ff183c6ec78d1f67198, no deployment ID. PR preparation only; no merge or publication. Ops #88 D3 stays open.
+
+### 2026-10-12 — Codex: #421 redirect-only private candidate repair
+- Joe authorized `error` → `manual`, preserving every other check, and private deployment only.
+- Changed the relay's single redirect option, updated its transport test and added one 302 fail-closed regression. 34 focused tests, strict standalone tsc, Workers build and two native compiled-handler checks pass.
+- Saved/deployed owner-only Site v2 at source d55f7d7c66bef6465d4249177b3f09c48e562287. Hosted Site returned available for London/Washington over the production Railway HTTPS route at 8:37 PM Toronto, with GSIS identities, medium identity confidence, 12/16 recorded weeks and target means 9.333333333333334/5.9375.
+- Added the redirect repair receipt. No other gate, endpoint, auth, DB, FORGE, env, audience or league change; no merge or public deploy.
+- Full-table screenshot remains blocked: native capture stops above metrics, and auto-review rejected external Firecrawl capture without explicit private-content disclosure authorization. No workaround or external disclosure. D3 remains open; previous-head review is not inherited.
