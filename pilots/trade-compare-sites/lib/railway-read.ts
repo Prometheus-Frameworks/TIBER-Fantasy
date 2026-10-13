@@ -39,7 +39,7 @@ export async function readPlayers(ids: string[], fetcher: typeof fetch = fetch):
     url.searchParams.set('player_ids', ids.join(','));
     const response = await fetcher(url, {
       method: 'GET', headers: { Accept: 'application/json' },
-      credentials: 'omit', redirect: 'error', cache: 'no-store', signal: controller.signal,
+      credentials: 'omit', redirect: 'manual', cache: 'no-store', signal: controller.signal,
     });
     const history = parseHistory(await boundedJson(response), ids);
     return { schema_version: 'tiber_trade_compare_read_v0', selected_ids: [...ids],

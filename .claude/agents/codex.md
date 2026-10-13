@@ -1332,3 +1332,9 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Product:** Reusable pure card over UI-local #294 projection; exact historical IDs, denominators, identity confidence and receipts preserved. Operator thesis/package and unmodeled Shipley illustration stay separate. Weekly/model/roster evidence remains unavailable; no FORGE changes.
 - **Validation:** 33/33 scoped tests, standalone strict tsc and Workers build pass; public pair/three HTTPS reads and local pair relay pass. Two later Node reads timed out; no browser, phone, assistive-tech or hosted dispatch check.
 - **Delivery:** Site saved version 1, source 6dd2a8941e9ea6265e731ff183c6ec78d1f67198, owner-only, undeployed. GitHub PR and #416 report carry the final head/version pointers. D3 remains open; future private runtime acceptance needs separate scope.
+
+### 2026-10-12 — PR #421 Workers redirect compatibility repair
+- Explicit live operator approval: single redirect option fix, unchanged gates, owner-private candidate deployment, hosted HTTPS verification and requested screenshot; no merge/public publication.
+- Runtime cause reproduced from compiled v1 handler: Cloudflare rejects `redirect:error` before outbound I/O. Candidate uses manual; `!response.ok` still rejects 3xx without following it.
+- 34 tests, strict standalone TypeScript, build and compiled-Worker success/redirect cases pass. Owner-private v2 source d55f7d7c66bef6465d4249177b3f09c48e562287 deployed successfully. Actual hosted pair read passes with 50,157-byte available response at 8:37:08 PM Toronto; verified source endpoint and identities/values recorded in docs/pilots/trade-compare-sites-redirect-fix-2026-10-12.md.
+- Requested evidence-table screenshot is blocked: native screenshot only captures the top, and auto-review rejected disclosure to Firecrawl. No credential/private-content disclosure or bypass. Keep #421 unmerged and D3 open; this changed head requires fresh review.

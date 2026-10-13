@@ -98,7 +98,7 @@ test('relay uses one fixed GET over HTTPS with no incoming credentials, cookies,
     count++; assert.equal(new URL(String(url)).origin, 'https://tiber-fantasy-production.up.railway.app');
     assert.equal(new URL(String(url)).pathname, '/api/draft-review/evidence');
     assert.equal(new URL(String(url)).searchParams.get('player_ids'), '8112,9487');
-    assert.equal(options?.method, 'GET'); assert.equal(options?.credentials, 'omit'); assert.equal(options?.redirect, 'error');
+    assert.equal(options?.method, 'GET'); assert.equal(options?.credentials, 'omit'); assert.equal(options?.redirect, 'manual');
     assert.deepEqual(options?.headers, { Accept: 'application/json' });
     return jsonResponse(fixture());
   });
@@ -116,6 +116,14 @@ for (const query of ['', '?ids=8112,8112', '?ids=1,2,3,4', '?ids=8112&user_id=de
 test('POST rejected before outbound request', async () => {
   let calls = 0; const r = await comparisonGet(new Request('https://private.test/api/compare?ids=8112', { method: 'POST' }), async () => { calls++; return jsonResponse(fixture()); });
   assert.equal(r.status, 400); assert.equal(calls, 0);
+});
+test('redirect response remains unavailable and no second request is made', async () => {
+  let calls = 0;
+  const read = await readPlayers(['8112', '9487'], async (_url, options) => {
+    calls++; assert.equal(options?.redirect, 'manual');
+    return new Response(null, { status: 302, headers: { Location: 'https://must-not-be-followed.test/' } });
+  });
+  assert.equal(calls, 1); assert.equal(read.status, 'unavailable'); assert.equal(read.history, null);
 });
 for (const [name, fetcher] of [
   ['HTTP failure', async () => new Response('no', { status: 502 })],
