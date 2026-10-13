@@ -40,6 +40,7 @@ export type DraftReview = {
     league: {
       name: string;
       season: string;
+      current_week?: number | null;
       total_rosters: number;
       league_mode: 'redraft' | 'keeper' | 'dynasty' | 'unknown';
       scoring_format: string | null;

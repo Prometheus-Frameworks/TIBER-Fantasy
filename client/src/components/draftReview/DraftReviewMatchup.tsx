@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DraftReview } from '@/pages/TiberDraftReview';
-import { matchupPacket, matchupSchema, type TeamMatchup } from '@shared/draftReviewMatchup';
+import { matchupPacket, matchupSchema, validatedLeagueWeek, type TeamMatchup } from '@shared/draftReviewMatchup';
 function MatchupContent({ review }: { review: DraftReview }) {
-  const [week, setWeek] = useState(1);
+  const currentWeek = validatedLeagueWeek(review.observed.league.current_week);
+  const [week, setWeek] = useState(() => currentWeek ?? 1);
   const [refresh, setRefresh] = useState(0);
   const [result, setResult] = useState<TeamMatchup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,7 @@ function MatchupContent({ review }: { review: DraftReview }) {
   const money = (n: number | null) => n === null ? '—' : n.toFixed(2);
   return <div className="drp-matchup">
     <div className="drp-matchup-toolbar"><label>Week <select value={week} onChange={e => { invalidate(); setSettled(false); setWeek(Number(e.target.value)); }}>{Array.from({ length: 18 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}</select></label><button type="button" className="drp-action" onClick={() => { invalidate(); setRefresh(r => r + 1); }} disabled={loading}>Refresh matchup</button></div>
+    {currentWeek === null && <p className="drp-muted">Current league week is unavailable; the selector defaults to Week 1.</p>}
     <div aria-live="polite" aria-busy={loading}>{loading && <p>Reading this week’s matchup…</p>}{error && <p role="alert">{error}</p>}</div>
     {result && <>
       <div className="drp-matchup-scoreboard">{[result.observed.you, result.observed.opponent].map((side, i) => <div key={side.roster_id}><span className="drp-label observed">{i === 0 ? 'Your team' : 'Opponent'}</span><h3>{side.name}</h3><strong>{money(side.points)}</strong><small>Observed points{side.custom_points !== null ? ' · commissioner override' : ''}</small></div>)}</div>

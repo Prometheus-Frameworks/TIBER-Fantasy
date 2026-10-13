@@ -5,9 +5,44 @@ import DraftReviewMatchup from '@/components/draftReview/DraftReviewMatchup';
 import type { DraftReview } from '@/pages/TiberDraftReview';
 const review = { input: { canonicalUrl: 'https://sleeper.com/roster/123/1', leagueId: '123', rosterId: 1 }, observed: { league: { season: '2026' } } } as DraftReview;
 const originalFetch = global.fetch;
-const data = () => ({ schema_version: 'tiber_team_matchup_v1', input: review.input, season: '2026', week: 1, observed: { you: { roster_id: 1, name: 'Mine', points: 0, custom_points: null, starters: [] }, opponent: { roster_id: 2, name: 'Theirs', points: 12, custom_points: null, starters: [] } }, derived: { score_margin: -12, shared_offense: [] }, unavailable: ['Game timing'], provenance: { received_at: '2026-09-12T12:00:00Z', directory_fetched_at: '2026-09-12T11:00:00Z', source_urls: [], disclosures: [] } });
+const data = (week = 1) => ({ schema_version: 'tiber_team_matchup_v1', input: review.input, season: '2026', week, observed: { you: { roster_id: 1, name: 'Mine', points: 0, custom_points: null, starters: [] }, opponent: { roster_id: 2, name: 'Theirs', points: 12, custom_points: null, starters: [] } }, derived: { score_margin: -12, shared_offense: [] }, unavailable: ['Game timing'], provenance: { received_at: '2026-09-12T12:00:00Z', directory_fetched_at: '2026-09-12T11:00:00Z', source_urls: [], disclosures: [] } });
+const reviewAtWeek = (current_week: unknown) => ({ ...review, observed: { ...review.observed, league: { ...review.observed.league, current_week } } }) as DraftReview;
 beforeEach(() => { Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: jest.fn().mockResolvedValue(undefined) } }); });
 afterEach(() => { cleanup(); global.fetch = originalFetch; });
+test.each([1, 5, 18])('initializes Chapter matchup from validated current league week %s', async week => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => data(week) });
+  render(React.createElement(DraftReviewMatchup, { review: reviewAtWeek(week), initiallyOpen: true }));
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe(String(week));
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`&week=${week}`), expect.objectContaining({ cache: 'no-store' }));
+  await screen.findByText('Mine');
+  expect(screen.queryByText(/Current league week is unavailable/)).toBeNull();
+});
+test.each([undefined, null, 0, 19, 5.5, '5', true, NaN])('falls back explicitly to Week 1 for unavailable or invalid league week %s', async currentWeek => {
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => data() });
+  render(React.createElement(DraftReviewMatchup, { review: reviewAtWeek(currentWeek), initiallyOpen: true }));
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('1');
+  expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('&week=1'), expect.anything());
+  expect(screen.getByText(/Current league week is unavailable.*Week 1/)).toBeTruthy();
+  await screen.findByText('Mine');
+});
+test('manual week selection survives rerender and refresh, resets intent, and scopes the copied packet', async () => {
+  global.fetch = jest.fn(async input => ({ ok: true, json: async () => data(Number(new URL(String(input), window.location.origin).searchParams.get('week'))) })) as typeof fetch;
+  const mounted = render(React.createElement(DraftReviewMatchup, { review: reviewAtWeek(5), initiallyOpen: true }));
+  await screen.findByText('Mine');
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
+  await screen.findByText('Mine');
+  expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false);
+  mounted.rerender(React.createElement(DraftReviewMatchup, { review: reviewAtWeek(6), initiallyOpen: true }));
+  await screen.findByText('Mine');
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh matchup' }));
+  await screen.findByText('Mine');
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('2');
+  expect(jest.mocked(global.fetch).mock.calls.slice(1).every(([url]) => String(url).endsWith('&week=2'))).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Discuss matchup' }));
+  await screen.findByText(/Matchup context copied/);
+  expect(JSON.parse(jest.mocked(navigator.clipboard.writeText).mock.calls[0][0]).context.week).toBe(2);
+});
 test('loads on demand and copies explicit manager preference', async () => {
   global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => data() });
   render(React.createElement(DraftReviewMatchup, { review }));

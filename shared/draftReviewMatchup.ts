@@ -1,4 +1,9 @@
 import { z } from 'zod';
+const leagueWeekSchema = z.number().int().min(1).max(18);
+export function validatedLeagueWeek(value: unknown): number | null {
+  const parsed = leagueWeekSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
 const text = z.string().max(120);
 const score = z.number().finite().min(-1000000).max(1000000);
 const starter = z.object({ slot: text, player_id: text.nullable(), name: text, position: text.nullable(), team: text.nullable(), status: text.nullable(), injury_status: text.nullable(), points: score.nullable() });
@@ -6,7 +11,7 @@ const side = z.object({ roster_id: z.number().int().positive(), name: text, poin
 export const matchupSchema = z.object({
   schema_version: z.literal('tiber_team_matchup_v1'),
   input: z.object({ leagueId: z.string().regex(/^\d{1,32}$/), rosterId: z.number().int().positive(), canonicalUrl: z.string().url() }),
-  season: z.string().regex(/^\d{4}$/), week: z.number().int().min(1).max(18),
+  season: z.string().regex(/^\d{4}$/), week: leagueWeekSchema,
   observed: z.object({ you: side, opponent: side }),
   derived: z.object({ score_margin: score, shared_offense: z.array(z.object({ team: text, your_player: text, opponent_player: text })).max(256) }),
   unavailable: z.array(z.string()).max(16),

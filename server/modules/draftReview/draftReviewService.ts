@@ -1,4 +1,5 @@
 import { historicalEvidenceFor } from './historicalEvidence';
+import { validatedLeagueWeek } from '../../../shared/draftReviewMatchup';
 import {
   deriveSleeperScoringFormat,
   sleeperClient,
@@ -643,6 +644,7 @@ export async function buildDraftReview(rawInput: string) {
         league_id: input.leagueId,
         name: sanitizeDisplay(league.name, 'Sleeper league'),
         season: sanitizeDisplay(league.season, 'Unknown'),
+        current_week: validatedLeagueWeek(league.settings?.leg),
         status: league.status ?? null,
         total_rosters: league.total_rosters ?? rosters.length,
         league_mode: leagueMode.mode,

@@ -25,6 +25,21 @@ function response(body: unknown) {
 }
 
 describe('Draft Review Sleeper context compiler', () => {
+  test.each([1, 5, 18, undefined, null, 0, 19, 5.5, '5', true, NaN])('exposes only validated current league week from leg %s', async leg => {
+    global.fetch = jest.fn(async input => {
+      const url = String(input);
+      if (url.endsWith('/league/123')) return response({ league_id: '123', name: 'Synthetic', season: '2026', total_rosters: 1, roster_positions: ['QB'], settings: { leg } });
+      if (url.endsWith('/league/123/users')) return response([{ user_id: 'u1', display_name: 'Synthetic manager' }]);
+      if (url.endsWith('/league/123/rosters')) return response([{ roster_id: 1, owner_id: 'u1', players: ['11'], starters: ['11'] }]);
+      if (url.endsWith('/players/nfl')) return response({ '11': { full_name: 'Synthetic QB', position: 'QB', team: 'PHI' } });
+      throw new Error(`Unexpected URL: ${url}`);
+    }) as typeof fetch;
+    const result = await buildDraftReview('https://sleeper.com/roster/123/1');
+    expect(result.observed.league).toMatchObject({ current_week: typeof leg === 'number' && Number.isInteger(leg) && leg >= 1 && leg <= 18 ? leg : null });
+    expect(result.schema_version).toBe('tiber_draft_review_v0_1');
+    expect(result.observed.league).not.toHaveProperty('settings');
+  });
+
   test('accepts only an exact public Sleeper roster URL at the build boundary', () => {
     expect(parseSleeperRosterUrl('https://sleeper.com/roster/999999999999999999/7')).toEqual({
       leagueId: '999999999999999999',
