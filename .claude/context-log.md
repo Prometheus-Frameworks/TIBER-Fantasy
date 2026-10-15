@@ -1125,3 +1125,14 @@ Validated historical catalog directory containers inside the fallback boundary a
 - Authentication/installation succeeded and the actual ChatGPT data call reached the private Worker; source reads returned unavailable. Matched the documented Trade Compare failure: Workers rejects fetch initialization with redirect:error before outbound requests.
 - Changed only Sleeper and schedule fetch redirect mode to manual. Existing !ok checks reject every 3xx before parsing; no redirect follow-up. All source bounds, timeout, principal/profile and identity rules remain.
 - Added a redirect-mode/no-follow regression and replaced a clock-sensitive substring privacy assertion with structural membership/owner-key checks. Actual hosted plugin acceptance remains pending repair deployment at this commit.
+
+### 2026-10-15 — Codex: #422 independent inspection and bounded hardening
+- Joe authorized independent inspection, security/reliability tests, minimal repairs and a second exact-head review; merge/broader activation remain operator decisions. Starting head 4ddcf688.
+- Actual installed plugin league-list and candidate-only lineup calls succeed. Deployed Site v2 source 163ef6bc rebuilt byte-for-byte from that head (Worker SHA-256 5336e78e64732e87d8285f47b3cddfece35791f093c8f2d69bd2d800ea2262ee); owner-private policy verified with only the owner.
+- Repaired two reproduced P2s: stalled inbound decoded bodies/cancel hooks had no response deadline; impossible calendar dates qualified schedule coverage. Added ten-second body deadline/408, nonblocking cancellation and UTC calendar validation. Preserved working SDK negotiation, schemas, profile and private access.
+- Validation: 33 native tests (12 added), 85 Team tests/five suites, strict scoped TypeScript, server build and 230-module Worker isolation audit pass; inherited duplicate applyAdjusters build warning. Full-repository checks and physical iPhone acceptance unverified.
+- Identity isolation depends on the single-owner Sites policy, not a multi-user profile map. Shell anonymous/spoofed probes stopped at Cloudflare 403/1010, so header stripping/second-user OAuth is not independently certified. Independent final-head review and repaired private deployment receipts follow on #422. See docs/reviews/mcp-personal-hosted-hardening-2026-10-15.md.
+
+### 2026-10-15 — Codex: #422 independent review cancellation repair
+- The independent reviewer of local candidate 7eef4a79 reproduced a further P2: non-OK Sleeper/schedule branches awaited cancellation outside the bounded helper; a never-settling hook kept the MCP busy slot or schedule in-flight promise pinned after abort.
+- Both branches now cancel without blocking and retain fixed unavailable errors. Added a regression proving repeated failures settle and release the slots. Final validation target is 34 native tests (13 added) plus the unchanged 85 Team tests. Final exact-head re-review is required; no merge or broader activation.

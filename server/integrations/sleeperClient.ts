@@ -96,7 +96,7 @@ async function fetchJson<T>(path: string): Promise<T> {
     // Workers supports manual; the !ok guard rejects every 3xx without following.
     const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal, redirect: 'manual' });
     if (!res.ok) {
-      await res.body?.cancel();
+      void res.body?.cancel().catch(() => {});
       throw new Error('Sleeper source unavailable');
     }
     const limit = path === '/players/nfl' ? 24 * 1024 * 1024 : 2 * 1024 * 1024;

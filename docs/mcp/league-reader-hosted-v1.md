@@ -46,7 +46,8 @@ Byes use nflverse's maintained `nfldata/data/games.csv` at the fixed raw GitHub
 URL in `schedule.ts`, bounded to 4 MiB with a ten-second timeout and one-hour
 cache. For seasons 2021 onward a bye is derived only after all 272 regular-season
 games, all 32 recognized teams, 17 distinct team-weeks per team, unique game IDs,
-valid dates/weeks, and no team-week conflict are verified. The explicit nflverse
+valid calendar dates/weeks, and no team-week conflict are verified. Impossible
+dates and JavaScript date rollover are rejected. The explicit nflverse
 LA → Sleeper LAR code mapping is included. Missing/partial/conflicting schedules
 produce null byes, with a separate unavailable schedule observation. This source
 is used only for schedule context, not promoted statistical/model evidence.
@@ -57,7 +58,9 @@ Retrieval timestamps are not source-update or atomic-snapshot claims.
 `server/mcp/leagueReaderWorker.ts` uses the SDK's Web Standards stateless
 Streamable HTTP transport. `POST /mcp` supports initialize, list and calls; JSON
 batches and bodies over 16 KiB are refused. Tool arguments stay limited to 2 KiB;
-complete envelopes stay under 1 MB. A shared per-isolate busy slot permits one
+complete envelopes stay under 1 MB. Decoded bodies also have a ten-second read
+deadline; a stalled upload is canceled and returns HTTP 408 with no-store. Stream
+cancellation is best-effort and cannot hold a failed request open. A shared per-isolate busy slot permits one
 active source read, with a 30-second response deadline; authenticated calls are
 limited to 30/minute per isolate. These are per-isolate controls, not a claimed
 global distributed quota. Origin checks and no-store responses are applied.
@@ -69,6 +72,19 @@ inspect data-free discovery but cannot read the configured personal profile.
 This code must not be exposed behind a proxy that trusts caller-supplied identity
 headers. The owner-private policy is the principal restriction; do not widen the
 Site's audience without adding per-principal profile authorization.
+
+There is one configured profile, not a visitor-to-profile database. Different
+trusted visitor IDs would select that same profile if the Site admitted them.
+The verified single-owner Sites policy is therefore essential to profile
+isolation, not an optional perimeter. Personal tool arguments cannot override
+the configured account; the five explicit-selector tools intentionally retain
+their public-observation semantics.
+
+The installed SDK negotiates MCP `2025-11-25`. Current ChatGPT calls first try
+`server/discover`, receive an unsupported-method response, then successfully use
+the older initialize/list/call flow. Modern `2026-07-28` negotiation is not
+implemented or advertised; changing that requires complete transport support,
+not merely a successful discovery response.
 
 Runtime values (names only):
 - `TIBER_LEAGUE_SOURCE=public-sleeper` explicitly enables provider reads. Any other
@@ -92,6 +108,9 @@ hosting manifest contains the opaque project ID and MCP capability, not profile
 values. Reuse that Site and its provisioned plugin on updates. Read `get_site`
 with `include_mcp_connection: true`, offer that exact plugin for installation,
 then verify a read-only call. Publication alone is not connection acceptance.
+Rebuild the published source with the same lockfile and compare the Worker bytes
+to bind a hosted version to a reviewed Fantasy commit. A Site source SHA is a
+separate Git history and must not be substituted for the Fantasy review SHA.
 Rollback uses the prior saved Site version; for an immediate source kill switch,
 change the source marker and publish with the new environment revision.
 
@@ -115,3 +134,6 @@ reject all redirect responses before parsing. No alternate destination is follow
 Timeouts, byte bounds, fixed source URLs, identity and profile checks are unchanged.
 A regression pins manual mode and verifies that a 302 never produces a follow-up
 request. Final acceptance requires successful calls through the connected plugin.
+
+Independent hardening evidence and replay commands:
+[`docs/reviews/mcp-personal-hosted-hardening-2026-10-15.md`](../reviews/mcp-personal-hosted-hardening-2026-10-15.md).

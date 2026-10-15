@@ -2,7 +2,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { buildLeagueReaderServer } from './leagueReaderServer';
 import { createLeagueTools, publicReaders, type Readers } from '../modules/leagueMcp/tools';
 import { createPersonalReaders } from '../modules/leagueMcp/personalContext';
-import { readBoundedText } from '../integrations/boundedFetch';
+import { BodyReadDeadlineError, readBoundedText } from '../integrations/boundedFetch';
 
 type Env = { TIBER_LEAGUE_SOURCE?: string; TIBER_PROFILE_USER_ID?: string; TIBER_DEFAULT_LEAGUE_ID?: string };
 let cachedKey = '';
@@ -23,7 +23,7 @@ export default {
     if (origin && origin !== url.origin && origin !== 'https://chatgpt.com') return json(403, 'origin_not_allowed');
     let body: unknown;
     try { body = JSON.parse(await readBoundedText(request, 16_384)); }
-    catch { return json(413, 'invalid_or_oversized_request'); }
+    catch (error) { return error instanceof BodyReadDeadlineError ? json(408, 'request_body_deadline') : json(413, 'invalid_or_oversized_request'); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json(400, 'single_request_required');
     const method = (body as { method?: unknown }).method;
     if (method === 'tools/call') {

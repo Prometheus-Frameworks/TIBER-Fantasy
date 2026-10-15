@@ -18,7 +18,9 @@ export function compileSchedule(csv: string, season: string, receivedAt: string)
   const weeks = Object.fromEntries(Array.from(teams).map(team => [team, new Set<number>()]));
   for (const row of rows) {
     const week = Number(row.week), home = canonical(row.home_team), away = canonical(row.away_team);
+    const day = Date.parse(`${row.gameday}T00:00:00Z`);
     if (!row.game_id || ids.has(row.game_id) || !/^\d{4}-\d{2}-\d{2}$/.test(row.gameday)
+        || !Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== row.gameday
         || !Number.isInteger(week) || week < 1 || week > 18 || home === away
         || !teams.has(home) || !teams.has(away) || weeks[home].has(week) || weeks[away].has(week)) {
       throw new Error('Conflicting schedule coverage');
@@ -42,7 +44,7 @@ export async function getSchedule(season: string): Promise<Schedule> {
     const timer = setTimeout(() => controller.abort(), 10_000);
     try {
       const response = await fetch(SCHEDULE_URL, { signal: controller.signal, redirect: 'manual' });
-      if (!response.ok) { await response.body?.cancel(); throw new Error('Schedule unavailable'); }
+      if (!response.ok) { void response.body?.cancel().catch(() => {}); throw new Error('Schedule unavailable'); }
       cached = compileSchedule(await readBoundedText(response, 4 * 1024 * 1024), season, new Date().toISOString());
       return cached;
     } finally { clearTimeout(timer); }

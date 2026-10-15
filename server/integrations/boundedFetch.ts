@@ -1,8 +1,11 @@
 /** Bound decoded response bytes before parsing, including chunked/compressed bodies. */
-export async function readBoundedText(response: Pick<Response, 'headers' | 'body'>, maxBytes: number): Promise<string> {
+export class BodyReadDeadlineError extends Error {
+  constructor() { super('Body read deadline exceeded'); }
+}
+export async function readBoundedText(response: Pick<Response, 'headers' | 'body'>, maxBytes: number, deadlineMs = 10_000): Promise<string> {
   const declared = response.headers.get('content-length');
   if (declared && Number(declared) > maxBytes) {
-    await response.body?.cancel();
+    void response.body?.cancel().catch(() => {});
     throw new Error('Response limit exceeded');
   }
   if (!response.body) throw new Error('Missing response body');
@@ -10,7 +13,8 @@ export async function readBoundedText(response: Pick<Response, 'headers' | 'body
   const decoder = new TextDecoder('utf-8', { fatal: true });
   const parts: string[] = [];
   let bytes = 0;
-  try {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const read = async () => {
     for (;;) {
       const chunk = await reader.read();
       if (chunk.done) break;
@@ -20,8 +24,14 @@ export async function readBoundedText(response: Pick<Response, 'headers' | 'body
     }
     parts.push(decoder.decode());
     return parts.join('');
+  };
+  try {
+    return await Promise.race([read(), new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new BodyReadDeadlineError()), deadlineMs);
+    })]);
   } catch (error) {
-    await reader.cancel().catch(() => {});
+    // A stalled inbound upload (or a rejecting cancel hook) must not hold a request forever.
+    void reader.cancel().catch(() => {});
     throw error;
-  } finally { reader.releaseLock(); }
+  } finally { if (timer) clearTimeout(timer); reader.releaseLock(); }
 }
