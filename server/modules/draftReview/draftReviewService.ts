@@ -1,3 +1,5 @@
+import { getDraftReviewPlayerDirectory } from './playerDirectory';
+export { getDraftReviewPlayerDirectory, __resetDraftReviewCacheForTests } from './playerDirectory';
 import { deriveWaiverSettings } from '../../../shared/teamWaiverContext';
 import { historicalEvidenceFor } from './historicalEvidence';
 import {
@@ -13,7 +15,6 @@ import {
 
 const ALLOWED_SLEEPER_HOSTS = new Set(['sleeper.com', 'www.sleeper.com', 'sleeper.app', 'www.sleeper.app']);
 const SLEEPER_ID = /^\d{1,32}$/;
-const PLAYER_CACHE_MS = 24 * 60 * 60 * 1000;
 const MAX_DRAFT_PICKS = 512;
 const MAX_SCORING_RULES = 128;
 const MAX_SELECTOR_TEAMS = 64;
@@ -81,10 +82,6 @@ const SCORING_RULE_LABELS: Record<string, string> = {
   bonus_rush_att_20: '20 rushing attempts',
   bonus_pass_cmp_25: '25 pass completions',
 };
-
-type PlayerDirectorySnapshot = { fetchedAt: number; players: Record<string, SleeperPlayer> };
-let playerCache: PlayerDirectorySnapshot | null = null;
-let playerCacheRequest: Promise<PlayerDirectorySnapshot> | null = null;
 
 export class DraftReviewInputError extends Error {
   constructor(message: string) {
@@ -245,30 +242,8 @@ export async function resolveDraftReviewInput(rawInput: string) {
   return resolveLeagueTeams(parsed.leagueId, parsed.inputType);
 }
 
-/** Shared read-only snapshot: fetchedAt is our acquisition clock, not Sleeper's update time. */
-export async function getDraftReviewPlayerDirectory() {
-  if (playerCache && Date.now() - playerCache.fetchedAt < PLAYER_CACHE_MS) return playerCache;
-  if (!playerCacheRequest) {
-    playerCacheRequest = sleeperClient.getNflPlayers()
-      .then((players) => {
-        if (!players || typeof players !== 'object' || Array.isArray(players)) {
-          throw new Error('Sleeper returned an invalid player-directory container.');
-        }
-        playerCache = { fetchedAt: Date.now(), players };
-        return playerCache;
-      })
-      .finally(() => { playerCacheRequest = null; });
-  }
-  return playerCacheRequest;
-}
-
 async function getPlayers() {
   return (await getDraftReviewPlayerDirectory()).players;
-}
-
-export function __resetDraftReviewCacheForTests() {
-  playerCache = null;
-  playerCacheRequest = null;
 }
 
 function countSlots(slots: string[] = []) {

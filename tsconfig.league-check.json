@@ -5,7 +5,8 @@
     "server/mcp/leagueReaderStdio.ts",
     "server/modules/leagueMcp/**/*.ts",
     "server/modules/draftReview/teamManager.ts",
-    "shared/teamManager.ts"
+    "shared/teamManager.ts",
+    "server/mcp/leagueReaderWorker.ts"
   ],
   "exclude": [
     "node_modules",

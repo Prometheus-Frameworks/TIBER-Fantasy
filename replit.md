@@ -140,3 +140,11 @@ Team now includes an on-demand 2025 Data workspace with admitted-cohort search, 
 
 ## October 11 — #383 local league MCP candidate
 A dedicated source-disabled-by-default stdio league reader is prepared separately from the weekly Watson evidence adapter. See `docs/mcp/league-reader-local-v0.md`. Remote hosting/auth and consumer activation remain pending; no saved classifications or producer expansion.
+
+## October 15 — personal league MCP follow-up
+Two personal tools add configured-account league discovery and a single lineup,
+scoring, bye and candidate-availability read. Reuses Team membership, roster and
+waiver services. A dedicated owner-private Sites Worker supplies stateless MCP
+with managed platform OAuth; Railway/DB and the source-disabled stdio default are
+unchanged. See `docs/mcp/league-reader-hosted-v1.md` for source/transport bounds,
+configuration, deployment and acceptance boundaries.

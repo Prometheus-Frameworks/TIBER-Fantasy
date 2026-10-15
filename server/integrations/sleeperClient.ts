@@ -1,3 +1,4 @@
+import { readBoundedText } from './boundedFetch';
 const BASE_URL = 'https://api.sleeper.app/v1';
 const SLEEPER_REQUEST_TIMEOUT_MS = 10_000;
 
@@ -92,12 +93,13 @@ async function fetchJson<T>(path: string): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SLEEPER_REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal });
+    const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal, redirect: 'error' });
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sleeper API error ${res.status}: ${text}`);
+      await res.body?.cancel();
+      throw new Error('Sleeper source unavailable');
     }
-    return await res.json() as T;
+    const limit = path === '/players/nfl' ? 24 * 1024 * 1024 : 2 * 1024 * 1024;
+    return JSON.parse(await readBoundedText(res, limit)) as T;
   } finally {
     clearTimeout(timeout);
   }

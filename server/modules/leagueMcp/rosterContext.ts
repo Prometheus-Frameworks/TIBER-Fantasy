@@ -2,7 +2,7 @@ import { settleSourceReads } from '../draftReview/settledSources';
 import { z } from 'zod';
 import { sleeperId, leagueSeason } from '../../../shared/teamLeagues';
 import { sleeperClient } from '../../integrations/sleeperClient';
-import { getDraftReviewPlayerDirectory } from '../draftReview/draftReviewService';
+import { getDraftReviewPlayerDirectory } from '../draftReview/playerDirectory';
 
 export const rosterContextInput = z.object({ userId: sleeperId, leagueId: sleeperId,
   season: leagueSeason, rosterId: z.number().int().min(1).max(64) }).strict();
