@@ -37,3 +37,12 @@ explicit local source opt-in, not used in this implementation's validation and
 not remote activation authority. The launcher requires installed dependencies,
 fixes cwd and forwards only PATH/LANG/TZ plus its source-mode marker. No HTTP
 listener is supplied. The parent runtime is trusted, not a hostile-host sandbox.
+
+## October 15 personal hosted follow-up
+
+The preceding text describes #418's original local release boundary. The owner has now
+asked to finish the connection. See `docs/mcp/league-reader-hosted-v1.md` for the
+implemented owner-private Sites transport, managed OAuth, two personal-context
+tools, shared waiver compiler, complete-schedule bye derivation, streamed upstream
+limits and runtime kill switch. The stdio default remains source-disabled. Hosted
+publication and an actual ChatGPT tool call are distinct acceptance checkpoints.
