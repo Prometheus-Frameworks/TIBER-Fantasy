@@ -93,7 +93,8 @@ async function fetchJson<T>(path: string): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SLEEPER_REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal, redirect: 'error' });
+    // Workers supports manual; the !ok guard rejects every 3xx without following.
+    const res = await fetch(`${BASE_URL}${path}`, { signal: controller.signal, redirect: 'manual' });
     if (!res.ok) {
       await res.body?.cancel();
       throw new Error('Sleeper source unavailable');

@@ -41,7 +41,7 @@ export async function getSchedule(season: string): Promise<Schedule> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10_000);
     try {
-      const response = await fetch(SCHEDULE_URL, { signal: controller.signal, redirect: 'error' });
+      const response = await fetch(SCHEDULE_URL, { signal: controller.signal, redirect: 'manual' });
       if (!response.ok) { await response.body?.cancel(); throw new Error('Schedule unavailable'); }
       cached = compileSchedule(await readBoundedText(response, 4 * 1024 * 1024), season, new Date().toISOString());
       return cached;

@@ -37,7 +37,7 @@ extracted for reuse, preserving its contract. A single personal request shares
 one league, roster and directory observation across membership, roster and waiver
 checks. Sibling source reads settle before the busy slot is released.
 
-Sleeper fixed origin: `https://api.sleeper.app/v1`. Redirects are rejected, decoded
+Sleeper fixed origin: `https://api.sleeper.app/v1`. Worker-compatible manual redirect mode rejects every 3xx without following; decoded
 bodies are bounded before JSON parsing (24 MiB NFL directory, 2 MiB other reads),
 and the existing ten-second timeout covers the body. Error bodies are not echoed.
 The directory remains cached up to 24 hours; membership is request-time.
@@ -104,3 +104,14 @@ change the source marker and publish with the new environment revision.
   bench TE's verified bye, and Kyle Pitts' observed membership status.
 - Final host/plugin status is reported from deployment and actual connection
   evidence separately; no iPhone acceptance or independent review is implied.
+
+## Hosted compatibility repair
+
+The first authenticated ChatGPT data call reached the private service, but source
+reads failed because Workers rejects fetch initialization with redirect mode
+`error`. This repeats the already documented Trade Compare compatibility issue.
+Sleeper and schedule fetches now use `manual`; unchanged `!response.ok` guards
+reject all redirect responses before parsing. No alternate destination is followed.
+Timeouts, byte bounds, fixed source URLs, identity and profile checks are unchanged.
+A regression pins manual mode and verifies that a 302 never produces a follow-up
+request. Final acceptance requires successful calls through the connected plugin.

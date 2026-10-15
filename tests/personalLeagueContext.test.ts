@@ -5,6 +5,24 @@ import { createLeagueTools, publicReaders } from '../server/modules/leagueMcp/to
 import { compileSchedule } from '../server/modules/leagueMcp/schedule';
 import { readBoundedText } from '../server/integrations/boundedFetch';
 import worker from '../server/mcp/leagueReaderWorker';
+import { sleeperClient } from '../server/integrations/sleeperClient';
+import { getSchedule } from '../server/modules/leagueMcp/schedule';
+
+test('Worker-compatible fetch refuses redirects without following or parsing them', async () => {
+  const original = globalThis.fetch;
+  const calls: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    assert.equal(init?.redirect, 'manual');
+    calls.push(String(input));
+    return new Response('redirect body must not be parsed', { status: 302, headers: { Location: 'https://untrusted.example/redirect' } });
+  };
+  try {
+    await assert.rejects(sleeperClient.getManagerNflState());
+    await assert.rejects(getSchedule('2026'));
+    assert.equal(calls.length, 2);
+    assert.equal(calls.some(url => url.includes('untrusted.example')), false);
+  } finally { globalThis.fetch = original; }
+});
 
 function fixture() {
   const league = { league_id: '10', name: 'Synthetic PPR', sport: 'nfl', season: '2026', total_rosters: 2,
@@ -42,7 +60,8 @@ test('one personal call verifies membership and returns lineup, PPR, byes and ca
   assert.equal(result.candidates[0].claimEligibility, 'unknown');
   assert.equal(result.waiverSettings.derived.faab_remaining, 79);
   assert.deepEqual(f.calls, { league: 1, rosters: 1, directory: 1 });
-  assert.equal(JSON.stringify(result).includes('456'), false);
+  assert.equal(JSON.stringify(result).includes('owner_id'), false);
+  assert.deepEqual(result.roster.players, ['100', '101']);
   assert.equal((await personal.myLeagues({})).season, '2026');
 });
 test('strict personal selectors cannot override the configured account or source', async () => {
