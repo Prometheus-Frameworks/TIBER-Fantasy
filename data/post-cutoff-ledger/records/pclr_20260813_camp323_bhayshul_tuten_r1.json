@@ -1,0 +1,56 @@
+{
+  "record_id": "pclr_20260813_camp323_bhayshul_tuten_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_bhayshul_tuten",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:56:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:12490",
+      "display_name": "Bhayshul Tuten",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "depth_chart_change",
+    "observations": [
+      "2026-08-11: the Jaguars' first unofficial 2026 depth chart lists RB1 as 'Bhayshul Tuten OR Chris Rodriguez Jr.' — Tuten shares the top line rather than holding it alone (jaguars.com).",
+      "Context (Yahoo, 08-04): Tuten capitalized during Rodriguez's injury absence and looked like 'a potential star' in the offseason program; the Tuten-vs-Rodriguez battle had not materialized until Rodriguez returned to team drills in the first padded week.",
+      "Room context: Travis Etienne departed to New Orleans; neither Etienne nor Tank Bigsby appears on the 08-11 chart."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): the co-starter listing introduces workload-split uncertainty relative to a Tuten-solo-lead assumption; this is opportunity uncertainty, not a performance signal against Tuten.",
+      "No evidence in-window supports any downgrade of Tuten's own play; his offseason standing was strong, and the change in his outlook is purely competitive-context-driven."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.jaguars.com/news/jaguars-2026-training-camp-first-unofficial-depth-chart-released",
+        "note": "Team site, 2026-08-11. First unofficial depth chart co-starter 'OR' listing.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/jaguars-rb-starting-impress-camp-120009707.html",
+        "note": "Yahoo, 2026-08-04. Tuten's strong offseason standing; Rodriguez return context.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "This entry records depth-chart uncertainty only. Per #323, no Tuten talent downgrade is admitted: no in-window source supports one.",
+      "The chart is unofficial and provisional; an 'OR' listing is not a resolved committee.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does the 'OR' resolve toward Tuten, Rodriguez, or a persistent committee as preseason deployment accumulates?"
+    ],
+    "unrecognized_fields": []
+  }
+}

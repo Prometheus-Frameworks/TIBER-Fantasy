@@ -1,0 +1,79 @@
+{
+  "record_id": "pclr_20260813_camp323_eli_raridon_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_eli_raridon",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:52:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:13421",
+      "display_name": "Eli Raridon",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "role_expansion",
+    "observations": [
+      "[internal] 2026-07-29 through 2026-08-03: Raridon was a repeated team-drill target for all three Patriots QBs (Maye, DeVito, Morton), with multiple catches and practice touchdowns across first- and second-team units (SI 07-29: three catches in Tuesday team drills; SI/Yahoo 07-31: five catches across Tuesday-Thursday; Boston.com 08-03: 'a regular target so far during camp').",
+      "[internal] Vrabel (team-official): with Julian Hill's season-ending OTA injury, Raridon has 'the first crack' at the vacated TE role behind Hunter Henry.",
+      "[external] 2026-08-11 joint practice vs. Colts: won a dig route vs. Colts S Daniel Scott in one-on-ones; caught a deep corner route from Maye in 11-on-11s; converted a two-point attempt from DeVito over the middle (Roundtable 08-11).",
+      "[external] 2026-08-11 joint practice: Raridon outpaced Hunter Henry in snaps with the first-team offense in that single practice (Roundtable 08-11); Patriots.com team-site blogs corroborate red-zone and play-action-crosser receptions vs. Colts defenders the same day."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward pressure on routes and targets in 11/12 personnel as the clear receiving TE2 with expanding access.",
+      "The single-practice first-team snap edge over Henry on 08-11 is one practice of deployment, not a starter change."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.si.com/nfl/patriots/onsi/rookie-te-eli-raridon-turning-heads-at-patriots-training-camp",
+        "note": "SI/On SI, 2026-07-29. Beat observation: three team-drill catches; Vrabel quote on Raridon's learning curve.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/heres-patriots-rookie-eli-raridon-110009962.html",
+        "note": "SI via Yahoo, 2026-07-31. Five team-drill catches Tue-Thu across first- and second-team units.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.boston.com/sports/new-england-patriots/2026/08/03/new-england-patriots-training-camp-nfl-football-rookies-eli-raridon/",
+        "note": "Boston.com, 2026-08-03. Regular target for all three QBs; Hill-injury pathway context; Maye teammate comment.",
+        "verified": false
+      },
+      {
+        "ref": "https://roundtable.io/sports/nfl/pats/news/observations-from-the-new-england-patriots-joint-practice-with-the-indianapolis-colts",
+        "note": "Roundtable, 2026-08-11. Joint-practice external-defense detail: dig vs. Daniel Scott, deep corner from Maye, 2-pt catch, first-team snap edge over Henry.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.patriots.com/news/day-14-blogservations-patriots-colts-enjoy-productive-back-and-forth-in-joint-practice",
+        "note": "Patriots.com team site, 2026-08-11. Red-zone tight-window receptions from DeVito vs. Colts.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.patriots.com/news/12-takeaways-from-drake-maye-and-the-patriots-offense-in-joint-practice-vs-colts",
+        "note": "Patriots.com team site, 2026-08-11. Play-action crosser win and contested TD catch through a Colts defender.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "missing"
+    },
+    "limitations": [
+      "Hunter Henry is the entrenched starter (2025 team-high 60-768-7): a starter-pathway limitation that constrains interpretation of Raridon's access but does not negate the observed route/receiving access.",
+      "No opposing-player or opposing-coach quotes about Raridon were recoverable: the external-defense corroboration is performance against Colts defenders as observed by Patriots-side reporters, not opponent testimony.",
+      "No cumulative camp target/catch charting ledger exists for Patriots camp; access evidence is per-practice observation only.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does the first-team snap share vs. Henry repeat in preseason games or later joint practices?",
+      "Does the receiving access survive when Henry is featured in the game plan?"
+    ],
+    "unrecognized_fields": []
+  }
+}

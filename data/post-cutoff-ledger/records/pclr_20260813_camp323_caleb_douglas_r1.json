@@ -1,0 +1,83 @@
+{
+  "record_id": "pclr_20260813_camp323_caleb_douglas_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_caleb_douglas",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:01:00.000Z",
+  "change_note": "#323 reconciliation: role/access/opportunity evidence only. The operator's separate evaluator-prior hypothesis (Jon-Eric Sullivan decision-maker calibration) is deliberately excluded from this entry because the ledger contract has no operator-hypothesis field that cannot be confused with player evidence; it is preserved in the #323 manifest as a future TIBER-Research idea.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:13296",
+      "display_name": "Caleb Douglas",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "depth_chart_change",
+    "observations": [
+      "2026-08-11: Miami's first depth chart of the preseason — explicitly unofficial — lists the starting WRs as Caleb Douglas and Malik Washington, with Tutu Atwell, Terrace Marshall Jr., and Theo Wease Jr. behind them; the preseason opener is Friday 08-15 vs. Washington (Local10, 08-11). HC Jeff Hafley (team-official, via PFT 08-12): 'It's been consistency over time... he's probably been one of our most consistent guys, and he's showed up every day. So that's where he deserves to be at this point.'",
+      "Draft context (2026-04-25): Miami selected Douglas at No. 75 overall (Round 3); NFL.com's Lance Zierlein had projected him as a fifth- or sixth-round pick — a materially earlier selection than that public expectation (Palm Beach Post via Yahoo, 04-25). Dolphins director of college scouting Matt Winston: 'Caleb brings some size to the room, a good athlete can run the full route tree.'",
+      "Target-competition context: Jaylen Waddle was traded to Denver (reported 2026-03-18, finalized at the draft) and Tyreek Hill was released by the new regime and remains a free agent — the Miami WR room's incumbent target hierarchy was structurally cleared before camp.",
+      "2026-08-12 joint practice at Washington: Douglas recorded multiple catches from Malik Willis over the middle and drew a defensive penalty (Palm Beach Post/Joe Schad via Yahoo, 08-12). Douglas: 'You've got to keep working, man. It's not in stone yet.'",
+      "~2026-08-10: Dolphins GM Jon-Eric Sullivan, on The Joe Rose Show (104.3 WQAM), discussed Douglas after nine camp practices: 'Caleb has a LOT of natural gifts... it's the body type. He's tall, he's long, he can run... he can bend. He can get in and out of breaks. Got extremely quick feet and, like all of them, he's honing his craft... Some of the hard lessons he's learned early on, he's starting to reap the benefits of that.' (A to Z Sports, 08-10). Recorded as team-evaluator characterization, not on-field performance evidence."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): role/access opportunity is unusually open — the starter listing plus the Waddle/Hill departures point to immediate route/snap access; none of this quantifies a target share.",
+      "Any player-quality interpretation (draft-capital read, GM characterization, camp flashes) is inference and is kept separate from the access evidence above.",
+      "The depth-chart first listing is not converted into a WR1 target-share claim; positive coach/GM speak is not converted into production."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.local10.com/sports/local/2026/08/11/dolphins-1st-depth-chart-revealed-ahead-of-preseason-game-vs-commanders/",
+        "note": "Local10, 2026-08-11. First (unofficial) depth chart: Douglas and Malik Washington starting WRs; Malik Willis starting QB.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.nbcsports.com/nfl/profootballtalk/rumor-mill/news/dolphins-depth-chart-has-third-round-pick-caleb-douglas-as-a-starting-wide-receiver",
+        "note": "Pro Football Talk, 2026-08-12. Corroborates the starter listing; Hafley consistency quote.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/caleb-douglas-picked-dolphins-nfl-020603065.html",
+        "note": "Palm Beach Post via Yahoo, 2026-04-25. Draft slot No. 75; Zierlein 5th-6th-round public projection; Winston quote.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/dolphins-rookie-wr-caleb-douglas-175945728.html",
+        "note": "Palm Beach Post (Joe Schad) via Yahoo, 2026-08-12. Joint-practice catches vs. Washington; Douglas and Hafley quotes.",
+        "verified": false
+      },
+      {
+        "ref": "https://atozsports.com/nfl/miami-dolphins-news/jon-eric-sullivan-offers-an-update-on-one-of-the-rookies-the-miami-dolphins-need-most/",
+        "note": "A to Z Sports, 2026-08-10. Sullivan Joe Rose Show quotes (WQAM air date approximate; precise air time not pinned).",
+        "verified": false
+      },
+      {
+        "ref": "https://www.nfl.com/news/dolphins-trading-wr-jaylen-waddle-to-broncos-for-draft-picks-including-2026-first-rounder",
+        "note": "NFL.com (surfaced via search; body not independently fetched). Waddle-to-Denver trade context.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "missing"
+    },
+    "limitations": [
+      "The depth chart is the team's explicitly unofficial first preseason chart; a first listing is access evidence, not a target-share guarantee.",
+      "Candidate-claim gap: no NFL.com draft analysis stating Douglas's profile 'resembled Green Bay picks under Jon-Eric Sullivan' was recoverable; what exists is Zierlein's skeptical 5th-6th-round projection and third-party pieces describing Sullivan's Packers-style traits philosophy. The specific NFL.com claim is unrecovered and not admitted.",
+      "Draft-reach corroborations (PhinPhanatic ~138-pick reach framing; ESPN front-office survey) surfaced via search only; the fetched Palm Beach Post/Zierlein gap is the admitted basis for 'materially earlier than public expectation'.",
+      "The Phinsider joint-practice recap was not directly fetchable (403); its extra detail is excluded.",
+      "The operator's Sullivan evaluator-prior hypothesis is excluded from this entry by design (see change_note).",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Douglas start and command targets in Friday's (08-15) preseason opener vs. Washington?",
+      "Does the starter listing survive veteran competition (Atwell, Marshall, Tolbert) into the regular season?"
+    ],
+    "unrecognized_fields": []
+  }
+}

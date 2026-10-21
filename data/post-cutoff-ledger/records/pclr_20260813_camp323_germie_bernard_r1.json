@@ -1,0 +1,78 @@
+{
+  "record_id": "pclr_20260813_camp323_germie_bernard_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_germie_bernard",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:52:00.000Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:13274",
+      "display_name": "Germie Bernard",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-10",
+    "event_type": "personnel_usage",
+    "observations": [
+      "2026-07-31 practice (Athlon via Yahoo 08-01, sourced to Steelers Now): Bernard received first-team reps and lined up in the slot, outside, and out of the backfield; connected on a Cover-2 honey-hole shot with Rodgers.",
+      "Unofficial beat charting through seven practices (Steelers Depot, 2026-08-08): 5 receptions on 9 targets (55.6%), 1 drop; explicitly characterized as a 'quiet start'.",
+      "2026-08-08 night practice: mixed-unit usage — crosser receptions from Mason Rudolph (non-first-unit QB), one double-catch reception from Rodgers, plus special-teams kick-coverage work.",
+      "2026-08-10: HC Mike McCarthy (team-official) said Bernard 'would get more reps today' with Pittman unavailable; same practice, Bernard flinched on a Rodgers hard count in a goal-line drill (false start) and was pulled for Ben Skowronek."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): access opportunity is rising while Metcalf/Pittman are out, but the underlying WR3/WR4 hierarchy with Roman Wilson remains open.",
+      "Versatile alignment usage (slot/outside/backfield) is a deployment fact; it does not by itself imply target volume."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "low",
+    "status": "corroboration_pending",
+    "source_refs": [
+      {
+        "ref": "https://sports.yahoo.com/articles/germie-bernard-earns-first-team-210000074.html",
+        "note": "Athlon via Yahoo, 2026-08-01 (event 07-31). First-team reps; multi-alignment usage. Original athlonsports.com URL returned 403; content confirmed via this republication only.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-stats-first-seven-practices/",
+        "note": "Steelers Depot, 2026-08-08. Charting 5/9, 1 drop; 'quiet start' characterization.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-diary-day-nine/",
+        "note": "Steelers Depot, 2026-08-08. Mixed-unit usage detail (Rudolph crossers, Rodgers double-catch, kick coverage).",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/pittsburgh-steelers-2026-training-camp-injury-report-august-10/",
+        "note": "Steelers Depot, 2026-08-10. McCarthy: Bernard gets more reps with Pittman out.",
+        "verified": false
+      },
+      {
+        "ref": "https://steelersdepot.com/2026/08/steelers-2026-training-camp-diary-day-10/",
+        "note": "Steelers Depot, 2026-08-10. Goal-line false start; pulled for Skowronek.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.si.com/nfl/steelers/onsi/germie-bernard-huge-opportunity-pittsburgh-steelers-wide-receiver-injuries",
+        "note": "SI/On SI, 2026-08-11. Projection: significant preseason-opener time if Metcalf/Pittman sit; Bernard quote on versatility.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "missing"
+    },
+    "limitations": [
+      "Role access is unresolved: first-team access in-window is injury-driven and intermittent, target volume is modest, and no report of a stable first-team alignment independent of the Metcalf/Pittman absences was recoverable.",
+      "Countervailing in-window evidence is preserved rather than resolved: second-unit reps and a goal-line benching-for-error sit alongside the first-team access reports.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Bernard hold a defined alignment role once Metcalf and Pittman return?",
+      "How does preseason game deployment split between Bernard and Roman Wilson?"
+    ],
+    "unrecognized_fields": []
+  }
+}
