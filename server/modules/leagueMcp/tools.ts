@@ -32,10 +32,11 @@ export const publicReaders: Readers = {
 export function createLeagueTools(readers: Readers | null = null, deadlineMs = 30000, remoteEnabled = false) {
   let busy = false;
   const unavailable = (reason: string) => ({ status: 'unavailable', reason });
-  return async (name: ToolName, raw: unknown): Promise<Record<string, unknown>> => {
+  return async (name: string, raw: unknown): Promise<Record<string, unknown>> => {
+    if (!Object.hasOwn(toolSchemas, name)) return unavailable('unknown_tool');
     try { if (new TextEncoder().encode(JSON.stringify(raw)).byteLength > 2048) return unavailable('invalid_input'); }
     catch { return unavailable('invalid_input'); }
-    const parsed = toolSchemas[name]?.safeParse(raw);
+    const parsed = toolSchemas[name as ToolName].safeParse(raw);
     if (!parsed?.success) return unavailable('invalid_input');
     if (name === 'tiber_league_capabilities') return { status: 'available', schemaVersion: 'tiber_league_mcp_v1',
       sourceMode: readers ? 'public_sleeper' : 'disabled', remoteEnabled, tools: Object.keys(toolSchemas),
@@ -53,7 +54,8 @@ export function createLeagueTools(readers: Readers | null = null, deadlineMs = 3
       if (name === 'tiber_get_my_leagues') return readers.myLeagues?.(parsed.data) ?? unavailable('profile_not_configured');
       if (name === 'tiber_get_lineup_context') return readers.lineup?.(parsed.data) ?? unavailable('profile_not_configured');
       // Pass original strict input: manager service owns the week transform.
-      return readers.matchups(raw as z.input<typeof managerResultInput>);
+      if (name === 'tiber_get_weekly_matchups') return readers.matchups(raw as z.input<typeof managerResultInput>);
+      return unavailable('unknown_tool');
     }).then(value => {
       const text = JSON.stringify(value);
       if (new TextEncoder().encode(text).byteLength > 1000000) return unavailable('response_too_large');

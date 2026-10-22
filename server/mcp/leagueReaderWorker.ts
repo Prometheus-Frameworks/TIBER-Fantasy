@@ -3,8 +3,13 @@ import { buildLeagueReaderServer } from './leagueReaderServer';
 import { createLeagueTools, publicReaders, type Readers } from '../modules/leagueMcp/tools';
 import { createPersonalReaders } from '../modules/leagueMcp/personalContext';
 import { BodyReadDeadlineError, readBoundedText } from '../integrations/boundedFetch';
+import privateRoleEvidence from '../modules/roleEvidence/privateRoleEvidence';
+import { createRoleTools } from '../modules/roleEvidence/roleHistory';
 
-type Env = { TIBER_LEAGUE_SOURCE?: string; TIBER_PROFILE_USER_ID?: string; TIBER_DEFAULT_LEAGUE_ID?: string };
+type Env = { TIBER_LEAGUE_SOURCE?: string; TIBER_PROFILE_USER_ID?: string; TIBER_DEFAULT_LEAGUE_ID?: string; TIBER_ROP_SOURCE?: string };
+// Fixed build input only; no filesystem or Library access in the Worker.
+const enabledRole = privateRoleEvidence === null ? undefined : createRoleTools(privateRoleEvidence, true);
+const disabledRole = privateRoleEvidence === null ? undefined : createRoleTools(null, false);
 let cachedKey = '';
 let cachedCall: ReturnType<typeof createLeagueTools> | undefined;
 let windowStart = 0, readCount = 0;
@@ -42,7 +47,8 @@ export default {
       }
     }
     if (!cachedCall || cachedKey !== key) { cachedCall = createLeagueTools(readers, 30_000, true); cachedKey = key; }
-    const server = buildLeagueReaderServer(readers, cachedCall);
+    const role = env.TIBER_ROP_SOURCE === 'private-frozen-w01-w05-v2' ? enabledRole : disabledRole;
+    const server = buildLeagueReaderServer(readers, cachedCall, role);
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);

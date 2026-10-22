@@ -1348,3 +1348,11 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 ### 2026-10-15 — Codex: #422 independent review cancellation repair
 - The independent reviewer of local candidate 7eef4a79 reproduced a further P2: non-OK Sleeper/schedule branches awaited cancellation outside the bounded helper; a never-settling hook kept the MCP busy slot or schedule in-flight promise pinned after abort.
 - Both branches now cancel without blocking and retain fixed unavailable errors. Added a regression proving repeated failures settle and release the slots. Final validation target is 34 native tests (13 added) plus the unchanged 85 Team tests. Final exact-head re-review is required; no merge or broader activation.
+
+
+### 2026-10-22 — Codex: frozen private ROP MCP reader (stacked on #422)
+- Joe accepted Step 1/Draft 2, granted repeated owner-private descriptive reads of the exact W1–5 release v2, and authorized a pushed branch + draft PR. No sharing, promotion, other consumer, review dispatch, merge or hosted publication.
+- Added a pure GSIS-only reader, separate/exhaustive dispatch, state/coverage-preserving results, private build preparation and independent ROP enablement. Default/public builds retain null private input. No populated fixture/artifact is committed.
+- Base fdffe2aeb4f1760f3f08f86d7c42f413762e19d3 reproduces the prior Site v3 receipt's Worker hash exactly. #422's stale PR-body draft instruction corrected; it remains non-draft and unmerged. This candidate is stacked on that branch.
+- Validation: 42 native + 85 existing Team tests, four synthetic Python preparation/build guards, scoped strict TypeScript, server/public/private Worker builds, all 1,045 retained row + 939 State comparisons and local built-Worker identity/origin/no-store/kill-switch checks. No network calls in the private reader check. Private bundle 9.78 MB raw / 585 KB gzip; actual host size/startup and installed acceptance remain unverified.
+- Packet: docs/reviews/rop-history-adapter-2026-10-22.md. Independent review has not been dispatched; keep the new PR draft. #67 successor is a separate approved follow-up.
