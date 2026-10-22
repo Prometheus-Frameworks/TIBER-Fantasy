@@ -158,3 +158,11 @@ preparation/builds verify immutable W1–5 release v2 bytes outside Git/CI, and
 Returned rows, state bindings, observed zeros and missing coverage remain
 unchanged. No name lookup, Sleeper join, production publication or producer run.
 See `server/modules/roleEvidence/MODULE.md` and the October 22 review packet.
+
+### Schedule-only ROS schedule strength — October 22, 2026 candidate (#423)
+A draft MCP operation stacked on the #422/#424 branches returns verified NFL
+opponents, byes and explicit calendar windows (next3 = decision week through +2;
+ROS/playoffs need an explicit league final week) with source hash, separate clocks,
+verified league playoff start/scoring as context and named missing witnesses.
+Defensive ratings remain null; no legacy SOS, database or ROP input is used.
+See `docs/mcp/league-reader-hosted-v1.md`; not merged, hosted or accepted.
