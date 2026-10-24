@@ -1325,3 +1325,9 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
 - Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
 - Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
+
+### 2026-10-23 — Codex: simplify the TIBER-Fantasy README
+- **Request:** Joe approved the research-first README direction and asked to proceed. Scope is the Fantasy README plus required append-only logs.
+- **Change:** Added the independent football research introduction, Research / Models / Tools & workflows links, contribution invitation, explicit private-MCP wording and human final decisions. Preserved the technical/setup reference inside a collapsed section; included Research and Role & Opportunity in the detailed map, marked standalone FORGE archived, and labeled CURRENT_PHASE as historical.
+- **Validation:** 8 local link targets, 9 linked repositories and 10 npm-script names checked; setup and command text preserved; Markdown structure and diff whitespace checked; original log bytes retained. Application tests and hosted availability checks were not run.
+- **Coordination and boundary:** Based on main c4adf6effdeff0c6a68f92aece759b03fe575b29. Contribution-text overlap with open #403 is noted; its proposed policy is not adopted. #420 and other READMEs are unchanged. Submit a draft PR and record independent review against its exact head; no merge or deployment.
