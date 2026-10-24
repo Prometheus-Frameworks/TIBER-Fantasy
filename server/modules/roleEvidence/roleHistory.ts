@@ -32,52 +32,80 @@ const preparedSchema = z.object({
 }).strict();
 
 export type RoleCall = ReturnType<typeof createRoleTools>;
+/** Build-bound private input: release fixed by the validating build; full artifact parsed only on first enabled use. */
+export type RoleSource = { release: Record<string, unknown>; load: () => unknown };
+type Artifact = z.infer<typeof preparedSchema>;
+type Reader = { artifact: Artifact; byId: Map<string, Artifact['catalogue'][number]>; rows: Map<string, z.infer<typeof rowSchema>> };
 const unavailable = (reason: string) => ({ status: 'unavailable', reason });
+const isSource = (value: unknown): value is RoleSource => typeof (value as RoleSource | null)?.load === 'function';
 
-/** Trusted build input only. Copies once, indexes once; no source fetch, joins or derivations. */
+function index(value: unknown, release: unknown): Reader {
+  // Validate only; retain the original JSON values (including all unknown upstream fields).
+  preparedSchema.parse(value);
+  const artifact = value as Artifact;
+  if (release !== undefined && JSON.stringify(artifact.release) !== JSON.stringify(release)) throw Error('release binding mismatch');
+  const byId: Reader['byId'] = new Map(), rows: Reader['rows'] = new Map();
+  for (const player of artifact.catalogue) {
+    if (byId.has(player.player_id)) throw Error('duplicate identity');
+    byId.set(player.player_id, player);
+  }
+  for (const row of artifact.rows) {
+    const key = `${row.player_id}:${row.week}`;
+    if (!byId.has(row.player_id) || rows.has(key)) throw Error('invalid coverage');
+    if (row.coverage_status === 'observed') {
+      const retained = row.state_path && artifact.states[row.state_path];
+      if (!retained) throw Error('missing state binding');
+    } else if (row.state_path !== null) throw Error('unexpected state');
+    rows.set(key, row);
+  }
+  for (const id of Array.from(byId.keys())) for (const week of [1, 2, 3, 4, 5]) {
+    if (!rows.has(`${id}:${week}`)) throw Error('incomplete coverage');
+  }
+  return { artifact, byId, rows };
+}
+
+/**
+ * Trusted build input only; no source fetch, joins or derivations. Construction does no artifact work:
+ * disabled, missing or never-called readers never parse, copy or validate. The first valid enabled call
+ * copies, validates and indexes once; a failure stays closed for the life of the reader.
+ */
 export function createRoleTools(input: unknown = null, enabled = false, now = () => new Date().toISOString()) {
-  let artifact: z.infer<typeof preparedSchema> | undefined;
-  const byId = new Map<string, z.infer<typeof preparedSchema>['catalogue'][number]>();
-  const rows = new Map<string, z.infer<typeof rowSchema>>();
-  try {
-    // Parse for validation, retain the original JSON values (including all unknown upstream fields).
-    const copy = JSON.parse(JSON.stringify(input));
-    if (input !== null) {
-      preparedSchema.parse(copy);
-      artifact = copy;
-      for (const player of artifact!.catalogue) {
-        if (byId.has(player.player_id)) throw Error('duplicate identity');
-        byId.set(player.player_id, player);
-      }
-      for (const row of artifact!.rows) {
-        const key = `${row.player_id}:${row.week}`;
-        if (!byId.has(row.player_id) || rows.has(key)) throw Error('invalid coverage');
-        if (row.coverage_status === 'observed') {
-          const retained = row.state_path && artifact!.states[row.state_path];
-          if (!retained) throw Error('missing state binding');
-        } else if (row.state_path !== null) throw Error('unexpected state');
-        rows.set(key, row);
-      }
-      for (const id of Array.from(byId.keys())) for (const week of [1, 2, 3, 4, 5]) {
-        if (!rows.has(`${id}:${week}`)) throw Error('incomplete coverage');
-      }
+  const reason = !enabled ? 'source_disabled' : input === null ? 'artifact_missing' : null;
+  let reader: Reader | null | undefined;
+  const initialize = () => {
+    if (reason) return null;
+    if (reader === undefined) {
+      try {
+        // A source yields a fresh parse; a plain object is copied so callers cannot reach retained values.
+        reader = isSource(input) ? index(input.load(), input.release) : index(JSON.parse(JSON.stringify(input)), undefined);
+      } catch { reader = null; }
     }
-  } catch { artifact = undefined; byId.clear(); rows.clear(); }
-  const reason = !enabled ? 'source_disabled' : input === null ? 'artifact_missing' : !artifact ? 'artifact_invalid' : null;
-  const capability = { status: reason ? 'unavailable' : 'available', reason,
-    sourceMode: 'private_frozen_release', schemaVersion: 'tiber_rop_role_history_v1',
-    scope: { season: 2026, seasonType: 'REG', weeks: [1, 2, 3, 4, 5] },
-    identity: 'nflverse:gsis_only', consumerUse: 'owner_private_descriptive_only',
-    tool: ROLE_TOOL, ...(artifact && !reason ? { release: JSON.parse(JSON.stringify(artifact.release)) } : {}) };
+    return reader;
+  };
+  const release = () => reader ? reader.artifact.release : isSource(input) ? input.release : (input as { release?: unknown } | null)?.release;
   return {
-    capability,
+    /** Fresh object per read. Before first use, build binding is reported and runtime validation is deferred. */
+    get capability() {
+      const state = reason ?? (reader === null ? 'artifact_invalid' : null);
+      return { status: state ? 'unavailable' : 'available', reason: state,
+        validation: reason ? 'not_applicable' : reader === undefined ? 'deferred' : reader ? 'passed' : 'failed',
+        sourceMode: 'private_frozen_release', schemaVersion: 'tiber_rop_role_history_v1',
+        scope: { season: 2026, seasonType: 'REG', weeks: [1, 2, 3, 4, 5] },
+        identity: 'nflverse:gsis_only', consumerUse: 'owner_private_descriptive_only',
+        tool: ROLE_TOOL, ...(!state && release() ? { release: JSON.parse(JSON.stringify(release())) } : {}) };
+    },
+    /** Explicit owner-build/check validation; serving never needs it. */
+    initialize: () => initialize() !== null,
     call(name: string, raw: unknown): Record<string, unknown> {
       if (name !== ROLE_TOOL) return unavailable('unknown_tool');
       try {
         if (new TextEncoder().encode(JSON.stringify(raw)).byteLength > 2048) return unavailable('invalid_input');
         const parsed = roleHistoryInput.safeParse(raw);
         if (!parsed.success) return unavailable('invalid_input');
-        if (reason || !artifact) return unavailable(reason ?? 'artifact_invalid');
+        if (reason) return unavailable(reason);
+        const ready = initialize();
+        if (!ready) return unavailable('artifact_invalid');
+        const { artifact, byId, rows } = ready;
         const request = parsed.data;
         const subject = byId.get(request.subject.id);
         const inScope = request.season === 2026 && request.seasonType === 'REG';

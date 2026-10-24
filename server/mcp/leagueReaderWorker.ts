@@ -7,7 +7,8 @@ import privateRoleEvidence from '../modules/roleEvidence/privateRoleEvidence';
 import { createRoleTools } from '../modules/roleEvidence/roleHistory';
 
 type Env = { TIBER_LEAGUE_SOURCE?: string; TIBER_PROFILE_USER_ID?: string; TIBER_DEFAULT_LEAGUE_ID?: string; TIBER_ROP_SOURCE?: string };
-// Fixed build input only; no filesystem or Library access in the Worker.
+// Fixed build input only; no filesystem or Library access in the Worker. Readers are lazy:
+// module load, discovery and disabled calls never parse, copy or validate the artifact.
 const enabledRole = privateRoleEvidence === null ? undefined : createRoleTools(privateRoleEvidence, true);
 const disabledRole = privateRoleEvidence === null ? undefined : createRoleTools(null, false);
 let cachedKey = '';

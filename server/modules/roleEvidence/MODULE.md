@@ -11,6 +11,11 @@ network, database, current roster, producer or legacy lab. Its input is trusted
 build material authenticated by the pinned preparation/build chain; schema
 validation alone is not artifact authentication. All retained JSON fields and
 states/bindings pass through without recalculation. Caller results are copies.
+The reader is lazy: construction, discovery, league, unknown, invalid and
+disabled calls never parse, copy or validate the artifact. The first valid
+enabled call does so once; failure stays closed (`artifact_invalid`) without
+retry. Before that call, capability reports the build-validated release with
+`validation: deferred`; afterwards `passed` or `failed`.
 
 `tiber_get_rop_role_history` accepts only a native `nflverse:gsis` ID, numeric
 season, seasonType and one to five distinct numeric weeks. No name lookup or
@@ -21,7 +26,8 @@ on an observed player-week, alongside any positive fields.
 
 `privateRoleEvidence.ts` contains only null in Git. The default build/stdio
 surface remains seven tools, with ROP withheld. The owner-only Worker build
-replaces that module with the exact pinned private input. That build registers
+replaces that module with the exact pinned private input as immutable text plus
+its validated release, parsed only on first enabled use. That build registers
 the eighth tool separately from the league dispatcher. Data calls use existing
 Sites admission and trusted visitor-header checks. Runtime marker
 `TIBER_ROP_SOURCE=private-frozen-w01-w05-v2` separately enables ROP; absent or
