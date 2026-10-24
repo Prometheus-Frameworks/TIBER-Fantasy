@@ -46,3 +46,12 @@ implemented owner-private Sites transport, managed OAuth, two personal-context
 tools, shared waiver compiler, complete-schedule bye derivation, streamed upstream
 limits and runtime kill switch. The stdio default remains source-disabled. Hosted
 publication and an actual ChatGPT tool call are distinct acceptance checkpoints.
+
+## October 22 frozen ROP adapter candidate
+
+The separately scoped `server/modules/roleEvidence/` candidate composes a
+private frozen ROP reader with this transport; it does not add ROP to the league
+dispatcher. League dispatch explicitly refuses non-owned names and calls the
+matchup reader only for its own exact tool name. The default public build stays
+source-disabled for ROP with no populated input. See that module's documentation
+and the October 22 review packet; the candidate has not been hosted or merged.
