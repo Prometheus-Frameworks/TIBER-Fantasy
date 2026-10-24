@@ -155,12 +155,49 @@ test('playoff windows use the verified start; zero means no playoffs; unknown st
   assert.ok(none.regularSeasonRemainder);
   const unknown = compileCalendar({ schedule, team: 'LAR', decisionWeek: 7, window: { kind: 'playoffs', finalWeek: 17 }, playoffStart: { status: 'unavailable', reason: 'no_league_selected' } });
   assert.equal(unknown.window.reason, 'playoff_start_unknown');
-  assert.equal(unknown.missingWitnesses.find(w => w.scope.metric === 'league_playoff_start')!.reason, 'absent_from_inspected_source');
+  assert.equal(unknown.missingWitnesses.find(w => w.scope.metric === 'league_playoff_start')!.reason, 'not_inspected');
   const noFinal = compileCalendar({ schedule, team: 'LAR', decisionWeek: 7, window: { kind: 'playoffs', finalWeek: null }, playoffStart: { status: 'verified', value: 15 } });
   assert.equal(noFinal.window.reason, 'league_final_week_required');
   assert.ok(noFinal.missingWitnesses.some(w => w.id === 'SOS-2026-LAR-playoffs-league_final_week-not_inspected'));
   const inverted = compileCalendar({ schedule, team: 'LAR', decisionWeek: 7, window: { kind: 'playoffs', finalWeek: 14 }, playoffStart: { status: 'verified', value: 15 } });
   assert.equal(inverted.window.reason, 'final_week_before_playoff_start');
+});
+
+test('custom reader windows reject a conflicting finalWeek before source reads', async () => {
+  const f = fixture(await syntheticSchedule());
+  const rejected: any = await reader(f)({ team: 'ARI', window: 'custom', startWeek: '15', endWeek: '18', finalWeek: '17' });
+  assert.equal(rejected.status, 'unavailable');
+  assert.equal(rejected.reason, 'invalid_window');
+  assert.match(rejected.detail, /finalWeek/);
+  assert.deepEqual(f.calls, { league: 0, rosters: 0, directory: 0, schedule: 0, state: 0 });
+  const bounded: any = await reader(f)({ team: 'ARI', window: 'custom', startWeek: '15', endWeek: '17', finalWeek: '17' });
+  assert.equal(bounded.calendar.finalWeek, 17);
+  assert.deepEqual(bounded.window.weeks, [15, 16, 17]);
+  const explicit: any = await reader(f)({ team: 'ARI', window: 'custom', startWeek: '15', endWeek: '18' });
+  assert.equal(explicit.calendar.finalWeek, null);
+  assert.deepEqual(explicit.window.weeks, [15, 16, 17, 18]);
+});
+
+test('playoff witnesses distinguish unread settings from a successfully inspected missing field', async () => {
+  const schedule = await syntheticSchedule();
+  for (const cause of ['no_league_selected', 'source_unavailable', 'membership_not_verified', 'absent']) {
+    const f = fixture(schedule);
+    if (cause === 'source_unavailable') f.sources.getLeague = async () => { throw Error('synthetic outage'); };
+    if (cause === 'membership_not_verified') f.sources.getLeagueRosters = async () => [
+      { roster_id: 1, owner_id: '999', players: ['100'], starters: ['100'] },
+      { roster_id: 2, owner_id: '456', players: ['101'], starters: ['101'] },
+    ];
+    if (cause === 'absent') delete (f.league.settings as any).playoff_week_start;
+    const profile = cause === 'no_league_selected' ? { userId: '123' } : { userId: '123', defaultLeagueId: '10' };
+    const result: any = await createScheduleStrengthReader(profile, f.sources as any)({ team: 'ARI', window: 'playoffs', finalWeek: '17' });
+    assert.equal(result.window.reason, 'playoff_start_unknown', cause);
+    assert.ok(result.regularSeasonRemainder.fixtures.length > 0, cause);
+    const witness = result.missingWitnesses.find((w: any) => w.scope.metric === 'league_playoff_start');
+    assert.equal(witness.reason, cause === 'absent' ? 'absent_from_inspected_source' : 'not_inspected', cause);
+    if (cause === 'absent') assert.equal(result.league.status, 'available');
+    else assert.equal(result.league.reason, cause);
+    assert.ok(witness.evidenceNeeded.includes(result.calendar.playoffStart.reason), cause);
+  }
 });
 
 test('locks stay unknown, ratings stay null and past fixtures are labeled team history', async () => {

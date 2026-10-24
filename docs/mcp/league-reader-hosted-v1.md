@@ -168,6 +168,14 @@ evidence needed, and the decision-week-through-week-18 fixtures labeled
 `regularSeasonRemainder` (not the league ROS). Derivation from Sleeper
 playoff-round settings is deferred.
 
+A custom range with an explicit `finalWeek` must end at or before that final;
+conflicting input returns `invalid_window` before any source reads. An explicit
+custom range without `finalWeek` remains supported. A playoff-start witness uses
+`absent_from_inspected_source` only after successful league/settings inspection
+found no `playoff_week_start`. No selected league, an unverified membership or a
+league-source failure uses `not_inspected`, retaining the underlying cause and
+the useful regular-season fixture remainder.
+
 Honest contract: each fixture carries `gameId`, `gameday`, `opponent` and the
 source home/away `designation` (not a venue or neutral-site claim), with
 `kickoff: null` and `lockState`/`completion`/`postponement`/`venue: "unknown"`.

@@ -114,7 +114,10 @@ export function compileCalendar(input: CalendarInput): CompiledCalendar {
     const basis = 'verified_league_playoff_start_through_caller_supplied_final_week';
     const start = input.playoffStart;
     if (start.status !== 'verified') {
-      witness('playoffs', 'league_playoff_start', 'absent_from_inspected_source', null, 'playoffs window start',
+      // Only a successful settings inspection can establish that the field is absent.
+      const reason: WitnessReason = start.reason === 'playoff_week_start_absent_from_league_settings'
+        ? 'absent_from_inspected_source' : 'not_inspected';
+      witness('playoffs', 'league_playoff_start', reason, null, 'playoffs window start',
         `Verified playoff_week_start from the selected league's settings; current state: ${start.reason}.`);
       compiled = unavailable('playoff_start_unknown', basis);
     } else if (start.value === 0) compiled = unavailable('no_playoffs_configured', 'verified_league_setting_playoff_week_start_0');

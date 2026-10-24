@@ -53,6 +53,7 @@ export function createScheduleStrengthReader(profile: PersonalProfile, sources: 
     if (input.window === 'custom') {
       if (input.startWeek === undefined || input.endWeek === undefined) return unavailable('invalid_window', { detail: 'custom requires startWeek and endWeek' });
       if (Number(input.startWeek) > Number(input.endWeek)) return unavailable('invalid_window', { detail: 'startWeek must not exceed endWeek' });
+      if (input.finalWeek !== undefined && Number(input.endWeek) > Number(input.finalWeek)) return unavailable('invalid_window', { detail: 'endWeek must not exceed finalWeek' });
     } else if (input.startWeek !== undefined || input.endWeek !== undefined) return unavailable('invalid_window', { detail: 'startWeek/endWeek apply only to the custom window' });
 
     const nfl = await state();
