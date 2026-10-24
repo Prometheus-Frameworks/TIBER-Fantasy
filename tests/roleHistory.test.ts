@@ -137,6 +137,58 @@ test('full MCP envelope bound includes duplicated text/structured ROP data', asy
   } finally { await client.close(); await server.close(); }
 });
 
+// Build-bound source shape with a counting loader; same synthetic data only.
+function source(make: () => unknown = synthetic, release: Record<string, unknown> = synthetic().release) {
+  const s = { loads: 0, release, load: () => { s.loads++; return make(); } };
+  return s;
+}
+
+test('module construction, disabled, discovery, league, unknown and invalid calls never load the artifact', async () => {
+  const on = source(), off = source();
+  const role = createRoleTools(on, true), disabled = createRoleTools(off, false);
+  assert.equal(role.capability.status, 'available'); assert.equal(role.capability.validation, 'deferred');
+  assert.equal(role.capability.release.outputSha256, synthetic().release.outputSha256);
+  assert.equal(disabled.call(ROLE_TOOL, request).reason, 'source_disabled');
+  assert.equal(disabled.capability.status, 'unavailable');
+  assert.equal(role.call(ROLE_TOOL, { ...request, weeks: [1, 1] }).reason, 'invalid_input');
+  assert.equal(role.call('tiber_get_weekly_matchups', request).reason, 'unknown_tool');
+  const server = buildLeagueReaderServer(null, createLeagueTools(), role);
+  const client = new Client({ name: 'synthetic-lazy-test', version: '1' });
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(a); await client.connect(b);
+  try {
+    await client.listTools();
+    const c: any = (await client.callTool({ name: 'tiber_league_capabilities', arguments: {} })).structuredContent;
+    assert.equal(c.families.ROP.status, 'available'); assert.equal(c.families.ROP.validation, 'deferred');
+    await client.callTool({ name: 'tiber_get_weekly_matchups', arguments: { userId: '123', leagueId: '10', season: '2026', week: '1' } });
+    for (const name of ['unknown', 'constructor']) await client.callTool({ name, arguments: request });
+    await client.callTool({ name: ROLE_TOOL, arguments: { ...request, name: 'someone' } });
+  } finally { await client.close(); await server.close(); }
+  assert.equal(on.loads + off.loads, 0);
+});
+
+test('first valid enabled call initializes once, later calls reuse it and the kill switch still refuses', () => {
+  const s = source(), role = createRoleTools(s, true, () => 'synthetic-retrieval');
+  const first: any = role.call(ROLE_TOOL, request);
+  first.weeks[0].record.fields.carries.value = 99;
+  const second: any = role.call(ROLE_TOOL, request);
+  assert.equal(s.loads, 1); assert.equal(second.weeks[0].record.fields.carries.value, 7);
+  assert.equal(role.capability.validation, 'passed');
+  assert.equal(createRoleTools(s, false).call(ROLE_TOOL, request).reason, 'source_disabled');
+  assert.equal(s.loads, 1);
+});
+
+test('initialization errors and a release differing from the build binding fail closed without retry', () => {
+  const truncated = () => { const f = synthetic(); f.rows.pop(); return f; };
+  for (const s of [source(() => { throw Error('synthetic'); }), source(truncated),
+    source(synthetic, { ...synthetic().release, version: 3 })]) {
+    const role = createRoleTools(s, true);
+    for (let i = 0; i < 2; i++) assert.equal(role.call(ROLE_TOOL, request).reason, 'artifact_invalid');
+    assert.equal(s.loads, 1);
+    assert.equal(role.capability.status, 'unavailable'); assert.equal(role.capability.validation, 'failed');
+    assert.equal('release' in role.capability, false);
+  }
+});
+
 test('disabled ROP remains withheld in composed discovery', async () => {
   const server = buildLeagueReaderServer(null, createLeagueTools(), createRoleTools(synthetic(), false));
   const client = new Client({ name: 'synthetic-disabled-test', version: '1' });

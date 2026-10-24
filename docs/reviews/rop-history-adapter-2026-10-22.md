@@ -111,7 +111,8 @@ receipt. No original producer/reviewer tests are claimed as newly executed.
 | Retained clean review | `3b39f6abb7710aa155e19b0217f56b08d00c13691cc1e67f5f7322d0789b79fd` |
 | Prepared private input (9,366,038 bytes) | `d5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083` |
 | Aggregate of 209 fixed-clock reader results | `83fc3029180035744819221f5875838213714c7534a2e12572b2d9e4d5170382` |
-| Private Worker (9,776,562 bytes; gzip 585,295) | `581dbdc6f6fb003cdc3fe3434dc423ff62c290fcc90d481c8348b3bdab09ed1a` |
+| Private Worker (9,776,562 bytes; gzip 585,295) | `581dbdc6f6fb003cdc3fe3434dc423ff62c290fcc90d481c8348b3bdab09ed1a` (historical, head `b30d9a61`) |
+| Private Worker after revision (9,778,109 bytes; gzip 586,027) | `13ddba1fac66e3de8be7d3089d4e5b2ac7f562300f5d1d6005fbd5f1dff950a1` |
 
 Archive and prepared input remained unchanged after comparison. Full private
 source/bundle bytes stay in the owner's local environment, outside Git/CI.
@@ -140,8 +141,65 @@ paths below with the already-retained archive and private local destinations:
 python3 scripts/preparePrivateRoleEvidence.py --owner-private --archive /private/retained-release.zip --output /private/new/prepared.json
 node --import tsx scripts/checkPrivateRoleEvidence.mts --owner-private /private/new/prepared.json d5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083
 node --import tsx scripts/buildLeagueReaderWorker.mjs /private/new/worker.mjs --owner-private --role-evidence /private/new/prepared.json --sha256 d5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083
-node --import tsx scripts/checkPrivateRoleWorker.mts --owner-private /private/new/worker.mjs 581dbdc6f6fb003cdc3fe3434dc423ff62c290fcc90d481c8348b3bdab09ed1a
+node --import tsx scripts/checkPrivateRoleWorker.mts --owner-private /private/new/worker.mjs 13ddba1fac66e3de8be7d3089d4e5b2ac7f562300f5d1d6005fbd5f1dff950a1
 ```
+
+## Post-replay revision, 2026-10-23
+
+Authorized by the [post-replay revision grant](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/424#issuecomment-6353890275)
+after Joe accepted the independent private-binding replay of `b30d9a61`. That
+replay's receipt stays bound to `b30d9a61`; it is not a review of this revision.
+The revision's author is the same Claude session that ran that replay, so this
+section is primary-author evidence only.
+
+- **Lazy reader.** `createRoleTools` does no artifact work at construction. Module
+  load, discovery, league, unknown, invalid-input and disabled/wrong-marker calls
+  never parse, copy or validate. The first valid enabled call copies, validates
+  and indexes once and is reused; failure stays closed without retry. The
+  independent disabled reader still refuses after initialization.
+- **Truthful capability.** Before first use the enabled capability reports the
+  build-validated release with `validation: deferred`; afterwards `passed`, or
+  `unavailable`/`artifact_invalid` with `validation: failed`. A loaded release
+  differing from the build binding fails closed.
+- **Deferred parse.** The private build now emits the pinned input as immutable
+  text plus its validated release; `JSON.parse` runs on first enabled use. The
+  text itself still costs import time and heap (measured below, not zero).
+- **Output path before creation.** The private build resolves the future output
+  through its nearest existing ancestor, rejects lexical and symlink-resolved
+  repository paths and dangling links, and checks the input pin and artifact
+  before creating any directory; the post-creation realpath check remains.
+- Prepared-input generator, retained bytes and pin unchanged.
+
+Runtime: official Node `v20.20.2` linux-x64 (SHASUMS256-verified standalone,
+command-scoped PATH), npm 10.8.2, Python 3.12.3, WSL2 Ubuntu, locked `npm ci`.
+The unchanged `b30d9a61` private Worker was rebuilt under this runtime first and
+reproduced `581dbdc6…ed1a` exactly.
+
+| Check (Node 20.20.2) | Result |
+| --- | --- |
+| Native reader/protocol/process/hosted regressions | 45 pass: 42 previous + 3 new lazy-initialization cases |
+| Existing Team/waiver/catalog tests | 85 pass in five suites |
+| Synthetic Python preparation/build guards | 5 pass: 4 previous + rejected-path/no-directory case (fails against the old builder) |
+| Scoped strict TypeScript / server build | Pass / pass; inherited duplicate `applyAdjusters` warning |
+| Public/private Worker builds and isolation audit | Pass; 232 modules each; public `privateInput: false` |
+| Short replay: private build + `checkPrivateRoleWorker.mts` with the new full hash | Pass: identity/origin refusal, no-store, kill switch, Noel W1–5, 0 network calls, 99,566 response bytes |
+| Prepared input before/after | `d5d4cb46…1083` unchanged |
+
+Local observations only — not hosted measurements. Same machine, runtime and
+harness; seven fresh processes per scenario, `--expose-gc`; median [range].
+Retained heap is `heapUsed` after forced GC minus the pre-import baseline.
+
+| Built Worker | Import | Uncollected after import | Retained after GC | Peak RSS | First enabled ROP call | Retained after enabled call |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before, `581dbdc6` | 461 ms [432–618] | 63.1 MB | 36.0 MB | 155 MB | 96 ms [86–104] | 38.5 MB |
+| After, `13ddba1f` | 220 ms [186–283] | 26.2 MB | 22.8 MB | 97 MB | 248 ms [206–345] | 38.5 MB |
+| Public, no private input | 74–77 ms | 9.0 MB | 4.9 MB | 51 MB | n/a | n/a |
+
+Disabled-path heap after a disabled ROP call, discovery and an unknown name:
+38.5 MB before, 25.4 MB after (public: 7.5 MB). The remaining disabled import
+cost (~18 MB retained, ~145 ms over public) is the embedded private text. The
+first enabled call now carries the deferred parse/validation; second calls stay
+~5–6 ms.
 
 ## Risk, limitation and the one judgment
 

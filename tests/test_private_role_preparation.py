@@ -79,6 +79,31 @@ class PreparationBoundary(unittest.TestCase):
                 self.assertFalse(output.exists())
                 self.assertNotIn('must_not_become_evidence', result.stdout + result.stderr)
 
+    def test_private_builder_rejected_paths_create_no_directories(self):
+        repo = Path(__file__).resolve().parents[1]
+        env = {k: v for k, v in os.environ.items() if k not in prepare.CI_KEYS}
+        pin = 'd5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083'
+        with tempfile.TemporaryDirectory() as d:
+            fake = Path(d) / 'synthetic.json'
+            fake.write_text('{"synthetic":"must_not_become_evidence"}')
+            tag = os.urandom(6).hex()
+            # Lexical inside, symlink into the repo, and a dangling link aimed into the repo.
+            (Path(d) / 'link').symlink_to(repo, target_is_directory=True)
+            (Path(d) / 'dangling').symlink_to(repo / f'.reject-dangling-{tag}')
+            cases = [(repo / f'.reject-lexical-{tag}' / 'sub' / 'worker.mjs', repo / f'.reject-lexical-{tag}', 'outside repository'),
+                     (Path(d) / 'link' / f'.reject-link-{tag}' / 'worker.mjs', repo / f'.reject-link-{tag}', 'outside repository'),
+                     (Path(d) / 'dangling' / 'sub' / 'worker.mjs', repo / f'.reject-dangling-{tag}', 'unresolvable'),
+                     # Outside the repo but a substituted input: the pin fails before any directory exists.
+                     (Path(d) / 'fresh' / 'nested' / 'worker.mjs', Path(d) / 'fresh', 'pin mismatch')]
+            for output, created, reason in cases:
+                result = subprocess.run(['node', 'scripts/buildLeagueReaderWorker.mjs', str(output), '--owner-private',
+                                         '--role-evidence', str(fake), '--sha256', pin],
+                                        cwd=repo, env=env, capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(reason, result.stderr)
+                self.assertFalse(os.path.lexists(created), created)
+                self.assertNotIn('must_not_become_evidence', result.stdout + result.stderr)
+
 
 if __name__ == '__main__':
     unittest.main()
