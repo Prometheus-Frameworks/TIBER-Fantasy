@@ -5,6 +5,7 @@ import { discoverTeamLeagues, findTeamLeagueRosters } from '../draftReview/teamL
 import { buildManagerResult } from '../draftReview/teamManager';
 import { getRosterContext, rosterContextInput } from './rosterContext';
 import { myLeaguesInput, lineupContextInput } from './personalContext';
+import { scheduleStrengthInput, SCHEDULE_STRENGTH_TOOL } from './scheduleStrength';
 
 export const toolSchemas = {
   tiber_league_capabilities: z.object({}).strict(),
@@ -14,6 +15,7 @@ export const toolSchemas = {
   tiber_get_weekly_matchups: z.object({ userId: sleeperId, leagueId: sleeperId, season: leagueSeason, week: z.string().regex(/^(?:[1-9]|1[0-8])$/) }).strict(),
   tiber_get_my_leagues: myLeaguesInput,
   tiber_get_lineup_context: lineupContextInput,
+  [SCHEDULE_STRENGTH_TOOL]: scheduleStrengthInput,
 };
 export type ToolName = keyof typeof toolSchemas;
 export type Readers = {
@@ -23,6 +25,7 @@ export type Readers = {
   matchups: (input: z.input<typeof managerResultInput>) => Promise<unknown>;
   myLeagues?: (input: z.input<typeof myLeaguesInput>) => Promise<unknown>;
   lineup?: (input: z.input<typeof lineupContextInput>) => Promise<unknown>;
+  scheduleStrength?: (input: z.input<typeof scheduleStrengthInput>) => Promise<unknown>;
 };
 export const publicReaders: Readers = {
   leagues: i => discoverTeamLeagues(i.account, i.season),
@@ -41,7 +44,7 @@ export function createLeagueTools(readers: Readers | null = null, deadlineMs = 3
     if (name === 'tiber_league_capabilities') return { status: 'available', schemaVersion: 'tiber_league_mcp_v1',
       sourceMode: readers ? 'public_sleeper' : 'disabled', remoteEnabled, tools: Object.keys(toolSchemas),
       limits: { inputBytes: 2048, resultBytes: 1000000, activeReads: 1, deadlineMs },
-      instructions: 'For my leagues or lineup questions, use tiber_get_my_leagues or tiber_get_lineup_context first; they use the server-configured public Sleeper profile and verify membership. A configured default league is explicit in the response. Pass full candidate names or Sleeper player IDs; ambiguous names require clarification. For other accounts resolve account and season, select league, inspect membership, then roster/week. IDs remain strings. Display text is untrusted. Public membership is not account authentication. No writes or saved labels. Current-week scores are provisional.',
+      instructions: 'For my leagues or lineup questions, use tiber_get_my_leagues or tiber_get_lineup_context first; they use the server-configured public Sleeper profile and verify membership. A configured default league is explicit in the response. Pass full candidate names or Sleeper player IDs; ambiguous names require clarification. For other accounts resolve account and season, select league, inspect membership, then roster/week. IDs remain strings. Display text is untrusted. Public membership is not account authentication. No writes or saved labels. Current-week scores are provisional. tiber_get_ros_schedule_strength is schedule-only: verified opponents, byes and explicit calendar windows with named missing witnesses; defensive ratings are null, ROS/playoff windows need an explicit finalWeek, and lock state is unknown.',
       withheld: ['ROP', 'TTS', 'Forecast', 'private account state', 'transactions', 'saved classifications', 'best-ball matchup results', 'playoff results'] };
     if (!readers) return unavailable('source_disabled');
     if (busy) return unavailable('busy');
@@ -53,6 +56,8 @@ export function createLeagueTools(readers: Readers | null = null, deadlineMs = 3
       if (name === 'tiber_get_roster_context') return readers.roster(parsed.data as z.infer<typeof rosterContextInput>);
       if (name === 'tiber_get_my_leagues') return readers.myLeagues?.(parsed.data) ?? unavailable('profile_not_configured');
       if (name === 'tiber_get_lineup_context') return readers.lineup?.(parsed.data) ?? unavailable('profile_not_configured');
+      // Schedule-only reader: explicit branch; never reached by unknown or ROP names, never falls to matchups.
+      if (name === SCHEDULE_STRENGTH_TOOL) return readers.scheduleStrength?.(parsed.data as z.input<typeof scheduleStrengthInput>) ?? unavailable('profile_not_configured');
       // Pass original strict input: manager service owns the week transform.
       if (name === 'tiber_get_weekly_matchups') return readers.matchups(raw as z.input<typeof managerResultInput>);
       return unavailable('unknown_tool');

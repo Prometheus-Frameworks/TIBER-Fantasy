@@ -110,7 +110,7 @@ test('real MCP discovers separate read-only ROP schema, GSIS-only call and accur
   try {
     const list = await client.listTools();
     const tool = list.tools.find(t => t.name === ROLE_TOOL)!;
-    assert.equal(list.tools.length, 8);
+    assert.equal(list.tools.length, 9);
     assert.equal(tool.annotations?.readOnlyHint, true);
     assert.equal(tool.inputSchema.additionalProperties, false);
     const result = await client.callTool({ name: ROLE_TOOL, arguments: request });

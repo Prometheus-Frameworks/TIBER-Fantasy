@@ -43,7 +43,8 @@ function fixture() {
     getUser: async () => ({ user_id: '123', display_name: 'Synthetic', username: 'synthetic' }),
     getUserLeagues: async () => [league],
     getManagerNflState: async () => ({ season: '2026', season_type: 'regular', leg: 6 }),
-    getSchedule: async (season: string) => ({ season, receivedAt: new Date().toISOString(), sourceUrl: 'https://example.com/synthetic.csv', byeWeeks: { PIT: 9, DET: 6, ATL: 7 } }),
+    getSchedule: async (season: string) => ({ season, receivedAt: new Date().toISOString(), sourceUrl: 'https://example.com/synthetic.csv',
+      contentHash: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', hashConvention: 'sha256_hex_utf8_decoded_text_v1', byeWeeks: { PIT: 9, DET: 6, ATL: 7 }, teamWeeks: {} }),
   };
   return { sources, calls, rosters, players };
 }
@@ -106,9 +107,9 @@ function completeCsv() {
 }
 test('bye derivation requires full 272-game, 32-team coverage and rejects missing/duplicate/team-week conflicts', () => {
   const rows = completeCsv();
-  assert.equal(compileSchedule(rows.join('\n'), '2026', new Date().toISOString()).byeWeeks.DET, 18);
+  assert.equal(compileSchedule(rows.join('\n'), '2026', new Date().toISOString(), '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef').byeWeeks.DET, 18);
   for (const csv of [rows.slice(0, -1).join('\n'), [...rows.slice(0, -1), rows[1]].join('\n'), rows.join('\n').replace('SYNTHETIC_2_0,2026,REG,2', 'SYNTHETIC_2_0,2026,REG,1')]) {
-    assert.throws(() => compileSchedule(csv, '2026', new Date().toISOString()));
+    assert.throws(() => compileSchedule(csv, '2026', new Date().toISOString(), '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'));
   }
 });
 test('decoded body limits stop chunked upstream and inbound bodies before parsing', async () => {

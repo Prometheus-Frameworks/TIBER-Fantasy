@@ -7,6 +7,9 @@ import { readLeagueAvailabilityForSelection, directoryEntry, display } from '../
 import { compileWaiverCandidates } from '../draftReview/waiverCandidateCompiler';
 import { getRosterContext, type RosterSources } from './rosterContext';
 import { getSchedule, type Schedule } from './schedule';
+import { matchDirectoryEntries, SKILL_POSITIONS } from './identity';
+import { nflStateSchema } from './nflState';
+import { createScheduleStrengthReader } from './scheduleStrength';
 
 export const myLeaguesInput = z.object({ season: leagueSeason.optional() }).strict();
 export const lineupContextInput = z.object({
@@ -17,12 +20,12 @@ export const lineupContextInput = z.object({
 }).strict();
 export const personalProfileSchema = z.object({ userId: sleeperId, defaultLeagueId: sleeperId.optional() }).strict();
 export type PersonalProfile = z.infer<typeof personalProfileSchema>;
-type Sources = RosterSources & Pick<typeof sleeperClient, 'getUser' | 'getUserLeagues' | 'getManagerNflState'> & {
+export type PersonalSources = RosterSources & Pick<typeof sleeperClient, 'getUser' | 'getUserLeagues' | 'getManagerNflState'> & {
   getSchedule: (season: string) => Promise<Schedule>;
 };
+type Sources = PersonalSources;
 const defaults: Sources = { ...sleeperClient, getDirectory: getDraftReviewPlayerDirectory, getSchedule };
-const stateSchema = z.object({ season: leagueSeason, season_type: z.string(), leg: z.number().int().min(0).max(22) });
-const normalized = (name: string) => name.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+const stateSchema = nflStateSchema;
 
 export function createPersonalReaders(rawProfile: PersonalProfile, sources: Sources = defaults) {
   const profile = personalProfileSchema.parse(rawProfile);
@@ -31,6 +34,7 @@ export function createPersonalReaders(rawProfile: PersonalProfile, sources: Sour
     catch { return null; }
   }
   return {
+    scheduleStrength: createScheduleStrengthReader(profile, sources),
     myLeagues: async (raw: z.input<typeof myLeaguesInput>) => {
       const input = myLeaguesInput.parse(raw);
       const nfl = input.season ? null : await state();
@@ -79,17 +83,12 @@ export function createPersonalReaders(rawProfile: PersonalProfile, sources: Sour
         const evidence = compileWaiverCandidates(availability);
         waiverSettings = evidence.waiver_settings; availabilityObservations = evidence.observations;
         candidates = input.candidates.map(query => {
-          const matches = availability.entries.filter(([id, raw]) => {
-            const p = directoryEntry.safeParse(raw);
-            if (!p.success || (p.data.player_id != null && p.data.player_id !== id)) return false;
-            const name = p.data.full_name ?? [p.data.first_name, p.data.last_name].filter(Boolean).join(' ');
-            return /^\d+$/.test(query) ? query === id : normalized(name) === normalized(query);
-          });
+          const matches = matchDirectoryEntries(availability.entries, query);
           if (matches.length !== 1) return { query, status: 'unavailable', reason: matches.length ? 'ambiguous_player' : 'player_not_found',
             matchCount: matches.length,
             matches: matches.slice(0, 10).map(([id, raw]) => ({ playerId: id, name: display(directoryEntry.parse(raw).full_name) })) };
           const [playerId, raw] = matches[0], p = directoryEntry.parse(raw);
-          if (!['QB', 'RB', 'WR', 'TE'].includes(p.position ?? '') || !/^\d{1,24}$/.test(playerId)) return { query, status: 'unavailable', reason: 'unsupported_player' };
+          if (!(SKILL_POSITIONS as readonly string[]).includes(p.position ?? '') || !/^\d{1,24}$/.test(playerId)) return { query, status: 'unavailable', reason: 'unsupported_player' };
           const own = context.roster.players.includes(playerId);
           const unrostered = evidence.candidates.some(candidate => candidate.player_id === playerId);
           return { query, status: 'available', playerId, name: display(p.full_name) ?? display([p.first_name, p.last_name].filter(Boolean).join(' ')),
@@ -107,7 +106,8 @@ export function createPersonalReaders(rawProfile: PersonalProfile, sources: Sour
         candidates, waiverSettings,
         observations: { ...context.observations, availability: availabilityObservations,
           nflState: nfl ? { season: nfl.season, phase: nfl.season_type, week: nfl.leg, receivedAt: nfl.receivedAt, sourceUrl: 'https://api.sleeper.app/v1/state/nfl' } : null,
-          schedule: schedule ? { status: 'available', season, receivedAt: schedule.receivedAt, sourceUrl: schedule.sourceUrl, coverage: '272_games_32_teams_17_games_each' }
+          schedule: schedule ? { status: 'available', season, receivedAt: schedule.receivedAt, sourceUrl: schedule.sourceUrl,
+              contentHash: schedule.contentHash, hashConvention: schedule.hashConvention, coverage: '272_games_32_teams_17_games_each' }
             : { status: 'unavailable', reason: 'complete_schedule_not_verified' } },
         limitations: ['Read-only public observations, not account-control verification. No roster moves or bids.',
           'Unrostered does not establish waiver claim eligibility, locks, processing time or availability at claim time.',
