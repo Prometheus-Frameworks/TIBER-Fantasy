@@ -148,3 +148,13 @@ waiver services. A dedicated owner-private Sites Worker supplies stateless MCP
 with managed platform OAuth; Railway/DB and the source-disabled stdio default are
 unchanged. See `docs/mcp/league-reader-hosted-v1.md` for source/transport bounds,
 configuration, deployment and acceptance boundaries.
+
+
+### Frozen private ROP MCP reader — October 22, 2026 candidate
+The draft adapter stacked on #422 adds a separately dispatched, GSIS-only frozen
+ROP history read. Public/default builds retain null private input; owner-only
+preparation/builds verify immutable W1–5 release v2 bytes outside Git/CI, and
+`TIBER_ROP_SOURCE=private-frozen-w01-w05-v2` separately enables the private build.
+Returned rows, state bindings, observed zeros and missing coverage remain
+unchanged. No name lookup, Sleeper join, production publication or producer run.
+See `server/modules/roleEvidence/MODULE.md` and the October 22 review packet.

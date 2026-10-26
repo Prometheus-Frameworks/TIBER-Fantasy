@@ -1348,3 +1348,18 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 ### 2026-10-15 — Codex: #422 independent review cancellation repair
 - The independent reviewer of local candidate 7eef4a79 reproduced a further P2: non-OK Sleeper/schedule branches awaited cancellation outside the bounded helper; a never-settling hook kept the MCP busy slot or schedule in-flight promise pinned after abort.
 - Both branches now cancel without blocking and retain fixed unavailable errors. Added a regression proving repeated failures settle and release the slots. Final validation target is 34 native tests (13 added) plus the unchanged 85 Team tests. Final exact-head re-review is required; no merge or broader activation.
+
+
+### 2026-10-22 — Codex: frozen private ROP MCP reader (stacked on #422)
+- Joe accepted Step 1/Draft 2, granted repeated owner-private descriptive reads of the exact W1–5 release v2, and authorized a pushed branch + draft PR. No sharing, promotion, other consumer, review dispatch, merge or hosted publication.
+- Added a pure GSIS-only reader, separate/exhaustive dispatch, state/coverage-preserving results, private build preparation and independent ROP enablement. Default/public builds retain null private input. No populated fixture/artifact is committed.
+- Base fdffe2aeb4f1760f3f08f86d7c42f413762e19d3 reproduces the prior Site v3 receipt's Worker hash exactly. #422's stale PR-body draft instruction corrected; it remains non-draft and unmerged. This candidate is stacked on that branch.
+- Validation: 42 native + 85 existing Team tests, four synthetic Python preparation/build guards, scoped strict TypeScript, server/public/private Worker builds, all 1,045 retained row + 939 State comparisons and local built-Worker identity/origin/no-store/kill-switch checks. No network calls in the private reader check. Private bundle 9.78 MB raw / 585 KB gzip; actual host size/startup and installed acceptance remain unverified.
+- Packet: docs/reviews/rop-history-adapter-2026-10-22.md. Independent review has not been dispatched; keep the new PR draft. #67 successor is a separate approved follow-up.
+
+
+### 2026-10-26 — Codex: reject dangling private preparation destinations
+- **What changed:** Repaired #424 review finding discussion_r4365444018 at starting head 98f0d50a. The preparation helper checks the original output entry and dangling symlink ancestors before resolution, archive preparation or directory creation. Existing owner/CI, canonical repository, exclusive-write and fixed-pin boundaries remain.
+- **Files modified:** scripts/preparePrivateRoleEvidence.py; tests/test_private_role_preparation.py; docs/reviews/rop-history-adapter-2026-10-22.md; .claude/context-log.md; .claude/agents/codex.md.
+- **Validation:** Two new regression methods reproduced three old-code failures, then passed. All nine synthetic Python preparation/build guards and 45 native MCP/ROP regressions pass; git diff --check passes. Python 3.12.14; Node 24.22.1; reused dependencies have matching package/lock files.
+- **Notes:** Joe authorized the fix and review of the changed version. Exact-head independent review is recorded on GitHub separately. No real private input, producer, private replay, hosting, merge or activation. #424 remains draft; the stacked #425 must include this repair before its final review is current.
