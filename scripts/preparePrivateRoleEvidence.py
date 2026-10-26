@@ -25,8 +25,18 @@ def owner_paths(owner_private, output):
     if not owner_private or any(os.environ.get(k) for k in CI_KEYS):
         raise ValueError('owner_environment_required')
     repo = Path(__file__).resolve().parent.parent
-    target = Path(output).resolve()
-    if not Path(output).is_absolute() or target.is_relative_to(repo):
+    original = Path(output)
+    if not original.is_absolute():
+        raise ValueError('private_output_must_be_outside_repository')
+    # Inspect unresolved entries first: resolve() hides dangling symlink outputs
+    # and ancestors, allowing mkdir/open to create their destinations instead.
+    if original.exists() or original.is_symlink():
+        raise ValueError('output_already_exists')
+    for parent in original.parents:
+        if parent.is_symlink() and not parent.exists():
+            raise ValueError('private_output_path_unresolvable')
+    target = original.resolve()
+    if target.is_relative_to(repo):
         raise ValueError('private_output_must_be_outside_repository')
     if target.exists():
         raise ValueError('output_already_exists')
