@@ -9,7 +9,7 @@ const TOKEN = 'synthetic-test-token-0123456789abcdefghijklmnop';
 const DIGEST = createHash('sha256').update(TOKEN).digest('hex');
 const ANTHROPIC_IP = '160.79.104.10';
 const env = (extra: Record<string, string | undefined> = {}) => ({
-  TIBER_CLAUDE_ADMISSION: 'static-bearer-v1', TIBER_CLAUDE_TOKEN_SHA256: DIGEST, ...extra,
+  TIBER_CLAUDE_ADMISSION: 'static-api-key-v1', TIBER_CLAUDE_TOKEN_SHA256: DIGEST, ...extra,
 });
 const rpc = (method: string, params: unknown = {}) => ({ jsonrpc: '2.0', id: 1, method, params });
 const req = (body: unknown, headers: Record<string, string> = {}, path = '/mcp', method = 'POST') =>
@@ -18,7 +18,7 @@ const req = (body: unknown, headers: Record<string, string> = {}, path = '/mcp',
       'mcp-protocol-version': '2025-11-25', 'cf-connecting-ip': ANTHROPIC_IP, ...headers },
     ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
   });
-const auth = { Authorization: `Bearer ${TOKEN}` };
+const auth = { 'x-api-key': TOKEN };
 const noFetch = async (fn: () => Promise<void>) => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => { throw Error('admission must not reach a source'); };
@@ -27,7 +27,7 @@ const noFetch = async (fn: () => Promise<void>) => {
 const reason = async (r: Response) => ((await r.json()) as any).error;
 
 test('kill switch: missing or wrong admission mode refuses before any credential check', () => noFetch(async () => {
-  for (const mode of [undefined, '', 'static-bearer-v0', 'on']) {
+  for (const mode of [undefined, '', 'static-bearer-v1', 'static-api-key-v0', 'on']) {
     const r = await claude.fetch(req(rpc('tools/list'), auth), env({ TIBER_CLAUDE_ADMISSION: mode }));
     assert.equal(r.status, 503); assert.equal(await reason(r), 'claude_admission_disabled');
     assert.equal(r.headers.get('Cache-Control'), 'no-store');
@@ -43,10 +43,11 @@ test('unconfigured or malformed digest fails closed', () => noFetch(async () => 
 
 test('missing, malformed, wrong and spoofed credentials are refused without OAuth discovery', () => noFetch(async () => {
   const cases: Record<string, string>[] = [
-    {}, { Authorization: '' }, { Authorization: 'Bearer' }, { Authorization: 'Bearer short' },
-    { Authorization: `bearer ${TOKEN}` }, { Authorization: `Basic ${TOKEN}` }, { Authorization: `Bearer  ${TOKEN}` },
-    { Authorization: `Bearer ${TOKEN}x` }, { Authorization: `Bearer ${TOKEN.slice(0, -1)}` },
-    { Authorization: `Bearer ${DIGEST}` },
+    {}, { 'x-api-key': '' }, { 'x-api-key': 'short' }, { 'x-api-key': `Bearer ${TOKEN}` },
+    { 'x-api-key': `${TOKEN}x` }, { 'x-api-key': TOKEN.slice(0, -1) }, { 'x-api-key': `${TOKEN} ${TOKEN}` },
+    { 'x-api-key': DIGEST }, { 'x-api-key': `${TOKEN};` },
+    // The right token in the wrong header is refused: Authorization belongs to OAuth.
+    { Authorization: `Bearer ${TOKEN}` }, { Authorization: TOKEN }, { 'x-auth-token': TOKEN },
     { 'oai-authenticated-user-id': 'joe' }, { 'oai-authenticated-user-id': CLAUDE_PRINCIPAL },
   ];
   for (const headers of cases) {
@@ -59,7 +60,7 @@ test('missing, malformed, wrong and spoofed credentials are refused without OAut
     }
   }
   // Fetch Headers strip trailing whitespace per spec: this is the same token, not a variant.
-  const trimmed = await claude.fetch(req(rpc('tools/list'), { Authorization: `Bearer ${TOKEN} ` }), env());
+  const trimmed = await claude.fetch(req(rpc('tools/list'), { 'x-api-key': ` ${TOKEN} ` }), env());
   assert.equal(trimmed.status, 200);
 }));
 
@@ -121,10 +122,11 @@ test('credential is stripped and fixed principal injected before the inner Worke
   const original = chatgpt.fetch;
   (chatgpt as any).fetch = async (request: Request) => { seen.push(request.headers); return new Response('{}'); };
   try {
-    await claude.fetch(req(rpc('tools/list'), { ...auth, Cookie: 'a=b', 'oai-authenticated-user-id': 'spoof' }), env());
+    await claude.fetch(req(rpc('tools/list'), { ...auth, Authorization: 'Bearer oauth-would-go-here', Cookie: 'a=b', 'oai-authenticated-user-id': 'spoof' }), env());
   } finally { (chatgpt as any).fetch = original; }
   assert.equal(seen.length, 1);
   assert.equal(seen[0].get('authorization'), null);
+  assert.equal(seen[0].get('x-api-key'), null);
   assert.equal(seen[0].get('cookie'), null);
   assert.equal(seen[0].get('oai-authenticated-user-id'), CLAUDE_PRINCIPAL);
 });

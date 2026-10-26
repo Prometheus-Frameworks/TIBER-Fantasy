@@ -1,18 +1,20 @@
 /**
- * Claude admission adapter (candidate, static bearer v1).
+ * Claude admission adapter (candidate, static API key v1).
  *
  * A separate Worker entry for a separate, owner-private deployment reached by a Claude custom
- * connector using an organization-Owner request header (`Authorization: Bearer <token>`).
+ * connector using an organization-Owner request header (`x-api-key: <token>`). `x-api-key` is used
+ * rather than `Authorization`, which Claude reserves for OAuth on connectors.
  * The ChatGPT Worker (`leagueReaderWorker.ts`) and all tool/domain code are reused unchanged.
  *
  * Admission order (fail closed; nothing reaches the inner Worker until all pass):
  *   1. path is exactly /mcp, otherwise 404 (no landing page, no discovery documents)
- *   2. explicit kill switch TIBER_CLAUDE_ADMISSION=static-bearer-v1, otherwise 503
+ *   2. explicit kill switch TIBER_CLAUDE_ADMISSION=static-api-key-v1, otherwise 503
  *   3. TIBER_CLAUDE_TOKEN_SHA256 is a 64-char lowercase hex digest, otherwise 503
  *   4. Anthropic egress range 160.79.104.0/21 via CF-Connecting-IP, unless explicitly
  *      TIBER_CLAUDE_EGRESS_CHECK=off
  *   5. no foreign browser Origin (including chatgpt.com)
- *   6. bearer token whose SHA-256 matches in constant time, otherwise 401
+ *   6. `x-api-key` token whose SHA-256 matches in constant time, otherwise 401
+ *      (a token sent in `Authorization` is never accepted)
  *
  * Only after admission are caller-supplied identity/credential headers removed and a fixed
  * principal injected for the inner Worker's identity check. One principal, one profile:
@@ -33,11 +35,11 @@ type Env = {
   TIBER_DEFAULT_LEAGUE_ID?: string;
 };
 
-export const CLAUDE_ADMISSION_MODE = 'static-bearer-v1';
+export const CLAUDE_ADMISSION_MODE = 'static-api-key-v1';
 export const CLAUDE_PRINCIPAL = 'claude-static-owner';
-const TOKEN = /^Bearer ([A-Za-z0-9._~+/=-]{32,512})$/;
+const TOKEN = /^[A-Za-z0-9._~+/=-]{32,512}$/;
 const DIGEST = /^[0-9a-f]{64}$/;
-const STRIPPED = ['authorization', 'cookie', 'oai-authenticated-user-id'];
+const STRIPPED = ['x-api-key', 'authorization', 'cookie', 'oai-authenticated-user-id'];
 
 const json = (status: number, reason: string, extra: Record<string, string> = {}) =>
   Response.json({ error: reason }, { status, headers: { 'Cache-Control': 'no-store', ...extra } });
@@ -76,11 +78,12 @@ export default {
     }
     const origin = request.headers.get('origin');
     if (origin && origin !== url.origin) return json(403, 'origin_not_allowed');
-    const presented = request.headers.get('authorization')?.match(TOKEN)?.[1];
+    const raw = request.headers.get('x-api-key');
+    const presented = raw && TOKEN.test(raw) ? raw : undefined;
     // Hash a fixed placeholder when absent so the refusal path does the same work either way.
     const actual = await sha256Hex(presented ?? 'absent');
     if (!presented || !digestsEqual(actual, expected)) {
-      return json(401, 'invalid_credentials', { 'WWW-Authenticate': 'Bearer realm="tiber"' });
+      return json(401, 'invalid_credentials', { 'WWW-Authenticate': 'ApiKey realm="tiber"' });
     }
     const headers = new Headers(request.headers);
     for (const name of STRIPPED) headers.delete(name);
