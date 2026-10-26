@@ -151,7 +151,7 @@ configuration, deployment and acceptance boundaries.
 
 
 ### Frozen private ROP MCP reader — October 22, 2026 candidate
-The draft adapter stacked on #422 adds a separately dispatched, GSIS-only frozen
+The adapter merged into the #422 integration branch via #424 adds a separately dispatched, GSIS-only frozen
 ROP history read. Public/default builds retain null private input; owner-only
 preparation/builds verify immutable W1–5 release v2 bytes outside Git/CI, and
 `TIBER_ROP_SOURCE=private-frozen-w01-w05-v2` separately enables the private build.
@@ -160,9 +160,10 @@ unchanged. No name lookup, Sleeper join, production publication or producer run.
 See `server/modules/roleEvidence/MODULE.md` and the October 22 review packet.
 
 ### Schedule-only ROS schedule strength — October 22, 2026 candidate (#423)
-A draft MCP operation stacked on the #422/#424 branches returns verified NFL
+The MCP operation merged into the #422 integration branch via #425 returns verified NFL
 opponents, byes and explicit calendar windows (next3 = decision week through +2;
 ROS/playoffs need an explicit league final week) with source hash, separate clocks,
 verified league playoff start/scoring as context and named missing witnesses.
 Defensive ratings remain null; no legacy SOS, database or ROP input is used.
-See `docs/mcp/league-reader-hosted-v1.md`; not merged, hosted or accepted.
+See `docs/mcp/league-reader-hosted-v1.md`; #422 remains unmerged into main,
+and the combined readers are not hosted or accepted through the installed connector.

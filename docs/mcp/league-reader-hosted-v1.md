@@ -1,5 +1,22 @@
 # Private personal league connector
 
+## Combined source status — October 26, 2026
+
+The #422 integration branch includes merged child PRs #424 (frozen ROP history)
+and #425 (schedule-only ROS). The default source build has eight tools; an
+owner-private build with the pinned frozen input adds the ninth ROP tool.
+Runtime markers independently enable league sources and frozen ROP; a marker
+cannot supply a missing build artifact. All data calls retain the same required
+trusted visitor identity and owner-private Sites admission boundary.
+
+#422 remains unmerged into main. Historical hosted version-3 acceptance covers
+`fdffe2aeb4f1760f3f08f86d7c42f413762e19d3`, not this combined branch. The new
+readers are not claimed live. See the
+[combined validation report](../reviews/mcp-combined-integration-2026-10-26.md)
+and the exact-head review receipt on #422 before considering a merge.
+
+## Original personal connector scope
+
 The owner's October 14–15 request to finish the connector authorizes this follow-up to
 merged #418. The existing local proposal is historical; this implementation adds
 a private Sites-hosted transport and a configured public Sleeper profile. It does

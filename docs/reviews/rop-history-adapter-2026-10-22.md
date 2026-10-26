@@ -1,10 +1,14 @@
 # Frozen ROP history adapter — implementation and decision packet
 
-Status: implementation candidate for **draft PR #424, stacked on #422**.
-Current path-guard repair evidence is below; earlier implementation/replay
-receipts remain historical and bound to their original heads. The latest
-GitHub review receipt identifies the exact reviewed commit. No merge or hosted
-publication is authorized by this packet.
+Current status — October 26, 2026: **#424 merged into #422** as
+`aba1147ee07c4cc512c805f0d75b163069ed826e`; #425 subsequently joined that
+integration branch. #422 remains unmerged into main and the new readers remain
+unhosted. The [combined validation report](mcp-combined-integration-2026-10-26.md)
+and a separate exact-head review cover integration readiness.
+
+The dated implementation/path-guard receipts below remain historical and bound
+to their original heads; their draft/merge instructions describe those stages.
+This packet grants no additional merge or hosted-publication authority.
 
 ## Path-guard repair — October 26, 2026
 

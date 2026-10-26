@@ -24,11 +24,11 @@ outside-catalogue results have null records; a selected subject's source gap
 preserves the retained missing/null record. Observed-zero field witnesses stay
 on an observed player-week, alongside any positive fields.
 
-`privateRoleEvidence.ts` contains only null in Git. The default build/stdio
-surface remains seven tools, with ROP withheld. The owner-only Worker build
+`privateRoleEvidence.ts` contains only null in Git. The combined default build/stdio
+surface has eight league/schedule tools, with ROP withheld. The owner-only Worker build
 replaces that module with the exact pinned private input as immutable text plus
 its validated release, parsed only on first enabled use. That build registers
-the eighth tool separately from the league dispatcher. Data calls use existing
+the ninth tool separately from the league dispatcher. Data calls use existing
 Sites admission and trusted visitor-header checks. Runtime marker
 `TIBER_ROP_SOURCE=private-frozen-w01-w05-v2` separately enables ROP; absent or
 wrong marker refuses ROP even if league reads are enabled. The marker does not

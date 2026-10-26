@@ -1,5 +1,12 @@
 # Read-only league MCP adapter — #383
 
+Current integration status — October 26, 2026: #424 (frozen ROP history) and
+#425 (schedule-only ROS) are merged into the #422 integration branch. #422
+remains open and unmerged into main; the combined readers are not deployed.
+The following dated sections retain their original release context. Combined
+validation and its limits are recorded in
+[`docs/reviews/mcp-combined-integration-2026-10-26.md`](../../../docs/reviews/mcp-combined-integration-2026-10-26.md).
+
 Local implementation candidate authorized by Joe on October 11, 2026. This is a
 separate public Sleeper observation surface. Remote connection, auth, hosting,
 consumer activation, saved classifications and evidence expansion remain pending.
@@ -54,7 +61,7 @@ private frozen ROP reader with this transport; it does not add ROP to the league
 dispatcher. League dispatch explicitly refuses non-owned names and calls the
 matchup reader only for its own exact tool name. The default public build stays
 source-disabled for ROP with no populated input. See that module's documentation
-and the October 22 review packet; the candidate has not been hosted or merged.
+and the October 22 review packet; the candidate has not been hosted or merged into main.
 
 ## October 22 schedule-only ROS schedule strength candidate (#423)
 
