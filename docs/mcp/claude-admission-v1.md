@@ -19,6 +19,7 @@ if all of these hold, and otherwise refuses before any tool runs:
 | `CF-Connecting-IP` in Anthropic egress `160.79.104.0/21` (unless `TIBER_CLAUDE_EGRESS_CHECK=off`) | 403 `egress_not_allowed` |
 | no foreign browser `Origin` | 403 `origin_not_allowed` |
 | `x-api-key` whose SHA-256 matches (constant time). A token in `Authorization` is never accepted | 401 `invalid_credentials` |
+| `tools/call` arguments no larger than 2,048 serialized UTF-8 bytes, checked before SDK validation | 413 `tool_arguments_too_large` |
 
 `x-api-key` is used because Claude reserves `Authorization` for OAuth on connectors. The 401 never
 advertises OAuth discovery. Only league environment values reach the reader, and
@@ -26,6 +27,10 @@ advertises OAuth discovery. Only league environment values reach the reader, and
 
 The shared key identifies the Claude organization, not a person. That is acceptable only while
 Joe is its only member. The Worker has one configured profile.
+
+The early input bound reduces exposure to oversized tool arguments; it does not upgrade the MCP SDK
+or Zod, or by itself resolve their advisories. The existing 16 KiB request-body cap remains in place.
+Deployment and installed-tool acceptance must be repeated for the exact reviewed candidate.
 
 ## Runbook (on Joe's computer, not the phone)
 
