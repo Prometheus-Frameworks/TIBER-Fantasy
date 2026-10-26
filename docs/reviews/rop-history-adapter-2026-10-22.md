@@ -1,8 +1,45 @@
 # Frozen ROP history adapter — implementation and decision packet
 
-Status: implementation candidate for a **draft PR stacked on #422**. Primary
-author checks only; independent review has not been dispatched. No merge or
-hosted publication is authorized by this packet.
+Status: implementation candidate for **draft PR #424, stacked on #422**.
+Current path-guard repair evidence is below; earlier implementation/replay
+receipts remain historical and bound to their original heads. The latest
+GitHub review receipt identifies the exact reviewed commit. No merge or hosted
+publication is authorized by this packet.
+
+## Path-guard repair — October 26, 2026
+
+Joe authorized repairing review finding
+[#424 discussion_r4365444018](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/424#discussion_r4365444018)
+and reviewing the changed version. The starting head was
+`98f0d50a77436ece6db948ceabc62199a4072640`; #422's base remains
+`fdffe2aeb4f1760f3f08f86d7c42f413762e19d3`.
+
+`owner_paths` now rejects an existing output entry, including a dangling
+symlink, and dangling symlink ancestors **before resolving the output path**.
+The canonical outside-repository check, owner/CI refusal, exclusive 0600 write,
+archive authentication, prepared-input pins and sanitized CLI failure remain.
+
+Synthetic CLI regressions cover a dangling output, direct and deeper dangling
+ancestors, preserved existing files/directories/symlinks, a canonical path back
+into the repository, and a successful fresh nested output with restrictive
+permissions. Rejected paths are refused before archive preparation and create
+no destination directories. The two dangling-link regression methods produced
+three failing cases on the old helper, then passed with the repair.
+
+Validation in an isolated worktree using Python 3.12.14, Node 24.22.1 and
+existing dependencies whose package/lock files match this head:
+
+- Nine synthetic Python preparation/build tests pass.
+- 45 native MCP/ROP reader, protocol, personal-context and hardening tests pass.
+- `git diff --check` passes.
+
+This bounded repair changes the Python preparation helper and its synthetic
+tests, plus this packet and the required agent logs. TypeScript/runtime code,
+dependencies and archive transformation are unchanged. No retained private
+input, producer, source acquisition, private Worker build/replay or hosted
+acceptance was exercised. Earlier private hashes are not a fresh certification
+of this revision. Independent review is recorded separately on the published
+head; keep #424 draft and unmerged.
 
 ## Problem and resulting behavior
 

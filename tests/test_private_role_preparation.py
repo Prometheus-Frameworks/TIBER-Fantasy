@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import tempfile
 import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -32,6 +33,78 @@ def synthetic_zip(*, corrupt=False, duplicate=False, extra=False):
 
 
 class PreparationBoundary(unittest.TestCase):
+    def assert_preparation_refused_before_reads(self, output):
+        argv = ['preparePrivateRoleEvidence.py', '--owner-private',
+                '--archive', 'synthetic-unused.zip', '--output', str(output)]
+        with patch.dict(os.environ, {}, clear=True), patch.object(sys, 'argv', argv), \
+                patch.object(prepare, 'prepare', return_value={'synthetic': True}) as source, \
+                patch('sys.stdout', new_callable=io.StringIO) as stdout, \
+                patch('sys.stderr', new_callable=io.StringIO) as stderr:
+            self.assertEqual(prepare.main(), 1)
+            source.assert_not_called()
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(stderr.getvalue(),
+                             '{"status":"unavailable","reason":"private_preparation_refused"}\n')
+
+    def test_preparation_rejects_dangling_output_before_reads(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            destination = root / 'never-created' / 'nested' / 'private.json'
+            output = root / 'output.json'
+            output.symlink_to(destination)
+            self.assert_preparation_refused_before_reads(output)
+            self.assertTrue(output.is_symlink())
+            self.assertFalse(os.path.lexists(destination.parent.parent))
+
+    def test_preparation_rejects_dangling_ancestors_before_reads(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            destination = root / 'never-created'
+            ancestor = root / 'dangling'
+            ancestor.symlink_to(destination, target_is_directory=True)
+            for suffix in ('private.json', 'nested/deeper/private.json'):
+                with self.subTest(suffix=suffix):
+                    self.assert_preparation_refused_before_reads(ancestor / suffix)
+                    self.assertTrue(ancestor.is_symlink())
+                    self.assertFalse(os.path.lexists(destination))
+
+    def test_preparation_preserves_existing_outputs_and_repository_guard(self):
+        repo = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            existing = root / 'existing.json'
+            existing.write_bytes(b'synthetic-existing')
+            directory = root / 'existing-directory'
+            directory.mkdir()
+            link = root / 'existing-link.json'
+            link.symlink_to(existing)
+            repo_link = root / 'repository'
+            repo_link.symlink_to(repo, target_is_directory=True)
+            inside = repo / 'synthetic-refused-private-output.json'
+            self.assertFalse(os.path.lexists(inside))
+            for output in (existing, directory, link, repo_link / inside.name):
+                with self.subTest(output=output.name):
+                    self.assert_preparation_refused_before_reads(output)
+            self.assertEqual(existing.read_bytes(), b'synthetic-existing')
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(list(directory.iterdir()), [])
+            self.assertFalse(os.path.lexists(inside))
+
+    def test_preparation_accepts_fresh_nested_output_with_private_permissions(self):
+        with tempfile.TemporaryDirectory() as d:
+            output = Path(d) / 'fresh' / 'nested' / 'private.json'
+            argv = ['preparePrivateRoleEvidence.py', '--owner-private',
+                    '--archive', 'synthetic-unused.zip', '--output', str(output)]
+            with patch.dict(os.environ, {}, clear=True), patch.object(sys, 'argv', argv), \
+                    patch.object(prepare, 'prepare', return_value={'synthetic': True}) as source, \
+                    patch('sys.stdout', new_callable=io.StringIO) as stdout:
+                self.assertEqual(prepare.main(), 0)
+                source.assert_called_once_with(Path('synthetic-unused.zip'))
+                self.assertEqual(json.loads(output.read_bytes()), {'synthetic': True})
+                self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
+                self.assertEqual(json.loads(stdout.getvalue())['status'], 'prepared_private')
+
     def test_synthetic_manifest_exactness(self):
         with synthetic_zip() as z:
             self.assertEqual(len(prepare.verify_members(z, 'root/', 1)), 1)
