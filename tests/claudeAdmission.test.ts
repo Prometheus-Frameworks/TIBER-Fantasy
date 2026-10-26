@@ -143,3 +143,52 @@ test('refused requests never reach the inner Worker', async () => {
   } finally { (chatgpt as any).fetch = original; }
   assert.equal(reached, 0);
 });
+
+test('oversized tool arguments are refused before the inner SDK can validate them', async () => {
+  let reached = 0;
+  const original = chatgpt.fetch;
+  (chatgpt as any).fetch = async () => { reached++; return new Response('{}'); };
+  try {
+    const input = { name: 'tiber_get_lineup_context', arguments: { candidates: Array(2500).fill(null) } };
+    const response = await claude.fetch(req(rpc('tools/call', input), auth), env());
+    assert.equal(response.status, 413);
+    assert.equal(await reason(response), 'tool_arguments_too_large');
+  } finally { (chatgpt as any).fetch = original; }
+  assert.equal(reached, 0);
+});
+
+test('bounded valid tool requests reach the inner Worker without credentials', async () => {
+  let received: { headers: Headers; body: unknown } | undefined;
+  const original = chatgpt.fetch;
+  (chatgpt as any).fetch = async (request: Request) => {
+    received = { headers: request.headers, body: await request.json() };
+    return new Response('{}');
+  };
+  const input = { name: 'tiber_get_lineup_context', arguments: { candidates: ['Kyle Pitts'] } };
+  try {
+    const response = await claude.fetch(req(rpc('tools/call', input), auth), env());
+    assert.equal(response.status, 200);
+  } finally { (chatgpt as any).fetch = original; }
+  assert.ok(received);
+  assert.equal(received.headers.get('x-api-key'), null);
+  assert.equal(received.headers.get('oai-authenticated-user-id'), CLAUDE_PRINCIPAL);
+  assert.deepEqual(received.body, rpc('tools/call', input));
+});
+
+test('deeply nested tool arguments are refused without throwing or reaching the SDK', async () => {
+  let reached = 0;
+  const original = chatgpt.fetch;
+  (chatgpt as any).fetch = async () => { reached++; return new Response('{}'); };
+  try {
+    const nested = '['.repeat(7800) + '0' + ']'.repeat(7800);
+    const body = `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"tiber_league_capabilities","arguments":${nested}}}`;
+    assert.ok(new TextEncoder().encode(body).byteLength < 16_384);
+    const request = new Request('https://claude-private.example/mcp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'cf-connecting-ip': ANTHROPIC_IP, ...auth }, body,
+    });
+    const response = await claude.fetch(request, env());
+    assert.equal(response.status, 413);
+    assert.equal(await reason(response), 'tool_arguments_too_large');
+  } finally { (chatgpt as any).fetch = original; }
+  assert.equal(reached, 0);
+});
