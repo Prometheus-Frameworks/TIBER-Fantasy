@@ -30,7 +30,7 @@ test('installed SDK negotiation preserves the accepted discovery and initialize 
     } }), {});
     assert.equal((await initialized.json() as any).result.protocolVersion, '2025-11-25');
     const listed = await worker.fetch(request({ jsonrpc: '2.0', id: 3, method: 'tools/list' }, { 'mcp-protocol-version': '2025-11-25' }), {});
-    assert.equal((await listed.json() as any).result.tools.length, 7);
+    assert.equal((await listed.json() as any).result.tools.length, 8);
   } finally { globalThis.fetch = original; }
 });
 
@@ -148,7 +148,7 @@ test('schedule refuses impossible calendar dates before claiming complete covera
   }
   const csv = rows.join('\n');
   for (const invalid of ['2026-99-99', '2026-02-30', '2026-02-29']) {
-    assert.throws(() => compileSchedule(csv.replace('2026-10-01', invalid), '2026', new Date().toISOString()));
+    assert.throws(() => compileSchedule(csv.replace('2026-10-01', invalid), '2026', new Date().toISOString(), '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'));
   }
 });
 

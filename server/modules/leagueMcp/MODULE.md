@@ -55,3 +55,18 @@ dispatcher. League dispatch explicitly refuses non-owned names and calls the
 matchup reader only for its own exact tool name. The default public build stays
 source-disabled for ROP with no populated input. See that module's documentation
 and the October 22 review packet; the candidate has not been hosted or merged.
+
+## October 22 schedule-only ROS schedule strength candidate (#423)
+
+`tiber_get_ros_schedule_strength` adds one explicit dispatch branch for a
+schedule-only read: `schedule.ts` now retains validated team-week fixtures and a
+declared-convention content hash beside the byes; `rosSchedule.ts` is a pure
+calendar/window compiler (next3 includes the decision week; ROS/playoffs require an
+explicit final week; byes stay in-window; week 18 is never the assumed final);
+`scheduleStrength.ts` resolves one team or one uniquely matched player on its
+current directory team, verified league playoff start and scoring as context, and
+returns fixtures, clocks, source hash and missing witnesses. Ratings stay null
+with `no_qualified_defensive_evidence`; locks are unknown. The shared exact
+directory matcher lives in `identity.ts`. No legacy SOS, database, ROP input or
+new statistical producer. Synthetic validation only; hosted acceptance is separate.
+See `docs/mcp/league-reader-hosted-v1.md`.

@@ -137,3 +137,75 @@ request. Final acceptance requires successful calls through the connected plugin
 
 Independent hardening evidence and replay commands:
 [`docs/reviews/mcp-personal-hosted-hardening-2026-10-15.md`](../reviews/mcp-personal-hosted-hardening-2026-10-15.md).
+
+## Schedule-only ROS schedule strength (#423 candidate)
+
+`tiber_get_ros_schedule_strength` is a read-only, **schedule-only** operation. Its
+capability is `schedule_only`: it returns verified NFL opponents, byes and an explicit
+calendar window with named missing witnesses. Defensive ratings are `null` with
+`no_qualified_defensive_evidence`; no zero, neutral score, rank, tier or color is
+substituted. It creates no ratings, projections or statistical producer, and the
+legacy database-backed SOS service is not imported (the Worker bundle audit still
+excludes it).
+
+Inputs (strict; strings for IDs, season and weeks; no URLs or producer instructions):
+`window` (`next3` | `ros` | `playoffs` | `custom`) and exactly one of `player` (full
+name or exact Sleeper ID, unique match required, QB/RB/WR/TE only) or `team`
+(canonical Sleeper code, e.g. `LAR`). Optional `season` and `week` (decision week)
+default from the observed regular-season NFL state; `finalWeek` is the explicit
+league final; `startWeek`/`endWeek` apply only to `custom`; `leagueId` overrides the
+configured default league; `scoringScenario` is a label when no league is selected.
+
+Calendar semantics: `next3` = decision week through decision week + 2 (W7 means
+W7/W8/W9), clamped at week 18 or an explicit `finalWeek`. `ros` = decision week
+through the caller-supplied `finalWeek`. `playoffs` = the league's verified
+`playoff_week_start` through the caller-supplied `finalWeek`; a verified value of
+`0` means no playoffs are configured. `custom` = validated explicit range. Byes
+stay inside the window as `bye` rows and never extend it. **The league final week
+is never derived and week 18 is never assumed to be the fantasy championship**: a
+missing `finalWeek` returns `league_final_week_required`, a witness naming the
+evidence needed, and the decision-week-through-week-18 fixtures labeled
+`regularSeasonRemainder` (not the league ROS). Derivation from Sleeper
+playoff-round settings is deferred.
+
+A custom range with an explicit `finalWeek` must end at or before that final;
+conflicting input returns `invalid_window` before any source reads. An explicit
+custom range without `finalWeek` remains supported. A playoff-start witness uses
+`absent_from_inspected_source` only after successful league/settings inspection
+found no `playoff_week_start`. No selected league, an unverified membership or a
+league-source failure uses `not_inspected`, retaining the underlying cause and
+the useful regular-season fixture remainder.
+
+Honest contract: each fixture carries `gameId`, `gameday`, `opponent` and the
+source home/away `designation` (not a venue or neutral-site claim), with
+`kickoff: null` and `lockState`/`completion`/`postponement`/`venue: "unknown"`.
+Inclusion of the decision week does not establish that its game remains usable;
+`eligibleGames` and `ratedGames` are `null`. Fixtures before the decision week are
+`teamHistoryOnly`; a resolved player maps to its current directory team and
+historical membership is a separate witness. `clocks` keeps decision time,
+schedule retrieval, NFL state, league and directory retrieval separate, with
+`defensiveStatisticsCutoff: null`. League scoring and playoff start are returned
+as verified context only ("no rating was computed under this scoring").
+
+Schedule source and hash: the existing bounded nflverse read is reused unchanged
+(fixed raw URL, 4 MiB, ten-second timeout, one-hour cache, 272-game validation).
+The compiled output now retains the validated team-week fixtures and a
+`contentHash`. Convention `sha256_hex_utf8_decoded_text_v1`: SHA-256, lowercase
+hex, over the UTF-8 encoding of the decoded response text exactly as the bounded
+reader returned it (fatal UTF-8 decoding, leading BOM removed by the decoder, no
+other normalization) — the same string the compiler parsed. The hash and the
+compiled fixtures are cached together. Source bytes are not retained, so the hash
+identifies the fetched content and does not by itself establish historical
+replay. The unadmitted TIBER-Data schedule snapshot is not used or combined. This
+remains schedule context, not promoted statistical or model evidence.
+
+`tiber_get_roster_context` and `tiber_get_lineup_context` additionally return
+`league.playoffWeekStart` (parsed from `settings.playoff_week_start`; round type
+and length are not parsed), and the lineup schedule observation carries the
+content hash. Dispatch stays explicit and exhaustive: unknown and ROP tool names
+return `unknown_tool` and never reach the schedule or matchup readers. Synthetic
+tests cover decision-week inclusion, byes inside windows, bounds and explicit
+finals, missing final/no-playoffs states, unknown locks, hash/cache consistency,
+LA → LAR reciprocal fixtures, invalid schedules, ambiguous identity and invalid
+selectors, null ratings, dispatcher refusals, existing-tool compatibility and
+envelope bounds. They do not establish live or hosted acceptance.

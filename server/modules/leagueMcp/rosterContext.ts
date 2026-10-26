@@ -18,7 +18,9 @@ const leagueSchema = z.object({ league_id: sleeperId, season: leagueSeason, spor
   roster_positions: z.array(z.string().max(32)).max(64).nullish(),
   scoring_settings: z.record(z.number().finite()).refine(v => Object.keys(v).length <= 128).nullish(),
   settings: z.object({ type: z.number().int().nullish(), best_ball: z.number().int().nullish(),
-    league_average_match: z.number().int().nullish() }).nullish() });
+    league_average_match: z.number().int().nullish(),
+    // Playoff start only (same shape as teamManager). Round type/length are not parsed; no final week is derived.
+    playoff_week_start: z.number().int().min(0).max(19).nullish() }).nullish() });
 const playerSchema = z.object({ player_id: playerId.optional(), full_name: display, first_name: display,
   last_name: display, position: display, team: display, status: display, injury_status: display,
   active: z.boolean().nullish() });
@@ -58,7 +60,8 @@ export async function getRosterContext(raw: unknown, sources: RosterSources = de
     leagueId: input.leagueId, season: input.season, rosterId: input.rosterId,
     accountControlVerified: false, membership: own.owner_id === input.userId ? 'owner' : 'co_owner',
     league: { name: clean(league.name), type: league.settings?.type ?? null, bestBall: league.settings?.best_ball ?? null,
-      medianEnabled: league.settings?.league_average_match ?? null, scoring: league.scoring_settings ?? null, slots: league.roster_positions ?? null },
+      medianEnabled: league.settings?.league_average_match ?? null, scoring: league.scoring_settings ?? null, slots: league.roster_positions ?? null,
+      playoffWeekStart: league.settings?.playoff_week_start ?? null },
     roster: { players: own.players, starters: own.starters ?? null, reserve: own.reserve ?? null, taxi: own.taxi ?? null,
       directory: selected.map(id => {
         const parsed = playerSchema.safeParse(directory?.players[id]);
