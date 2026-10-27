@@ -1,5 +1,12 @@
 # Read-only league MCP adapter — #383
 
+Current integration status — October 26, 2026: #424 (frozen ROP history) and
+#425 (schedule-only ROS) are merged into the #422 integration branch. #422
+remains open and unmerged into main; the combined readers are not deployed.
+The following dated sections retain their original release context. Combined
+validation and its limits are recorded in
+[`docs/reviews/mcp-combined-integration-2026-10-26.md`](../../../docs/reviews/mcp-combined-integration-2026-10-26.md).
+
 Local implementation candidate authorized by Joe on October 11, 2026. This is a
 separate public Sleeper observation surface. Remote connection, auth, hosting,
 consumer activation, saved classifications and evidence expansion remain pending.
@@ -37,3 +44,41 @@ explicit local source opt-in, not used in this implementation's validation and
 not remote activation authority. The launcher requires installed dependencies,
 fixes cwd and forwards only PATH/LANG/TZ plus its source-mode marker. No HTTP
 listener is supplied. The parent runtime is trusted, not a hostile-host sandbox.
+
+## October 15 personal hosted follow-up
+
+The preceding text describes #418's original local release boundary. The owner has now
+asked to finish the connection. See `docs/mcp/league-reader-hosted-v1.md` for the
+implemented owner-private Sites transport, managed OAuth, two personal-context
+tools, shared waiver compiler, complete-schedule bye derivation, streamed upstream
+limits and runtime kill switch. The stdio default remains source-disabled. Hosted
+publication and an actual ChatGPT tool call are distinct acceptance checkpoints.
+
+Roster and personal-lineup scoring accepts up to 256 finite numeric settings,
+preserving every key and zero value. A malformed or larger map fails closed with
+the existing sanitized `source_unavailable` result. Sleeper body and complete MCP
+result/envelope byte limits remain independently enforced.
+
+## October 22 frozen ROP adapter candidate
+
+The separately scoped `server/modules/roleEvidence/` candidate composes a
+private frozen ROP reader with this transport; it does not add ROP to the league
+dispatcher. League dispatch explicitly refuses non-owned names and calls the
+matchup reader only for its own exact tool name. The default public build stays
+source-disabled for ROP with no populated input. See that module's documentation
+and the October 22 review packet; the candidate has not been hosted or merged into main.
+
+## October 22 schedule-only ROS schedule strength candidate (#423)
+
+`tiber_get_ros_schedule_strength` adds one explicit dispatch branch for a
+schedule-only read: `schedule.ts` now retains validated team-week fixtures and a
+declared-convention content hash beside the byes; `rosSchedule.ts` is a pure
+calendar/window compiler (next3 includes the decision week; ROS/playoffs require an
+explicit final week; byes stay in-window; week 18 is never the assumed final);
+`scheduleStrength.ts` resolves one team or one uniquely matched player on its
+current directory team, verified league playoff start and scoring as context, and
+returns fixtures, clocks, source hash and missing witnesses. Ratings stay null
+with `no_qualified_defensive_evidence`; locks are unknown. The shared exact
+directory matcher lives in `identity.ts`. No legacy SOS, database, ROP input or
+new statistical producer. Synthetic validation only; hosted acceptance is separate.
+See `docs/mcp/league-reader-hosted-v1.md`.

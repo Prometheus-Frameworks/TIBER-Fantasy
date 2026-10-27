@@ -18,7 +18,7 @@ function serve(data: any) {
   global.fetch = jest.fn(async input => {
     const path = String(input);
     const body = path.endsWith('/rosters') ? data.rosters : path.endsWith('/players/nfl') ? data.players : path.endsWith('/users') ? [] : data.league;
-    return { ok: true, json: async () => body } as Response;
+    return new Response(JSON.stringify(body));
   });
 }
 afterEach(() => { global.fetch = originalFetch; __resetDraftReviewCacheForTests(); });
