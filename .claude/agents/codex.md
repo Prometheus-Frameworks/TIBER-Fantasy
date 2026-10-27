@@ -1528,3 +1528,12 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Reconciliation:** Integrated main d979292 into this branch, not this PR into main. Resolved only the two log conflicts, with both complete parent histories and main's README retained.
 - **Checks:** Preserved 271 prior distinct evidence destinations and all prior headings; 286 current destinations, 14 exact source pins, five consistent tables/four balanced details sections; relative/internal links, parent-log retention, three-file PR scope and full whitespace checks pass. No application/provider/private-output/football runtime tests.
 - **Handoff:** Request independent review of the final published exact head/base/tree through @codex on #420, with stop-on-drift instructions. Matching current-head review remains pending; no acceptance is inherited from October 17. Preserve open non-draft unmerged state and provider-effects HOLD. No hosting change or main merge.
+
+
+## 2026-10-27 UTC — Codex: TIBER Now daily refresh
+
+- **Scope:** Reused open [PR #420](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/420) on `codex/tiber-now-daily-update`; only `docs/TIBER_NOW.md` and the two required logs change. No main or companion README edit.
+- **Source check:** All 14 defaults remain `main`; every README read succeeded and every source pin is unchanged from October 26.
+- **Update:** Recorded Research #43 at `59753eb` with an incomplete four-player October 27 board, $24,900 allocated and five slots unresolved; added dated Noel/Wilson evidence and bounded #61–#63/#66/#67 studies. Preserved the separation between public observations, contingency hypotheses, implementation, official inputs, ready handoffs, validated findings and roster authority.
+- **Review/publication:** The reconciled predecessor `da57b7f2` received a clean exact-head review and #420 was mechanically mergeable before this refresh. That review does not cover the new head. Provider-effects disposition and Joe's explicit publication approval remain. No review request, readiness change, merge, deployment, activation or contributor message.
+- **Handoff:** Status-page commit `48c69697fe0c33209530aec758718969dfc3f6c1`; prior evidence links and log bytes preserved, 14 exact pins retained, Markdown/date/conflict-marker checks passed.
