@@ -10,13 +10,15 @@ const playerId = z.string().regex(/^(?:\d{1,32}|[A-Z]{2,4})$/);
 const ids = z.array(playerId).max(256);
 const optionalIds = ids.nullish();
 const display = z.string().max(256).nullish();
+// Some valid Sleeper leagues include kicker and IDP settings beyond 128 entries.
+const maxScoringSettings = 256;
 const rosterSchema = z.object({ roster_id: z.number().int().min(1).max(64), league_id: sleeperId.optional(),
   owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish(), players: ids,
   starters: optionalIds, reserve: optionalIds, taxi: optionalIds });
 const leagueSchema = z.object({ league_id: sleeperId, season: leagueSeason, sport: z.literal('nfl'),
   total_rosters: z.number().int().min(1).max(64), name: display,
   roster_positions: z.array(z.string().max(32)).max(64).nullish(),
-  scoring_settings: z.record(z.number().finite()).refine(v => Object.keys(v).length <= 128).nullish(),
+  scoring_settings: z.record(z.number().finite()).refine(v => Object.keys(v).length <= maxScoringSettings).nullish(),
   settings: z.object({ type: z.number().int().nullish(), best_ball: z.number().int().nullish(),
     league_average_match: z.number().int().nullish(),
     // Playoff start only (same shape as teamManager). Round type/length are not parsed; no final week is derived.
