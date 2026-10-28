@@ -1,19 +1,22 @@
 # Private personal league connector
 
-## Combined source status — October 26, 2026
+## Combined source and hosted status — October 28, 2026
 
-The #422 integration branch includes merged child PRs #424 (frozen ROP history)
-and #425 (schedule-only ROS). The default source build has eight tools; an
+[#422](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/422) merged
+into main as `912904d324626f8caf91a9b259c59dd16068c19a`, including child PRs
+#424 (frozen ROP history) and #425 (schedule-only ROS). The default source build has eight tools; an
 owner-private build with the pinned frozen input adds the ninth ROP tool.
 Runtime markers independently enable league sources and frozen ROP; a marker
 cannot supply a missing build artifact. All data calls retain the same required
 trusted visitor identity and owner-private Sites admission boundary.
 
-#422 remains unmerged into main. Historical hosted version-3 acceptance covers
-`fdffe2aeb4f1760f3f08f86d7c42f413762e19d3`, not this combined branch. The new
-readers are not claimed live. See the
-[combined validation report](../reviews/mcp-combined-integration-2026-10-26.md)
-and the exact-head review receipt on #422 before considering a merge.
+The existing owner-private Site is version 4, built from the previously accepted
+`fdffe2ae` baseline plus #430's scoring fix; it still exposes seven tools.
+Neither new reader has hosted acceptance. See the
+[hosted qualification record](../reviews/mcp-hosted-qualification-2026-10-28.md)
+for direct checks, the local default-build candidate and separate gates, and
+the [combined validation report](../reviews/mcp-combined-integration-2026-10-26.md)
+for historical source evidence.
 
 ## Original personal connector scope
 

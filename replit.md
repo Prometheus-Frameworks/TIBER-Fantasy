@@ -165,5 +165,5 @@ opponents, byes and explicit calendar windows (next3 = decision week through +2;
 ROS/playoffs need an explicit league final week) with source hash, separate clocks,
 verified league playoff start/scoring as context and named missing witnesses.
 Defensive ratings remain null; no legacy SOS, database or ROP input is used.
-See `docs/mcp/league-reader-hosted-v1.md`; #422 remains unmerged into main,
-and the combined readers are not hosted or accepted through the installed connector.
+See `docs/mcp/league-reader-hosted-v1.md`; #422 has since merged into main,
+but the newer readers are not hosted or accepted through the installed connector.
