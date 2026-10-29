@@ -1408,3 +1408,8 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Shared compiler receives explicit selection and injected dependencies. Private wrapper retains contracts/defaults/historical/null-week behavior and sibling readers. Six public adapters add strict selection, current-season gating, honest in-process capabilities, independent census evidence and reference freshness.
 - Validation: 100 Node tests, 60 Jest tests/3 suites, focused typecheck including the public modules, runtime import-graph check and full application build pass. Full typecheck matches unchanged base: 507 diagnostics with zero delta. Synthetic inputs only; no live reads or new dependencies.
 - Receipt: docs/reviews/public-mcp-slice-1-2026-10-28.md. Independent exact-head review and any fixes are recorded on the draft PR. Leave draft/unmerged; no hosted/source/access/credential changes.
+
+### 2026-10-28 — Codex: Slice 1 independent-review repairs
+- Independent review of 6d320e52da44a7f9bd461275e8c517ad03b8de0f found runtime missing-source fallback (P1), contradictory username expansion (P2), and synchronous sibling-settlement escape (P2).
+- Added runtime dependency checks, public-only raw ASCII case-insensitive username verification before expansion, and promise-normalized public source methods. Private discovery/defaults are unchanged.
+- Seven regression tests cover zero-fetch failures, identity mismatch/case handling and deferred sibling drainage; focused total is 107 Node tests plus the prior 60 Jest tests. Exact repaired head, fresh checks and independent re-review are recorded on draft PR #433. No merge, hosting or activation.

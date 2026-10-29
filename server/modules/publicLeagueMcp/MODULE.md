@@ -30,6 +30,12 @@ elsewhere or census-absence evidence when enrichment fails. Name-only fallback i
 unknown. Census absence alone never means unrostered or claim-eligible. The private
 serialized candidate shape and legacy auxiliary-bucket/FAAB semantics are preserved.
 
+The dispatcher checks the complete source dependency bag at runtime, before every
+source-reading invocation. Promise wrappers contain synchronous injected failures
+inside the existing sibling settlement barriers. Public username discovery compares
+raw ASCII identifiers case-insensitively before expanding leagues; missing or
+contradictory usernames fail closed. Private discovery remains unchanged.
+
 `sources.ts` validates injected reference clocks and schedule coverage, with a
 24-hour directory limit and one-hour schedule limit. It rechecks expiry at response
 projection without refreshing clocks or retaining references between invocations.

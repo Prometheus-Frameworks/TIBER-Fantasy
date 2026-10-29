@@ -218,3 +218,34 @@ test('a reference expiring during compilation cannot retain enriched names, avai
   assert.equal(r.candidates[0].membership.status, 'on_selected_roster'); assert.equal(r.candidates[0].availability, undefined);
   assert.equal(r.candidates[1].membership.status, 'unknown');
 });
+
+for (const [tool, args] of [
+  ['tiber_public_list_league_rosters', select],
+  ['tiber_public_get_roster_context', { ...select, rosterId: 1 }],
+  ['tiber_public_get_weekly_matchups', { ...select, week: '7' }],
+  ['tiber_public_get_lineup_context', select],
+] as const) {
+  test(`${tool} drains a pending league when its roster sibling throws synchronously`, async () => {
+    const f = fixture(), league = deferred<any>(), started = deferred<void>();
+    f.sources.getLeague = () => { started.resolve(); return league.promise; };
+    f.sources.getLeagueRosters = () => { throw Error('synchronous source failure'); };
+    let finished = false;
+    const pending = f.call(tool, args).then(result => { finished = true; return result; });
+    await started.promise; await new Promise(resolve => setImmediate(resolve));
+    assert.equal(finished, false); league.resolve(f.league);
+    assert.equal((await pending as any).reason, 'source_unavailable'); assert.equal(f.calls.directory, 0);
+  });
+}
+
+test('weekly matchup read drains pending scores when NFL state throws synchronously', async () => {
+  const f = fixture(), scores = deferred<unknown>(), started = deferred<void>();
+  f.sources.getManagerMatchups = () => { started.resolve(); return scores.promise; };
+  f.sources.getManagerNflState = () => { throw Error('synchronous state failure'); };
+  let finished = false;
+  const pending = f.call('tiber_public_get_weekly_matchups', { ...select, week: '7' }).then(result => { finished = true; return result; });
+  await started.promise; await new Promise(resolve => setImmediate(resolve));
+  assert.equal(finished, false);
+  scores.resolve([{ roster_id: 1, matchup_id: 1, points: 10 }, { roster_id: 2, matchup_id: 1, points: 5 }]);
+  const r: any = await pending;
+  assert.equal(r.status, 'available'); assert.equal(r.rosters[0].points, 10); assert.equal(r.rosters[0].outcome, 'unavailable');
+});

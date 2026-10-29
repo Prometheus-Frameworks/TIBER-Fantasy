@@ -7,6 +7,28 @@ import { SCHEDULE_TEAMS, SCHEDULE_HASH_CONVENTION, type Schedule } from '../leag
  * belongs to the injected reference; checkedAt is only the validation clock. */
 export type PublicSources = LineupSources & Pick<typeof sleeperClient,
   'getUser' | 'getUserLeagues' | 'getManagerNflState' | 'getManagerMatchups'>;
+const sourceMethods = ['getUser', 'getUserLeagues', 'getLeague', 'getLeagueRosters',
+  'getDirectory', 'getManagerNflState', 'getManagerMatchups', 'getSchedule'] as const;
+export function hasPublicSources(value: unknown): value is PublicSources {
+  return typeof value === 'object' && value !== null
+    && sourceMethods.every(method => typeof (value as PublicSources)[method] === 'function');
+}
+
+/** Keep synchronous injected throws inside promises so inherited sibling settlement
+ * barriers still see every started read. These wrappers hold no source observations. */
+export function promisePublicSources(sources: PublicSources): PublicSources {
+  return {
+    getUser: account => Promise.resolve().then(() => sources.getUser(account)),
+    getUserLeagues: (userId, season) => Promise.resolve().then(() => sources.getUserLeagues(userId, season)),
+    getLeague: leagueId => Promise.resolve().then(() => sources.getLeague(leagueId)),
+    getLeagueRosters: leagueId => Promise.resolve().then(() => sources.getLeagueRosters(leagueId)),
+    getDirectory: () => Promise.resolve().then(() => sources.getDirectory()),
+    getManagerNflState: () => Promise.resolve().then(() => sources.getManagerNflState()),
+    getManagerMatchups: (leagueId, week) => Promise.resolve().then(() => sources.getManagerMatchups(leagueId, week)),
+    getSchedule: season => Promise.resolve().then(() => sources.getSchedule(season)),
+  };
+}
+
 export type ReferenceEvidence = {
   status: 'available' | 'unavailable' | 'not_read';
   receivedAt: string | null; checkedAt: string | null; maxAgeMs: number;

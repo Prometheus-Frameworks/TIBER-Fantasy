@@ -95,3 +95,42 @@ test('public runtime module graph cannot reach private wrappers, registries, art
   for (const path of paths) assert.doesNotMatch(path,
     /personalContext|leagueMcp\/tools|scheduleStrength|roleEvidence|\/artifacts\/|server\/mcp\/|server\/(?:index|routes|storage)\.|\/db\.|\/init\//);
 });
+
+test('missing/null/incomplete runtime source dependencies never activate inherited live defaults', async () => {
+  const { createPublicLeagueTools } = await import('../server/modules/publicLeagueMcp/tools');
+  const original = globalThis.fetch;
+  let fetches = 0;
+  globalThis.fetch = async () => { fetches++; throw Error('intercepted forbidden live read'); };
+  try {
+    const f = fixture();
+    const missing = Object.keys(f.sources).map(method => ({ ...f.sources, [method]: undefined }));
+    for (const sources of [undefined, null, {}, ...missing]) {
+      const call = createPublicLeagueTools(sources as any);
+      assert.equal((await call('tiber_public_capabilities', {}) as any).status, 'available');
+      for (const [name, args] of [
+        ['tiber_public_list_leagues', { account: 'synthetic', season: '2026' }],
+        ['tiber_public_list_league_rosters', select],
+        ['tiber_public_get_roster_context', { ...select, rosterId: 1 }],
+        ['tiber_public_get_lineup_context', select],
+        ['tiber_public_get_weekly_matchups', { ...select, week: '7' }],
+      ] as const) assert.equal((await call(name, args) as any).reason, 'source_unavailable');
+      assert.equal((await call('tiber_public_get_lineup_context', {}) as any).reason, 'invalid_input');
+      assert.equal((await call('tiber_get_my_leagues', {}) as any).reason, 'unknown_tool');
+    }
+    assert.equal(fetches, 0); assert.ok(Object.values(f.calls).every(count => count === 0));
+  } finally { globalThis.fetch = original; }
+});
+
+test('public username identity is raw ASCII case-insensitive and verified before league expansion', async () => {
+  const f = fixture();
+  const mismatch: any = await f.call('tiber_public_list_leagues', { account: 'other_manager', season: '2026' });
+  assert.equal(mismatch.reason, 'source_unavailable'); assert.equal(f.calls.leagues, 0);
+  for (const username of [undefined, null, 'synthetic ', 'synthetic\n', 'synthetic\u202e', 'other_manager']) {
+    f.sources.getUser = async () => ({ user_id: '123', display_name: 'synthetic', username } as any);
+    assert.equal((await f.call('tiber_public_list_leagues', { account: 'synthetic', season: '2026' }) as any).reason, 'source_unavailable');
+    assert.equal(f.calls.leagues, 0);
+  }
+  f.sources.getUser = async () => ({ user_id: '123', display_name: 'Synthetic', username: 'SyNtHeTiC' });
+  assert.equal((await f.call('tiber_public_list_leagues', { account: 'sYnThEtIc', season: '2026' }) as any).status, 'available');
+  assert.equal(f.calls.leagues, 1);
+});

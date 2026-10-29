@@ -1,3 +1,4 @@
+import { sleeperAccountInput } from '../../../shared/teamLeagues';
 import { discoverTeamLeagues, findTeamLeagueRosters } from '../draftReview/teamLeagues';
 import { buildManagerResult } from '../draftReview/teamManager';
 import { createRequestSources } from '../draftReview/sourceObservations';
@@ -7,7 +8,7 @@ import { compileLineupContext, type LineupCandidate } from '../leagueMcp/lineupC
 import { nflStateSchema } from '../leagueMcp/nflState';
 import { publicInputs, PUBLIC_TOOL_NAMES, publicCapabilities, publicEnvelope,
   type PublicInput, type PublicSelectors, type PublicFailure, type PublicFailureReason } from './contracts';
-import { qualifyReferences, type PublicSources } from './sources';
+import { qualifyReferences, hasPublicSources, promisePublicSources, type PublicSources } from './sources';
 
 const unavailable = (reason: PublicFailureReason): PublicFailure => ({ status: 'unavailable', reason });
 const noCensus = (): RosterCensus => ({ status: 'unknown', reason: 'incomplete_roster_census', rostersReceivedAt: null });
@@ -98,18 +99,30 @@ async function lineup(input: PublicInput<'tiber_public_get_lineup_context'>, sou
 
 /** In-process dispatch only. No default sources, private dispatcher, transport or activation. */
 export function createPublicLeagueTools(sources: PublicSources, now = Date.now) {
+  const reads = promisePublicSources(sources);
   const handlers = {
     tiber_public_capabilities: async (_input: PublicInput<'tiber_public_capabilities'>) => publicCapabilities(),
     tiber_public_list_leagues: async (input: PublicInput<'tiber_public_list_leagues'>) => {
-      const result = await discoverTeamLeagues(input.account, input.season, sources, now);
+      const result = await discoverTeamLeagues(input.account, input.season, { ...reads,
+        getUser: async account => {
+          const user = await reads.getUser(account);
+          if (!/^[0-9]+$/.test(account)) {
+            // Sleeper usernames are compared as raw ASCII identifiers, case-insensitively.
+            // Display sanitization or trimming must not repair contradictory identity evidence.
+            const username = sleeperAccountInput.safeParse(user?.username);
+            if (!username.success || username.data.toLowerCase() !== account.toLowerCase()) throw new Error('Account identity unavailable');
+          }
+          return user;
+        },
+      }, now);
       return { ...result, ...publicEnvelope(supplied(input), { userId: result.account.userId, season: result.season }) };
     },
     tiber_public_list_league_rosters: async (input: PublicInput<'tiber_public_list_league_rosters'>) => {
-      const result = await findTeamLeagueRosters(input.userId, input.leagueId, input.season, sources, now);
+      const result = await findTeamLeagueRosters(input.userId, input.leagueId, input.season, reads, now);
       return { ...result, ...publicEnvelope(supplied(input), supplied(input)) };
     },
     tiber_public_get_roster_context: async (input: PublicInput<'tiber_public_get_roster_context'>) => {
-      const qualified = qualifyReferences(createRequestSources(sources, input.leagueId, now), now);
+      const qualified = qualifyReferences(createRequestSources(reads, input.leagueId, now), now);
       const result = await getRosterContext(input, qualified.sources, now);
       qualified.refresh();
       const directoryAvailable = qualified.evidence.directory.status === 'available';
@@ -119,10 +132,10 @@ export function createPublicLeagueTools(sources: PublicSources, now = Date.now) 
         observations: { ...result.observations, references: qualified.evidence,
           directoryReceivedAt: directoryAvailable ? result.observations.directoryReceivedAt : null } };
     },
-    tiber_public_get_lineup_context: (input: PublicInput<'tiber_public_get_lineup_context'>) => lineup(input, sources, now),
+    tiber_public_get_lineup_context: (input: PublicInput<'tiber_public_get_lineup_context'>) => lineup(input, reads, now),
     tiber_public_get_weekly_matchups: async (input: PublicInput<'tiber_public_get_weekly_matchups'>) => {
       // Pass the validated STRING week. The inherited parser owns conversion.
-      const result = await buildManagerResult(input, sources, now);
+      const result = await buildManagerResult(input, reads, now);
       return { ...result, ...publicEnvelope(supplied(input), { ...input }) };
     },
   };
@@ -131,7 +144,14 @@ export function createPublicLeagueTools(sources: PublicSources, now = Date.now) 
     const tool = name as keyof typeof publicInputs;
     const parsed = publicInputs[tool].safeParse(raw);
     if (!parsed.success) return unavailable('invalid_input');
-    try { return await handlers[tool](parsed.data as never); }
+    try {
+      // Runtime callers can omit a TypeScript-required argument. Never let undefined
+      // reach shared readers whose legacy signatures have live-source defaults.
+      if (tool !== 'tiber_public_capabilities' && !hasPublicSources(sources)) {
+        return { ...unavailable('source_unavailable'), ...publicEnvelope(supplied(parsed.data)) };
+      }
+      return await handlers[tool](parsed.data as never);
+    }
     catch { return { ...unavailable('source_unavailable'), ...publicEnvelope(supplied(parsed.data)) }; }
   };
 }

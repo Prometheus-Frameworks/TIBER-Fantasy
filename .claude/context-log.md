@@ -1204,3 +1204,8 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Files modified:** leagueMcp compiler/wrapper/roster observation seam; draftReview shared observations/census/availability/membership; publicLeagueMcp contracts/adapters/reference validation; focused tests, scoped typecheck and documentation.
 - **Validation:** 100 Node and 60 Jest tests, scoped strict TypeScript/import graph and application build pass. Full typecheck: identical 507 diagnostics on candidate and isolated unchanged main. See docs/reviews/public-mcp-slice-1-2026-10-28.md; exact candidate and independent review recorded on the draft PR.
 - **Notes:** Actual base 912904d324626f8caf91a9b259c59dd16068c19a matches design reference. Explicit user authority covers independent review and draft PR. No merge, hosting, deployment, private evidence, credentials, access change or source activation.
+
+### 2026-10-28 — Codex: Slice 1 independent-review repairs
+- Independent review of 6d320e52da44a7f9bd461275e8c517ad03b8de0f found runtime missing-source fallback (P1), contradictory username expansion (P2), and synchronous sibling-settlement escape (P2).
+- Added runtime dependency checks, public-only raw ASCII case-insensitive username verification before expansion, and promise-normalized public source methods. Private discovery/defaults are unchanged.
+- Seven regression tests cover zero-fetch failures, identity mismatch/case handling and deferred sibling drainage; focused total is 107 Node tests plus the prior 60 Jest tests. Exact repaired head, fresh checks and independent re-review are recorded on draft PR #433. No merge, hosting or activation.

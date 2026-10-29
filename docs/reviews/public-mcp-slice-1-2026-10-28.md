@@ -78,7 +78,7 @@ npm run typecheck
 git diff --check
 ```
 
-Results before independent review: 100 Node tests (63 existing, 37 new) and 60
+Results after review repairs: 107 Node tests (63 existing, 44 new) and 60
 Jest tests/3 suites pass. Scoped typecheck and import-graph assertions pass. The
 module graph includes the neutral compiler and excludes private profile/registry,
 ROS reader, private evidence/artifacts and app/database startup. This is not a
@@ -101,9 +101,23 @@ regressions. All new fixtures are synthetic.
 
 ## Review and boundaries
 
-Independent review findings, any follow-up fixes and exact reviewed commit are
-recorded in the draft PR after this candidate is committed; no review is implied
-by this pre-review receipt. Later fixes must rerun affected checks.
+Independent review of initial head `6d320e52da44a7f9bd461275e8c517ad03b8de0f`
+found three blockers beyond the initial passing tests:
+
+1. P1: an omitted runtime source bag could reach inherited live-reader defaults.
+   Public dispatch now checks all required dependencies at runtime after syntax
+   validation; absent/null/incomplete bags produce bounded failures and zero reads.
+2. P2: a nonnumeric account lookup could accept a contradictory returned username.
+   Public discovery now verifies the raw ASCII username, case-insensitively, before
+   reading that account's leagues. Missing or malformed usernames fail closed;
+   display sanitization cannot repair identity. Private discovery is unchanged.
+3. P2: a synchronously throwing injected method could bypass an inherited sibling
+   settlement barrier. Public methods now normalize synchronous throws into promise
+   rejections, preserving settlement of pending league/roster and matchup/state reads.
+
+Seven new tests cover the repairs, including intercepted global fetch and deferred
+siblings. A fresh exact-head review is required and recorded in draft PR #433;
+this receipt does not imply that review passed before it occurred.
 
 No HTTP/SDK registration, public Worker, Cloudflare resources, Durable Objects, R2,
 persistent caching, provider governor, credentials, access-policy changes or source
