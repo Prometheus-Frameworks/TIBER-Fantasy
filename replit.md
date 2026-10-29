@@ -167,3 +167,13 @@ verified league playoff start/scoring as context and named missing witnesses.
 Defensive ratings remain null; no legacy SOS, database or ROP input is used.
 See `docs/mcp/league-reader-hosted-v1.md`; #422 remains unmerged into main,
 and the combined readers are not hosted or accepted through the installed connector.
+
+## Public League Context Slice 1 — October 28, 2026
+
+`server/modules/publicLeagueMcp/` provides six strict, anonymous, read-only
+in-process contracts with explicitly injected sources. It shares the neutral
+`leagueMcp/lineupContext.ts` compiler with the preserved private wrapper, and adds
+public current-season/week gates, independent roster-census membership and bounded
+reference freshness. No public endpoint, source activation, persistent cache,
+global governor or client acceptance is implemented. See that module's `MODULE.md`
+and `docs/reviews/public-mcp-slice-1-2026-10-28.md`.
