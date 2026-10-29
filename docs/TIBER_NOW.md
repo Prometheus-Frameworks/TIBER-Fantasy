@@ -308,7 +308,7 @@ Each entry links to its upstream README and local usage instructions. All 14 def
 <details>
 <summary>October 29, 2026 source pins</summary>
 
-All 14 source/README reads succeeded, every default branch remains `main`, and all 14 pins are unchanged from October 28. Research #43's off-main movement and Fantasy #432/#433/#428/#429 candidates do not change default-branch pins. These pins identify inspected code/documentation, not deployments, hosted activation or mutable issue revisions.
+All 14 source/README reads succeeded, every default branch remains `main`, and all 14 pins are unchanged from October 28. Research #43's off-main movement and Fantasy #432/#433/#428/#429 candidates do not change default-branch pins. The prior Fantasy pin [`d979292`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/d9792924012ab89f54c47d23f86804f19c05309e/README.md) remains linked as historical evidence; current Fantasy source is `912904d` below. These pins identify inspected code/documentation, not deployments, hosted activation or mutable issue revisions.
 
 | Repository | Inspected default-branch commit / README |
 | --- | --- |
