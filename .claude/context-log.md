@@ -1355,3 +1355,8 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Publication gate:** The latest independent #420 review remains bound to predecessor `da57b7f2cc477989422e8ec0da4b66991cf71471`, not this refresh. Main reconciliation, current-head review, provider-effects disposition and Joe's explicit publication approval remain separate. No review request, readiness change, merge, deployment, contributor message, runtime/provider change or source/model/consumer activation occurred.
 - **Validation/handoff:** Status-page commit `508251852cfb07fbe119a5c8775ca4d9fb3ebc07`. Retained all 14 exact source pins and prior dated history, checked October 29 labels, table shapes, balanced details sections, link syntax, whitespace/conflict markers and append-only prior log bytes.
 
+
+### 2026-10-29 final verification addendum
+
+- Preserved the superseded Fantasy `d979292` README evidence link alongside the unchanged current `912904d` pin. Final status-page commit is `d36393d9e96b4da56ff029bdfbfa645887efa92a`; the earlier `5082518` commit remains the substantive daily refresh predecessor. All 306 prior distinct Markdown destinations are present, with 17 new primary-evidence destinations added.
+
