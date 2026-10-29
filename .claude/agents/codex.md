@@ -1557,3 +1557,8 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Review/publication:** #420 began open, non-draft, unmerged and not mechanically mergeable at `1650b504`. The latest independent review covers `da57b7f2`, not this refresh. No review request, readiness change, reconciliation, merge, deployment, activation or contributor message. Provider-effects disposition and explicit publication approval remain required.
 - **Handoff:** Status-page commit `508251852cfb07fbe119a5c8775ca4d9fb3ebc07`; prior history and 14 source pins preserved, date/table/details/link/conflict-marker checks passed.
 
+
+### 2026-10-29 final verification addendum
+
+- Final status-page commit `d36393d9e96b4da56ff029bdfbfa645887efa92a` preserves all 306 prior distinct Markdown evidence destinations and adds 17 current primary-evidence destinations. The superseded Fantasy `d979292` README link remains historical; the current pin remains `912904d`.
+
