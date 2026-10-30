@@ -68,7 +68,7 @@ test.each([null, [], 'invalid'])('malformed upstream directory %p cannot poison 
             ? [{ roster_id: 1, owner_id: 'u1', players: ['qb1'], starters: ['qb1'] }]
             : null;
     if (body === null && !url.endsWith('/players/nfl')) throw new Error(`Unexpected URL: ${url}`);
-    return { ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) } as Response;
+    return new Response(JSON.stringify(body));
   }) as typeof fetch;
 
   const catalog = await buildHistoricalCatalog();

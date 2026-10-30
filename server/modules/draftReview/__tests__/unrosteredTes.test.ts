@@ -17,7 +17,7 @@ function serve(data: ReturnType<typeof sources>) {
     const path = String(input);
     const body = path.endsWith('/rosters') ? data.rosters : path.endsWith('/players/nfl') ? data.players : path.endsWith('/league/123') ? data.league : undefined;
     if (!body) throw new Error('Unexpected source request');
-    return { ok: true, json: async () => body } as Response;
+    return new Response(JSON.stringify(body));
   });
 }
 afterEach(() => { global.fetch = originalFetch; __resetDraftReviewCacheForTests(); __resetTeTrendsForTests(); jest.useRealTimers(); });
@@ -96,7 +96,7 @@ test('trends are cached separately and exclude owned IDs; malformed refresh fall
   serve(sources());
   const sourceFetch = global.fetch;
   let trendRows: unknown = [{ player_id: '11', count: 900 }, { player_id: '55', count: 80 }];
-  global.fetch = jest.fn(async (input, init) => String(input).includes('/trending/') ? { ok: true, json: async () => trendRows } as Response : sourceFetch(input, init));
+  global.fetch = jest.fn(async (input, init) => String(input).includes('/trending/') ? new Response(JSON.stringify(trendRows)) : sourceFetch(input, init));
   const first = await buildUnrosteredTes(url);
   expect(first.trends?.counts).toEqual({ '55': 80 });
   await buildUnrosteredTes(url);
@@ -118,7 +118,7 @@ test.each(['outage', 'malformed'])('caches %s trend unavailability for five minu
     if (!String(input).includes('/trending/')) return sourceFetch(input, init);
     ++trendCalls;
     if (!healthy && failure === 'outage') throw new Error('Synthetic upstream outage');
-    return { ok: true, json: async () => [{ player_id: '55', count: healthy ? 80 : -1 }] } as Response;
+    return new Response(JSON.stringify([{ player_id: '55', count: healthy ? 80 : -1 }]));
   });
   const first = await buildUnrosteredTes(url);
   expect(first.trends).toMatchObject({ status: 'unavailable', received_at: null, counts: {} });

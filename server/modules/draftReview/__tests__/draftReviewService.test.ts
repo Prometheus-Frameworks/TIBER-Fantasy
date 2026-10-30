@@ -16,12 +16,7 @@ afterEach(() => {
 });
 
 function response(body: unknown) {
-  return {
-    ok: true,
-    status: 200,
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  } as Response;
+  return new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
 }
 
 describe('Draft Review Sleeper context compiler', () => {
