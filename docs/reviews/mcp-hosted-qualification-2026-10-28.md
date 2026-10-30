@@ -120,3 +120,60 @@ visitor-to-profile authorization map. Previous receipts do not independently
 establish cross-account OAuth or platform header stripping, and per-isolate
 limits are not global. Keep these limitations explicit. No Claude admission
 implementation or decision is part of this qualification.
+
+## Independent qualification review — October 30, 2026
+
+Reviewed PR #432 at `21d29f224720edef316afeda13ed0b3571819768`, tree
+`892932b472ac609b425eeadb0c0467800e2b1765`, against unchanged main
+`912904d324626f8caf91a9b259c59dd16068c19a`. GitHub had no submitted review
+or inline thread from the October 28 request. The bot's summary and eyes
+reaction were unchanged: apparently stalled/unresolved, not a clean review.
+The internal review-job state was not accessible. The new independent findings
+and their resolution are recorded on #432; the old bot summary is not edited
+or treated as evidence of completion.
+
+Core Build `40776931040` passed under Node 20.20.2, but only ran `npm ci` and
+`sh build.sh`. Its checked-out PR merge commit was
+`f17912938fea0e4ab161aae3e8a64b764fd07570`, whose tree exactly equals the
+reviewed head. That run did **not** execute the built-artifact qualification.
+
+The independent local rebuild under Node 24.22.1 reproduced all recorded
+default-Worker bytes: 236 modules, 425,124 bytes, 120,655 gzip bytes and SHA-256
+`6bb0502b48a8d19152b09c00dcc33cf22dab4dd70186af548a0ad9382af8785d`.
+The reused dependency installation has byte-identical manifest and lock files;
+this review did not perform a fresh local install. Node 20 was unavailable in
+the local offline cache. The original and corrected built-artifact checks pass,
+as do 74 existing native MCP tests, nine synthetic preparation/build guards and
+scoped strict TypeScript. The final GitHub CI receipt is recorded separately
+on the exact corrected head, so these local results do not imply its success.
+
+Two test-coverage findings required correction. Three isolated mutations each
+passed the original test: deleting all missing witnesses, returning empty
+next-three fixtures, and fetching NFL state while the league source was disabled.
+Each now fails the corrected test. All mutations were restored; no runtime
+source, dependency, private-input pin, configuration or generated Worker changed.
+
+| Boundary | Corrected built-artifact evidence |
+| --- | --- |
+| Private input | Default builder has no private-input flags; the inspected source placeholder is null. Eight tools and absent ROP are checked with its runtime marker both present and absent; an ROP call cannot fall through to a provider. The import graph contains no retained input, legacy SOS, database or external runtime import. |
+| Provider reads | The allowlisted synthetic fetch stub is installed before bundle import. Import, discovery, denied identities/origins, disabled or absent source markers, invalid selectors and unavailable ROP calls make no provider reads. Redirect mode is manual; a schedule redirect is refused. |
+| Identity | Missing and whitespace-only trusted identity headers and a foreign Origin receive HTTP 403. This checks the Worker's refusal, not account authorization or platform header stripping. |
+| Calendar | Next-three includes the decision week and an internal bye without extending the window; explicit final and week-18 clamps, custom bye, verified playoff start and explicit playoff final are exercised. |
+| Unknown evidence | Fixture lists and counts are asserted; eligible/rated counts, ratings and rating cutoff remain null, and lock/completion/postponement/venue stay unknown. Final-week, rating, lock and unknown-playoff-start witnesses are required. Missing final keeps a separately labeled regular-season remainder. |
+| Incomplete schedule | Fresh bundle instances refuse incomplete schedule coverage and redirects without inventing fixtures or byes; successful earlier reads cannot mask the failures through cache. |
+
+Core Build now runs `node --test tests/leagueReaderBuiltArtifact.test.mjs`
+after the application build on its existing Node 20 runner. The test emits its
+bundle receipt for comparison with this dated candidate; it does not freeze the
+hash for every future source change. No private input is used in public CI.
+
+The unchanged default artifact is locally qualified for the next controlled
+packaging/admission review. Qualification of the corrected PR, its CI and the
+fresh requested GitHub review must be reported against their exact head.
+Node execution of the bundle is not a Workers-runtime or hosted resource test.
+Site source/archive equality, current owner-only policy/environment, cross-account
+OAuth, trusted-header stripping, actual startup/memory behavior, installed
+ROS reads, existing-tool regressions and a fresh-session replay remain unverified
+by this review. The earlier acceptance/deployment gates above remain in force.
+This work does not investigate the October 27 Render deployment, access retained
+private inputs, merge, save a Site version, publish, activate readers or deploy.

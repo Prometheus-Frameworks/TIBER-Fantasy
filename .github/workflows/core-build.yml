@@ -31,3 +31,5 @@ jobs:
         run: npm ci
       - name: Build application
         run: sh build.sh
+      - name: Qualify default MCP Worker
+        run: node --test tests/leagueReaderBuiltArtifact.test.mjs
