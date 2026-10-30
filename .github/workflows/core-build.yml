@@ -31,3 +31,44 @@ jobs:
         run: npm ci
       - name: Build application
         run: sh build.sh
+
+  public-mcp-runtime:
+    name: Public MCP runtime (Node 20)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Record candidate and runtime
+        run: |
+          git rev-parse HEAD
+          node --version
+          npm --version
+          node -e 'if (process.versions.node.split(".")[0] !== "20") process.exit(1)'
+      - name: Install locked dependencies
+        run: npm ci
+      # Synthetic in-process/protocol tests only; no provider or hosted activation.
+      - name: Test public contracts and private-reader regressions
+        run: |
+          node --import tsx --test \
+            tests/leagueReader.test.ts tests/personalLeagueContext.test.ts \
+            tests/leagueScoringSettings.test.ts tests/scheduleStrength.test.ts \
+            tests/combinedLeagueReader.test.ts tests/leagueReaderHardening.test.ts \
+            tests/leagueReaderProtocol.test.ts tests/publicLeagueContracts.test.ts \
+            tests/publicLeagueLineup.test.ts tests/publicRosterCensus.test.ts
+      - name: Test shared discovery and waiver readers
+        run: |
+          npm test -- --runTestsByPath \
+            server/modules/draftReview/__tests__/teamLeagues.test.ts \
+            server/modules/draftReview/__tests__/waiverCandidates.test.ts \
+            server/modules/draftReview/__tests__/unrosteredTes.test.ts --coverage=false
+      - name: Check scoped TypeScript including public modules
+        run: node_modules/.bin/tsc -p tsconfig.league-check.json --noEmit --listFiles
