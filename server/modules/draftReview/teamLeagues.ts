@@ -1,9 +1,10 @@
+import { observeLeague, observeRosters, type ObservedLeagueReads } from './sourceObservations';
 import { settleSourceReads } from './settledSources';
 import { z } from 'zod';
 import { leagueSeason, sleeperAccountInput, sleeperId, type TeamLeagues, type TeamLeagueRosters, type TeamLeagueSummary } from '@shared/teamLeagues';
 import { sleeperClient } from '../../integrations/sleeperClient';
 
-type Sources = Pick<typeof sleeperClient, 'getUser' | 'getUserLeagues' | 'getLeague' | 'getLeagueRosters'>;
+type Sources = Pick<typeof sleeperClient, 'getUser' | 'getUserLeagues' | 'getLeague' | 'getLeagueRosters'> & ObservedLeagueReads;
 const optionalDisplay = z.string().max(256).nullish();
 const accountSchema = z.object({ user_id: sleeperId, username: optionalDisplay, display_name: optionalDisplay });
 const leagueSchema = z.object({
@@ -63,8 +64,8 @@ export async function findTeamLeagueRosters(userId: string, leagueId: string, se
   sleeperId.parse(userId); sleeperId.parse(leagueId); leagueSeason.parse(season);
   try {
     const [leagueObservation, rosterObservation] = await settleSourceReads([
-      sources.getLeague(leagueId).then(value => ({ value, receivedAt: new Date(now()).toISOString() })),
-      sources.getLeagueRosters(leagueId).then(value => ({ value, receivedAt: new Date(now()).toISOString() })),
+      observeLeague(sources, leagueId, now),
+      observeRosters(sources, leagueId, now),
     ] as const);
     const league = leagueSchema.parse(leagueObservation.value);
     const rows = z.array(rosterSchema).max(64).parse(rosterObservation.value);
