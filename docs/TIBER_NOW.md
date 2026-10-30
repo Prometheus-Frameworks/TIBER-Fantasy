@@ -338,6 +338,19 @@ All 14 source/README reads succeeded, every default branch remains `main`, and a
 
 </details>
 
+<details>
+<summary>Historical references from the prior published page</summary>
+
+The [October 10 published snapshot, retained unchanged at the current main pin](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/912904d324626f8caf91a9b259c59dd16068c19a/docs/TIBER_NOW.md) preserves its original status records. The following destinations from that page are retained for historical navigation; their earlier candidate states and acceptance limits are superseded only by the dated evidence above, not silently transferred to newer work.
+
+- **ROP #30:** [owner validation at the earlier candidate](https://github.com/Prometheus-Frameworks/Role-and-opportunity-model/pull/30#issuecomment-6090246329), [that candidate's independent review](https://github.com/Prometheus-Frameworks/Role-and-opportunity-model/pull/30#issuecomment-6090259777), [purpose-only preflight](https://github.com/Prometheus-Frameworks/Role-and-opportunity-model/pull/30#issuecomment-6097643568) and [qualification of that exact receipt](https://github.com/Prometheus-Frameworks/Role-and-opportunity-model/pull/30#issuecomment-6097673353).
+- **Team access and MCP preparation:** [October 1 Ops handoff](https://github.com/Prometheus-Frameworks/TIBER-Ops/issues/88#issuecomment-5938413606), [offline-adapter review receipt](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/383#issuecomment-5913196883) and [remote-beta preparation receipt](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/383#issuecomment-5938413906).
+- **Trade Compare:** [earlier owner-private V0.2 receipt](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/issues/416#issuecomment-6038834212).
+- **Team interaction #377:** [hidden-board P1](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/377#discussion_r4054651151), [first RESERVE-slot P2](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/377#discussion_r4054651155) and [second RESERVE-slot P2](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/pull/377#discussion_r4054651157).
+- **Superseded README pins:** [Data `0d9f82a`](https://github.com/Prometheus-Frameworks/TIBER-Data/blob/0d9f82a8d0225602faea4887adf314983ee25a3a/README.md), [Fantasy `e5b3380`](https://github.com/Prometheus-Frameworks/TIBER-Fantasy/blob/e5b33807b4b6f982a62c3c97fe7a02529d641886/README.md), [Rookies `e78df9d`](https://github.com/Prometheus-Frameworks/TIBER-Rookies/blob/e78df9df32adb6568ccfbe8ff2b7210d9d99e8a6/README.md) and [Research `5339b58`](https://github.com/Prometheus-Frameworks/TIBER-Research/blob/5339b587bf5e59a7c21eb48480fdb0a992c4271b/README.md). The 14 current pins remain in the preceding table.
+
+</details>
+
 ## Joining in
 
 People and agent-assisted contributors are welcome. Start with the relevant repository’s README and operating instructions, then open a focused issue explaining what you want to build, what evidence it needs, and whether the work is a proposal, local experiment, fork implementation or upstream PR.
