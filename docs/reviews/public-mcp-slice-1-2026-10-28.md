@@ -3,6 +3,10 @@
 Joe authorized library implementation, focused checks, independent review and a
 draft PR. Keep it draft, unmerged, unhosted and unactivated.
 
+October 30 follow-up: the [Node 20 qualification receipt](public-mcp-slice-1-node20-2026-10-30.md)
+records fresh runtime tests and CI coverage. The Node 24 results and unperformed
+checks below describe the original implementation run, not the later qualification.
+
 ## Base and implementation
 
 Actual base: `912904d324626f8caf91a9b259c59dd16068c19a`.

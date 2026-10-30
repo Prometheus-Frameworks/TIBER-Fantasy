@@ -44,3 +44,5 @@ limits and global concurrency/rate controls remain Slice 2 work.
 
 Validation and remaining limitations:
 [`docs/reviews/public-mcp-slice-1-2026-10-28.md`](../../../docs/reviews/public-mcp-slice-1-2026-10-28.md).
+Node 20 runtime qualification and continuing CI:
+[`docs/reviews/public-mcp-slice-1-node20-2026-10-30.md`](../../../docs/reviews/public-mcp-slice-1-node20-2026-10-30.md).
