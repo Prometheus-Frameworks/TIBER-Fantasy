@@ -1,7 +1,6 @@
 # Claude admission v1: owner-private connector over a static API key
 
-Status: **blocked integration candidate**, PR #428, still stacked on #422's
-branch. Joe's October 31 review/fix/merge request permits repairing this source,
+Status: **blocked integration candidate**, PR #428, reconciled with main for source review. Joe's October 31 review/fix/merge request permits repairing this source,
 not deploying it or deciding the unresolved Claude-host ROS scope. No deployable
 integrated candidate has been selected. The historical October 26 plan was a
 separate league-only Worker, `x-api-key` header, and a token generated on Joe's
@@ -34,8 +33,8 @@ Joe is its only member. The Worker has one configured profile.
 **STOP before building or running any provider command:** the old
 `8b86e06b05201b46a3b5f5851c4950106ebec4f9` candidate lacks #429's pre-SDK
 argument guard. Neither that candidate nor its recorded bundle hash qualifies a
-corrected deployment. This documentation-only correction does not add the guard,
-integrate current main, resolve the ROS-scope decision or clear a deployment gate.
+corrected deployment. The October 31 source integration includes that guard and current main, but does
+not resolve the ROS-scope decision or clear a deployment gate.
 
 ### 1. Select and build a separately qualified integrated candidate
 
@@ -133,3 +132,30 @@ If it fails, watch `npx wrangler tail tiber-claude-mcp` while retrying:
 - Kill switch: `npx wrangler secret delete TIBER_CLAUDE_TOKEN_SHA256 --name tiber-claude-mcp` (every
   call returns 503), or `npx wrangler delete --name tiber-claude-mcp` to remove the Worker.
 - The ChatGPT/Sites deployment is independent and unaffected by any of this.
+
+
+## October 31 source integration (not deployment qualification)
+
+The source candidate incorporates main `ee937153fb49bef0be59703ef0cc9711b84d4ede`
+and the exact argument-limit implementation/tests from #429
+`ca5aa9038c8cfb7f1cc3a70c3b0d37f8683311c8`, without modifying #429. Both agent-log
+histories and TypeScript scopes are preserved. The existing eight-tool reader,
+including schedule-only ROS, remains unchanged in capability scope; no new ROS
+policy or admission gate is inferred. Joe's ROS decision remains required before
+any deployment/activation. Existing source code inclusion is not that decision.
+
+Local Node24.22.1 default builds with manifest/lock-matched dependencies:
+- Claude: 239 modules, no private input, 427997 bytes, SHA-256
+  `b8a607d7c896b669133fe3a5f113f26fb9bfee51c8ffdabf7abf5765120e4b89`.
+- ChatGPT: 238 modules, no private input, 425612 bytes, SHA-256
+  `4d8b394816b6088a158897e9e0e9a814b4a9788577dfc3e8aa96ac2b8bcbe974`;
+  identical to current main's already-qualified shared reader.
+
+The pre-SDK guard preserves the existing 16KiB request bound/deadline, enforces
+2KiB serialized tool arguments before SDK schema validation, and strips credentials
+before forwarding. Synthetic tests exercise oversized and deeply nested arguments,
+zero inner calls on refusal, and unchanged bounded forwarding. CI now includes the
+admission tests alongside main's public/private regression tests. Exact final-head
+review/CI receipts belong on PR #428; these local build hashes alone are not a
+selected deployment receipt. All closed-state and separate activation gates above
+remain controlling. No credentials, provider reads or deployed settings changed.

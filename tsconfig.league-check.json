@@ -7,7 +7,8 @@
     "server/modules/draftReview/teamManager.ts",
     "shared/teamManager.ts",
     "server/mcp/leagueReaderWorker.ts",
-    "server/mcp/claudeAdmissionWorker.ts"
+    "server/mcp/claudeAdmissionWorker.ts",
+    "server/modules/publicLeagueMcp/**/*.ts"
   ],
   "exclude": [
     "node_modules",

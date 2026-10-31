@@ -1,3 +1,4 @@
+import { observeLeague, observeRosters, type ObservedLeagueReads } from './sourceObservations';
 import { z } from 'zod';
 import { sleeperClient } from '../../integrations/sleeperClient';
 import { getDraftReviewPlayerDirectory } from './playerDirectory';
@@ -24,20 +25,12 @@ export const directoryEntry = z.object({
 export function display(value: string | null | undefined) {
   return value?.replace(/[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, '').trim().slice(0, 120) || null;
 }
-type AvailabilitySources = Pick<typeof sleeperClient, 'getLeague' | 'getLeagueRosters'> & { getDirectory: () => Promise<{ fetchedAt: number; players: Record<string, unknown> }> };
+type AvailabilitySources = Pick<typeof sleeperClient, 'getLeague' | 'getLeagueRosters'> & ObservedLeagueReads & { getDirectory: () => Promise<{ fetchedAt: number; players: Record<string, unknown> }> };
 const defaults: AvailabilitySources = { ...sleeperClient, getDirectory: getDraftReviewPlayerDirectory };
-async function observed<T>(request: Promise<T>) {
-  return { value: await request, receivedAt: new Date().toISOString() };
-}
 
-export async function readLeagueAvailabilityForSelection(input: { leagueId: string; rosterId: number; canonicalUrl: string }, sources: AvailabilitySources = defaults) {
-  const [leagueRead, rosterRead, directory] = await settleSourceReads([
-    observed(sources.getLeague(input.leagueId)),
-    observed(sources.getLeagueRosters(input.leagueId)),
-    sources.getDirectory(),
-  ] as const);
-  const league = leagueSchema.parse(leagueRead.value);
-  const rosters = z.array(rosterSchema).min(1).max(64).parse(rosterRead.value);
+export function parseCompleteRosterCoverage(input: { leagueId: string; rosterId: number }, leagueValue: unknown, rosterValue: unknown) {
+  const league = leagueSchema.parse(leagueValue);
+  const rosters = z.array(rosterSchema).min(1).max(64).parse(rosterValue);
   if (league.league_id !== input.leagueId || rosters.length !== league.total_rosters
       || new Set(rosters.map(r => r.roster_id)).size !== rosters.length
       || !rosters.some(r => r.roster_id === input.rosterId)
@@ -47,6 +40,16 @@ export async function readLeagueAvailabilityForSelection(input: { leagueId: stri
   const rostered = new Set(rosters.flatMap(r => [
     ...r.players, ...(r.starters ?? []).filter(p => p !== '0' && p !== ''), ...(r.reserve ?? []), ...(r.taxi ?? []),
   ]));
+  return { league, rosters, rostered };
+}
+
+export async function readLeagueAvailabilityForSelection(input: { leagueId: string; rosterId: number; canonicalUrl: string }, sources: AvailabilitySources = defaults) {
+  const [leagueRead, rosterRead, directory] = await settleSourceReads([
+    observeLeague(sources, input.leagueId),
+    observeRosters(sources, input.leagueId),
+    sources.getDirectory(),
+  ] as const);
+  const { league, rosters, rostered } = parseCompleteRosterCoverage(input, leagueRead.value, rosterRead.value);
   if (!directory.players || typeof directory.players !== 'object' || Array.isArray(directory.players)) {
     throw new Error('Player directory is malformed.');
   }

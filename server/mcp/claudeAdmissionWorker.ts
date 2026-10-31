@@ -25,6 +25,7 @@
  * companion build script refuses private input.
  */
 import inner from './leagueReaderWorker';
+import { BodyReadDeadlineError, readBoundedText } from '../integrations/boundedFetch';
 
 type Env = {
   TIBER_CLAUDE_ADMISSION?: string;
@@ -40,6 +41,8 @@ export const CLAUDE_PRINCIPAL = 'claude-static-owner';
 const TOKEN = /^[A-Za-z0-9._~+/=-]{32,512}$/;
 const DIGEST = /^[0-9a-f]{64}$/;
 const STRIPPED = ['x-api-key', 'authorization', 'cookie', 'oai-authenticated-user-id'];
+const MAX_REQUEST_BYTES = 16_384;
+const MAX_TOOL_ARGUMENT_BYTES = 2_048;
 
 const json = (status: number, reason: string, extra: Record<string, string> = {}) =>
   Response.json({ error: reason }, { status, headers: { 'Cache-Control': 'no-store', ...extra } });
@@ -88,7 +91,40 @@ export default {
     const headers = new Headers(request.headers);
     for (const name of STRIPPED) headers.delete(name);
     headers.set('oai-authenticated-user-id', CLAUDE_PRINCIPAL);
-    const admitted = new Request(request, { headers });
+    let admitted: Request;
+    if (request.method === 'POST') {
+      // The SDK validates registered tool schemas before calling the tool's own 2 KiB guard.
+      // Read the same bounded body here and enforce that guard before SDK validation.
+      let text: string;
+      let body: unknown;
+      try {
+        text = await readBoundedText(request, MAX_REQUEST_BYTES);
+        body = JSON.parse(text);
+      } catch (error) {
+        return error instanceof BodyReadDeadlineError
+          ? json(408, 'request_body_deadline')
+          : json(413, 'invalid_or_oversized_request');
+      }
+      if (body && typeof body === 'object' && !Array.isArray(body)) {
+        const message = body as { method?: unknown; params?: unknown };
+        if (message.method === 'tools/call' && message.params && typeof message.params === 'object') {
+          const args = (message.params as { arguments?: unknown }).arguments;
+          try {
+            if (new TextEncoder().encode(JSON.stringify(args)).byteLength > MAX_TOOL_ARGUMENT_BYTES) {
+              return json(413, 'tool_arguments_too_large');
+            }
+          } catch {
+            // Deeply nested JSON can exceed the serializer stack even below the HTTP byte limit.
+            return json(413, 'tool_arguments_too_large');
+          }
+        }
+      }
+      // The decoded body may have a different byte count (e.g. a stripped BOM).
+      headers.delete('content-length');
+      admitted = new Request(request.url, { method: request.method, headers, body: text, signal: request.signal });
+    } else {
+      admitted = new Request(request, { headers });
+    }
     // League values only; TIBER_ROP_SOURCE is never forwarded.
     return inner.fetch(admitted, {
       TIBER_LEAGUE_SOURCE: env.TIBER_LEAGUE_SOURCE,

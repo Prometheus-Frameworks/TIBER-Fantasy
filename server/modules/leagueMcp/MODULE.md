@@ -54,6 +54,11 @@ tools, shared waiver compiler, complete-schedule bye derivation, streamed upstre
 limits and runtime kill switch. The stdio default remains source-disabled. Hosted
 publication and an actual ChatGPT tool call are distinct acceptance checkpoints.
 
+Roster and personal-lineup scoring accepts up to 256 finite numeric settings,
+preserving every key and zero value. A malformed or larger map fails closed with
+the existing sanitized `source_unavailable` result. Sleeper body and complete MCP
+result/envelope byte limits remain independently enforced.
+
 ## October 22 frozen ROP adapter candidate
 
 The separately scoped `server/modules/roleEvidence/` candidate composes a

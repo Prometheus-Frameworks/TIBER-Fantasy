@@ -1,3 +1,4 @@
+import { observeLeague, observeRosters, type ObservedLeagueReads } from '../draftReview/sourceObservations';
 import { settleSourceReads } from '../draftReview/settledSources';
 import { z } from 'zod';
 import { sleeperId, leagueSeason } from '../../../shared/teamLeagues';
@@ -10,13 +11,15 @@ const playerId = z.string().regex(/^(?:\d{1,32}|[A-Z]{2,4})$/);
 const ids = z.array(playerId).max(256);
 const optionalIds = ids.nullish();
 const display = z.string().max(256).nullish();
+// Some valid Sleeper leagues include kicker and IDP settings beyond 128 entries.
+const maxScoringSettings = 256;
 const rosterSchema = z.object({ roster_id: z.number().int().min(1).max(64), league_id: sleeperId.optional(),
   owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish(), players: ids,
   starters: optionalIds, reserve: optionalIds, taxi: optionalIds });
 const leagueSchema = z.object({ league_id: sleeperId, season: leagueSeason, sport: z.literal('nfl'),
   total_rosters: z.number().int().min(1).max(64), name: display,
   roster_positions: z.array(z.string().max(32)).max(64).nullish(),
-  scoring_settings: z.record(z.number().finite()).refine(v => Object.keys(v).length <= 128).nullish(),
+  scoring_settings: z.record(z.number().finite()).refine(v => Object.keys(v).length <= maxScoringSettings).nullish(),
   settings: z.object({ type: z.number().int().nullish(), best_ball: z.number().int().nullish(),
     league_average_match: z.number().int().nullish(),
     // Playoff start only (same shape as teamManager). Round type/length are not parsed; no final week is derived.
@@ -25,14 +28,13 @@ const playerSchema = z.object({ player_id: playerId.optional(), full_name: displ
   last_name: display, position: display, team: display, status: display, injury_status: display,
   active: z.boolean().nullish() });
 const clean = (s: string | null | undefined) => s?.replace(/[\u0000-\u001f\u007f]/g, '').trim() || null;
-export type RosterSources = Pick<typeof sleeperClient, 'getLeague' | 'getLeagueRosters'> & {
+export type RosterSources = Pick<typeof sleeperClient, 'getLeague' | 'getLeagueRosters'> & ObservedLeagueReads & {
   getDirectory: () => Promise<{ fetchedAt: number; players: Record<string, unknown> }>;
 };
 const defaults: RosterSources = { ...sleeperClient, getDirectory: getDraftReviewPlayerDirectory };
 export async function getRosterContext(raw: unknown, sources: RosterSources = defaults, now = Date.now) {
   const input = rosterContextInput.parse(raw);
-  const observe = async (promise: Promise<unknown>) => ({ value: await promise, receivedAt: new Date(now()).toISOString() });
-  const [l, r] = await settleSourceReads([observe(sources.getLeague(input.leagueId)), observe(sources.getLeagueRosters(input.leagueId))] as const);
+  const [l, r] = await settleSourceReads([observeLeague(sources, input.leagueId, now), observeRosters(sources, input.leagueId, now)] as const);
   const league = leagueSchema.parse(l.value);
   const rows = z.array(rosterSchema).max(64).parse(r.value);
   if (league.league_id !== input.leagueId || league.season !== input.season || rows.length !== league.total_rosters ||
