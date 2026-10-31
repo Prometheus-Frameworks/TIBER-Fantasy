@@ -1,10 +1,12 @@
 # Claude admission v1: owner-private connector over a static API key
 
-Status: candidate (draft PR #428, stacked on #422). Joe approved this plan on
-2026-10-26: a separate league-only Cloudflare Worker, `x-api-key` request header,
-token generated on his own machine. That approval covers this runbook only. It does not cover
-frozen ROP on this host, merging #422/#428, changes to the ChatGPT/Sites deployment, or any
-other user.
+Status: **blocked integration candidate**, PR #428, still stacked on #422's
+branch. Joe's October 31 review/fix/merge request permits repairing this source,
+not deploying it or deciding the unresolved Claude-host ROS scope. No deployable
+integrated candidate has been selected. The historical October 26 plan was a
+separate league-only Worker, `x-api-key` header, and a token generated on Joe's
+computer. Frozen ROP, other users, ChatGPT/Sites changes and activation remain
+outside this runbook's authority.
 
 ## What this deploys
 
@@ -29,30 +31,42 @@ Joe is its only member. The Worker has one configured profile.
 
 ## Runbook (on Joe's computer, not the phone)
 
-Needs Node 22+, git and a Cloudflare account. Run `npx wrangler login` once.
+**STOP before building or running any provider command:** the old
+`8b86e06b05201b46a3b5f5851c4950106ebec4f9` candidate lacks #429's pre-SDK
+argument guard. Neither that candidate nor its recorded bundle hash qualifies a
+corrected deployment. This documentation-only correction does not add the guard,
+integrate current main, resolve the ROS-scope decision or clear a deployment gate.
 
-### 1. Build the exact reviewed commit
+### 1. Select and build a separately qualified integrated candidate
 
-```bash
-git clone https://github.com/Prometheus-Frameworks/TIBER-Fantasy tiber-claude && cd tiber-claude
-git checkout <#428 head commit>          # the exact SHA from the PR, not the branch name
-npm ci
-node scripts/buildClaudeReaderWorker.mjs "$HOME/tiber-claude-build/worker.mjs"
-```
+There is currently **no approved build SHA or bundle receipt** for this procedure.
+Before it can be used, the maintainer must identify one published integrated head
+that includes the argument guard, current required integration and the explicitly
+decided ROS scope, then obtain fresh tests and independent review. Record its full
+40-character commit SHA and expected Claude bundle SHA-256 together in a dated
+receipt. Do not substitute "latest #428 head", a branch name, #429 alone, or the
+old #428 hash. Further integration invalidates earlier build/review receipts.
 
-Compare the printed `sha256` with the one recorded on PR #428 for that commit. If they differ, stop
-and report both values; do not deploy an unmatched bundle.
+Only after those gates and separate deployment permission are satisfied, on Joe's
+computer with Node 22+, git and the authorized Cloudflare account: check out that
+exact recorded commit, run `npm ci`, and build using
+`node scripts/buildClaudeReaderWorker.mjs "$HOME/tiber-claude-build/worker.mjs"`.
+Compare the printed SHA-256 to that same candidate's receipt. Stop on any mismatch.
+The steps below describe the future closed procedure, not authority to execute it.
 
 ### 2. Deploy, still closed
 
 ```bash
 npx wrangler deploy "$HOME/tiber-claude-build/worker.mjs" --name tiber-claude-mcp \
   --no-bundle --compatibility-date 2026-10-01 \
-  --var TIBER_CLAUDE_ADMISSION:static-api-key-v1 --var TIBER_LEAGUE_SOURCE:public-sleeper
+  --var TIBER_CLAUDE_ADMISSION:disabled --var TIBER_LEAGUE_SOURCE:disabled
 ```
 
-Note the `https://tiber-claude-mcp.<your-subdomain>.workers.dev` URL. With no digest set yet, every
-`/mcp` request returns 503. That is expected.
+Note the `https://tiber-claude-mcp.<your-subdomain>.workers.dev` URL. Verify an
+`/mcp` request returns HTTP 503 with `claude_admission_disabled` before proceeding.
+Existing secrets can survive redeployment: absence of a digest must never be the
+closed-state guarantee. Keep both explicit disabled values through all secret
+configuration and verify the same refusal afterwards; stop on any other result.
 
 ### 3. Set secrets
 
@@ -80,8 +94,10 @@ curl -s -X POST https://tiber-claude-mcp.<sub>.workers.dev/mcp -H 'content-type:
   -H "x-api-key: $TOKEN" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-Expected: `{"error":"egress_not_allowed"}`. Your machine is outside Anthropic's range, so even the
-right key is refused. Then `unset TOKEN`.
+Expected while closed: HTTP 503, `{"error":"claude_admission_disabled"}`, even
+with the right key. Do not enable admission or sources to make this probe pass.
+Copy the locally generated key only into the authorized connector configuration,
+then `unset TOKEN`; never publish it.
 
 ### 5. Add the connector (claude.ai on the computer)
 
@@ -91,7 +107,15 @@ Settings → Connectors → Add custom connector:
 - Request headers → Add header: name `x-api-key`, value the key from step 3
 - Leave the OAuth choice at its default. The server never advertises OAuth, so sign-in should not start.
 
-### 6. Acceptance
+### 6. Separate activation decision, then acceptance
+
+Steps 2–5 deliberately leave admission and source reads disabled. Connector setup
+is not activation permission. Stop here until Joe separately authorizes activation
+of the exact reviewed candidate and its explicit tool/ROS scope. Keep the disabled
+values otherwise. Any authorized activation must be a separately recorded action;
+this runbook intentionally supplies no automatic enable command. After authorized
+activation, an own-machine valid-key probe should refuse with `egress_not_allowed`
+when outside the allowed range, and acceptance can proceed below.
 
 In a new chat, enable the TIBER connector and ask Claude to list its tools, then call
 `tiber_league_capabilities` and `tiber_get_my_leagues`. Repeat in a second fresh chat. Report

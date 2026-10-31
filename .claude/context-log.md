@@ -1203,3 +1203,8 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Authority:** Joe confirmed his Claude account shows Request headers and approved the plan: separate league-only Cloudflare Worker, `x-api-key` header, token generated on his machine. ROP on this host, merges and Sites changes remain withheld.
 - **What changed:** Credential read only from `x-api-key` (Claude reserves `Authorization` for OAuth); mode renamed `static-api-key-v1`; `x-api-key` stripped before the inner Worker. New runbook `docs/mcp/claude-admission-v1.md`.
 - **Validation:** 77/77 native MCP tests, scoped tsc, ChatGPT Worker hash unchanged (a3217ab1…), Claude Worker d676cbe12f9b3c92a6c287163c9b0387896955143254e062cff5031c5a1f0078, built-bundle smoke 401/401/200/503, `wrangler deploy --no-bundle --dry-run` (4.153.0) accepts the bundle and vars. Nothing deployed.
+
+### 2026-10-31 — Codex: contain Claude runbook P1/P2
+- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
+- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
+- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
