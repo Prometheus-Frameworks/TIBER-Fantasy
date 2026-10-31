@@ -1397,6 +1397,10 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Validation:** 67 native MCP tests, 85 existing Team tests/five suites, nine Python preparation guards, strict scoped TypeScript, full sh build.sh, public Worker import audit and seven local built-Worker curl checks pass. Worker: 236 modules, no private input, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc. Matching package/lock dependency reuse; inherited build warnings retained. No live source or retained private replay.
 - **Handoff:** docs/reviews/mcp-combined-integration-2026-10-26.md records replay and limits. Independent exact-head review, published CI/mergeability and final disposition are recorded separately on #422 without changing the reviewed head. Keep #422 unmerged and hosted version unchanged.
 
+### 2026-10-31 — Codex: contain Claude runbook P1/P2
+- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
+- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
+- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
 ### 2026-10-27 — Codex: #430 scoring-settings boundary repair
 - **Request:** Fix the rejected FFA/GHFFL lineup reads and open a PR through independent review to the merge boundary.
 - **Change:** Raised the roster scoring map limit from 128 to 256 finite numeric settings without truncating keys or zeros. Kept the existing sanitized failure contract and provider/result byte limits. Added synthetic roster, personal lineup, waiver-candidate and bundled Worker regressions; documented the boundary.
@@ -1421,3 +1425,8 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Changes:** Added a separate exact-head Public MCP runtime (Node 20) job to Core Build with locked install, focused Node/Jest tests and scoped TypeScript. Added docs/reviews/public-mcp-slice-1-node20-2026-10-30.md and links from the original receipt/module; required logs are append-only.
 - **Validation:** Official checksum-verified Node 20.20.2 / npm 10.8.2; fresh npm ci installed 1,184 packages. 107 Node tests, 60 Jest tests/3 suites, scoped TypeScript with all public modules listed, and full application build pass. Node 24.22.1 replay matches all 107 Node tests. No compatibility repair or assertion weakening; inherited build warnings remain. YAML/shell syntax and git diff whitespace pass.
 - **Review/boundary:** Independent reviewer reran the 107 Node tests and scoped TypeScript at the original exact head and passed additional zero-fetch, identity and sibling-settlement probes. Final qualification head/tree, independent final-head review and GitHub CI outcomes are recorded on #433 after publication; application builds alone are not runtime-test evidence. Real-provider/hosted/client acceptance and full-repository Jest/typecheck remain outside this follow-up.
+
+### 2026-10-31 — Codex: reconcile Claude admission source and bounded guard
+- **What changed:** Integrated main ee937153 without rebase, retained both log histories/type scopes, carried the exact #429 pre-SDK argument guard/tests into #428, and included admission tests in existing Node20 CI. #429 unchanged.
+- **Boundary:** Existing eight-tool/ROS scope preserved, not newly approved. No ROS/admission-policy or provider setting changes; deployment still requires separate scope/effects/activation decisions.
+- **Validation:** Synthetic tests, scoped TypeScript, default Claude/ChatGPT bundle receipts and fresh exact-head review/CI tracked on PR #428.

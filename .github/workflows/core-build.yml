@@ -59,7 +59,7 @@ jobs:
       - name: Test public contracts and private-reader regressions
         run: |
           node --import tsx --test \
-            tests/leagueReader.test.ts tests/personalLeagueContext.test.ts \
+            tests/claudeAdmission.test.ts tests/leagueReader.test.ts tests/personalLeagueContext.test.ts \
             tests/leagueScoringSettings.test.ts tests/scheduleStrength.test.ts \
             tests/combinedLeagueReader.test.ts tests/leagueReaderHardening.test.ts \
             tests/leagueReaderProtocol.test.ts tests/publicLeagueContracts.test.ts \
