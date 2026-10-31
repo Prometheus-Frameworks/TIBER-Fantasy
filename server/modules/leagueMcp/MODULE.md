@@ -1,11 +1,12 @@
 # Read-only league MCP adapter — #383
 
-Current integration status — October 26, 2026: #424 (frozen ROP history) and
-#425 (schedule-only ROS) are merged into the #422 integration branch. #422
-remains open and unmerged into main; the combined readers are not deployed.
-The following dated sections retain their original release context. Combined
-validation and its limits are recorded in
-[`docs/reviews/mcp-combined-integration-2026-10-26.md`](../../../docs/reviews/mcp-combined-integration-2026-10-26.md).
+Current integration status — October 28, 2026: #424 (frozen ROP history) and
+#425 (schedule-only ROS) are included in #422, merged into main as `912904d`.
+The existing owner-private Site version 4 exposes the previous seven-tool
+baseline plus the #430 scoring fix; the newer readers have not been hosted or
+accepted. The following dated sections retain their original release context.
+See the [hosted qualification record](../../../docs/reviews/mcp-hosted-qualification-2026-10-28.md)
+and [combined source validation](../../../docs/reviews/mcp-combined-integration-2026-10-26.md).
 
 Local implementation candidate authorized by Joe on October 11, 2026. This is a
 separate public Sleeper observation surface. Remote connection, auth, hosting,
