@@ -1416,3 +1416,26 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Files modified:** `tests/leagueReaderBuiltArtifact.test.mjs`, `.github/workflows/core-build.yml`, `docs/reviews/mcp-hosted-qualification-2026-10-28.md` and agent logs.
 - **Validation:** Original and corrected baseline checks pass on Node 24.22.1; three deliberate regressions passed the original but fail the correction. The restored Worker remains 236 modules with SHA-256 `6bb0502b48a8d19152b09c00dcc33cf22dab4dd70186af548a0ad9382af8785d`. 74 native tests, nine synthetic Python guards and scoped strict TypeScript pass. Final exact-head CI and review are separate PR receipts.
 - **Notes:** October 28 bot summary was stale with no submitted review; not treated as approval. No runtime, dependencies, production configuration, retained private input, Site packaging or deployment changed. PR remains draft/unmerged; hosted acceptance and Render investigation remain separate.
+### 2026-10-28 — Public League Context Slice 1
+- Implemented the handoff on an isolated feat/public-mcp-slice-1 branch from current main 912904d324626f8caf91a9b259c59dd16068c19a (no design-reference drift).
+- Shared compiler receives explicit selection and injected dependencies. Private wrapper retains contracts/defaults/historical/null-week behavior and sibling readers. Six public adapters add strict selection, current-season gating, honest in-process capabilities, independent census evidence and reference freshness.
+- Validation: 100 Node tests, 60 Jest tests/3 suites, focused typecheck including the public modules, runtime import-graph check and full application build pass. Full typecheck matches unchanged base: 507 diagnostics with zero delta. Synthetic inputs only; no live reads or new dependencies.
+- Receipt: docs/reviews/public-mcp-slice-1-2026-10-28.md. Independent exact-head review and any fixes are recorded on the draft PR. Leave draft/unmerged; no hosted/source/access/credential changes.
+
+### 2026-10-28 — Codex: Slice 1 independent-review repairs
+- Independent review of 6d320e52da44a7f9bd461275e8c517ad03b8de0f found runtime missing-source fallback (P1), contradictory username expansion (P2), and synchronous sibling-settlement escape (P2).
+- Added runtime dependency checks, public-only raw ASCII case-insensitive username verification before expansion, and promise-normalized public source methods. Private discovery/defaults are unchanged.
+- Seven regression tests cover zero-fetch failures, identity mismatch/case handling and deferred sibling drainage; focused total is 107 Node tests plus the prior 60 Jest tests. Exact repaired head, fresh checks and independent re-review are recorded on draft PR #433. No merge, hosting or activation.
+
+
+### 2026-10-30 — Codex: Public MCP Slice 1 Node 20 qualification
+- **Authority/scope:** Joe requested Node 20 qualification of draft #433 before considering Slice 2, including focused CI coverage. Keep draft/unmerged/unactivated; no endpoint, hosting, access or provider changes.
+- **Candidate:** Exact implementation head 2496f6bb32438f90bcc60435835ab7759c6fb8ee, tree 7c0e52f48a90b45c2c78527f4096fd629d0c75fa; current main remains 912904d324626f8caf91a9b259c59dd16068c19a. Isolated qualification branch; no application/test/manifest/lock changes.
+- **Changes:** Added a separate exact-head Public MCP runtime (Node 20) job to Core Build with locked install, focused Node/Jest tests and scoped TypeScript. Added docs/reviews/public-mcp-slice-1-node20-2026-10-30.md and links from the original receipt/module; required logs are append-only.
+- **Validation:** Official checksum-verified Node 20.20.2 / npm 10.8.2; fresh npm ci installed 1,184 packages. 107 Node tests, 60 Jest tests/3 suites, scoped TypeScript with all public modules listed, and full application build pass. Node 24.22.1 replay matches all 107 Node tests. No compatibility repair or assertion weakening; inherited build warnings remain. YAML/shell syntax and git diff whitespace pass.
+- **Review/boundary:** Independent reviewer reran the 107 Node tests and scoped TypeScript at the original exact head and passed additional zero-fetch, identity and sibling-settlement probes. Final qualification head/tree, independent final-head review and GitHub CI outcomes are recorded on #433 after publication; application builds alone are not runtime-test evidence. Real-provider/hosted/client acceptance and full-repository Jest/typecheck remain outside this follow-up.
+
+### 2026-10-31 — Codex: reconcile #432 with current main
+- **What changed:** Integrated main ee937153 into the qualification branch without rebase; preserved both log histories, both CI checks and both architecture notes. Added a dated integrated-Worker receipt. No runtime code changed relative to main.
+- **Validation:** Synthetic built-artifact test, 107 native MCP tests, 60 scoped Jest tests and scoped TypeScript pass on Node 24.22.1 with manifest/lock-matched dependencies. Fresh final-head CI/review tracked on PR #432.
+- **Boundary:** Joe requested review/fix/merge; no deployment, provider/settings/admission change, private input or live-provider call performed.

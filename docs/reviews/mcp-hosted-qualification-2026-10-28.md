@@ -177,3 +177,23 @@ ROS reads, existing-tool regressions and a fresh-session replay remain unverifie
 by this review. The earlier acceptance/deployment gates above remain in force.
 This work does not investigate the October 27 Render deployment, access retained
 private inputs, merge, save a Site version, publish, activate readers or deploy.
+
+## October 31 merge-readiness integration
+
+The October 30 candidate `25912d203d3e9f10b7de65c18eaaa6693676b09f`
+was integrated with main `ee937153fb49bef0be59703ef0cc9711b84d4ede`
+for Joe's October 31 review/fix/merge request. Both complete agent-log histories
+are preserved. Core Build retains the default-Worker qualification step and
+main's separate public-MCP Node 20 regression job. The architecture note retains
+both the corrected #422 merged status and main's public in-process slice.
+
+Main's already-merged shared lineup extraction changes the default Worker:
+238 modules, privateInput false, 425612 bytes, 120806 gzip bytes, SHA-256
+`4d8b394816b6088a158897e9e0e9a814b4a9788577dfc3e8aa96ac2b8bcbe974`.
+The earlier 236-module receipt remains historical, not this integrated build.
+The integrated synthetic built-artifact test, 107 native MCP tests, 60 Jest
+tests across three shared-reader suites, and scoped TypeScript pass locally on
+Node 24.22.1 using manifest/lock-matched existing dependencies. No live provider,
+private input, Site packaging or hosted acceptance was exercised. Fresh exact-head
+CI and independent review are separate receipts on PR #432. Source integration
+is not deployment or admission authorization; the hosted gates above remain.
