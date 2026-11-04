@@ -1,0 +1,50 @@
+{
+  "record_id": "pclr_20260813_camp323_puka_nacua_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_puka_nacua",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:01:00.000Z",
+  "change_note": "#323 reconciliation: secondary candidate admitted on a recoverable, material availability event.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:9493",
+      "display_name": "Puka Nacua",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-11",
+    "event_type": "injury_update",
+    "observations": [
+      "2026-08-11: Nacua left Tuesday's joint practice with the Cowboys with a groin injury; McVay initially had no details; Ian Rapoport subsequently reported it as a 'minor' groin injury with 'the team just being cautious' (Yahoo Sports, 08-11).",
+      "History context in the same report: 2025 knee/PCL issue cost him five games."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): short-term downward availability pressure, currently characterized as minor/precautionary; no timeline exists in either direction."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://sports.yahoo.com/articles/puka-nacua-left-rams-cowboys-130000840.html",
+        "note": "Yahoo Sports, 2026-08-11. Exit from joint practice; Rapoport minor/precautionary characterization. Fetched and content-verified.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "An SI/BYU page characterizing Nacua as 'week to week' was removed (HTTP 410) and is superseded in retrievable reporting by the minor/precautionary characterization; the discrepancy is noted rather than resolved.",
+      "No firm timeline exists; 'minor' is an insider characterization, not a team-published diagnosis.",
+      "Positive camp-performance notes (team-site Day 9 one-handed catches) surfaced via search only and are excluded from this availability lineage.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Does Nacua return to practice within the week, consistent with the minor characterization?"
+    ],
+    "unrecognized_fields": []
+  }
+}

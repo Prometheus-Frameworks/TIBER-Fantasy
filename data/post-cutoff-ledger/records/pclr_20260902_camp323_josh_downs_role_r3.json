@@ -1,0 +1,73 @@
+{
+  "record_id": "pclr_20260902_camp323_josh_downs_role_r3",
+  "ledger_entry_id": "pcl_msi9eu8k_aa85bc0b",
+  "revision": 3,
+  "supersedes_record_id": "pclr_20260813_camp323_josh_downs_role_r2",
+  "recorded_at": "2026-09-02T11:19:14.838Z",
+  "change_note": "Append-only epistemic classification correction accepted after exact-head review: preserve revisions 1 and 2 unchanged, and move the already-recorded 'bunch/stack usage designed to preserve free releases' analyst projection from observations to inferences. No new football evidence is introduced; the role thesis, sealed pregame evidence boundary, source references, baseline binding, forecast pressure, and deferred canonical identity binding are unchanged.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:9500",
+      "display_name": "Josh Downs",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-06",
+    "event_type": "role_expansion",
+    "observations": [
+      "outside reps increasing",
+      "multi-TE personnel expected to rise"
+    ],
+    "inferences": [
+      "bunch/stack usage designed to preserve free releases",
+      "more routes in two-WR personnel",
+      "modestly higher target depth",
+      "increased spike-week potential"
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://heavy.com/sports/nfl/indianapolis-colts/colts-news-josh-downs-expanded-role/",
+        "note": "Heavy, 2026-08-06. Steichen (team-official): 'He's a guy that can play inside and outside now for us, and his role is going to improve this season.'",
+        "verified": false
+      },
+      {
+        "ref": "https://flurrysports.org/josh-downs-undervalued-fantasy-football-adp/",
+        "note": "FlurrySports, 2026-08-04. Steichen on multi-TE usage: 'getting him involved any way we can, whether it's in 12 personnel... trying to find different ways to get him the ball.'",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/josh-downs-looks-ready-bigger-215000539.html",
+        "note": "Yahoo/Stampede Blue, 2026-08-06. Corroborates the inside/outside Steichen statement; article is predominantly projection.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.colts.com/news/josh-downs-wide-receiver-fantasy-football-usage-snap-counts-targets-2026-season",
+        "note": "Colts.com, 2026-03-31. Structural context: Pittman trade; 35.6% multi-TE snaps in 2025; Steichen on exploring Downs outside.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Append-only classification correction: revisions 1 and 2 preserve the original placement of 'bunch/stack usage designed to preserve free releases' under observations. This revision records that statement under inferences because it traces to ESPN analyst Ben Solak's projection as relayed by Heavy (2026-08-06), not to documented practice evidence. No new football evidence is introduced.",
+      "The pilot record was created without source references on 2026-08-07; sources were recovered and attached at the #323 reconciliation on 2026-08-13.",
+      "Pre-baseline re-bind: no executed/frozen Forecast baseline exists as of 2026-08-13. The pilot's original bare baseline_run_id predates the #322 pre-baseline semantics; this revision re-expresses it with the explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure moves from the pilot's 'upward' to 'unresolved' per the same #322 semantics; the upward directional mechanism is preserved in the inferences. Append a revision re-binding to the exact frozen run identity once the baseline exists.",
+      "The short-term groin availability event of 2026-08-08 through 2026-08-11 is deliberately kept in a separate lineage (pcl_20260813_camp323_josh_downs_availability) and does not modify this role thesis."
+    ],
+    "open_questions": [
+      "Do outside-alignment and multi-TE deployment claims hold in preseason game snaps?"
+    ],
+    "unrecognized_fields": [
+      {
+        "key": "status",
+        "value": "pending repeated camp and preseason deployment"
+      }
+    ]
+  }
+}
