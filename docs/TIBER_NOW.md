@@ -1,6 +1,6 @@
 # TIBER Now — Project Status
 
-**Status checked: November 4, 2026 (America/Toronto).**
+**Status checked: November 5, 2026 (America/Toronto).**
 
 TIBER is an independent football research project supported by models and open-source tools. We study player roles, team environments and fantasy decisions, keep the evidence and uncertainty visible, and revisit our views as the season develops. This page is the shared starting point across the repositories.
 
