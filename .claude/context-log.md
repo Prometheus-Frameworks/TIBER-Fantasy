@@ -1193,6 +1193,21 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Validation:** 67 native MCP tests, 85 existing Team tests/five suites, nine Python preparation guards, strict scoped TypeScript, full sh build.sh, public Worker import audit and seven local built-Worker curl checks pass. Worker: 236 modules, no private input, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc. Matching package/lock dependency reuse; inherited build warnings retained. No live source or retained private replay.
 - **Handoff:** docs/reviews/mcp-combined-integration-2026-10-26.md records replay and limits. Independent exact-head review, published CI/mergeability and final disposition are recorded separately on #422 without changing the reviewed head. Keep #422 unmerged and hosted version unchanged.
 
+### 2026-10-26 — Claude: Claude admission adapter candidate (static API key v1), stacked on #422
+- **Authority:** Joe asked to prepare the smallest secure path for an owner-private, read-only Claude connection and to test locally. Hosting, credentials, private-data location and deployment remain withheld pending his approval of the posted plan.
+- **What changed:** New entry `server/mcp/claudeAdmissionWorker.ts` wraps the unchanged `leagueReaderWorker.ts`: explicit kill switch, SHA-256 bearer digest with constant-time compare, Anthropic egress range (160.79.104.0/21) on by default, foreign Origin refusal, credential/cookie/identity headers stripped, fixed principal injected only after admission, league env only (ROP never forwarded). New league-only `scripts/buildClaudeReaderWorker.mjs` refuses any private-input flag. Scoped typecheck includes the new entry.
+- **Validation:** 10 new synthetic tests; 77/77 native MCP tests pass; scoped tsc passes. ChatGPT Worker rebuild reproduces a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc unchanged. Claude Worker bundle 6ce8c77c8aaf8d868593379a11c6ef67117145f591c59fa3be6f077ff7c3a1d3 (237 modules, no private input); built-bundle smoke 401/401/200/503 as expected.
+- **Not verified:** whether Joe's Claude account offers request headers (static_headers beta); any hosted deployment; live Claude connection; live Anthropic egress IP.
+
+### 2026-10-26 — Claude: switch #428 to x-api-key and add the deploy runbook
+- **Authority:** Joe confirmed his Claude account shows Request headers and approved the plan: separate league-only Cloudflare Worker, `x-api-key` header, token generated on his machine. ROP on this host, merges and Sites changes remain withheld.
+- **What changed:** Credential read only from `x-api-key` (Claude reserves `Authorization` for OAuth); mode renamed `static-api-key-v1`; `x-api-key` stripped before the inner Worker. New runbook `docs/mcp/claude-admission-v1.md`.
+- **Validation:** 77/77 native MCP tests, scoped tsc, ChatGPT Worker hash unchanged (a3217ab1…), Claude Worker d676cbe12f9b3c92a6c287163c9b0387896955143254e062cff5031c5a1f0078, built-bundle smoke 401/401/200/503, `wrangler deploy --no-bundle --dry-run` (4.153.0) accepts the bundle and vars. Nothing deployed.
+
+### 2026-10-31 — Codex: contain Claude runbook P1/P2
+- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
+- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
+- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
 ### 2026-10-27 — Codex: #430 scoring-settings boundary repair
 - **What changed:** Raised the bounded roster-context scoring map from 128 to 256 finite numeric entries, retaining all keys and zeros. The existing sanitized `source_unavailable` behavior, upstream body limit and complete MCP result/envelope limits remain unchanged.
 - **Files modified:** `server/modules/leagueMcp/rosterContext.ts`, `server/modules/leagueMcp/MODULE.md`, `tests/leagueScoringSettings.test.ts` and required agent logs.
@@ -1218,6 +1233,26 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Validation:** Official checksum-verified Node 20.20.2 / npm 10.8.2; fresh npm ci installed 1,184 packages. 107 Node tests, 60 Jest tests/3 suites, scoped TypeScript with all public modules listed, and full application build pass. Node 24.22.1 replay matches all 107 Node tests. No compatibility repair or assertion weakening; inherited build warnings remain. YAML/shell syntax and git diff whitespace pass.
 - **Review/boundary:** Independent reviewer reran the 107 Node tests and scoped TypeScript at the original exact head and passed additional zero-fetch, identity and sibling-settlement probes. Final qualification head/tree, independent final-head review and GitHub CI outcomes are recorded on #433 after publication; application builds alone are not runtime-test evidence. Real-provider/hosted/client acceptance and full-repository Jest/typecheck remain outside this follow-up.
 
+### 2026-10-31 — Codex: reconcile Claude admission source and bounded guard
+- **What changed:** Integrated main ee937153 without rebase, retained both log histories/type scopes, carried the exact #429 pre-SDK argument guard/tests into #428, and included admission tests in existing Node20 CI. #429 unchanged.
+- **Boundary:** Existing eight-tool/ROS scope preserved, not newly approved. No ROS/admission-policy or provider setting changes; deployment still requires separate scope/effects/activation decisions.
+- **Validation:** Synthetic tests, scoped TypeScript, default Claude/ChatGPT bundle receipts and fresh exact-head review/CI tracked on PR #428.
+
+
+### 2026-11-11 — Codex: #435 elimination-roster CI coverage
+- **Authority/scope:** Joe approved the recommended next step: add the new elimination-roster regression suite to CI, then carry the reviewed source fix into the Claude adapter candidate. No main merge, deployment, credentials or source/admission change.
+- **Change:** Added `tests/leagueEliminatedRosters.test.ts` to the existing exact-head Node 20 public MCP runtime job. Existing test entries and production behavior are unchanged by this follow-up.
+- **Validation:** On Node 24.22.1 with manifest/lock-matched dependencies, the exact workflow commands pass 112 native tests, 60 Jest tests across three suites and scoped TypeScript. Workflow YAML parses, the eleven native suites include the new suite exactly once, and `git diff --check` passes. Published Node 20 CI is verified separately after push.
+- **Boundary:** Preserve #435 as draft/unmerged. The witnessed-null runtime exception is the previously reviewed implementation, not a broader membership default. Claude integration and fresh published-head review/CI remain separate receipts.
+
+
+### 2026-11-11 — Codex: carry #435 into the Claude admission candidate
+- **Authority/scope:** Joe approved the recommended source follow-up. Integrated #435 at `6c5bec5b0cd9403299d9ff137022f9894ef94594` into prior #428 head `4bd9df176635cec1ae22b789669f3340bf83cd12` without rewriting either history. Main remains untouched.
+- **Change:** Carry the witnessed eliminated-roster parser, roster/availability changes and five regression tests into #428. The merged exact-head Node 20 workflow retains both Claude admission tests and the new elimination-roster suite. Original #428 log contents are preserved in full, followed by the #435 CI entry and this integration entry; no runtime conflict required manual repair.
+- **Validation:** Node 24.22.1 with unchanged manifest/lock-matched dependencies: 125 native tests, 60 Jest tests/three suites, scoped TypeScript and full application build pass. Workflow YAML/shell checks and whitespace checks pass. Default Claude and ChatGPT Worker builds pass import-isolation checks with `privateInput:false`.
+- **Build receipts:** Claude 240 modules, 428591 bytes, SHA-256 `e587df069ef7c6a32532633df8303d8df49f1ceeb8e08a915c50abbe533d6edb`; ChatGPT 239 modules, 426206 bytes, SHA-256 `51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059`. These local source-build receipts do not select an approved deployment candidate.
+- **Compiled synthetic smoke:** Disabled admission 503, wrong key 401, eight-tool discovery including existing ROS, no private-role tools and oversized arguments 413. A synthetic chopped-league lineup returns available with candidate membership and FAAB 303; removing the null roster's witness returns sanitized `source_unavailable`. Eight intercepted fixture fetches, zero live provider calls.
+- **Boundary:** #435 Node 20 CI run 43035231811 passed both jobs. Fresh #428 published-head CI and independent review are separate; previous #428 receipts do not review this new head. Existing ROS/admission scope is preserved, not newly decided. No main merge, deployment, credentials, private input, real source read, provider or access change; #429 is unchanged.
 
 ### 2026-11-11 — Claude (Fable): #434 Architecture Lab prototype (BIM-style evidence explorer)
 - **Authority/scope:** Joe's live instruction on #434: build a bounded read-only prototype on a separate branch and open a draft PR. Not merged, deployed or activated; no backend, DB, auth, provider or contract change.

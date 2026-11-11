@@ -3,15 +3,24 @@ import { z } from 'zod';
 import { sleeperClient } from '../../integrations/sleeperClient';
 import { getDraftReviewPlayerDirectory } from './playerDirectory';
 import { settleSourceReads } from './settledSources';
+import { eliminationWitness, hasEliminationWitness } from './eliminatedRoster';
 const id = z.string().regex(/^(?:\d{1,24}|[A-Z]{2,3})$/);
 const membership = z.array(id).max(256);
-// players is required: a missing/null primary membership list is never an empty roster.
+// players is required: a missing/null primary membership list is never an empty roster, with one
+// witnessed exception: a roster Sleeper has stamped eliminated holds no players (eliminatedRoster.ts).
 // Optional auxiliary fields add exclusions; no eligibility is inferred from their absence.
 const rosterSchema = z.object({
   roster_id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
-  league_id: z.string().optional(), players: membership,
+  league_id: z.string().optional(), players: membership.nullable(), settings: eliminationWitness,
   starters: z.array(z.union([id, z.literal('0'), z.literal('')])).max(64).nullish(),
   reserve: membership.nullish(), taxi: membership.nullish(),
+}).transform((row, ctx) => {
+  if (row.players !== null) return { ...row, players: row.players, eliminated: false };
+  if (!hasEliminationWitness(row)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Null primary membership without elimination witness.' });
+    return z.NEVER;
+  }
+  return { ...row, players: [] as string[], eliminated: true };
 });
 const leagueSchema = z.object({
   league_id: z.string(), season: z.string().regex(/^\d{4}$/),
@@ -33,7 +42,7 @@ export function parseCompleteRosterCoverage(input: { leagueId: string; rosterId:
   const rosters = z.array(rosterSchema).min(1).max(64).parse(rosterValue);
   if (league.league_id !== input.leagueId || rosters.length !== league.total_rosters
       || new Set(rosters.map(r => r.roster_id)).size !== rosters.length
-      || !rosters.some(r => r.roster_id === input.rosterId)
+      || !rosters.some(r => r.roster_id === input.rosterId && !r.eliminated)
       || rosters.some(r => r.league_id !== undefined && r.league_id !== input.leagueId)) {
     throw new Error('League roster completeness or scope could not be established.');
   }

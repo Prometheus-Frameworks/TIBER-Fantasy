@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { sleeperId, leagueSeason } from '../../../shared/teamLeagues';
 import { sleeperClient } from '../../integrations/sleeperClient';
 import { getDraftReviewPlayerDirectory } from '../draftReview/playerDirectory';
+import { eliminationWitness, nullMembershipsAreWitnessed } from '../draftReview/eliminatedRoster';
 
 export const rosterContextInput = z.object({ userId: sleeperId, leagueId: sleeperId,
   season: leagueSeason, rosterId: z.number().int().min(1).max(64) }).strict();
@@ -14,7 +15,9 @@ const display = z.string().max(256).nullish();
 // Some valid Sleeper leagues include kicker and IDP settings beyond 128 entries.
 const maxScoringSettings = 256;
 const rosterSchema = z.object({ roster_id: z.number().int().min(1).max(64), league_id: sleeperId.optional(),
-  owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish(), players: ids,
+  owner_id: sleeperId.nullish(), co_owners: z.array(sleeperId).max(64).nullish(),
+  // Null only for a roster Sleeper has stamped eliminated (see eliminatedRoster.ts); never optional.
+  players: ids.nullable(), settings: eliminationWitness,
   starters: optionalIds, reserve: optionalIds, taxi: optionalIds });
 const leagueSchema = z.object({ league_id: sleeperId, season: leagueSeason, sport: z.literal('nfl'),
   total_rosters: z.number().int().min(1).max(64), name: display,
@@ -38,9 +41,13 @@ export async function getRosterContext(raw: unknown, sources: RosterSources = de
   const league = leagueSchema.parse(l.value);
   const rows = z.array(rosterSchema).max(64).parse(r.value);
   if (league.league_id !== input.leagueId || league.season !== input.season || rows.length !== league.total_rosters ||
-      new Set(rows.map(x => x.roster_id)).size !== rows.length || rows.some(x => x.league_id !== undefined && x.league_id !== input.leagueId)) throw new Error('Scope or coverage unavailable');
-  const own = rows.find(x => x.roster_id === input.rosterId);
-  if (!own || !(own.owner_id === input.userId || own.co_owners?.includes(input.userId))) throw new Error('Membership unavailable');
+      new Set(rows.map(x => x.roster_id)).size !== rows.length || rows.some(x => x.league_id !== undefined && x.league_id !== input.leagueId) ||
+      !nullMembershipsAreWitnessed(rows)) throw new Error('Scope or coverage unavailable');
+  const selectedRow = rows.find(x => x.roster_id === input.rosterId);
+  if (!selectedRow || !(selectedRow.owner_id === input.userId || selectedRow.co_owners?.includes(input.userId))) throw new Error('Membership unavailable');
+  // An eliminated selected roster has no lineup to describe; refuse rather than present an empty one.
+  if (selectedRow.players === null) throw new Error('Selected roster eliminated');
+  const own = { ...selectedRow, players: selectedRow.players };
   for (const list of [own.players, own.reserve, own.taxi]) {
     if (list && new Set(list).size !== list.length) throw new Error('Duplicate membership');
   }
