@@ -41,7 +41,8 @@ export const VERIFICATION_META: Record<Verification, { label: string; short: str
     label: 'Replay / test verified',
     short: 'Replayed',
     code: 'T',
-    meaning: 'A reproducible check was re-run against pinned sources. It verifies exactly what the replay says, no more.',
+    meaning:
+      'A reproducible artifact or contract check was re-run against pinned sources. No integration was executed; it verifies exactly what the replay says, no more.',
   },
   runtime_verified: {
     label: 'Runtime observed',

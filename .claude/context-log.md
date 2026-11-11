@@ -1225,3 +1225,9 @@ Validated historical catalog directory containers inside the fallback boundary a
 - **Files modified:** client/src/pages/architectureLab/** (new), scripts/architecture-lab/** (new), docs/prototypes/architecture-lab/** (new), client/src/App.tsx (route registration only).
 - **Validation:** 36 new Jest tests pass; `verifyEvidence.ts` 109/109 against local clones at the pinned commits; `tsc -p .` 507 diagnostics on this branch and on base ee937153, none in touched files; `sh build.sh` passes; full Jest 184/192 suites with the same 8 failing suites (3 tests) as base.
 - **Notes:** Fixture is a manual snapshot checked 2026-11-11 and goes stale when any pinned repo moves. Zero edges are runtime-verified. See docs/prototypes/architecture-lab/README.md for findings and limits.
+
+### 2026-11-11 — Claude (Fable): #436 review repairs (Architecture Lab prototype)
+- **Authority/scope:** Independent review of c8ae2fb on draft PR #436 found two P2 interaction defects. Repairs are bounded to those findings plus the reviewer's non-blocking wording suggestion. PR stays draft and unmerged.
+- **What changed:** Drag detection now measures cumulative travel from pointer-down (slow drags pan; the click is suppressed). The inspector's return control references the always-mounted stage section and is labelled for the current view. The Replayed floor states that its checks are artifact/contract byte checks, not integration runs.
+- **Files modified:** client/src/pages/architectureLab/{ArchitectureLab.tsx,graphLogic.ts,__tests__/architectureLabInteractions.test.ts (new)}, docs/prototypes/architecture-lab/**.
+- **Validation:** 45 lab Jest tests pass (9 new mounted-component tests; 3 of them fail against c8ae2fb); typecheck 507 diagnostics, none in touched files; `sh build.sh` passes; slow drag and phone Schedule→inspector→return path confirmed in headless Chrome.

@@ -25,7 +25,7 @@ Line style carries the class as well as colour: dashed is documented intent, sol
 | Class | Meaning here | Count in seed |
 | --- | --- | --- |
 | Runtime observed | Seen in a running system. The fixture format has no way to record this, and validation rejects the value. | 0 |
-| Replay / test verified | A check was re-run against both pinned commits (byte parity of a bundled or vendored copy). | 3 |
+| Replay / test verified | An artifact or contract check was re-run against both pinned commits (byte parity of a bundled or vendored copy). No integration was executed end to end. | 3 |
 | Source-inspected | Code or committed artifacts were read at pinned commits. Nothing executed. | 14 |
 | Documented intent | A governing document says so. | 3 |
 | Unknown / proposed | No evidence. Drawn only as a candidate. | 1 |
@@ -36,7 +36,7 @@ The full per-edge matrix is in [EVIDENCE_MATRIX.md](EVIDENCE_MATRIX.md), generat
 
 These are findings to look at, each with its limits stated on the edge:
 
-1. **Identity crosswalk v2 is stale downstream.** The copy bundled in TIBER-Fantasy has 68 records (generated 2026-08-09); TIBER-Data's promoted export has 94 (2026-09-13). The bundled set is a strict subset. v1 is byte-identical.
+1. **Identity crosswalk v2 differs downstream.** The copy bundled in TIBER-Fantasy has 68 records (generated 2026-08-09); TIBER-Data's promoted export has 94 (2026-09-13). The bundled set is a strict subset. v1 is byte-identical. This is a drift flag only: TIBER-Data's coverage notes gate consumer activation separately, so the smaller slice may be intended. It is not a call to refresh the copy.
 2. **FORGE HTTP path mismatch.** TIBER-Fantasy's FORGE client defaults to `POST /v1/forge/evaluations`; the archived TIBER-FORGE serves `POST /api/forge/evaluate` and has no `/v1/` route. An env override exists, so this is not proof of a broken deployment.
 3. **Two doctrine edges have no implementation.** The feedback-loop doctrine draws Role & Opportunity → point prediction → FORGE. Forecast's source excludes `role_and_opportunity` (and `teamstate`, `rookie_transition_features`) from its frozen base, and FORGE's source does not read Forecast.
 4. **Two cycle review candidates.** TIBER-Fantasy ⇄ TIBER-Forecast (the request carries per-player opportunity averages computed in TIBER-Fantasy's own database) and TIBER-Fantasy → Forecast → FORGE → TIBER-Fantasy (closed only by a documented-intent edge). Neither is shown as a recursion; both need the fields traced.
@@ -62,6 +62,7 @@ node scripts/architecture-lab/preview.mjs
 
 ```bash
 # Fixture, validator, floors, cycles, route containment, matrix drift (36 tests)
+# plus mounted-component interaction regressions under jsdom (9 tests)
 NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.cjs --runInBand --coverage=false client/src/pages/architectureLab
 
 # Re-check every evidence path, the key lines and the three byte-parity replays
@@ -81,7 +82,8 @@ npx tsx scripts/architecture-lab/writeEvidenceMatrix.ts
 | `client/src/pages/architectureLab/graphLogic.ts` | Validation, one-hop neighbours, floors, cycle candidates, matrix renderer |
 | `client/src/pages/architectureLab/layout.ts` | Sheet positions and hand-routed orthogonal runs |
 | `client/src/pages/architectureLab/ArchitectureLab.tsx`, `architectureLab.css` | The page |
-| `client/src/pages/architectureLab/__tests__/architectureLabGraph.test.ts` | Tests |
+| `client/src/pages/architectureLab/__tests__/architectureLabGraph.test.ts` | Fixture and logic tests |
+| `client/src/pages/architectureLab/__tests__/architectureLabInteractions.test.ts` | Mounted-component tests: drag detection, inspector return control, floor wording |
 | `scripts/architecture-lab/` | Preview server, evidence re-check, matrix generator |
 | `client/src/App.tsx` | Route registration only |
 
@@ -98,4 +100,6 @@ npx tsx scripts/architecture-lab/writeEvidenceMatrix.ts
 - **Phone overview is small.** At 390 px wide the whole sheet fits but labels are about 7 px until you zoom; the Schedule view is the readable alternative.
 - **Accessibility is partial.** Keyboard and labelled controls were exercised in Chrome; no screen reader was tested and contrast was not audited.
 - **Tested in one browser** (headless Chrome, desktop 1440×1000 and emulated 390×844). No Safari, Firefox or real device.
+- **Visual system.** `ARCHITECTURE.md` §7 describes a light-only design system with Ember accents and shared CSS custom properties. This page deliberately uses its own scoped dark drafting palette (`.alab-*`), under the creative latitude in #434. Adopting it would mean reconciling that.
+- **Component tests run in jsdom**, which reports a zero-size SVG, so they check drag logic at one pixel per sheet unit. Real pointer behaviour was checked separately in headless Chrome.
 - **Layout label.** The existing shell shows "Architecture" in its top bar for this route because it matches on the `/architecture` prefix. Left alone to avoid touching `TiberLayout`.

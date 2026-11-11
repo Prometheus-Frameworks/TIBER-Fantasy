@@ -34,6 +34,8 @@ interface ViewTransform {
 const HOME: ViewTransform = { x: 0, y: 0, k: 1 };
 const MIN_ZOOM = 0.6;
 const MAX_ZOOM = 5;
+/** Total travel from pointer-down, in screen pixels, before a press becomes a drag. */
+const DRAG_THRESHOLD_PX = 4;
 
 /** The four selectable evidence floors. "unknown" is not a floor: candidates are always drawn as candidates. */
 const FLOORS: { floor: Verification; title: string; blurb: string }[] = [
@@ -114,7 +116,9 @@ export default function ArchitectureLab() {
   const [view, setView] = useState<ViewTransform>(HOME);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const inspectorRef = useRef<HTMLElement | null>(null);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const stageRef = useRef<HTMLElement | null>(null);
+  /** Last position per pointer, plus where that pointer went down. */
+  const pointers = useRef(new Map<number, { x: number; y: number; originX: number; originY: number }>());
   const dragMoved = useRef(false);
 
   useEffect(() => {
@@ -165,14 +169,14 @@ export default function ArchitectureLab() {
   }, [zoomBy, pane, issues.length]);
 
   const onPointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY, originX: event.clientX, originY: event.clientY });
     dragMoved.current = false;
   };
 
   const onPointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
     const previous = pointers.current.get(event.pointerId);
     if (!previous) return;
-    const current = { x: event.clientX, y: event.clientY };
+    const current = { ...previous, x: event.clientX, y: event.clientY };
     const scale = pxPerUnit();
 
     if (pointers.current.size === 2) {
@@ -184,14 +188,20 @@ export default function ArchitectureLab() {
         dragMoved.current = true;
       }
     } else if (pointers.current.size === 1) {
-      const dx = current.x - previous.x;
-      const dy = current.y - previous.y;
-      if (Math.abs(dx) + Math.abs(dy) > 0) {
-        if (!dragMoved.current && Math.hypot(dx, dy) > 3) {
+      if (dragMoved.current) {
+        const dx = current.x - previous.x;
+        const dy = current.y - previous.y;
+        if (dx !== 0 || dy !== 0) setView((v) => ({ ...v, x: v.x + dx / scale, y: v.y + dy / scale }));
+      } else {
+        // Measure from where the pointer went down, not from the previous event:
+        // a slow drag arrives as many sub-threshold moves and must still become a drag.
+        const totalX = current.x - previous.originX;
+        const totalY = current.y - previous.originY;
+        if (Math.hypot(totalX, totalY) > DRAG_THRESHOLD_PX) {
           dragMoved.current = true;
           event.currentTarget.setPointerCapture?.(event.pointerId);
+          setView((v) => ({ ...v, x: v.x + totalX / scale, y: v.y + totalY / scale }));
         }
-        if (dragMoved.current) setView((v) => ({ ...v, x: v.x + dx / scale, y: v.y + dy / scale }));
       }
     }
     pointers.current.set(event.pointerId, current);
@@ -339,6 +349,7 @@ export default function ArchitectureLab() {
             <p className="alab-floor-status" aria-live="polite">
               <strong>{floorSummary?.meeting ?? 0} of {floorSummary?.total ?? 0}</strong> relationships reach “
               {FLOORS.find((f) => f.floor === floor)?.title}”.
+              {floor === 'test_verified' && ' These are artifact and contract byte checks; no integration was executed.'}
               {floor === 'runtime_verified' && ' Nothing on this sheet has been observed running.'}
             </p>
           </div>
@@ -346,7 +357,7 @@ export default function ArchitectureLab() {
       </header>
 
       <div className="alab-workspace">
-        <section className="alab-window alab-stage" aria-label={pane === 'model' ? 'Architecture model' : 'Relationship schedule'}>
+        <section ref={stageRef} className="alab-window alab-stage" aria-label={pane === 'model' ? 'Architecture model' : 'Relationship schedule'}>
           <div className="alab-titlebar">
             <span>{pane === 'model' ? 'Model space' : 'Relationship schedule (evidence matrix)'}</span>
             {pane === 'model' && (
@@ -561,9 +572,9 @@ export default function ArchitectureLab() {
             <button
               type="button"
               className="alab-titlebar-close alab-back"
-              onClick={() => svgRef.current?.closest('.alab-stage')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}
+              onClick={() => stageRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })}
             >
-              ↑ Model
+              {pane === 'model' ? '↑ Model' : '↑ Schedule'}
             </button>
             {selection && (
               <button type="button" className="alab-titlebar-close" onClick={() => setSelection(null)} aria-label="Clear selection">×</button>
