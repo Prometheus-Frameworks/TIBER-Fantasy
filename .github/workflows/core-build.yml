@@ -63,7 +63,8 @@ jobs:
             tests/leagueScoringSettings.test.ts tests/scheduleStrength.test.ts \
             tests/combinedLeagueReader.test.ts tests/leagueReaderHardening.test.ts \
             tests/leagueReaderProtocol.test.ts tests/publicLeagueContracts.test.ts \
-            tests/publicLeagueLineup.test.ts tests/publicRosterCensus.test.ts
+            tests/publicLeagueLineup.test.ts tests/publicRosterCensus.test.ts \
+            tests/leagueEliminatedRosters.test.ts
       - name: Test shared discovery and waiver readers
         run: |
           npm test -- --runTestsByPath \
