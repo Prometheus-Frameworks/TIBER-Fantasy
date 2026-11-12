@@ -1326,6 +1326,133 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
 - Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
 
+### 2026-10-15 — Codex: personal league MCP and private hosted transport
+- The owner asked to finish the merged #418 reader so ChatGPT can supply league context behind the scenes. Added configured-account league listing and one lineup/scoring/bye/candidate context tool; membership is refreshed and ambiguous rosters/names require selection.
+- Reused/extracted the existing directory, complete-membership and waiver candidate compilers; legacy Team exports/contracts remain. Bounded decoded Sleeper bodies and rejected redirects before JSON parsing. Added complete 272-game schedule validation for bye context with explicit unknown fallback and source clocks.
+- Added an isolated stateless Sites Worker transport with owner-private managed OAuth/admission, required visitor identity for calls, strict body/tool/result bounds, per-isolate read/rate controls and source kill switch. No Railway/DB deployment, roster writes, model calls, custom OAuth stack or OpenAI API key.
+- Checks: 20 native service/protocol/stdio/hosted tests pass; 85 existing Team/waiver/catalog tests pass (84 plus the corrected directory-empty compatibility regression were checked in the full/targeted runs); scoped strict TypeScript and full server build pass, with inherited duplicate applyAdjusters warning; Worker import audit excludes DB/history/draft compiler. curl verifies seven-tool discovery and identity rejection. Live bounded reader confirms the configured account/default league, exact roster membership, current week, PPR, starting TE, bench TE bye and candidate membership status.
+- Dedicated owner-private Sites project registered; publication and actual ChatGPT plugin call remain separate checkpoints at this commit. No independent exact-head review or iPhone acceptance claimed. See docs/mcp/league-reader-hosted-v1.md.
+
+### 2026-10-15 — Codex: hosted MCP fetch compatibility repair
+- Authentication/installation succeeded and the actual ChatGPT data call reached the private Worker; source reads returned unavailable. Matched the documented Trade Compare failure: Workers rejects fetch initialization with redirect:error before outbound requests.
+- Changed only Sleeper and schedule fetch redirect mode to manual. Existing !ok checks reject every 3xx before parsing; no redirect follow-up. All source bounds, timeout, principal/profile and identity rules remain.
+- Added a redirect-mode/no-follow regression and replaced a clock-sensitive substring privacy assertion with structural membership/owner-key checks. Actual hosted plugin acceptance remains pending repair deployment at this commit.
+
+### 2026-10-15 — Codex: #422 independent inspection and bounded hardening
+- Joe authorized independent inspection, security/reliability tests, minimal repairs and a second exact-head review; merge/broader activation remain operator decisions. Starting head 4ddcf688.
+- Actual installed plugin league-list and candidate-only lineup calls succeed. Deployed Site v2 source 163ef6bc rebuilt byte-for-byte from that head (Worker SHA-256 5336e78e64732e87d8285f47b3cddfece35791f093c8f2d69bd2d800ea2262ee); owner-private policy verified with only the owner.
+- Repaired two reproduced P2s: stalled inbound decoded bodies/cancel hooks had no response deadline; impossible calendar dates qualified schedule coverage. Added ten-second body deadline/408, nonblocking cancellation and UTC calendar validation. Preserved working SDK negotiation, schemas, profile and private access.
+- Validation: 33 native tests (12 added), 85 Team tests/five suites, strict scoped TypeScript, server build and 230-module Worker isolation audit pass; inherited duplicate applyAdjusters build warning. Full-repository checks and physical iPhone acceptance unverified.
+- Identity isolation depends on the single-owner Sites policy, not a multi-user profile map. Shell anonymous/spoofed probes stopped at Cloudflare 403/1010, so header stripping/second-user OAuth is not independently certified. Independent final-head review and repaired private deployment receipts follow on #422. See docs/reviews/mcp-personal-hosted-hardening-2026-10-15.md.
+
+### 2026-10-15 — Codex: #422 independent review cancellation repair
+- The independent reviewer of local candidate 7eef4a79 reproduced a further P2: non-OK Sleeper/schedule branches awaited cancellation outside the bounded helper; a never-settling hook kept the MCP busy slot or schedule in-flight promise pinned after abort.
+- Both branches now cancel without blocking and retain fixed unavailable errors. Added a regression proving repeated failures settle and release the slots. Final validation target is 34 native tests (13 added) plus the unchanged 85 Team tests. Final exact-head re-review is required; no merge or broader activation.
+
+
+### 2026-10-22 — Codex: frozen private ROP MCP reader (stacked on #422)
+- Joe accepted Step 1/Draft 2, granted repeated owner-private descriptive reads of the exact W1–5 release v2, and authorized a pushed branch + draft PR. No sharing, promotion, other consumer, review dispatch, merge or hosted publication.
+- Added a pure GSIS-only reader, separate/exhaustive dispatch, state/coverage-preserving results, private build preparation and independent ROP enablement. Default/public builds retain null private input. No populated fixture/artifact is committed.
+- Base fdffe2aeb4f1760f3f08f86d7c42f413762e19d3 reproduces the prior Site v3 receipt's Worker hash exactly. #422's stale PR-body draft instruction corrected; it remains non-draft and unmerged. This candidate is stacked on that branch.
+- Validation: 42 native + 85 existing Team tests, four synthetic Python preparation/build guards, scoped strict TypeScript, server/public/private Worker builds, all 1,045 retained row + 939 State comparisons and local built-Worker identity/origin/no-store/kill-switch checks. No network calls in the private reader check. Private bundle 9.78 MB raw / 585 KB gzip; actual host size/startup and installed acceptance remain unverified.
+- Packet: docs/reviews/rop-history-adapter-2026-10-22.md. Independent review has not been dispatched; keep the new PR draft. #67 successor is a separate approved follow-up.
+
+### 2026-10-23 — Codex: #425 schedule calendar review repairs
+- Joe asked to finish the prior MCP work here; Fable's completed mapping and draft implementation were available. Rechecked #425 at dcfda41433ec3a2042ba8fe364e0c8179f690ae6 and #424 at b30d9a6131c6f6b4e8cd40da54753f81405ae943, both draft/unmerged and unchanged. #424's private repair/replay is separate and was not modified.
+- Reproduced both review findings with failing synthetic reader regressions, then rejected custom endWeek beyond an explicit finalWeek before source reads and distinguished unread playoff settings from successful inspection with an absent field. Preserved underlying causes, schedule facts, unknown locks and null ratings.
+- Files: server/modules/leagueMcp/{scheduleStrength,rosSchedule}.ts, tests/scheduleStrength.test.ts, docs/mcp/league-reader-hosted-v1.md and required logs. No dependency, source, private artifact, auth, host or producer change.
+- Validation on Node 24.19.0 with locked dependencies: 60 focused native tests pass (58 existing plus two new regressions); scoped strict TypeScript passes; server build passes with inherited duplicate applyAdjusters warning; public Worker build passes its 236-module isolation audit, privateInput false, 424648 bytes, SHA-256 f3d9414721e4f681293de6592aeac2b9e1fbc4ee5b7ff2950ecd4951e7bbe6d9. Node 20 publication behavior, full-repo tests, live reads, private builds and hosted acceptance were not run.
+- Boundary: return repaired #425 as draft for fresh exact-head independent review; no reviewer dispatch, readiness, merge, deployment or access change. #425 still rests on the unchanged #424 base and must be restacked/rechecked after that repair lands. Prior review receipts stay historical.
+
+### 2026-10-23 — Codex: integrate #424 repair into #425 draft
+- Reconciled #424 head 98f0d50a77436ece6db948ceabc62199a4072640 (parent b30d9a61) and its primary-author Node 20.20.2/private-replay receipt. Prepared input remains d5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083; reported #424-only private Worker is 13ddba1fac66e3de8be7d3089d4e5b2ac7f562300f5d1d6005fbd5f1dff950a1. These private results were not independently rerun here.
+- Inspected the revision delta and synthetic tests; no blocking code finding identified in this scoped inspection. Integrated that unchanged repair into #425 at prior head af04055d26f345db44cd92dcc73e5c8a57b7848f using a two-parent integration commit; automatic merge preserved both the lazy-reader regressions and schedule tool counts. ROP runtime/builder sources match #424 exactly; no manual code repair was needed.
+- Fresh combined local checks on Node 24.19.0: 63 focused native tests and five Python synthetic guards pass; scoped strict TypeScript, server build (inherited duplicate applyAdjusters warning), public Worker build/import audit and whitespace checks pass. Public Worker: 236 modules, 425118 bytes, gzip 120648, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc, privateInput false. The prior 85 Jest results remain attributed to #424's author and were not rerun.
+- No real private preparation/build/replay, live source read, hosted test, credential/access change, reviewer dispatch, readiness or PR merge. Both PRs remain draft and unhosted. Fresh independent final-head review remains pending; Codex authored #425 repairs and is not its independent reviewer. #424's private hash/replay does not bind the combined #425 bundle.
+
+### 2026-10-26 — Codex: reject dangling private preparation destinations
+- **What changed:** Repaired #424 review finding discussion_r4365444018 at starting head 98f0d50a. The preparation helper checks the original output entry and dangling symlink ancestors before resolution, archive preparation or directory creation. Existing owner/CI, canonical repository, exclusive-write and fixed-pin boundaries remain.
+- **Files modified:** scripts/preparePrivateRoleEvidence.py; tests/test_private_role_preparation.py; docs/reviews/rop-history-adapter-2026-10-22.md; .claude/context-log.md; .claude/agents/codex.md.
+- **Validation:** Two new regression methods reproduced three old-code failures, then passed. All nine synthetic Python preparation/build guards and 45 native MCP/ROP regressions pass; git diff --check passes. Python 3.12.14; Node 24.22.1; reused dependencies have matching package/lock files.
+- **Notes:** Joe authorized the fix and review of the changed version. Exact-head independent review is recorded on GitHub separately. No real private input, producer, private replay, hosting, merge or activation. #424 remains draft; the stacked #425 must include this repair before its final review is current.
+
+
+### 2026-10-26 — Codex: carry #424 path repair into the stacked SOS candidate
+- **What changed:** Integrated #424 repair 31225cdbcae8a3eb05fc4bf9694b703171c647d6 into #425's prior head c49703542fd852ded174f4dafa14ae6a7bc3dc7f. The preparation helper, regression file and ROP packet match #424 exactly. Preserved both histories when reconciling append-only context/agent logs; no runtime/schedule code changed.
+- **Files modified:** scripts/preparePrivateRoleEvidence.py; tests/test_private_role_preparation.py; docs/reviews/rop-history-adapter-2026-10-22.md; .claude/context-log.md; .claude/agents/codex.md.
+- **Validation:** 63 combined native MCP/ROP/schedule tests and nine synthetic Python preparation/build guards pass; whitespace check passes. Python 3.12.14 / Node 24.22.1; matching package/lock files. No TypeScript, Worker-builder, server or shared source changes in this integration.
+- **Notes:** Two-parent integration preserves both PR histories without rewriting a branch. Fresh independent review applies to the published integration head. Prior private build/replay and older #425 review receipts remain bound to their original commits. Keep both PRs draft/unmerged/unhosted; no private input, producer, live-source acquisition or deployment.
+
+### 2026-10-23 — Codex: simplify the TIBER-Fantasy README
+- **Request:** Joe approved the research-first README direction and asked to proceed. Scope is the Fantasy README plus required append-only logs.
+- **Change:** Added the independent football research introduction, Research / Models / Tools & workflows links, contribution invitation, explicit private-MCP wording and human final decisions. Preserved the technical/setup reference inside a collapsed section; included Research and Role & Opportunity in the detailed map, marked standalone FORGE archived, and labeled CURRENT_PHASE as historical.
+- **Validation:** 8 local link targets, 9 linked repositories and 10 npm-script names checked; setup and command text preserved; Markdown structure and diff whitespace checked; original log bytes retained. Application tests and hosted availability checks were not run.
+- **Coordination and boundary:** Based on main c4adf6effdeff0c6a68f92aece759b03fe575b29. Contribution-text overlap with open #403 is noted; its proposed policy is not adopted. #420 and other READMEs are unchanged. Submit a draft PR and record independent review against its exact head; no merge or deployment.
+
+
+### 2026-10-26 — Codex: combined #422 integration validation and main reconciliation
+- **Authority:** Joe requested combined integration validation, necessary repairs and independent exact-head review. Main merge and hosted/access/credential/provider/deployment changes remain withheld.
+- **Parents and conflicts:** Integration cfdba53c2cee077cf78332b834d286d37e34e3d3, main d9792924012ab89f54c47d23f86804f19c05309e. Reproduced exactly two append-only log conflicts; preserved both complete parent log suffixes and main's research-first README. No application-code conflict or runtime repair identified.
+- **Changes:** Four synthetic combined MCP/Worker regressions cover lineup/ROS consistency, GSIS-only frozen history and lazy loading, shared source busy slot, owner identity/origin refusals and independent source markers/default-null input. Corrected current integration status/tool counts in module and developer docs; retained dated historical receipts.
+- **Validation:** 67 native MCP tests, 85 existing Team tests/five suites, nine Python preparation guards, strict scoped TypeScript, full sh build.sh, public Worker import audit and seven local built-Worker curl checks pass. Worker: 236 modules, no private input, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc. Matching package/lock dependency reuse; inherited build warnings retained. No live source or retained private replay.
+- **Handoff:** docs/reviews/mcp-combined-integration-2026-10-26.md records replay and limits. Independent exact-head review, published CI/mergeability and final disposition are recorded separately on #422 without changing the reviewed head. Keep #422 unmerged and hosted version unchanged.
+
+### 2026-10-31 — Codex: contain Claude runbook P1/P2
+- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
+- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
+- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
+### 2026-10-27 — Codex: #430 scoring-settings boundary repair
+- **Request:** Fix the rejected FFA/GHFFL lineup reads and open a PR through independent review to the merge boundary.
+- **Change:** Raised the roster scoring map limit from 128 to 256 finite numeric settings without truncating keys or zeros. Kept the existing sanitized failure contract and provider/result byte limits. Added synthetic roster, personal lineup, waiver-candidate and bundled Worker regressions; documented the boundary.
+- **Validation:** 74 native MCP tests, 85 Team tests, nine synthetic Python guards, scoped strict TypeScript, full application build, public Worker isolation build and eight local synthetic Worker HTTP/curl checks pass. Reproduced the 132/148/256 refusal before repair. Oversized/non-numeric/non-finite maps and the existing response byte limit still refuse. Node 24.22.1, reused manifest/lock-matched dependencies; inherited build warnings remain.
+- **Boundary:** Based on #422 `97e2a913e1a0350bbdb25db3477f2e1e81793271`; independent exact-head review and CI are recorded separately. No live league access, roster transactions, Site publication or deployment. Integrating this fix into #422 changes its reviewed head, so the combined branch requires fresh review before main merge.
+
+### 2026-10-28 — Public League Context Slice 1
+- Implemented the handoff on an isolated feat/public-mcp-slice-1 branch from current main 912904d324626f8caf91a9b259c59dd16068c19a (no design-reference drift).
+- Shared compiler receives explicit selection and injected dependencies. Private wrapper retains contracts/defaults/historical/null-week behavior and sibling readers. Six public adapters add strict selection, current-season gating, honest in-process capabilities, independent census evidence and reference freshness.
+- Validation: 100 Node tests, 60 Jest tests/3 suites, focused typecheck including the public modules, runtime import-graph check and full application build pass. Full typecheck matches unchanged base: 507 diagnostics with zero delta. Synthetic inputs only; no live reads or new dependencies.
+- Receipt: docs/reviews/public-mcp-slice-1-2026-10-28.md. Independent exact-head review and any fixes are recorded on the draft PR. Leave draft/unmerged; no hosted/source/access/credential changes.
+
+### 2026-10-28 — Codex: Slice 1 independent-review repairs
+- Independent review of 6d320e52da44a7f9bd461275e8c517ad03b8de0f found runtime missing-source fallback (P1), contradictory username expansion (P2), and synchronous sibling-settlement escape (P2).
+- Added runtime dependency checks, public-only raw ASCII case-insensitive username verification before expansion, and promise-normalized public source methods. Private discovery/defaults are unchanged.
+- Seven regression tests cover zero-fetch failures, identity mismatch/case handling and deferred sibling drainage; focused total is 107 Node tests plus the prior 60 Jest tests. Exact repaired head, fresh checks and independent re-review are recorded on draft PR #433. No merge, hosting or activation.
+
+
+### 2026-10-30 — Codex: Public MCP Slice 1 Node 20 qualification
+- **Authority/scope:** Joe requested Node 20 qualification of draft #433 before considering Slice 2, including focused CI coverage. Keep draft/unmerged/unactivated; no endpoint, hosting, access or provider changes.
+- **Candidate:** Exact implementation head 2496f6bb32438f90bcc60435835ab7759c6fb8ee, tree 7c0e52f48a90b45c2c78527f4096fd629d0c75fa; current main remains 912904d324626f8caf91a9b259c59dd16068c19a. Isolated qualification branch; no application/test/manifest/lock changes.
+- **Changes:** Added a separate exact-head Public MCP runtime (Node 20) job to Core Build with locked install, focused Node/Jest tests and scoped TypeScript. Added docs/reviews/public-mcp-slice-1-node20-2026-10-30.md and links from the original receipt/module; required logs are append-only.
+- **Validation:** Official checksum-verified Node 20.20.2 / npm 10.8.2; fresh npm ci installed 1,184 packages. 107 Node tests, 60 Jest tests/3 suites, scoped TypeScript with all public modules listed, and full application build pass. Node 24.22.1 replay matches all 107 Node tests. No compatibility repair or assertion weakening; inherited build warnings remain. YAML/shell syntax and git diff whitespace pass.
+- **Review/boundary:** Independent reviewer reran the 107 Node tests and scoped TypeScript at the original exact head and passed additional zero-fetch, identity and sibling-settlement probes. Final qualification head/tree, independent final-head review and GitHub CI outcomes are recorded on #433 after publication; application builds alone are not runtime-test evidence. Real-provider/hosted/client acceptance and full-repository Jest/typecheck remain outside this follow-up.
+
+### 2026-10-31 — Codex: reconcile Claude admission source and bounded guard
+- **What changed:** Integrated main ee937153 without rebase, retained both log histories/type scopes, carried the exact #429 pre-SDK argument guard/tests into #428, and included admission tests in existing Node20 CI. #429 unchanged.
+- **Boundary:** Existing eight-tool/ROS scope preserved, not newly approved. No ROS/admission-policy or provider setting changes; deployment still requires separate scope/effects/activation decisions.
+- **Validation:** Synthetic tests, scoped TypeScript, default Claude/ChatGPT bundle receipts and fresh exact-head review/CI tracked on PR #428.
+
+
+### 2026-11-11 — Codex: #435 elimination-roster CI coverage
+- **Authority/scope:** Joe approved the recommended next step: add the new elimination-roster regression suite to CI, then carry the reviewed source fix into the Claude adapter candidate. No main merge, deployment, credentials or source/admission change.
+- **Change:** Added `tests/leagueEliminatedRosters.test.ts` to the existing exact-head Node 20 public MCP runtime job. Existing test entries and production behavior are unchanged by this follow-up.
+- **Validation:** On Node 24.22.1 with manifest/lock-matched dependencies, the exact workflow commands pass 112 native tests, 60 Jest tests across three suites and scoped TypeScript. Workflow YAML parses, the eleven native suites include the new suite exactly once, and `git diff --check` passes. Published Node 20 CI is verified separately after push.
+- **Boundary:** Preserve #435 as draft/unmerged. The witnessed-null runtime exception is the previously reviewed implementation, not a broader membership default. Claude integration and fresh published-head review/CI remain separate receipts.
+
+
+### 2026-11-11 — Codex: carry #435 into the Claude admission candidate
+- **Authority/scope:** Joe approved the recommended source follow-up. Integrated #435 at `6c5bec5b0cd9403299d9ff137022f9894ef94594` into prior #428 head `4bd9df176635cec1ae22b789669f3340bf83cd12` without rewriting either history. Main remains untouched.
+- **Change:** Carry the witnessed eliminated-roster parser, roster/availability changes and five regression tests into #428. The merged exact-head Node 20 workflow retains both Claude admission tests and the new elimination-roster suite. Original #428 log contents are preserved in full, followed by the #435 CI entry and this integration entry; no runtime conflict required manual repair.
+- **Validation:** Node 24.22.1 with unchanged manifest/lock-matched dependencies: 125 native tests, 60 Jest tests/three suites, scoped TypeScript and full application build pass. Workflow YAML/shell checks and whitespace checks pass. Default Claude and ChatGPT Worker builds pass import-isolation checks with `privateInput:false`.
+- **Build receipts:** Claude 240 modules, 428591 bytes, SHA-256 `e587df069ef7c6a32532633df8303d8df49f1ceeb8e08a915c50abbe533d6edb`; ChatGPT 239 modules, 426206 bytes, SHA-256 `51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059`. These local source-build receipts do not select an approved deployment candidate.
+- **Compiled synthetic smoke:** Disabled admission 503, wrong key 401, eight-tool discovery including existing ROS, no private-role tools and oversized arguments 413. A synthetic chopped-league lineup returns available with candidate membership and FAAB 303; removing the null roster's witness returns sanitized `source_unavailable`. Eight intercepted fixture fetches, zero live provider calls.
+- **Boundary:** #435 Node 20 CI run 43035231811 passed both jobs. Fresh #428 published-head CI and independent review are separate; previous #428 receipts do not review this new head. Existing ROS/admission scope is preserved, not newly decided. No main merge, deployment, credentials, private input, real source read, provider or access change; #429 is unchanged.
+
+### 2026-10-11 — Codex: #418 historical-season outcome P2 repair
+- Joe authorized the P2 repair on published head cb2c8239d740c892c806bdd0875853f430f4f9fa.
+- Require matching season and regular phase before deriving pending or provisional W/L/T; mismatched state yields unavailable outcomes with an explicit reason while preserving scores and retrieval clocks.
+- Regression covers a completed historical-season league and same-season preseason/postseason state; reproduced pending-versus-unavailable failure before repair. All 13 native service/protocol/process tests and scoped strict TypeScript pass.
+- Files: server/modules/draftReview/teamManager.ts, tests/leagueReader.test.ts and required agent logs. Source-disabled and release boundaries preserved; no live source calls. Fresh exact-head review required; stacked #375 integration remains unresolved.
+
 ## 2026-10-12 — TIBER Now daily evidence refresh
 
 - **Authorization:** Daily documentation preparation for the established TIBER Now lane; maintainer review and merge remain separate.
@@ -1484,62 +1611,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Evidence boundary:** Public GitHub source and records were checked. Underlying sports sources, provider bytes, private packages, transfer paths, live Sites/devices, provider settings and scheduled-task execution were not independently reproduced. Merged code, author tests, private replay, issue notes and draft PRs retain distinct statuses.
 - **Publication gate:** Latest independent #420 review remains bound to `91480577b0a8c8061aac2aabec1e85e844431501`, not this refresh. Preserve the provider-effects HOLD, reuse #422 and require Joe's separate publication approval. No review request, readiness change, merge or contributor message.
 - **Validation/handoff:** Preserved the prior 222 distinct evidence links except the superseded Data README pin, added nine current links (230 distinct total), retained all 14 exact source pins, updated October 23 date labels, checked table row shape, whitespace and conflict-marker absence. No application tests were warranted for this documentation-only update. No deployment, runtime/provider change, producer execution, acquisition, source/model/consumer activation or companion README edit.
-### 2026-10-15 — Codex: personal league MCP and private hosted transport
-- The owner asked to finish the merged #418 reader so ChatGPT can supply league context behind the scenes. Added configured-account league listing and one lineup/scoring/bye/candidate context tool; membership is refreshed and ambiguous rosters/names require selection.
-- Reused/extracted the existing directory, complete-membership and waiver candidate compilers; legacy Team exports/contracts remain. Bounded decoded Sleeper bodies and rejected redirects before JSON parsing. Added complete 272-game schedule validation for bye context with explicit unknown fallback and source clocks.
-- Added an isolated stateless Sites Worker transport with owner-private managed OAuth/admission, required visitor identity for calls, strict body/tool/result bounds, per-isolate read/rate controls and source kill switch. No Railway/DB deployment, roster writes, model calls, custom OAuth stack or OpenAI API key.
-- Checks: 20 native service/protocol/stdio/hosted tests pass; 85 existing Team/waiver/catalog tests pass (84 plus the corrected directory-empty compatibility regression were checked in the full/targeted runs); scoped strict TypeScript and full server build pass, with inherited duplicate applyAdjusters warning; Worker import audit excludes DB/history/draft compiler. curl verifies seven-tool discovery and identity rejection. Live bounded reader confirms the configured account/default league, exact roster membership, current week, PPR, starting TE, bench TE bye and candidate membership status.
-- Dedicated owner-private Sites project registered; publication and actual ChatGPT plugin call remain separate checkpoints at this commit. No independent exact-head review or iPhone acceptance claimed. See docs/mcp/league-reader-hosted-v1.md.
-
-### 2026-10-15 — Codex: hosted MCP fetch compatibility repair
-- Authentication/installation succeeded and the actual ChatGPT data call reached the private Worker; source reads returned unavailable. Matched the documented Trade Compare failure: Workers rejects fetch initialization with redirect:error before outbound requests.
-- Changed only Sleeper and schedule fetch redirect mode to manual. Existing !ok checks reject every 3xx before parsing; no redirect follow-up. All source bounds, timeout, principal/profile and identity rules remain.
-- Added a redirect-mode/no-follow regression and replaced a clock-sensitive substring privacy assertion with structural membership/owner-key checks. Actual hosted plugin acceptance remains pending repair deployment at this commit.
-
-### 2026-10-15 — Codex: #422 independent inspection and bounded hardening
-- Joe authorized independent inspection, security/reliability tests, minimal repairs and a second exact-head review; merge/broader activation remain operator decisions. Starting head 4ddcf688.
-- Actual installed plugin league-list and candidate-only lineup calls succeed. Deployed Site v2 source 163ef6bc rebuilt byte-for-byte from that head (Worker SHA-256 5336e78e64732e87d8285f47b3cddfece35791f093c8f2d69bd2d800ea2262ee); owner-private policy verified with only the owner.
-- Repaired two reproduced P2s: stalled inbound decoded bodies/cancel hooks had no response deadline; impossible calendar dates qualified schedule coverage. Added ten-second body deadline/408, nonblocking cancellation and UTC calendar validation. Preserved working SDK negotiation, schemas, profile and private access.
-- Validation: 33 native tests (12 added), 85 Team tests/five suites, strict scoped TypeScript, server build and 230-module Worker isolation audit pass; inherited duplicate applyAdjusters build warning. Full-repository checks and physical iPhone acceptance unverified.
-- Identity isolation depends on the single-owner Sites policy, not a multi-user profile map. Shell anonymous/spoofed probes stopped at Cloudflare 403/1010, so header stripping/second-user OAuth is not independently certified. Independent final-head review and repaired private deployment receipts follow on #422. See docs/reviews/mcp-personal-hosted-hardening-2026-10-15.md.
-
-### 2026-10-15 — Codex: #422 independent review cancellation repair
-- The independent reviewer of local candidate 7eef4a79 reproduced a further P2: non-OK Sleeper/schedule branches awaited cancellation outside the bounded helper; a never-settling hook kept the MCP busy slot or schedule in-flight promise pinned after abort.
-- Both branches now cancel without blocking and retain fixed unavailable errors. Added a regression proving repeated failures settle and release the slots. Final validation target is 34 native tests (13 added) plus the unchanged 85 Team tests. Final exact-head re-review is required; no merge or broader activation.
-
-
-### 2026-10-22 — Codex: frozen private ROP MCP reader (stacked on #422)
-- Joe accepted Step 1/Draft 2, granted repeated owner-private descriptive reads of the exact W1–5 release v2, and authorized a pushed branch + draft PR. No sharing, promotion, other consumer, review dispatch, merge or hosted publication.
-- Added a pure GSIS-only reader, separate/exhaustive dispatch, state/coverage-preserving results, private build preparation and independent ROP enablement. Default/public builds retain null private input. No populated fixture/artifact is committed.
-- Base fdffe2aeb4f1760f3f08f86d7c42f413762e19d3 reproduces the prior Site v3 receipt's Worker hash exactly. #422's stale PR-body draft instruction corrected; it remains non-draft and unmerged. This candidate is stacked on that branch.
-- Validation: 42 native + 85 existing Team tests, four synthetic Python preparation/build guards, scoped strict TypeScript, server/public/private Worker builds, all 1,045 retained row + 939 State comparisons and local built-Worker identity/origin/no-store/kill-switch checks. No network calls in the private reader check. Private bundle 9.78 MB raw / 585 KB gzip; actual host size/startup and installed acceptance remain unverified.
-- Packet: docs/reviews/rop-history-adapter-2026-10-22.md. Independent review has not been dispatched; keep the new PR draft. #67 successor is a separate approved follow-up.
-
-### 2026-10-23 — Codex: #425 schedule calendar review repairs
-- Joe asked to finish the prior MCP work here; Fable's completed mapping and draft implementation were available. Rechecked #425 at dcfda41433ec3a2042ba8fe364e0c8179f690ae6 and #424 at b30d9a6131c6f6b4e8cd40da54753f81405ae943, both draft/unmerged and unchanged. #424's private repair/replay is separate and was not modified.
-- Reproduced both review findings with failing synthetic reader regressions, then rejected custom endWeek beyond an explicit finalWeek before source reads and distinguished unread playoff settings from successful inspection with an absent field. Preserved underlying causes, schedule facts, unknown locks and null ratings.
-- Files: server/modules/leagueMcp/{scheduleStrength,rosSchedule}.ts, tests/scheduleStrength.test.ts, docs/mcp/league-reader-hosted-v1.md and required logs. No dependency, source, private artifact, auth, host or producer change.
-- Validation on Node 24.19.0 with locked dependencies: 60 focused native tests pass (58 existing plus two new regressions); scoped strict TypeScript passes; server build passes with inherited duplicate applyAdjusters warning; public Worker build passes its 236-module isolation audit, privateInput false, 424648 bytes, SHA-256 f3d9414721e4f681293de6592aeac2b9e1fbc4ee5b7ff2950ecd4951e7bbe6d9. Node 20 publication behavior, full-repo tests, live reads, private builds and hosted acceptance were not run.
-- Boundary: return repaired #425 as draft for fresh exact-head independent review; no reviewer dispatch, readiness, merge, deployment or access change. #425 still rests on the unchanged #424 base and must be restacked/rechecked after that repair lands. Prior review receipts stay historical.
-
-### 2026-10-23 — Codex: integrate #424 repair into #425 draft
-- Reconciled #424 head 98f0d50a77436ece6db948ceabc62199a4072640 (parent b30d9a61) and its primary-author Node 20.20.2/private-replay receipt. Prepared input remains d5d4cb469fc0bed4b5df1576a424c21b102844a7d9bd7b937e240e53666c1083; reported #424-only private Worker is 13ddba1fac66e3de8be7d3089d4e5b2ac7f562300f5d1d6005fbd5f1dff950a1. These private results were not independently rerun here.
-- Inspected the revision delta and synthetic tests; no blocking code finding identified in this scoped inspection. Integrated that unchanged repair into #425 at prior head af04055d26f345db44cd92dcc73e5c8a57b7848f using a two-parent integration commit; automatic merge preserved both the lazy-reader regressions and schedule tool counts. ROP runtime/builder sources match #424 exactly; no manual code repair was needed.
-- Fresh combined local checks on Node 24.19.0: 63 focused native tests and five Python synthetic guards pass; scoped strict TypeScript, server build (inherited duplicate applyAdjusters warning), public Worker build/import audit and whitespace checks pass. Public Worker: 236 modules, 425118 bytes, gzip 120648, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc, privateInput false. The prior 85 Jest results remain attributed to #424's author and were not rerun.
-- No real private preparation/build/replay, live source read, hosted test, credential/access change, reviewer dispatch, readiness or PR merge. Both PRs remain draft and unhosted. Fresh independent final-head review remains pending; Codex authored #425 repairs and is not its independent reviewer. #424's private hash/replay does not bind the combined #425 bundle.
-
-### 2026-10-26 — Codex: reject dangling private preparation destinations
-- **What changed:** Repaired #424 review finding discussion_r4365444018 at starting head 98f0d50a. The preparation helper checks the original output entry and dangling symlink ancestors before resolution, archive preparation or directory creation. Existing owner/CI, canonical repository, exclusive-write and fixed-pin boundaries remain.
-- **Files modified:** scripts/preparePrivateRoleEvidence.py; tests/test_private_role_preparation.py; docs/reviews/rop-history-adapter-2026-10-22.md; .claude/context-log.md; .claude/agents/codex.md.
-- **Validation:** Two new regression methods reproduced three old-code failures, then passed. All nine synthetic Python preparation/build guards and 45 native MCP/ROP regressions pass; git diff --check passes. Python 3.12.14; Node 24.22.1; reused dependencies have matching package/lock files.
-- **Notes:** Joe authorized the fix and review of the changed version. Exact-head independent review is recorded on GitHub separately. No real private input, producer, private replay, hosting, merge or activation. #424 remains draft; the stacked #425 must include this repair before its final review is current.
-
-
-### 2026-10-26 — Codex: carry #424 path repair into the stacked SOS candidate
-- **What changed:** Integrated #424 repair 31225cdbcae8a3eb05fc4bf9694b703171c647d6 into #425's prior head c49703542fd852ded174f4dafa14ae6a7bc3dc7f. The preparation helper, regression file and ROP packet match #424 exactly. Preserved both histories when reconciling append-only context/agent logs; no runtime/schedule code changed.
-- **Files modified:** scripts/preparePrivateRoleEvidence.py; tests/test_private_role_preparation.py; docs/reviews/rop-history-adapter-2026-10-22.md; .claude/context-log.md; .claude/agents/codex.md.
-- **Validation:** 63 combined native MCP/ROP/schedule tests and nine synthetic Python preparation/build guards pass; whitespace check passes. Python 3.12.14 / Node 24.22.1; matching package/lock files. No TypeScript, Worker-builder, server or shared source changes in this integration.
-- **Notes:** Two-parent integration preserves both PR histories without rewriting a branch. Fresh independent review applies to the published integration head. Prior private build/replay and older #425 review receipts remain bound to their original commits. Keep both PRs draft/unmerged/unhosted; no private input, producer, live-source acquisition or deployment.
 
 ### 2026-10-23 — Codex: simplify the TIBER-Fantasy README
 - **Request:** Joe approved the research-first README direction and asked to proceed. Scope is the Fantasy README plus required append-only logs.
@@ -1613,7 +1684,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Review/publication:** #420 began open, non-draft, unmerged and not mechanically mergeable at `1650b504`. The latest independent review covers `da57b7f2`, not this refresh. No review request, readiness change, reconciliation, merge, deployment, activation or contributor message. Provider-effects disposition and explicit publication approval remain required.
 - **Handoff:** Status-page commit `508251852cfb07fbe119a5c8775ca4d9fb3ebc07`; prior history and 14 source pins preserved, date/table/details/link/conflict-marker checks passed.
 
-
 ### 2026-10-29 final verification addendum
 
 - Final status-page commit `d36393d9e96b4da56ff029bdfbfa645887efa92a` preserves all 306 prior distinct Markdown evidence destinations and adds 17 current primary-evidence destinations. The superseded Fantasy `d979292` README link remains historical; the current pin remains `912904d`.
@@ -1627,14 +1697,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Boundaries:** CI is not football validation, review, hosting or deployment. Research comments are not implemented models or transaction authority. No private input, live client/Site/device, provider/credential change, model run, contest entry or fantasy action occurred.
 - **Review/publication:** #420 began open, non-draft, unmerged and not mechanically mergeable at `453c7a4d`. The latest independent review covers `da57b7f2`, not this refresh. No review request, readiness change, reconciliation, merge, deployment, activation or contributor message. Provider-effects disposition and explicit publication approval remain required.
 - **Handoff:** Status-page commit `01a8fdbaa4eb83def6fe80fc004bf37231a4b11d`; all 323 prior evidence destinations, 14 source pins and append-only history preserved; date/table/details/link/conflict-marker checks passed.
-
-
-### 2026-10-26 — Codex: combined #422 integration validation and main reconciliation
-- **Authority:** Joe requested combined integration validation, necessary repairs and independent exact-head review. Main merge and hosted/access/credential/provider/deployment changes remain withheld.
-- **Parents and conflicts:** Integration cfdba53c2cee077cf78332b834d286d37e34e3d3, main d9792924012ab89f54c47d23f86804f19c05309e. Reproduced exactly two append-only log conflicts; preserved both complete parent log suffixes and main's research-first README. No application-code conflict or runtime repair identified.
-- **Changes:** Four synthetic combined MCP/Worker regressions cover lineup/ROS consistency, GSIS-only frozen history and lazy loading, shared source busy slot, owner identity/origin refusals and independent source markers/default-null input. Corrected current integration status/tool counts in module and developer docs; retained dated historical receipts.
-- **Validation:** 67 native MCP tests, 85 existing Team tests/five suites, nine Python preparation guards, strict scoped TypeScript, full sh build.sh, public Worker import audit and seven local built-Worker curl checks pass. Worker: 236 modules, no private input, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc. Matching package/lock dependency reuse; inherited build warnings retained. No live source or retained private replay.
-- **Handoff:** docs/reviews/mcp-combined-integration-2026-10-26.md records replay and limits. Independent exact-head review, published CI/mergeability and final disposition are recorded separately on #422 without changing the reviewed head. Keep #422 unmerged and hosted version unchanged.
 
 ### 2026-10-27 — Codex: #430 scoring-settings boundary repair
 - **Request:** Fix the rejected FFA/GHFFL lineup reads and open a PR through independent review to the merge boundary.
@@ -1651,31 +1713,11 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Checks:** All 14 default refs/pins and README navigation rechecked; all 13 companion links present. Current linked MCP/DFS/research/review records checked with explicit attribution. All 327 prior evidence destinations, 11 headings, 14 pins and historical status records preserved; 328 destinations total. Five tables/four details sections, relative/internal links, conflict markers, parent-log retention, three-file scope and whitespace checks pass. No local application/provider/private-input/model execution.
 - **Handoff/hold:** Request GitHub's independent review on the exact published head/base/tree, then record the matching review/build/mergeability results in the PR discussion. The prior review is historical, not transferred. Keep #420 open, non-draft and unmerged. Provider-effects evidence and Joe's explicit publication approval are separate gates; no deployment, provider/hosting change or additional capability activation.
 
-
 ### 2026-10-30 18:25 EDT — Codex: Preserve prior published references before final review
 
 - An expanded comparison against main's published page found 15 evidence destinations already absent before this task, also absent from the October 26 reviewed candidate. Restored them in a clearly historical navigation section, with a link to the immutable prior published snapshot so its original status records remain available unchanged. No historical claim is promoted to a current acceptance state.
 - All 161 distinct main-page destinations, 286 October 26 reviewed destinations and 327 starting-candidate destinations are now retained; the candidate has 344 total destinations, the same 14 current pins/11 headings, five tables and five balanced details sections. Both parent logs remain complete and addition-only; scope remains the same three Markdown files.
 - Integration head `cb3941fcb35c806365b0cce643211cf1a2b48b2d` had passing Core Build and GitHub `mergeable: true`; its requested review cannot qualify this follow-up. Request fresh independent review against the final resulting head/tree and unchanged main `912904d324626f8caf91a9b259c59dd16068c19a`. Keep the publication/provider-effects hold, open non-draft unmerged state and no-deployment/no-activation boundary.
-### 2026-10-28 — Public League Context Slice 1
-- Implemented the handoff on an isolated feat/public-mcp-slice-1 branch from current main 912904d324626f8caf91a9b259c59dd16068c19a (no design-reference drift).
-- Shared compiler receives explicit selection and injected dependencies. Private wrapper retains contracts/defaults/historical/null-week behavior and sibling readers. Six public adapters add strict selection, current-season gating, honest in-process capabilities, independent census evidence and reference freshness.
-- Validation: 100 Node tests, 60 Jest tests/3 suites, focused typecheck including the public modules, runtime import-graph check and full application build pass. Full typecheck matches unchanged base: 507 diagnostics with zero delta. Synthetic inputs only; no live reads or new dependencies.
-- Receipt: docs/reviews/public-mcp-slice-1-2026-10-28.md. Independent exact-head review and any fixes are recorded on the draft PR. Leave draft/unmerged; no hosted/source/access/credential changes.
-
-### 2026-10-28 — Codex: Slice 1 independent-review repairs
-- Independent review of 6d320e52da44a7f9bd461275e8c517ad03b8de0f found runtime missing-source fallback (P1), contradictory username expansion (P2), and synchronous sibling-settlement escape (P2).
-- Added runtime dependency checks, public-only raw ASCII case-insensitive username verification before expansion, and promise-normalized public source methods. Private discovery/defaults are unchanged.
-- Seven regression tests cover zero-fetch failures, identity mismatch/case handling and deferred sibling drainage; focused total is 107 Node tests plus the prior 60 Jest tests. Exact repaired head, fresh checks and independent re-review are recorded on draft PR #433. No merge, hosting or activation.
-
-
-### 2026-10-30 — Codex: Public MCP Slice 1 Node 20 qualification
-- **Authority/scope:** Joe requested Node 20 qualification of draft #433 before considering Slice 2, including focused CI coverage. Keep draft/unmerged/unactivated; no endpoint, hosting, access or provider changes.
-- **Candidate:** Exact implementation head 2496f6bb32438f90bcc60435835ab7759c6fb8ee, tree 7c0e52f48a90b45c2c78527f4096fd629d0c75fa; current main remains 912904d324626f8caf91a9b259c59dd16068c19a. Isolated qualification branch; no application/test/manifest/lock changes.
-- **Changes:** Added a separate exact-head Public MCP runtime (Node 20) job to Core Build with locked install, focused Node/Jest tests and scoped TypeScript. Added docs/reviews/public-mcp-slice-1-node20-2026-10-30.md and links from the original receipt/module; required logs are append-only.
-- **Validation:** Official checksum-verified Node 20.20.2 / npm 10.8.2; fresh npm ci installed 1,184 packages. 107 Node tests, 60 Jest tests/3 suites, scoped TypeScript with all public modules listed, and full application build pass. Node 24.22.1 replay matches all 107 Node tests. No compatibility repair or assertion weakening; inherited build warnings remain. YAML/shell syntax and git diff whitespace pass.
-- **Review/boundary:** Independent reviewer reran the 107 Node tests and scoped TypeScript at the original exact head and passed additional zero-fetch, identity and sibling-settlement probes. Final qualification head/tree, independent final-head review and GitHub CI outcomes are recorded on #433 after publication; application builds alone are not runtime-test evidence. Real-provider/hosted/client acceptance and full-repository Jest/typecheck remain outside this follow-up.
-
 
 ### 2026-10-30 18:35 EDT — Codex: Reconcile #420 after concurrent main advance
 
@@ -1703,8 +1745,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - Page commit: `a368cddb30932a8d7bfbaad6990512b98d19935e`. Preserved all prior evidence destinations and added 14; retained all 14 pins, five consistent tables, five balanced details sections, 11 headings, append-only history, no conflict markers and no trailing whitespace.
 - Scope remains `docs/TIBER_NOW.md` plus the two required logs. #420 must stay open/unmerged; fresh current-head review/CI, provider-effects disposition and Joe's explicit publication decision remain separate. No review request, readiness change, merge, deployment, activation, runtime change or contributor message occurred.
 
-
-
 ### 2026-11-03 — Codex: TIBER Now daily evidence refresh
 - **Authority:** Daily documentation preparation is authorized; maintainer review/merge, provider-effects disposition and publication approval remain separate. No review dispatch, readiness change, deployment, activation, runtime change or contributor message is authorized.
 - **Branch/scope:** Reused open PR #420 on `codex/tiber-now-daily-update`. Starting head `e0aa253703689266e19752806ac6760e56a3b27f`; base `ee937153fb49bef0be59703ef0cc9711b84d4ede`. Initial and final intended scope: `docs/TIBER_NOW.md` plus the two required logs only.
@@ -1713,8 +1753,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Current evidence:** Added the Week 8 exact freeze, Week 9 separate Codex/Claude v1 receipts, #71 closeout at off-main `264c34ea`, Week 9 board #99, current Hunter/Jeanty/Concepcion/McConkey/Hockenson updates and ROP #33's two unresolved P2 findings. Preserved inaccessible-source notes and prior evidence links.
 - **Validation:** Page commit `8e299074010e535069508b97d26be1e4e00493ab`. All 362 prior distinct URLs retained; page now has 381. Fourteen current pins present, five `details` pairs balanced, 11 headings, Markdown table shapes consistent, no conflict markers and no trailing whitespace introduced. No live application, provider, private package, hosted client/device, producer/model, contest or roster action was run.
 - **Handoff:** Keep PR #420 open, non-draft and unmerged. Verify remote readback, exact three-file scope and current-head Core Build after both log commits. Today’s head does not inherit the prior exact-head review; no review request is made.
-
-
 
 ### 2026-11-04 — Codex: TIBER Now daily evidence refresh
 - **Authority:** Daily documentation preparation is authorized; maintainer review/merge, provider-effects disposition and publication approval remain separate. No review dispatch, readiness change, deployment, activation, runtime change or contributor message is authorized.
@@ -1787,30 +1825,6 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Current evidence:** Added Forecast #191 at `31811fb0` with exact-head no-findings summary and Actions run 42896357460 (1,823 tests); Research #126/#127/#128 and Data #291; Fantasy #434; DFS #43 comment `6794412934` at head `87f26eda`; Concepcion/McConkey Week 9 checkpoints; and Ops #41 comment `6796678749`. Data #290 remains draft/unmerged with its two documented full-suite failures unresolved.
 - **Validation:** Page commit `fefe488d4edd16ef89050883e05d0ec28fc272ee`; context-log commit `13a53048d0bbe2efac7cc7e055a98b4a5b9f9e6a`. All 451 prior distinct URLs retained and 12 current destinations added; 14 current pins present, five `details` pairs balanced, 11 headings, Markdown table shapes consistent, no conflict markers and no trailing whitespace. No live application, provider, private package, hosted client/device, producer/model, scheduled agent, contest or roster action was run.
 - **Handoff:** Keep PR #420 open, non-draft and unmerged. Verify remote readback, exact three-file scope and current-head Core Build after this log commit. Today’s head does not inherit an earlier exact-head review; no review request is made.
-
-### 2026-10-31 — Codex: contain Claude runbook P1/P2
-- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
-- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
-- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
-
-### 2026-10-31 — Codex: reconcile Claude admission source and bounded guard
-- **What changed:** Integrated main ee937153 without rebase, retained both log histories/type scopes, carried the exact #429 pre-SDK argument guard/tests into #428, and included admission tests in existing Node20 CI. #429 unchanged.
-- **Boundary:** Existing eight-tool/ROS scope preserved, not newly approved. No ROS/admission-policy or provider setting changes; deployment still requires separate scope/effects/activation decisions.
-- **Validation:** Synthetic tests, scoped TypeScript, default Claude/ChatGPT bundle receipts and fresh exact-head review/CI tracked on PR #428.
-
-### 2026-11-11 — Codex: #435 elimination-roster CI coverage
-- **Authority/scope:** Joe approved the recommended next step: add the new elimination-roster regression suite to CI, then carry the reviewed source fix into the Claude adapter candidate. No main merge, deployment, credentials or source/admission change.
-- **Change:** Added `tests/leagueEliminatedRosters.test.ts` to the existing exact-head Node 20 public MCP runtime job. Existing test entries and production behavior are unchanged by this follow-up.
-- **Validation:** On Node 24.22.1 with manifest/lock-matched dependencies, the exact workflow commands pass 112 native tests, 60 Jest tests across three suites and scoped TypeScript. Workflow YAML parses, the eleven native suites include the new suite exactly once, and `git diff --check` passes. Published Node 20 CI is verified separately after push.
-- **Boundary:** Preserve #435 as draft/unmerged. The witnessed-null runtime exception is the previously reviewed implementation, not a broader membership default. Claude integration and fresh published-head review/CI remain separate receipts.
-
-### 2026-11-11 — Codex: carry #435 into the Claude admission candidate
-- **Authority/scope:** Joe approved the recommended source follow-up. Integrated #435 at `6c5bec5b0cd9403299d9ff137022f9894ef94594` into prior #428 head `4bd9df176635cec1ae22b789669f3340bf83cd12` without rewriting either history. Main remains untouched.
-- **Change:** Carry the witnessed eliminated-roster parser, roster/availability changes and five regression tests into #428. The merged exact-head Node 20 workflow retains both Claude admission tests and the new elimination-roster suite. Original #428 log contents are preserved in full, followed by the #435 CI entry and this integration entry; no runtime conflict required manual repair.
-- **Validation:** Node 24.22.1 with unchanged manifest/lock-matched dependencies: 125 native tests, 60 Jest tests/three suites, scoped TypeScript and full application build pass. Workflow YAML/shell checks and whitespace checks pass. Default Claude and ChatGPT Worker builds pass import-isolation checks with `privateInput:false`.
-- **Build receipts:** Claude 240 modules, 428591 bytes, SHA-256 `e587df069ef7c6a32532633df8303d8df49f1ceeb8e08a915c50abbe533d6edb`; ChatGPT 239 modules, 426206 bytes, SHA-256 `51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059`. These local source-build receipts do not select an approved deployment candidate.
-- **Compiled synthetic smoke:** Disabled admission 503, wrong key 401, eight-tool discovery including existing ROS, no private-role tools and oversized arguments 413. A synthetic chopped-league lineup returns available with candidate membership and FAAB 303; removing the null roster's witness returns sanitized `source_unavailable`. Eight intercepted fixture fetches, zero live provider calls.
-- **Boundary:** #435 Node 20 CI run 43035231811 passed both jobs. Fresh #428 published-head CI and independent review are separate; previous #428 receipts do not review this new head. Existing ROS/admission scope is preserved, not newly decided. No main merge, deployment, credentials, private input, real source read, provider or access change; #429 is unchanged.
 
 ### 2026-11-12 — Codex: TIBER Now daily evidence refresh
 - **Authority:** Daily documentation preparation is authorized; maintainer review/merge, provider-effects disposition and publication approval remain separate. No review dispatch, readiness change, deployment, activation, runtime change or contributor message is authorized.
