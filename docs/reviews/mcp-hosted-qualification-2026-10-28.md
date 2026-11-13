@@ -197,3 +197,30 @@ Node 24.22.1 using manifest/lock-matched existing dependencies. No live provider
 private input, Site packaging or hosted acceptance was exercised. Fresh exact-head
 CI and independent review are separate receipts on PR #432. Source integration
 is not deployment or admission authorization; the hosted gates above remain.
+
+
+## November 13 backlog integration (source-only qualification)
+
+Joe authorized cleanup and merge of the outstanding backlog on November 13.
+This source-only qualification PR is reconciled with main
+`2fd2eaaf5801b05f7d9e0441bbe3fc8d47f695a1`. Both complete append-only
+agent-log histories are retained; the workflow keeps main's Claude admission and
+chopped-league regression tests as well as this PR's default-Worker check.
+The delta against main changes only tests, workflow and documentation.
+
+On Node 24.22.1 with existing manifest/lock-matched dependencies, the actual
+default Worker qualification passes: 239 modules, privateInput false, 426206
+bytes, 121006 gzip bytes, SHA-256
+`51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059`.
+This replaces the October 31 receipt for the integrated source; earlier hashes
+remain historical. The 125 native MCP tests, 60 Jest tests across three
+shared-reader suites, scoped TypeScript and full `sh build.sh` pass locally.
+The build reports existing chunk-size/Browserslist notices. Exact remote-head
+CI and independent review are recorded on PR #432 after publication.
+
+These checks use synthetic fixed-origin providers and no retained private input.
+They establish no present-day hosted state, Site/archive equality, account
+admission, trusted-header stripping, deployed resource behavior, ROS/ROP
+activation or live connector acceptance. The earlier hosted observations remain
+dated history. Merging this test/documentation change does not authorize any
+provider, configuration, credential or activation change.

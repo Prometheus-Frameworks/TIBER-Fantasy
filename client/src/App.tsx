@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation, Redirect } from "wouter";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -51,6 +51,10 @@ import CatalystLab from "@/pages/CatalystLab";
 import RookieBoard from "@/pages/RookieBoard";
 import TiberClawPage from "@/pages/TiberClawPage";
 import NotFound from "@/pages/not-found";
+
+// Experimental prototype (#434). Lazy so it adds nothing to the default bundle, registered
+// only in the full profile below, and deliberately absent from navigation.
+const ArchitectureLab = lazy(() => import("@/pages/architectureLab/ArchitectureLab"));
 
 type RuntimeProfile = "full" | "public-draft-review" | "team-auth";
 
@@ -130,6 +134,13 @@ function Router({ runtimeProfile }: { runtimeProfile: RuntimeProfile }) {
               </Route>
               <Route path="/x-intel" component={XIntelligence} />
               <Route path="/architecture" component={Architecture} />
+              <Route path="/architecture-lab">
+                {() => (
+                  <Suspense fallback={<main className="tiber-main" aria-busy="true">Loading Architecture Lab…</main>}>
+                    <ArchitectureLab />
+                  </Suspense>
+                )}
+              </Route>
               <Route path="/metrics-dictionary" component={MetricsDictionary} />
               <Route path="/forge-workbench" component={ForgeWorkbench} />
               <Route path="/fantasy-lab" component={FantasyLab} />

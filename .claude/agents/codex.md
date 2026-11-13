@@ -1397,6 +1397,10 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **Validation:** 67 native MCP tests, 85 existing Team tests/five suites, nine Python preparation guards, strict scoped TypeScript, full sh build.sh, public Worker import audit and seven local built-Worker curl checks pass. Worker: 236 modules, no private input, SHA-256 a3217ab12fecc498cb57ca3a7b5de297f3cbe27da7795065230d1b3e6c0ec9fc. Matching package/lock dependency reuse; inherited build warnings retained. No live source or retained private replay.
 - **Handoff:** docs/reviews/mcp-combined-integration-2026-10-26.md records replay and limits. Independent exact-head review, published CI/mergeability and final disposition are recorded separately on #422 without changing the reviewed head. Keep #422 unmerged and hosted version unchanged.
 
+### 2026-10-31 — Codex: contain Claude runbook P1/P2
+- **What changed:** Corrected closed-deploy instructions to keep admission and source markers disabled through secrets and probes; separated activation. Removed selection of the old unguarded #428 build and explicitly blocked building until one integrated, tested, independently reviewed SHA/hash receipt exists.
+- **Validation:** Documentation assertions and whitespace check; runtime code untouched. Fresh exact-head CI/review recorded on PR #428.
+- **Boundary:** No deployment, credentials, provider access or policy/ROS decision. #429 guard integration, base conflict and ROS scope remain unresolved.
 ### 2026-10-27 — Codex: #430 scoring-settings boundary repair
 - **Request:** Fix the rejected FFA/GHFFL lineup reads and open a PR through independent review to the merge boundary.
 - **Change:** Raised the roster scoring map limit from 128 to 256 finite numeric settings without truncating keys or zeros. Kept the existing sanitized failure contract and provider/result byte limits. Added synthetic roster, personal lineup, waiver-candidate and bundled Worker regressions; documented the boundary.
@@ -1439,3 +1443,30 @@ Rejected malformed Sleeper directory containers at the shared cache boundary and
 - **What changed:** Integrated main ee937153 into the qualification branch without rebase; preserved both log histories, both CI checks and both architecture notes. Added a dated integrated-Worker receipt. No runtime code changed relative to main.
 - **Validation:** Synthetic built-artifact test, 107 native MCP tests, 60 scoped Jest tests and scoped TypeScript pass on Node 24.22.1 with manifest/lock-matched dependencies. Fresh final-head CI/review tracked on PR #432.
 - **Boundary:** Joe requested review/fix/merge; no deployment, provider/settings/admission change, private input or live-provider call performed.
+### 2026-10-31 — Codex: reconcile Claude admission source and bounded guard
+- **What changed:** Integrated main ee937153 without rebase, retained both log histories/type scopes, carried the exact #429 pre-SDK argument guard/tests into #428, and included admission tests in existing Node20 CI. #429 unchanged.
+- **Boundary:** Existing eight-tool/ROS scope preserved, not newly approved. No ROS/admission-policy or provider setting changes; deployment still requires separate scope/effects/activation decisions.
+- **Validation:** Synthetic tests, scoped TypeScript, default Claude/ChatGPT bundle receipts and fresh exact-head review/CI tracked on PR #428.
+
+
+### 2026-11-11 — Codex: #435 elimination-roster CI coverage
+- **Authority/scope:** Joe approved the recommended next step: add the new elimination-roster regression suite to CI, then carry the reviewed source fix into the Claude adapter candidate. No main merge, deployment, credentials or source/admission change.
+- **Change:** Added `tests/leagueEliminatedRosters.test.ts` to the existing exact-head Node 20 public MCP runtime job. Existing test entries and production behavior are unchanged by this follow-up.
+- **Validation:** On Node 24.22.1 with manifest/lock-matched dependencies, the exact workflow commands pass 112 native tests, 60 Jest tests across three suites and scoped TypeScript. Workflow YAML parses, the eleven native suites include the new suite exactly once, and `git diff --check` passes. Published Node 20 CI is verified separately after push.
+- **Boundary:** Preserve #435 as draft/unmerged. The witnessed-null runtime exception is the previously reviewed implementation, not a broader membership default. Claude integration and fresh published-head review/CI remain separate receipts.
+
+
+### 2026-11-11 — Codex: carry #435 into the Claude admission candidate
+- **Authority/scope:** Joe approved the recommended source follow-up. Integrated #435 at `6c5bec5b0cd9403299d9ff137022f9894ef94594` into prior #428 head `4bd9df176635cec1ae22b789669f3340bf83cd12` without rewriting either history. Main remains untouched.
+- **Change:** Carry the witnessed eliminated-roster parser, roster/availability changes and five regression tests into #428. The merged exact-head Node 20 workflow retains both Claude admission tests and the new elimination-roster suite. Original #428 log contents are preserved in full, followed by the #435 CI entry and this integration entry; no runtime conflict required manual repair.
+- **Validation:** Node 24.22.1 with unchanged manifest/lock-matched dependencies: 125 native tests, 60 Jest tests/three suites, scoped TypeScript and full application build pass. Workflow YAML/shell checks and whitespace checks pass. Default Claude and ChatGPT Worker builds pass import-isolation checks with `privateInput:false`.
+- **Build receipts:** Claude 240 modules, 428591 bytes, SHA-256 `e587df069ef7c6a32532633df8303d8df49f1ceeb8e08a915c50abbe533d6edb`; ChatGPT 239 modules, 426206 bytes, SHA-256 `51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059`. These local source-build receipts do not select an approved deployment candidate.
+- **Compiled synthetic smoke:** Disabled admission 503, wrong key 401, eight-tool discovery including existing ROS, no private-role tools and oversized arguments 413. A synthetic chopped-league lineup returns available with candidate membership and FAAB 303; removing the null roster's witness returns sanitized `source_unavailable`. Eight intercepted fixture fetches, zero live provider calls.
+- **Boundary:** #435 Node 20 CI run 43035231811 passed both jobs. Fresh #428 published-head CI and independent review are separate; previous #428 receipts do not review this new head. Existing ROS/admission scope is preserved, not newly decided. No main merge, deployment, credentials, private input, real source read, provider or access change; #429 is unchanged.
+
+
+### 2026-11-13 — Codex: Reconcile default MCP Worker qualification backlog (#432)
+- **What changed:** Integrated main 2fd2eaaf with both complete append-only histories preserved; retained main's full MCP CI coverage and #432's built-artifact step. Added dated source-only build receipt. #429 separately closed as superseded by merged #428 after exact guard/test comparison.
+- **Files modified:** Agent logs, Core Build workflow, MCP qualification/hosted/module documentation, replit.md and built-artifact test (original #432 delta); no runtime source delta against main.
+- **Validation:** Synthetic built-artifact test (239 modules, privateInput false, 426206 bytes, SHA-256 51b4afbf8bc9b7d89d3190d20d668801f77c540cdbc3fea81944c8cfcc805059), 125 native MCP tests, 60 Jest tests, scoped TypeScript and full sh build.sh pass on Node24.22.1 using manifest/lock-matched dependencies. Fresh exact-head CI and independent review follow on PR.
+- **Notes:** Joe authorized backlog cleanup/merge; no provider, credential, access/configuration, retained private input, Site publication, deployment or reader activation change. Hosted acceptance remains separate.
