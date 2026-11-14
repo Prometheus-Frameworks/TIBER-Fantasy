@@ -7,6 +7,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### 2026-11-14 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **Summary:** Prepared the first post-#420 daily candidate. Recorded Fantasy's current source pin, the paused Week 10 operations pilot and suspended preview queue, reviewed/CI-passing off-main DFS #144, Hunter's final-availability amendment, advisory-only Devy Scout run 18 and bounded deployment-effects evidence.
+- **Key files:** `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md` only.
+- **Validation boundary:** Rechecked all 14 default branches/READMEs plus relevant issues, PRs, reviews and workflows. Did not run upstream application tests, private artifacts, live sports data, providers, deployments or models; did not activate any capability.
+- **Handoff:** Dedicated draft documentation PR only. Maintainer review/merge is separate; no main write, ready-state change, review request, contributor message, merge, deployment or runtime/source/model/provider activation.
+
 ### 2026-10-07 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches, current tracked PR/review states and new upstream issues. Updated `docs/TIBER_NOW.md` for ROP #32 at reviewed exact head `a3aa191`, Research #29's conceptual Universe C track, and Fantasy #416/#417's authorized-but-not-yet-implemented GPT Sites handoffs.

@@ -5,6 +5,13 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-11-14 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches/READMEs and current mutable evidence. Updated `docs/TIBER_NOW.md` for Fantasy's post-#420 source pin, the paused Week 10 operations pilot and suspended Research #143 queue, reviewed/CI-passing but unfrozen DFS PR #144, Hunter's final-availability amendment, Rookies Devy Scout run 18 and the bounded Railway deployment-effects follow-ups.
+- **Evidence boundary:** Kept published source, open reviewed PRs, author-checked research, advisory routines, paused operations, hosted effects and source/data/model admission distinct. No football result, private output, live application, provider setting, model, source or runtime was run or activated.
+- **Verification:** All 14 defaults remain `main`; every README read succeeded, every companion canonical-page link remains present and FORGE remains archived. Only Fantasy moved after the latest post-backlog checkpoint, to `26e13f81`; the other 13 pins retain their latest dated evidence.
+- **Handoff:** Documentation-only candidate on the dedicated post-publication daily-update branch. Only `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md` changed. Separate maintainer review/merge remains required; no ready-state change, review request, merge, deployment, activation or contributor message was performed.
+
 ### 2026-10-07 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches and current upstream work records. Updated `docs/TIBER_NOW.md` for ROP #32's reviewed exact head, Research #29's conceptual Universe C hypothesis, and Fantasy #416/#417's authorized-but-unimplemented GPT Sites handoffs.
