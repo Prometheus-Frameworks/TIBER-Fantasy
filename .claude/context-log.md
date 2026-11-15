@@ -5,6 +5,13 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-11-15 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches/READMEs and mutable evidence. Updated `docs/TIBER_NOW.md` for Ops #78's merged authority-preflight runbook, Research #144's Sunday DFS delta and review boundary, Rookies #308's docs-drift proposal, Fantasy #413's advisory checkpoint and the unchanged paused Week 10 pilot.
+- **Evidence boundary:** Kept published runbook documentation, current-head CI, older-head review, off-main research, open advisory/issues, paused operations and implementation/activation distinct. No football result, private output, live application, provider setting, source, model or runtime was run or activated.
+- **Verification:** All 14 defaults remain `main`; every README read succeeded, every companion canonical-page link remains present and FORGE remains archived. Ops alone moved after November 14, to `be85bbdf`; the other 13 pins are unchanged.
+- **Handoff:** Reused draft PR #437 and changed only `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md`. Separate maintainer review/merge remains required; no ready-state change, review request, main write, merge, deployment, activation or contributor message was performed.
+
 ### 2026-11-14 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches/READMEs and current mutable evidence. Updated `docs/TIBER_NOW.md` for Fantasy's post-#420 source pin, the paused Week 10 operations pilot and suspended Research #143 queue, reviewed/CI-passing but unfrozen DFS PR #144, Hunter's final-availability amendment, Rookies Devy Scout run 18 and the bounded Railway deployment-effects follow-ups.
