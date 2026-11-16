@@ -5,6 +5,13 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-11-16 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches/READMEs and current mutable records. Updated `docs/TIBER_NOW.md` for Research #144's Week 10 freeze/provisional scoring and Week 11 partial board, provisional Tyson study #145, Jacksonville #45's Week 10 deployment update and draft Rookies docs repair #309.
+- **Evidence boundary:** Kept frozen research choices, provisional reconstructed scoring, open-PR source, issue-level study, current-head CI, older-head review, implementation, promotion, deployment and contest action distinct. No private output, live application, provider setting, source/model activation, contest entry or runtime was run or changed.
+- **Verification:** All 14 defaults remain `main`; every README read succeeded, every companion canonical-page link remains present and FORGE remains archived. No default-branch source pin moved after November 15. Research #144 current-head CI and Rookies #309 CI pass; neither current head has a recorded exact-head review.
+- **Handoff:** Reused draft PR #437 and changed only `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md`. Separate maintainer review/merge remains required; no ready-state change, review request, main write, merge, deployment, activation or contributor message was performed.
+
 ### 2026-11-15 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches/READMEs and mutable evidence. Updated `docs/TIBER_NOW.md` for Ops #78's merged authority-preflight runbook, Research #144's Sunday DFS delta and review boundary, Rookies #308's docs-drift proposal, Fantasy #413's advisory checkpoint and the unchanged paused Week 10 pilot.

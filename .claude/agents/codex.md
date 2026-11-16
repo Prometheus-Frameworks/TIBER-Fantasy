@@ -7,6 +7,13 @@ Workflow: Creates PRs on GitHub, merged by Architect J after review
 
 ---
 
+### 2026-11-16 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **Summary:** Reused draft PR #437. Recorded Research #144's Week 10 research freeze/provisional scoring and unpriced Week 11 board, author-checked Tyson issue #145, Jacksonville #45's material Week 10 evidence and draft docs-only Rookies #309.
+- **Key files:** `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md` only.
+- **Validation boundary:** Rechecked all 14 default branches/READMEs plus relevant issues, PRs, reviews and workflows. Did not run upstream application tests, private artifacts, live sports data, providers, deployments, contest actions or models; did not activate any capability.
+- **Handoff:** Draft documentation PR only. Maintainer review/merge is separate; no main write, ready-state change, review request, contributor message, merge, deployment or runtime/source/model/provider activation.
+
 ### 2026-11-15 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **Summary:** Reused draft PR #437. Recorded Ops #78's documentation-only runbook merge, Research #144's Sunday candidate and stale-review boundary, Rookies #308 and Fantasy #413 as advisory/open records, and the still-paused Week 10 operations pilot.
