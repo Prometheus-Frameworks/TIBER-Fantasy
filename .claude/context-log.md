@@ -5,6 +5,13 @@ Every agent should append an entry here after completing work.
 
 ---
 
+### 2026-11-17 — Codex: source-backed TIBER Now refresh
+- **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
+- **What changed:** Rechecked all 14 linked default branches/READMEs and current mutable evidence. Updated `docs/TIBER_NOW.md` for merged Rookies #309, Research #139/#145/#146 and the Flowers/McConkey follow-ups, plus the off-main Week 11 DFS draft at Research #144.
+- **Evidence boundary:** Kept merged status documentation, local producer/cache source, uncorrected generated pool, current-head CI, older-head review, issue-level research, off-main drafts, implementation, promotion, deployment and fantasy action distinct. No private output, live application, provider setting, source/model activation, contest entry or runtime was run or changed.
+- **Verification:** All 14 defaults remain `main`; every README read succeeded, every companion canonical-page link remains present and FORGE remains archived. Rookies alone moved after November 16, to `297d11ea`; Research `main` is unchanged while #144 remains open at `b38f1e69`.
+- **Handoff:** Reused draft PR #437 and changed only `docs/TIBER_NOW.md`, `.claude/context-log.md` and `.claude/agents/codex.md`. Separate maintainer review/merge remains required; no ready-state change, review request, main write, merge, deployment, activation or contributor message was performed.
+
 ### 2026-11-16 — Codex: source-backed TIBER Now refresh
 - **Authority:** Daily documentation preparation was authorized; maintainer review and merge remain separate.
 - **What changed:** Rechecked all 14 linked default branches/READMEs and current mutable records. Updated `docs/TIBER_NOW.md` for Research #144's Week 10 freeze/provisional scoring and Week 11 partial board, provisional Tyson study #145, Jacksonville #45's Week 10 deployment update and draft Rookies docs repair #309.
