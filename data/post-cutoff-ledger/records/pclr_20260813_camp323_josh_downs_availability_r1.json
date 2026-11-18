@@ -1,0 +1,64 @@
+{
+  "record_id": "pclr_20260813_camp323_josh_downs_availability_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_josh_downs_availability",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T18:59:00.000Z",
+  "change_note": "#323 reconciliation: availability event recorded retrospectively from dated sources; kept separate from the role-expansion lineage pcl_msi9eu8k_aa85bc0b.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:9500",
+      "display_name": "Josh Downs",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-08",
+    "event_type": "injury_update",
+    "observations": [
+      "2026-08-08: Downs missed Saturday practice with a groin injury per the team; he was in street clothes on the sideline (NBC Sports Edge, 08-08). First-team WRs in his absence: Dulin, Westbrook-Ikhine, Gould (Stampede Blue Day 8).",
+      "2026-08-09: second consecutive missed practice (NBC Sports Edge, 08-09); Steichen (team-official) said the groin injury is 'not considered serious' and Downs could return Tuesday for the joint practice with the Patriots (Yahoo, 08-09 — return expectation, recorded as projection at that time)."
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): short-lived downward availability pressure only; no role implication while the team characterizes the injury as not serious."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://www.nbcsports.com/fantasy/football/player-news/2026-08-08/josh-downs-groin-misses-practice-saturday",
+        "note": "NBC Sports Edge, 2026-08-08. Missed Saturday practice, groin, per the team.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/colts-training-camp-day-8-023140968.html",
+        "note": "Yahoo/Stampede Blue, published 2026-08-09 02:31 UTC (Sat evening ET). Groin injury; replacement first-team WRs.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.nbcsports.com/fantasy/football/player-news/2026-08-09/josh-downs-groin-sidelined-again-on-sunday",
+        "note": "NBC Sports Edge, 2026-08-09. Second consecutive missed practice.",
+        "verified": false
+      },
+      {
+        "ref": "https://sports.yahoo.com/articles/josh-downs-groin-injury-not-175818003.html",
+        "note": "Yahoo, 2026-08-09. Steichen: not considered serious; possible Tuesday return (projection at that time).",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Exact injury onset is not pinned by any source ('late last week': 08-07 or during the 08-08 session).",
+      "Whether a Monday 08-10 practice was missed (vs. no team practice that day) is unrecoverable.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "Confirmed return date?"
+    ],
+    "unrecognized_fields": []
+  }
+}

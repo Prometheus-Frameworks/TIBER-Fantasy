@@ -1,0 +1,45 @@
+{
+  "record_id": "pclr_msi9eu8k_ee2ae3c5",
+  "ledger_entry_id": "pcl_msi9eu8k_aa85bc0b",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-07T01:21:55.604Z",
+  "change_note": null,
+  "entry": {
+    "baseline_run_id": "seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": null,
+      "display_name": "Josh Downs",
+      "identity_status": "unresolved"
+    },
+    "observed_at": "2026-08-06",
+    "event_type": "role_expansion",
+    "observations": [
+      "outside reps increasing",
+      "multi-TE personnel expected to rise",
+      "bunch/stack usage designed to preserve free releases"
+    ],
+    "inferences": [
+      "more routes in two-WR personnel",
+      "modestly higher target depth",
+      "increased spike-week potential"
+    ],
+    "forecast_pressure": "upward",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "missing"
+    },
+    "limitations": [],
+    "open_questions": [],
+    "unrecognized_fields": [
+      {
+        "key": "status",
+        "value": "pending repeated camp and preseason deployment"
+      }
+    ]
+  }
+}

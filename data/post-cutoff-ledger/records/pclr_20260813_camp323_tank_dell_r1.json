@@ -1,0 +1,56 @@
+{
+  "record_id": "pclr_20260813_camp323_tank_dell_r1",
+  "ledger_entry_id": "pcl_20260813_camp323_tank_dell",
+  "revision": 1,
+  "supersedes_record_id": null,
+  "recorded_at": "2026-08-13T19:01:00.000Z",
+  "change_note": "#323 reconciliation: secondary candidate admitted on a recoverable, material availability milestone.",
+  "entry": {
+    "baseline_run_id": "pre-baseline:seasonal-ppr-2026-forward-001",
+    "player_ref": {
+      "canonical_player_id": "sleeper:9502",
+      "display_name": "Tank Dell",
+      "identity_status": "resolved"
+    },
+    "observed_at": "2026-08-07",
+    "event_type": "availability_change",
+    "observations": [
+      "2026-08-07 (AP): Dell rejoined the Texans this week in a limited capacity for team drills, after missing the entire 2025 season following the 2024-12-21 dislocated knee with ACL/MCL/LCL/meniscus damage vs. Kansas City. DeMeco Ryans (team-official): 'We're taking our time with Tank... He looked really nice today. Nice and crisp running his routes.'",
+      "Neither Dell nor Ryans committed to Week 1 availability (same AP report).",
+      "Dell: 'I want to come back better than where I was'; 'The mental aspect is the hardest thing you've got to get over.'"
+    ],
+    "inferences": [
+      "Directional mechanism (pre-baseline, preserved as inference): upward availability trajectory — an observed participation milestone after a full missed season — with role and timeline still undefined."
+    ],
+    "forecast_pressure": "unresolved",
+    "confidence": "moderate",
+    "status": "candidate_operator_observation",
+    "source_refs": [
+      {
+        "ref": "https://spectrumlocalnews.com/tx/south-texas-el-paso/sports/2026/08/07/tank-dell-back-in-texans-drills-after-a-gruesome-knee-injury",
+        "note": "AP wire via Spectrum News, 2026-08-07. Limited return to team drills; Ryans and Dell quotes. Fetched and content-verified.",
+        "verified": false
+      },
+      {
+        "ref": "https://www.washingtonpost.com/sports/nfl/2026/08/07/texans-dell-injury/5a3b05f4-9295-11f1-9fdc-0a725c989a7b_story.html",
+        "note": "Same AP story at the Washington Post, 2026-08-07.",
+        "verified": false
+      }
+    ],
+    "linked_artifacts": {
+      "forecast_player_row_ref": null,
+      "rookies_profile_ref": null,
+      "rookies_profile_status": "not_applicable"
+    },
+    "limitations": [
+      "Participation is limited, not full: a local headline framing this as 'cleared to return' overstates the AP's characterization and is not adopted.",
+      "No Week 1 commitment exists; any regular-season availability read is projection.",
+      "Pre-baseline entry: no executed/frozen Forecast baseline exists as of 2026-08-13. baseline_run_id carries an explicit pre-baseline marker for the designated successor run seasonal-ppr-2026-forward-001 (bound but not executed per TIBER-Forecast forwardRun1 packages). forecast_pressure is unresolved by definition until a frozen baseline exists; directional mechanisms are preserved as inferences only. Append a revision re-binding this entry to the exact frozen run identity once the baseline exists."
+    ],
+    "open_questions": [
+      "When does Dell progress from limited to full team-drill participation?",
+      "Is he on track for Week 1?"
+    ],
+    "unrecognized_fields": []
+  }
+}
